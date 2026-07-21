@@ -91,6 +91,14 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
 
 ## Settled decisions
 
+- **Python reference + data + vectors; no native core planned.** gavel's C core made sense because its kernel is the
+  dream case for a C ABI: four strings in, an enum out, allocation-free. atlas is the opposite shape — config parsing,
+  string assembly, variable-length results, and a reader seam that would become callback FFI across a C boundary:
+  exactly the allocation-and-ownership hazards gavel's design ruled out. The portable core of atlas is the knowledge,
+  not the code: the registry is language-neutral JSON, the probe locations are data, the rules are small, and the
+  vectors are the contract — a client in another language implements the thin logic natively and proves it against the
+  vectors, it does not link a library to read an ini file. Revisit only if a concrete consumer asks for a drop-in.
+
 - **No cross-installation fall-through.** A RetroDECK install with no own `retroarch.cfg` gets RetroDECK's defaults — it
   never silently borrows a coexisting standalone install's cfg. Every question is asked of one installation; mixing
   their configs would make answers depend on unrelated installs being present.
