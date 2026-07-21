@@ -9,7 +9,7 @@ import atlas
 
 # Detection: what is installed on this machine?
 installations = atlas.detect(home="/home/deck")
-# → [RetroDeck(root=...), EmuDeck(root=...), StandaloneRetroArch(config=...)]
+# → [RetroDeck(root=...), StandaloneRetroArchFlatpak(root=...), NativeRetroArch(root=...)]
 
 # Questions are asked of an installation:
 inst = installations[0]
@@ -88,3 +88,9 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
 - Override-chain representation in provenance when more than two layers stack (RetroArch global → core → content-dir →
   game overrides).
 - Whether detection reports confidence/health (present-but-broken installs) alongside kind and root.
+
+## Settled decisions
+
+- **No cross-installation fall-through.** A RetroDECK install with no own `retroarch.cfg` gets RetroDECK's defaults — it
+  never silently borrows a coexisting standalone install's cfg. Every question is asked of one installation; mixing
+  their configs would make answers depend on unrelated installs being present.

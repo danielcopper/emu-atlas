@@ -94,6 +94,11 @@ class BiosRegistry:
         entry = self.entry(platform, file_name)
         if entry is None:
             return False
+        # Branching on a NON-EMPTY cores map is a deliberate simplification of
+        # the source semantics (which branch on the key's presence): the shipped
+        # registry contains no entry with a present-but-empty cores map, so the
+        # two never diverge on real data. If a registry regeneration ever
+        # introduces one, an empty map here falls back to the top-level flag.
         if core is not None and entry.cores:
             return entry.cores.get(core, False)
         return entry.required
