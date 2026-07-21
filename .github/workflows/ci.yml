@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  markdown-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check markdown formatting
+        run: deno fmt --check
+
+  # Vector-schema validation, the reference test run, and the breaking-change
+  # gate are added once vectors/ and the reference carry content (phase 1).

@@ -1,0 +1,12 @@
+# Python reference implementation artifacts
+__pycache__/
+*.py[cod]
+.venv/
+.hypothesis/
+.pytest_cache/
+
+# Native core build artifacts
+*.so
+*.o
+*.out
+build/
