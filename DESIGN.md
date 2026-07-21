@@ -28,7 +28,7 @@ A placement is a template with named holes, not a resolved path:
 
 ```python
 SavePlacement(
-    dir="~/retrodeck/saves/gba/<content_dir>",
+    dir="~/retrodeck/saves/<content_dir>",
     filename="<rom_stem>.srm",
     needs=["content_dir", "rom_stem"],
     sources=[
@@ -38,7 +38,8 @@ SavePlacement(
 )
 ```
 
-- Holes the caller can always fill from the ROM at hand: `<rom_stem>`, `<content_dir>`.
+- Holes the caller can always fill from the ROM at hand: `<rom_stem>`, `<content_dir>` (the ROM's parent folder name —
+  with sort-by-content the system slug appears only _as_ that folder, never as an extra path component).
 - Holes that need identity knowledge: `<save_id>` (serial / title id) — sigil is one supplier, never a dependency.
 - `sources` is the provenance trail: which config file produced each governing value, which default applied.
 - "Saves live next to the ROMs" (`savefiles_in_content_dir`) is a valid placement, not an error.
@@ -64,13 +65,13 @@ included:
   "name": "retrodeck-content-sort-on",
   "input": {
     "files": {
-      "~/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"rd_home_path\": \"~/retrodeck\"}",
+      "~/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"~/retrodeck\"}}",
       "~/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"true\"\n"
     }
   },
   "expected": {
     "installations": [{ "kind": "retrodeck", "root": "~/retrodeck" }],
-    "save_placement": { "dir": "~/retrodeck/saves/gba/<content_dir>", "filename": "<rom_stem>.srm" }
+    "save_placement": { "dir": "~/retrodeck/saves/<content_dir>", "filename": "<rom_stem>.srm" }
   }
 }
 ```
