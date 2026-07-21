@@ -43,7 +43,8 @@ emu-atlas depends on nothing and nothing depends on it: sigil identifies, atlas 
    yet) as data.
 2. **BIOS registry** — which firmware files each platform and libretro core wants, with hashes and sizes (548 entries
    across 54 platforms and 122 cores at extraction time), plus the classification rules (required / optional / unknown
-   relative to an active core).
+   relative to an active core); its generator and data provenance (`scripts/generate_bios_registry.py`,
+   `atlas/data/README.md`) live with the data.
 3. **ES-DE knowledge** — `es_systems.xml` / `es_find_rules.xml` parsing and launch-command classification, generalized
    across the frontends that ship ES-DE (RetroDECK, EmuDeck, standalone).
 4. **Standalone emulators** — per-emulator config parsing and save/BIOS placement rules (Dolphin, PPSSPP, RPCS3, …), as
