@@ -39,7 +39,8 @@ emu-atlas depends on nothing and nothing depends on it: sigil identifies, atlas 
 
 1. **RetroArch knowledge** — interpretation of `retroarch.cfg` (the three save-layout keys and their override
    semantics), the save-directory math (`sort_by_content` / `sort_by_core`), core `.info` parsing, and the probe
-   locations per install flavor (flatpak, native, RetroDECK, EmuDeck) as data.
+   locations per install flavor (flatpak, native, RetroDECK; EmuDeck is planned — no production knowledge exists for it
+   yet) as data.
 2. **BIOS registry** — which firmware files each platform and libretro core wants, with hashes and sizes (548 entries
    across 54 platforms and 122 cores at extraction time), plus the classification rules (required / optional / unknown
    relative to an active core).
@@ -77,5 +78,22 @@ Places this knowledge could plug in — options, not commitments:
 
 ## Status
 
-Scoping. The extraction sources are in production in decky-romm-sync (~700 lines of pure, tested knowledge code plus the
-BIOS registry); the phase issues track the work.
+Phase 1 shipped — RetroArch knowledge and the BIOS registry, extracted from decky-romm-sync's production code. What
+exists now:
+
+- `atlas.detect(home, reader=...)` finds RetroDECK, the standalone `org.libretro.RetroArch` Flatpak, and a native
+  `~/.config/retroarch` install by their config markers, in that order; coexisting installs each return their own
+  handle.
+- Every installation answers `save_placement(system, core=..., rom_dir_name=...)` with a `SavePlacement` — a template
+  carrying named holes (`<content_dir>`, `<rom_stem>`, `<savefile_directory>`, `<core>`), the `needs` still to be
+  filled, and a provenance trail. RetroDECK handles also expose `bios_dir()` and `roms_dir()`.
+- `retroarch.cfg` interpretation of the three save-layout keys (`savefiles_in_content_dir`,
+  `sort_savefiles_by_content_enable`, `sort_savefiles_enable`) plus `savefile_directory`, each with per-key provenance.
+- The RetroArch `.info` parser and the BIOS registry (548 entries across 54 platforms and 122 cores) with entry lookup
+  and a required-classification query that honors the per-core override over the top-level flag.
+- All filesystem access flows through the injected `Reader`; a `machines` conformance-vector family (16 cases) drives
+  real detection and placement from fixture machines, with save-placement expectations oracle-derived from
+  decky-romm-sync's `resolve_save_dir` / `compute_local_save_target`.
+
+EmuDeck detection is **not** in this phase — no production knowledge exists for it yet. ES-DE knowledge, standalone
+emulators, and the canonical system vocabulary remain future phases.
