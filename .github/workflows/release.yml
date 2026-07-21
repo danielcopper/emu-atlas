@@ -18,9 +18,6 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       # Mint a GitHub App installation token so release-please's PR/branch
       # pushes are authored by the App, not GITHUB_TOKEN. Pushes made with
@@ -36,62 +33,7 @@ jobs:
           permission-pull-requests: write
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
-        id: release
         with:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-
-  core-artifact:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Build the shared library
-        # -fno-builtin: the core is freestanding (no libc imports); without it
-        # the optimizer may recognize the inlined comparison loop and emit a
-        # strcmp libcall, silently reintroducing the dependency.
-        run: cc -std=c99 -Wall -Wextra -Werror -pedantic -fno-builtin -fPIC -shared -O2 core/gavel.c -o libgavel-x86_64-linux.so
-
-      - name: Guard portability (zero dependencies)
-        run: |
-          # The artifact must load on ANY x86_64 Linux — SteamOS, Ubuntu,
-          # Bazzite, musl, anything. The strongest form of that promise is
-          # "depends on nothing": no NEEDED libraries, no undefined symbols.
-          # A toolchain change that reintroduces an import fails the release,
-          # not the consumer's device.
-          if readelf -d libgavel-x86_64-linux.so | grep NEEDED; then
-            echo "ERROR: library gained a shared-library dependency"
-            exit 1
-          fi
-          # Only GLOBAL undefined symbols (nm type "U") are real dependencies.
-          # gcc's crt stubs add WEAK undefined symbols (__cxa_finalize,
-          # __gmon_start__) to every .so — the loader nulls them harmlessly
-          # when absent, on any libc.
-          if nm -D --undefined-only libgavel-x86_64-linux.so | grep ' U '; then
-            echo "ERROR: library has global undefined symbols"
-            exit 1
-          fi
-
-      - name: Smoke-test load and decide
-        run: |
-          python3 - <<'EOF'
-          import ctypes
-          lib = ctypes.CDLL("./libgavel-x86_64-linux.so")
-          lib.gavel_resolve_upload_conflict.argtypes = [ctypes.c_char_p] * 4
-          lib.gavel_resolve_upload_conflict.restype = ctypes.c_int
-          assert lib.gavel_resolve_upload_conflict(b"a" * 32, b"a" * 32, None, None) == 0
-          assert lib.gavel_resolve_upload_conflict(None, None, None, None) == 1
-          print("smoke ok")
-          EOF
-
-      - name: Checksum and attach to the release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
-        run: |
-          sha256sum libgavel-x86_64-linux.so > libgavel-x86_64-linux.so.sha256
-          gh release upload "$TAG" libgavel-x86_64-linux.so libgavel-x86_64-linux.so.sha256 --clobber
