@@ -824,8 +824,8 @@
       }
     },
     {
-      "name": "lrps2-fixed-shared-memcards-through-symlink",
-      "rationale": "LRPS2 keeps shared memory cards under <system_directory>/pcsx2/memcards with no governing option (fixed behaviour, rule card 'lrps2'). Under RetroDECK that path is a dir_prep symlink into the saves tree; the fixture models the link and the observed card is found through it.",
+      "name": "lrps2-shared-memcards-through-symlink",
+      "rationale": "LRPS2's default (pcsx2_shared_memory_cards=enabled, libretro_core_options.h:169) keeps shared memory cards under <system_directory>/pcsx2/memcards. Under RetroDECK that path is a dir_prep symlink into the saves tree; the observed card is found through the link. The option's 'disabled' mode switches to per-game <rom_stem>.ps2 in the save directory (verified in libretro/ps2 source).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -866,7 +866,9 @@
             ]
           },
           "granularity": {
-            "value": "shared-card"
+            "value": "shared-card",
+            "option_key": "pcsx2_shared_memory_cards",
+            "option_value": "enabled"
           }
         }
       }

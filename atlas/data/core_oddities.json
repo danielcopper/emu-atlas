@@ -63,9 +63,12 @@
         ]
       },
       "saves": {
-        "governing_option": null,
+        "governing_option": {
+          "key": "pcsx2_shared_memory_cards",
+          "default": "enabled"
+        },
         "modes": {
-          "always": {
+          "enabled": {
             "root": "system_directory",
             "subdir": "pcsx2/memcards",
             "files": [
@@ -73,15 +76,24 @@
               "Mcd002.ps2"
             ],
             "granularity": "shared-card"
+          },
+          "disabled": {
+            "root": "savefile_directory",
+            "subdir": null,
+            "files": [
+              "<rom_stem>.ps2"
+            ],
+            "granularity": "per-game-file"
           }
         }
       },
       "provenance": {
-        "source": "RetroDECK component_prepare.sh:97 dir_preps <system_directory>/pcsx2/memcards (live symlink observed: bios/pcsx2/memcards -> saves/ps2/retroarch-core/LRPS2/memcards); filename scheme Mcd%03u.ps2 from pcsx2_libretro.so format strings, matching shipped PCSX2 defaults (Slot1/2 = Mcd001/Mcd002). No memcard-related core option exists in the binary's option strings — fixed behaviour.",
-        "verified_against": "LRPS2 as shipped in RetroDECK 0.10.9b",
+        "source": "libretro/ps2 source: option def libretro_core_options.h:158-170 (values disabled/enabled, default enabled); per-content branch main.cpp:2154-2166 sets Folders/MemoryCards to RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY and Pcsx2Config.cpp:995-997 names slot 1 '<rom_stem>.ps2'. Shared mode roots at PCSX2's default memcards folder — under RetroDECK that is <system_directory>/pcsx2/memcards (component_prepare.sh:97 dir_prep, live symlink observed). NOTE: an older LRPS2 generation used pcsx2_memcard_slot_1/2 keys (observed in a live retroarch-core-options.cfg) — this card matches the core shipped in RetroDECK 0.10.9b.",
+        "verified_against": "LRPS2 as shipped in RetroDECK 0.10.9b; libretro/ps2 @ master 2026-07-23",
         "date": "2026-07-23",
         "status": {
-          "always": "root verified via RetroDECK arrangement; default filenames declared from format strings + PCSX2 defaults, not yet live-observed (memcards dir empty on the observed machine); multitap variants (Mcd-Multitap%u-Slot%02u.ps2) exist when enabled"
+          "enabled": "root verified via RetroDECK arrangement; filenames from format strings + PCSX2 defaults, not yet live-observed",
+          "disabled": "root and slot-1 filename verified from source; slot-2 behaviour in this mode unestablished"
         }
       }
     }

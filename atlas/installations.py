@@ -358,16 +358,17 @@ def _retroarch_save_location(
             card_sources.append(f'{cfg_label} chain: system_directory = "{raw_system}"')
         directory = os.path.join(base, card_mode.subdir) if card_mode.subdir else base
         card_sources.append(f"rule card '{card.key}': core keeps saves under system_directory — {card.provenance}")
-        if card_mode.files is None:
+        declared = _card_files(card_mode.files, rom_stem) if card_mode.files is not None else None
+        if declared is None:
             fs = UNKNOWN_FILE_SET
         elif needs:
-            fs = FileSet("declared", card_mode.files, f"declared by rule card '{card.key}'")
+            fs = FileSet("declared", declared, f"declared by rule card '{card.key}'")
         else:
-            present = tuple(f for f in card_mode.files if machine.exists(os.path.join(directory, f)))
+            present = tuple(f for f in declared if machine.exists(os.path.join(directory, f)))
             if present:
                 fs = FileSet("observed", present, f"observed on the machine: {directory}")
             else:
-                fs = FileSet("declared", card_mode.files, f"declared by rule card '{card.key}' (none present yet)")
+                fs = FileSet("declared", declared, f"declared by rule card '{card.key}' (none present yet)")
         return SavePlacement(
             dir=directory,
             root_kind=ROOT_SYSTEM_DIRECTORY,
@@ -415,11 +416,23 @@ def _retroarch_save_location(
                     source=f"observed on the machine: {directory}",
                 )
             else:
-                file_set = FileSet(
-                    state="unknown",
-                    files=(),
-                    source=f"no files present at {directory} — file set not stated (never guessed)",
+                declared = (
+                    _card_files(card_mode.files, rom_stem)
+                    if card is not None and card_mode is not None and card_mode.files is not None
+                    else None
                 )
+                if declared is not None:
+                    file_set = FileSet(
+                        state="declared",
+                        files=declared,
+                        source=f"declared by rule card '{card.key}' (none present yet)",
+                    )
+                else:
+                    file_set = FileSet(
+                        state="unknown",
+                        files=(),
+                        source=f"no files present at {directory} — file set not stated (never guessed)",
+                    )
         if (
             placement.root_kind == "savefile_directory"
             and layout.savefile_directory is not None
@@ -444,6 +457,22 @@ def _retroarch_save_location(
         caveats=tuple(caveats),
         granularity=granularity,
     )
+
+
+def _card_files(files: tuple[str, ...], rom_stem: str | None) -> tuple[str, ...] | None:
+    """Substitute the ``<rom_stem>`` hole in a card's declared file list.
+
+    Returns ``None`` when a template file cannot be filled (no content given) —
+    the file set is then honestly unknown rather than a template guess.
+    """
+    resolved: list[str] = []
+    for name in files:
+        if "<rom_stem>" in name:
+            if rom_stem is None:
+                return None
+            name = name.replace("<rom_stem>", rom_stem)
+        resolved.append(name)
+    return tuple(resolved)
 
 
 def _match_per_game(selections: GamelistSelections, content_path: str) -> str | None:
