@@ -25,6 +25,7 @@ import json
 import os
 from typing import Any, Callable
 
+from atlas.esde import KIND_LIBRETRO, EmulatorSpec, merge_layers, parse_es_systems
 from atlas.machine import Machine
 from atlas.oddities import lookup_card
 from atlas.placement import (
@@ -423,6 +424,62 @@ def _retroarch_save_location(
     )
 
 
+class EmulatorEntry:
+    """One catalogue entry — an emulator that can launch one system, as configured.
+
+    Wraps an :class:`~atlas.esde.EmulatorSpec` and the installation it belongs
+    to, so the entry can answer placement questions with its core always known —
+    the ``no-core`` caveat class does not exist on this path.
+    """
+
+    def __init__(self, installation: "RetroDeck", spec: EmulatorSpec) -> None:
+        self._installation = installation
+        self._spec = spec
+
+    @property
+    def system(self) -> str:
+        return self._spec.system
+
+    @property
+    def label(self) -> str:
+        return self._spec.label
+
+    @property
+    def kind(self) -> str:
+        return self._spec.kind
+
+    @property
+    def core_so(self) -> str | None:
+        return self._spec.core_so
+
+    @property
+    def command(self) -> str:
+        return self._spec.command
+
+    @property
+    def source(self) -> str:
+        return self._spec.source
+
+    def save_location(self, *, content_path: str | None = None) -> SavePlacement:
+        """Where this emulator keeps the save — core filled in from the catalogue.
+
+        Standalone entries are not resolvable yet (task list: standalone
+        emulators); asking raises instead of guessing.
+        """
+        if self._spec.kind != KIND_LIBRETRO:
+            raise NotImplementedError(
+                f"standalone emulator {self._spec.label!r} ({self._spec.system}) is not resolvable yet — "
+                "see docs/tasks/save-detection.md"
+            )
+        return self._installation.save_location(content_path=content_path, core_so=self._spec.core_so)
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return (
+            f"EmulatorEntry(system={self._spec.system!r}, label={self._spec.label!r}, "
+            f"kind={self._spec.kind!r}, core_so={self._spec.core_so!r})"
+        )
+
+
 def _parse_retrodeck_config(text: str | None) -> dict[str, Any]:
     """Parse ``retrodeck.json`` best-effort — malformed or absent yields ``{}``."""
     if text is None:
@@ -503,6 +560,36 @@ class RetroDeck:
         if cores_dir is None:
             return None
         return os.path.join(cores_dir, core_so)
+
+    # ES-DE catalogue — read live: bundled file in the Flatpak deployment,
+    # user overlay under <rd_home>/ES-DE/custom_systems (observed layout).
+    _ESDE_BUNDLED_SANDBOX = "/app/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+
+    def _catalogue(self) -> dict[str, tuple[EmulatorSpec, ...]]:
+        bundled: dict[str, tuple[EmulatorSpec, ...]] = {}
+        bundled_path = _flatpak_host_path(self._machine, self._home, self._APP_ID, self._ESDE_BUNDLED_SANDBOX)
+        if bundled_path is not None:
+            text = self._machine.read_text(bundled_path)
+            if text is not None:
+                bundled = parse_es_systems(text, source="es_systems.xml (bundled)")
+        custom: dict[str, tuple[EmulatorSpec, ...]] = {}
+        custom_path = os.path.join(self.root(), "ES-DE", "custom_systems", "es_systems.xml")
+        custom_text = self._machine.read_text(custom_path)
+        if custom_text is not None:
+            custom = parse_es_systems(custom_text, source="es_systems.xml (custom_systems overlay)")
+        return merge_layers(bundled, custom)
+
+    def systems(self) -> tuple[str, ...]:
+        """Every system the catalogue declares, sorted."""
+        return tuple(sorted(self._catalogue()))
+
+    def emulators_for(self, system: str) -> tuple[EmulatorEntry, ...]:
+        """The emulators that can launch *system*, in launch-priority order.
+
+        First entry = ES-DE's declared default. The user's saved per-system
+        choice (``es_settings.xml``) is not read yet — task list.
+        """
+        return tuple(EmulatorEntry(self, spec) for spec in self._catalogue().get(system, ()))
 
     def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.

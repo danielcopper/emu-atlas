@@ -46,6 +46,13 @@ def test_machine_vector(vector):
     ]
     assert got_installations == expected["installations"], vector.get("rationale", vector["name"])
 
+    if "emulators" in expected:
+        entries = installs[0].emulators_for(inp["catalogue_query"]["system"])
+        got_emulators = []
+        for exp, entry in zip(expected["emulators"], entries):
+            got_emulators.append({key: getattr(entry, key) for key in exp})
+        assert len(entries) == len(expected["emulators"]) and got_emulators == expected["emulators"], vector["name"]
+
     if "save_location" in expected:
         query = inp["query"]
         placement = installs[0].save_location(

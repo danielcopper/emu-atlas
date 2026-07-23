@@ -18,11 +18,13 @@ from __future__ import annotations
 from atlas.bios import BiosEntry, BiosRegistry, load_registry
 from atlas.core_info import parse_core_info
 from atlas.detect import detect
+from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE, EmulatorSpec, parse_es_systems
 from atlas.installations import (
     HEALTH_CONFIG_UNREADABLE,
     HEALTH_OK,
     HEALTH_ROOT_MISSING,
     EmuDeck,
+    EmulatorEntry,
     Installation,
     NativeRetroArch,
     RetroDeck,
@@ -73,12 +75,16 @@ __all__ = [
     "CoreInfo",
     "EMUDECK_DEFAULTS",
     "EmuDeck",
+    "EmulatorEntry",
+    "EmulatorSpec",
     "FileSet",
     "FixtureMachine",
     "HEALTH_CONFIG_UNREADABLE",
     "HEALTH_OK",
     "HEALTH_ROOT_MISSING",
     "Installation",
+    "KIND_LIBRETRO",
+    "KIND_STANDALONE",
     "LayoutDefaults",
     "Machine",
     "NativeRetroArch",

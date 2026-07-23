@@ -36,10 +36,13 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
 4. **libretro cores with their own save stack** (§3c). `saves/<system>/retroarch-core/<CORE>/` — LRPS2 memcards reached
    via `bios/pcsx2/memcards` symlink. Oddity rules per core.
 
-5. **Emulator catalogue** (`emulators_for`, DESIGN "two entry points"). Parse `es_systems.xml` (choice, first entry =
-   default) and `.info` `systemid` (capability; never a path source). Once this exists the emulator handle always
-   carries its core — the optional `core_so` parameter and its caveat disappear from the common path. EmuDeck: the
-   frontend may be Pegasus or SRM or absent (§13).
+5. **Emulator catalogue** (`emulators_for`, DESIGN "two entry points"). **Partially done:** RetroDECK reads the bundled
+   `es_systems.xml` (Flatpak deployment) plus the `custom_systems` overlay live; `EmulatorEntry.save_location` carries
+   its core, removing the no-core caveat class from that path; standalone entries refuse instead of guessing. Still
+   open: the user's saved per-system emulator choice in `es_settings.xml` (key format unverified — [O], needs a machine
+   with a switched emulator to observe), per-game `altemulator` in gamelists, `.info` `systemid` capability queries,
+   EmuDeck frontends (ES-DE elsewhere / Pegasus / SRM / absent, §13), and structured error reporting for skipped
+   catalogue layers (currently silent).
 
 6. **Save granularity field** (issue #12): per-game file / per-game folder / shared card on the placement, with the
    config that selects the mode. Flycast, LRPS2, Dolphin-libretro are the first shared-card targets.

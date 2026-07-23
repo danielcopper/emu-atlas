@@ -16,7 +16,7 @@ from typing import Any, NoReturn
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 INPUT_FIELDS_REQUIRED = {"home", "files"}
-INPUT_FIELDS_OPTIONAL = {"symlinks", "cores", "query"}
+INPUT_FIELDS_OPTIONAL = {"symlinks", "cores", "query", "catalogue_query"}
 QUERY_FIELDS_OPTIONAL = {"content_path", "core_so"}
 INSTALLATION_FIELDS = {"kind", "root", "health"}
 PLACEMENT_FIELDS = {"dir", "root_kind", "needs", "file_set"}
@@ -85,6 +85,10 @@ def _validate_input(name: str, inp: Any) -> None:
             fail(f"{name}: input.cores[{so_path!r}] must be null or an object with a string library_name")
     if "query" in inp:
         _validate_query(name, inp["query"])
+    if "catalogue_query" in inp:
+        cq = inp["catalogue_query"]
+        if not isinstance(cq, dict) or set(cq) != {"system"} or not isinstance(cq["system"], str):
+            fail(f"{name}: input.catalogue_query must be exactly {{'system': str}}")
 
 
 def _validate_installations(name: str, installations: Any) -> None:
@@ -135,12 +139,18 @@ def _validate_placement(name: str, placement: Any) -> None:
         fail(f"{name}: an unknown file_set must carry no files (never guessed)")
 
 
-def _validate_expected(name: str, expected: Any, has_query: bool) -> None:
+def _validate_expected(name: str, expected: Any, has_query: bool, has_catalogue_query: bool) -> None:
     if not isinstance(expected, dict):
         fail(f"{name}: expected must be an object")
     keys = set(expected)
-    if "installations" not in keys or not keys <= {"installations", "save_location"}:
-        fail(f"{name}: expected keys must be 'installations' plus optional 'save_location'")
+    if "installations" not in keys or not keys <= {"installations", "save_location", "emulators"}:
+        fail(f"{name}: expected keys must be 'installations' plus optional 'save_location'/'emulators'")
+    if ("emulators" in keys) != has_catalogue_query:
+        fail(f"{name}: catalogue_query and emulators expectation must appear together")
+    if "emulators" in keys:
+        for entry in expected["emulators"]:
+            if not isinstance(entry, dict) or not set(entry) <= {"label", "kind", "core_so"} or "label" not in entry:
+                fail(f"{name}: each emulator must carry 'label' plus optional 'kind'/'core_so'")
     _validate_installations(name, expected["installations"])
     has_placement = "save_location" in expected
     if has_placement != has_query:
@@ -156,7 +166,12 @@ def validate_machines_vector(vector: dict[str, Any]) -> None:
     if "rationale" in vector and not isinstance(vector["rationale"], str):
         fail(f"{name}: rationale must be a string when present")
     _validate_input(name, vector.get("input"))
-    _validate_expected(name, vector.get("expected"), has_query="query" in vector.get("input", {}))
+    _validate_expected(
+        name,
+        vector.get("expected"),
+        has_query="query" in vector.get("input", {}),
+        has_catalogue_query="catalogue_query" in vector.get("input", {}),
+    )
 
 
 FAMILIES = {

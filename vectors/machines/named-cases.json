@@ -718,6 +718,73 @@
           ]
         }
       }
+    },
+    {
+      "name": "catalogue-declared-order-and-classification",
+      "rationale": "The catalogue is read live from the bundled es_systems.xml in the Flatpak deployment: entries in declared order (first = ES-DE default), libretro entries carry their extracted core .so, standalone entries carry none.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
+        },
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
+        "emulators": [
+          {
+            "label": "Mupen64Plus-Next",
+            "kind": "libretro",
+            "core_so": "mupen64plus_next_libretro.so"
+          },
+          {
+            "label": "ParaLLEl N64",
+            "kind": "libretro",
+            "core_so": "parallel_n64_libretro.so"
+          }
+        ]
+      }
+    },
+    {
+      "name": "catalogue-custom-overlay-replaces-system",
+      "rationale": "A system defined in the custom_systems overlay replaces the bundled system of the same name entirely (ES-DE USERGUIDE, Game System Customizations).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
+        },
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
+        "emulators": [
+          {
+            "label": "ParaLLEl N64",
+            "kind": "libretro",
+            "core_so": "parallel_n64_libretro.so"
+          }
+        ]
+      }
     }
   ]
 }
