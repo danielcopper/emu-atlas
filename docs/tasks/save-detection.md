@@ -6,6 +6,12 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
 
 ## Wrong today, unmarked
 
+> **Done:** tasks 1 and 2 shipped as rule cards (`atlas/data/core_oddities.json` + `atlas/oddities.py`): Flycast
+> resolves to `system_directory/dc` with observed VMUs, granularity (shared vs. per-game) is read live from the
+> governing core option, and the answer names the options file to switch it. Remaining inside task 1: the per-game VMU
+> filename scheme ([O]) and cards for further system-directory cores as they are found. Task 6 is now partially covered
+> — granularity is stated wherever a rule card exists, `None` elsewhere.
+
 1. **Flycast / system-directory cores** (§8, issue #12). The resolver returns the RetroArch default directory for
    Dreamcast content with no warning, while the real saves are shared VMUs under `system_directory`
    (`bios/dc/vmu_save_*.bin` + `dc_nvmem.bin`) — verified live with Shenmue. Steps:

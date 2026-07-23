@@ -43,16 +43,38 @@ _HOLE_LIBRARY_NAME = "library_name"
 
 @dataclass(frozen=True, slots=True)
 class FileSet:
-    """The files a save consists of — observed on the machine, or unknown.
+    """The files a save consists of — observed, declared, or unknown.
 
-    ``state`` is ``"observed"`` (``files`` are real basenames found on disk) or
-    ``"unknown"`` (``files`` is empty; atlas refuses to guess). ``source`` says
-    how the state was reached.
+    ``state`` is ``"observed"`` (``files`` are real basenames found on disk),
+    ``"declared"`` (``files`` come from a verified rule card — world knowledge
+    with cited provenance, not a guess), or ``"unknown"`` (``files`` is empty;
+    atlas refuses to guess). ``source`` says how the state was reached.
     """
 
     state: str
     files: tuple[str, ...]
     source: str
+
+
+@dataclass(frozen=True, slots=True)
+class Granularity:
+    """How this emulator, configured as it is, groups save data — and how to change it.
+
+    ``value`` is the current granularity (``"shared-card"``,
+    ``"per-game-file"``, …), selected by the live-read ``option_value`` of
+    ``option_key``; ``option_source`` is its provenance (which file, or the
+    core default). ``options_file`` is where a caller would change the option —
+    change it, ask again, and the new answer confirms the switch.
+    ``alternatives`` lists the other selectable ``(option_value, granularity)``
+    pairs from the rule card.
+    """
+
+    value: str
+    option_key: str
+    option_value: str
+    option_source: str
+    options_file: str | None
+    alternatives: tuple[tuple[str, str], ...]
 
 
 UNKNOWN_FILE_SET = FileSet(
@@ -80,6 +102,7 @@ class SavePlacement:
     file_set: FileSet
     sources: tuple[str, ...]
     caveats: tuple[str, ...]
+    granularity: Granularity | None = None
 
 
 def build_save_placement(

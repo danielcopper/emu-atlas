@@ -24,7 +24,7 @@ FILE_SET_FIELDS = {"state", "files"}
 KNOWN_KINDS = {"retrodeck", "emudeck", "standalone_retroarch_flatpak", "native_retroarch"}
 KNOWN_HEALTH = {"ok", "root_missing", "config_unreadable"}
 KNOWN_ROOT_KINDS = {"savefile_directory", "content_directory", "system_directory"}
-KNOWN_FILE_SET_STATES = {"observed", "unknown"}
+KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 
 
 class VectorError(Exception):
@@ -93,8 +93,16 @@ def _validate_installations(name: str, installations: Any) -> None:
 
 
 def _validate_placement(name: str, placement: Any) -> None:
-    if not isinstance(placement, dict) or set(placement) != PLACEMENT_FIELDS:
-        fail(f"{name}: save_location must be exactly {sorted(PLACEMENT_FIELDS)}")
+    if not isinstance(placement, dict) or not (
+        set(placement) == PLACEMENT_FIELDS or set(placement) == PLACEMENT_FIELDS | {"granularity"}
+    ):
+        fail(f"{name}: save_location must be exactly {sorted(PLACEMENT_FIELDS)} plus optional 'granularity'")
+    if "granularity" in placement:
+        gran = placement["granularity"]
+        if not isinstance(gran, dict) or "value" not in gran or not (
+            set(gran) <= {"value", "option_key", "option_value"}
+        ):
+            fail(f"{name}: granularity must be an object with 'value' plus optional 'option_key'/'option_value'")
     if not isinstance(placement["dir"], str) or not placement["dir"]:
         fail(f"{name}: save_location.dir must be a non-empty string")
     if placement["root_kind"] not in KNOWN_ROOT_KINDS:

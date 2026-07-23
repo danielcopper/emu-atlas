@@ -114,7 +114,7 @@ def _as_bool(value: str) -> bool:
     return value.strip().lower() == "true"
 
 
-def _expand_home(raw: str, *, home: str) -> str | None:
+def expand_home(raw: str, *, home: str) -> str | None:
     """Expand ``~`` against *home*; map blank / ``"default"`` to ``None`` (unset)."""
     stripped = raw.strip()
     if stripped == "" or stripped.lower() == "default":
@@ -174,7 +174,7 @@ def resolve_save_layout(
     for label, parsed, is_override in layers:
         if _SAVEFILE_DIRECTORY in parsed:
             raw = parsed[_SAVEFILE_DIRECTORY]
-            savefile_directory = _expand_home(raw, home=home)
+            savefile_directory = expand_home(raw, home=home)
             suffix = " (override wins)" if is_override else ""
             if savefile_directory is None:
                 dir_source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" (unset — resolves to the ROM\'s directory){suffix}'

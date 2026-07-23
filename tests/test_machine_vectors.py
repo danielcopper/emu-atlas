@@ -60,4 +60,10 @@ def test_machine_vector(vector):
                 "files": list(placement.file_set.files),
             },
         }
+        expected_gran = expected["save_location"].get("granularity")
+        if expected_gran is not None:
+            assert placement.granularity is not None, vector["name"]
+            got_placement["granularity"] = {
+                key: getattr(placement.granularity, key) for key in expected_gran
+            }
         assert got_placement == expected["save_location"], vector.get("rationale", vector["name"])

@@ -29,12 +29,14 @@ from atlas.installations import (
     StandaloneRetroArchFlatpak,
 )
 from atlas.machine import CoreInfo, FixtureMachine, Machine, RealMachine
+from atlas.oddities import CoreCard, SaveMode, load_oddities, lookup_card
 from atlas.placement import (
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     UNKNOWN_FILE_SET,
     FileSet,
+    Granularity,
     SavePlacement,
     build_save_placement,
 )

@@ -26,9 +26,12 @@ import os
 from typing import Any, Callable
 
 from atlas.machine import Machine
+from atlas.oddities import lookup_card
 from atlas.placement import (
+    ROOT_SYSTEM_DIRECTORY,
     UNKNOWN_FILE_SET,
     FileSet,
+    Granularity,
     SavePlacement,
     build_save_placement,
 )
@@ -37,6 +40,7 @@ from atlas.retroarch_cfg import (
     RETRODECK_DEFAULTS,
     UPSTREAM_DEFAULTS,
     LayoutDefaults,
+    expand_home,
     parse_cfg_text,
     resolve_save_layout,
 )
@@ -94,6 +98,80 @@ def _flatpak_host_path(machine: Machine, home: str, app_id: str, path: str) -> s
         if machine.exists(candidate):
             return candidate
     return None
+
+
+def _resolve_chain_key(layer_texts: list[str], key: str) -> str | None:
+    """Resolve one raw cfg key across the layer texts — later layers win."""
+    value: str | None = None
+    for text in layer_texts:
+        parsed = parse_cfg_text(text)
+        if key in parsed:
+            value = parsed[key]
+    return value
+
+
+def _core_options_value(
+    machine: Machine,
+    layer_texts: list[str],
+    *,
+    home: str,
+    retroarch_config_dir: str,
+    override_config_dir: str,
+    library_name: str | None,
+    content_dir_name: str | None,
+    rom_stem: str | None,
+    option_key: str,
+    option_default: str,
+) -> tuple[str, str, str]:
+    """Read a core option the way RetroArch does — first existing file is THE source.
+
+    Priority (``runloop.c`` ``validate_per_core_options``): game ``.opt``,
+    folder ``.opt``, per-core ``.opt`` (when ``global_core_options`` is off),
+    then the global options file (``core_options_path`` or
+    ``retroarch-core-options.cfg``). A key absent from the governing file falls
+    back to the core default — it does not fall through to another file.
+
+    Returns ``(value, provenance, options_file)`` where ``options_file`` is the
+    file a caller would edit to change the option.
+    """
+    candidates: list[str] = []
+    if library_name:
+        if rom_stem:
+            candidates.append(os.path.join(override_config_dir, library_name, f"{rom_stem}.opt"))
+        if content_dir_name:
+            candidates.append(os.path.join(override_config_dir, library_name, f"{content_dir_name}.opt"))
+    global_flag = _resolve_chain_key(layer_texts, "global_core_options")
+    # Upstream default is false (config.def.h DEFAULT_GLOBAL_CORE_OPTIONS).
+    per_core_options = (global_flag or "false").strip().lower() != "true"
+    if library_name and per_core_options:
+        candidates.append(os.path.join(override_config_dir, library_name, f"{library_name}.opt"))
+    custom_path = _resolve_chain_key(layer_texts, "core_options_path")
+    global_file = expand_home(custom_path, home=home) if custom_path is not None else None
+    if global_file is None:
+        global_file = os.path.join(retroarch_config_dir, "retroarch-core-options.cfg")
+    candidates.append(global_file)
+
+    for path in candidates:
+        text = machine.read_text(path)
+        if text is None:
+            continue
+        parsed = parse_cfg_text(text)
+        if option_key in parsed:
+            return (
+                parsed[option_key],
+                f'{os.path.basename(path)}: {option_key} = "{parsed[option_key]}"',
+                path,
+            )
+        return (
+            option_default,
+            f'core default: {option_key} = "{option_default}" ({os.path.basename(path)} has no entry)',
+            path,
+        )
+    return (
+        option_default,
+        f'core default: {option_key} = "{option_default}" (no options file present)',
+        global_file,
+    )
 
 
 def _retroarch_save_location(
@@ -168,13 +246,92 @@ def _retroarch_save_location(
             if text is not None:
                 overrides.append((label, text))
 
+    global_text = machine.read_text(global_cfg_path)
     layout = resolve_save_layout(
-        machine.read_text(global_cfg_path),
+        global_text,
         home=home,
         cfg_label=cfg_label,
         defaults=defaults,
         overrides=overrides,
     )
+    layer_texts = [t for t in (global_text, *(text for _, text in overrides)) if t is not None]
+
+    # Rule cards: cores whose save behaviour deviates from the standard rule.
+    # The card names the governing option; its current value is read live.
+    so_basename = os.path.basename(core_so) if core_so is not None else None
+    card = lookup_card(so_basename=so_basename, library_name=library_name)
+    granularity: Granularity | None = None
+    card_mode = None
+    if card is not None:
+        opt_value, opt_source, options_file = _core_options_value(
+            machine,
+            layer_texts,
+            home=home,
+            retroarch_config_dir=os.path.dirname(global_cfg_path),
+            override_config_dir=override_config_dir,
+            library_name=library_name,
+            content_dir_name=content_dir_name,
+            rom_stem=rom_stem,
+            option_key=card.option_key,
+            option_default=card.option_default,
+        )
+        card_mode = card.modes.get(opt_value)
+        if card_mode is None:
+            caveats.append(
+                f'core option {card.option_key} = "{opt_value}" is not a value the rule card knows — '
+                "falling back to the standard rule"
+            )
+        else:
+            granularity = Granularity(
+                value=card_mode.granularity,
+                option_key=card.option_key,
+                option_value=opt_value,
+                option_source=opt_source,
+                options_file=options_file,
+                alternatives=tuple(
+                    (value, mode.granularity) for value, mode in card.modes.items() if value != opt_value
+                ),
+            )
+
+    if card is not None and card_mode is not None and card_mode.root == ROOT_SYSTEM_DIRECTORY:
+        card_sources = list(sources_extra)
+        raw_system = _resolve_chain_key(layer_texts, "system_directory")
+        system_dir = expand_home(raw_system, home=home) if raw_system is not None else None
+        needs: tuple[str, ...] = ()
+        if system_dir is None:
+            base = "<system_directory>"
+            needs = ("system_directory",)
+            caveats.append("system_directory is unset in the configs — its RetroArch default is not resolved yet")
+        else:
+            base = system_dir
+            card_sources.append(f'{cfg_label} chain: system_directory = "{raw_system}"')
+        directory = os.path.join(base, card_mode.subdir) if card_mode.subdir else base
+        card_sources.append(f"rule card '{card.key}': core keeps saves under system_directory — {card.provenance}")
+        if card_mode.files is None:
+            fs = UNKNOWN_FILE_SET
+        elif needs:
+            fs = FileSet("declared", card_mode.files, f"declared by rule card '{card.key}'")
+        else:
+            present = tuple(f for f in card_mode.files if machine.exists(os.path.join(directory, f)))
+            if present:
+                fs = FileSet("observed", present, f"observed on the machine: {directory}")
+            else:
+                fs = FileSet("declared", card_mode.files, f"declared by rule card '{card.key}' (none present yet)")
+        return SavePlacement(
+            dir=directory,
+            root_kind=ROOT_SYSTEM_DIRECTORY,
+            needs=needs,
+            file_set=fs,
+            sources=tuple(card_sources),
+            caveats=tuple(caveats),
+            granularity=granularity,
+        )
+
+    if card is not None and card_mode is not None and granularity is not None and card_mode.files is None:
+        caveats.append(
+            f"rule card '{card.key}': mode {granularity.option_value!r} places per-game files under the "
+            "standard directory, but the filename scheme is unverified — file names not stated"
+        )
 
     file_set = UNKNOWN_FILE_SET
     placement = build_save_placement(
@@ -226,6 +383,7 @@ def _retroarch_save_location(
         file_set=file_set,
         sources=placement.sources,
         caveats=tuple(caveats),
+        granularity=granularity,
     )
 
 

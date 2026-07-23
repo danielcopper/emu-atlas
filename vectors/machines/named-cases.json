@@ -19,12 +19,23 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/gba",
           "root_kind": "savefile_directory",
           "needs": [],
-          "file_set": { "state": "observed", "files": ["Golden Sun (USA).srm"] }
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Golden Sun (USA).srm"
+            ]
+          }
         }
       }
     },
@@ -44,12 +55,23 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/Final Fantasy VII (USA).m3u",
           "root_kind": "savefile_directory",
           "needs": [],
-          "file_set": { "state": "observed", "files": ["Final Fantasy VII (USA).srm"] }
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Final Fantasy VII (USA).srm"
+            ]
+          }
         }
       }
     },
@@ -75,12 +97,21 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves",
           "root_kind": "savefile_directory",
           "needs": [],
-          "file_set": { "state": "unknown", "files": [] }
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          }
         }
       }
     },
@@ -107,12 +138,21 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/gba",
           "root_kind": "savefile_directory",
           "needs": [],
-          "file_set": { "state": "unknown", "files": [] }
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          }
         }
       }
     },
@@ -138,12 +178,23 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/gba/mGBA",
           "root_kind": "savefile_directory",
           "needs": [],
-          "file_set": { "state": "observed", "files": ["Golden Sun (USA).srm"] }
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Golden Sun (USA).srm"
+            ]
+          }
         }
       }
     },
@@ -162,12 +213,23 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/<library_name>",
           "root_kind": "savefile_directory",
-          "needs": ["library_name"],
-          "file_set": { "state": "unknown", "files": [] }
+          "needs": [
+            "library_name"
+          ],
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          }
         }
       }
     },
@@ -186,12 +248,21 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/roms/gba",
           "root_kind": "content_directory",
           "needs": [],
-          "file_set": { "state": "unknown", "files": [] }
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          }
         }
       }
     },
@@ -209,12 +280,21 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/roms/gba",
           "root_kind": "content_directory",
           "needs": [],
-          "file_set": { "state": "unknown", "files": [] }
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          }
         }
       }
     },
@@ -229,7 +309,11 @@
       },
       "expected": {
         "installations": [
-          { "kind": "retrodeck", "root": "/run/media/deck/Emulation/retrodeck", "health": "root_missing" }
+          {
+            "kind": "retrodeck",
+            "root": "/run/media/deck/Emulation/retrodeck",
+            "health": "root_missing"
+          }
         ]
       }
     },
@@ -244,7 +328,13 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }]
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ]
       }
     },
     {
@@ -263,12 +353,23 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "emudeck", "root": "/home/deck/Emulation", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "emudeck",
+            "root": "/home/deck/Emulation",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/home/deck/Emulation/saves/retroarch/saves",
           "root_kind": "savefile_directory",
           "needs": [],
-          "file_set": { "state": "observed", "files": ["Golden Sun (USA).srm"] }
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Golden Sun (USA).srm"
+            ]
+          }
         }
       }
     },
@@ -296,8 +397,13 @@
         "save_location": {
           "dir": "/home/user/saves/<library_name>",
           "root_kind": "savefile_directory",
-          "needs": ["library_name"],
-          "file_set": { "state": "unknown", "files": [] }
+          "needs": [
+            "library_name"
+          ],
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          }
         }
       }
     },
@@ -326,7 +432,10 @@
           "dir": "/home/user/roms/gba",
           "root_kind": "content_directory",
           "needs": [],
-          "file_set": { "state": "unknown", "files": [] }
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          }
         }
       }
     },
@@ -348,7 +457,11 @@
       },
       "expected": {
         "installations": [
-          { "kind": "native_retroarch", "root": "/home/user/.config/retroarch", "health": "ok" }
+          {
+            "kind": "native_retroarch",
+            "root": "/home/user/.config/retroarch",
+            "health": "ok"
+          }
         ],
         "save_location": {
           "dir": "/home/user/saves",
@@ -384,12 +497,23 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/<library_name>",
           "root_kind": "savefile_directory",
-          "needs": ["library_name"],
-          "file_set": { "state": "unknown", "files": [] }
+          "needs": [
+            "library_name"
+          ],
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          }
         }
       }
     },
@@ -412,13 +536,22 @@
       },
       "expected": {
         "installations": [
-          { "kind": "native_retroarch", "root": "/home/user/.config/retroarch", "health": "ok" }
+          {
+            "kind": "native_retroarch",
+            "root": "/home/user/.config/retroarch",
+            "health": "ok"
+          }
         ],
         "save_location": {
           "dir": "/home/user/links/saves",
           "root_kind": "savefile_directory",
           "needs": [],
-          "file_set": { "state": "observed", "files": ["Tetris (World).srm"] }
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Tetris (World).srm"
+            ]
+          }
         }
       }
     },
@@ -435,8 +568,16 @@
       },
       "expected": {
         "installations": [
-          { "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" },
-          { "kind": "native_retroarch", "root": "/home/deck/.config/retroarch", "health": "ok" }
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          },
+          {
+            "kind": "native_retroarch",
+            "root": "/home/deck/.config/retroarch",
+            "health": "ok"
+          }
         ]
       }
     },
@@ -452,7 +593,13 @@
         }
       },
       "expected": {
-        "installations": [{ "kind": "emudeck", "root": "/home/deck/Emulation", "health": "ok" }]
+        "installations": [
+          {
+            "kind": "emudeck",
+            "root": "/home/deck/Emulation",
+            "health": "ok"
+          }
+        ]
       }
     },
     {
@@ -466,6 +613,100 @@
       },
       "expected": {
         "installations": []
+      }
+    },
+    {
+      "name": "flycast-shared-vmus-in-system-directory",
+      "rationale": "Flycast's default roots saves in system_directory, not savefile_directory: shared VMUs under <system_directory>/dc, one set for every game (rule card 'flycast', governing option reicast_per_content_vmus read live). Only the VMUs actually present are observed; granularity states the shared card and how to switch.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/bios/dc/dc_nvmem.bin": "n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/bios/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin",
+              "dc_nvmem.bin"
+            ]
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled"
+          }
+        }
+      }
+    },
+    {
+      "name": "flycast-per-game-vmu-mode",
+      "rationale": "The same core with reicast_per_content_vmus = 'VMU A1' switches to per-game VMUs rooted in the standard savefile_directory — granularity and root flip on one live-read option. The per-game filename scheme is unverified, so the file set stays honestly unknown.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"VMU A1\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": {
+            "state": "unknown",
+            "files": []
+          },
+          "granularity": {
+            "value": "per-game-file",
+            "option_value": "VMU A1"
+          }
+        }
       }
     }
   ]

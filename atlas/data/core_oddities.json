@@ -1,0 +1,53 @@
+{
+  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' lists every name the card matches, including the display library_name the core binary reports. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL.",
+  "cores": {
+    "flycast": {
+      "identifiers": {
+        "so": ["flycast_libretro.so"],
+        "library_name": ["Flycast"]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "reicast_per_content_vmus",
+          "default": "disabled"
+        },
+        "modes": {
+          "disabled": {
+            "root": "system_directory",
+            "subdir": "dc",
+            "files": [
+              "vmu_save_A1.bin",
+              "vmu_save_B1.bin",
+              "vmu_save_C1.bin",
+              "vmu_save_D1.bin",
+              "dc_nvmem.bin"
+            ],
+            "granularity": "shared-card"
+          },
+          "VMU A1": {
+            "root": "savefile_directory",
+            "subdir": null,
+            "files": null,
+            "granularity": "per-game-file"
+          },
+          "All VMUs": {
+            "root": "savefile_directory",
+            "subdir": null,
+            "files": null,
+            "granularity": "per-game-files"
+          }
+        }
+      },
+      "provenance": {
+        "source": "flycast_libretro.so option strings ('Per-Game VMUs', mode descriptions); live observation of <system_directory>/dc on RetroDECK 0.10.9b — vmu_save_{A1,B1,C1,D1}.bin + dc_nvmem.bin present, A1 written by play. Slot-2 VMUs (A2..D2) appear only when a port's slot 2 is configured as VMU.",
+        "verified_against": "Flycast as shipped in RetroDECK 0.10.9b",
+        "date": "2026-07-23",
+        "status": {
+          "disabled": "verified",
+          "VMU A1": "root verified from option description; per-game filename scheme unestablished",
+          "All VMUs": "root verified from option description; per-game filename scheme unestablished"
+        }
+      }
+    }
+  }
+}
