@@ -18,6 +18,33 @@ import importlib.resources
 import json
 from dataclasses import dataclass
 
+# Packaged-data schema versions. The loaders are strict: unknown schema or
+# malformed entries raise instead of coercing — a broken build must fail
+# loudly, never resolve wrongly (REVIEW M3, M10).
+ODDITIES_SCHEMA = 1
+AUDIT_SCHEMA = 1
+
+_KNOWN_VERDICTS = {"card", "standard", "standard-dir", "multi-option", "suspect", "unaudited"}
+_KNOWN_MODE_ROOTS = {"savefile_directory", "system_directory", "content_directory"}
+
+
+def _expect_str(value: object, where: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{where}: expected a non-empty string, got {value!r}")
+    return value
+
+
+def _expect_opt_str(value: object, where: str) -> str | None:
+    if value is not None and not isinstance(value, str):
+        raise ValueError(f"{where}: expected a string or null, got {value!r}")
+    return value
+
+
+def _expect_str_list(value: object, where: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ValueError(f"{where}: expected a list of strings, got {value!r}")
+    return tuple(value)
+
 
 @dataclass(frozen=True, slots=True)
 class SaveMode:
@@ -69,35 +96,47 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
             importlib.resources.files("atlas").joinpath("data", "core_oddities.json").read_text(encoding="utf-8")
         )
     raw = json.loads(text)
+    if not isinstance(raw, dict) or raw.get("schema") != ODDITIES_SCHEMA:
+        raise ValueError(
+            f"core_oddities: unsupported schema {raw.get('schema') if isinstance(raw, dict) else None!r} "
+            f"(this atlas reads schema {ODDITIES_SCHEMA})"
+        )
     cards: list[CoreCard] = []
     for key, entry in raw.get("cores", {}).items():
+        where = f"card {key!r}"
         identifiers = entry.get("identifiers", {})
         saves = entry.get("saves", {})
         governing = saves.get("governing_option") or {}
         modes: dict[str, SaveMode] = {}
         for value, mode in saves.get("modes", {}).items():
+            mode_where = f"{where} mode {value!r}"
+            root = _expect_str(mode.get("root"), f"{mode_where}: root")
+            if root not in _KNOWN_MODE_ROOTS:
+                raise ValueError(f"{mode_where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
             files = mode.get("files")
             observe = mode.get("observe")
             complete = mode.get("complete", False)
             if not isinstance(complete, bool):
                 # bool("false") is True in Python — never coerce this claim.
-                raise ValueError(f"card {key!r} mode {value!r}: 'complete' must be a JSON boolean")
+                raise ValueError(f"{mode_where}: 'complete' must be a JSON boolean")
             modes[value] = SaveMode(
-                root=mode["root"],
-                subdir=mode.get("subdir"),
-                files=tuple(files) if files is not None else None,
-                granularity=mode["granularity"],
-                observe=tuple(observe) if observe is not None else None,
+                root=root,
+                subdir=_expect_opt_str(mode.get("subdir"), f"{mode_where}: subdir"),
+                files=_expect_str_list(files, f"{mode_where}: files") if files is not None else None,
+                granularity=_expect_str(mode.get("granularity"), f"{mode_where}: granularity"),
+                observe=_expect_str_list(observe, f"{mode_where}: observe") if observe is not None else None,
                 complete=complete,
             )
         provenance = entry.get("provenance", {})
         cards.append(
             CoreCard(
                 key=key,
-                so_names=tuple(identifiers.get("so", ())),
-                library_names=tuple(identifiers.get("library_name", ())),
-                option_key=governing.get("key"),
-                option_default=governing.get("default"),
+                so_names=_expect_str_list(identifiers.get("so", []), f"{where}: identifiers.so"),
+                library_names=_expect_str_list(
+                    identifiers.get("library_name", []), f"{where}: identifiers.library_name"
+                ),
+                option_key=_expect_opt_str(governing.get("key"), f"{where}: governing_option.key"),
+                option_default=_expect_opt_str(governing.get("default"), f"{where}: governing_option.default"),
                 modes=modes,
                 provenance=provenance.get("source", "unstated"),
             )
@@ -142,20 +181,32 @@ def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
     if text is None:
         text = importlib.resources.files("atlas").joinpath("data", "core_audit.json").read_text(encoding="utf-8")
     raw = json.loads(text)
+    if not isinstance(raw, dict) or raw.get("schema") != AUDIT_SCHEMA:
+        raise ValueError(
+            f"core_audit: unsupported schema {raw.get('schema') if isinstance(raw, dict) else None!r} "
+            f"(this atlas reads schema {AUDIT_SCHEMA})"
+        )
     entries: dict[str, AuditEntry] = {}
     for key, entry in raw.get("cores", {}).items():
+        where = f"audit {key!r}"
+        verdict = _expect_str(entry.get("verdict"), f"{where}: verdict")
+        if verdict not in _KNOWN_VERDICTS:
+            raise ValueError(f"{where}: verdict must be one of {sorted(_KNOWN_VERDICTS)}, got {verdict!r}")
         verified: dict[str, VerifiedOn | None] = {}
         for arrangement, rec in entry.get("verified", {}).items():
+            rec_where = f"{where}: verified[{arrangement!r}]"
             verified[arrangement] = (
                 VerifiedOn(
-                    version=rec.get("version"),
-                    core_library_version=rec.get("core_library_version"),
-                    date=rec.get("date"),
+                    version=_expect_opt_str(rec.get("version"), f"{rec_where}.version"),
+                    core_library_version=_expect_opt_str(
+                        rec.get("core_library_version"), f"{rec_where}.core_library_version"
+                    ),
+                    date=_expect_opt_str(rec.get("date"), f"{rec_where}.date"),
                 )
                 if rec is not None
                 else None
             )
-        entries[key] = AuditEntry(key=key, verdict=entry.get("verdict", "unaudited"), verified=verified)
+        entries[key] = AuditEntry(key=key, verdict=verdict, verified=verified)
     return entries
 
 

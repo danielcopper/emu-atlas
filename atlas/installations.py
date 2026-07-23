@@ -478,6 +478,9 @@ def _retroarch_save_location(
                 )
             )
     if card is not None:
+        # Verification is explicit and fails closed (REVIEW M3): the states
+        # are verified, drifted, runtime-version-unknown, never-verified —
+        # missing live evidence is never treated as successful verification.
         audit = lookup_audit(card.key)
         verified = audit.verified.get(arrangement) if audit is not None else None
         live_core_version = info.library_version if core_so is not None and info is not None else None
@@ -487,33 +490,56 @@ def _retroarch_save_location(
                     CAVEAT_UNVERIFIED_VERSION,
                     f"rule card '{card.key}' was never verified on a {arrangement} arrangement — "
                     "the behaviour it describes may not hold here",
-                    {"card": card.key, "arrangement": arrangement},
+                    {"card": card.key, "arrangement": arrangement, "verification": "never-verified"},
                 )
             )
         else:
             drift: dict[str, str] = {}
-            if (
-                verified.version is not None
-                and arrangement_version is not None
-                and verified.version != arrangement_version
-            ):
-                drift["arrangement_verified"] = verified.version
-                drift["arrangement_live"] = arrangement_version
-            if (
-                verified.core_library_version is not None
-                and live_core_version is not None
-                and verified.core_library_version != live_core_version
-            ):
-                drift["core_verified"] = verified.core_library_version
-                drift["core_live"] = live_core_version
+            missing: list[str] = []
+            if verified.version is not None:
+                if arrangement_version is None:
+                    missing.append("arrangement_version")
+                elif verified.version != arrangement_version:
+                    drift["arrangement_verified"] = verified.version
+                    drift["arrangement_live"] = arrangement_version
+            if verified.core_library_version is not None:
+                if live_core_version is None:
+                    missing.append("core_library_version")
+                elif verified.core_library_version != live_core_version:
+                    drift["core_verified"] = verified.core_library_version
+                    drift["core_live"] = live_core_version
             if drift:
+                data = {"card": card.key, "arrangement": arrangement, "verification": "drifted", **drift}
+                if missing:
+                    data["missing"] = ", ".join(missing)
                 caveats.append(
                     Caveat(
                         CAVEAT_UNVERIFIED_VERSION,
                         f"rule card '{card.key}' was verified against different versions than this "
                         f"machine runs ({drift}) — behaviour may have drifted",
-                        {"card": card.key, "arrangement": arrangement, **drift},
+                        data,
                     )
+                )
+            elif missing:
+                caveats.append(
+                    Caveat(
+                        CAVEAT_UNVERIFIED_VERSION,
+                        f"rule card '{card.key}' is pinned to {arrangement} versions this machine does "
+                        f"not expose ({', '.join(missing)} unavailable) — the verification cannot be "
+                        "confirmed live",
+                        {
+                            "card": card.key,
+                            "arrangement": arrangement,
+                            "verification": "runtime-version-unknown",
+                            "missing": ", ".join(missing),
+                        },
+                    )
+                )
+            else:
+                sources_extra.append(
+                    f"rule card '{card.key}': verified on {arrangement} "
+                    f"{verified.version or '?'} (core {verified.core_library_version or '?'}, "
+                    f"{verified.date or 'undated'})"
                 )
     if card is not None and card.option_key is None:
         card_mode = card.modes.get("always")
