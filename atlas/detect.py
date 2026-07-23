@@ -44,21 +44,21 @@ def detect(home: str, machine: Machine | None = None) -> list[Installation]:
 
     found: list[Installation] = []
 
-    retrodeck_json = machine.read_text(os.path.join(home, RETRODECK_JSON_SUFFIX))
+    retrodeck_json = machine.read_text(os.path.join(home, RETRODECK_JSON_SUFFIX)).text
     if retrodeck_json is not None:
         found.append(RetroDeck(home, machine, retrodeck_json))
 
-    emudeck_settings = machine.read_text(os.path.join(home, EMUDECK_SETTINGS_SUFFIX))
+    emudeck_settings = machine.read_text(os.path.join(home, EMUDECK_SETTINGS_SUFFIX)).text
     emudeck_present = emudeck_settings is not None
     if emudeck_present:
         found.append(EmuDeck(home, machine, emudeck_settings))
 
     # EmuDeck claims the standalone Flatpak — same RetroArch, two descriptions,
     # one handle. Only an unclaimed Flatpak appears as its own installation.
-    if not emudeck_present and machine.exists(os.path.join(home, STANDALONE_FLATPAK_CFG_SUFFIX)):
+    if not emudeck_present and machine.path_kind(os.path.join(home, STANDALONE_FLATPAK_CFG_SUFFIX)) == "file":
         found.append(StandaloneRetroArchFlatpak(home, machine))
 
-    if machine.exists(os.path.join(home, NATIVE_CFG_SUFFIX)):
+    if machine.path_kind(os.path.join(home, NATIVE_CFG_SUFFIX)) == "file":
         found.append(NativeRetroArch(home, machine))
 
     return found

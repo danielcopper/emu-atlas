@@ -37,7 +37,7 @@ def test_machine_vector(vector):
     inp = vector["input"]
     expected = vector["expected"]
     machine = atlas.FixtureMachine(
-        inp["files"], symlinks=inp.get("symlinks"), cores=inp.get("cores")
+        inp["files"], symlinks=inp.get("symlinks"), cores=inp.get("cores"), dirs=inp.get("dirs")
     )
 
     installs = atlas.detect(inp["home"], machine)

@@ -35,7 +35,7 @@ from atlas.esde import (
     parse_es_systems,
     parse_gamelist,
 )
-from atlas.machine import Machine
+from atlas.machine import KIND_DIRECTORY, KIND_FILE, Machine
 from atlas.oddities import lookup_audit, lookup_card
 from atlas.placement import (
     CAVEAT_CARD_MODE_UNCONFIRMED,
@@ -118,7 +118,7 @@ def _flatpak_host_path(machine: Machine, home: str, app_id: str, path: str) -> s
         os.path.join(home, ".local", "share", "flatpak", "app", app_id, "current", "active", "files"),
     ):
         candidate = os.path.join(base, rest)
-        if machine.exists(candidate):
+        if machine.path_kind(candidate) != "missing":
             return candidate
     return None
 
@@ -188,7 +188,7 @@ def _core_options_value(
     candidates.append(global_file)
 
     for path in candidates:
-        text = machine.read_text(path)
+        text = machine.read_text(path).text
         if text is None:
             continue
         parsed = parse_cfg_text(text)
@@ -272,7 +272,7 @@ def _retroarch_save_location(
             )
         )
 
-    global_text = machine.read_text(global_cfg_path)
+    global_text = machine.read_text(global_cfg_path).text
     global_layer = [global_text] if global_text is not None else []
 
     # Gates read from the global cfg (an override cannot enable itself):
@@ -312,7 +312,7 @@ def _retroarch_save_location(
                 )
             )
         for label, path in candidates:
-            text = machine.read_text(path)
+            text = machine.read_text(path).text
             if text is not None:
                 overrides.append((label, text))
     layout = resolve_save_layout(
@@ -326,11 +326,11 @@ def _retroarch_save_location(
 
     # The RetroArch platform default saves dir — 'saves' under the config tree
     # (platform_unix.c:1844) — is the effective root whenever the key is unset,
-    # reset, or points at a directory that does not exist: RetroArch only
-    # applies a configured path when path_is_directory() succeeds
+    # reset, or points at anything that is not an existing directory: RetroArch
+    # only applies a configured path when path_is_directory() succeeds
     # (configuration.c:6916), otherwise the prior effective (default) stays.
     platform_default_dir = os.path.join(os.path.dirname(global_cfg_path), "saves")
-    if layout.savefile_directory is not None and not machine.exists(layout.savefile_directory):
+    if layout.savefile_directory is not None and machine.path_kind(layout.savefile_directory) != KIND_DIRECTORY:
         caveats.append(
             Caveat(
                 CAVEAT_INVALID_SAVE_DIRECTORY,
@@ -496,7 +496,7 @@ def _retroarch_save_location(
         elif needs:
             fs = FileSet("declared", declared, f"declared by rule card '{card.key}'")
         else:
-            present = tuple(f for f in declared if machine.exists(os.path.join(directory, f)))
+            present = tuple(f for f in declared if machine.path_kind(os.path.join(directory, f)) == KIND_FILE)
             if present:
                 fs = FileSet("observed", present, f"observed on the machine: {directory}")
             else:
@@ -568,7 +568,7 @@ def _retroarch_save_location(
         if (
             placement.root_kind == "savefile_directory"
             and directory != effective_root
-            and not machine.exists(directory)
+            and machine.path_kind(directory) != KIND_DIRECTORY
         ):
             caveats.append(
                 Caveat(
@@ -786,7 +786,7 @@ class RetroDeck:
         """Installation health — config readable, root present."""
         if not self._config:
             return HEALTH_CONFIG_UNREADABLE
-        if not self._machine.exists(self.root()):
+        if self._machine.path_kind(self.root()) != KIND_DIRECTORY:
             return HEALTH_ROOT_MISSING
         return HEALTH_OK
 
@@ -799,7 +799,7 @@ class RetroDeck:
         The configured value points into the sandbox (``/app/...``); translate it
         to the host deployment. ``None`` when nothing resolvable — never a guess.
         """
-        text = self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX))
+        text = self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text
         if text is None:
             return None
         raw = parse_cfg_text(text).get("libretro_directory", "")
@@ -819,12 +819,12 @@ class RetroDeck:
         bundled: dict[str, tuple[EmulatorSpec, ...]] = {}
         bundled_path = _flatpak_host_path(self._machine, self._home, self._APP_ID, self._ESDE_BUNDLED_SANDBOX)
         if bundled_path is not None:
-            text = self._machine.read_text(bundled_path)
+            text = self._machine.read_text(bundled_path).text
             if text is not None:
                 bundled = parse_es_systems(text, source="es_systems.xml (bundled)")
         custom: dict[str, tuple[EmulatorSpec, ...]] = {}
         custom_path = os.path.join(self.root(), "ES-DE", "custom_systems", "es_systems.xml")
-        custom_text = self._machine.read_text(custom_path)
+        custom_text = self._machine.read_text(custom_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, source="es_systems.xml (custom_systems overlay)")
         return merge_layers(bundled, custom)
@@ -835,7 +835,7 @@ class RetroDeck:
 
     def gamelist_selections(self, system: str) -> GamelistSelections:
         gamelist_path = os.path.join(self.root(), "ES-DE", "gamelists", system, "gamelist.xml")
-        text = self._machine.read_text(gamelist_path)
+        text = self._machine.read_text(gamelist_path).text
         if text is None:
             return GamelistSelections(system_label=None, per_game={})
         return parse_gamelist(text)
@@ -973,7 +973,7 @@ class EmuDeck:
 
     def health(self) -> str:
         """Installation health — the saves root must be present."""
-        if not self._machine.exists(self.saves_root()):
+        if self._machine.path_kind(self.saves_root()) != KIND_DIRECTORY:
             return HEALTH_ROOT_MISSING
         return HEALTH_OK
 
@@ -981,7 +981,7 @@ class EmuDeck:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
 
     def _core_path(self, core_so: str) -> str | None:
-        text = self._machine.read_text(os.path.join(self._home, STANDALONE_FLATPAK_CFG_SUFFIX))
+        text = self._machine.read_text(os.path.join(self._home, STANDALONE_FLATPAK_CFG_SUFFIX)).text
         if text is None:
             return None
         raw = parse_cfg_text(text).get("libretro_directory", "")
@@ -1044,7 +1044,7 @@ class _RetroArchInstall:
         return HEALTH_OK
 
     def _core_path(self, core_so: str) -> str | None:
-        text = self._machine.read_text(self._cfg_path())
+        text = self._machine.read_text(self._cfg_path()).text
         if text is None:
             return None
         raw = parse_cfg_text(text).get("libretro_directory", "")

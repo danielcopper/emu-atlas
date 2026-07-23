@@ -190,7 +190,7 @@ class TestEmuDeck:
                 f"{HOME}/Emulation/saves/.keep": "",
             }
         )
-        ed = atlas.EmuDeck(HOME, machine, machine.read_text(EMUDECK_SETTINGS) or "")
+        ed = atlas.EmuDeck(HOME, machine, machine.read_text(EMUDECK_SETTINGS).text or "")
         assert ed.root() == f"{HOME}/Emulation"
         assert ed.saves_root() == f"{HOME}/Emulation/saves"
         assert ed.health() == atlas.HEALTH_OK
@@ -208,7 +208,7 @@ class TestEmuDeck:
                 f"{HOME}/Emulation/saves/retroarch/saves/.keep": "",
             }
         )
-        ed = atlas.EmuDeck(HOME, machine, machine.read_text(EMUDECK_SETTINGS) or "")
+        ed = atlas.EmuDeck(HOME, machine, machine.read_text(EMUDECK_SETTINGS).text or "")
         p = ed.save_location(content_path=f"{HOME}/Emulation/roms/gba/Game.zip")
         assert p.dir == "/home/deck/Emulation/saves/retroarch/saves"
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY

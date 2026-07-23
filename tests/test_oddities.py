@@ -282,7 +282,7 @@ class TestVerificationMatrix:
             },
             cores={"/cores/flycast_libretro.so": {"library_name": "Flycast"}},
         )
-        ed = atlas.EmuDeck(HOME, machine, machine.read_text(f"{HOME}/.config/EmuDeck/settings.sh") or "")
+        ed = atlas.EmuDeck(HOME, machine, machine.read_text(f"{HOME}/.config/EmuDeck/settings.sh").text or "")
         p = ed.save_location(content_path=f"{HOME}/Emulation/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale and stale[0].data["arrangement"] == "emudeck"
