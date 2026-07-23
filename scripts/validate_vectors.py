@@ -25,6 +25,15 @@ KNOWN_KINDS = {"retrodeck", "emudeck", "standalone_retroarch_flatpak", "native_r
 KNOWN_HEALTH = {"ok", "root_missing", "config_unreadable"}
 KNOWN_ROOT_KINDS = {"savefile_directory", "content_directory", "system_directory"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
+KNOWN_CAVEAT_CODES = {
+    "no-core",
+    "core-unqueryable",
+    "sorted-dir-missing",
+    "health",
+    "filenames-unverified",
+    "unknown-option-value",
+    "system-directory-unset",
+}
 
 
 class VectorError(Exception):
@@ -93,10 +102,15 @@ def _validate_installations(name: str, installations: Any) -> None:
 
 
 def _validate_placement(name: str, placement: Any) -> None:
+    optional = {"granularity", "caveats"}
     if not isinstance(placement, dict) or not (
-        set(placement) == PLACEMENT_FIELDS or set(placement) == PLACEMENT_FIELDS | {"granularity"}
+        PLACEMENT_FIELDS <= set(placement) and set(placement) <= PLACEMENT_FIELDS | optional
     ):
-        fail(f"{name}: save_location must be exactly {sorted(PLACEMENT_FIELDS)} plus optional 'granularity'")
+        fail(f"{name}: save_location must be exactly {sorted(PLACEMENT_FIELDS)} plus optional {sorted(optional)}")
+    if "caveats" in placement:
+        codes = placement["caveats"]
+        if not isinstance(codes, list) or not all(c in KNOWN_CAVEAT_CODES for c in codes):
+            fail(f"{name}: caveats must be a list of known caveat codes {sorted(KNOWN_CAVEAT_CODES)}")
     if "granularity" in placement:
         gran = placement["granularity"]
         if not isinstance(gran, dict) or "value" not in gran or not (

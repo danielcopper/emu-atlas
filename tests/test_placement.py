@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from atlas.placement import (
+    Caveat,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     UNKNOWN_FILE_SET,
@@ -113,5 +114,7 @@ class TestFileSetAndProvenance:
         assert 'retroarch.cfg: sort_savefiles_by_content_enable = "true"' in joined
 
     def test_caveats_carried_through(self):
-        p = _build('savefile_directory = "/saves"\n', caveats=("something degraded",))
-        assert p.caveats == ("something degraded",)
+        caveat = Caveat("test-code", "something degraded")
+        p = _build('savefile_directory = "/saves"\n', caveats=(caveat,))
+        assert p.caveats == (caveat,)
+        assert p.caveats[0].code == "test-code"

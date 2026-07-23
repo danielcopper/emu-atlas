@@ -28,8 +28,16 @@ from typing import Any, Callable
 from atlas.machine import Machine
 from atlas.oddities import lookup_card
 from atlas.placement import (
+    CAVEAT_CORE_UNQUERYABLE,
+    CAVEAT_FILENAMES_UNVERIFIED,
+    CAVEAT_HEALTH,
+    CAVEAT_NO_CORE,
+    CAVEAT_SORTED_DIR_MISSING,
+    CAVEAT_SYSTEM_DIR_UNSET,
+    CAVEAT_UNKNOWN_OPTION_VALUE,
     ROOT_SYSTEM_DIRECTORY,
     UNKNOWN_FILE_SET,
+    Caveat,
     FileSet,
     Granularity,
     SavePlacement,
@@ -186,7 +194,7 @@ def _retroarch_save_location(
     core_so: str | None,
     core_path_resolver: Callable[[str], str | None],
     extra_sources: tuple[str, ...] = (),
-    extra_caveats: tuple[str, ...] = (),
+    extra_caveats: tuple[Caveat, ...] = (),
 ) -> SavePlacement:
     """The shared resolver: global cfg → override chain → placement, all live.
 
@@ -214,13 +222,20 @@ def _retroarch_save_location(
             )
         else:
             caveats.append(
-                f"core {core_so!r} could not be queried — library_name unknown, per-core overrides not checked"
+                Caveat(
+                    CAVEAT_CORE_UNQUERYABLE,
+                    f"core {core_so!r} could not be queried — library_name unknown, per-core overrides not checked",
+                    {"core_so": core_so},
+                )
             )
     else:
         caveats.append(
-            "no core given — per-core overrides and save-behaviour rule cards not checked: this answer "
-            "assumes a standard core, and a card-carrying core (e.g. one rooted in system_directory, like "
-            "Flycast) keeps its saves elsewhere entirely"
+            Caveat(
+                CAVEAT_NO_CORE,
+                "no core given — per-core overrides and save-behaviour rule cards not checked: this answer "
+                "assumes a standard core, and a card-carrying core (e.g. one rooted in system_directory, like "
+                "Flycast) keeps its saves elsewhere entirely",
+            )
         )
 
     overrides: list[tuple[str, str]] = []
@@ -282,8 +297,12 @@ def _retroarch_save_location(
         card_mode = card.modes.get(opt_value)
         if card_mode is None:
             caveats.append(
-                f'core option {card.option_key} = "{opt_value}" is not a value the rule card knows — '
-                "falling back to the standard rule"
+                Caveat(
+                    CAVEAT_UNKNOWN_OPTION_VALUE,
+                    f'core option {card.option_key} = "{opt_value}" is not a value the rule card knows — '
+                    "falling back to the standard rule",
+                    {"card": card.key, "option_key": card.option_key, "value": opt_value},
+                )
             )
         else:
             granularity = Granularity(
@@ -305,7 +324,12 @@ def _retroarch_save_location(
         if system_dir is None:
             base = "<system_directory>"
             needs = ("system_directory",)
-            caveats.append("system_directory is unset in the configs — its RetroArch default is not resolved yet")
+            caveats.append(
+                Caveat(
+                    CAVEAT_SYSTEM_DIR_UNSET,
+                    "system_directory is unset in the configs — its RetroArch default is not resolved yet",
+                )
+            )
         else:
             base = system_dir
             card_sources.append(f'{cfg_label} chain: system_directory = "{raw_system}"')
@@ -333,8 +357,12 @@ def _retroarch_save_location(
 
     if card is not None and card_mode is not None and granularity is not None and card_mode.files is None:
         caveats.append(
-            f"rule card '{card.key}': mode {granularity.option_value!r} places per-game files under the "
-            "standard directory, but the filename scheme is unverified — file names not stated"
+            Caveat(
+                CAVEAT_FILENAMES_UNVERIFIED,
+                f"rule card '{card.key}': mode {granularity.option_value!r} places per-game files under the "
+                "standard directory, but the filename scheme is unverified — file names not stated",
+                {"card": card.key, "mode": granularity.option_value},
+            )
         )
 
     file_set = UNKNOWN_FILE_SET
@@ -376,8 +404,12 @@ def _retroarch_save_location(
             and not machine.exists(directory)
         ):
             caveats.append(
-                f"sorted directory {directory} does not exist yet — RetroArch creates it on first save, "
-                f"and silently reverts to {layout.savefile_directory} if creation fails (runloop.c:8844)"
+                Caveat(
+                    CAVEAT_SORTED_DIR_MISSING,
+                    f"sorted directory {directory} does not exist yet — RetroArch creates it on first save, "
+                    f"and silently reverts to {layout.savefile_directory} if creation fails (runloop.c:8844)",
+                    {"dir": directory, "fallback_dir": layout.savefile_directory},
+                )
             )
 
     return SavePlacement(
@@ -480,10 +512,10 @@ class RetroDeck:
         ``library_name`` from the binary. Both arguments are optional — missing
         ones leave holes and stated caveats, never guesses.
         """
-        caveats: list[str] = []
+        caveats: list[Caveat] = []
         health = self.health()
         if health != HEALTH_OK:
-            caveats.append(f"installation health: {health}")
+            caveats.append(Caveat(CAVEAT_HEALTH, f"installation health: {health}", {"health": health}))
         return _retroarch_save_location(
             self._machine,
             home=self._home,
@@ -580,10 +612,10 @@ class EmuDeck:
 
     def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
         """Where EmuDeck's RetroArch keeps the save — resolved from the standalone Flatpak cfg."""
-        caveats: list[str] = []
+        caveats: list[Caveat] = []
         health = self.health()
         if health != HEALTH_OK:
-            caveats.append(f"installation health: {health}")
+            caveats.append(Caveat(CAVEAT_HEALTH, f"installation health: {health}", {"health": health}))
         return _retroarch_save_location(
             self._machine,
             home=self._home,

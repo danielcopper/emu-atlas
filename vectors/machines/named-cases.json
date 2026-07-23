@@ -229,7 +229,10 @@
           "file_set": {
             "state": "unknown",
             "files": []
-          }
+          },
+          "caveats": [
+            "no-core"
+          ]
         }
       }
     },
@@ -513,7 +516,10 @@
           "file_set": {
             "state": "unknown",
             "files": []
-          }
+          },
+          "caveats": [
+            "core-unqueryable"
+          ]
         }
       }
     },
@@ -705,7 +711,11 @@
           "granularity": {
             "value": "per-game-file",
             "option_value": "VMU A1"
-          }
+          },
+          "caveats": [
+            "filenames-unverified",
+            "sorted-dir-missing"
+          ]
         }
       }
     }

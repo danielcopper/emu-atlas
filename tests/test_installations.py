@@ -112,7 +112,7 @@ class TestRetroDeckSaveLocation:
         )
         assert p.dir == "/mnt/sd/retrodeck/saves/<library_name>"
         assert p.needs == ("library_name",)
-        assert any("could not be queried" in c for c in p.caveats)
+        assert any(c.code == atlas.CAVEAT_CORE_UNQUERYABLE for c in p.caveats)
 
     def test_observed_file_set(self):
         rd = _retrodeck(
@@ -152,7 +152,7 @@ class TestRetroDeckSaveLocation:
             }
         )
         p = rd.save_location()
-        assert any("root_missing" in c for c in p.caveats)
+        assert any(c.code == atlas.CAVEAT_HEALTH and c.data["health"] == "root_missing" for c in p.caveats)
 
     def test_rom_stem_truncates_at_last_dot(self):
         # runloop.c:8710 — truncate at the last dot, but not a leading one.

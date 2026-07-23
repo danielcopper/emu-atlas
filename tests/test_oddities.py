@@ -105,7 +105,7 @@ class TestFlycastResolution:
         assert p.granularity is not None
         assert p.granularity.value == "per-game-file"
         assert p.file_set.state == "unknown"
-        assert any("filename scheme is unverified" in c for c in p.caveats)
+        assert any(c.code == atlas.CAVEAT_FILENAMES_UNVERIFIED for c in p.caveats)
 
     def test_game_opt_file_wins_over_global(self):
         # runloop.c validate_per_core_options: the game .opt is THE source.
@@ -131,7 +131,7 @@ class TestFlycastResolution:
         )
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY  # standard rule
         assert p.granularity is None
-        assert any("not a value the rule card knows" in c for c in p.caveats)
+        assert any(c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE and c.data["value"] == "something new" for c in p.caveats)
 
     def test_ordinary_core_has_no_granularity(self):
         rd = _retrodeck(

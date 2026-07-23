@@ -31,10 +31,18 @@ from atlas.installations import (
 from atlas.machine import CoreInfo, FixtureMachine, Machine, RealMachine
 from atlas.oddities import CoreCard, SaveMode, load_oddities, lookup_card
 from atlas.placement import (
+    CAVEAT_CORE_UNQUERYABLE,
+    CAVEAT_FILENAMES_UNVERIFIED,
+    CAVEAT_HEALTH,
+    CAVEAT_NO_CORE,
+    CAVEAT_SORTED_DIR_MISSING,
+    CAVEAT_SYSTEM_DIR_UNSET,
+    CAVEAT_UNKNOWN_OPTION_VALUE,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     UNKNOWN_FILE_SET,
+    Caveat,
     FileSet,
     Granularity,
     SavePlacement,
@@ -53,6 +61,14 @@ from atlas.retroarch_cfg import (
 
 __all__ = [
     "BiosEntry",
+    "CAVEAT_CORE_UNQUERYABLE",
+    "CAVEAT_FILENAMES_UNVERIFIED",
+    "CAVEAT_HEALTH",
+    "CAVEAT_NO_CORE",
+    "CAVEAT_SORTED_DIR_MISSING",
+    "CAVEAT_SYSTEM_DIR_UNSET",
+    "CAVEAT_UNKNOWN_OPTION_VALUE",
+    "Caveat",
     "BiosRegistry",
     "CoreInfo",
     "EMUDECK_DEFAULTS",

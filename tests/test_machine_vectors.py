@@ -60,6 +60,8 @@ def test_machine_vector(vector):
                 "files": list(placement.file_set.files),
             },
         }
+        if "caveats" in expected["save_location"]:
+            got_placement["caveats"] = [c.code for c in placement.caveats]
         expected_gran = expected["save_location"].get("granularity")
         if expected_gran is not None:
             assert placement.granularity is not None, vector["name"]

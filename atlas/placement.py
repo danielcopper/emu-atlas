@@ -28,7 +28,7 @@ the results in.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from atlas.retroarch_cfg import RetroArchCfg
 
@@ -36,6 +36,32 @@ from atlas.retroarch_cfg import RetroArchCfg
 ROOT_SAVEFILE_DIRECTORY = "savefile_directory"
 ROOT_CONTENT_DIRECTORY = "content_directory"
 ROOT_SYSTEM_DIRECTORY = "system_directory"
+
+# Caveat codes — the stable, machine-readable identifiers clients branch on.
+# Part of the API contract; messages are for humans and may change freely.
+CAVEAT_NO_CORE = "no-core"
+CAVEAT_CORE_UNQUERYABLE = "core-unqueryable"
+CAVEAT_SORTED_DIR_MISSING = "sorted-dir-missing"
+CAVEAT_HEALTH = "health"
+CAVEAT_FILENAMES_UNVERIFIED = "filenames-unverified"
+CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
+CAVEAT_SYSTEM_DIR_UNSET = "system-directory-unset"
+
+
+@dataclass(frozen=True, slots=True)
+class Caveat:
+    """A stated degradation — structured, so clients can act on it.
+
+    ``code`` is a stable identifier from the ``CAVEAT_*`` constants and part of
+    the API contract: clients branch on it, vectors assert it. ``message`` is
+    the human-readable explanation and may change freely. ``data`` carries the
+    machine-readable specifics (e.g. the fallback directory of a silent
+    revert). Decision-relevant → structured; explanatory → text.
+    """
+
+    code: str
+    message: str
+    data: dict[str, str] = field(default_factory=dict)
 
 _HOLE_CONTENT_DIR = "content_dir"
 _HOLE_LIBRARY_NAME = "library_name"
@@ -101,7 +127,7 @@ class SavePlacement:
     needs: tuple[str, ...]
     file_set: FileSet
     sources: tuple[str, ...]
-    caveats: tuple[str, ...]
+    caveats: tuple[Caveat, ...]
     granularity: Granularity | None = None
 
 
@@ -112,7 +138,7 @@ def build_save_placement(
     content_dir_name: str | None,
     library_name: str | None,
     extra_sources: tuple[str, ...] = (),
-    caveats: tuple[str, ...] = (),
+    caveats: tuple[Caveat, ...] = (),
     file_set: FileSet = UNKNOWN_FILE_SET,
 ) -> SavePlacement:
     """Compose a :class:`SavePlacement` from a resolved layout and the caller's fills.
