@@ -1,0 +1,101 @@
+{
+  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' lists every name the card matches, including the display library_name the core binary reports. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL.",
+  "cores": {
+    "flycast": {
+      "identifiers": {
+        "so": [
+          "flycast_libretro.so"
+        ],
+        "library_name": [
+          "Flycast"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "reicast_per_content_vmus",
+          "default": "disabled"
+        },
+        "modes": {
+          "disabled": {
+            "root": "system_directory",
+            "subdir": "dc",
+            "files": [
+              "vmu_save_A1.bin",
+              "vmu_save_B1.bin",
+              "vmu_save_C1.bin",
+              "vmu_save_D1.bin",
+              "dc_nvmem.bin"
+            ],
+            "granularity": "shared-card"
+          },
+          "VMU A1": {
+            "root": "savefile_directory",
+            "subdir": null,
+            "files": null,
+            "granularity": "per-game-file"
+          },
+          "All VMUs": {
+            "root": "savefile_directory",
+            "subdir": null,
+            "files": null,
+            "granularity": "per-game-files"
+          }
+        }
+      },
+      "provenance": {
+        "source": "flycast_libretro.so option strings ('Per-Game VMUs', mode descriptions); live observation of <system_directory>/dc on RetroDECK 0.10.9b — vmu_save_{A1,B1,C1,D1}.bin + dc_nvmem.bin present, A1 written by play. Slot-2 VMUs (A2..D2) appear only when a port's slot 2 is configured as VMU.",
+        "verified_against": "Flycast as shipped in RetroDECK 0.10.9b",
+        "date": "2026-07-23",
+        "status": {
+          "disabled": "verified",
+          "VMU A1": "root verified from option description; per-game filename scheme unestablished",
+          "All VMUs": "root verified from option description; per-game filename scheme unestablished"
+        }
+      }
+    },
+    "pcsx2": {
+      "identifiers": {
+        "so": [
+          "pcsx2_libretro.so"
+        ],
+        "library_name": [
+          "LRPS2"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "pcsx2_shared_memory_cards",
+          "default": "enabled"
+        },
+        "modes": {
+          "enabled": {
+            "root": "system_directory",
+            "subdir": "pcsx2/memcards",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "granularity": "shared-card"
+          },
+          "disabled": {
+            "root": "savefile_directory",
+            "subdir": null,
+            "files": [
+              "<rom_stem>.ps2"
+            ],
+            "granularity": "per-game-file"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/ps2 source: option def libretro_core_options.h:158-170 (values disabled/enabled, default enabled); per-content branch main.cpp:2154-2166 sets Folders/MemoryCards to RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY and Pcsx2Config.cpp:995-997 names slot 1 '<rom_stem>.ps2'. Shared mode roots at PCSX2's default memcards folder — under RetroDECK that is <system_directory>/pcsx2/memcards (component_prepare.sh:97 dir_prep, live symlink observed). NOTE: an older LRPS2 generation used pcsx2_memcard_slot_1/2 keys (observed in a live retroarch-core-options.cfg) — this card matches the core shipped in RetroDECK 0.10.9b.",
+        "verified_against": "LRPS2 as shipped in RetroDECK 0.10.9b; libretro/ps2 @ master 2026-07-23",
+        "date": "2026-07-23",
+        "status": {
+          "enabled": "root verified via RetroDECK arrangement; filenames from format strings + PCSX2 defaults, not yet live-observed",
+          "disabled": "root and slot-1 filename verified from source; slot-2 behaviour in this mode unestablished"
+        }
+      }
+    }
+  }
+}

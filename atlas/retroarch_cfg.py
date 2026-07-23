@@ -1,52 +1,86 @@
-"""Pure interpretation of ``retroarch.cfg`` — the save-layout keys and their defaults.
+"""Interpretation of ``retroarch.cfg`` and its override chain — the save-layout keys.
 
 RetroArch's on-disk save layout is not a static path: it is governed by live
-config values. This module reads the four keys that decide it out of the cfg
-text and reports both the resolved value and the provenance of each — which came
-from the file and which fell back to a default.
+config values, resolved through a four-layer chain in which later files win
+(``config_load_override()``, RetroArch ``configuration.c:7095``):
 
-The three save-layout keys are extraction-faithful to decky-romm-sync
-(``adapters/retroarch_config.py``):
+1. ``retroarch.cfg`` — global
+2. ``config/<library_name>/<library_name>.cfg`` — core override
+3. ``config/<library_name>/<content_dir>.cfg`` — content-dir override
+4. ``config/<library_name>/<rom_name>.cfg`` — game override
 
-- ``savefiles_in_content_dir`` — saves live next to the ROM (default ``false``).
-- ``sort_savefiles_by_content_enable`` — a per-content subdirectory (default
-  ``true``, the RetroDECK default decky applies to every flavor it probes).
-- ``sort_savefiles_enable`` — a per-core subdirectory (default ``false``).
+This module resolves the four governing keys through that chain and reports both
+the resolved value and the provenance of each — which file won, which default
+applied. Defaults differ per install flavor and are passed in as
+:class:`LayoutDefaults`; the shipped sets below are read from the respective
+upstream sources, version-pinned in ``docs/research/retrodeck-save-placement.md``.
 
-The fourth key, ``savefile_directory``, is *not* extracted from decky: decky gets
-its saves root from RetroDECK's ``retrodeck.json`` and never needs the cfg value.
-Standalone RetroArch installs have no RetroDECK config, so their saves root comes
-from this key. It is read minimally and honestly — ``~`` is expanded against the
-machine's home, and an absent value or the literal ``"default"`` is reported as
-*unset* (``savefile_directory is None``), never guessed at.
-
-Pure text in, value object out. No I/O — the reader supplies the text.
+Pure text in, value object out. No I/O — the machine seam supplies the texts.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Sequence
 
 _IN_CONTENT_DIR = "savefiles_in_content_dir"
 _SORT_BY_CONTENT = "sort_savefiles_by_content_enable"
 _SORT_BY_CORE = "sort_savefiles_enable"
 _SAVEFILE_DIRECTORY = "savefile_directory"
 
-# decky's per-flavor defaults, applied when a key line is absent from the cfg.
-_DEFAULT_IN_CONTENT_DIR = False
-_DEFAULT_SORT_BY_CONTENT = True
-_DEFAULT_SORT_BY_CORE = False
+
+@dataclass(frozen=True, slots=True)
+class LayoutDefaults:
+    """The per-flavor defaults applied when a key is absent from every layer."""
+
+    savefiles_in_content_dir: bool
+    sort_by_content: bool
+    sort_by_core: bool
+    label: str
+
+
+# RetroArch upstream compile-time defaults (config.def.h:982-989). Note that
+# upstream sorts BY CORE by default — a bare install without the key set puts
+# saves in per-library_name subdirectories.
+UPSTREAM_DEFAULTS = LayoutDefaults(
+    savefiles_in_content_dir=False,
+    sort_by_content=False,
+    sort_by_core=True,
+    label="RetroArch upstream default (config.def.h)",
+)
+
+# RetroDECK's shipped retroarch.cfg (components/retroarch/rd_config/retroarch.cfg).
+RETRODECK_DEFAULTS = LayoutDefaults(
+    savefiles_in_content_dir=False,
+    sort_by_content=True,
+    sort_by_core=False,
+    label="RetroDECK shipped default",
+)
+
+# EmuDeck's shipped cfg for org.libretro.RetroArch
+# (configs/org.libretro.RetroArch/config/retroarch/retroarch.cfg): flat layout.
+EMUDECK_DEFAULTS = LayoutDefaults(
+    savefiles_in_content_dir=False,
+    sort_by_content=False,
+    sort_by_core=False,
+    label="EmuDeck shipped default",
+)
 
 
 @dataclass(frozen=True, slots=True)
 class RetroArchCfg:
-    """The save-layout decision read from ``retroarch.cfg``, with provenance.
+    """The save-layout decision resolved through the override chain, with provenance.
 
-    ``savefile_directory`` is the raw saves-root value with ``~`` expanded, or
-    ``None`` when the cfg leaves it unset (absent, blank, or ``"default"``) —
-    an unfilled ``<savefile_directory>`` hole for the caller to resolve.
-    ``sources`` records, per governing key, whether the value came from the file
-    or from a default.
+    ``savefile_directory`` is the resolved saves-root value with ``~`` expanded,
+    or ``None`` when the platform default applies (key absent, blank, or the
+    literal ``"default"``). RetroArch initializes platform default directories
+    before applying the config — on Unix the SRAM default is ``saves`` under
+    the RetroArch config tree (``platform_unix.c:1844``) — so an unset key
+    means *that* directory, never the ROM's directory (the ``runloop.c:8786``
+    content fallback fires only when the effective dir is still empty, which
+    the platform defaults prevent on desktop). The caller supplies the
+    concrete platform default. ``sources`` records, per governing key, which
+    file (or default) produced the value; when an override won, it names it.
     """
 
     savefiles_in_content_dir: bool
@@ -56,24 +90,39 @@ class RetroArchCfg:
     sources: tuple[str, ...]
 
 
-def _parse_lines(text: str) -> dict[str, str]:
-    """Parse ``key = "value"`` lines into a dict, exact-keyed and quote-stripped.
+def _strip_trailing_comment(value: str) -> str:
+    """Drop a trailing ``#`` comment that sits outside the quoted value."""
+    in_quotes = False
+    for index, char in enumerate(value):
+        if char == '"':
+            in_quotes = not in_quotes
+        elif char == "#" and not in_quotes:
+            return value[:index].rstrip()
+    return value
 
-    RetroArch's cfg is ``key = "value"`` per line. Lines without ``=`` are
-    ignored; the LHS is matched exactly (not by prefix) so ``savefile_directory``
-    and ``savefiles_in_content_dir`` never collide. Matching outer double quotes
-    are stripped; a later occurrence of a key wins.
+
+def parse_cfg_text(text: str) -> dict[str, str]:
+    """Parse ``key = "value"`` lines the way RetroArch's ``config_file.c`` does.
+
+    Semantics matched against upstream: comment lines (leading ``#``) are
+    skipped and trailing comments outside the quotes are stripped
+    (``config_file_strip_comment``); the **first** occurrence of a duplicate
+    key wins (``config_file.c:496-507`` maps a key only when not already
+    present); matching outer double quotes are stripped. The LHS is matched
+    exactly (not by prefix) so ``savefile_directory`` and
+    ``savefiles_in_content_dir`` never collide. ``#include`` directives are NOT
+    resolved yet — a stated gap (task list), not an approximation.
     """
     result: dict[str, str] = {}
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if not line or "=" not in line:
+        if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
         key = key.strip()
-        if not key:
+        if not key or key in result:
             continue
-        value = value.strip()
+        value = _strip_trailing_comment(value.strip())
         if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
             value = value[1:-1]
         result[key] = value
@@ -81,13 +130,13 @@ def _parse_lines(text: str) -> dict[str, str]:
 
 
 def _as_bool(value: str) -> bool:
-    return value.strip().lower() == "true"
+    # config_get_bool accepts "true" and "1" (config_file.c:1233).
+    stripped = value.strip()
+    return stripped == "1" or stripped.lower() == "true"
 
 
-def _resolve_savefile_directory(raw: str | None, *, home: str) -> str | None:
-    """Expand ``~`` against *home*; map absent / blank / ``"default"`` to ``None``."""
-    if raw is None:
-        return None
+def expand_home(raw: str, *, home: str) -> str | None:
+    """Expand ``~`` against *home*; map blank / ``"default"`` to ``None`` (unset)."""
     stripped = raw.strip()
     if stripped == "" or stripped.lower() == "default":
         return None
@@ -98,48 +147,78 @@ def _resolve_savefile_directory(raw: str | None, *, home: str) -> str | None:
     return stripped
 
 
-def interpret_cfg(text: str | None, *, home: str, cfg_label: str) -> RetroArchCfg:
-    """Interpret ``retroarch.cfg`` text into the save-layout decision.
+def resolve_save_layout(
+    global_text: str | None,
+    *,
+    home: str,
+    cfg_label: str,
+    defaults: LayoutDefaults,
+    overrides: Sequence[tuple[str, str]] = (),
+) -> RetroArchCfg:
+    """Resolve the save layout through the override chain — later layers win.
 
     Parameters
     ----------
-    text:
-        The cfg file's content, or ``None`` when no cfg was found. ``None`` and
-        an empty file both yield the all-defaults decision.
+    global_text:
+        The global cfg's content, or ``None`` when no cfg was found (``None``
+        and an empty file both yield the all-defaults decision).
     home:
         The machine home, used to expand a leading ``~`` in ``savefile_directory``.
     cfg_label:
-        A human-readable label for the cfg source (its path), woven into the
-        provenance strings so a consumer can see which file governed each value.
+        Human-readable label for the global cfg, woven into provenance strings.
+    defaults:
+        The flavor's defaults, applied when no layer sets a key.
+    overrides:
+        ``(label, text)`` pairs in load order (core, content-dir, game) —
+        exactly the files that exist, already read through the machine seam.
+        Each layer overrides only the keys it actually sets.
     """
-    parsed = _parse_lines(text) if text is not None else {}
-    sources: list[str] = []
+    layers: list[tuple[str, dict[str, str], bool]] = [
+        (cfg_label, parse_cfg_text(global_text) if global_text is not None else {}, False)
+    ]
+    layers.extend((label, parse_cfg_text(text), True) for label, text in overrides)
 
-    def _flag(key: str, default: bool) -> bool:
-        if key in parsed:
-            resolved = _as_bool(parsed[key])
-            sources.append(f'{cfg_label}: {key} = "{parsed[key]}"')
-            return resolved
-        sources.append(f"default: {key} = {str(default).lower()} (RetroDECK default)")
-        return default
+    def _flag(key: str, default: bool) -> tuple[bool, str]:
+        value, source = default, f"default: {key} = {str(default).lower()} ({defaults.label})"
+        for label, parsed, is_override in layers:
+            if key in parsed:
+                value = _as_bool(parsed[key])
+                source = f'{label}: {key} = "{parsed[key]}"' + (" (override wins)" if is_override else "")
+        return value, source
 
-    in_content_dir = _flag(_IN_CONTENT_DIR, _DEFAULT_IN_CONTENT_DIR)
-    sort_by_content = _flag(_SORT_BY_CONTENT, _DEFAULT_SORT_BY_CONTENT)
-    sort_by_core = _flag(_SORT_BY_CORE, _DEFAULT_SORT_BY_CORE)
+    in_content_dir, s1 = _flag(_IN_CONTENT_DIR, defaults.savefiles_in_content_dir)
+    sort_by_content, s2 = _flag(_SORT_BY_CONTENT, defaults.sort_by_content)
+    sort_by_core, s3 = _flag(_SORT_BY_CORE, defaults.sort_by_core)
 
-    raw_savefile_dir = parsed.get(_SAVEFILE_DIRECTORY)
-    savefile_directory = _resolve_savefile_directory(raw_savefile_dir, home=home)
-    if raw_savefile_dir is None:
-        sources.append(f"default: {_SAVEFILE_DIRECTORY} unset (unfilled <savefile_directory> hole)")
-    elif savefile_directory is None:
-        sources.append(f'{cfg_label}: {_SAVEFILE_DIRECTORY} = "{raw_savefile_dir}" (unfilled <savefile_directory> hole)')
-    else:
-        sources.append(f'{cfg_label}: {_SAVEFILE_DIRECTORY} = "{raw_savefile_dir}"')
+    savefile_directory: str | None = None
+    dir_source = (
+        f"default: {_SAVEFILE_DIRECTORY} unset — RetroArch platform default applies "
+        "(saves under the config tree, platform_unix.c:1844)"
+    )
+    for label, parsed, is_override in layers:
+        if _SAVEFILE_DIRECTORY in parsed:
+            raw = parsed[_SAVEFILE_DIRECTORY]
+            savefile_directory = expand_home(raw, home=home)
+            suffix = " (override wins)" if is_override else ""
+            if savefile_directory is None:
+                dir_source = (
+                    f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" — resets to the RetroArch '
+                    f"platform default{suffix}"
+                )
+            else:
+                dir_source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}"{suffix}'
 
     return RetroArchCfg(
         savefiles_in_content_dir=in_content_dir,
         sort_by_content=sort_by_content,
         sort_by_core=sort_by_core,
         savefile_directory=savefile_directory,
-        sources=tuple(sources),
+        sources=(s1, s2, s3, dir_source),
     )
+
+
+def interpret_cfg(
+    text: str | None, *, home: str, cfg_label: str, defaults: LayoutDefaults = RETRODECK_DEFAULTS
+) -> RetroArchCfg:
+    """Interpret a single ``retroarch.cfg`` text (no overrides) — see :func:`resolve_save_layout`."""
+    return resolve_save_layout(text, home=home, cfg_label=cfg_label, defaults=defaults)
