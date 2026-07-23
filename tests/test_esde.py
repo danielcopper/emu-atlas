@@ -154,16 +154,20 @@ class TestEntrySaveLocation:
         )
         entry = rd.emulators_for("dreamcast")[0]
         p = entry.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi")
+        assert isinstance(p, atlas.SavePlacement)
         assert p.dir == "/mnt/sd/retrodeck/bios/dc"
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert not any(c.code == atlas.CAVEAT_NO_CORE for c in p.caveats)
         assert p.granularity is not None and p.granularity.value == "shared-card"
 
-    def test_standalone_entry_refuses_instead_of_guessing(self):
+    def test_standalone_entry_is_a_domain_outcome(self):
+        # Outside the resolver's coverage is an answer, not an exception (M8).
         rd = _catalogue_fixture()
         entry = rd.emulators_for("ps3")[0]
-        with pytest.raises(NotImplementedError):
-            entry.save_location(content_path="/mnt/sd/retrodeck/roms/ps3/game")
+        outcome = entry.save_location(content_path="/mnt/sd/retrodeck/roms/ps3/game")
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_STANDALONE
+        assert outcome.data["system"] == "ps3"
 
 
 class TestGamelistAlternative:
@@ -274,5 +278,6 @@ class TestPerGameAltemulator:
         )
         parallel = rd.emulators_for("n64")[0]  # ParaLLEl (system default)
         p = parallel.save_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
+        assert isinstance(p, atlas.SavePlacement)
         override = [c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
         assert override and override[0].data["label"] == "Mupen64Plus-Next"

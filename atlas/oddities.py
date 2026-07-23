@@ -17,6 +17,8 @@ from __future__ import annotations
 import importlib.resources
 import json
 from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Mapping
 
 # Packaged-data schema versions. The loaders are strict: unknown schema or
 # malformed entries raise instead of coercing — a broken build must fail
@@ -76,8 +78,11 @@ class CoreCard:
     library_names: tuple[str, ...]
     option_key: str | None
     option_default: str | None
-    modes: dict[str, SaveMode]
+    modes: Mapping[str, SaveMode]
     provenance: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "modes", MappingProxyType(dict(self.modes)))
 
     def matches(self, *, so_basename: str | None, library_name: str | None) -> bool:
         if so_basename is not None and so_basename in self.so_names:
@@ -173,7 +178,10 @@ class AuditEntry:
 
     key: str
     verdict: str
-    verified: dict[str, VerifiedOn | None]
+    verified: Mapping[str, VerifiedOn | None]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "verified", MappingProxyType(dict(self.verified)))
 
 
 def load_audit(text: str | None = None) -> dict[str, AuditEntry]:

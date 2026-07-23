@@ -31,13 +31,28 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from types import MappingProxyType
+from typing import Literal, Mapping
 
 from atlas.retroarch_cfg import RetroArchCfg
 
-# Root kinds — where the placement's directory is anchored.
-ROOT_SAVEFILE_DIRECTORY = "savefile_directory"
-ROOT_CONTENT_DIRECTORY = "content_directory"
-ROOT_SYSTEM_DIRECTORY = "system_directory"
+# Root kinds — where the placement's directory is anchored. The closed
+# vocabularies are Literal types so an invalid state is a type error first
+# and a constructor error second (REVIEW M10).
+RootKind = Literal["savefile_directory", "content_directory", "system_directory"]
+FileSetState = Literal["observed", "declared", "unknown"]
+
+ROOT_SAVEFILE_DIRECTORY: RootKind = "savefile_directory"
+ROOT_CONTENT_DIRECTORY: RootKind = "content_directory"
+ROOT_SYSTEM_DIRECTORY: RootKind = "system_directory"
+
+_ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory")
+_FILE_SET_STATES = ("observed", "declared", "unknown")
+
+
+def _freeze(mapping: Mapping[str, str]) -> Mapping[str, str]:
+    """A read-only copy — frozen dataclasses stay deeply immutable."""
+    return MappingProxyType(dict(mapping))
 
 # Caveat codes — the stable, machine-readable identifiers clients branch on.
 # Part of the API contract; messages are for humans and may change freely.
@@ -67,12 +82,18 @@ class Caveat:
     the API contract: clients branch on it, vectors assert it. ``message`` is
     the human-readable explanation and may change freely. ``data`` carries the
     machine-readable specifics (e.g. the fallback directory of a silent
-    revert). Decision-relevant → structured; explanatory → text.
+    revert) as a read-only mapping. Decision-relevant → structured;
+    explanatory → text.
     """
 
     code: str
     message: str
-    data: dict[str, str] = field(default_factory=dict)
+    data: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.code:
+            raise ValueError("Caveat: code must be a non-empty stable identifier")
+        object.__setattr__(self, "data", _freeze(self.data))
 
 _HOLE_CONTENT_DIR = "content_dir"
 _HOLE_LIBRARY_NAME = "library_name"
@@ -93,10 +114,16 @@ class FileSet:
     universe for the active mode; the generic observation can never earn it.
     """
 
-    state: str
+    state: FileSetState
     files: tuple[str, ...]
     source: str
     complete: bool = False
+
+    def __post_init__(self) -> None:
+        if self.state not in _FILE_SET_STATES:
+            raise ValueError(f"FileSet: state must be one of {_FILE_SET_STATES}, got {self.state!r}")
+        if self.state == "unknown" and (self.files or self.complete):
+            raise ValueError("FileSet: an unknown set carries no files and no completeness claim")
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,7 +178,7 @@ class SavePlacement:
     """
 
     dir: str
-    root_kind: str
+    root_kind: RootKind
     needs: tuple[str, ...]
     file_set: FileSet
     sources: tuple[str, ...]
@@ -159,6 +186,37 @@ class SavePlacement:
     granularity: Granularity | None = None
     fallback_dir: str | None = None
     physical_dir: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.dir:
+            raise ValueError("SavePlacement: dir must be non-empty (an unanswerable placement is Unresolved)")
+        if self.root_kind not in _ROOT_KINDS:
+            raise ValueError(f"SavePlacement: root_kind must be one of {_ROOT_KINDS}, got {self.root_kind!r}")
+
+
+# Unresolved outcome codes — stable identifiers like caveat codes.
+UNRESOLVED_STANDALONE = "standalone-unsupported"
+
+
+@dataclass(frozen=True, slots=True)
+class Unresolved:
+    """A question atlas cannot answer for this entry — a domain outcome, not an error.
+
+    Returned where an answer route exists but the subject is outside the
+    resolver's current coverage (e.g. a standalone emulator entry before the
+    standalone block lands). ``code`` is a stable identifier clients branch
+    on; ``message`` says why; ``data`` carries the specifics. Callers switch
+    on the result type — nothing raises at runtime (REVIEW M8).
+    """
+
+    code: str
+    message: str
+    data: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.code:
+            raise ValueError("Unresolved: code must be a non-empty stable identifier")
+        object.__setattr__(self, "data", _freeze(self.data))
 
 
 def build_save_placement(

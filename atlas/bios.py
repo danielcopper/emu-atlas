@@ -19,7 +19,8 @@ from __future__ import annotations
 import importlib.resources
 import json
 from dataclasses import dataclass
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,19 +37,33 @@ class BiosEntry:
     description: str
     required: bool
     firmware_path: str
-    cores: dict[str, bool]
+    cores: Mapping[str, bool]
     md5: str | None
     sha1: str | None
     size: int | None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "cores", MappingProxyType(dict(self.cores)))
+
+
+def _required_flag(value: object, where: str) -> bool:
+    # bool("false") is True in Python — a registry flag must BE a boolean,
+    # never something coerced into one (REVIEW M10).
+    if not isinstance(value, bool):
+        raise ValueError(f"{where}: 'required' must be a JSON boolean, got {value!r}")
+    return value
+
 
 def _entry_from_raw(file_name: str, raw: dict[str, Any]) -> BiosEntry:
     raw_cores = raw.get("cores") or {}
-    cores = {core_so: bool(info.get("required", True)) for core_so, info in raw_cores.items()}
+    cores = {
+        core_so: _required_flag(info.get("required", True), f"{file_name} cores[{core_so!r}]")
+        for core_so, info in raw_cores.items()
+    }
     return BiosEntry(
         file_name=file_name,
         description=raw.get("description", file_name),
-        required=bool(raw.get("required", True)),
+        required=_required_flag(raw.get("required", True), file_name),
         firmware_path=raw.get("firmware_path", file_name),
         cores=cores,
         md5=raw.get("md5"),

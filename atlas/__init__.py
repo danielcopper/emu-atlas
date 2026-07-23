@@ -67,10 +67,12 @@ from atlas.placement import (
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     UNKNOWN_FILE_SET,
+    UNRESOLVED_STANDALONE,
     Caveat,
     FileSet,
     Granularity,
     SavePlacement,
+    Unresolved,
     build_save_placement,
 )
 from atlas.retroarch_cfg import (
@@ -146,6 +148,8 @@ __all__ = [
     "SavePlacement",
     "StandaloneRetroArchFlatpak",
     "UNKNOWN_FILE_SET",
+    "UNRESOLVED_STANDALONE",
+    "Unresolved",
     "UPSTREAM_DEFAULTS",
     "build_save_placement",
     "detect",

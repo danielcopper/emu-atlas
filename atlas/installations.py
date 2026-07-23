@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import os
 from glob import escape as _glob_escape
-from typing import Any, Callable
+from typing import Any, Callable, Protocol, runtime_checkable
 
 from dataclasses import dataclass, replace as _dc_replace
 
@@ -58,10 +58,12 @@ from atlas.placement import (
     ROOT_CONTENT_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     UNKNOWN_FILE_SET,
+    UNRESOLVED_STANDALONE,
     Caveat,
     FileSet,
     Granularity,
     SavePlacement,
+    Unresolved,
     build_save_placement,
 )
 from atlas.retroarch_cfg import (
@@ -862,17 +864,21 @@ class EmulatorEntry:
         """Stated catalogue-level degradations (e.g. unchecked per-game overrides)."""
         return self._caveats
 
-    def save_location(self, *, content_path: str | None = None) -> SavePlacement:
+    def save_location(self, *, content_path: str | None = None) -> SavePlacement | Unresolved:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
         Catalogue-level degradations stay attached to the derived answer
-        (REVIEW M9). Standalone entries are not resolvable yet (task list:
-        standalone emulators); asking raises instead of guessing.
+        (REVIEW M9). Standalone entries are outside the resolver's coverage
+        until the standalone block lands — that is a domain outcome
+        (:class:`~atlas.placement.Unresolved`), never a guess and never an
+        exception (REVIEW M8).
         """
         if self._spec.kind != KIND_LIBRETRO:
-            raise NotImplementedError(
+            return Unresolved(
+                UNRESOLVED_STANDALONE,
                 f"standalone emulator {self._spec.label!r} ({self._spec.system}) is not resolvable yet — "
-                "see docs/tasks/save-detection.md"
+                "standalone emulators are the next big roadmap block (ROADMAP.md)",
+                {"label": self._spec.label, "system": self._spec.system},
             )
         return self._installation.entry_save_location(
             self._spec, self._caveats, content_path=content_path
@@ -1437,4 +1443,27 @@ class NativeRetroArch(_RetroArchInstall):
         super().__init__(home, machine, NATIVE_CFG_SUFFIX)
 
 
-Installation = RetroDeck | EmuDeck | StandaloneRetroArchFlatpak | NativeRetroArch
+@runtime_checkable
+class Installation(Protocol):
+    """The surface every installation handle offers — identity, health, placement.
+
+    A common protocol instead of a closed union (REVIEW M8): detection returns
+    these, and consumers program against the surface. Capabilities beyond it —
+    the ES-DE catalogue (``systems``/``emulators_for``), RetroDECK's tree
+    roots — live on the concrete handles; narrow with ``isinstance`` when a
+    capability is needed.
+    """
+
+    @property
+    def kind(self) -> str: ...
+
+    @property
+    def kinds(self) -> tuple[str, ...]: ...
+
+    def root(self) -> str: ...
+
+    def health(self) -> Health: ...
+
+    def save_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> SavePlacement: ...
