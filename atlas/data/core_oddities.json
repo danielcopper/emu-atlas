@@ -53,7 +53,7 @@
         }
       }
     },
-    "lrps2": {
+    "pcsx2": {
       "identifiers": {
         "so": [
           "pcsx2_libretro.so"

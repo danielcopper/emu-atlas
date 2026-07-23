@@ -11,9 +11,114 @@
         },
         "emudeck": null,
         "bare": null
-      }
+      },
+      "kind": "libretro"
     },
-    "lrps2": {
+    "mednafen_psx": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "mednafen_psx_hw": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "pcsx_rearmed": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "mupen64plus_next": {
+      "verdict": "standard",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "mgba": {
+      "verdict": "standard",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "mednafen_saturn": {
+      "verdict": "standard-dir",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "mednafen_ngp": {
+      "verdict": "standard-dir",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "pokemini": {
+      "verdict": "standard-dir",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "pcsx2": {
       "verdict": "card",
       "verified": {
         "retrodeck": {
@@ -23,71 +128,8 @@
         },
         "emudeck": null,
         "bare": null
-      }
-    },
-    "mednafen_psx": {
-      "verdict": "multi-option",
-      "verified": {
-        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
-        "emudeck": null,
-        "bare": null
-      }
-    },
-    "mednafen_psx_hw": {
-      "verdict": "multi-option",
-      "verified": {
-        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
-        "emudeck": null,
-        "bare": null
-      }
-    },
-    "pcsx_rearmed": {
-      "verdict": "multi-option",
-      "verified": {
-        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
-        "emudeck": null,
-        "bare": null
-      }
-    },
-    "mupen64plus_next": {
-      "verdict": "standard",
-      "verified": {
-        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
-        "emudeck": null,
-        "bare": null
-      }
-    },
-    "mgba": {
-      "verdict": "standard",
-      "verified": {
-        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
-        "emudeck": null,
-        "bare": null
-      }
-    },
-    "mednafen_saturn": {
-      "verdict": "standard-dir",
-      "verified": {
-        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
-        "emudeck": null,
-        "bare": null
-      }
-    },
-    "mednafen_ngp": {
-      "verdict": "standard-dir",
-      "verified": {
-        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
-        "emudeck": null,
-        "bare": null
-      }
-    },
-    "pokemini": {
-      "verdict": "standard-dir",
-      "verified": {
-        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
-        "emudeck": null,
-        "bare": null
-      }
+      },
+      "kind": "libretro"
     }
   }
 }
