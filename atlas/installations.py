@@ -35,10 +35,12 @@ from atlas.esde import (
     parse_es_systems,
     parse_gamelist,
 )
-from atlas.machine import KIND_DIRECTORY, KIND_FILE, Machine
+from atlas.machine import KIND_DIRECTORY, KIND_FILE, KIND_MISSING, Machine
 from atlas.oddities import lookup_audit, lookup_card
 from atlas.placement import (
     CAVEAT_CARD_MODE_UNCONFIRMED,
+    CAVEAT_DEAD_SYMLINK,
+    CAVEAT_SORTED_DIR_UNCREATABLE,
     CAVEAT_CORE_SUSPECT,
     CAVEAT_CORE_UNAUDITED,
     CAVEAT_CORE_UNQUERYABLE,
@@ -52,6 +54,7 @@ from atlas.placement import (
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYSTEM_DIR_UNSET,
     CAVEAT_UNKNOWN_OPTION_VALUE,
+    ROOT_CONTENT_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     UNKNOWN_FILE_SET,
     Caveat,
@@ -169,6 +172,64 @@ def _cfg_bool(raw: str | None, default: bool) -> bool:
         return default
     stripped = raw.strip()
     return stripped == "1" or stripped.lower() == "true"
+
+
+_MAX_LINK_HOPS = 40
+
+
+def _resolve_symlink_chain(machine: Machine, path: str) -> tuple[str, list[tuple[str, str]]]:
+    """Resolve symlink components in *path* through the seam, kernel-style.
+
+    Walks components left to right via ``readlink``, splicing targets in
+    (relative targets against the link's directory), with a hop limit against
+    cycles. Returns the fully resolved path and every ``(link, target)``
+    traversed — an empty list means no symlink was involved.
+    """
+    links: list[tuple[str, str]] = []
+    current = path
+    for _ in range(_MAX_LINK_HOPS):
+        parts = current.split("/")
+        replaced = False
+        for i in range(2, len(parts) + 1):
+            prefix = "/".join(parts[:i])
+            target = machine.readlink(prefix)
+            if target is not None:
+                links.append((prefix, target))
+                if not target.startswith("/"):
+                    target = os.path.normpath(os.path.join(os.path.dirname(prefix), target))
+                rest = "/".join(parts[i:])
+                current = target + ("/" + rest if rest else "")
+                replaced = True
+                break
+        if not replaced:
+            break
+    return current, links
+
+
+def _link_view(machine: Machine, directory: str) -> tuple[str | None, tuple[Caveat, ...]]:
+    """The link-resolved view of a final directory (REVIEW M7).
+
+    Returns ``(physical_dir, caveats)``: ``physical_dir`` is the fully
+    resolved backing directory when *directory* traverses live symlinks —
+    RetroDECK's ``dir_prep`` pattern makes the emulator-side path and the
+    physical path two truthful answers to different questions. A traversal
+    that ends nowhere yields a ``dead-symlink`` caveat instead: the
+    emulator-side directory is dead, and writing there will fail.
+    """
+    resolved, links = _resolve_symlink_chain(machine, directory)
+    if not links:
+        return None, ()
+    if machine.path_kind(resolved) == KIND_MISSING:
+        link, target = links[-1]
+        return None, (
+            Caveat(
+                CAVEAT_DEAD_SYMLINK,
+                f"{directory} traverses the symlink {link} -> {target}, which resolves to "
+                f"{resolved} — a path that does not exist: the emulator-side directory is dead",
+                {"link": link, "target": target, "resolved": resolved},
+            ),
+        )
+    return (resolved if resolved != directory else None), ()
 
 
 def _resolve_chain_key(layer_texts: list[str], key: str) -> str | None:
@@ -382,6 +443,8 @@ def _retroarch_save_location(
                 {"configured": layout.savefile_directory, "effective": platform_default_dir},
             )
         )
+        # When the rejection is a dead symlink, say why (REVIEW M7).
+        caveats.extend(_link_view(machine, layout.savefile_directory)[1])
         layout = _dc_replace(layout, savefile_directory=None)
 
     # Rule cards: cores whose save behaviour deviates from the standard rule.
@@ -543,6 +606,10 @@ def _retroarch_save_location(
                 fs = FileSet("observed", present, f"observed on the machine: {directory}")
             else:
                 fs = FileSet("declared", declared, f"declared by rule card '{card.key}' (none present yet)")
+        physical_dir = None
+        if not needs:
+            physical_dir, link_caveats = _link_view(machine, directory)
+            caveats.extend(link_caveats)
         return SavePlacement(
             dir=directory,
             root_kind=ROOT_SYSTEM_DIRECTORY,
@@ -551,6 +618,7 @@ def _retroarch_save_location(
             sources=tuple(card_sources),
             caveats=tuple(caveats),
             granularity=granularity,
+            physical_dir=physical_dir,
         )
 
     if card is not None and card_mode is not None and granularity is not None and card_mode.files is None:
@@ -573,13 +641,47 @@ def _retroarch_save_location(
         extra_sources=tuple(sources_extra),
     )
 
+    final_dir = placement.dir
+    fallback_dir: str | None = None
+    physical_dir: str | None = None
     if not placement.needs:
-        directory = placement.dir
+        # A sorted directory that does not exist yet is a CONDITIONAL result:
+        # RetroArch creates it on first save and silently reverts to the
+        # unsorted root when creation fails (runloop.c:8844). A file in the
+        # way makes the failure certain — then the fallback IS the answer;
+        # anything else keeps the intended dir with a structural fallback
+        # (REVIEW H5).
+        if placement.root_kind == ROOT_CONTENT_DIRECTORY:
+            effective_root = content_dir_path
+        else:
+            effective_root = layout.savefile_directory or platform_default_dir
+        if effective_root is not None and final_dir != effective_root:
+            dir_kind = machine.path_kind(final_dir)
+            if dir_kind == KIND_FILE:
+                caveats.append(
+                    Caveat(
+                        CAVEAT_SORTED_DIR_UNCREATABLE,
+                        f"sorted directory {final_dir} is blocked by an existing file — RetroArch "
+                        f"cannot create it and reverts to {effective_root} (runloop.c:8844)",
+                        {"intended": final_dir, "effective": effective_root},
+                    )
+                )
+                final_dir = effective_root
+            elif dir_kind != KIND_DIRECTORY:
+                fallback_dir = effective_root
+                caveats.append(
+                    Caveat(
+                        CAVEAT_SORTED_DIR_MISSING,
+                        f"sorted directory {final_dir} does not exist yet — RetroArch creates it on first save, "
+                        f"and silently reverts to {effective_root} if creation fails (runloop.c:8844)",
+                        {"dir": final_dir, "fallback_dir": effective_root},
+                    )
+                )
         if rom_stem is not None:
             content_basename = os.path.basename(content_path) if content_path else None
             matches = [
                 m
-                for m in machine.glob(os.path.join(directory, f"{rom_stem}.*"))
+                for m in machine.glob(os.path.join(final_dir, f"{rom_stem}.*"))
                 # In content-dir mode the ROM shares the save's directory and
                 # stem — the content file itself is never part of the save set.
                 if os.path.basename(m) != content_basename
@@ -588,7 +690,7 @@ def _retroarch_save_location(
                 file_set = FileSet(
                     state="observed",
                     files=tuple(sorted(os.path.basename(m) for m in matches)),
-                    source=f"observed on the machine: {directory}",
+                    source=f"observed on the machine: {final_dir}",
                 )
             else:
                 declared = None
@@ -604,31 +706,21 @@ def _retroarch_save_location(
                     file_set = FileSet(
                         state="unknown",
                         files=(),
-                        source=f"no files present at {directory} — file set not stated (never guessed)",
+                        source=f"no files present at {final_dir} — file set not stated (never guessed)",
                     )
-        effective_root = layout.savefile_directory or platform_default_dir
-        if (
-            placement.root_kind == "savefile_directory"
-            and directory != effective_root
-            and machine.path_kind(directory) != KIND_DIRECTORY
-        ):
-            caveats.append(
-                Caveat(
-                    CAVEAT_SORTED_DIR_MISSING,
-                    f"sorted directory {directory} does not exist yet — RetroArch creates it on first save, "
-                    f"and silently reverts to {effective_root} if creation fails (runloop.c:8844)",
-                    {"dir": directory, "fallback_dir": effective_root},
-                )
-            )
+        physical_dir, link_caveats = _link_view(machine, final_dir)
+        caveats.extend(link_caveats)
 
     return SavePlacement(
-        dir=placement.dir,
+        dir=final_dir,
         root_kind=placement.root_kind,
         needs=placement.needs,
         file_set=file_set,
         sources=placement.sources,
         caveats=tuple(caveats),
         granularity=granularity,
+        fallback_dir=fallback_dir,
+        physical_dir=physical_dir,
     )
 
 

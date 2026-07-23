@@ -55,6 +55,8 @@ CAVEAT_INVALID_SAVE_DIRECTORY = "invalid-save-directory"
 CAVEAT_CORE_SUSPECT = "core-suspect"
 CAVEAT_CORE_UNAUDITED = "core-unaudited"
 CAVEAT_CARD_MODE_UNCONFIRMED = "card-mode-unconfirmed"
+CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
+CAVEAT_DEAD_SYMLINK = "dead-symlink"
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +132,16 @@ class SavePlacement:
     :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`).
     ``file_set`` is observed or unknown, never guessed. ``sources`` is the
     provenance trail; ``caveats`` states every degradation explicitly.
+
+    A placement can be *conditional*: when ``dir`` does not exist yet,
+    RetroArch attempts to create it on first save and silently reverts to the
+    unsorted root when creation fails — ``fallback_dir`` names that root, so
+    the two possible outcomes are structural, not prose (REVIEW H5).
+    ``physical_dir`` is the fully link-resolved backing directory when ``dir``
+    reaches its files through symlinks (RetroDECK's ``dir_prep`` pattern) —
+    the emulator-side path and the physical path are two truthful answers to
+    different questions (REVIEW M7); a dead link is a ``dead-symlink`` caveat
+    instead.
     """
 
     dir: str
@@ -139,6 +151,8 @@ class SavePlacement:
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
     granularity: Granularity | None = None
+    fallback_dir: str | None = None
+    physical_dir: str | None = None
 
 
 def build_save_placement(

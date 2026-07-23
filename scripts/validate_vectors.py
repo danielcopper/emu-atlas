@@ -49,6 +49,8 @@ KNOWN_CAVEAT_CODES = {
     "core-suspect",
     "core-unaudited",
     "card-mode-unconfirmed",
+    "sorted-dir-uncreatable",
+    "dead-symlink",
 }
 
 

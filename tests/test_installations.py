@@ -185,6 +185,138 @@ class TestRetroDeckSaveLocation:
         assert p.file_set.files == ("Tetris (World) (Rev 1).rtc", "Tetris (World) (Rev 1).srm")
 
 
+class TestConditionalPlacement:
+    """H5: an absent sorted directory is a conditional result, not a fact."""
+
+    CFG_SORT_CONTENT = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+    )
+
+    def test_existing_sorted_dir_is_unconditional(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: self.CFG_SORT_CONTENT,
+                "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
+                "/mnt/sd/retrodeck/saves/gba/Game.srm": "s",
+            }
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        assert p.fallback_dir is None
+        assert not any(c.code == atlas.CAVEAT_SORTED_DIR_MISSING for c in p.caveats)
+
+    def test_missing_sorted_dir_carries_structural_fallback(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: self.CFG_SORT_CONTENT,
+                "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
+                "/mnt/sd/retrodeck/saves/.keep": "",
+            }
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        assert p.dir == "/mnt/sd/retrodeck/saves/gba"
+        assert p.fallback_dir == "/mnt/sd/retrodeck/saves"
+        assert any(c.code == atlas.CAVEAT_SORTED_DIR_MISSING for c in p.caveats)
+
+    def test_file_blocking_sorted_dir_makes_fallback_the_answer(self):
+        # A file where the sorted dir should be: mkdir MUST fail, so the
+        # fallback is not conditional — it is the known outcome.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: self.CFG_SORT_CONTENT,
+                "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
+                "/mnt/sd/retrodeck/saves/gba": "i am a file, not a directory",
+            }
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+        assert p.fallback_dir is None
+        assert any(c.code == atlas.CAVEAT_SORTED_DIR_UNCREATABLE for c in p.caveats)
+
+    def test_content_dir_root_with_sorting_gets_fallback_too(self):
+        # H6 established that sorting applies after content-root selection;
+        # the conditional-creation rule applies there just the same.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefiles_in_content_dir = "true"\n'
+                    'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        assert p.dir == "/mnt/sd/retrodeck/roms/gba/gba"
+        assert p.fallback_dir == "/mnt/sd/retrodeck/roms/gba"
+        assert any(c.code == atlas.CAVEAT_SORTED_DIR_MISSING for c in p.caveats)
+
+
+class TestLinkView:
+    """M7: the emulator-side path and the physical path are both answers."""
+
+    FLAT_CFG = (
+        'savefile_directory = "/home/deck/links/saves"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+    )
+
+    def test_symlinked_save_dir_reports_physical_dir(self):
+        machine = atlas.FixtureMachine(
+            {
+                f"{HOME}/.config/retroarch/retroarch.cfg": self.FLAT_CFG,
+                "/data/real-saves/Game.srm": "s",
+                f"{HOME}/roms/gba/Game.zip": "",
+            },
+            symlinks={f"{HOME}/links/saves": "/data/real-saves"},
+        )
+        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        assert p.dir == f"{HOME}/links/saves"
+        assert p.physical_dir == "/data/real-saves"
+
+    def test_dead_link_in_card_directory_is_stated(self):
+        # The LRPS2 dir_prep case: the memcards link points into an unmounted
+        # volume — the emulator-side path is dead and the answer says so.
+        machine = atlas.FixtureMachine(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'system_directory = "/mnt/sd/retrodeck/bios"\n'
+                    'libretro_directory = "/app/cores"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/roms/ps2/Game.iso": "",
+                "/mnt/sd/retrodeck/saves/.keep": "",
+            },
+            symlinks={"/mnt/sd/retrodeck/bios/pcsx2/memcards": "/run/media/gone/saves/ps2/memcards"},
+            cores={f"{RD_DEPLOY_CORES}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
+        )
+        p = atlas.RetroDeck(HOME, machine).save_location(
+            content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so"
+        )
+        assert p.dir == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+        assert p.physical_dir is None
+        dead = [c for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+        assert dead and dead[0].data["link"] == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+
+    def test_rejected_save_root_through_dead_link_says_why(self):
+        machine = atlas.FixtureMachine(
+            {
+                f"{HOME}/.config/retroarch/retroarch.cfg": self.FLAT_CFG,
+                f"{HOME}/roms/gba/Game.zip": "",
+            },
+            symlinks={f"{HOME}/links/saves": "/run/media/gone/saves"},
+        )
+        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        assert p.dir == f"{HOME}/.config/retroarch/saves"
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY in codes
+        assert atlas.CAVEAT_DEAD_SYMLINK in codes
+
+
 class TestEmuDeck:
     def test_settings_parse_and_roots(self):
         machine = atlas.FixtureMachine(
