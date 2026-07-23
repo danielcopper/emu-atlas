@@ -30,14 +30,17 @@ from dataclasses import replace as _dc_replace
 from atlas.esde import (
     KIND_LIBRETRO,
     EmulatorSpec,
+    GamelistSelections,
     merge_layers,
     parse_es_systems,
-    parse_gamelist_alternative,
+    parse_gamelist,
 )
 from atlas.machine import Machine
 from atlas.oddities import lookup_card
 from atlas.placement import (
     CAVEAT_CORE_UNQUERYABLE,
+    CAVEAT_PER_GAME_OVERRIDE,
+    CAVEAT_PER_GAME_OVERRIDES_PRESENT,
     CAVEAT_FILENAMES_UNVERIFIED,
     CAVEAT_HEALTH,
     CAVEAT_NO_CORE,
@@ -432,6 +435,18 @@ def _retroarch_save_location(
     )
 
 
+def _match_per_game(selections: GamelistSelections, content_path: str) -> str | None:
+    """Match a content path against per-game ``altemulator`` entries.
+
+    Gamelist paths are relative (``./Name.ext``, or ``./Folder`` for directory
+    entries such as multi-disc folders); matched on the last path component
+    against the content's basename and its parent directory name.
+    """
+    base = os.path.basename(content_path)
+    parent = os.path.basename(os.path.dirname(content_path))
+    return selections.per_game.get(base) or selections.per_game.get(parent)
+
+
 class EmulatorEntry:
     """One catalogue entry — an emulator that can launch one system, as configured.
 
@@ -440,9 +455,12 @@ class EmulatorEntry:
     the ``no-core`` caveat class does not exist on this path.
     """
 
-    def __init__(self, installation: "RetroDeck", spec: EmulatorSpec) -> None:
+    def __init__(
+        self, installation: "RetroDeck", spec: EmulatorSpec, caveats: tuple[Caveat, ...] = ()
+    ) -> None:
         self._installation = installation
         self._spec = spec
+        self._caveats = caveats
 
     @property
     def system(self) -> str:
@@ -473,6 +491,11 @@ class EmulatorEntry:
         """Provenance of a user promotion, or ``None`` for declared order."""
         return self._spec.selection
 
+    @property
+    def caveats(self) -> tuple[Caveat, ...]:
+        """Stated catalogue-level degradations (e.g. unchecked per-game overrides)."""
+        return self._caveats
+
     def save_location(self, *, content_path: str | None = None) -> SavePlacement:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
@@ -484,7 +507,30 @@ class EmulatorEntry:
                 f"standalone emulator {self._spec.label!r} ({self._spec.system}) is not resolvable yet — "
                 "see docs/tasks/save-detection.md"
             )
-        return self._installation.save_location(content_path=content_path, core_so=self._spec.core_so)
+        placement = self._installation.save_location(content_path=content_path, core_so=self._spec.core_so)
+        if content_path is not None:
+            selections = self._installation._gamelist_selections(self._spec.system)
+            override_label = _match_per_game(selections, content_path)
+            if override_label is not None and override_label != self._spec.label:
+                placement = SavePlacement(
+                    dir=placement.dir,
+                    root_kind=placement.root_kind,
+                    needs=placement.needs,
+                    file_set=placement.file_set,
+                    sources=placement.sources,
+                    caveats=(
+                        *placement.caveats,
+                        Caveat(
+                            CAVEAT_PER_GAME_OVERRIDE,
+                            f"this game carries a per-game altemulator override selecting "
+                            f"{override_label!r} — ES-DE would launch that emulator, not "
+                            f"{self._spec.label!r}; ask emulators_for with content_path",
+                            {"label": override_label},
+                        ),
+                    ),
+                    granularity=placement.granularity,
+                )
+        return placement
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
         return (
@@ -596,30 +642,56 @@ class RetroDeck:
         """Every system the catalogue declares, sorted."""
         return tuple(sorted(self._catalogue()))
 
-    def emulators_for(self, system: str) -> tuple[EmulatorEntry, ...]:
+    def _gamelist_selections(self, system: str) -> GamelistSelections:
+        gamelist_path = os.path.join(self.root(), "ES-DE", "gamelists", system, "gamelist.xml")
+        text = self._machine.read_text(gamelist_path)
+        if text is None:
+            return GamelistSelections(system_label=None, per_game={})
+        return parse_gamelist(text)
+
+    def emulators_for(self, system: str, *, content_path: str | None = None) -> tuple[EmulatorEntry, ...]:
         """The emulators that can launch *system*, in launch-priority order.
 
-        First entry = the effective default: the user's saved per-system choice
-        (``gamelists/<system>/gamelist.xml`` ``alternativeEmulator`` header,
-        read live) when it matches a declared entry, else ES-DE's declared
-        first entry. A selection label matching nothing keeps the declared
-        order — ES-DE itself falls back the same way. Per-game ``altemulator``
-        entries are not read yet (task list).
+        First entry = the effective default, resolved live through ES-DE's
+        hierarchy: per-game ``altemulator`` (when *content_path* is given and a
+        gamelist entry matches) > per-system ``alternativeEmulator`` > declared
+        first entry. A selection label matching no declared entry keeps the
+        declared order — ES-DE itself falls back the same way.
+
+        When *content_path* is omitted and the gamelist carries per-game
+        overrides, every returned entry states that as a catalogue caveat: the
+        system-level answer may be wrong for exactly those games.
         """
         specs = self._catalogue().get(system, ())
-        gamelist_path = os.path.join(self.root(), "ES-DE", "gamelists", system, "gamelist.xml")
-        gamelist_text = self._machine.read_text(gamelist_path)
-        if specs and gamelist_text is not None:
-            label = parse_gamelist_alternative(gamelist_text)
-            if label is not None:
-                for index, spec in enumerate(specs):
-                    if spec.label == label:
-                        promoted = _dc_replace(
-                            spec, selection=f'gamelist.xml: alternativeEmulator = "{label}"'
-                        )
-                        specs = (promoted, *specs[:index], *specs[index + 1 :])
-                        break
-        return tuple(EmulatorEntry(self, spec) for spec in specs)
+        selections = self._gamelist_selections(system)
+        chosen_label: str | None = None
+        chosen_source: str | None = None
+        if content_path is not None:
+            per_game = _match_per_game(selections, content_path)
+            if per_game is not None:
+                chosen_label = per_game
+                chosen_source = f'gamelist.xml: altemulator = "{per_game}" (per-game)'
+        if chosen_label is None and selections.system_label is not None:
+            chosen_label = selections.system_label
+            chosen_source = f'gamelist.xml: alternativeEmulator = "{selections.system_label}"'
+        if specs and chosen_label is not None:
+            for index, spec in enumerate(specs):
+                if spec.label == chosen_label:
+                    promoted = _dc_replace(spec, selection=chosen_source)
+                    specs = (promoted, *specs[:index], *specs[index + 1 :])
+                    break
+        entry_caveats: tuple[Caveat, ...] = ()
+        if content_path is None and selections.per_game:
+            entry_caveats = (
+                Caveat(
+                    CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+                    f"{len(selections.per_game)} game(s) of this system carry per-game altemulator "
+                    "overrides — this system-level order may be wrong for exactly those games; "
+                    "ask emulators_for with content_path",
+                    {"count": str(len(selections.per_game))},
+                ),
+            )
+        return tuple(EmulatorEntry(self, spec, entry_caveats) for spec in specs)
 
     def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.

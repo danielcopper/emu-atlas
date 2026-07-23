@@ -33,6 +33,8 @@ KNOWN_CAVEAT_CODES = {
     "filenames-unverified",
     "unknown-option-value",
     "system-directory-unset",
+    "per-game-overrides-present",
+    "per-game-override",
 }
 
 

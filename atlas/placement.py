@@ -46,6 +46,8 @@ CAVEAT_HEALTH = "health"
 CAVEAT_FILENAMES_UNVERIFIED = "filenames-unverified"
 CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
 CAVEAT_SYSTEM_DIR_UNSET = "system-directory-unset"
+CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
+CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
 
 
 @dataclass(frozen=True, slots=True)

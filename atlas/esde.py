@@ -106,14 +106,28 @@ def merge_layers(
     return merged
 
 
-def parse_gamelist_alternative(text: str) -> str | None:
-    """Extract the system-wide ``alternativeEmulator`` label from a ``gamelist.xml``.
+@dataclass(frozen=True, slots=True)
+class GamelistSelections:
+    """The user's emulator choices stored in a system's ``gamelist.xml``.
 
-    ES-DE stores the user's per-system emulator choice as a top-level
-    ``<alternativeEmulator><label>…</label></alternativeEmulator>`` element
-    written *before* ``<gameList>`` — two root elements, i.e. not well-formed
-    XML (observed live on RetroDECK 0.10.9b). Parsed by wrapping in a synthetic
-    root; anything unparseable yields ``None``, never a guess.
+    ``system_label`` is the per-system choice (``<alternativeEmulator><label>``,
+    top-level); ``per_game`` maps the last path component of each game entry
+    (file basename, or folder name for directory entries) to its
+    ``<altemulator>`` label. Both tag names are verified against the ES-DE
+    binary's strings; the per-game hierarchy is game > system > declared.
+    """
+
+    system_label: str | None
+    per_game: dict[str, str]
+
+
+def parse_gamelist(text: str) -> GamelistSelections:
+    """Parse a ``gamelist.xml`` for emulator selections — tolerant of ES-DE's quirk.
+
+    ES-DE writes the file with **two root elements** (``<alternativeEmulator>``
+    before ``<gameList>``) — not well-formed XML, observed live on RetroDECK
+    0.10.9b. Wrapping in a synthetic root parses both that and well-formed
+    variants; anything unparseable yields empty selections, never a guess.
     """
     stripped = text.strip()
     if stripped.startswith("<?"):
@@ -123,7 +137,17 @@ def parse_gamelist_alternative(text: str) -> str | None:
     try:
         root = ET.fromstring(f"<atlas-wrapper>{stripped}</atlas-wrapper>")
     except ET.ParseError:
-        return None
-    label = root.findtext("alternativeEmulator/label")
-    label = (label or "").strip()
-    return label or None
+        return GamelistSelections(system_label=None, per_game={})
+    system_label = (root.findtext("alternativeEmulator/label") or "").strip() or None
+    per_game: dict[str, str] = {}
+    for game in root.iter("game"):
+        path = (game.findtext("path") or "").strip()
+        label = (game.findtext("altemulator") or "").strip()
+        if path and label:
+            per_game[path.rstrip("/").rsplit("/", 1)[-1]] = label
+    return GamelistSelections(system_label=system_label, per_game=per_game)
+
+
+def parse_gamelist_alternative(text: str) -> str | None:
+    """The per-system ``alternativeEmulator`` label — see :func:`parse_gamelist`."""
+    return parse_gamelist(text).system_label

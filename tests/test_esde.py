@@ -204,3 +204,75 @@ class TestGamelistAlternative:
         entries = rd.emulators_for("n64")
         assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
         assert all(e.selection is None for e in entries)
+
+
+class TestPerGameAltemulator:
+    GAMELIST = (
+        '<?xml version="1.0"?>\n'
+        "<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n"
+        "<gameList>\n"
+        "\t<game>\n\t\t<path>./Paper Mario (USA).zip</path>\n"
+        "\t\t<altemulator>Mupen64Plus-Next</altemulator>\n\t</game>\n"
+        "\t<game>\n\t\t<path>./Some Folder Game</path>\n"
+        "\t\t<altemulator>Mupen64Plus-Next</altemulator>\n\t</game>\n"
+        "</gameList>\n"
+    )
+    FILES = {"/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": GAMELIST}
+
+    def test_parse_both_levels(self):
+        sel = atlas.parse_gamelist(self.GAMELIST)
+        assert sel.system_label == "ParaLLEl N64"
+        assert sel.per_game == {
+            "Paper Mario (USA).zip": "Mupen64Plus-Next",
+            "Some Folder Game": "Mupen64Plus-Next",
+        }
+
+    def test_per_game_wins_over_system(self):
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for("n64", content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
+        assert entries[0].label == "Mupen64Plus-Next"
+        assert entries[0].selection == 'gamelist.xml: altemulator = "Mupen64Plus-Next" (per-game)'
+
+    def test_folder_entry_matches_parent_dir(self):
+        # multi-disc convention: the gamelist path is the folder, content is inside it
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for(
+            "n64", content_path="/mnt/sd/retrodeck/roms/n64/Some Folder Game/disc.m3u"
+        )
+        assert entries[0].label == "Mupen64Plus-Next"
+
+    def test_system_selection_for_other_games(self):
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for("n64", content_path="/mnt/sd/retrodeck/roms/n64/Other Game.zip")
+        assert entries[0].label == "ParaLLEl N64"
+        assert "alternativeEmulator" in (entries[0].selection or "")
+
+    def test_system_level_ask_carries_caveat_when_per_game_exists(self):
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for("n64")
+        assert entries[0].label == "ParaLLEl N64"  # system selection still applies
+        assert any(c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT for c in entries[0].caveats)
+        assert entries[0].caveats[0].data["count"] == "2"
+
+    def test_no_caveat_without_per_game_entries(self):
+        rd = _catalogue_fixture(
+            {
+                "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": (
+                    "<alternativeEmulator><label>ParaLLEl N64</label></alternativeEmulator><gameList />"
+                )
+            }
+        )
+        assert all(not e.caveats for e in rd.emulators_for("n64"))
+
+    def test_wrong_entry_save_location_gets_override_caveat(self):
+        # caller picked the system default, but THIS game's altemulator points elsewhere
+        rd = _catalogue_fixture(
+            {
+                **self.FILES,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+            }
+        )
+        parallel = rd.emulators_for("n64")[0]  # ParaLLEl (system default)
+        p = parallel.save_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
+        override = [c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
+        assert override and override[0].data["label"] == "Mupen64Plus-Next"

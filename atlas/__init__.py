@@ -18,7 +18,7 @@ from __future__ import annotations
 from atlas.bios import BiosEntry, BiosRegistry, load_registry
 from atlas.core_info import parse_core_info
 from atlas.detect import detect
-from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE, EmulatorSpec, parse_es_systems, parse_gamelist_alternative
+from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE, EmulatorSpec, GamelistSelections, parse_es_systems, parse_gamelist, parse_gamelist_alternative
 from atlas.installations import (
     HEALTH_CONFIG_UNREADABLE,
     HEALTH_OK,
@@ -38,6 +38,8 @@ from atlas.placement import (
     CAVEAT_HEALTH,
     CAVEAT_NO_CORE,
     CAVEAT_SORTED_DIR_MISSING,
+    CAVEAT_PER_GAME_OVERRIDE,
+    CAVEAT_PER_GAME_OVERRIDES_PRESENT,
     CAVEAT_SYSTEM_DIR_UNSET,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     ROOT_CONTENT_DIRECTORY,
@@ -68,6 +70,8 @@ __all__ = [
     "CAVEAT_HEALTH",
     "CAVEAT_NO_CORE",
     "CAVEAT_SORTED_DIR_MISSING",
+    "CAVEAT_PER_GAME_OVERRIDE",
+    "CAVEAT_PER_GAME_OVERRIDES_PRESENT",
     "CAVEAT_SYSTEM_DIR_UNSET",
     "CAVEAT_UNKNOWN_OPTION_VALUE",
     "Caveat",
@@ -104,6 +108,7 @@ __all__ = [
     "interpret_cfg",
     "load_registry",
     "parse_cfg_text",
+    "parse_gamelist",
     "parse_gamelist_alternative",
     "resolve_save_layout",
 ]
