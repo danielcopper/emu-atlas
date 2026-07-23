@@ -62,14 +62,18 @@ def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, 
 def cell(audit_entry: dict[str, object] | None, arrangement: str, kind: str) -> str:
     if kind == "standalone" and arrangement == "bare":
         return "—"
-    if audit_entry is None:
-        return "✖"
-    verified_map = audit_entry.get("verified")
-    verified = verified_map.get(arrangement) if isinstance(verified_map, dict) else None
-    if verified is None:
-        return "✖"
-    version = verified.get("version") or "?"
-    return f"✔ {version}"
+    verified = None
+    if audit_entry is not None:
+        verified_map = audit_entry.get("verified")
+        verified = verified_map.get(arrangement) if isinstance(verified_map, dict) else None
+    if verified is not None:
+        version = verified.get("version") or "?"
+        return f"✔ {version}"
+    # The row set comes from RetroDECK's shipped matrix, so existence there is
+    # certain (✖ = present but unverified). EmuDeck ships its OWN emulator set
+    # (unresearched, issue #11) and bare-RetroArch cores are user-installed —
+    # availability itself is unknown there, not merely the verification.
+    return "✖" if arrangement == "retrodeck" else "?"
 
 
 def systems_summary(systems: set[str], limit: int = 4) -> str:
@@ -101,7 +105,9 @@ def main() -> None:
     lines.append("Regenerate with `python scripts/generate_coverage_matrix.py` (then `deno fmt`). Facts come from")
     lines.append("`atlas/data/core_audit.json`; the row set comes from RetroDECK's bundled `es_systems.xml`, so")
     lines.append("unaudited emulators appear automatically as the work list. Cells: ✔ verified (with the arrangement")
-    lines.append("version the knowledge was proven against), ✖ not verified, — not applicable. Verdicts are defined in")
+    lines.append("version the knowledge was proven against), ✖ present but not verified, ? availability unknown there")
+    lines.append("(EmuDeck ships its own emulator set — unresearched; bare-RetroArch cores are user-installed), — not")
+    lines.append("applicable. The row set is RetroDECK's shipped matrix. Verdicts are defined in")
     lines.append("`docs/research/core-audit.md`.")
     lines.append("")
 
