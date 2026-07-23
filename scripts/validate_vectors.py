@@ -149,7 +149,7 @@ def _validate_expected(name: str, expected: Any, has_query: bool, has_catalogue_
         fail(f"{name}: catalogue_query and emulators expectation must appear together")
     if "emulators" in keys:
         for entry in expected["emulators"]:
-            if not isinstance(entry, dict) or not set(entry) <= {"label", "kind", "core_so"} or "label" not in entry:
+            if not isinstance(entry, dict) or not set(entry) <= {"label", "kind", "core_so", "selection"} or "label" not in entry:
                 fail(f"{name}: each emulator must carry 'label' plus optional 'kind'/'core_so'")
     _validate_installations(name, expected["installations"])
     has_placement = "save_location" in expected

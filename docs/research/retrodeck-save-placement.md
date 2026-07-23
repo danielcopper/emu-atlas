@@ -387,6 +387,14 @@ Three live sources answer three different questions:
 | core `.info` `systemid`         | **capability** — which cores can run a platform             | 249 of 295 `.info` files carry `systemid`; never a path source (§5) |
 | RetroArch playlists (`*.lpl`)   | **fact** — which core actually launched a ROM               | empty on the observed machine (everything launches via ES-DE)       |
 
+**[V]** The user's saved per-system emulator choice is **not** in `es_settings.xml` (only `AlternativeEmulatorPerGame`
+lives there). It is stored in the system's `gamelists/<system>/gamelist.xml` as a top-level
+`<alternativeEmulator><label>…</label></alternativeEmulator>` element whose label matches the command's `label`
+attribute in `es_systems.xml` — and ES-DE writes that file with **two root elements** (the declaration, then
+`<alternativeEmulator>`, then `<gameList>`), i.e. not well-formed XML. Observed live after switching n64 and psx on a
+real installation. A parser must tolerate the quirk; a label matching no declared entry falls back to declared order, as
+ES-DE itself does.
+
 When no catalogue exists (bare RetroArch, EmuDeck without ES-DE), the caller names the core; a default cannot be read
 and must not be invented.
 

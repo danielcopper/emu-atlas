@@ -18,7 +18,7 @@ from __future__ import annotations
 from atlas.bios import BiosEntry, BiosRegistry, load_registry
 from atlas.core_info import parse_core_info
 from atlas.detect import detect
-from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE, EmulatorSpec, parse_es_systems
+from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE, EmulatorSpec, parse_es_systems, parse_gamelist_alternative
 from atlas.installations import (
     HEALTH_CONFIG_UNREADABLE,
     HEALTH_OK,
@@ -104,5 +104,6 @@ __all__ = [
     "interpret_cfg",
     "load_registry",
     "parse_cfg_text",
+    "parse_gamelist_alternative",
     "resolve_save_layout",
 ]

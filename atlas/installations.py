@@ -25,7 +25,15 @@ import json
 import os
 from typing import Any, Callable
 
-from atlas.esde import KIND_LIBRETRO, EmulatorSpec, merge_layers, parse_es_systems
+from dataclasses import replace as _dc_replace
+
+from atlas.esde import (
+    KIND_LIBRETRO,
+    EmulatorSpec,
+    merge_layers,
+    parse_es_systems,
+    parse_gamelist_alternative,
+)
 from atlas.machine import Machine
 from atlas.oddities import lookup_card
 from atlas.placement import (
@@ -460,6 +468,11 @@ class EmulatorEntry:
     def source(self) -> str:
         return self._spec.source
 
+    @property
+    def selection(self) -> str | None:
+        """Provenance of a user promotion, or ``None`` for declared order."""
+        return self._spec.selection
+
     def save_location(self, *, content_path: str | None = None) -> SavePlacement:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
@@ -586,10 +599,27 @@ class RetroDeck:
     def emulators_for(self, system: str) -> tuple[EmulatorEntry, ...]:
         """The emulators that can launch *system*, in launch-priority order.
 
-        First entry = ES-DE's declared default. The user's saved per-system
-        choice (``es_settings.xml``) is not read yet — task list.
+        First entry = the effective default: the user's saved per-system choice
+        (``gamelists/<system>/gamelist.xml`` ``alternativeEmulator`` header,
+        read live) when it matches a declared entry, else ES-DE's declared
+        first entry. A selection label matching nothing keeps the declared
+        order — ES-DE itself falls back the same way. Per-game ``altemulator``
+        entries are not read yet (task list).
         """
-        return tuple(EmulatorEntry(self, spec) for spec in self._catalogue().get(system, ()))
+        specs = self._catalogue().get(system, ())
+        gamelist_path = os.path.join(self.root(), "ES-DE", "gamelists", system, "gamelist.xml")
+        gamelist_text = self._machine.read_text(gamelist_path)
+        if specs and gamelist_text is not None:
+            label = parse_gamelist_alternative(gamelist_text)
+            if label is not None:
+                for index, spec in enumerate(specs):
+                    if spec.label == label:
+                        promoted = _dc_replace(
+                            spec, selection=f'gamelist.xml: alternativeEmulator = "{label}"'
+                        )
+                        specs = (promoted, *specs[:index], *specs[index + 1 :])
+                        break
+        return tuple(EmulatorEntry(self, spec) for spec in specs)
 
     def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.

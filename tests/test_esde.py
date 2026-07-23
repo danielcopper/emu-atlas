@@ -164,3 +164,43 @@ class TestEntrySaveLocation:
         entry = rd.emulators_for("ps3")[0]
         with pytest.raises(NotImplementedError):
             entry.save_location(content_path="/mnt/sd/retrodeck/roms/ps3/game")
+
+
+class TestGamelistAlternative:
+    # The real ES-DE gamelist quirk: two root elements, not well-formed XML.
+    REAL_SAMPLE = (
+        '<?xml version="1.0"?>\n'
+        "<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n"
+        "<gameList />\n"
+    )
+
+    def test_parses_the_real_two_root_quirk(self):
+        assert atlas.parse_gamelist_alternative(self.REAL_SAMPLE) == "ParaLLEl N64"
+
+    def test_absent_selection_is_none(self):
+        assert atlas.parse_gamelist_alternative('<?xml version="1.0"?>\n<gameList />') is None
+
+    def test_malformed_is_none_never_guessed(self):
+        assert atlas.parse_gamelist_alternative("<alternativeEmulator><label>") is None
+
+    def test_selection_promotes_entry_to_default(self):
+        rd = _catalogue_fixture(
+            {"/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": self.REAL_SAMPLE}
+        )
+        entries = rd.emulators_for("n64")
+        assert [e.label for e in entries] == ["ParaLLEl N64", "Mupen64Plus-Next"]
+        assert entries[0].selection == 'gamelist.xml: alternativeEmulator = "ParaLLEl N64"'
+        assert entries[1].selection is None
+
+    def test_unmatched_selection_keeps_declared_order(self):
+        # ES-DE falls back to the declared default on an unknown label; so does atlas.
+        rd = _catalogue_fixture(
+            {
+                "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": (
+                    "<alternativeEmulator><label>Gone Emulator</label></alternativeEmulator><gameList />"
+                )
+            }
+        )
+        entries = rd.emulators_for("n64")
+        assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
+        assert all(e.selection is None for e in entries)

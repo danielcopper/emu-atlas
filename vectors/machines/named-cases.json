@@ -785,6 +785,43 @@
           }
         ]
       }
+    },
+    {
+      "name": "catalogue-gamelist-selection-promotes-default",
+      "rationale": "The user's saved per-system emulator choice lives in the gamelist.xml header as <alternativeEmulator><label> — written by ES-DE as two root elements (not well-formed XML, observed live). A matching label promotes that entry to effective default; the declared default stays as alternative.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n<gameList />\n",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
+        },
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
+        "emulators": [
+          {
+            "label": "ParaLLEl N64",
+            "core_so": "parallel_n64_libretro.so",
+            "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\""
+          },
+          {
+            "label": "Mupen64Plus-Next",
+            "core_so": "mupen64plus_next_libretro.so",
+            "selection": null
+          }
+        ]
+      }
     }
   ]
 }

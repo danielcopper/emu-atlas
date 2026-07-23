@@ -55,6 +55,7 @@ class EmulatorSpec:
     core_so: str | None
     command: str
     source: str
+    selection: str | None = None
 
 
 def parse_es_systems(text: str, *, source: str) -> dict[str, tuple[EmulatorSpec, ...]]:
@@ -103,3 +104,26 @@ def merge_layers(
     merged = dict(bundled)
     merged.update(custom)
     return merged
+
+
+def parse_gamelist_alternative(text: str) -> str | None:
+    """Extract the system-wide ``alternativeEmulator`` label from a ``gamelist.xml``.
+
+    ES-DE stores the user's per-system emulator choice as a top-level
+    ``<alternativeEmulator><label>…</label></alternativeEmulator>`` element
+    written *before* ``<gameList>`` — two root elements, i.e. not well-formed
+    XML (observed live on RetroDECK 0.10.9b). Parsed by wrapping in a synthetic
+    root; anything unparseable yields ``None``, never a guess.
+    """
+    stripped = text.strip()
+    if stripped.startswith("<?"):
+        end = stripped.find("?>")
+        if end != -1:
+            stripped = stripped[end + 2 :]
+    try:
+        root = ET.fromstring(f"<atlas-wrapper>{stripped}</atlas-wrapper>")
+    except ET.ParseError:
+        return None
+    label = root.findtext("alternativeEmulator/label")
+    label = (label or "").strip()
+    return label or None
