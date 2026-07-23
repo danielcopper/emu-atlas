@@ -103,3 +103,54 @@ def lookup_card(*, so_basename: str | None, library_name: str | None) -> CoreCar
         if card.matches(so_basename=so_basename, library_name=library_name):
             return card
     return None
+
+
+@dataclass(frozen=True, slots=True)
+class VerifiedOn:
+    """What one arrangement's verification pinned: arrangement + core versions."""
+
+    version: str | None
+    core_library_version: str | None
+    date: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AuditEntry:
+    """One core's audit verdict and per-arrangement verification record."""
+
+    key: str
+    verdict: str
+    verified: dict[str, VerifiedOn | None]
+
+
+def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
+    """Load the packaged verification matrix (``data/core_audit.json``)."""
+    if text is None:
+        text = importlib.resources.files("atlas").joinpath("data", "core_audit.json").read_text(encoding="utf-8")
+    raw = json.loads(text)
+    entries: dict[str, AuditEntry] = {}
+    for key, entry in raw.get("cores", {}).items():
+        verified: dict[str, VerifiedOn | None] = {}
+        for arrangement, rec in entry.get("verified", {}).items():
+            verified[arrangement] = (
+                VerifiedOn(
+                    version=rec.get("version"),
+                    core_library_version=rec.get("core_library_version"),
+                    date=rec.get("date"),
+                )
+                if rec is not None
+                else None
+            )
+        entries[key] = AuditEntry(key=key, verdict=entry.get("verdict", "unaudited"), verified=verified)
+    return entries
+
+
+_AUDIT: dict[str, AuditEntry] | None = None
+
+
+def lookup_audit(key: str) -> AuditEntry | None:
+    """Find the packaged audit entry for a card key."""
+    global _AUDIT
+    if _AUDIT is None:
+        _AUDIT = load_audit()
+    return _AUDIT.get(key)

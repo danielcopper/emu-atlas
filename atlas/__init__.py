@@ -31,7 +31,16 @@ from atlas.installations import (
     StandaloneRetroArchFlatpak,
 )
 from atlas.machine import CoreInfo, FixtureMachine, Machine, RealMachine
-from atlas.oddities import CoreCard, SaveMode, load_oddities, lookup_card
+from atlas.oddities import (
+    AuditEntry,
+    CoreCard,
+    SaveMode,
+    VerifiedOn,
+    load_audit,
+    load_oddities,
+    lookup_audit,
+    lookup_card,
+)
 from atlas.placement import (
     CAVEAT_CORE_UNQUERYABLE,
     CAVEAT_FILENAMES_UNVERIFIED,
@@ -42,6 +51,7 @@ from atlas.placement import (
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
     CAVEAT_SYSTEM_DIR_UNSET,
     CAVEAT_UNKNOWN_OPTION_VALUE,
+    CAVEAT_UNVERIFIED_VERSION,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
@@ -74,6 +84,7 @@ __all__ = [
     "CAVEAT_PER_GAME_OVERRIDES_PRESENT",
     "CAVEAT_SYSTEM_DIR_UNSET",
     "CAVEAT_UNKNOWN_OPTION_VALUE",
+    "CAVEAT_UNVERIFIED_VERSION",
     "Caveat",
     "BiosRegistry",
     "CoreInfo",

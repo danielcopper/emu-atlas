@@ -1,0 +1,93 @@
+{
+  "spec": "The verification matrix behind docs/research/core-audit.md: per core, the audit verdict and — per arrangement (retrodeck / emudeck / bare) — which versions the knowledge was verified against. null = never verified on that arrangement. MAINTENANCE IS ENFORCED, not documented-and-hoped: a test asserts every rule card in core_oddities.json has an entry here, and the resolver attaches an 'unverified-version' caveat when a card is applied on an arrangement that is null here or whose live-read version differs from the verified one. core_library_version is the value the core's own retro_get_system_info reports (query_core), so staleness is checked against live reads on both sides.",
+  "cores": {
+    "flycast": {
+      "verdict": "card",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": "1dac369",
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "lrps2": {
+      "verdict": "card",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": "14d19f8",
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "mednafen_psx": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "mednafen_psx_hw": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "pcsx_rearmed": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "mupen64plus_next": {
+      "verdict": "standard",
+      "verified": {
+        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "mgba": {
+      "verdict": "standard",
+      "verified": {
+        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "mednafen_saturn": {
+      "verdict": "standard-dir",
+      "verified": {
+        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "mednafen_ngp": {
+      "verdict": "standard-dir",
+      "verified": {
+        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
+        "emudeck": null,
+        "bare": null
+      }
+    },
+    "pokemini": {
+      "verdict": "standard-dir",
+      "verified": {
+        "retrodeck": { "version": "0.10.9b", "core_library_version": null, "date": "2026-07-23" },
+        "emudeck": null,
+        "bare": null
+      }
+    }
+  }
+}

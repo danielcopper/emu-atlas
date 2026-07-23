@@ -36,9 +36,10 @@ from atlas.esde import (
     parse_gamelist,
 )
 from atlas.machine import Machine
-from atlas.oddities import lookup_card
+from atlas.oddities import lookup_audit, lookup_card
 from atlas.placement import (
     CAVEAT_CORE_UNQUERYABLE,
+    CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
     CAVEAT_FILENAMES_UNVERIFIED,
@@ -205,6 +206,8 @@ def _retroarch_save_location(
     content_path: str | None,
     core_so: str | None,
     core_path_resolver: Callable[[str], str | None],
+    arrangement: str,
+    arrangement_version: str | None,
     extra_sources: tuple[str, ...] = (),
     extra_caveats: tuple[Caveat, ...] = (),
 ) -> SavePlacement:
@@ -223,6 +226,7 @@ def _retroarch_save_location(
         content_dir_path, content_dir_name, rom_stem = _split_content_path(content_path)
 
     library_name: str | None = None
+    info = None
     if core_so is not None:
         so_path = core_so if os.sep in core_so else core_path_resolver(core_so)
         info = machine.query_core(so_path) if so_path else None
@@ -293,6 +297,44 @@ def _retroarch_save_location(
     card = lookup_card(so_basename=so_basename, library_name=library_name)
     granularity: Granularity | None = None
     card_mode = None
+    if card is not None:
+        audit = lookup_audit(card.key)
+        verified = audit.verified.get(arrangement) if audit is not None else None
+        live_core_version = info.library_version if core_so is not None and info is not None else None
+        if verified is None:
+            caveats.append(
+                Caveat(
+                    CAVEAT_UNVERIFIED_VERSION,
+                    f"rule card '{card.key}' was never verified on a {arrangement} arrangement — "
+                    "the behaviour it describes may not hold here",
+                    {"card": card.key, "arrangement": arrangement},
+                )
+            )
+        else:
+            drift: dict[str, str] = {}
+            if (
+                verified.version is not None
+                and arrangement_version is not None
+                and verified.version != arrangement_version
+            ):
+                drift["arrangement_verified"] = verified.version
+                drift["arrangement_live"] = arrangement_version
+            if (
+                verified.core_library_version is not None
+                and live_core_version is not None
+                and verified.core_library_version != live_core_version
+            ):
+                drift["core_verified"] = verified.core_library_version
+                drift["core_live"] = live_core_version
+            if drift:
+                caveats.append(
+                    Caveat(
+                        CAVEAT_UNVERIFIED_VERSION,
+                        f"rule card '{card.key}' was verified against different versions than this "
+                        f"machine runs ({drift}) — behaviour may have drifted",
+                        {"card": card.key, "arrangement": arrangement, **drift},
+                    )
+                )
     if card is not None and card.option_key is None:
         card_mode = card.modes.get("always")
         if card_mode is not None:
@@ -755,6 +797,8 @@ class RetroDeck:
             content_path=content_path,
             core_so=core_so,
             core_path_resolver=self._core_path,
+            arrangement="retrodeck",
+            arrangement_version=self._config.get("version") if isinstance(self._config.get("version"), str) else None,
             extra_caveats=tuple(caveats),
         )
 
@@ -855,6 +899,8 @@ class EmuDeck:
             content_path=content_path,
             core_so=core_so,
             core_path_resolver=self._core_path,
+            arrangement="emudeck",
+            arrangement_version=None,
             extra_caveats=tuple(caveats),
         )
 
@@ -914,6 +960,8 @@ class _RetroArchInstall:
             content_path=content_path,
             core_so=core_so,
             core_path_resolver=self._core_path,
+            arrangement="bare",
+            arrangement_version=None,
         )
 
 

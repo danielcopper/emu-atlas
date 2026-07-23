@@ -206,3 +206,75 @@ class TestLRPS2Card:
         p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("Mcd001.ps2",)
+
+
+class TestVerificationMatrix:
+    def test_every_card_has_an_audit_entry(self):
+        # Maintenance is enforced: a new card without a verification entry fails here.
+        from atlas.oddities import load_audit, load_oddities
+
+        audit = load_audit()
+        for card in load_oddities():
+            assert card.key in audit, (
+                f"rule card {card.key!r} has no entry in atlas/data/core_audit.json — "
+                "add its verification record (see the file's spec)"
+            )
+
+    def test_matching_versions_carry_no_staleness_caveat(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: '{"version": "0.10.9b", "paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}',
+                RETRODECK_CFG: CFG,
+                "/mnt/sd/retrodeck/roms/dreamcast/Game.gdi": "",
+            },
+            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        assert not any(c.code == atlas.CAVEAT_UNVERIFIED_VERSION for c in p.caveats)
+
+    def test_arrangement_version_drift_fires_caveat(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: '{"version": "0.11.0", "paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}',
+                RETRODECK_CFG: CFG,
+                "/mnt/sd/retrodeck/roms/dreamcast/Game.gdi": "",
+            },
+            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
+        assert stale and stale[0].data["arrangement_live"] == "0.11.0"
+        assert stale[0].data["arrangement_verified"] == "0.10.9b"
+
+    def test_core_version_drift_fires_caveat(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: '{"version": "0.10.9b", "paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}',
+                RETRODECK_CFG: CFG,
+                "/mnt/sd/retrodeck/roms/dreamcast/Game.gdi": "",
+            },
+            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "fffffff"}},
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
+        assert stale and stale[0].data["core_live"] == "fffffff"
+
+    def test_unverified_arrangement_fires_caveat(self):
+        # The flycast card was never verified on EmuDeck — the answer says so.
+        machine = atlas.FixtureMachine(
+            {
+                f"{HOME}/.config/EmuDeck/settings.sh": 'savesPath="$HOME/Emulation/saves"\nromsPath="$HOME/Emulation/roms"\n',
+                f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": (
+                    'savefile_directory = "/home/deck/Emulation/saves/retroarch/saves"\n'
+                    'system_directory = "/home/deck/Emulation/bios"\n'
+                    'libretro_directory = "/cores"\n'
+                ),
+                f"{HOME}/Emulation/saves/.keep": "",
+                f"{HOME}/Emulation/roms/dreamcast/Game.gdi": "",
+            },
+            cores={"/cores/flycast_libretro.so": {"library_name": "Flycast"}},
+        )
+        ed = atlas.EmuDeck(HOME, machine, machine.read_text(f"{HOME}/.config/EmuDeck/settings.sh") or "")
+        p = ed.save_location(content_path=f"{HOME}/Emulation/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
+        assert stale and stale[0].data["arrangement"] == "emudeck"

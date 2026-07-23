@@ -48,6 +48,7 @@ CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
 CAVEAT_SYSTEM_DIR_UNSET = "system-directory-unset"
 CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
 CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
+CAVEAT_UNVERIFIED_VERSION = "unverified-version"
 
 
 @dataclass(frozen=True, slots=True)

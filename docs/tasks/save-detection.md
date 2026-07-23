@@ -63,6 +63,14 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
     deployment); report drift alongside the correct answer. On EmuDeck note the different semantics — `autofix.sh`
     reverts drift.
 
+## Versioning
+
+15. **Card variants via feature detection.** Cards currently describe one core generation; the LRPS2 drift
+    (`pcsx2_memcard_slot_1/2` → `pcsx2_shared_memory_cards`) shows two generations coexist in the wild. Planned: variant
+    dispatch on observable facts (which option keys the core registers), enabled by extending `query_core` to capture
+    the option definitions from `retro_set_environment` — which also turns option defaults into live reads. One vector
+    per generation, kept forever. Design in `docs/research/core-audit.md`.
+
 ## Context and docs
 
 11. **`home` guidance for callers.** Document who supplies `home` and why there is no default: the caller knows which
