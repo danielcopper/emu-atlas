@@ -3,8 +3,12 @@
   "cores": {
     "flycast": {
       "identifiers": {
-        "so": ["flycast_libretro.so"],
-        "library_name": ["Flycast"]
+        "so": [
+          "flycast_libretro.so"
+        ],
+        "library_name": [
+          "Flycast"
+        ]
       },
       "saves": {
         "governing_option": {
@@ -46,6 +50,38 @@
           "disabled": "verified",
           "VMU A1": "root verified from option description; per-game filename scheme unestablished",
           "All VMUs": "root verified from option description; per-game filename scheme unestablished"
+        }
+      }
+    },
+    "lrps2": {
+      "identifiers": {
+        "so": [
+          "pcsx2_libretro.so"
+        ],
+        "library_name": [
+          "LRPS2"
+        ]
+      },
+      "saves": {
+        "governing_option": null,
+        "modes": {
+          "always": {
+            "root": "system_directory",
+            "subdir": "pcsx2/memcards",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "granularity": "shared-card"
+          }
+        }
+      },
+      "provenance": {
+        "source": "RetroDECK component_prepare.sh:97 dir_preps <system_directory>/pcsx2/memcards (live symlink observed: bios/pcsx2/memcards -> saves/ps2/retroarch-core/LRPS2/memcards); filename scheme Mcd%03u.ps2 from pcsx2_libretro.so format strings, matching shipped PCSX2 defaults (Slot1/2 = Mcd001/Mcd002). No memcard-related core option exists in the binary's option strings — fixed behaviour.",
+        "verified_against": "LRPS2 as shipped in RetroDECK 0.10.9b",
+        "date": "2026-07-23",
+        "status": {
+          "always": "root verified via RetroDECK arrangement; default filenames declared from format strings + PCSX2 defaults, not yet live-observed (memcards dir empty on the observed machine); multitap variants (Mcd-Multitap%u-Slot%02u.ps2) exist when enabled"
         }
       }
     }

@@ -40,8 +40,8 @@ class CoreCard:
     key: str
     so_names: tuple[str, ...]
     library_names: tuple[str, ...]
-    option_key: str
-    option_default: str
+    option_key: str | None
+    option_default: str | None
     modes: dict[str, SaveMode]
     provenance: str
 
@@ -66,7 +66,7 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
     for key, entry in raw.get("cores", {}).items():
         identifiers = entry.get("identifiers", {})
         saves = entry.get("saves", {})
-        governing = saves.get("governing_option", {})
+        governing = saves.get("governing_option") or {}
         modes: dict[str, SaveMode] = {}
         for value, mode in saves.get("modes", {}).items():
             files = mode.get("files")
@@ -82,8 +82,8 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
                 key=key,
                 so_names=tuple(identifiers.get("so", ())),
                 library_names=tuple(identifiers.get("library_name", ())),
-                option_key=governing["key"],
-                option_default=governing["default"],
+                option_key=governing.get("key"),
+                option_default=governing.get("default"),
                 modes=modes,
                 provenance=provenance.get("source", "unstated"),
             )

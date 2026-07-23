@@ -293,7 +293,18 @@ def _retroarch_save_location(
     card = lookup_card(so_basename=so_basename, library_name=library_name)
     granularity: Granularity | None = None
     card_mode = None
-    if card is not None:
+    if card is not None and card.option_key is None:
+        card_mode = card.modes.get("always")
+        if card_mode is not None:
+            granularity = Granularity(
+                value=card_mode.granularity,
+                option_key=None,
+                option_value=None,
+                option_source=f"rule card '{card.key}': fixed behaviour (no governing option)",
+                options_file=None,
+                alternatives=(),
+            )
+    elif card is not None:
         opt_value, opt_source, options_file = _core_options_value(
             machine,
             layer_texts,

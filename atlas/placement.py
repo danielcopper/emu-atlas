@@ -94,12 +94,13 @@ class Granularity:
     core default). ``options_file`` is where a caller would change the option —
     change it, ask again, and the new answer confirms the switch.
     ``alternatives`` lists the other selectable ``(option_value, granularity)``
-    pairs from the rule card.
+    pairs from the rule card. A core with fixed behaviour (no governing option,
+    e.g. LRPS2) carries ``option_key=None`` and no alternatives.
     """
 
     value: str
-    option_key: str
-    option_value: str
+    option_key: str | None
+    option_value: str | None
     option_source: str
     options_file: str | None
     alternatives: tuple[tuple[str, str], ...]

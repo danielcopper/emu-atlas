@@ -144,3 +144,42 @@ class TestFlycastResolution:
         )
         p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so")
         assert p.granularity is None
+
+
+class TestLRPS2FixedCard:
+    def test_lookup_by_so_and_library_name(self):
+        assert lookup_card(so_basename="pcsx2_libretro.so", library_name=None).key == "lrps2"
+        assert lookup_card(so_basename=None, library_name="LRPS2").key == "lrps2"
+
+    def test_fixed_shared_memcards_in_system_directory(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                "/mnt/sd/retrodeck/roms/ps2/Game.iso": "",
+            },
+            cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
+        assert p.dir == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ("Mcd001.ps2", "Mcd002.ps2")
+        g = p.granularity
+        assert g is not None and g.value == "shared-card"
+        assert g.option_key is None and g.alternatives == ()
+        assert "fixed behaviour" in g.option_source
+
+    def test_existing_memcard_is_observed(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                "/mnt/sd/retrodeck/roms/ps2/Game.iso": "",
+                "/mnt/sd/retrodeck/bios/pcsx2/memcards/Mcd001.ps2": "m",
+            },
+            cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
+        assert p.file_set.state == "observed"
+        assert p.file_set.files == ("Mcd001.ps2",)

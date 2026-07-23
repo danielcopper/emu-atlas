@@ -822,6 +822,54 @@
           }
         ]
       }
+    },
+    {
+      "name": "lrps2-fixed-shared-memcards-through-symlink",
+      "rationale": "LRPS2 keeps shared memory cards under <system_directory>/pcsx2/memcards with no governing option (fixed behaviour, rule card 'lrps2'). Under RetroDECK that path is a dir_prep symlink into the saves tree; the fixture models the link and the observed card is found through it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": "m"
+        },
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso",
+          "core_so": "pcsx2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd001.ps2"
+            ]
+          },
+          "granularity": {
+            "value": "shared-card"
+          }
+        }
+      }
     }
   ]
 }
