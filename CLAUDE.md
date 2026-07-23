@@ -40,6 +40,7 @@ mise run setup      # editable install + dev deps into the local venv
 mise run test       # pytest (unit + vector runner)
 mise run validate   # vector shape validation
 deno fmt --check    # markdown formatting (CI-enforced)
+basedpyright atlas tests scripts   # type-check (CI-enforced; pip install basedpyright into the venv)
 ```
 
 ## Pitfalls
