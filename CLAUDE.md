@@ -7,7 +7,7 @@ way the emulator does. The one rule that decides every "table or live?" question
 > knowledge is marked, versioned, and source-cited.
 
 Spec: `DESIGN.md`. Plan: `ROADMAP.md`. Where to pick up core work: `docs/research/coverage-matrix.md` (generated).
-Evidence: `docs/research/`. Itemized gaps: `docs/tasks/save-detection.md`. External reviews: `docs/reviews/`.
+Evidence: `docs/research/`. Itemized gaps: `docs/tasks/save-detection.md`.
 
 ## Ground rules
 

@@ -1,8 +1,8 @@
 # Roadmap
 
 Where atlas goes from here, in order. Working docs: `docs/research/coverage-matrix.md` (generated — where to pick up
-core work), `docs/tasks/save-detection.md` (itemized gaps), `docs/reviews/` (external reviews; finding IDs referenced
-below). The boundary rule and settled decisions live in `DESIGN.md`.
+core work), `docs/tasks/save-detection.md` (itemized gaps). Finding IDs (`H*`/`M*`) below refer to the external review
+of the resolver rebuild (PR #13; not tracked in the repo). The boundary rule and settled decisions live in `DESIGN.md`.
 
 ## Done (this branch)
 
