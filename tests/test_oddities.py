@@ -93,6 +93,21 @@ class TestFlycastResolution:
         assert p.file_set.state == "declared"
         assert "vmu_save_A1.bin" in p.file_set.files
 
+    def test_slot2_vmus_are_observed_when_present(self):
+        # The card's observe list is wider than the declared defaults: slot-2
+        # VMUs exist only when a port's slot 2 is configured as VMU (M2).
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+                "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+                "/mnt/sd/retrodeck/bios/dc/vmu_save_A2.bin": "v",
+            }
+        )
+        assert p.file_set.files == ("vmu_save_A1.bin", "vmu_save_A2.bin")
+        assert p.file_set.complete is False
+
     def test_per_game_mode_switches_root_and_granularity(self):
         p = _flycast_query(
             {

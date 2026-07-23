@@ -86,11 +86,17 @@ class FileSet:
     ``"declared"`` (``files`` come from a verified rule card — world knowledge
     with cited provenance, not a guess), or ``"unknown"`` (``files`` is empty;
     atlas refuses to guess). ``source`` says how the state was reached.
+
+    *Observed* means a snapshot of matching files currently seen — it never
+    implies the whole save. ``complete`` is the explicit completeness claim:
+    ``True`` only when a source-verified rule card closes the candidate
+    universe for the active mode; the generic observation can never earn it.
     """
 
     state: str
     files: tuple[str, ...]
     source: str
+    complete: bool = False
 
 
 @dataclass(frozen=True, slots=True)

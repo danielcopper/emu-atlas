@@ -26,6 +26,17 @@
               "vmu_save_D1.bin",
               "dc_nvmem.bin"
             ],
+            "observe": [
+              "vmu_save_A1.bin",
+              "vmu_save_A2.bin",
+              "vmu_save_B1.bin",
+              "vmu_save_B2.bin",
+              "vmu_save_C1.bin",
+              "vmu_save_C2.bin",
+              "vmu_save_D1.bin",
+              "vmu_save_D2.bin",
+              "dc_nvmem.bin"
+            ],
             "granularity": "shared-card"
           },
           "VMU A1": {

@@ -167,6 +167,57 @@ class TestRetroDeckSaveLocation:
             for c in p.caveats
         )
 
+    def test_observation_is_literal_for_glob_metacharacters(self):
+        # '[USA]' in a ROM name must match itself, never act as a class (M2).
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/roms/gba/Game [USA].zip": "",
+                "/mnt/sd/retrodeck/saves/Game [USA].srm": "s",
+                "/mnt/sd/retrodeck/saves/Game U.srm": "decoy",
+            }
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game [USA].zip")
+        assert p.file_set.files == ("Game [USA].srm",)
+
+    def test_disk_index_companion_is_filtered(self):
+        # <stem>.ldci is RetroArch's disk-control index, not save data
+        # (disk_index_file.c:201-249, file_path_special.h:83).
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/roms/psx/Game.chd": "",
+                "/mnt/sd/retrodeck/saves/Game.srm": "s",
+                "/mnt/sd/retrodeck/saves/Game.ldci": "{}",
+            }
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/psx/Game.chd")
+        assert p.file_set.files == ("Game.srm",)
+
+    def test_observed_never_claims_completeness(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
+                "/mnt/sd/retrodeck/saves/Game.srm": "s",
+            }
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        assert p.file_set.state == "observed"
+        assert p.file_set.complete is False
+
     def test_rom_stem_truncates_at_last_dot(self):
         # runloop.c:8710 — truncate at the last dot, but not a leading one.
         rd = _retrodeck(

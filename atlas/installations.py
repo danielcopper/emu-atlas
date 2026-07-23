@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+from glob import escape as _glob_escape
 from typing import Any, Callable
 
 from dataclasses import dataclass, replace as _dc_replace
@@ -599,13 +600,24 @@ def _retroarch_save_location(
         if declared is None:
             fs = UNKNOWN_FILE_SET
         elif needs:
-            fs = FileSet("declared", declared, f"declared by rule card '{card.key}'")
+            fs = FileSet("declared", declared, f"declared by rule card '{card.key}'", complete=card_mode.complete)
         else:
-            present = tuple(f for f in declared if machine.path_kind(os.path.join(directory, f)) == KIND_FILE)
+            # Observation candidates may be wider than the declared defaults —
+            # e.g. Flycast's slot-2 VMUs exist only when configured (REVIEW M2).
+            observe = _card_files(card_mode.observe, rom_stem) if card_mode.observe is not None else None
+            candidates = observe if observe is not None else declared
+            present = tuple(f for f in candidates if machine.path_kind(os.path.join(directory, f)) == KIND_FILE)
             if present:
-                fs = FileSet("observed", present, f"observed on the machine: {directory}")
+                fs = FileSet(
+                    "observed", present, f"observed on the machine: {directory}", complete=card_mode.complete
+                )
             else:
-                fs = FileSet("declared", declared, f"declared by rule card '{card.key}' (none present yet)")
+                fs = FileSet(
+                    "declared",
+                    declared,
+                    f"declared by rule card '{card.key}' (none present yet)",
+                    complete=card_mode.complete,
+                )
         physical_dir = None
         if not needs:
             physical_dir, link_caveats = _link_view(machine, directory)
@@ -679,35 +691,51 @@ def _retroarch_save_location(
                 )
         if rom_stem is not None:
             content_basename = os.path.basename(content_path) if content_path else None
+            # Literal observation: ROM names routinely carry glob
+            # metacharacters ('[', ']') — escape them so '[' matches '['
+            # (REVIEW M2). RetroArch's own bookkeeping next to saves is
+            # filtered with a source citation: the disk-control index
+            # '<stem>.ldci' (disk_index_file.c:201-249, file_path_special.h:83)
+            # is not save data.
+            pattern = os.path.join(_glob_escape(final_dir), _glob_escape(rom_stem) + ".*")
+            companions = {f"{rom_stem}.ldci"}
             matches = [
                 m
-                for m in machine.glob(os.path.join(final_dir, f"{rom_stem}.*"))
+                for m in machine.glob(pattern)
                 # In content-dir mode the ROM shares the save's directory and
                 # stem — the content file itself is never part of the save set.
-                if os.path.basename(m) != content_basename
+                if os.path.basename(m) != content_basename and os.path.basename(m) not in companions
             ]
+            declared = None
+            if card is not None and card_mode is not None and card_mode.files is not None:
+                declared = _card_files(card_mode.files, rom_stem)
             if matches:
+                observed = tuple(sorted(os.path.basename(m) for m in matches))
+                complete = (
+                    card_mode is not None
+                    and card_mode.complete
+                    and declared is not None
+                    and set(observed) <= set(declared)
+                )
                 file_set = FileSet(
                     state="observed",
-                    files=tuple(sorted(os.path.basename(m) for m in matches)),
+                    files=observed,
                     source=f"observed on the machine: {final_dir}",
+                    complete=complete,
+                )
+            elif declared is not None and card is not None:
+                file_set = FileSet(
+                    state="declared",
+                    files=declared,
+                    source=f"declared by rule card '{card.key}' (none present yet)",
+                    complete=card_mode.complete if card_mode is not None else False,
                 )
             else:
-                declared = None
-                if card is not None and card_mode is not None and card_mode.files is not None:
-                    declared = _card_files(card_mode.files, rom_stem)
-                if declared is not None and card is not None:
-                    file_set = FileSet(
-                        state="declared",
-                        files=declared,
-                        source=f"declared by rule card '{card.key}' (none present yet)",
-                    )
-                else:
-                    file_set = FileSet(
-                        state="unknown",
-                        files=(),
-                        source=f"no files present at {final_dir} — file set not stated (never guessed)",
-                    )
+                file_set = FileSet(
+                    state="unknown",
+                    files=(),
+                    source=f"no files present at {final_dir} — file set not stated (never guessed)",
+                )
         physical_dir, link_caveats = _link_view(machine, final_dir)
         caveats.extend(link_caveats)
 

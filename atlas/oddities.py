@@ -25,12 +25,19 @@ class SaveMode:
 
     ``files`` is the declared file set for this mode, or ``None`` when the
     card marks it unverified — the resolver then refuses to state filenames.
+    ``observe`` optionally widens the *observation* candidates beyond the
+    declared defaults (e.g. Flycast's slot-2 VMUs, which exist only when a
+    controller port's slot 2 is configured as a VMU). ``complete`` asserts
+    that the mode's candidate universe is closed — no other file can belong
+    to the save; a card may claim it only with source-verified provenance.
     """
 
     root: str
     subdir: str | None
     files: tuple[str, ...] | None
     granularity: str
+    observe: tuple[str, ...] | None = None
+    complete: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,11 +77,18 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
         modes: dict[str, SaveMode] = {}
         for value, mode in saves.get("modes", {}).items():
             files = mode.get("files")
+            observe = mode.get("observe")
+            complete = mode.get("complete", False)
+            if not isinstance(complete, bool):
+                # bool("false") is True in Python — never coerce this claim.
+                raise ValueError(f"card {key!r} mode {value!r}: 'complete' must be a JSON boolean")
             modes[value] = SaveMode(
                 root=mode["root"],
                 subdir=mode.get("subdir"),
                 files=tuple(files) if files is not None else None,
                 granularity=mode["granularity"],
+                observe=tuple(observe) if observe is not None else None,
+                complete=complete,
             )
         provenance = entry.get("provenance", {})
         cards.append(
