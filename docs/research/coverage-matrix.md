@@ -5,7 +5,7 @@ Regenerate with `python scripts/generate_coverage_matrix.py` (then `deno fmt`). 
 automatically as the work list. Cells: ✔ verified (with the arrangement version the knowledge was proven against), ✖ not
 verified, — not applicable. Verdicts are defined in `docs/research/core-audit.md`.
 
-**Status:** libretro 10/159 audited · standalone 0/22 audited
+**Status:** libretro 11/159 audited · standalone 0/22 audited
 
 ## libretro cores
 
@@ -21,6 +21,7 @@ verified, — not applicable. Verdicts are defined in `docs/research/core-audit.
 | `pcsx2`                                     | ps2                                                 | card         | ✔ 0.10.9b | ✖       | ✖                |
 | `pcsx_rearmed`                              | psx                                                 | multi-option | ✔ 0.10.9b | ✖       | ✖                |
 | `pokemini`                                  | pokemini                                            | standard-dir | ✔ 0.10.9b | ✖       | ✖                |
+| `swanstation`                               | psx                                                 | multi-option | ✔ 0.10.9b | ✖       | ✖                |
 | `81`                                        | zx81                                                | unaudited    | ✖         | ✖       | ✖                |
 | `DoubleCherryGB`                            | gb, gbc                                             | unaudited    | ✖         | ✖       | ✖                |
 | `a5200`                                     | atari5200                                           | unaudited    | ✖         | ✖       | ✖                |
@@ -143,7 +144,6 @@ verified, — not applicable. Verdicts are defined in `docs/research/core-audit.
 | `stella2014`                                | atari2600                                           | unaudited    | ✖         | ✖       | ✖                |
 | `stella2023`                                | atari2600                                           | unaudited    | ✖         | ✖       | ✖                |
 | `superbroswar`                              | ports                                               | unaudited    | ✖         | ✖       | ✖                |
-| `swanstation`                               | psx                                                 | unaudited    | ✖         | ✖       | ✖                |
 | `tgbdual`                                   | gb, gbc                                             | unaudited    | ✖         | ✖       | ✖                |
 | `theodore`                                  | moto, to8                                           | unaudited    | ✖         | ✖       | ✖                |
 | `tic80`                                     | tic80                                               | unaudited    | ✖         | ✖       | ✖                |

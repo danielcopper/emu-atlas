@@ -130,6 +130,19 @@
         "bare": null
       },
       "kind": "libretro"
+    },
+    "swanstation": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
     }
   }
 }
