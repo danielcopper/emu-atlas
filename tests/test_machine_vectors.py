@@ -47,7 +47,9 @@ def test_machine_vector(vector):
     assert got_installations == expected["installations"], vector.get("rationale", vector["name"])
 
     if "emulators" in expected:
-        entries = installs[0].emulators_for(inp["catalogue_query"]["system"])
+        catalogue_inst = installs[0]
+        assert isinstance(catalogue_inst, atlas.RetroDeck), "catalogue vectors target RetroDECK"
+        entries = catalogue_inst.emulators_for(inp["catalogue_query"]["system"])
         got_emulators = []
         for exp, entry in zip(expected["emulators"], entries):
             got_emulators.append({key: getattr(entry, key) for key in exp})

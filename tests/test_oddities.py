@@ -153,8 +153,10 @@ class TestFlycastResolution:
 
 class TestLRPS2Card:
     def test_lookup_by_so_and_library_name(self):
-        assert lookup_card(so_basename="pcsx2_libretro.so", library_name=None).key == "pcsx2"
-        assert lookup_card(so_basename=None, library_name="LRPS2").key == "pcsx2"
+        by_so = lookup_card(so_basename="pcsx2_libretro.so", library_name=None)
+        by_name = lookup_card(so_basename=None, library_name="LRPS2")
+        assert by_so is not None and by_so.key == "pcsx2"
+        assert by_name is not None and by_name.key == "pcsx2"
 
     def test_default_shared_memcards_in_system_directory(self):
         # pcsx2_shared_memory_cards defaults to "enabled" (libretro_core_options.h:169)

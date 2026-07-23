@@ -517,7 +517,7 @@ def _retroarch_save_location(
                 CAVEAT_FILENAMES_UNVERIFIED,
                 f"rule card '{card.key}': mode {granularity.option_value!r} places per-game files under the "
                 "standard directory, but the filename scheme is unverified — file names not stated",
-                {"card": card.key, "mode": granularity.option_value},
+                {"card": card.key, "mode": granularity.option_value or ""},
             )
         )
 
@@ -549,12 +549,10 @@ def _retroarch_save_location(
                     source=f"observed on the machine: {directory}",
                 )
             else:
-                declared = (
-                    _card_files(card_mode.files, rom_stem)
-                    if card is not None and card_mode is not None and card_mode.files is not None
-                    else None
-                )
-                if declared is not None:
+                declared = None
+                if card is not None and card_mode is not None and card_mode.files is not None:
+                    declared = _card_files(card_mode.files, rom_stem)
+                if declared is not None and card is not None:
                     file_set = FileSet(
                         state="declared",
                         files=declared,
@@ -701,7 +699,7 @@ class EmulatorEntry:
                 granularity=placement.granularity,
             )
         if content_path is not None:
-            selections = self._installation._gamelist_selections(self._spec.system)
+            selections = self._installation.gamelist_selections(self._spec.system)
             override_label = _match_per_game(selections, content_path)
             if override_label is not None and override_label != self._spec.label:
                 placement = SavePlacement(
@@ -835,7 +833,7 @@ class RetroDeck:
         """Every system the catalogue declares, sorted."""
         return tuple(sorted(self._catalogue()))
 
-    def _gamelist_selections(self, system: str) -> GamelistSelections:
+    def gamelist_selections(self, system: str) -> GamelistSelections:
         gamelist_path = os.path.join(self.root(), "ES-DE", "gamelists", system, "gamelist.xml")
         text = self._machine.read_text(gamelist_path)
         if text is None:
@@ -856,7 +854,7 @@ class RetroDeck:
         system-level answer may be wrong for exactly those games.
         """
         specs = self._catalogue().get(system, ())
-        selections = self._gamelist_selections(system)
+        selections = self.gamelist_selections(system)
         chosen_label: str | None = None
         chosen_source: str | None = None
         if content_path is not None:
