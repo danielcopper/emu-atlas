@@ -16,6 +16,12 @@ Two entry points, per DESIGN.md:
 from __future__ import annotations
 
 from atlas.bios import BiosEntry, BiosRegistry, load_registry
+from atlas.contract import (
+    emulator_contract,
+    installation_contract,
+    placement_contract,
+    unresolved_contract,
+)
 from atlas.core_info import parse_core_info
 from atlas.detect import detect
 from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE, EmulatorSpec, GamelistSelections, parse_es_systems, parse_gamelist, parse_gamelist_alternative
@@ -153,6 +159,10 @@ __all__ = [
     "UPSTREAM_DEFAULTS",
     "build_save_placement",
     "detect",
+    "emulator_contract",
+    "installation_contract",
+    "placement_contract",
+    "unresolved_contract",
     "interpret_cfg",
     "load_registry",
     "parse_cfg_text",
