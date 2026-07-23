@@ -17,7 +17,7 @@ RD_DEPLOY_CORES = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/f
 
 def _retrodeck(files, **kwargs):
     machine = atlas.FixtureMachine(files, **kwargs)
-    return atlas.RetroDeck(HOME, machine, files.get(RETRODECK_JSON))
+    return atlas.RetroDeck(HOME, machine)
 
 
 class TestRetroDeckPaths:
@@ -162,7 +162,10 @@ class TestRetroDeckSaveLocation:
             }
         )
         p = rd.save_location()
-        assert any(c.code == atlas.CAVEAT_HEALTH and c.data["health"] == "root_missing" for c in p.caveats)
+        assert any(
+            c.code == atlas.CAVEAT_HEALTH and c.data["issue"] == atlas.HEALTH_ISSUE_ROOT_MISSING
+            for c in p.caveats
+        )
 
     def test_rom_stem_truncates_at_last_dot(self):
         # runloop.c:8710 — truncate at the last dot, but not a leading one.
@@ -190,10 +193,12 @@ class TestEmuDeck:
                 f"{HOME}/Emulation/saves/.keep": "",
             }
         )
-        ed = atlas.EmuDeck(HOME, machine, machine.read_text(EMUDECK_SETTINGS).text or "")
+        ed = atlas.EmuDeck(HOME, machine)
         assert ed.root() == f"{HOME}/Emulation"
         assert ed.saves_root() == f"{HOME}/Emulation/saves"
-        assert ed.health() == atlas.HEALTH_OK
+        # No standalone RetroArch cfg in this fixture: the companion issue is
+        # the only one — roots are fine.
+        assert ed.health().codes == (atlas.HEALTH_ISSUE_COMPANION_CONFIG_MISSING,)
 
     def test_save_location_reads_standalone_cfg(self):
         machine = atlas.FixtureMachine(
@@ -208,7 +213,7 @@ class TestEmuDeck:
                 f"{HOME}/Emulation/saves/retroarch/saves/.keep": "",
             }
         )
-        ed = atlas.EmuDeck(HOME, machine, machine.read_text(EMUDECK_SETTINGS).text or "")
+        ed = atlas.EmuDeck(HOME, machine)
         p = ed.save_location(content_path=f"{HOME}/Emulation/roms/gba/Game.zip")
         assert p.dir == "/home/deck/Emulation/saves/retroarch/saves"
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY

@@ -23,7 +23,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -59,7 +59,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -102,7 +102,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -144,7 +144,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -184,7 +184,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -220,7 +220,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -259,7 +259,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -287,7 +287,10 @@
           {
             "kind": "retrodeck",
             "root": "/run/media/deck/Emulation/retrodeck",
-            "health": "root_missing"
+            "health": [
+              "root-missing",
+              "saves-root-missing"
+            ]
           }
         ]
       }
@@ -300,14 +303,17 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
-        }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ]
       },
       "expected": {
         "installations": [
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ]
       }
@@ -332,7 +338,7 @@
           {
             "kind": "emudeck",
             "root": "/home/deck/Emulation",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -367,7 +373,7 @@
           {
             "kind": "standalone_retroarch_flatpak",
             "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -401,7 +407,7 @@
           {
             "kind": "standalone_retroarch_flatpak",
             "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -438,7 +444,7 @@
           {
             "kind": "native_retroarch",
             "root": "/home/user/.config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -480,7 +486,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -523,7 +529,7 @@
           {
             "kind": "native_retroarch",
             "root": "/home/user/.config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -549,19 +555,22 @@
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
           "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/ra-saves/.keep": ""
-        }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ]
       },
       "expected": {
         "installations": [
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           },
           {
             "kind": "native_retroarch",
             "root": "/home/deck/.config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ]
       }
@@ -582,7 +591,7 @@
           {
             "kind": "emudeck",
             "root": "/home/deck/Emulation",
-            "health": "ok"
+            "health": []
           }
         ]
       }
@@ -629,7 +638,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -678,7 +687,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -710,6 +719,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
         "catalogue_query": {
           "system": "n64"
         }
@@ -719,7 +731,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "emulators": [
@@ -746,6 +758,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
         },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
         "catalogue_query": {
           "system": "n64"
         }
@@ -755,7 +770,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "emulators": [
@@ -778,6 +793,9 @@
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n<gameList />\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
         "catalogue_query": {
           "system": "n64"
         }
@@ -787,7 +805,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "emulators": [
@@ -833,7 +851,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -863,6 +881,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
         },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
         "query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -872,7 +893,7 @@
           {
             "kind": "retrodeck",
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {

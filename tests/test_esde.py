@@ -94,7 +94,7 @@ class TestMerge:
 
 def _retrodeck(files, **kwargs):
     machine = atlas.FixtureMachine(files, **kwargs)
-    return atlas.RetroDeck(HOME, machine, files.get(RETRODECK_JSON))
+    return atlas.RetroDeck(HOME, machine)
 
 
 def _catalogue_fixture(extra_files=None, **kwargs):

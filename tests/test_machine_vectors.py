@@ -42,7 +42,7 @@ def test_machine_vector(vector):
 
     installs = atlas.detect(inp["home"], machine)
     got_installations = [
-        {"kind": i.kind, "root": i.root(), "health": i.health()} for i in installs
+        {"kind": i.kind, "root": i.root(), "health": list(i.health().codes)} for i in installs
     ]
     assert got_installations == expected["installations"], vector.get("rationale", vector["name"])
 

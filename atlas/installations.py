@@ -25,7 +25,7 @@ import json
 import os
 from typing import Any, Callable
 
-from dataclasses import replace as _dc_replace
+from dataclasses import dataclass, replace as _dc_replace
 
 from atlas.esde import (
     KIND_LIBRETRO,
@@ -68,10 +68,50 @@ from atlas.retroarch_cfg import (
     resolve_save_layout,
 )
 
-# Health states.
-HEALTH_OK = "ok"
-HEALTH_ROOT_MISSING = "root_missing"
-HEALTH_CONFIG_UNREADABLE = "config_unreadable"
+# Health issue codes — stable identifiers clients and vectors branch on.
+# An installation is healthy exactly when it has no issues; every issue keeps
+# marker existence, read status, parse status, companion state, and root state
+# apart instead of collapsing them into one lossy string (REVIEW H10).
+HEALTH_ISSUE_MARKER_MISSING = "marker-missing"
+HEALTH_ISSUE_MARKER_UNREADABLE = "marker-unreadable"
+HEALTH_ISSUE_MARKER_INVALID = "marker-invalid"
+HEALTH_ISSUE_ROOT_MISSING = "root-missing"
+HEALTH_ISSUE_SAVES_ROOT_MISSING = "saves-root-missing"
+HEALTH_ISSUE_COMPANION_CONFIG_MISSING = "companion-config-missing"
+HEALTH_ISSUE_CONFIG_UNREADABLE = "config-unreadable"
+
+
+@dataclass(frozen=True, slots=True)
+class Health:
+    """Structured installation health — *ok* is simply the absence of issues.
+
+    Each issue is a :class:`~atlas.placement.Caveat` whose ``code`` is one of
+    the ``HEALTH_ISSUE_*`` constants; ``data`` carries the affected path or
+    read status. Handles never hide a present-but-broken installation — they
+    report it with the issues attached.
+    """
+
+    issues: tuple[Caveat, ...] = ()
+
+    @property
+    def ok(self) -> bool:
+        return not self.issues
+
+    @property
+    def codes(self) -> tuple[str, ...]:
+        return tuple(issue.code for issue in self.issues)
+
+
+def _health_caveats(health: Health) -> tuple[Caveat, ...]:
+    """Health issues restated as placement caveats — one per issue, structured."""
+    return tuple(
+        Caveat(
+            CAVEAT_HEALTH,
+            f"installation health: {issue.message}",
+            {"issue": issue.code, **issue.data},
+        )
+        for issue in health.issues
+    )
 
 # Config markers, as ``home``-relative suffixes.
 RETRODECK_JSON_SUFFIX = os.path.join(
@@ -218,6 +258,7 @@ def _retroarch_save_location(
     *,
     home: str,
     global_cfg_path: str,
+    global_text: str | None,
     cfg_label: str,
     override_config_dir: str,
     defaults: LayoutDefaults,
@@ -234,7 +275,9 @@ def _retroarch_save_location(
     Reads the same four layers RetroArch reads (``configuration.c:7095``),
     resolves ``library_name`` from the core binary when a core is named, and
     observes the file set for existing saves. Every degradation is a stated
-    caveat, never a silent guess.
+    caveat, never a silent guess. ``global_text`` is the global cfg's content,
+    read exactly once by the caller — one query derives every decision from
+    one snapshot of each source (REVIEW M4).
     """
     caveats = list(extra_caveats)
     sources_extra = list(extra_sources)
@@ -272,7 +315,6 @@ def _retroarch_save_location(
             )
         )
 
-    global_text = machine.read_text(global_cfg_path).text
     global_layer = [global_text] if global_text is not None else []
 
     # Gates read from the global cfg (an override cannot enable itself):
@@ -677,50 +719,18 @@ class EmulatorEntry:
     def save_location(self, *, content_path: str | None = None) -> SavePlacement:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
-        Standalone entries are not resolvable yet (task list: standalone
-        emulators); asking raises instead of guessing.
+        Catalogue-level degradations stay attached to the derived answer
+        (REVIEW M9). Standalone entries are not resolvable yet (task list:
+        standalone emulators); asking raises instead of guessing.
         """
         if self._spec.kind != KIND_LIBRETRO:
             raise NotImplementedError(
                 f"standalone emulator {self._spec.label!r} ({self._spec.system}) is not resolvable yet — "
                 "see docs/tasks/save-detection.md"
             )
-        placement = self._installation.save_location(content_path=content_path, core_so=self._spec.core_so)
-        if self._caveats:
-            # Catalogue-level degradations stay attached to the answer derived
-            # from this entry (REVIEW M9).
-            placement = SavePlacement(
-                dir=placement.dir,
-                root_kind=placement.root_kind,
-                needs=placement.needs,
-                file_set=placement.file_set,
-                sources=placement.sources,
-                caveats=(*self._caveats, *placement.caveats),
-                granularity=placement.granularity,
-            )
-        if content_path is not None:
-            selections = self._installation.gamelist_selections(self._spec.system)
-            override_label = _match_per_game(selections, content_path)
-            if override_label is not None and override_label != self._spec.label:
-                placement = SavePlacement(
-                    dir=placement.dir,
-                    root_kind=placement.root_kind,
-                    needs=placement.needs,
-                    file_set=placement.file_set,
-                    sources=placement.sources,
-                    caveats=(
-                        *placement.caveats,
-                        Caveat(
-                            CAVEAT_PER_GAME_OVERRIDE,
-                            f"this game carries a per-game altemulator override selecting "
-                            f"{override_label!r} — ES-DE would launch that emulator, not "
-                            f"{self._spec.label!r}; ask emulators_for with content_path",
-                            {"label": override_label},
-                        ),
-                    ),
-                    granularity=placement.granularity,
-                )
-        return placement
+        return self._installation.entry_save_location(
+            self._spec, self._caveats, content_path=content_path
+        )
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
         return (
@@ -729,80 +739,126 @@ class EmulatorEntry:
         )
 
 
-def _parse_retrodeck_config(text: str | None) -> dict[str, Any]:
-    """Parse ``retrodeck.json`` best-effort — malformed or absent yields ``{}``."""
-    if text is None:
-        return {}
-    try:
-        data = json.loads(text)
-    except (json.JSONDecodeError, ValueError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
 class RetroDeck:
-    """A RetroDECK installation — cfg is the truth, ``retrodeck.json`` is context."""
+    """A RetroDECK installation — cfg is the truth, ``retrodeck.json`` is context.
+
+    The handle is *live*: it stores only its identity (home) and the machine
+    seam. Every query re-reads the governing sources — each exactly once — and
+    derives all decisions from that one snapshot, so a concurrent config edit
+    can never mix two revisions inside one answer (REVIEW M4).
+    """
 
     kind = "retrodeck"
     kinds = ("retrodeck",)
     _APP_ID = "net.retrodeck.retrodeck"
 
-    def __init__(self, home: str, machine: Machine, retrodeck_json: str | None) -> None:
+    def __init__(self, home: str, machine: Machine) -> None:
         self._home = home
         self._machine = machine
-        self._config = _parse_retrodeck_config(retrodeck_json)
 
-    def _config_path(self, key: str, fallback_subdir: str) -> tuple[str, str]:
-        """Resolve a RetroDECK path and its provenance from ``retrodeck.json``."""
-        paths = self._config.get("paths")
+    def _marker_path(self) -> str:
+        return os.path.join(self._home, RETRODECK_JSON_SUFFIX)
+
+    def _read_marker(self) -> tuple[dict[str, Any], tuple[Caveat, ...]]:
+        """One live read of ``retrodeck.json`` → (config, marker issues).
+
+        Missing, unreadable, and invalid are distinct states — a marker that
+        exists but cannot be read or parsed is a *present, broken* RetroDECK,
+        never an absent one (REVIEW H10).
+        """
+        path = self._marker_path()
+        result = self._machine.read_text(path)
+        if result.status == "missing":
+            return {}, (Caveat(HEALTH_ISSUE_MARKER_MISSING, f"marker {path} does not exist", {"path": path}),)
+        if result.text is None:
+            return {}, (
+                Caveat(
+                    HEALTH_ISSUE_MARKER_UNREADABLE,
+                    f"marker {path} cannot be read as text ({result.status})",
+                    {"path": path, "status": result.status},
+                ),
+            )
+        try:
+            data = json.loads(result.text)
+        except (json.JSONDecodeError, ValueError):
+            data = None
+        if not isinstance(data, dict):
+            return {}, (
+                Caveat(HEALTH_ISSUE_MARKER_INVALID, f"marker {path} is not a JSON object", {"path": path}),
+            )
+        return data, ()
+
+    def _config_path(self, config: dict[str, Any], key: str, fallback_subdir: str) -> tuple[str, str]:
+        """Resolve a RetroDECK path and its provenance from a marker snapshot.
+
+        A sub-path key that is unset falls back under the *resolved* root
+        (``rd_home_path`` or its own ``~/retrodeck`` fallback) — RetroDECK
+        lays its tree out under the home it was pointed at, so the honest
+        default follows the configured root, not a hard-coded one.
+        """
+        paths = config.get("paths")
         if isinstance(paths, dict):
             value = paths.get(key, "")
             if value:
                 return value, f"retrodeck.json: paths.{key}"
-        fallback = (
-            os.path.join(self._home, "retrodeck", fallback_subdir)
-            if fallback_subdir
-            else os.path.join(self._home, "retrodeck")
-        )
+        if not fallback_subdir:
+            fallback = os.path.join(self._home, "retrodeck")
+        else:
+            root = self._config_path(config, "rd_home_path", "")[0]
+            fallback = os.path.join(root, fallback_subdir)
         return fallback, f"default: {key} unset → {fallback}"
 
     def root(self) -> str:
         """The RetroDECK home directory (``rd_home_path`` or the fallback)."""
-        return self._config_path("rd_home_path", "")[0]
+        return self._config_path(self._read_marker()[0], "rd_home_path", "")[0]
 
     def saves_root(self) -> str:
         """The RetroDECK saves root (``saves_path`` or the fallback)."""
-        return self._config_path("saves_path", "saves")[0]
+        return self._config_path(self._read_marker()[0], "saves_path", "saves")[0]
 
     def bios_dir(self) -> str:
         """The RetroDECK BIOS directory (``bios_path`` or the fallback)."""
-        return self._config_path("bios_path", "bios")[0]
+        return self._config_path(self._read_marker()[0], "bios_path", "bios")[0]
 
     def roms_dir(self) -> str:
         """The RetroDECK ROMs directory (``roms_path`` or the fallback)."""
-        return self._config_path("roms_path", "roms")[0]
+        return self._config_path(self._read_marker()[0], "roms_path", "roms")[0]
 
-    def health(self) -> str:
-        """Installation health — config readable, root present."""
-        if not self._config:
-            return HEALTH_CONFIG_UNREADABLE
-        if self._machine.path_kind(self.root()) != KIND_DIRECTORY:
-            return HEALTH_ROOT_MISSING
-        return HEALTH_OK
+    def _health_from(self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]) -> Health:
+        issues = list(marker_issues)
+        root = self._config_path(config, "rd_home_path", "")[0]
+        if self._machine.path_kind(root) != KIND_DIRECTORY:
+            issues.append(
+                Caveat(HEALTH_ISSUE_ROOT_MISSING, f"root {root} is not an existing directory", {"path": root})
+            )
+        saves = self._config_path(config, "saves_path", "saves")[0]
+        if self._machine.path_kind(saves) != KIND_DIRECTORY:
+            issues.append(
+                Caveat(
+                    HEALTH_ISSUE_SAVES_ROOT_MISSING,
+                    f"saves root {saves} is not an existing directory",
+                    {"path": saves},
+                )
+            )
+        return Health(tuple(issues))
+
+    def health(self) -> Health:
+        """Installation health — marker readable and parseable, roots present."""
+        config, marker_issues = self._read_marker()
+        return self._health_from(config, marker_issues)
 
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._APP_ID, "config", "retroarch")
 
-    def _core_path(self, core_so: str) -> str | None:
-        """Resolve a core ``.so`` basename against the cfg's ``libretro_directory``.
+    def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
+        """Resolve a core ``.so`` basename against a cfg snapshot's ``libretro_directory``.
 
         The configured value points into the sandbox (``/app/...``); translate it
         to the host deployment. ``None`` when nothing resolvable — never a guess.
         """
-        text = self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text
-        if text is None:
+        if global_text is None:
             return None
-        raw = parse_cfg_text(text).get("libretro_directory", "")
+        raw = parse_cfg_text(global_text).get("libretro_directory", "")
         if not raw:
             return None
         raw = expand_home(raw, home=self._home) or raw
@@ -815,7 +871,7 @@ class RetroDeck:
     # user overlay under <rd_home>/ES-DE/custom_systems (observed layout).
     _ESDE_BUNDLED_SANDBOX = "/app/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
 
-    def _catalogue(self) -> dict[str, tuple[EmulatorSpec, ...]]:
+    def _catalogue(self, root: str) -> dict[str, tuple[EmulatorSpec, ...]]:
         bundled: dict[str, tuple[EmulatorSpec, ...]] = {}
         bundled_path = _flatpak_host_path(self._machine, self._home, self._APP_ID, self._ESDE_BUNDLED_SANDBOX)
         if bundled_path is not None:
@@ -823,7 +879,7 @@ class RetroDeck:
             if text is not None:
                 bundled = parse_es_systems(text, source="es_systems.xml (bundled)")
         custom: dict[str, tuple[EmulatorSpec, ...]] = {}
-        custom_path = os.path.join(self.root(), "ES-DE", "custom_systems", "es_systems.xml")
+        custom_path = os.path.join(root, "ES-DE", "custom_systems", "es_systems.xml")
         custom_text = self._machine.read_text(custom_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, source="es_systems.xml (custom_systems overlay)")
@@ -831,14 +887,19 @@ class RetroDeck:
 
     def systems(self) -> tuple[str, ...]:
         """Every system the catalogue declares, sorted."""
-        return tuple(sorted(self._catalogue()))
+        config, _ = self._read_marker()
+        return tuple(sorted(self._catalogue(self._config_path(config, "rd_home_path", "")[0])))
 
-    def gamelist_selections(self, system: str) -> GamelistSelections:
-        gamelist_path = os.path.join(self.root(), "ES-DE", "gamelists", system, "gamelist.xml")
+    def _gamelist_selections_at(self, root: str, system: str) -> GamelistSelections:
+        gamelist_path = os.path.join(root, "ES-DE", "gamelists", system, "gamelist.xml")
         text = self._machine.read_text(gamelist_path).text
         if text is None:
             return GamelistSelections(system_label=None, per_game={})
         return parse_gamelist(text)
+
+    def gamelist_selections(self, system: str) -> GamelistSelections:
+        config, _ = self._read_marker()
+        return self._gamelist_selections_at(self._config_path(config, "rd_home_path", "")[0], system)
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> tuple[EmulatorEntry, ...]:
         """The emulators that can launch *system*, in launch-priority order.
@@ -853,8 +914,10 @@ class RetroDeck:
         overrides, every returned entry states that as a catalogue caveat: the
         system-level answer may be wrong for exactly those games.
         """
-        specs = self._catalogue().get(system, ())
-        selections = self.gamelist_selections(system)
+        config, _ = self._read_marker()
+        root = self._config_path(config, "rd_home_path", "")[0]
+        specs = self._catalogue(root).get(system, ())
+        selections = self._gamelist_selections_at(root, system)
         chosen_label: str | None = None
         chosen_source: str | None = None
         if content_path is not None:
@@ -884,6 +947,35 @@ class RetroDeck:
             )
         return tuple(EmulatorEntry(self, spec, entry_caveats) for spec in specs)
 
+    def _save_location_from(
+        self,
+        config: dict[str, Any],
+        marker_issues: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+        core_so: str | None,
+        extra_caveats: tuple[Caveat, ...] = (),
+    ) -> SavePlacement:
+        health = self._health_from(config, marker_issues)
+        global_cfg_path = os.path.join(self._home, RETRODECK_CFG_SUFFIX)
+        global_text = self._machine.read_text(global_cfg_path).text
+        version = config.get("version")
+        return _retroarch_save_location(
+            self._machine,
+            home=self._home,
+            global_cfg_path=global_cfg_path,
+            global_text=global_text,
+            cfg_label="retroarch.cfg",
+            override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
+            defaults=UPSTREAM_DEFAULTS,
+            content_path=content_path,
+            core_so=core_so,
+            core_path_resolver=lambda so: self._core_path_in(global_text, so),
+            arrangement="retrodeck",
+            arrangement_version=version if isinstance(version, str) else None,
+            extra_caveats=(*extra_caveats, *_health_caveats(health)),
+        )
+
     def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.
 
@@ -892,24 +984,49 @@ class RetroDeck:
         ``library_name`` from the binary. Both arguments are optional — missing
         ones leave holes and stated caveats, never guesses.
         """
-        caveats: list[Caveat] = []
-        health = self.health()
-        if health != HEALTH_OK:
-            caveats.append(Caveat(CAVEAT_HEALTH, f"installation health: {health}", {"health": health}))
-        return _retroarch_save_location(
-            self._machine,
-            home=self._home,
-            global_cfg_path=os.path.join(self._home, RETRODECK_CFG_SUFFIX),
-            cfg_label="retroarch.cfg",
-            override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
-            defaults=UPSTREAM_DEFAULTS,
+        config, marker_issues = self._read_marker()
+        return self._save_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
+
+    def entry_save_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> SavePlacement:
+        """The entry route behind :meth:`EmulatorEntry.save_location` — one marker read.
+
+        Resolves the placement for a catalogue entry and, when *content_path*
+        is given, checks the gamelist for a per-game override that would launch
+        a different emulator — all from one snapshot of the governing sources.
+        """
+        config, marker_issues = self._read_marker()
+        placement = self._save_location_from(
+            config,
+            marker_issues,
             content_path=content_path,
-            core_so=core_so,
-            core_path_resolver=self._core_path,
-            arrangement="retrodeck",
-            arrangement_version=self._config.get("version") if isinstance(self._config.get("version"), str) else None,
-            extra_caveats=tuple(caveats),
+            core_so=spec.core_so,
+            extra_caveats=entry_caveats,
         )
+        if content_path is not None:
+            root = self._config_path(config, "rd_home_path", "")[0]
+            selections = self._gamelist_selections_at(root, spec.system)
+            override_label = _match_per_game(selections, content_path)
+            if override_label is not None and override_label != spec.label:
+                placement = _dc_replace(
+                    placement,
+                    caveats=(
+                        *placement.caveats,
+                        Caveat(
+                            CAVEAT_PER_GAME_OVERRIDE,
+                            f"this game carries a per-game altemulator override selecting "
+                            f"{override_label!r} — ES-DE would launch that emulator, not "
+                            f"{spec.label!r}; ask emulators_for with content_path",
+                            {"label": override_label},
+                        ),
+                    ),
+                )
+        return placement
 
 
 def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
@@ -941,19 +1058,41 @@ class EmuDeck:
 
     The handle carries both descriptions (``kinds``): EmuDeck *is* a configured
     standalone RetroArch, so both statements are true of the same installation.
+    Like every handle it is live — one snapshot of each source per query
+    (REVIEW M4) — and its health covers the claimed companion RetroArch config,
+    so a stale ``settings.sh`` next to a vanished Flatpak is visible instead of
+    silently suppressing the standalone handle (REVIEW H10).
     """
 
     kind = "emudeck"
     kinds = ("emudeck", "standalone_retroarch_flatpak")
     _RA_APP_ID = "org.libretro.RetroArch"
 
-    def __init__(self, home: str, machine: Machine, settings_text: str) -> None:
+    def __init__(self, home: str, machine: Machine) -> None:
         self._home = home
         self._machine = machine
-        self._settings = _parse_settings_sh(settings_text, home=home)
 
-    def _setting_path(self, key: str, fallback_subdir: str) -> tuple[str, str]:
-        value = self._settings.get(key, "")
+    def _marker_path(self) -> str:
+        return os.path.join(self._home, EMUDECK_SETTINGS_SUFFIX)
+
+    def _read_marker(self) -> tuple[dict[str, str], tuple[Caveat, ...]]:
+        """One live read of ``settings.sh`` → (settings, marker issues)."""
+        path = self._marker_path()
+        result = self._machine.read_text(path)
+        if result.status == "missing":
+            return {}, (Caveat(HEALTH_ISSUE_MARKER_MISSING, f"marker {path} does not exist", {"path": path}),)
+        if result.text is None:
+            return {}, (
+                Caveat(
+                    HEALTH_ISSUE_MARKER_UNREADABLE,
+                    f"marker {path} cannot be read as text ({result.status})",
+                    {"path": path, "status": result.status},
+                ),
+            )
+        return _parse_settings_sh(result.text, home=self._home), ()
+
+    def _setting_path(self, settings: dict[str, str], key: str, fallback_subdir: str) -> tuple[str, str]:
+        value = settings.get(key, "")
         if value:
             return value, f"settings.sh: {key}"
         fallback = os.path.join(self._home, "Emulation", fallback_subdir)
@@ -961,30 +1100,65 @@ class EmuDeck:
 
     def root(self) -> str:
         """The EmuDeck ``Emulation`` tree root (parent of ``romsPath``)."""
-        return os.path.dirname(self._setting_path("romsPath", "roms")[0])
+        return os.path.dirname(self._setting_path(self._read_marker()[0], "romsPath", "roms")[0])
 
     def saves_root(self) -> str:
         """EmuDeck's saves root (``savesPath`` or the default)."""
-        return self._setting_path("savesPath", "saves")[0]
+        return self._setting_path(self._read_marker()[0], "savesPath", "saves")[0]
 
     def bios_dir(self) -> str:
         """EmuDeck's BIOS directory (``biosPath`` or the default)."""
-        return self._setting_path("biosPath", "bios")[0]
+        return self._setting_path(self._read_marker()[0], "biosPath", "bios")[0]
 
-    def health(self) -> str:
-        """Installation health — the saves root must be present."""
-        if self._machine.path_kind(self.saves_root()) != KIND_DIRECTORY:
-            return HEALTH_ROOT_MISSING
-        return HEALTH_OK
+    def _companion_cfg_path(self) -> str:
+        return os.path.join(self._home, STANDALONE_FLATPAK_CFG_SUFFIX)
+
+    def _health_from(
+        self,
+        settings: dict[str, str],
+        marker_issues: tuple[Caveat, ...],
+        companion_status: str,
+    ) -> Health:
+        issues = list(marker_issues)
+        root = os.path.dirname(self._setting_path(settings, "romsPath", "roms")[0])
+        if self._machine.path_kind(root) != KIND_DIRECTORY:
+            issues.append(
+                Caveat(HEALTH_ISSUE_ROOT_MISSING, f"root {root} is not an existing directory", {"path": root})
+            )
+        saves = self._setting_path(settings, "savesPath", "saves")[0]
+        if self._machine.path_kind(saves) != KIND_DIRECTORY:
+            issues.append(
+                Caveat(
+                    HEALTH_ISSUE_SAVES_ROOT_MISSING,
+                    f"saves root {saves} is not an existing directory",
+                    {"path": saves},
+                )
+            )
+        if companion_status != "ok":
+            path = self._companion_cfg_path()
+            issues.append(
+                Caveat(
+                    HEALTH_ISSUE_COMPANION_CONFIG_MISSING,
+                    f"the claimed org.libretro.RetroArch config {path} is not readable "
+                    f"({companion_status}) — the arrangement's RetroArch side is broken or stale",
+                    {"path": path, "status": companion_status},
+                )
+            )
+        return Health(tuple(issues))
+
+    def health(self) -> Health:
+        """Installation health — marker, roots, and the claimed companion RetroArch config."""
+        settings, marker_issues = self._read_marker()
+        companion_status = self._machine.read_text(self._companion_cfg_path()).status
+        return self._health_from(settings, marker_issues, companion_status)
 
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
 
-    def _core_path(self, core_so: str) -> str | None:
-        text = self._machine.read_text(os.path.join(self._home, STANDALONE_FLATPAK_CFG_SUFFIX)).text
-        if text is None:
+    def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
+        if global_text is None:
             return None
-        raw = parse_cfg_text(text).get("libretro_directory", "")
+        raw = parse_cfg_text(global_text).get("libretro_directory", "")
         if not raw:
             return None
         raw = expand_home(raw, home=self._home) or raw
@@ -995,23 +1169,24 @@ class EmuDeck:
 
     def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
         """Where EmuDeck's RetroArch keeps the save — resolved from the standalone Flatpak cfg."""
-        caveats: list[Caveat] = []
-        health = self.health()
-        if health != HEALTH_OK:
-            caveats.append(Caveat(CAVEAT_HEALTH, f"installation health: {health}", {"health": health}))
+        settings, marker_issues = self._read_marker()
+        global_cfg_path = self._companion_cfg_path()
+        cfg = self._machine.read_text(global_cfg_path)
+        health = self._health_from(settings, marker_issues, cfg.status)
         return _retroarch_save_location(
             self._machine,
             home=self._home,
-            global_cfg_path=os.path.join(self._home, STANDALONE_FLATPAK_CFG_SUFFIX),
+            global_cfg_path=global_cfg_path,
+            global_text=cfg.text,
             cfg_label="retroarch.cfg",
             override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
             defaults=UPSTREAM_DEFAULTS,
             content_path=content_path,
             core_so=core_so,
-            core_path_resolver=self._core_path,
+            core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
             arrangement="emudeck",
             arrangement_version=None,
-            extra_caveats=tuple(caveats),
+            extra_caveats=_health_caveats(health),
         )
 
 
@@ -1039,15 +1214,30 @@ class _RetroArchInstall:
         """The RetroArch config directory (the folder holding ``retroarch.cfg``)."""
         return os.path.dirname(self._cfg_path())
 
-    def health(self) -> str:
-        """Bare installs are healthy when their config marker exists (it is the marker)."""
-        return HEALTH_OK
+    def _health_from(self, cfg_status: str) -> Health:
+        path = self._cfg_path()
+        if cfg_status == "ok":
+            return Health()
+        if cfg_status == "missing":
+            return Health((Caveat(HEALTH_ISSUE_MARKER_MISSING, f"marker {path} does not exist", {"path": path}),))
+        return Health(
+            (
+                Caveat(
+                    HEALTH_ISSUE_CONFIG_UNREADABLE,
+                    f"config {path} cannot be read as text ({cfg_status})",
+                    {"path": path, "status": cfg_status},
+                ),
+            )
+        )
 
-    def _core_path(self, core_so: str) -> str | None:
-        text = self._machine.read_text(self._cfg_path()).text
-        if text is None:
+    def health(self) -> Health:
+        """Bare installs: the cfg is the marker — health is its read status."""
+        return self._health_from(self._machine.read_text(self._cfg_path()).status)
+
+    def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
+        if global_text is None:
             return None
-        raw = parse_cfg_text(text).get("libretro_directory", "")
+        raw = parse_cfg_text(global_text).get("libretro_directory", "")
         if not raw:
             return None
         raw = expand_home(raw, home=self._home) or raw
@@ -1061,18 +1251,22 @@ class _RetroArchInstall:
 
     def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
         """Where this RetroArch install keeps the save for *content_path* under *core_so*."""
+        cfg = self._machine.read_text(self._cfg_path())
+        health = self._health_from(cfg.status)
         return _retroarch_save_location(
             self._machine,
             home=self._home,
             global_cfg_path=self._cfg_path(),
+            global_text=cfg.text,
             cfg_label="retroarch.cfg",
             override_config_dir=os.path.join(self.root(), "config"),
             defaults=UPSTREAM_DEFAULTS,
             content_path=content_path,
             core_so=core_so,
-            core_path_resolver=self._core_path,
+            core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
             arrangement="bare",
             arrangement_version=None,
+            extra_caveats=_health_caveats(health),
         )
 
 

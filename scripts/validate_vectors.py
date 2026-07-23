@@ -16,13 +16,22 @@ from typing import Any, NoReturn
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 INPUT_FIELDS_REQUIRED = {"home", "files"}
-INPUT_FIELDS_OPTIONAL = {"symlinks", "cores", "query", "catalogue_query"}
+INPUT_FIELDS_OPTIONAL = {"symlinks", "cores", "dirs", "inaccessible", "query", "catalogue_query"}
 QUERY_FIELDS_OPTIONAL = {"content_path", "core_so"}
 INSTALLATION_FIELDS = {"kind", "root", "health"}
 PLACEMENT_FIELDS = {"dir", "root_kind", "needs", "file_set"}
 FILE_SET_FIELDS = {"state", "files"}
 KNOWN_KINDS = {"retrodeck", "emudeck", "standalone_retroarch_flatpak", "native_retroarch"}
-KNOWN_HEALTH = {"ok", "root_missing", "config_unreadable"}
+KNOWN_FILE_STATUSES = {"unreadable", "invalid-text"}
+KNOWN_HEALTH_ISSUES = {
+    "marker-missing",
+    "marker-unreadable",
+    "marker-invalid",
+    "root-missing",
+    "saves-root-missing",
+    "companion-config-missing",
+    "config-unreadable",
+}
 KNOWN_ROOT_KINDS = {"savefile_directory", "content_directory", "system_directory"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_CAVEAT_CODES = {
@@ -71,10 +80,22 @@ def _validate_input(name: str, inp: Any) -> None:
     if not isinstance(inp["home"], str) or not inp["home"]:
         fail(f"{name}: input.home must be a non-empty string")
     files = inp["files"]
-    if not isinstance(files, dict) or not all(
-        isinstance(k, str) and isinstance(v, str) for k, v in files.items()
-    ):
-        fail(f"{name}: input.files must be an object of string paths to string contents")
+    if not isinstance(files, dict):
+        fail(f"{name}: input.files must be an object")
+    for path, spec in files.items():
+        if not isinstance(path, str):
+            fail(f"{name}: input.files keys must be strings")
+        if isinstance(spec, str):
+            continue
+        if not isinstance(spec, dict) or spec.get("status") not in KNOWN_FILE_STATUSES:
+            fail(
+                f"{name}: input.files[{path!r}] must be string content or "
+                f"{{'status': one of {sorted(KNOWN_FILE_STATUSES)}}}"
+            )
+    for list_key in ("dirs", "inaccessible"):
+        entries = inp.get(list_key, [])
+        if not isinstance(entries, list) or not all(isinstance(e, str) and e for e in entries):
+            fail(f"{name}: input.{list_key} must be a list of non-empty path strings")
     symlinks = inp.get("symlinks", {})
     if not isinstance(symlinks, dict) or not all(
         isinstance(k, str) and isinstance(v, str) for k, v in symlinks.items()
@@ -108,8 +129,12 @@ def _validate_installations(name: str, installations: Any) -> None:
             fail(f"{name}: installation kind must be one of {sorted(KNOWN_KINDS)}, got {inst['kind']!r}")
         if not isinstance(inst["root"], str) or not inst["root"]:
             fail(f"{name}: installation root must be a non-empty string")
-        if inst["health"] not in KNOWN_HEALTH:
-            fail(f"{name}: installation health must be one of {sorted(KNOWN_HEALTH)}, got {inst['health']!r}")
+        health = inst["health"]
+        if not isinstance(health, list) or not all(h in KNOWN_HEALTH_ISSUES for h in health):
+            fail(
+                f"{name}: installation health must be a list of issue codes from "
+                f"{sorted(KNOWN_HEALTH_ISSUES)}, got {health!r}"
+            )
 
 
 def _validate_placement(name: str, placement: Any) -> None:
