@@ -217,7 +217,11 @@ def _retroarch_save_location(
                 f"core {core_so!r} could not be queried — library_name unknown, per-core overrides not checked"
             )
     else:
-        caveats.append("no core given — library_name unavailable, per-core overrides not checked")
+        caveats.append(
+            "no core given — per-core overrides and save-behaviour rule cards not checked: this answer "
+            "assumes a standard core, and a card-carrying core (e.g. one rooted in system_directory, like "
+            "Flycast) keeps its saves elsewhere entirely"
+        )
 
     overrides: list[tuple[str, str]] = []
     if library_name is not None:
