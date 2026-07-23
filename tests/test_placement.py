@@ -1,105 +1,117 @@
-"""Tests for atlas.placement — the save-directory template math."""
+"""Tests for atlas.placement — the placement type and its layout math."""
 
 from __future__ import annotations
 
-from atlas.placement import build_save_placement
+from atlas.placement import (
+    ROOT_CONTENT_DIRECTORY,
+    ROOT_SAVEFILE_DIRECTORY,
+    UNKNOWN_FILE_SET,
+    FileSet,
+    build_save_placement,
+)
+from atlas.retroarch_cfg import RETRODECK_DEFAULTS, resolve_save_layout
+
+HOME = "/home/deck"
 
 
-def _placement(
-    *,
-    saves_root: str | None = "/saves",
-    savefiles_in_content_dir: bool = False,
-    sort_by_content: bool = False,
-    sort_by_core: bool = False,
-    core: str | None = None,
-    rom_dir_name: str | None = None,
-    sources: tuple[str, ...] = (),
-):
+def _layout(text):
+    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_DEFAULTS)
+
+
+def _build(text, *, content_dir_path=None, content_dir_name=None, library_name=None, **kwargs):
     return build_save_placement(
-        saves_root=saves_root,
-        savefiles_in_content_dir=savefiles_in_content_dir,
-        sort_by_content=sort_by_content,
-        sort_by_core=sort_by_core,
-        core=core,
-        rom_dir_name=rom_dir_name,
-        sources=sources,
+        layout=_layout(text),
+        content_dir_path=content_dir_path,
+        content_dir_name=content_dir_name,
+        library_name=library_name,
+        **kwargs,
     )
 
 
-class TestFilename:
-    def test_filename_is_always_rom_stem_srm(self):
-        assert _placement().filename == "<rom_stem>.srm"
-
-    def test_rom_stem_always_in_needs(self):
-        assert "rom_stem" in _placement().needs
-
-
-class TestFlatLayout:
-    def test_no_sorts_is_flat_saves_root(self):
-        p = _placement(sort_by_content=False, sort_by_core=False)
-        assert p.dir == "/saves"
-        assert p.needs == ("rom_stem",)
-
-
-class TestSortByContent:
-    def test_unfilled_content_hole(self):
-        p = _placement(sort_by_content=True)
-        assert p.dir == "/saves/<content_dir>"
-        assert p.needs == ("content_dir", "rom_stem")
-
-    def test_content_hole_filled_by_rom_dir_name(self):
-        p = _placement(sort_by_content=True, rom_dir_name="gba")
+class TestRoots:
+    def test_sorted_by_content_concrete(self):
+        p = _build(
+            'savefile_directory = "/saves"\nsort_savefiles_by_content_enable = "true"\n',
+            content_dir_path="/roms/gba",
+            content_dir_name="gba",
+        )
         assert p.dir == "/saves/gba"
-        assert p.needs == ("rom_stem",)
+        assert p.root_kind == ROOT_SAVEFILE_DIRECTORY
+        assert p.needs == ()
+
+    def test_in_content_dir_is_content_root(self):
+        p = _build(
+            'savefile_directory = "/saves"\nsavefiles_in_content_dir = "true"\n',
+            content_dir_path="/roms/gba",
+            content_dir_name="gba",
+        )
+        assert p.dir == "/roms/gba"
+        assert p.root_kind == ROOT_CONTENT_DIRECTORY
+
+    def test_unset_directory_is_content_root_not_a_hole(self):
+        # runloop.c:8786 — RetroArch resolves an unset save dir to the ROM's dir.
+        p = _build(
+            'sort_savefiles_by_content_enable = "false"\n',
+            content_dir_path="/roms/gba",
+            content_dir_name="gba",
+        )
+        assert p.dir == "/roms/gba"
+        assert p.root_kind == ROOT_CONTENT_DIRECTORY
+        assert p.needs == ()
+        assert any("runloop.c:8786" in s for s in p.sources)
 
 
-class TestSortByCore:
-    def test_core_provided_is_appended(self):
-        p = _placement(sort_by_core=True, core="mgba_libretro")
-        assert p.dir == "/saves/mgba_libretro"
-        assert p.needs == ("rom_stem",)
+class TestHoles:
+    def test_missing_content_leaves_hole(self):
+        p = _build('savefile_directory = "/saves"\nsort_savefiles_by_content_enable = "true"\n')
+        assert p.dir == "/saves/<content_dir>"
+        assert p.needs == ("content_dir",)
 
-    def test_core_absent_is_hole(self):
-        p = _placement(sort_by_core=True, core=None)
-        assert p.dir == "/saves/<core>"
-        assert p.needs == ("core", "rom_stem")
+    def test_missing_library_name_leaves_hole(self):
+        p = _build(
+            'savefile_directory = "/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\n'
+            'sort_savefiles_enable = "true"\n'
+        )
+        assert p.dir == "/saves/<library_name>"
+        assert p.needs == ("library_name",)
 
-    def test_content_and_core_together(self):
-        p = _placement(sort_by_content=True, sort_by_core=True, rom_dir_name="gba", core="mgba_libretro")
-        assert p.dir == "/saves/gba/mgba_libretro"
-        assert p.needs == ("rom_stem",)
+    def test_content_then_core_order(self):
+        # runloop.c:8827 then :8835 — content component first, then core.
+        p = _build(
+            'savefile_directory = "/saves"\n'
+            'sort_savefiles_by_content_enable = "true"\n'
+            'sort_savefiles_enable = "true"\n',
+            content_dir_name="gba",
+            library_name="mGBA",
+        )
+        assert p.dir == "/saves/gba/mGBA"
+        assert p.needs == ()
 
-
-class TestContentDirMode:
-    def test_saves_next_to_rom(self):
-        p = _placement(savefiles_in_content_dir=True, saves_root="/saves", sort_by_content=True)
-        # content-dir mode ignores the saves root and every sort flag.
+    def test_unfilled_content_dir_root_is_hole(self):
+        p = _build('savefiles_in_content_dir = "true"\n')
         assert p.dir == "<content_dir>"
-        assert p.needs == ("content_dir", "rom_stem")
-
-    def test_content_dir_mode_provenance(self):
-        p = _placement(savefiles_in_content_dir=True)
-        assert any("next to the ROM" in s for s in p.sources)
+        assert p.needs == ("content_dir",)
 
 
-class TestSavefileDirectoryHole:
-    def test_saves_root_none_is_savefile_directory_hole(self):
-        p = _placement(saves_root=None, sort_by_content=True)
-        assert p.dir == "<savefile_directory>/<content_dir>"
-        assert p.needs == ("savefile_directory", "content_dir", "rom_stem")
+class TestFileSetAndProvenance:
+    def test_default_file_set_is_unknown_never_guessed(self):
+        p = _build('savefile_directory = "/saves"\n')
+        assert p.file_set is UNKNOWN_FILE_SET
+        assert p.file_set.state == "unknown"
+        assert p.file_set.files == ()
 
-    def test_needs_ordering_savefile_content_core_stem(self):
-        p = _placement(saves_root=None, sort_by_content=True, sort_by_core=True)
-        assert p.dir == "<savefile_directory>/<content_dir>/<core>"
-        assert p.needs == ("savefile_directory", "content_dir", "core", "rom_stem")
+    def test_observed_file_set_carried_through(self):
+        fs = FileSet(state="observed", files=("a.srm",), source="observed on the machine: /saves")
+        p = _build('savefile_directory = "/saves"\n', file_set=fs)
+        assert p.file_set == fs
 
-    def test_flat_savefile_directory_hole(self):
-        p = _placement(saves_root=None, sort_by_content=False, sort_by_core=False)
-        assert p.dir == "<savefile_directory>"
-        assert p.needs == ("savefile_directory", "rom_stem")
+    def test_sources_carry_layout_provenance(self):
+        p = _build('savefile_directory = "/saves"\nsort_savefiles_by_content_enable = "true"\n')
+        joined = "\n".join(p.sources)
+        assert 'retroarch.cfg: savefile_directory = "/saves"' in joined
+        assert 'retroarch.cfg: sort_savefiles_by_content_enable = "true"' in joined
 
-
-class TestSources:
-    def test_sources_passed_through(self):
-        p = _placement(sources=("retrodeck.json: paths.saves_path",))
-        assert "retrodeck.json: paths.saves_path" in p.sources
+    def test_caveats_carried_through(self):
+        p = _build('savefile_directory = "/saves"\n', caveats=("something degraded",))
+        assert p.caveats == ("something degraded",)

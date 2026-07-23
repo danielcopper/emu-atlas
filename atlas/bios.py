@@ -112,9 +112,9 @@ def load_registry(text: str | None = None) -> BiosRegistry:
     """Load the packaged registry (or *text* when supplied, for tests).
 
     With no argument the bundled ``data/bios_registry.json`` is read from the
-    installed package. Reading packaged data is not the machine-filesystem seam
-    the :class:`~atlas.reader.Reader` guards, so it does not route through a
-    reader — it is the library reading its own bundled knowledge.
+    installed package. Reading packaged data is not the machine seam
+    (:class:`~atlas.machine.Machine`) — it is the library reading its own
+    bundled world knowledge, which is exactly what the registry is.
     """
     if text is None:
         text = importlib.resources.files("atlas").joinpath("data", "bios_registry.json").read_text(encoding="utf-8")

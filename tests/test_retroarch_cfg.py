@@ -1,8 +1,14 @@
-"""Tests for atlas.retroarch_cfg — the cfg-text interpretation and provenance."""
+"""Tests for atlas.retroarch_cfg — cfg interpretation, override chain, provenance."""
 
 from __future__ import annotations
 
-from atlas.retroarch_cfg import interpret_cfg
+from atlas.retroarch_cfg import (
+    EMUDECK_DEFAULTS,
+    RETRODECK_DEFAULTS,
+    UPSTREAM_DEFAULTS,
+    interpret_cfg,
+    resolve_save_layout,
+)
 
 HOME = "/home/deck"
 
@@ -15,7 +21,7 @@ class TestDefaults:
     def test_none_text_is_all_defaults(self):
         cfg = _cfg(None)
         assert cfg.savefiles_in_content_dir is False
-        assert cfg.sort_by_content is True  # RetroDECK default
+        assert cfg.sort_by_content is True  # RetroDECK shipped default
         assert cfg.sort_by_core is False
         assert cfg.savefile_directory is None
 
@@ -27,8 +33,19 @@ class TestDefaults:
     def test_defaults_provenance_marks_default(self):
         cfg = _cfg(None)
         joined = "\n".join(cfg.sources)
-        assert "default: sort_savefiles_by_content_enable = true (RetroDECK default)" in joined
+        assert "default: sort_savefiles_by_content_enable = true (RetroDECK shipped default)" in joined
         assert "default: savefile_directory unset" in joined
+
+    def test_upstream_defaults_sort_by_core(self):
+        # RetroArch's compile-time default sorts by core (config.def.h:982).
+        cfg = interpret_cfg(None, home=HOME, cfg_label="retroarch.cfg", defaults=UPSTREAM_DEFAULTS)
+        assert cfg.sort_by_core is True
+        assert cfg.sort_by_content is False
+
+    def test_emudeck_defaults_flat(self):
+        cfg = interpret_cfg(None, home=HOME, cfg_label="retroarch.cfg", defaults=EMUDECK_DEFAULTS)
+        assert cfg.sort_by_core is False
+        assert cfg.sort_by_content is False
 
 
 class TestSaveLayoutFlags:
@@ -64,19 +81,70 @@ class TestSavefileDirectory:
         cfg = _cfg('savefile_directory = "/mnt/saves"\n')
         assert cfg.savefile_directory == "/mnt/saves"
 
-    def test_literal_default_is_unset_hole(self):
+    def test_literal_default_is_unset(self):
+        # Unset is a rule, not a hole: RetroArch resolves it to the ROM's dir.
         cfg = _cfg('savefile_directory = "default"\n')
         assert cfg.savefile_directory is None
-        assert any("unfilled <savefile_directory> hole" in s for s in cfg.sources)
+        assert any("resolves to the ROM's directory" in s for s in cfg.sources)
 
-    def test_blank_is_unset_hole(self):
+    def test_blank_is_unset(self):
         cfg = _cfg('savefile_directory = ""\n')
         assert cfg.savefile_directory is None
 
-    def test_absent_is_unset_hole_with_default_provenance(self):
+    def test_absent_is_unset_with_default_provenance(self):
         cfg = _cfg('sort_savefiles_enable = "true"\n')
         assert cfg.savefile_directory is None
         assert any("default: savefile_directory unset" in s for s in cfg.sources)
+
+
+class TestOverrideChain:
+    def test_core_override_wins_over_global(self):
+        cfg = resolve_save_layout(
+            'sort_savefiles_by_content_enable = "true"\n',
+            home=HOME,
+            cfg_label="retroarch.cfg",
+            defaults=RETRODECK_DEFAULTS,
+            overrides=[("core override PPSSPP/PPSSPP.cfg", 'sort_savefiles_by_content_enable = "false"')],
+        )
+        assert cfg.sort_by_content is False
+        assert any("override wins" in s for s in cfg.sources)
+
+    def test_later_layer_wins_over_earlier(self):
+        cfg = resolve_save_layout(
+            'sort_savefiles_by_content_enable = "true"\n',
+            home=HOME,
+            cfg_label="retroarch.cfg",
+            defaults=RETRODECK_DEFAULTS,
+            overrides=[
+                ("core override", 'sort_savefiles_by_content_enable = "false"'),
+                ("game override", 'sort_savefiles_by_content_enable = "true"'),
+            ],
+        )
+        assert cfg.sort_by_content is True
+        assert any("game override" in s and "override wins" in s for s in cfg.sources)
+
+    def test_override_touches_only_its_keys(self):
+        cfg = resolve_save_layout(
+            'savefile_directory = "/mnt/saves"\nsort_savefiles_enable = "true"\n',
+            home=HOME,
+            cfg_label="retroarch.cfg",
+            defaults=RETRODECK_DEFAULTS,
+            overrides=[("core override", 'sort_savefiles_by_content_enable = "false"')],
+        )
+        assert cfg.savefile_directory == "/mnt/saves"
+        assert cfg.sort_by_core is True
+        assert cfg.sort_by_content is False
+
+    def test_override_can_set_savefile_directory(self):
+        # configuration.c:7240 — an override file can set the save dir itself.
+        cfg = resolve_save_layout(
+            'savefile_directory = "/mnt/saves"\n',
+            home=HOME,
+            cfg_label="retroarch.cfg",
+            defaults=RETRODECK_DEFAULTS,
+            overrides=[("game override", 'savefile_directory = "/mnt/elsewhere"')],
+        )
+        assert cfg.savefile_directory == "/mnt/elsewhere"
 
 
 class TestParsingEdgeCases:
@@ -85,7 +153,7 @@ class TestParsingEdgeCases:
         assert cfg.sort_by_content is False
 
     def test_lines_without_equals_ignored(self):
-        cfg = _cfg("this is not a config line\nsort_savefiles_enable = \"true\"\n")
+        cfg = _cfg('this is not a config line\nsort_savefiles_enable = "true"\n')
         assert cfg.sort_by_core is True
 
     def test_exact_key_match_no_prefix_collision(self):

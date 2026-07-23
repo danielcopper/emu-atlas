@@ -1,7 +1,7 @@
 # emu-atlas
 
-The map of where emulators keep things — a config-aware knowledge library answering, for any emulator installation on a
-machine: which config files govern it, how they override each other, and where saves and BIOS actually live.
+The map of where emulators keep things — a resolver answering live, for any emulator installation on a machine: which
+config files govern it, how they override each other, and where saves and BIOS actually live.
 
 ## Why
 
@@ -21,9 +21,10 @@ Four principles, fixed before any code:
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, standalone installs, any of
   them side by side — and every question is asked _of an installation_, never of a global "the system":
   `installation.save_placement(system, core=...)`, `installation.bios_dir(system)`.
-- **All I/O goes through an injected reader.** The library never touches the disk directly; it asks a narrow reader
-  protocol (`read_text`, `glob`, `exists`). In production the default reader is the real filesystem. In tests and
-  conformance vectors it is a fixture tree — a plain mapping of paths to file contents describing a whole machine — so
+- **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
+  machine protocol (`read_text`, `glob`, `exists`, `readlink`, `query_core`) — files, symlinks, and the answers only a
+  core binary can give, which is the same read the emulator itself performs. In production the seam is the real machine.
+  In tests and conformance vectors it is a fixture machine — files, symlinks, and core answers as plain data — so
   detection, config parsing, and override chains are all provable from data.
 - **Placements are templates, not paths.** Where a concrete path cannot be known from configs alone, the answer carries
   named holes: `<rom_stem>` for RetroArch-style naming, `<save_id>` where the emulator keys saves off a serial or title
@@ -96,5 +97,8 @@ exists now:
   real detection and placement from fixture machines, with save-placement expectations oracle-derived from
   decky-romm-sync's `resolve_save_dir` / `compute_local_save_target`.
 
-EmuDeck detection is **not** in this phase — no production knowledge exists for it yet. ES-DE knowledge, standalone
-emulators, and the canonical system vocabulary remain future phases.
+EmuDeck detection is **not** in this phase — research now exists (`docs/research/retrodeck-save-placement.md`, §13) but
+no implementation. ES-DE knowledge, standalone emulators, and the canonical system vocabulary remain future phases.
+
+The current code predates the resolver redesign: the shipped `Reader` still lacks `readlink`/`query_core`, and
+`save_placement` does not yet read the override chain. `DESIGN.md` specifies the target; the code follows it next.

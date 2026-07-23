@@ -1,468 +1,467 @@
 {
   "family": "machines",
-  "spec": "DESIGN.md — Installations, placements, the reader seam",
-  "description": "Fixture machines in, detected installations + save placements out. Each vector's input is a whole machine (a {path: content} file tree plus a home and an optional save-placement query); expected is the installations detect() finds and, when queried, the SavePlacement the highest-priority install returns. Save-placement expectations are oracle-derived: atlas's placement math is verified against decky-romm-sync's resolve_save_dir / compute_local_save_target.",
+  "spec": "DESIGN.md — installations, the machine seam, save locations",
+  "description": "Whole fixture machines (files, symlinks, core answers) in; detected installations (kind, root, health) and — when a query is present — the resolved SavePlacement out. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h and the shipped RetroDECK/EmuDeck configs; see docs/research/retrodeck-save-placement.md.",
   "vectors": [
     {
-      "name": "retrodeck-custom-home-sort-by-content",
-      "rationale": "retrodeck.json present with a custom rd_home on an SD card; RetroArch sorts saves by content. The saves root comes from retrodeck.json, the content component is an unfilled hole.",
+      "name": "retrodeck-sort-by-content-concrete",
+      "rationale": "RetroDECK stock layout: cfg sets savefile_directory and sort-by-content. With a content path given, the placement is concrete: saves/<parent-dir-name>/. The existing save is observed, not guessed.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"true\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+          "/mnt/sd/retrodeck/saves/gba/Golden Sun (USA).srm": "sram"
         },
         "query": {
-          "system": "gba"
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck"
-          }
-        ],
-        "save_placement": {
-          "dir": "/mnt/sd/retrodeck/saves/<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "content_dir",
-            "rom_stem"
-          ]
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/gba",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": { "state": "observed", "files": ["Golden Sun (USA).srm"] }
         }
       }
     },
     {
-      "name": "retrodeck-fallback-home",
-      "rationale": "retrodeck.json present but carries no paths; every root falls back to ~/retrodeck. Detection still succeeds — the file is the marker, its contents are best-effort.",
+      "name": "retrodeck-multi-disc-m3u-folder",
+      "rationale": "The multi-disc convention: the ROM's parent directory is named '<title>.m3u'. content_dir is the parent directory name (runloop.c:8781), so the save lands under saves/<title>.m3u/ — observed on a real installation.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"true\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Final Fantasy VII (USA).m3u/Final Fantasy VII (USA).m3u": "Disc 1.cue\n",
+          "/mnt/sd/retrodeck/saves/Final Fantasy VII (USA).m3u/Final Fantasy VII (USA).srm": "sram"
         },
         "query": {
-          "system": "gba"
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Final Fantasy VII (USA).m3u/Final Fantasy VII (USA).m3u"
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/home/deck/retrodeck"
-          }
-        ],
-        "save_placement": {
-          "dir": "/home/deck/retrodeck/saves/<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "content_dir",
-            "rom_stem"
-          ]
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/Final Fantasy VII (USA).m3u",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": { "state": "observed", "files": ["Final Fantasy VII (USA).srm"] }
         }
       }
     },
     {
-      "name": "retrodeck-no-cfg-defaults",
-      "rationale": "retrodeck.json present, no retroarch.cfg found: the layout falls to RetroDECK defaults (sort-by-content on, sort-by-core off). Provenance says 'default', not 'file'.",
+      "name": "retrodeck-core-override-flips-sort",
+      "rationale": "RetroDECK ships config/PPSSPP/PPSSPP.cfg with sort_savefiles_by_content_enable=false — a stock installation where the core override flips the layout flat for PPSSPP-libretro. The override directory is keyed by library_name (PPSSPP), resolved live from the core binary.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
         },
         "query": {
-          "system": "gba"
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck"
-          }
-        ],
-        "save_placement": {
-          "dir": "/mnt/sd/retrodeck/saves/<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "content_dir",
-            "rom_stem"
-          ]
-        }
-      }
-    },
-    {
-      "name": "retrodeck-sort-disabled-flat",
-      "rationale": "Both sort flags off: saves land flat in the saves root, no per-content or per-core subdir.",
-      "input": {
-        "home": "/home/deck",
-        "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n"
-        },
-        "query": {
-          "system": "gba"
-        }
-      },
-      "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck"
-          }
-        ],
-        "save_placement": {
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
           "dir": "/mnt/sd/retrodeck/saves",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "rom_stem"
-          ]
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": { "state": "unknown", "files": [] }
         }
       }
     },
     {
-      "name": "retrodeck-sort-by-content-and-core",
-      "rationale": "Both sort flags on, with the content folder and core supplied: every hole but rom_stem is filled, yielding saves/<folder>/<core>.",
+      "name": "retrodeck-game-override-wins-over-core-override",
+      "rationale": "The chain stacks core → content-dir → game, later wins (configuration.c:7095). The core override turns sorting off; the game override turns it back on — the game override must win.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"true\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/mGBA.cfg": "sort_savefiles_by_content_enable = \"false\"",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/Golden Sun (USA).cfg": "sort_savefiles_by_content_enable = \"true\"",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
         },
         "query": {
-          "system": "gba",
-          "core": "mgba_libretro",
-          "rom_dir_name": "gba"
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip",
+          "core_so": "mgba_libretro.so"
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck"
-          }
-        ],
-        "save_placement": {
-          "dir": "/mnt/sd/retrodeck/saves/gba/mgba_libretro",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "rom_stem"
-          ]
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/gba",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": { "state": "unknown", "files": [] }
         }
       }
     },
     {
-      "name": "retrodeck-sort-by-core-only",
-      "rationale": "Sort-by-core on, sort-by-content off, core supplied: the save nests under the core name directly beneath the saves root.",
+      "name": "retrodeck-sort-by-core-resolves-library-name",
+      "rationale": "Sorting by core appends library_name — the core's self-reported display name (mGBA), not the .so basename (mgba). Resolved live via query_core through the /app→Flatpak-deployment translation; the existing save is observed through it.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+          "/mnt/sd/retrodeck/saves/gba/mGBA/Golden Sun (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
         },
         "query": {
-          "system": "gba",
-          "core": "mgba_libretro"
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip",
+          "core_so": "mgba_libretro.so"
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck"
-          }
-        ],
-        "save_placement": {
-          "dir": "/mnt/sd/retrodeck/saves/mgba_libretro",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "rom_stem"
-          ]
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/gba/mGBA",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": { "state": "observed", "files": ["Golden Sun (USA).srm"] }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-sort-by-core-without-core-leaves-hole",
+      "rationale": "Sorting by core needs library_name; without a named core the hole stays open (a hole is not an unknown — the caller can fill it), and a caveat states that per-core overrides were not checked.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": ["library_name"],
+          "file_set": { "state": "unknown", "files": [] }
         }
       }
     },
     {
       "name": "retrodeck-savefiles-in-content-dir",
-      "rationale": "savefiles_in_content_dir=true: the save lives next to the ROM, so the directory is the ROM's own folder — an unfilled <content_dir>, a valid placement, not an error.",
+      "rationale": "savefiles_in_content_dir: the save lives next to the ROM. With the content path given, the directory is the ROM's own folder, concrete.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefiles_in_content_dir = \"true\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"true\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
         },
         "query": {
-          "system": "gba"
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck"
-          }
-        ],
-        "save_placement": {
-          "dir": "<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "content_dir",
-            "rom_stem"
-          ]
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/roms/gba",
+          "root_kind": "content_directory",
+          "needs": [],
+          "file_set": { "state": "unknown", "files": [] }
         }
       }
     },
     {
-      "name": "retrodeck-content-folder-provided",
-      "rationale": "Sort-by-content on and the caller supplies the ROM's folder: the content hole is filled, leaving only rom_stem.",
+      "name": "retrodeck-cfg-missing-unset-dir-resolves-to-content",
+      "rationale": "A RetroDECK whose retroarch.cfg is missing: savefile_directory is unset, and RetroArch resolves an unset save dir to the ROM's own directory (runloop.c:8786) — a rule, not a hole. retrodeck.json still detects the installation.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"true\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
         },
         "query": {
-          "system": "gba",
-          "rom_dir_name": "gba"
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck"
-          }
-        ],
-        "save_placement": {
-          "dir": "/mnt/sd/retrodeck/saves/gba",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "rom_stem"
-          ]
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/roms/gba",
+          "root_kind": "content_directory",
+          "needs": [],
+          "file_set": { "state": "unknown", "files": [] }
         }
       }
     },
     {
-      "name": "standalone-flatpak-savefile-directory-set",
-      "rationale": "The org.libretro.RetroArch Flatpak with savefile_directory set (with ~): the saves root is that expanded path, not a RetroDECK path.",
+      "name": "retrodeck-root-missing-health",
+      "rationale": "The commonest Steam Deck failure: retrodeck.json is readable but points at an unmounted SD card. Detection reports health=root_missing instead of handing out a syntactically correct path as if usable.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/RetroArch/saves\"\nsort_savefiles_by_content_enable = \"true\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/deck/Emulation/retrodeck\", \"saves_path\": \"/run/media/deck/Emulation/retrodeck/saves\"}}"
+        }
+      },
+      "expected": {
+        "installations": [
+          { "kind": "retrodeck", "root": "/run/media/deck/Emulation/retrodeck", "health": "root_missing" }
+        ]
+      }
+    },
+    {
+      "name": "retrodeck-no-query-detection-only",
+      "rationale": "Detection without a placement question: retrodeck.json present, root exists, health ok.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
+        }
+      },
+      "expected": {
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }]
+      }
+    },
+    {
+      "name": "emudeck-flat-layout",
+      "rationale": "EmuDeck: settings.sh is the truth, the standalone org.libretro.RetroArch Flatpak is its RetroArch, the shipped layout is flat (sort keys false). One handle for both descriptions — no separate standalone installation.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/Emulation/roms/gba/Golden Sun (USA).zip": "",
+          "/home/deck/Emulation/saves/retroarch/saves/Golden Sun (USA).srm": "sram"
         },
         "query": {
-          "system": "gba"
+          "content_path": "/home/deck/Emulation/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [{ "kind": "emudeck", "root": "/home/deck/Emulation", "health": "ok" }],
+        "save_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": { "state": "observed", "files": ["Golden Sun (USA).srm"] }
+        }
+      }
+    },
+    {
+      "name": "standalone-flatpak-upstream-default-sorts-by-core",
+      "rationale": "RetroArch's upstream compile-time default is sort_savefiles_enable=true (config.def.h:982). A bare Flatpak whose cfg sets only the directory sorts by core — the placement needs library_name.",
+      "input": {
+        "home": "/home/user",
+        "files": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\n",
+          "/home/user/roms/gba/Golden Sun (USA).zip": ""
+        },
+        "query": {
+          "content_path": "/home/user/roms/gba/Golden Sun (USA).zip"
         }
       },
       "expected": {
         "installations": [
           {
             "kind": "standalone_retroarch_flatpak",
-            "root": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch"
+            "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
+            "health": "ok"
           }
         ],
-        "save_placement": {
-          "dir": "/home/deck/RetroArch/saves/<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "content_dir",
-            "rom_stem"
-          ]
+        "save_location": {
+          "dir": "/home/user/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": ["library_name"],
+          "file_set": { "state": "unknown", "files": [] }
         }
       }
     },
     {
       "name": "standalone-flatpak-savefile-directory-absent",
-      "rationale": "Standalone Flatpak with no savefile_directory: the saves root itself is an unfilled <savefile_directory> hole — honest about what the cfg does not say.",
+      "rationale": "An unset savefile_directory is a rule, not a hole: RetroArch resolves it to the ROM's own directory (runloop.c:8786). With the content path given the answer is concrete.",
       "input": {
-        "home": "/home/deck",
+        "home": "/home/user",
         "files": {
-          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"true\"\n"
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "video_driver = \"gl\"\n",
+          "/home/user/roms/gba/Golden Sun (USA).zip": ""
         },
         "query": {
-          "system": "gba"
+          "content_path": "/home/user/roms/gba/Golden Sun (USA).zip"
         }
       },
       "expected": {
         "installations": [
           {
             "kind": "standalone_retroarch_flatpak",
-            "root": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch"
+            "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
+            "health": "ok"
           }
         ],
-        "save_placement": {
-          "dir": "<savefile_directory>/<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "savefile_directory",
-            "content_dir",
-            "rom_stem"
-          ]
+        "save_location": {
+          "dir": "/home/user/roms/gba",
+          "root_kind": "content_directory",
+          "needs": [],
+          "file_set": { "state": "unknown", "files": [] }
         }
       }
     },
     {
-      "name": "standalone-flatpak-content-dir-mode",
-      "rationale": "Standalone Flatpak writing saves next to the ROM: the same content-dir placement as RetroDECK, proving the mode is flavor-independent.",
+      "name": "native-explicit-flat-with-observed-multifile-save",
+      "rationale": "A native install with sorting explicitly off; the existing save is a core-written multi-file set (Beetle Saturn's .bcr/.bkr/.smpc). The file set is observed, never derived from an .srm assumption.",
       "input": {
-        "home": "/home/deck",
+        "home": "/home/user",
         "files": {
-          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefiles_in_content_dir = \"true\"\n"
+          "/home/user/.config/retroarch/retroarch.cfg": "savefile_directory = \"/home/user/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/user/roms/saturn/Sega Rally Championship (USA).chd": "",
+          "/home/user/saves/Sega Rally Championship (USA).bcr": "b",
+          "/home/user/saves/Sega Rally Championship (USA).bkr": "b",
+          "/home/user/saves/Sega Rally Championship (USA).smpc": "b"
         },
         "query": {
-          "system": "psx"
+          "content_path": "/home/user/roms/saturn/Sega Rally Championship (USA).chd"
         }
       },
       "expected": {
         "installations": [
-          {
-            "kind": "standalone_retroarch_flatpak",
-            "root": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch"
-          }
+          { "kind": "native_retroarch", "root": "/home/user/.config/retroarch", "health": "ok" }
         ],
-        "save_placement": {
-          "dir": "<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "content_dir",
-            "rom_stem"
-          ]
+        "save_location": {
+          "dir": "/home/user/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Sega Rally Championship (USA).bcr",
+              "Sega Rally Championship (USA).bkr",
+              "Sega Rally Championship (USA).smpc"
+            ]
+          }
         }
       }
     },
     {
-      "name": "native-savefile-directory-set-flat",
-      "rationale": "A native ~/.config/retroarch install with an absolute savefile_directory and both sort flags off: a flat saves root.",
+      "name": "unloadable-core-is-stated-not-guessed",
+      "rationale": "A core that is present but unloadable (missing host library — the applewin case) yields library_name unknown: the hole stays open and the caveat states it. Never a guess from the .so filename.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/apple2/game.dsk": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/applewin_libretro.so": null
         },
         "query": {
-          "system": "gba"
+          "content_path": "/mnt/sd/retrodeck/roms/apple2/game.dsk",
+          "core_so": "applewin_libretro.so"
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "native_retroarch",
-            "root": "/home/deck/.config/retroarch"
-          }
-        ],
-        "save_placement": {
-          "dir": "/home/deck/saves",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "rom_stem"
-          ]
+        "installations": [{ "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" }],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": ["library_name"],
+          "file_set": { "state": "unknown", "files": [] }
         }
       }
     },
     {
-      "name": "native-savefile-directory-default-is-hole",
-      "rationale": "savefile_directory=\"default\" is the literal RetroArch sentinel for 'unset' — treated as an unfilled <savefile_directory> hole, never as a directory named 'default'.",
+      "name": "symlinked-save-dir-reads-through",
+      "rationale": "A save directory reached through a symlink (RetroDECK's dir_prep pattern): the fixture resolves link prefixes like the kernel, so the observed file set is found through the link.",
       "input": {
-        "home": "/home/deck",
+        "home": "/home/user",
         "files": {
-          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"default\"\nsort_savefiles_by_content_enable = \"true\"\n"
+          "/home/user/.config/retroarch/retroarch.cfg": "savefile_directory = \"/home/user/links/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/user/roms/gb/Tetris (World).zip": "",
+          "/data/real-saves/Tetris (World).srm": "sram"
+        },
+        "symlinks": {
+          "/home/user/links/saves": "/data/real-saves"
         },
         "query": {
-          "system": "gba"
+          "content_path": "/home/user/roms/gb/Tetris (World).zip"
         }
       },
       "expected": {
         "installations": [
-          {
-            "kind": "native_retroarch",
-            "root": "/home/deck/.config/retroarch"
-          }
+          { "kind": "native_retroarch", "root": "/home/user/.config/retroarch", "health": "ok" }
         ],
-        "save_placement": {
-          "dir": "<savefile_directory>/<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "savefile_directory",
-            "content_dir",
-            "rom_stem"
-          ]
+        "save_location": {
+          "dir": "/home/user/links/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "file_set": { "state": "observed", "files": ["Tetris (World).srm"] }
         }
       }
     },
     {
       "name": "coexistence-retrodeck-and-native",
-      "rationale": "RetroDECK and a native RetroArch side by side: both detected, RetroDECK first. The placement is asked of the highest-priority install.",
+      "rationale": "Coexisting installations each get their own handle, RetroDECK first; no cross-installation fall-through and no silently chosen winner.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"true\"\n",
-          "/home/deck/.config/retroarch/retroarch.cfg": "sort_savefiles_by_content_enable = \"true\"\n"
-        },
-        "query": {
-          "system": "gba"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\n"
         }
       },
       "expected": {
         "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck"
-          },
-          {
-            "kind": "native_retroarch",
-            "root": "/home/deck/.config/retroarch"
-          }
-        ],
-        "save_placement": {
-          "dir": "/mnt/sd/retrodeck/saves/<content_dir>",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "content_dir",
-            "rom_stem"
-          ]
-        }
+          { "kind": "retrodeck", "root": "/mnt/sd/retrodeck", "health": "ok" },
+          { "kind": "native_retroarch", "root": "/home/deck/.config/retroarch", "health": "ok" }
+        ]
       }
     },
     {
-      "name": "coexistence-standalone-and-native",
-      "rationale": "Two bare RetroArch flavors coexisting: the standalone Flatpak is probed before the native install, and answers the placement.",
+      "name": "emudeck-claims-standalone-flatpak",
+      "rationale": "EmuDeck is a configured org.libretro.RetroArch — the same RetroArch under two descriptions. One handle carrying both, never a second handle for the same installation.",
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/flatpak-saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
-          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/native-saves\"\n"
-        },
-        "query": {
-          "system": "gba"
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Emulation/saves/retroarch/saves/.keep": ""
         }
       },
       "expected": {
-        "installations": [
-          {
-            "kind": "standalone_retroarch_flatpak",
-            "root": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch"
-          },
-          {
-            "kind": "native_retroarch",
-            "root": "/home/deck/.config/retroarch"
-          }
-        ],
-        "save_placement": {
-          "dir": "/home/deck/flatpak-saves",
-          "filename": "<rom_stem>.srm",
-          "needs": [
-            "rom_stem"
-          ]
-        }
+        "installations": [{ "kind": "emudeck", "root": "/home/deck/Emulation", "health": "ok" }]
       }
     },
     {
       "name": "nothing-installed",
-      "rationale": "A machine with no emulator config markers: detection returns nothing, and no placement question applies.",
+      "rationale": "An empty machine detects nothing; an empty list is the truthful answer.",
       "input": {
-        "home": "/home/deck",
+        "home": "/home/user",
         "files": {
-          "/home/deck/notes.txt": "unrelated file\n"
+          "/home/user/.bashrc": ""
         }
       },
       "expected": {

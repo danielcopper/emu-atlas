@@ -1,25 +1,28 @@
-"""Save placements — templates with named holes, not resolved paths.
+"""Save placements — resolved directories, honest file sets, and provenance.
 
-A :class:`SavePlacement` is the answer to "where does this installation keep the
-save for this ROM?". It is a template because the concrete path cannot always be
-known from configs alone: RetroArch names the save after the ROM file
-(``<rom_stem>``), it may nest saves under the ROM's content folder
-(``<content_dir>``), and a standalone install may leave its saves root unset
-(``<savefile_directory>``). Whoever holds the ROM at hand fills the holes; the
-template says exactly which holes remain and why (``sources``).
+A :class:`SavePlacement` answers "where does this emulator, configured as it is,
+keep the save for this content?". Its shape follows the research findings
+(``docs/research/retrodeck-save-placement.md`` §16):
 
-The directory math is extraction-faithful to decky-romm-sync
-(``domain/save_path.py`` ``resolve_save_dir`` and ``compute_local_save_target``):
+- **Directory and file set are different kinds of knowledge.** The directory
+  follows from RetroArch's central path rule and is always resolvable; the file
+  set is per-core behaviour with no metadata source. For existing saves atlas
+  *observes* the set (``glob("<rom_stem>.*")``); otherwise it is honestly
+  ``unknown`` — never guessed. The old fixed ``<rom_stem>.srm`` filename is
+  gone: ``.srm`` is only what RetroArch itself writes, and cores like Beetle
+  Saturn write ``.bcr``/``.bkr``/``.smpc`` on their own.
+- **A hole is not an unknown.** ``needs`` lists holes the caller fills from the
+  content at hand (``content_dir``, ``library_name``); *unknown* means atlas
+  cannot state the value and refuses to guess. Distinct states, kept distinct.
+- **The root varies** — ``savefile_directory``, ``system_directory`` (Flycast
+  VMUs), or the ROM's own directory (``savefiles_in_content_dir``, or an unset
+  save dir, which RetroArch resolves itself: ``runloop.c:8786``).
+- **Filesystem state is part of the answer** — RetroArch silently reverts to the
+  unsorted root when a sorted directory cannot be created (``runloop.c:8844``);
+  ``caveats`` carries that and every other stated degradation.
 
-- ``savefiles_in_content_dir`` → the save lives next to the ROM; the directory is
-  the ROM's own folder, an unfilled ``<content_dir>``.
-- otherwise the directory is the saves root, with a per-content component appended
-  when ``sort_by_content`` (the ROM's folder name) and a per-core component when
-  ``sort_by_core`` (the RetroArch core name).
-- the filename is always ``<rom_stem>.srm`` — RetroArch keys the save off the ROM
-  basename, and ``srm`` is the default extension.
-
-Pure compute. No I/O.
+Pure compute. No I/O — the installation handles observe the machine and pass
+the results in.
 """
 
 from __future__ import annotations
@@ -27,79 +30,115 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-_DEFAULT_SAVE_EXTENSION = "srm"
+from atlas.retroarch_cfg import RetroArchCfg
+
+# Root kinds — where the placement's directory is anchored.
+ROOT_SAVEFILE_DIRECTORY = "savefile_directory"
+ROOT_CONTENT_DIRECTORY = "content_directory"
+ROOT_SYSTEM_DIRECTORY = "system_directory"
+
+_HOLE_CONTENT_DIR = "content_dir"
+_HOLE_LIBRARY_NAME = "library_name"
+
+
+@dataclass(frozen=True, slots=True)
+class FileSet:
+    """The files a save consists of — observed on the machine, or unknown.
+
+    ``state`` is ``"observed"`` (``files`` are real basenames found on disk) or
+    ``"unknown"`` (``files`` is empty; atlas refuses to guess). ``source`` says
+    how the state was reached.
+    """
+
+    state: str
+    files: tuple[str, ...]
+    source: str
+
+
+UNKNOWN_FILE_SET = FileSet(
+    state="unknown",
+    files=(),
+    source="file set not stated — no observation available (never guessed)",
+)
 
 
 @dataclass(frozen=True, slots=True)
 class SavePlacement:
-    """A save location as a template with named holes and provenance.
+    """A resolved save location with provenance and stated degradations.
 
-    ``dir`` and ``filename`` are template strings; ``needs`` lists the holes that
-    remain unfilled (in the order they appear from the saves root outward, with
-    ``rom_stem`` last since the filename always carries it). ``sources`` is the
-    provenance trail: which config value or default produced each governing part.
+    ``dir`` is concrete when the caller supplied the content path; otherwise it
+    is a template whose remaining holes are listed in ``needs``. ``root_kind``
+    names the anchor (:data:`ROOT_SAVEFILE_DIRECTORY`,
+    :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`).
+    ``file_set`` is observed or unknown, never guessed. ``sources`` is the
+    provenance trail; ``caveats`` states every degradation explicitly.
     """
 
     dir: str
-    filename: str
+    root_kind: str
     needs: tuple[str, ...]
+    file_set: FileSet
     sources: tuple[str, ...]
+    caveats: tuple[str, ...]
 
 
 def build_save_placement(
     *,
-    saves_root: str | None,
-    savefiles_in_content_dir: bool,
-    sort_by_content: bool,
-    sort_by_core: bool,
-    core: str | None,
-    rom_dir_name: str | None,
-    sources: tuple[str, ...],
+    layout: RetroArchCfg,
+    content_dir_path: str | None,
+    content_dir_name: str | None,
+    library_name: str | None,
+    extra_sources: tuple[str, ...] = (),
+    caveats: tuple[str, ...] = (),
+    file_set: FileSet = UNKNOWN_FILE_SET,
 ) -> SavePlacement:
-    """Compose a :class:`SavePlacement` from a saves root and the layout decision.
+    """Compose a :class:`SavePlacement` from a resolved layout and the caller's fills.
 
-    ``saves_root`` is the concrete saves root when known, or ``None`` when it is
-    itself an unfilled ``<savefile_directory>`` hole (a standalone install whose
-    cfg leaves ``savefile_directory`` unset). ``core`` and ``rom_dir_name`` are
-    the caller's fills for the per-core and per-content holes; when absent the
-    corresponding hole is left in the template and listed in ``needs``.
+    ``content_dir_path`` / ``content_dir_name`` derive from the content path
+    when the caller supplied one (the ROM's own directory and its basename);
+    when absent the corresponding hole is left in the template and listed in
+    ``needs``. ``library_name`` is the core's self-reported name (via
+    ``query_core``); when the layout sorts by core and it is absent, the
+    ``<library_name>`` hole remains.
     """
     needs: list[str] = []
-    all_sources = list(sources)
+    all_sources = list(layout.sources) + list(extra_sources)
 
-    if savefiles_in_content_dir:
-        directory = "<content_dir>"
-        needs.append("content_dir")
-        all_sources.append("layout: saves live next to the ROM; <content_dir> is the ROM's own directory")
-    else:
-        if saves_root is None:
-            parts = ["<savefile_directory>"]
-            needs.append("savefile_directory")
+    if layout.savefiles_in_content_dir or layout.savefile_directory is None:
+        root_kind = ROOT_CONTENT_DIRECTORY
+        if layout.savefiles_in_content_dir:
+            all_sources.append("layout: saves live next to the ROM (savefiles_in_content_dir)")
         else:
-            parts = [saves_root]
-
-        if sort_by_content:
-            if rom_dir_name is not None:
-                parts.append(rom_dir_name)
+            all_sources.append(
+                "layout: savefile_directory unset — RetroArch resolves it to the ROM's directory (runloop.c:8786)"
+            )
+        if content_dir_path is not None:
+            directory = content_dir_path
+        else:
+            directory = "<content_dir>"
+            needs.append(_HOLE_CONTENT_DIR)
+    else:
+        root_kind = ROOT_SAVEFILE_DIRECTORY
+        parts = [layout.savefile_directory]
+        if layout.sort_by_content:
+            if content_dir_name is not None:
+                parts.append(content_dir_name)
             else:
                 parts.append("<content_dir>")
-                needs.append("content_dir")
-
-        if sort_by_core:
-            if core is not None:
-                parts.append(core)
+                needs.append(_HOLE_CONTENT_DIR)
+        if layout.sort_by_core:
+            if library_name is not None:
+                parts.append(library_name)
             else:
-                parts.append("<core>")
-                needs.append("core")
-
+                parts.append("<library_name>")
+                needs.append(_HOLE_LIBRARY_NAME)
         directory = os.path.join(*parts)
-
-    needs.append("rom_stem")
-    filename = f"<rom_stem>.{_DEFAULT_SAVE_EXTENSION}"
 
     return SavePlacement(
         dir=directory,
-        filename=filename,
+        root_kind=root_kind,
         needs=tuple(needs),
+        file_set=file_set,
         sources=tuple(all_sources),
+        caveats=tuple(caveats),
     )
