@@ -80,25 +80,24 @@ Places this knowledge could plug in — options, not commitments:
 
 ## Status
 
-Phase 1 shipped — RetroArch knowledge and the BIOS registry, extracted from decky-romm-sync's production code. What
-exists now:
+The resolver core is built and verified live against a real RetroDECK 0.10.9b installation. What exists now:
 
-- `atlas.detect(home, reader=...)` finds RetroDECK, the standalone `org.libretro.RetroArch` Flatpak, and a native
-  `~/.config/retroarch` install by their config markers, in that order; coexisting installs each return their own
-  handle.
-- Every installation answers `save_placement(system, core=..., rom_dir_name=...)` with a `SavePlacement` — a template
-  carrying named holes (`<content_dir>`, `<rom_stem>`, `<savefile_directory>`, `<core>`), the `needs` still to be
-  filled, and a provenance trail. RetroDECK handles also expose `bios_dir()` and `roms_dir()`.
-- `retroarch.cfg` interpretation of the three save-layout keys (`savefiles_in_content_dir`,
-  `sort_savefiles_by_content_enable`, `sort_savefiles_enable`) plus `savefile_directory`, each with per-key provenance.
-- The RetroArch `.info` parser and the BIOS registry (548 entries across 54 platforms and 122 cores) with entry lookup
-  and a required-classification query that honors the per-core override over the top-level flag.
-- All filesystem access flows through the injected `Reader`; a `machines` conformance-vector family (16 cases) drives
-  real detection and placement from fixture machines, with save-placement expectations oracle-derived from
-  decky-romm-sync's `resolve_save_dir` / `compute_local_save_target`.
+- `atlas.detect(home, machine=...)` finds RetroDECK, EmuDeck, the standalone `org.libretro.RetroArch` Flatpak, and a
+  native install — with health (`ok` / `root_missing` / `config_unreadable`), ordered markers (EmuDeck claims the
+  Flatpak it configures), and never a silently chosen winner.
+- `installation.save_location(content_path=..., core_so=...)` resolves the save directory the way RetroArch does:
+  platform-default roots, the four-layer override chain (gated by `auto_overrides_enable` / `game_specific_options` /
+  `rgui_config_directory`), `library_name` read live from the core binary through the Flatpak-deployment translation,
+  file sets observed or honestly unknown, granularity plus the option that switches it where a rule card exists
+  (Flycast, LRPS2), and structured caveats (stable codes) for every stated degradation.
+- `installation.emulators_for(system, content_path=...)` reads the ES-DE catalogue live (bundled + custom overlay) and
+  resolves the effective default through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` >
+  declared order. Entries carry their core, so placement answers on that path need no core argument.
+- The audit trail: `docs/research/coverage-matrix.md` (generated) tracks every referenced emulator's verdict and
+  per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test; drift raises an
+  `unverified-version` caveat at answer time.
+- 193 tests, 25 conformance vectors (fixture machines with files, symlinks, and core answers), zero runtime
+  dependencies.
 
-EmuDeck detection is **not** in this phase — research now exists (`docs/research/retrodeck-save-placement.md`, §13) but
-no implementation. ES-DE knowledge, standalone emulators, and the canonical system vocabulary remain future phases.
-
-The current code predates the resolver redesign: the shipped `Reader` still lacks `readlink`/`query_core`, and
-`save_placement` does not yet read the override chain. `DESIGN.md` specifies the target; the code follows it next.
+What is not covered yet, and in which order it comes: `ROADMAP.md`. The systematic core-by-core state:
+`docs/research/coverage-matrix.md`.

@@ -14,9 +14,11 @@ keep the save for this content?". Its shape follows the research findings
 - **A hole is not an unknown.** ``needs`` lists holes the caller fills from the
   content at hand (``content_dir``, ``library_name``); *unknown* means atlas
   cannot state the value and refuses to guess. Distinct states, kept distinct.
-- **The root varies** — ``savefile_directory``, ``system_directory`` (Flycast
-  VMUs), or the ROM's own directory (``savefiles_in_content_dir``, or an unset
-  save dir, which RetroArch resolves itself: ``runloop.c:8786``).
+- **The root varies** — ``savefile_directory`` (explicit, or the RetroArch
+  platform default when unset/reset), ``system_directory`` (Flycast VMUs), or
+  the ROM's own directory (``savefiles_in_content_dir``). Sorting stages apply
+  after root selection regardless of which root was chosen
+  (``runloop.c:8785-8841``).
 - **Filesystem state is part of the answer** — RetroArch silently reverts to the
   unsorted root when a sorted directory cannot be created (``runloop.c:8844``);
   ``caveats`` carries that and every other stated degradation.
@@ -49,6 +51,10 @@ CAVEAT_SYSTEM_DIR_UNSET = "system-directory-unset"
 CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
 CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
 CAVEAT_UNVERIFIED_VERSION = "unverified-version"
+CAVEAT_INVALID_SAVE_DIRECTORY = "invalid-save-directory"
+CAVEAT_CORE_SUSPECT = "core-suspect"
+CAVEAT_CORE_UNAUDITED = "core-unaudited"
+CAVEAT_CARD_MODE_UNCONFIRMED = "card-mode-unconfirmed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,6 +144,7 @@ class SavePlacement:
 def build_save_placement(
     *,
     layout: RetroArchCfg,
+    platform_default_dir: str,
     content_dir_path: str | None,
     content_dir_name: str | None,
     library_name: str | None,
@@ -147,6 +154,9 @@ def build_save_placement(
 ) -> SavePlacement:
     """Compose a :class:`SavePlacement` from a resolved layout and the caller's fills.
 
+    ``platform_default_dir`` is the arrangement's RetroArch platform default
+    saves directory (``saves`` under the config tree, ``platform_unix.c:1844``)
+    — the effective root whenever ``savefile_directory`` is unset or reset.
     ``content_dir_path`` / ``content_dir_name`` derive from the content path
     when the caller supplied one (the ROM's own directory and its basename);
     when absent the corresponding hole is left in the template and listed in
@@ -157,35 +167,37 @@ def build_save_placement(
     needs: list[str] = []
     all_sources = list(layout.sources) + list(extra_sources)
 
-    if layout.savefiles_in_content_dir or layout.savefile_directory is None:
+    # Root selection first (runloop.c:8785-8813), then the sorting stages run
+    # regardless of how the root was selected (runloop.c:8822-8841) — content
+    # component first, then library_name.
+    if layout.savefiles_in_content_dir:
         root_kind = ROOT_CONTENT_DIRECTORY
-        if layout.savefiles_in_content_dir:
-            all_sources.append("layout: saves live next to the ROM (savefiles_in_content_dir)")
-        else:
-            all_sources.append(
-                "layout: savefile_directory unset — RetroArch resolves it to the ROM's directory (runloop.c:8786)"
-            )
+        all_sources.append("layout: root is the ROM's own directory (savefiles_in_content_dir)")
         if content_dir_path is not None:
-            directory = content_dir_path
+            parts = [content_dir_path]
         else:
-            directory = "<content_dir>"
+            parts = ["<content_dir>"]
             needs.append(_HOLE_CONTENT_DIR)
+    elif layout.savefile_directory is None:
+        root_kind = ROOT_SAVEFILE_DIRECTORY
+        parts = [platform_default_dir]
     else:
         root_kind = ROOT_SAVEFILE_DIRECTORY
         parts = [layout.savefile_directory]
-        if layout.sort_by_content:
-            if content_dir_name is not None:
-                parts.append(content_dir_name)
-            else:
-                parts.append("<content_dir>")
-                needs.append(_HOLE_CONTENT_DIR)
-        if layout.sort_by_core:
-            if library_name is not None:
-                parts.append(library_name)
-            else:
-                parts.append("<library_name>")
-                needs.append(_HOLE_LIBRARY_NAME)
-        directory = os.path.join(*parts)
+
+    if layout.sort_by_content:
+        if content_dir_name is not None:
+            parts.append(content_dir_name)
+        else:
+            parts.append("<content_dir>")
+            needs.append(_HOLE_CONTENT_DIR)
+    if layout.sort_by_core:
+        if library_name is not None:
+            parts.append(library_name)
+        else:
+            parts.append("<library_name>")
+            needs.append(_HOLE_LIBRARY_NAME)
+    directory = os.path.join(*parts)
 
     return SavePlacement(
         dir=directory,

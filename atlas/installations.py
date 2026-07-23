@@ -38,7 +38,11 @@ from atlas.esde import (
 from atlas.machine import Machine
 from atlas.oddities import lookup_audit, lookup_card
 from atlas.placement import (
+    CAVEAT_CARD_MODE_UNCONFIRMED,
+    CAVEAT_CORE_SUSPECT,
+    CAVEAT_CORE_UNAUDITED,
     CAVEAT_CORE_UNQUERYABLE,
+    CAVEAT_INVALID_SAVE_DIRECTORY,
     CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
@@ -57,8 +61,6 @@ from atlas.placement import (
     build_save_placement,
 )
 from atlas.retroarch_cfg import (
-    EMUDECK_DEFAULTS,
-    RETRODECK_DEFAULTS,
     UPSTREAM_DEFAULTS,
     LayoutDefaults,
     expand_home,
@@ -121,6 +123,14 @@ def _flatpak_host_path(machine: Machine, home: str, app_id: str, path: str) -> s
     return None
 
 
+def _cfg_bool(raw: str | None, default: bool) -> bool:
+    """Interpret a raw cfg value as RetroArch's config_get_bool does."""
+    if raw is None:
+        return default
+    stripped = raw.strip()
+    return stripped == "1" or stripped.lower() == "true"
+
+
 def _resolve_chain_key(layer_texts: list[str], key: str) -> str | None:
     """Resolve one raw cfg key across the layer texts — later layers win."""
     value: str | None = None
@@ -143,7 +153,8 @@ def _core_options_value(
     rom_stem: str | None,
     option_key: str,
     option_default: str,
-) -> tuple[str, str, str]:
+    game_specific_options: bool,
+) -> tuple[str, str, str, bool]:
     """Read a core option the way RetroArch does — first existing file is THE source.
 
     Priority (``runloop.c`` ``validate_per_core_options``): game ``.opt``,
@@ -152,18 +163,22 @@ def _core_options_value(
     ``retroarch-core-options.cfg``). A key absent from the governing file falls
     back to the core default — it does not fall through to another file.
 
-    Returns ``(value, provenance, options_file)`` where ``options_file`` is the
-    file a caller would edit to change the option.
+    Returns ``(value, provenance, options_file, unconfirmed)``:
+    ``options_file`` is the file a caller would edit to change the option, and
+    ``unconfirmed`` is true when a governing file whose path needs
+    ``library_name`` could exist but cannot be checked (the core was
+    unqueryable) — the returned value may then not be the effective one.
     """
     candidates: list[str] = []
-    if library_name:
+    if library_name and game_specific_options:
         if rom_stem:
             candidates.append(os.path.join(override_config_dir, library_name, f"{rom_stem}.opt"))
         if content_dir_name:
             candidates.append(os.path.join(override_config_dir, library_name, f"{content_dir_name}.opt"))
     global_flag = _resolve_chain_key(layer_texts, "global_core_options")
     # Upstream default is false (config.def.h DEFAULT_GLOBAL_CORE_OPTIONS).
-    per_core_options = (global_flag or "false").strip().lower() != "true"
+    per_core_options = not _cfg_bool(global_flag, False)
+    unconfirmed = library_name is None and (game_specific_options or per_core_options)
     if library_name and per_core_options:
         candidates.append(os.path.join(override_config_dir, library_name, f"{library_name}.opt"))
     custom_path = _resolve_chain_key(layer_texts, "core_options_path")
@@ -182,16 +197,19 @@ def _core_options_value(
                 parsed[option_key],
                 f'{os.path.basename(path)}: {option_key} = "{parsed[option_key]}"',
                 path,
+                unconfirmed,
             )
         return (
             option_default,
             f'core default: {option_key} = "{option_default}" ({os.path.basename(path)} has no entry)',
             path,
+            unconfirmed,
         )
     return (
         option_default,
         f'core default: {option_key} = "{option_default}" (no options file present)',
         global_file,
+        unconfirmed,
     )
 
 
@@ -254,8 +272,25 @@ def _retroarch_save_location(
             )
         )
 
+    global_text = machine.read_text(global_cfg_path)
+    global_layer = [global_text] if global_text is not None else []
+
+    # Gates read from the global cfg (an override cannot enable itself):
+    # auto_overrides_enable and game_specific_options both default true
+    # (config.def.h); rgui_config_directory relocates the application config
+    # dir used for override .cfg and option .opt files.
+    auto_overrides = _cfg_bool(_resolve_chain_key(global_layer, "auto_overrides_enable"), True)
+    game_specific_options = _cfg_bool(_resolve_chain_key(global_layer, "game_specific_options"), True)
+    rgui_dir_raw = _resolve_chain_key(global_layer, "rgui_config_directory")
+    rgui_dir = expand_home(rgui_dir_raw, home=home) if rgui_dir_raw is not None else None
+    if rgui_dir is not None:
+        override_config_dir = rgui_dir
+        sources_extra.append(f'retroarch.cfg: rgui_config_directory = "{rgui_dir_raw}"')
+
     overrides: list[tuple[str, str]] = []
-    if library_name is not None:
+    if not auto_overrides:
+        sources_extra.append('retroarch.cfg: auto_overrides_enable = "false" — override files not applied')
+    elif library_name is not None:
         candidates = [
             (
                 f"core override config/{library_name}/{library_name}.cfg",
@@ -280,8 +315,6 @@ def _retroarch_save_location(
             text = machine.read_text(path)
             if text is not None:
                 overrides.append((label, text))
-
-    global_text = machine.read_text(global_cfg_path)
     layout = resolve_save_layout(
         global_text,
         home=home,
@@ -291,12 +324,53 @@ def _retroarch_save_location(
     )
     layer_texts = [t for t in (global_text, *(text for _, text in overrides)) if t is not None]
 
+    # The RetroArch platform default saves dir — 'saves' under the config tree
+    # (platform_unix.c:1844) — is the effective root whenever the key is unset,
+    # reset, or points at a directory that does not exist: RetroArch only
+    # applies a configured path when path_is_directory() succeeds
+    # (configuration.c:6916), otherwise the prior effective (default) stays.
+    platform_default_dir = os.path.join(os.path.dirname(global_cfg_path), "saves")
+    if layout.savefile_directory is not None and not machine.exists(layout.savefile_directory):
+        caveats.append(
+            Caveat(
+                CAVEAT_INVALID_SAVE_DIRECTORY,
+                f"configured savefile_directory {layout.savefile_directory!r} is not an existing "
+                f"directory — RetroArch rejects it and keeps the platform default "
+                f"{platform_default_dir!r} (configuration.c:6916)",
+                {"configured": layout.savefile_directory, "effective": platform_default_dir},
+            )
+        )
+        layout = _dc_replace(layout, savefile_directory=None)
+
     # Rule cards: cores whose save behaviour deviates from the standard rule.
     # The card names the governing option; its current value is read live.
     so_basename = os.path.basename(core_so) if core_so is not None else None
     card = lookup_card(so_basename=so_basename, library_name=library_name)
     granularity: Granularity | None = None
     card_mode = None
+    if card is None and so_basename is not None:
+        # A missing card is not evidence the standard rule is complete — the
+        # audit verdict decides how loudly to say so (REVIEW H7).
+        short_name = so_basename.removesuffix(".so").removesuffix("_libretro")
+        verdict_entry = lookup_audit(short_name)
+        if verdict_entry is None:
+            caveats.append(
+                Caveat(
+                    CAVEAT_CORE_UNAUDITED,
+                    f"core {short_name!r} has not been audited — the standard rule is assumed, "
+                    "not verified (docs/research/coverage-matrix.md)",
+                    {"core": short_name},
+                )
+            )
+        elif verdict_entry.verdict == "suspect":
+            caveats.append(
+                Caveat(
+                    CAVEAT_CORE_SUSPECT,
+                    f"core {short_name!r} is a documented deviation suspect — this standard answer "
+                    "may miss an additional or different save stack (docs/research/core-audit.md)",
+                    {"core": short_name, "verdict": verdict_entry.verdict},
+                )
+            )
     if card is not None:
         audit = lookup_audit(card.key)
         verified = audit.verified.get(arrangement) if audit is not None else None
@@ -347,7 +421,7 @@ def _retroarch_save_location(
                 alternatives=(),
             )
     elif card is not None:
-        opt_value, opt_source, options_file = _core_options_value(
+        opt_value, opt_source, options_file, opt_unconfirmed = _core_options_value(
             machine,
             layer_texts,
             home=home,
@@ -356,20 +430,36 @@ def _retroarch_save_location(
             library_name=library_name,
             content_dir_name=content_dir_name,
             rom_stem=rom_stem,
-            option_key=card.option_key,
-            option_default=card.option_default,
+            option_key=card.option_key or "",
+            option_default=card.option_default or "",
+            game_specific_options=game_specific_options,
         )
         card_mode = card.modes.get(opt_value)
         if card_mode is None:
+            # RetroArch's option manager keeps the core-declared default when a
+            # persisted value is invalid — it does not fall back to the
+            # standard rule (REVIEW M1).
+            card_mode = card.modes.get(card.option_default or "")
             caveats.append(
                 Caveat(
                     CAVEAT_UNKNOWN_OPTION_VALUE,
                     f'core option {card.option_key} = "{opt_value}" is not a value the rule card knows — '
-                    "falling back to the standard rule",
-                    {"card": card.key, "option_key": card.option_key, "value": opt_value},
+                    f"applying the core default mode {card.option_default!r} as RetroArch would",
+                    {"card": card.key, "option_key": card.option_key or "", "value": opt_value},
                 )
             )
-        else:
+            opt_value = card.option_default or opt_value
+        if opt_unconfirmed and card_mode is not None:
+            caveats.append(
+                Caveat(
+                    CAVEAT_CARD_MODE_UNCONFIRMED,
+                    f"a game/folder/per-core options file keyed by library_name could govern "
+                    f"{card.option_key} but cannot be checked (core unqueryable) — the applied mode "
+                    f"{opt_value!r} may not be the effective one",
+                    {"card": card.key, "option_key": card.option_key or "", "applied": opt_value},
+                )
+            )
+        if card_mode is not None:
             granularity = Granularity(
                 value=card_mode.granularity,
                 option_key=card.option_key,
@@ -434,6 +524,7 @@ def _retroarch_save_location(
     file_set = UNKNOWN_FILE_SET
     placement = build_save_placement(
         layout=layout,
+        platform_default_dir=platform_default_dir,
         content_dir_path=content_dir_path,
         content_dir_name=content_dir_name,
         library_name=library_name,
@@ -475,18 +566,18 @@ def _retroarch_save_location(
                         files=(),
                         source=f"no files present at {directory} — file set not stated (never guessed)",
                     )
+        effective_root = layout.savefile_directory or platform_default_dir
         if (
             placement.root_kind == "savefile_directory"
-            and layout.savefile_directory is not None
-            and directory != layout.savefile_directory
+            and directory != effective_root
             and not machine.exists(directory)
         ):
             caveats.append(
                 Caveat(
                     CAVEAT_SORTED_DIR_MISSING,
                     f"sorted directory {directory} does not exist yet — RetroArch creates it on first save, "
-                    f"and silently reverts to {layout.savefile_directory} if creation fails (runloop.c:8844)",
-                    {"dir": directory, "fallback_dir": layout.savefile_directory},
+                    f"and silently reverts to {effective_root} if creation fails (runloop.c:8844)",
+                    {"dir": directory, "fallback_dir": effective_root},
                 )
             )
 
@@ -518,15 +609,22 @@ def _card_files(files: tuple[str, ...], rom_stem: str | None) -> tuple[str, ...]
 
 
 def _match_per_game(selections: GamelistSelections, content_path: str) -> str | None:
-    """Match a content path against per-game ``altemulator`` entries.
+    """Match a content path against per-game ``altemulator`` entries, path-aware.
 
-    Gamelist paths are relative (``./Name.ext``, or ``./Folder`` for directory
-    entries such as multi-disc folders); matched on the last path component
-    against the content's basename and its parent directory name.
+    Gamelist paths are relative to the system's ROM directory (``./Name.ext``,
+    or ``./Folder`` for multi-disc directory entries) and may contain
+    subdirectories — ``./USA/Game.iso`` and ``./Japan/Game.iso`` are distinct
+    games. A gamelist path matches when the content path (or, for directory
+    entries, the content's parent directory) ends with it as a whole path
+    suffix.
     """
-    base = os.path.basename(content_path)
-    parent = os.path.basename(os.path.dirname(content_path))
-    return selections.per_game.get(base) or selections.per_game.get(parent)
+    content = content_path.replace("\\", "/")
+    parent = os.path.dirname(content)
+    for rel_path, label in selections.per_game.items():
+        suffix = "/" + rel_path
+        if content.endswith(suffix) or parent.endswith(suffix):
+            return label
+    return None
 
 
 class EmulatorEntry:
@@ -590,6 +688,18 @@ class EmulatorEntry:
                 "see docs/tasks/save-detection.md"
             )
         placement = self._installation.save_location(content_path=content_path, core_so=self._spec.core_so)
+        if self._caveats:
+            # Catalogue-level degradations stay attached to the answer derived
+            # from this entry (REVIEW M9).
+            placement = SavePlacement(
+                dir=placement.dir,
+                root_kind=placement.root_kind,
+                needs=placement.needs,
+                file_set=placement.file_set,
+                sources=placement.sources,
+                caveats=(*self._caveats, *placement.caveats),
+                granularity=placement.granularity,
+            )
         if content_path is not None:
             selections = self._installation._gamelist_selections(self._spec.system)
             override_label = _match_per_game(selections, content_path)
@@ -697,6 +807,7 @@ class RetroDeck:
         raw = parse_cfg_text(text).get("libretro_directory", "")
         if not raw:
             return None
+        raw = expand_home(raw, home=self._home) or raw
         cores_dir = _flatpak_host_path(self._machine, self._home, self._APP_ID, raw)
         if cores_dir is None:
             return None
@@ -793,7 +904,7 @@ class RetroDeck:
             global_cfg_path=os.path.join(self._home, RETRODECK_CFG_SUFFIX),
             cfg_label="retroarch.cfg",
             override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
-            defaults=RETRODECK_DEFAULTS,
+            defaults=UPSTREAM_DEFAULTS,
             content_path=content_path,
             core_so=core_so,
             core_path_resolver=self._core_path,
@@ -878,6 +989,7 @@ class EmuDeck:
         raw = parse_cfg_text(text).get("libretro_directory", "")
         if not raw:
             return None
+        raw = expand_home(raw, home=self._home) or raw
         cores_dir = _flatpak_host_path(self._machine, self._home, self._RA_APP_ID, raw)
         if cores_dir is None:
             return None
@@ -895,7 +1007,7 @@ class EmuDeck:
             global_cfg_path=os.path.join(self._home, STANDALONE_FLATPAK_CFG_SUFFIX),
             cfg_label="retroarch.cfg",
             override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
-            defaults=EMUDECK_DEFAULTS,
+            defaults=UPSTREAM_DEFAULTS,
             content_path=content_path,
             core_so=core_so,
             core_path_resolver=self._core_path,
@@ -940,6 +1052,7 @@ class _RetroArchInstall:
         raw = parse_cfg_text(text).get("libretro_directory", "")
         if not raw:
             return None
+        raw = expand_home(raw, home=self._home) or raw
         if self._app_id is not None:
             cores_dir = _flatpak_host_path(self._machine, self._home, self._app_id, raw)
         else:

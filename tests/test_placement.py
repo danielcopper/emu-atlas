@@ -22,6 +22,7 @@ def _layout(text):
 def _build(text, *, content_dir_path=None, content_dir_name=None, library_name=None, **kwargs):
     return build_save_placement(
         layout=_layout(text),
+        platform_default_dir="/platform/saves",
         content_dir_path=content_dir_path,
         content_dir_name=content_dir_name,
         library_name=library_name,
@@ -42,24 +43,38 @@ class TestRoots:
 
     def test_in_content_dir_is_content_root(self):
         p = _build(
-            'savefile_directory = "/saves"\nsavefiles_in_content_dir = "true"\n',
+            'savefile_directory = "/saves"\nsavefiles_in_content_dir = "true"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n',
             content_dir_path="/roms/gba",
             content_dir_name="gba",
         )
         assert p.dir == "/roms/gba"
         assert p.root_kind == ROOT_CONTENT_DIRECTORY
 
-    def test_unset_directory_is_content_root_not_a_hole(self):
-        # runloop.c:8786 — RetroArch resolves an unset save dir to the ROM's dir.
+    def test_unset_directory_is_platform_default_root(self):
+        # platform_unix.c:1844 — defaults are initialized before config load;
+        # an unset key means 'saves' under the config tree, never the ROM dir.
         p = _build(
-            'sort_savefiles_by_content_enable = "false"\n',
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n',
             content_dir_path="/roms/gba",
             content_dir_name="gba",
         )
-        assert p.dir == "/roms/gba"
-        assert p.root_kind == ROOT_CONTENT_DIRECTORY
+        assert p.dir == "/platform/saves"
+        assert p.root_kind == ROOT_SAVEFILE_DIRECTORY
         assert p.needs == ()
-        assert any("runloop.c:8786" in s for s in p.sources)
+        assert any("platform default" in s for s in p.sources)
+
+    def test_content_root_still_sorts(self):
+        # runloop.c:8785-8841 — in_content_dir picks the root; enabled sorting
+        # stages still append afterwards (REVIEW H6).
+        p = _build(
+            'savefile_directory = "/saves"\nsavefiles_in_content_dir = "true"\n'
+            'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n',
+            content_dir_path="/roms/gba",
+            content_dir_name="gba",
+        )
+        assert p.dir == "/roms/gba/gba"
+        assert p.root_kind == ROOT_CONTENT_DIRECTORY
 
 
 class TestHoles:
@@ -90,7 +105,10 @@ class TestHoles:
         assert p.needs == ()
 
     def test_unfilled_content_dir_root_is_hole(self):
-        p = _build('savefiles_in_content_dir = "true"\n')
+        p = _build(
+            'savefiles_in_content_dir = "true"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+        )
         assert p.dir == "<content_dir>"
         assert p.needs == ("content_dir",)
 

@@ -72,11 +72,15 @@ class RetroArchCfg:
     """The save-layout decision resolved through the override chain, with provenance.
 
     ``savefile_directory`` is the resolved saves-root value with ``~`` expanded,
-    or ``None`` when every layer leaves it unset (absent, blank, or
-    ``"default"``). Unset is **not** an unfilled hole: RetroArch resolves an
-    empty save dir to the ROM's own directory (``runloop.c:8786``) — the caller
-    applies that rule. ``sources`` records, per governing key, which file (or
-    default) produced the value; when an override won, the source names it.
+    or ``None`` when the platform default applies (key absent, blank, or the
+    literal ``"default"``). RetroArch initializes platform default directories
+    before applying the config — on Unix the SRAM default is ``saves`` under
+    the RetroArch config tree (``platform_unix.c:1844``) — so an unset key
+    means *that* directory, never the ROM's directory (the ``runloop.c:8786``
+    content fallback fires only when the effective dir is still empty, which
+    the platform defaults prevent on desktop). The caller supplies the
+    concrete platform default. ``sources`` records, per governing key, which
+    file (or default) produced the value; when an override won, it names it.
     """
 
     savefiles_in_content_dir: bool
@@ -86,24 +90,39 @@ class RetroArchCfg:
     sources: tuple[str, ...]
 
 
-def parse_cfg_text(text: str) -> dict[str, str]:
-    """Parse ``key = "value"`` lines into a dict, exact-keyed and quote-stripped.
+def _strip_trailing_comment(value: str) -> str:
+    """Drop a trailing ``#`` comment that sits outside the quoted value."""
+    in_quotes = False
+    for index, char in enumerate(value):
+        if char == '"':
+            in_quotes = not in_quotes
+        elif char == "#" and not in_quotes:
+            return value[:index].rstrip()
+    return value
 
-    RetroArch's cfg is ``key = "value"`` per line. Lines without ``=`` are
-    ignored; the LHS is matched exactly (not by prefix) so ``savefile_directory``
-    and ``savefiles_in_content_dir`` never collide. Matching outer double quotes
-    are stripped; a later occurrence of a key wins.
+
+def parse_cfg_text(text: str) -> dict[str, str]:
+    """Parse ``key = "value"`` lines the way RetroArch's ``config_file.c`` does.
+
+    Semantics matched against upstream: comment lines (leading ``#``) are
+    skipped and trailing comments outside the quotes are stripped
+    (``config_file_strip_comment``); the **first** occurrence of a duplicate
+    key wins (``config_file.c:496-507`` maps a key only when not already
+    present); matching outer double quotes are stripped. The LHS is matched
+    exactly (not by prefix) so ``savefile_directory`` and
+    ``savefiles_in_content_dir`` never collide. ``#include`` directives are NOT
+    resolved yet — a stated gap (task list), not an approximation.
     """
     result: dict[str, str] = {}
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if not line or "=" not in line:
+        if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
         key = key.strip()
-        if not key:
+        if not key or key in result:
             continue
-        value = value.strip()
+        value = _strip_trailing_comment(value.strip())
         if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
             value = value[1:-1]
         result[key] = value
@@ -111,7 +130,9 @@ def parse_cfg_text(text: str) -> dict[str, str]:
 
 
 def _as_bool(value: str) -> bool:
-    return value.strip().lower() == "true"
+    # config_get_bool accepts "true" and "1" (config_file.c:1233).
+    stripped = value.strip()
+    return stripped == "1" or stripped.lower() == "true"
 
 
 def expand_home(raw: str, *, home: str) -> str | None:
@@ -170,14 +191,20 @@ def resolve_save_layout(
     sort_by_core, s3 = _flag(_SORT_BY_CORE, defaults.sort_by_core)
 
     savefile_directory: str | None = None
-    dir_source = f"default: {_SAVEFILE_DIRECTORY} unset (RetroArch resolves an unset save dir to the ROM's directory)"
+    dir_source = (
+        f"default: {_SAVEFILE_DIRECTORY} unset — RetroArch platform default applies "
+        "(saves under the config tree, platform_unix.c:1844)"
+    )
     for label, parsed, is_override in layers:
         if _SAVEFILE_DIRECTORY in parsed:
             raw = parsed[_SAVEFILE_DIRECTORY]
             savefile_directory = expand_home(raw, home=home)
             suffix = " (override wins)" if is_override else ""
             if savefile_directory is None:
-                dir_source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" (unset — resolves to the ROM\'s directory){suffix}'
+                dir_source = (
+                    f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" — resets to the RetroArch '
+                    f"platform default{suffix}"
+                )
             else:
                 dir_source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}"{suffix}'
 

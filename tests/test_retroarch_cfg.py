@@ -81,11 +81,10 @@ class TestSavefileDirectory:
         cfg = _cfg('savefile_directory = "/mnt/saves"\n')
         assert cfg.savefile_directory == "/mnt/saves"
 
-    def test_literal_default_is_unset(self):
-        # Unset is a rule, not a hole: RetroArch resolves it to the ROM's dir.
+    def test_literal_default_resets_to_platform_default(self):
         cfg = _cfg('savefile_directory = "default"\n')
         assert cfg.savefile_directory is None
-        assert any("resolves to the ROM's directory" in s for s in cfg.sources)
+        assert any("platform default" in s for s in cfg.sources)
 
     def test_blank_is_unset(self):
         cfg = _cfg('savefile_directory = ""\n')
@@ -166,6 +165,17 @@ class TestParsingEdgeCases:
         assert cfg.savefile_directory == "/mnt/saves"
         assert cfg.savefiles_in_content_dir is True
 
-    def test_last_occurrence_wins(self):
+    def test_first_occurrence_wins(self):
+        # config_file.c:496-507 — the map only takes a key not already present.
         cfg = _cfg('sort_savefiles_enable = "true"\nsort_savefiles_enable = "false"\n')
-        assert cfg.sort_by_core is False
+        assert cfg.sort_by_core is True
+
+    def test_numeric_one_is_true(self):
+        # config_get_bool accepts "1" (config_file.c:1233).
+        cfg = _cfg('sort_savefiles_enable = "1"\n')
+        assert cfg.sort_by_core is True
+
+    def test_comment_lines_and_trailing_comments(self):
+        cfg = _cfg('# sort_savefiles_enable = "true"\nsort_savefiles_by_content_enable = "false" # note\n')
+        assert cfg.sort_by_core is False  # commented line must not count
+        assert cfg.sort_by_content is False

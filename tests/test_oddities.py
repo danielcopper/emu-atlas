@@ -12,9 +12,10 @@ OPTIONS_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroar
 FLYCAST_GAME_OPT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Shenmue (Europe).opt"
 
 RD_JSON = '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}'
+SAVES_KEEP = "/mnt/sd/retrodeck/saves/.keep"
 CFG = (
     'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
-    'sort_savefiles_by_content_enable = "true"\n'
+    'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
     'system_directory = "/mnt/sd/retrodeck/bios"\n'
     'global_core_options = "true"\n'
     'libretro_directory = "/app/cores"\n'
@@ -98,6 +99,7 @@ class TestFlycastResolution:
                 RETRODECK_JSON: RD_JSON,
                 RETRODECK_CFG: CFG,
                 OPTIONS_CFG: 'reicast_per_content_vmus = "VMU A1"\n',
+                SAVES_KEEP: "",
             }
         )
         assert p.dir == "/mnt/sd/retrodeck/saves/dreamcast"
@@ -121,7 +123,10 @@ class TestFlycastResolution:
         assert p.granularity.option_value == "VMU A1"
         assert "Shenmue (Europe).opt" in p.granularity.option_source
 
-    def test_unknown_option_value_falls_back_with_caveat(self):
+    def test_unknown_option_value_applies_core_default_mode(self):
+        # RetroArch's option manager keeps the core default on an invalid
+        # persisted value (REVIEW M1) — for Flycast that is shared VMUs, not
+        # the standard rule.
         p = _flycast_query(
             {
                 RETRODECK_JSON: RD_JSON,
@@ -129,8 +134,8 @@ class TestFlycastResolution:
                 OPTIONS_CFG: 'reicast_per_content_vmus = "something new"\n',
             }
         )
-        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY  # standard rule
-        assert p.granularity is None
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
+        assert p.granularity is not None and p.granularity.value == "shared-card"
         assert any(c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE and c.data["value"] == "something new" for c in p.caveats)
 
     def test_ordinary_core_has_no_granularity(self):
@@ -180,6 +185,7 @@ class TestLRPS2Card:
                 RETRODECK_JSON: RD_JSON,
                 RETRODECK_CFG: CFG,
                 OPTIONS_CFG: 'pcsx2_shared_memory_cards = "disabled"\n',
+                SAVES_KEEP: "",
                 "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
             },
             cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},

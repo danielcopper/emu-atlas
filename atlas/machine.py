@@ -110,7 +110,10 @@ class RealMachine:
         if key in self._core_cache:
             return self._core_cache[key]
         info = self._probe(so_path)
-        self._core_cache[key] = info
+        # Only successes are memoized: a failure can be transient (missing
+        # host library installed later) even while the .so is unchanged.
+        if info is not None:
+            self._core_cache[key] = info
         return info
 
     @staticmethod

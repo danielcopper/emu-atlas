@@ -46,7 +46,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/psx/Final Fantasy VII (USA).m3u/Final Fantasy VII (USA).m3u": "Disc 1.cue\n",
           "/mnt/sd/retrodeck/saves/Final Fantasy VII (USA).m3u/Final Fantasy VII (USA).srm": "sram"
         },
@@ -82,9 +82,10 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
-          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": ""
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
@@ -122,10 +123,11 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/mGBA.cfg": "sort_savefiles_by_content_enable = \"false\"",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/Golden Sun (USA).cfg": "sort_savefiles_by_content_enable = \"true\"",
-          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
@@ -206,7 +208,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\n",
-          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
@@ -243,40 +246,9 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"true\"\n",
-          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
-        },
-        "query": {
-          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
-        }
-      },
-      "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "root": "/mnt/sd/retrodeck",
-            "health": "ok"
-          }
-        ],
-        "save_location": {
-          "dir": "/mnt/sd/retrodeck/roms/gba",
-          "root_kind": "content_directory",
-          "needs": [],
-          "file_set": {
-            "state": "unknown",
-            "files": []
-          }
-        }
-      }
-    },
-    {
-      "name": "retrodeck-cfg-missing-unset-dir-resolves-to-content",
-      "rationale": "A RetroDECK whose retroarch.cfg is missing: savefile_directory is unset, and RetroArch resolves an unset save dir to the ROM's own directory (runloop.c:8786) — a rule, not a hole. retrodeck.json still detects the installation.",
-      "input": {
-        "home": "/home/deck",
-        "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
@@ -383,7 +355,8 @@
         "home": "/home/user",
         "files": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\n",
-          "/home/user/roms/gba/Golden Sun (USA).zip": ""
+          "/home/user/roms/gba/Golden Sun (USA).zip": "",
+          "/home/user/saves/.keep": ""
         },
         "query": {
           "content_path": "/home/user/roms/gba/Golden Sun (USA).zip"
@@ -412,7 +385,7 @@
     },
     {
       "name": "standalone-flatpak-savefile-directory-absent",
-      "rationale": "An unset savefile_directory is a rule, not a hole: RetroArch resolves it to the ROM's own directory (runloop.c:8786). With the content path given the answer is concrete.",
+      "rationale": "An unset savefile_directory means the RetroArch platform default — 'saves' under the config tree (platform_unix.c:1844) — never the ROM's directory; upstream compile defaults then sort by core.",
       "input": {
         "home": "/home/user",
         "files": {
@@ -432,9 +405,11 @@
           }
         ],
         "save_location": {
-          "dir": "/home/user/roms/gba",
-          "root_kind": "content_directory",
-          "needs": [],
+          "dir": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
           "file_set": {
             "state": "unknown",
             "files": []
@@ -489,7 +464,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
-          "/mnt/sd/retrodeck/roms/apple2/game.dsk": ""
+          "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/applewin_libretro.so": null
@@ -518,7 +494,8 @@
             "files": []
           },
           "caveats": [
-            "core-unqueryable"
+            "core-unqueryable",
+            "core-unaudited"
           ]
         }
       }
@@ -531,7 +508,8 @@
         "files": {
           "/home/user/.config/retroarch/retroarch.cfg": "savefile_directory = \"/home/user/links/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
           "/home/user/roms/gb/Tetris (World).zip": "",
-          "/data/real-saves/Tetris (World).srm": "sram"
+          "/data/real-saves/Tetris (World).srm": "sram",
+          "/home/user/links/saves/.keep": ""
         },
         "symlinks": {
           "/home/user/links/saves": "/data/real-saves"
@@ -569,7 +547,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
-          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\n"
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/ra-saves/.keep": ""
         }
       },
       "expected": {
@@ -594,7 +573,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
-          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/Emulation/saves/retroarch/saves/.keep": ""
         }
       },
@@ -628,11 +607,12 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
-          "/mnt/sd/retrodeck/bios/dc/dc_nvmem.bin": "n"
+          "/mnt/sd/retrodeck/bios/dc/dc_nvmem.bin": "n",
+          "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
@@ -678,9 +658,10 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"VMU A1\"\n",
-          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": ""
+          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
@@ -830,7 +811,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
           "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": "m"
         },
@@ -869,6 +850,40 @@
             "value": "shared-card",
             "option_key": "pcsx2_shared_memory_cards",
             "option_value": "enabled"
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-cfg-missing-platform-default-applies",
+      "rationale": "A RetroDECK whose retroarch.cfg is missing: RetroArch initializes platform defaults before config load (platform_unix.c:1844), so the effective root is 'saves' under the config tree — never the ROM's directory — and the upstream compile defaults govern sorting (sort_savefiles_enable=true, config.def.h:982).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "root": "/mnt/sd/retrodeck",
+            "health": "ok"
+          }
+        ],
+        "save_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "file_set": {
+            "state": "unknown",
+            "files": []
           }
         }
       }

@@ -111,9 +111,9 @@ class GamelistSelections:
     """The user's emulator choices stored in a system's ``gamelist.xml``.
 
     ``system_label`` is the per-system choice (``<alternativeEmulator><label>``,
-    top-level); ``per_game`` maps the last path component of each game entry
-    (file basename, or folder name for directory entries) to its
-    ``<altemulator>`` label. Both tag names are verified against the ES-DE
+    top-level); ``per_game`` maps each game entry's gamelist-relative path
+    (``./`` stripped; a file path, or a folder path for directory entries) to
+    its ``<altemulator>`` label. Both tag names are verified against the ES-DE
     binary's strings; the per-game hierarchy is game > system > declared.
     """
 
@@ -144,7 +144,12 @@ def parse_gamelist(text: str) -> GamelistSelections:
         path = (game.findtext("path") or "").strip()
         label = (game.findtext("altemulator") or "").strip()
         if path and label:
-            per_game[path.rstrip("/").rsplit("/", 1)[-1]] = label
+            # Keep the full gamelist-relative path — basenames alone collide
+            # when subdirectories repeat a name (./USA/Game.iso vs ./Japan/…).
+            normalized = path.replace("\\", "/").rstrip("/")
+            if normalized.startswith("./"):
+                normalized = normalized[2:]
+            per_game[normalized] = label
     return GamelistSelections(system_label=system_label, per_game=per_game)
 
 

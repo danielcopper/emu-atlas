@@ -143,6 +143,33 @@
         "bare": null
       },
       "kind": "libretro"
+    },
+    "dolphin": {
+      "verdict": "suspect",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "azahar": {
+      "verdict": "suspect",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "ppsspp": {
+      "verdict": "suspect",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
     }
   }
 }

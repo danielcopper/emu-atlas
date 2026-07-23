@@ -38,21 +38,27 @@ class TestRetroDeckSaveLocation:
         rd = _retrodeck(
             {
                 RETRODECK_JSON: RD_JSON,
-                RETRODECK_CFG: 'savefile_directory = "/elsewhere/saves"\nsort_savefiles_by_content_enable = "false"\n',
+                RETRODECK_CFG: (
+                    'savefile_directory = "/elsewhere/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/elsewhere/saves/.keep": "",
                 "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
             }
         )
         p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.dir == "/elsewhere/saves"
 
-    def test_missing_cfg_resolves_to_content_dir(self):
-        # Unset savefile_directory is a rule (runloop.c:8786), not a hole.
+    def test_missing_cfg_uses_platform_default(self):
+        # Platform defaults are initialized before config load
+        # (platform_unix.c:1844); upstream compile defaults sort by core.
         rd = _retrodeck(
             {RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/roms/gba/Game.zip": ""}
         )
         p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
-        assert p.dir == "/mnt/sd/retrodeck/roms/gba"
-        assert p.root_kind == atlas.ROOT_CONTENT_DIRECTORY
+        assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/<library_name>"
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
+        assert p.needs == ("library_name",)
 
     def test_core_override_applied(self):
         rd = _retrodeck(
@@ -60,10 +66,11 @@ class TestRetroDeckSaveLocation:
                 RETRODECK_JSON: RD_JSON,
                 RETRODECK_CFG: (
                     'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
-                    'sort_savefiles_by_content_enable = "true"\n'
+                    'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
                     'libretro_directory = "/app/cores"\n'
                 ),
                 f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "false"',
+                "/mnt/sd/retrodeck/saves/.keep": "",
                 "/mnt/sd/retrodeck/roms/psp/Game.iso": "",
             },
             cores={f"{RD_DEPLOY_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
@@ -84,6 +91,7 @@ class TestRetroDeckSaveLocation:
                     'sort_savefiles_enable = "true"\n'
                     'libretro_directory = "/app/cores"\n'
                 ),
+                "/mnt/sd/retrodeck/saves/.keep": "",
                 "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
             },
             cores={f"{RD_DEPLOY_CORES}/mgba_libretro.so": {"library_name": "mGBA"}},
@@ -103,6 +111,7 @@ class TestRetroDeckSaveLocation:
                     'sort_savefiles_enable = "true"\n'
                     'libretro_directory = "/app/cores"\n'
                 ),
+                "/mnt/sd/retrodeck/saves/.keep": "",
                 "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
             },
             cores={f"{RD_DEPLOY_CORES}/applewin_libretro.so": None},
@@ -120,7 +129,7 @@ class TestRetroDeckSaveLocation:
                 RETRODECK_JSON: RD_JSON,
                 RETRODECK_CFG: (
                     'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
-                    'sort_savefiles_by_content_enable = "true"\n'
+                    'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
                 ),
                 "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip": "",
                 "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
@@ -136,8 +145,9 @@ class TestRetroDeckSaveLocation:
                 RETRODECK_JSON: RD_JSON,
                 RETRODECK_CFG: (
                     'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
-                    'sort_savefiles_by_content_enable = "true"\n'
+                    'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
                 ),
+                "/mnt/sd/retrodeck/saves/.keep": "",
                 "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
             }
         )
@@ -161,7 +171,7 @@ class TestRetroDeckSaveLocation:
                 RETRODECK_JSON: RD_JSON,
                 RETRODECK_CFG: (
                     'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
-                    'sort_savefiles_by_content_enable = "false"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
                 ),
                 "/mnt/sd/retrodeck/roms/gb/Tetris (World) (Rev 1).zip": "",
                 "/mnt/sd/retrodeck/saves/Tetris (World) (Rev 1).srm": "s",
@@ -195,7 +205,7 @@ class TestEmuDeck:
                     'sort_savefiles_enable = "false"\n'
                 ),
                 f"{HOME}/Emulation/roms/gba/Game.zip": "",
-                f"{HOME}/Emulation/saves/.keep": "",
+                f"{HOME}/Emulation/saves/retroarch/saves/.keep": "",
             }
         )
         ed = atlas.EmuDeck(HOME, machine, machine.read_text(EMUDECK_SETTINGS) or "")
@@ -210,6 +220,7 @@ class TestBareRetroArch:
         machine = atlas.FixtureMachine(
             {
                 f"{HOME}/.config/retroarch/retroarch.cfg": 'savefile_directory = "~/saves"\n',
+                f"{HOME}/saves/.keep": "",
                 f"{HOME}/roms/gba/Game.zip": "",
             }
         )

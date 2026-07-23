@@ -36,6 +36,10 @@ KNOWN_CAVEAT_CODES = {
     "per-game-overrides-present",
     "per-game-override",
     "unverified-version",
+    "invalid-save-directory",
+    "core-suspect",
+    "core-unaudited",
+    "card-mode-unconfirmed",
 }
 
 
