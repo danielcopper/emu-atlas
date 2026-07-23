@@ -7,12 +7,16 @@ present but not verified, ? availability unknown there (EmuDeck ships its own em
 bare-RetroArch cores are user-installed), — not applicable. The row set is RetroDECK's shipped matrix. Verdicts are
 defined in `docs/research/core-audit.md`.
 
-**Status:** libretro 11/159 audited · standalone 0/22 audited
+Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 1) sha256 `85b8433f42cd`.
+
+**Status:** libretro 14/159 audited · standalone 0/22 audited
 
 ## libretro cores
 
 | emulator                                    | systems                                             | verdict      | RetroDECK | EmuDeck | RetroArch (bare) |
 | ------------------------------------------- | --------------------------------------------------- | ------------ | --------- | ------- | ---------------- |
+| `azahar`                                    | n3ds                                                | suspect      | ✖         | ?       | ?                |
+| `dolphin`                                   | gc, wii                                             | suspect      | ✖         | ?       | ?                |
 | `flycast`                                   | arcade, atomiswave, consolearcade, dreamcast, … (8) | card         | ✔ 0.10.9b | ?       | ?                |
 | `mednafen_ngp`                              | ngp, ngpc                                           | standard-dir | ✔ 0.10.9b | ?       | ?                |
 | `mednafen_psx`                              | psx                                                 | multi-option | ✔ 0.10.9b | ?       | ?                |
@@ -23,6 +27,7 @@ defined in `docs/research/core-audit.md`.
 | `pcsx2`                                     | ps2                                                 | card         | ✔ 0.10.9b | ?       | ?                |
 | `pcsx_rearmed`                              | psx                                                 | multi-option | ✔ 0.10.9b | ?       | ?                |
 | `pokemini`                                  | pokemini                                            | standard-dir | ✔ 0.10.9b | ?       | ?                |
+| `ppsspp`                                    | psp                                                 | suspect      | ✖         | ?       | ?                |
 | `swanstation`                               | psx                                                 | multi-option | ✔ 0.10.9b | ?       | ?                |
 | `81`                                        | zx81                                                | unaudited    | ✖         | ?       | ?                |
 | `DoubleCherryGB`                            | gb, gbc                                             | unaudited    | ✖         | ?       | ?                |
@@ -31,7 +36,6 @@ defined in `docs/research/core-audit.md`.
 | `ardens`                                    | arduboy                                             | unaudited    | ✖         | ?       | ?                |
 | `arduous`                                   | arduboy                                             | unaudited    | ✖         | ?       | ?                |
 | `atari800`                                  | atari5200, atari800, atarixe                        | unaudited    | ✖         | ?       | ?                |
-| `azahar`                                    | n3ds                                                | unaudited    | ✖         | ?       | ?                |
 | `b2`                                        | bbcmicro                                            | unaudited    | ✖         | ?       | ?                |
 | `blastem`                                   | genesis, megadrive, megadrivejp                     | unaudited    | ✖         | ?       | ?                |
 | `bluemsx`                                   | colecovision, msx, msx1, msx2, … (7)                | unaudited    | ✖         | ?       | ?                |
@@ -53,7 +57,6 @@ defined in `docs/research/core-audit.md`.
 | `desmume2015`                               | nds                                                 | unaudited    | ✖         | ?       | ?                |
 | `dice`                                      | arcade, mame                                        | unaudited    | ✖         | ?       | ?                |
 | `dirksimple`                                | daphne, laserdisc                                   | unaudited    | ✖         | ?       | ?                |
-| `dolphin`                                   | gc, wii                                             | unaudited    | ✖         | ?       | ?                |
 | `dosbox_core`                               | dos, pc                                             | unaudited    | ✖         | ?       | ?                |
 | `dosbox_pure`                               | dos, pc, windows3x, windows9x                       | unaudited    | ✖         | ?       | ?                |
 | `dosbox_svn`                                | dos, pc                                             | unaudited    | ✖         | ?       | ?                |
@@ -123,7 +126,6 @@ defined in `docs/research/core-audit.md`.
 | `parallel_n64`                              | n64, n64dd                                          | unaudited    | ✖         | ?       | ?                |
 | `picodrive`                                 | gamegear, genesis, mark3, mastersystem, … (12)      | unaudited    | ✖         | ?       | ?                |
 | `potator`                                   | supervision                                         | unaudited    | ✖         | ?       | ?                |
-| `ppsspp`                                    | psp                                                 | unaudited    | ✖         | ?       | ?                |
 | `prboom`                                    | doom                                                | unaudited    | ✖         | ?       | ?                |
 | `prosystem`                                 | atari7800                                           | unaudited    | ✖         | ?       | ?                |
 | `puae`                                      | amiga, amiga1200, amiga600, amigacd32, … (5)        | unaudited    | ✖         | ?       | ?                |

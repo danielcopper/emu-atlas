@@ -18,6 +18,7 @@ contract (see ``atlas/esde.py`` for the same call).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -89,8 +90,13 @@ def main() -> None:
         print(f"es_systems.xml not found at {es_systems_path} — pass a path as argv[1]")
         raise SystemExit(1)
 
-    audit = json.loads(AUDIT_PATH.read_text(encoding="utf-8")).get("cores", {})
+    audit_raw = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
+    audit = audit_raw.get("cores", {})
     libretro, standalone = collect_rows(es_systems_path)
+    # Full source identity for exact reproduction: content hashes name the
+    # exact inputs, independent of where or when the script ran.
+    es_sha = hashlib.sha256(es_systems_path.read_bytes()).hexdigest()[:12]
+    audit_sha = hashlib.sha256(AUDIT_PATH.read_bytes()).hexdigest()[:12]
 
     # Audit-only keys (e.g. cards for cores not in the matrix) still get rows.
     for key, entry in audit.items():
@@ -109,6 +115,11 @@ def main() -> None:
     lines.append("(EmuDeck ships its own emulator set — unresearched; bare-RetroArch cores are user-installed), — not")
     lines.append("applicable. The row set is RetroDECK's shipped matrix. Verdicts are defined in")
     lines.append("`docs/research/core-audit.md`.")
+    lines.append("")
+    lines.append(
+        f"Source identity: `es_systems.xml` sha256 `{es_sha}` · `core_audit.json` "
+        f"(schema {audit_raw.get('schema')}) sha256 `{audit_sha}`."
+    )
     lines.append("")
 
     def entry_for(key: str, kind: str):

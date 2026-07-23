@@ -33,11 +33,14 @@ jobs:
 
   vectors:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - name: Validate vector file shape
         run: python scripts/validate_vectors.py
       - name: Run the unit tests and the machine-vector runner
@@ -48,3 +51,32 @@ jobs:
         run: |
           pip install basedpyright
           basedpyright
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build wheel and sdist
+        run: |
+          pip install build
+          python -m build
+      - name: Install the wheel in a clean environment and verify the released contract
+        run: |
+          EXPECTED=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install --quiet dist/*.whl
+          cd /tmp && EXPECTED="$EXPECTED" /tmp/clean/bin/python -c "
+          import importlib.metadata, importlib.resources, os
+          assert importlib.metadata.version('emu-atlas') == os.environ['EXPECTED'], (
+              importlib.metadata.version('emu-atlas'), os.environ['EXPECTED'])
+          import atlas
+          from atlas.bios import load_registry
+          from atlas.oddities import load_audit, load_oddities
+          assert load_oddities() and load_audit() and load_registry().platforms()
+          assert importlib.resources.files('atlas').joinpath('py.typed').is_file()
+          "
+      - name: Verify the sdist carries the vectors
+        run: tar -tzf dist/*.tar.gz | grep -q "vectors/machines/named-cases.json"
