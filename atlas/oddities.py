@@ -24,7 +24,7 @@ from typing import Mapping
 # malformed entries raise instead of coercing — a broken build must fail
 # loudly, never resolve wrongly (REVIEW M3, M10).
 ODDITIES_SCHEMA = 1
-AUDIT_SCHEMA = 1
+AUDIT_SCHEMA = 2
 
 _KNOWN_VERDICTS = {"card", "standard", "standard-dir", "multi-option", "suspect", "unaudited"}
 _KNOWN_MODE_ROOTS = {"savefile_directory", "system_directory", "content_directory"}
@@ -39,6 +39,12 @@ def _expect_str(value: object, where: str) -> str:
 def _expect_opt_str(value: object, where: str) -> str | None:
     if value is not None and not isinstance(value, str):
         raise ValueError(f"{where}: expected a string or null, got {value!r}")
+    return value
+
+
+def _expect_opt_bool(value: object, where: str) -> bool | None:
+    if value is not None and not isinstance(value, bool):
+        raise ValueError(f"{where}: expected a boolean or null, got {value!r}")
     return value
 
 
@@ -174,10 +180,12 @@ class VerifiedOn:
 
 @dataclass(frozen=True, slots=True)
 class AuditEntry:
-    """One core's audit verdict and per-arrangement verification record."""
+    """One core's audit verdict, capability summary, and verification record."""
 
     key: str
     verdict: str
+    per_game_capable: bool | None
+    note: str
     verified: Mapping[str, VerifiedOn | None]
 
     def __post_init__(self) -> None:
@@ -200,6 +208,10 @@ def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
         verdict = _expect_str(entry.get("verdict"), f"{where}: verdict")
         if verdict not in _KNOWN_VERDICTS:
             raise ValueError(f"{where}: verdict must be one of {sorted(_KNOWN_VERDICTS)}, got {verdict!r}")
+        if "per_game_capable" not in entry:
+            raise ValueError(f"{where}: missing required field 'per_game_capable'")
+        per_game_capable = _expect_opt_bool(entry["per_game_capable"], f"{where}: per_game_capable")
+        note = _expect_str(entry.get("note"), f"{where}: note")
         verified: dict[str, VerifiedOn | None] = {}
         for arrangement, rec in entry.get("verified", {}).items():
             rec_where = f"{where}: verified[{arrangement!r}]"
@@ -214,7 +226,13 @@ def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
                 if rec is not None
                 else None
             )
-        entries[key] = AuditEntry(key=key, verdict=verdict, verified=verified)
+        entries[key] = AuditEntry(
+            key=key,
+            verdict=verdict,
+            per_game_capable=per_game_capable,
+            note=note,
+            verified=verified,
+        )
     return entries
 
 
