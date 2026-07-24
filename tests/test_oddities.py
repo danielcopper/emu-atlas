@@ -296,8 +296,83 @@ class TestStrictLoaders:
             load_audit('{"cores": {}}')
 
     def test_unknown_verdict_is_rejected(self):
-        text = json.dumps({"schema": 1, "cores": {"x": {"verdict": "fine-probably", "verified": {}}}})
+        text = json.dumps(
+            {
+                "schema": 2,
+                "cores": {
+                    "x": {
+                        "verdict": "fine-probably",
+                        "per_game_capable": None,
+                        "note": "unproven",
+                        "verified": {},
+                    }
+                },
+            }
+        )
         with pytest.raises(ValueError, match="verdict"):
+            load_audit(text)
+
+    def test_audit_capability_and_note_are_loaded(self):
+        text = json.dumps(
+            {
+                "schema": 2,
+                "cores": {
+                    "x": {
+                        "verdict": "standard",
+                        "per_game_capable": True,
+                        "note": "source-verified",
+                        "verified": {},
+                    }
+                },
+            }
+        )
+        entry = load_audit(text)["x"]
+        assert entry.per_game_capable is True
+        assert entry.note == "source-verified"
+
+    def test_missing_per_game_capability_is_rejected(self):
+        text = json.dumps(
+            {
+                "schema": 2,
+                "cores": {"x": {"verdict": "standard", "note": "source-verified", "verified": {}}},
+            }
+        )
+        with pytest.raises(ValueError, match="per_game_capable"):
+            load_audit(text)
+
+    def test_non_boolean_per_game_capability_is_rejected(self):
+        text = json.dumps(
+            {
+                "schema": 2,
+                "cores": {
+                    "x": {
+                        "verdict": "standard",
+                        "per_game_capable": 1,
+                        "note": "source-verified",
+                        "verified": {},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="boolean or null"):
+            load_audit(text)
+
+    @pytest.mark.parametrize("note", ["", None, 1])
+    def test_invalid_audit_note_is_rejected(self, note):
+        text = json.dumps(
+            {
+                "schema": 2,
+                "cores": {
+                    "x": {
+                        "verdict": "standard",
+                        "per_game_capable": None,
+                        "note": note,
+                        "verified": {},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="note"):
             load_audit(text)
 
     def test_non_boolean_complete_is_rejected(self):

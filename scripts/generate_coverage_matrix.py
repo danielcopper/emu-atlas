@@ -2,8 +2,9 @@
 
 The coverage matrix is the entry point for the core-by-core pass: every emulator
 the RetroDECK matrix references (libretro core or standalone runner), which
-systems it serves, its audit verdict, and per arrangement (RetroDECK / EmuDeck /
-bare RetroArch) which version the knowledge was verified against.
+systems it serves, its audit verdict, whether per-game saves are a proven
+capability, and per arrangement (RetroDECK / EmuDeck / bare RetroArch) which
+version the knowledge was verified against.
 
 Facts come from ``atlas/data/core_audit.json`` (maintained, test-enforced); the
 row set comes from ``es_systems.xml`` so unaudited emulators appear
@@ -39,6 +40,7 @@ _RUNNER_RE = re.compile(r"%EMULATOR_([A-Z0-9_\-]+)%")
 
 ARRANGEMENTS = ("retrodeck", "emudeck", "bare")
 ARRANGEMENT_HEADERS = {"retrodeck": "RetroDECK", "emudeck": "EmuDeck", "bare": "RetroArch (bare)"}
+AUDIT_SCHEMA = 2
 
 
 def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
@@ -60,6 +62,22 @@ def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, 
     return dict(libretro), dict(standalone)
 
 
+def load_audit_data(path: Path) -> tuple[int, dict[str, dict[str, object]]]:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict) or raw.get("schema") != AUDIT_SCHEMA:
+        schema = raw.get("schema") if isinstance(raw, dict) else None
+        raise ValueError(f"core_audit: unsupported schema {schema!r} (generator reads schema {AUDIT_SCHEMA})")
+    cores_raw = raw.get("cores")
+    if not isinstance(cores_raw, dict):
+        raise ValueError("core_audit: 'cores' must be an object")
+    cores: dict[str, dict[str, object]] = {}
+    for key, entry in cores_raw.items():
+        if not isinstance(key, str) or not isinstance(entry, dict):
+            raise ValueError("core_audit: every core key must be a string and every entry an object")
+        cores[key] = entry
+    return AUDIT_SCHEMA, cores
+
+
 def cell(audit_entry: dict[str, object] | None, arrangement: str, kind: str) -> str:
     if kind == "standalone" and arrangement == "bare":
         return "—"
@@ -77,6 +95,30 @@ def cell(audit_entry: dict[str, object] | None, arrangement: str, kind: str) -> 
     return "✖" if arrangement == "retrodeck" else "?"
 
 
+def per_game_cell(audit_entry: dict[str, object] | None) -> str:
+    if audit_entry is None:
+        return "?"
+    if "per_game_capable" not in audit_entry:
+        raise ValueError("audit entry is missing required field 'per_game_capable'")
+    value = audit_entry["per_game_capable"]
+    if value is True:
+        return "yes"
+    if value is False:
+        return "no"
+    if value is None:
+        return "?"
+    raise ValueError(f"per_game_capable must be a boolean or null, got {value!r}")
+
+
+def note_cell(audit_entry: dict[str, object] | None) -> str:
+    if audit_entry is None:
+        return "—"
+    note = audit_entry.get("note")
+    if not isinstance(note, str) or not note:
+        raise ValueError(f"audit note must be a non-empty string, got {note!r}")
+    return note.replace("|", "\\|").replace("\n", " ").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def systems_summary(systems: set[str], limit: int = 4) -> str:
     ordered = sorted(systems)
     if len(ordered) <= limit:
@@ -90,8 +132,7 @@ def main() -> None:
         print(f"es_systems.xml not found at {es_systems_path} — pass a path as argv[1]")
         raise SystemExit(1)
 
-    audit_raw = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
-    audit = audit_raw.get("cores", {})
+    audit_schema, audit = load_audit_data(AUDIT_PATH)
     libretro, standalone = collect_rows(es_systems_path)
     # Full source identity for exact reproduction: content hashes name the
     # exact inputs, independent of where or when the script ran.
@@ -113,12 +154,14 @@ def main() -> None:
     lines.append("unaudited emulators appear automatically as the work list. Cells: ✔ verified (with the arrangement")
     lines.append("version the knowledge was proven against), ✖ present but not verified, ? availability unknown there")
     lines.append("(EmuDeck ships its own emulator set — unresearched; bare-RetroArch cores are user-installed), — not")
-    lines.append("applicable. The row set is RetroDECK's shipped matrix. Verdicts are defined in")
+    lines.append("applicable. Per-game capable: yes = at least one mode is proven by source, binary, or observation; no =")
+    lines.append("absence is proven; ? = not established. This is capability, not the active mode on one machine. The row")
+    lines.append("set is RetroDECK's shipped matrix. Verdicts and evidence levels are defined in")
     lines.append("`docs/research/core-audit.md`.")
     lines.append("")
     lines.append(
         f"Source identity: `es_systems.xml` sha256 `{es_sha}` · `core_audit.json` "
-        f"(schema {audit_raw.get('schema')}) sha256 `{audit_sha}`."
+        f"(schema {audit_schema}) sha256 `{audit_sha}`."
     )
     lines.append("")
 
@@ -143,13 +186,18 @@ def main() -> None:
     ):
         lines.append(f"## {title}")
         lines.append("")
-        lines.append("| emulator | systems | verdict | RetroDECK | EmuDeck | RetroArch (bare) |")
-        lines.append("| --- | --- | --- | --- | --- | --- |")
+        lines.append(
+            "| emulator | systems | verdict | per-game capable | RetroDECK | EmuDeck | RetroArch (bare) | note |"
+        )
+        lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
         for key in sorted(rows, key=lambda k: (entry_for(k, kind) is None, k)):
             entry = entry_for(key, kind)
             verdict = entry.get("verdict", "?") if entry else "unaudited"
             cells = " | ".join(cell(entry, a, kind) for a in ARRANGEMENTS)
-            lines.append(f"| `{key}` | {systems_summary(rows[key])} | {verdict} | {cells} |")
+            lines.append(
+                f"| `{key}` | {systems_summary(rows[key])} | {verdict} | {per_game_cell(entry)} | "
+                f"{cells} | {note_cell(entry)} |"
+            )
         lines.append("")
 
     OUTPUT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
