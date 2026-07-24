@@ -7,9 +7,9 @@ present but not verified, ? availability unknown there (EmuDeck ships its own em
 bare-RetroArch cores are user-installed), — not applicable. The row set is RetroDECK's shipped matrix. Verdicts are
 defined in `docs/research/core-audit.md`.
 
-Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 1) sha256 `85b8433f42cd`.
+Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 1) sha256 `4f1391906bf6`.
 
-**Status:** libretro 14/159 audited · standalone 0/22 audited
+**Status:** libretro 17/159 audited · standalone 0/22 audited
 
 ## libretro cores
 
@@ -18,12 +18,15 @@ Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (sc
 | `azahar`                                    | n3ds                                                | suspect      | ✖         | ?       | ?                |
 | `dolphin`                                   | gc, wii                                             | suspect      | ✖         | ?       | ?                |
 | `flycast`                                   | arcade, atomiswave, consolearcade, dreamcast, … (8) | card         | ✔ 0.10.9b | ?       | ?                |
+| `genesis_plus_gx`                           | gamegear, genesis, mark3, mastersystem, … (10)      | multi-option | ✖         | ?       | ?                |
 | `mednafen_ngp`                              | ngp, ngpc                                           | standard-dir | ✔ 0.10.9b | ?       | ?                |
 | `mednafen_psx`                              | psx                                                 | multi-option | ✔ 0.10.9b | ?       | ?                |
 | `mednafen_psx_hw`                           | psx                                                 | multi-option | ✔ 0.10.9b | ?       | ?                |
 | `mednafen_saturn`                           | saturn, saturnjp                                    | standard-dir | ✔ 0.10.9b | ?       | ?                |
 | `mgba`                                      | gb, gba, gbc, sgb                                   | standard     | ✔ 0.10.9b | ?       | ?                |
 | `mupen64plus_next`                          | n64, n64dd                                          | standard     | ✔ 0.10.9b | ?       | ?                |
+| `neocd`                                     | neogeocd, neogeocdjp                                | multi-option | ✖         | ?       | ?                |
+| `opera`                                     | 3do                                                 | card         | ✖         | ?       | ?                |
 | `pcsx2`                                     | ps2                                                 | card         | ✔ 0.10.9b | ?       | ?                |
 | `pcsx_rearmed`                              | psx                                                 | multi-option | ✔ 0.10.9b | ?       | ?                |
 | `pokemini`                                  | pokemini                                            | standard-dir | ✔ 0.10.9b | ?       | ?                |
@@ -80,7 +83,6 @@ Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (sc
 | `geargrafx`                                 | supergrafx                                          | unaudited    | ✖         | ?       | ?                |
 | `gearsystem`                                | gamegear, mark3, mastersystem, multivision, … (5)   | unaudited    | ✖         | ?       | ?                |
 | `genesis-plus-gx-expanded-rom-size-paprium` | megadrive, megadrivejp                              | unaudited    | ✖         | ?       | ?                |
-| `genesis_plus_gx`                           | gamegear, genesis, mark3, mastersystem, … (10)      | unaudited    | ✖         | ?       | ?                |
 | `genesis_plus_gx_wide`                      | gamegear, genesis, mark3, mastersystem, … (10)      | unaudited    | ✖         | ?       | ?                |
 | `geolith`                                   | arcade, mame, neogeo                                | unaudited    | ✖         | ?       | ?                |
 | `gpsp`                                      | gba                                                 | unaudited    | ✖         | ?       | ?                |
@@ -114,14 +116,12 @@ Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (sc
 | `mrboom`                                    | ports                                               | unaudited    | ✖         | ?       | ?                |
 | `mu`                                        | palm                                                | unaudited    | ✖         | ?       | ?                |
 | `nekop2`                                    | pc98                                                | unaudited    | ✖         | ?       | ?                |
-| `neocd`                                     | neogeocd, neogeocdjp                                | unaudited    | ✖         | ?       | ?                |
 | `nestopia`                                  | famicom, fds, nes                                   | unaudited    | ✖         | ?       | ?                |
 | `noods`                                     | gba                                                 | unaudited    | ✖         | ?       | ?                |
 | `np2kai`                                    | pc98                                                | unaudited    | ✖         | ?       | ?                |
 | `nxengine`                                  | ports                                               | unaudited    | ✖         | ?       | ?                |
 | `o2em`                                      | odyssey2, videopac                                  | unaudited    | ✖         | ?       | ?                |
 | `openlara`                                  | ports                                               | unaudited    | ✖         | ?       | ?                |
-| `opera`                                     | 3do                                                 | unaudited    | ✖         | ?       | ?                |
 | `panda3ds`                                  | n3ds                                                | unaudited    | ✖         | ?       | ?                |
 | `parallel_n64`                              | n64, n64dd                                          | unaudited    | ✖         | ?       | ?                |
 | `picodrive`                                 | gamegear, genesis, mark3, mastersystem, … (12)      | unaudited    | ✖         | ?       | ?                |

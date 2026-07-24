@@ -2,12 +2,52 @@
   "schema": 1,
   "spec": "The verification matrix behind docs/research/core-audit.md: per core, the audit verdict and — per arrangement (retrodeck / emudeck / bare) — which versions the knowledge was verified against. null = never verified on that arrangement. MAINTENANCE IS ENFORCED, not documented-and-hoped: a test asserts every rule card in core_oddities.json has an entry here, and the resolver attaches an 'unverified-version' caveat when a card is applied on an arrangement that is null here or whose live-read version differs from the verified one. core_library_version is the value the core's own retro_get_system_info reports (query_core), so staleness is checked against live reads on both sides.",
   "cores": {
+    "azahar": {
+      "verdict": "suspect",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "dolphin": {
+      "verdict": "suspect",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "flycast": {
       "verdict": "card",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
           "core_library_version": "1dac369",
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "genesis_plus_gx": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "mednafen_ngp": {
+      "verdict": "standard-dir",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": null,
           "date": "2026-07-23"
         },
         "emudeck": null,
@@ -41,21 +81,8 @@
       },
       "kind": "libretro"
     },
-    "pcsx_rearmed": {
-      "verdict": "multi-option",
-      "verified": {
-        "retrodeck": {
-          "version": "0.10.9b",
-          "core_library_version": null,
-          "date": "2026-07-23"
-        },
-        "emudeck": null,
-        "bare": null
-      },
-      "kind": "libretro"
-    },
-    "mupen64plus_next": {
-      "verdict": "standard",
+    "mednafen_saturn": {
+      "verdict": "standard-dir",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -80,8 +107,8 @@
       },
       "kind": "libretro"
     },
-    "mednafen_saturn": {
-      "verdict": "standard-dir",
+    "mupen64plus_next": {
+      "verdict": "standard",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -93,8 +120,39 @@
       },
       "kind": "libretro"
     },
-    "mednafen_ngp": {
-      "verdict": "standard-dir",
+    "neocd": {
+      "verdict": "multi-option",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "opera": {
+      "verdict": "card",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "pcsx2": {
+      "verdict": "card",
+      "verified": {
+        "retrodeck": {
+          "version": "0.10.9b",
+          "core_library_version": "14d19f8",
+          "date": "2026-07-23"
+        },
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "pcsx_rearmed": {
+      "verdict": "multi-option",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -119,14 +177,10 @@
       },
       "kind": "libretro"
     },
-    "pcsx2": {
-      "verdict": "card",
+    "ppsspp": {
+      "verdict": "suspect",
       "verified": {
-        "retrodeck": {
-          "version": "0.10.9b",
-          "core_library_version": "14d19f8",
-          "date": "2026-07-23"
-        },
+        "retrodeck": null,
         "emudeck": null,
         "bare": null
       },
@@ -140,33 +194,6 @@
           "core_library_version": null,
           "date": "2026-07-23"
         },
-        "emudeck": null,
-        "bare": null
-      },
-      "kind": "libretro"
-    },
-    "dolphin": {
-      "verdict": "suspect",
-      "verified": {
-        "retrodeck": null,
-        "emudeck": null,
-        "bare": null
-      },
-      "kind": "libretro"
-    },
-    "azahar": {
-      "verdict": "suspect",
-      "verified": {
-        "retrodeck": null,
-        "emudeck": null,
-        "bare": null
-      },
-      "kind": "libretro"
-    },
-    "ppsspp": {
-      "verdict": "suspect",
-      "verified": {
-        "retrodeck": null,
         "emudeck": null,
         "bare": null
       },

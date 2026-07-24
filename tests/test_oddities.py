@@ -235,6 +235,55 @@ class TestLRPS2Card:
         assert p.file_set.files == ("Mcd001.ps2",)
 
 
+class TestOperaCard:
+    """3DO NVRAM: the core nests opera/per_game|shared under the save directory."""
+
+    OPERA_CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+        'global_core_options = "true"\n'
+        'libretro_directory = "/app/cores"\n'
+    )
+    ROM_3DO = "/mnt/sd/retrodeck/roms/3do/Game.chd"
+
+    def _query(self, files, cfg=None):
+        base = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: cfg or self.OPERA_CFG,
+            self.ROM_3DO: "",
+            SAVES_KEEP: "",
+        }
+        base.update(files)
+        rd = _retrodeck(base, cores={f"{DEPLOY}/opera_libretro.so": {"library_name": "Opera"}})
+        return rd.save_location(content_path=self.ROM_3DO, core_so="opera_libretro.so")
+
+    def test_default_per_game_nests_subdir_under_save_dir(self):
+        p = self._query({})
+        assert p.dir == "/mnt/sd/retrodeck/saves/opera/per_game"
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
+        assert p.granularity is not None and p.granularity.value == "per-game-file"
+        assert ("shared", "shared-card") in p.granularity.alternatives
+
+    def test_shared_mode_switches_subdir(self):
+        p = self._query({OPTIONS_CFG: 'opera_nvram_storage = "shared"\n'})
+        assert p.dir == "/mnt/sd/retrodeck/saves/opera/shared"
+        assert p.granularity is not None and p.granularity.value == "shared-card"
+
+    def test_subdir_follows_the_sorted_directory(self):
+        # GET_SAVE_DIRECTORY hands the core the redirected (sorted) dir
+        # (runloop.c:2001, 8977) — the core's subtree nests under it.
+        cfg = self.OPERA_CFG.replace(
+            'sort_savefiles_by_content_enable = "false"', 'sort_savefiles_by_content_enable = "true"'
+        )
+        p = self._query({"/mnt/sd/retrodeck/saves/3do/.keep": ""}, cfg=cfg)
+        assert p.dir == "/mnt/sd/retrodeck/saves/3do/opera/per_game"
+
+    def test_version_parameterized_files_are_observed_not_declared(self):
+        p = self._query({"/mnt/sd/retrodeck/saves/opera/per_game/Game.0.srm": "nv"})
+        assert p.file_set.state == "observed"
+        assert p.file_set.files == ("Game.0.srm",)
+
+
 class TestStrictLoaders:
     """Packaged data is validated, never coerced — a broken build fails loudly."""
 

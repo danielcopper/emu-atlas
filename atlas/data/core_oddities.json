@@ -65,6 +65,45 @@
         }
       }
     },
+    "opera": {
+      "identifiers": {
+        "so": [
+          "opera_libretro.so"
+        ],
+        "library_name": [
+          "Opera"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "opera_nvram_storage",
+          "default": "per game"
+        },
+        "modes": {
+          "per game": {
+            "root": "savefile_directory",
+            "subdir": "opera/per_game",
+            "files": null,
+            "granularity": "per-game-file"
+          },
+          "shared": {
+            "root": "savefile_directory",
+            "subdir": "opera/shared",
+            "files": null,
+            "granularity": "shared-card"
+          }
+        }
+      },
+      "provenance": {
+        "source": "opera-libretro source: opera_lr_nvram.c:117-175 — NVRAM is written to '<save_dir>/opera/per_game/<rom_stem>.<version>.srm' (per game) or '<save_dir>/opera/shared/nvram.<version>.srm' (shared); <version> comes from opera_nvram_version (values 0-7, default 0, libretro_core_options.c:286-301), which is why per-mode file lists are omitted rather than declared. save_dir falls back to system_dir only when the frontend provides none (opera_lr_nvram.c:102-113) — never the case under RetroArch. RETRO_MEMORY_SAVE_RAM returns NULL (libretro.c:574-579), so these files are the ONLY persistence; no RetroArch-side .srm exists. Legacy locations are tried at load only: '<save_dir>/<rom_stem>.srm', '<system_dir>/<rom_stem>.srm', '<save_dir|system_dir>/3DO.nvram' (opera_lr_nvram.c:177-349). The shipped RetroDECK 0.10.9b binary carries the same option keys and path constants (unfiltered strings check).",
+        "verified_against": "opera-libretro @ 74dd2a8 (2026-07-24); shipped Opera in RetroDECK 0.10.9b (strings match)",
+        "date": "2026-07-24",
+        "status": {
+          "per game": "paths verified from source; file names are opera_nvram_version-parameterized and therefore not declared; not yet live-observed",
+          "shared": "paths verified from source; not yet live-observed"
+        }
+      }
+    },
     "pcsx2": {
       "identifiers": {
         "so": [
