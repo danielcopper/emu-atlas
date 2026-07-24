@@ -32,7 +32,40 @@ Verdicts:
 | dolphin                 | dolphin-emu      | **suspect**        | RetroDECK dir_preps under `<retroarch config dir>/saves/dolphin-emu/…` imply a fourth root kind; zero core-written data observed; needs one live run                                                                                                                                                                                                                                                                            |
 | azahar                  | Azahar           | **suspect**        | same pattern (`saves/Citra/…` targets)                                                                                                                                                                                                                                                                                                                                                                                          |
 | ppsspp                  | PPSSPP           | **suspect**        | same pattern (`saves/PPSSPP/PSP/…` targets); also carries the shipped sort-flip override (research doc §6)                                                                                                                                                                                                                                                                                                                      |
-| _remaining ~145 of 159_ |                  | **unaudited**      | queue: cores with `memcard`/`save`-related options first (options scan), then the rest                                                                                                                                                                                                                                                                                                                                          |
+| _remaining ~145 of 159_ |                  | **unaudited**      | queue below (2026-07-24 triage scan)                                                                                                                                                                                                                                                                                                                                                                                            |
+
+## Audit queue — 2026-07-24 triage scan
+
+Unfiltered `strings` dumps of all 211 shipped `.so` files, searched for save-related option keys and path-format
+strings. **A triage hit is a queue position, not a verdict** — every entry stays _unaudited_ until the full method ran.
+One method lesson from this pass: pattern-based triage produces false negatives — `genesis_plus_gx` (Sega-CD BRAM,
+`.brm` files) matched no pattern because its path strings start mid-word (`_128Kbit_cart.brm`); suspicious systems get a
+manual dump check even when the scan is silent.
+
+Card-suspect first (own path construction, or a granularity/root option), then likely-internal hits, then the scanless
+rest:
+
+1. `genesis_plus_gx` — CD system BRAM + `_*Kbit_cart.brm` cart files (triage false negative, manual check)
+2. `opera` (3DO) — `opera_nvram_storage` with `per_game`, `%s.%u.srm`
+3. `neocd` — `neocd_per_content_saves`
+4. `fbneo` — own subtree `%s%cfbneo%c%s.fs` / `.memcard`, plus `%s%s.nv(ram)`
+5. `kronos` — own subtree `%s%ckronos%csaturn%c%s(-ext*).ram`, `%s%ckronos%cstv%c%s.ram`
+6. `scummvm` — own save scheme (`pegasus-%s.sav`; ScummVM savepath semantics)
+7. `dosbox_pure` — `.pure.zip` saves, "Save Difference Per Content" (manual check; scan hit only weakly)
+8. `puae` / `puae2021` — `puae_shared_nvram`, `cd32nvram`
+9. `geolith` — `geolith_memcard` / `geolith_memcard_wp`
+10. `virtualjaguar` — CRC-keyed `%s%08X.srm` names
+11. `melonds` / `melondsds` / `desmume` — `.dsv`(+`.bak`) / DSi-NAND title `.sav` / `libretropy_get_save_directory`
+12. MAME family (`mame`, `mame2000/2003/2003_plus/2003_midway/2010`, `fbalpha*`) — nvram/diff trees, own block
+13. VICE family (`vice_x64` …) — disk/NVRAM writes, own block
+14. `same_cdi` / `cdi2015` — CD-i NVRAM
+15. `handy` — writes `.eeprom` (`EEPROM SAVE %s`)
+16. `mesen` — `.eeprom128` / `.eeprom256`
+17. `stella` / `stella2023` — `nvram`
+18. likely-internal (symbols only, probably libretro-SRAM): `blastem`, `picodrive` (but: Sega CD — manual check),
+    `atari800`, `cap32`, `hatari`, `yabause`, remaining single-hit cores
+19. scanless remainder (`gambatte`, `snes9x*`, `nestopia`, `fceumm`, …) — expected standard via the libretro SRAM
+    interface; verdict only after per-core source check
 
 ## The verification matrix is data, and maintenance is enforced
 
