@@ -38,11 +38,11 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
 
 5. **Emulator catalogue** (`emulators_for`, DESIGN "two entry points"). **Partially done:** RetroDECK reads the bundled
    `es_systems.xml` (Flatpak deployment) plus the `custom_systems` overlay live; `EmulatorEntry.save_location` carries
-   its core, removing the no-core caveat class from that path; standalone entries refuse instead of guessing. Still
-   open: the user's saved per-system emulator choice in `es_settings.xml` (key format unverified — [O], needs a machine
-   with a switched emulator to observe), per-game `altemulator` in gamelists, `.info` `systemid` capability queries,
-   EmuDeck frontends (ES-DE elsewhere / Pegasus / SRM / absent, §13), and structured error reporting for skipped
-   catalogue layers (currently silent).
+   its core, removing the no-core caveat class from that path; standalone entries answer with a typed `Unresolved`
+   domain outcome instead of raising. Still open: the user's saved per-system emulator choice in `es_settings.xml` (key
+   format unverified — [O], needs a machine with a switched emulator to observe), per-game `altemulator` in gamelists,
+   `.info` `systemid` capability queries, EmuDeck frontends (ES-DE elsewhere / Pegasus / SRM / absent, §13), and
+   structured error reporting for skipped catalogue layers (currently silent).
 
 6. **Save granularity field** (issue #12): per-game file / per-game folder / shared card on the placement, with the
    config that selects the mode. Flycast, LRPS2, Dolphin-libretro are the first shared-card targets.
@@ -56,8 +56,10 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
    machine requires: glob the override config dir — no override dirs → the answer holds for every core (no caveat);
    otherwise name the `library_name`s that would change it.
 
-9. **Filter RetroArch companion files from observed file sets.** `.ldci` (disc index) is not save data; sourced from the
-   RetroArch tree, this is a rule, not a guess. Survey which other companion extensions exist before filtering.
+9. **Filter RetroArch companion files from observed file sets.** **Done for `.ldci`** (disk-control index,
+   `disk_index_file.c:201-249` + `file_path_special.h:83` — filtered with the citation; observation is also literal now,
+   glob metacharacters escaped). Remaining: survey whether further companion extensions land in the save directory
+   before filtering more.
 
 10. **Deviation warning** (§9). Compare the live cfg against the shipped reference (readable from the Flatpak
     deployment); report drift alongside the correct answer. On EmuDeck note the different semantics — `autofix.sh`

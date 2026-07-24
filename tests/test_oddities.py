@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json
+
+import pytest
+
 import atlas
-from atlas.oddities import lookup_card
+from atlas.oddities import load_audit, load_oddities, lookup_card
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -48,7 +52,7 @@ class TestCardLookup:
 
 def _retrodeck(files, **kwargs):
     machine = atlas.FixtureMachine(files, **kwargs)
-    return atlas.RetroDeck(HOME, machine, files.get(RETRODECK_JSON))
+    return atlas.RetroDeck(HOME, machine)
 
 
 def _flycast_query(files):
@@ -92,6 +96,21 @@ class TestFlycastResolution:
         )
         assert p.file_set.state == "declared"
         assert "vmu_save_A1.bin" in p.file_set.files
+
+    def test_slot2_vmus_are_observed_when_present(self):
+        # The card's observe list is wider than the declared defaults: slot-2
+        # VMUs exist only when a port's slot 2 is configured as VMU (M2).
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+                "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+                "/mnt/sd/retrodeck/bios/dc/vmu_save_A2.bin": "v",
+            }
+        )
+        assert p.file_set.files == ("vmu_save_A1.bin", "vmu_save_A2.bin")
+        assert p.file_set.complete is False
 
     def test_per_game_mode_switches_root_and_granularity(self):
         p = _flycast_query(
@@ -216,11 +235,64 @@ class TestLRPS2Card:
         assert p.file_set.files == ("Mcd001.ps2",)
 
 
+class TestStrictLoaders:
+    """Packaged data is validated, never coerced — a broken build fails loudly."""
+
+    def test_unknown_oddities_schema_is_rejected(self):
+        with pytest.raises(ValueError, match="schema"):
+            load_oddities('{"schema": 99, "cores": {}}')
+
+    def test_missing_audit_schema_is_rejected(self):
+        with pytest.raises(ValueError, match="schema"):
+            load_audit('{"cores": {}}')
+
+    def test_unknown_verdict_is_rejected(self):
+        text = json.dumps({"schema": 1, "cores": {"x": {"verdict": "fine-probably", "verified": {}}}})
+        with pytest.raises(ValueError, match="verdict"):
+            load_audit(text)
+
+    def test_non_boolean_complete_is_rejected(self):
+        text = json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "saves": {
+                            "modes": {
+                                "always": {
+                                    "root": "system_directory",
+                                    "granularity": "shared-card",
+                                    "complete": "false",
+                                }
+                            }
+                        },
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="complete"):
+            load_oddities(text)
+
+    def test_unknown_mode_root_is_rejected(self):
+        text = json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "saves": {"modes": {"always": {"root": "wherever", "granularity": "shared-card"}}},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="root"):
+            load_oddities(text)
+
+
 class TestVerificationMatrix:
     def test_every_card_has_an_audit_entry(self):
         # Maintenance is enforced: a new card without a verification entry fails here.
-        from atlas.oddities import load_audit, load_oddities
-
         audit = load_audit()
         for card in load_oddities():
             assert card.key in audit, (
@@ -267,6 +339,36 @@ class TestVerificationMatrix:
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale and stale[0].data["core_live"] == "fffffff"
 
+    def test_unknown_live_versions_fail_closed(self):
+        # The card is pinned to retrodeck 0.10.9b + core 1dac369, but this
+        # machine exposes neither — missing evidence is not verification
+        # (REVIEW M3).
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,  # no "version" key
+                RETRODECK_CFG: CFG,
+                "/mnt/sd/retrodeck/roms/dreamcast/Game.gdi": "",
+            },
+            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},  # no library_version
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
+        assert stale and stale[0].data["verification"] == "runtime-version-unknown"
+        assert "arrangement_version" in stale[0].data["missing"]
+        assert "core_library_version" in stale[0].data["missing"]
+
+    def test_confirmed_verification_lands_in_provenance(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: '{"version": "0.10.9b", "paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}',
+                RETRODECK_CFG: CFG,
+                "/mnt/sd/retrodeck/roms/dreamcast/Game.gdi": "",
+            },
+            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        assert any("verified on retrodeck 0.10.9b" in s for s in p.sources)
+
     def test_unverified_arrangement_fires_caveat(self):
         # The flycast card was never verified on EmuDeck — the answer says so.
         machine = atlas.FixtureMachine(
@@ -282,7 +384,7 @@ class TestVerificationMatrix:
             },
             cores={"/cores/flycast_libretro.so": {"library_name": "Flycast"}},
         )
-        ed = atlas.EmuDeck(HOME, machine, machine.read_text(f"{HOME}/.config/EmuDeck/settings.sh") or "")
+        ed = atlas.EmuDeck(HOME, machine)
         p = ed.save_location(content_path=f"{HOME}/Emulation/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale and stale[0].data["arrangement"] == "emudeck"

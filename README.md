@@ -20,12 +20,13 @@ Four principles, fixed before any code:
 
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, standalone installs, any of
   them side by side — and every question is asked _of an installation_, never of a global "the system":
-  `installation.save_placement(system, core=...)`, `installation.bios_dir(system)`.
+  `installation.save_location(content_path=..., core_so=...)`, `installation.emulators_for(system)`.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
-  machine protocol (`read_text`, `glob`, `exists`, `readlink`, `query_core`) — files, symlinks, and the answers only a
-  core binary can give, which is the same read the emulator itself performs. In production the seam is the real machine.
-  In tests and conformance vectors it is a fixture machine — files, symlinks, and core answers as plain data — so
-  detection, config parsing, and override chains are all provable from data.
+  machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`) whose every operation reports an
+  explicit outcome — missing is not unreadable is not invalid text — because the emulators make those distinctions and
+  health reporting depends on them. In production the seam is the real machine. In tests and conformance vectors it is a
+  fixture machine — files, directories, symlinks, and core answers as plain data — so detection, config parsing, and
+  override chains are all provable from data, failure states included.
 - **Placements are templates, not paths.** Where a concrete path cannot be known from configs alone, the answer carries
   named holes: `<rom_stem>` for RetroArch-style naming, `<save_id>` where the emulator keys saves off a serial or title
   id. Whoever can fill a hole fills it — [sigil](https://github.com/rommforge/argosy-sigil) is one supplier of
@@ -83,21 +84,30 @@ Places this knowledge could plug in — options, not commitments:
 The resolver core is built and verified live against a real RetroDECK 0.10.9b installation. What exists now:
 
 - `atlas.detect(home, machine=...)` finds RetroDECK, EmuDeck, the standalone `org.libretro.RetroArch` Flatpak, and a
-  native install — with health (`ok` / `root_missing` / `config_unreadable`), ordered markers (EmuDeck claims the
-  Flatpak it configures), and never a silently chosen winner.
+  native install — handles implementing one `Installation` protocol, with structured health (a list of issue caveats
+  with stable codes: unreadable or invalid markers, missing roots, a stale EmuDeck whose claimed RetroArch config is
+  gone), ordered markers (EmuDeck claims the Flatpak it configures), and never a silently chosen winner. Handles are
+  live: every query re-reads its governing sources, each exactly once.
 - `installation.save_location(content_path=..., core_so=...)` resolves the save directory the way RetroArch does:
   platform-default roots, the four-layer override chain (gated by `auto_overrides_enable` / `game_specific_options` /
   `rgui_config_directory`), `library_name` read live from the core binary through the Flatpak-deployment translation,
-  file sets observed or honestly unknown, granularity plus the option that switches it where a rule card exists
-  (Flycast, LRPS2), and structured caveats (stable codes) for every stated degradation.
+  file sets observed literally (glob-escaped, RetroArch's `.ldci` bookkeeping filtered) or honestly unknown, granularity
+  plus the option that switches it where a rule card exists (Flycast, LRPS2), and structured caveats for every stated
+  degradation. A sorted directory that does not exist yet is a conditional answer with a structural `fallback_dir`; a
+  placement reached through symlinks reports its `physical_dir`, and a dead `dir_prep` link is a stated caveat, not a
+  silent path.
 - `installation.emulators_for(system, content_path=...)` reads the ES-DE catalogue live (bundled + custom overlay) and
   resolves the effective default through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` >
-  declared order. Entries carry their core, so placement answers on that path need no core argument.
-- The audit trail: `docs/research/coverage-matrix.md` (generated) tracks every referenced emulator's verdict and
-  per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test; drift raises an
-  `unverified-version` caveat at answer time.
-- 193 tests, 25 conformance vectors (fixture machines with files, symlinks, and core answers), zero runtime
-  dependencies.
+  declared order. Entries carry their core, so placement answers on that path need no core argument; a standalone entry
+  answers with a typed `Unresolved` outcome instead of raising.
+- The audit trail: `docs/research/coverage-matrix.md` (generated, with full source identity) tracks every referenced
+  emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
+  verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer
+  time.
+- `atlas/contract.py` is the canonical JSON-shaped serialization of every answer — the same code the conformance run
+  asserts with exact equality, available to consumers.
+- 246 tests, 33 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, and
+  read-failure states), zero runtime dependencies, CI-verified wheel/sdist.
 
 What is not covered yet, and in which order it comes: `ROADMAP.md`. The systematic core-by-core state:
 `docs/research/coverage-matrix.md`.

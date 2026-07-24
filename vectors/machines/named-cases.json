@@ -1,7 +1,8 @@
 {
   "family": "machines",
+  "schema": 2,
   "spec": "DESIGN.md — installations, the machine seam, save locations",
-  "description": "Whole fixture machines (files, symlinks, core answers) in; detected installations (kind, root, health) and — when a query is present — the resolved SavePlacement out. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h and the shipped RetroDECK/EmuDeck configs; see docs/research/retrodeck-save-placement.md.",
+  "description": "Whole fixture machines (files, dirs, symlinks, core answers) in; the canonical contract serializations (atlas/contract.py) out, asserted with exact equality: installations (kind, kinds, root, health issue codes) and — per query — the full SavePlacement (dir, root_kind, needs, fallback_dir, physical_dir, file_set incl. completeness, granularity incl. option identity and alternatives, caveat codes + data), catalogue entries, and entry-route outcomes incl. Unresolved. Prose (sources, messages) is non-contractual. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h and the shipped RetroDECK/EmuDeck configs; see docs/research/retrodeck-save-placement.md.",
   "vectors": [
     {
       "name": "retrodeck-sort-by-content-concrete",
@@ -22,20 +23,33 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/gba",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "observed",
             "files": [
               "Golden Sun (USA).srm"
-            ]
-          }
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
         }
       }
     },
@@ -58,20 +72,33 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/Final Fantasy VII (USA).m3u",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "observed",
             "files": [
               "Final Fantasy VII (USA).srm"
-            ]
-          }
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
         }
       }
     },
@@ -101,18 +128,34 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
-          }
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
         }
       }
     },
@@ -143,18 +186,34 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/gba",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": "/mnt/sd/retrodeck/saves",
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
-          }
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "sorted-dir-missing",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves/gba",
+                "fallback_dir": "/mnt/sd/retrodeck/saves"
+              }
+            }
+          ]
         }
       }
     },
@@ -183,20 +242,28 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/gba/mGBA",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "observed",
             "files": [
               "Golden Sun (USA).srm"
-            ]
-          }
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": []
         }
       }
     },
@@ -219,8 +286,11 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -229,12 +299,19 @@
           "needs": [
             "library_name"
           ],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
+            "files": [],
+            "complete": false
           },
+          "granularity": null,
           "caveats": [
-            "no-core"
+            {
+              "code": "no-core",
+              "data": {}
+            }
           ]
         }
       }
@@ -258,18 +335,31 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/roms/gba",
           "root_kind": "content_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
-          }
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
         }
       }
     },
@@ -286,8 +376,14 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/run/media/deck/Emulation/retrodeck",
-            "health": "root_missing"
+            "health": [
+              "root-missing",
+              "saves-root-missing"
+            ]
           }
         ]
       }
@@ -300,14 +396,20 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
-        }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ]
       },
       "expected": {
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ]
       }
@@ -331,20 +433,34 @@
         "installations": [
           {
             "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "standalone_retroarch_flatpak"
+            ],
             "root": "/home/deck/Emulation",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/home/deck/Emulation/saves/retroarch/saves",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "observed",
             "files": [
               "Golden Sun (USA).srm"
-            ]
-          }
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
         }
       }
     },
@@ -366,8 +482,11 @@
         "installations": [
           {
             "kind": "standalone_retroarch_flatpak",
+            "kinds": [
+              "standalone_retroarch_flatpak"
+            ],
             "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -376,10 +495,20 @@
           "needs": [
             "library_name"
           ],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
-          }
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
         }
       }
     },
@@ -400,8 +529,11 @@
         "installations": [
           {
             "kind": "standalone_retroarch_flatpak",
+            "kinds": [
+              "standalone_retroarch_flatpak"
+            ],
             "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -410,10 +542,20 @@
           "needs": [
             "library_name"
           ],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
-          }
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
         }
       }
     },
@@ -437,22 +579,35 @@
         "installations": [
           {
             "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
             "root": "/home/user/.config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/home/user/saves",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "observed",
             "files": [
               "Sega Rally Championship (USA).bcr",
               "Sega Rally Championship (USA).bkr",
               "Sega Rally Championship (USA).smpc"
-            ]
-          }
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
         }
       }
     },
@@ -479,8 +634,11 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -489,13 +647,27 @@
           "needs": [
             "library_name"
           ],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
+            "files": [],
+            "complete": false
           },
+          "granularity": null,
           "caveats": [
-            "core-unqueryable",
-            "core-unaudited"
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "applewin_libretro.so"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "applewin"
+              }
+            }
           ]
         }
       }
@@ -522,20 +694,33 @@
         "installations": [
           {
             "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
             "root": "/home/user/.config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/home/user/links/saves",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/data/real-saves",
           "file_set": {
             "state": "observed",
             "files": [
               "Tetris (World).srm"
-            ]
-          }
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
         }
       }
     },
@@ -549,19 +734,28 @@
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
           "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/ra-saves/.keep": ""
-        }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ]
       },
       "expected": {
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           },
           {
             "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
             "root": "/home/deck/.config/retroarch",
-            "health": "ok"
+            "health": []
           }
         ]
       }
@@ -581,8 +775,12 @@
         "installations": [
           {
             "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "standalone_retroarch_flatpak"
+            ],
             "root": "/home/deck/Emulation",
-            "health": "ok"
+            "health": []
           }
         ]
       }
@@ -606,7 +804,7 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
@@ -616,7 +814,8 @@
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
-            "library_name": "Flycast"
+            "library_name": "Flycast",
+            "library_version": "1dac369"
           }
         },
         "query": {
@@ -628,26 +827,44 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/bios/dc",
           "root_kind": "system_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "observed",
             "files": [
               "vmu_save_A1.bin",
               "dc_nvmem.bin"
-            ]
+            ],
+            "complete": false
           },
           "granularity": {
             "value": "shared-card",
             "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled"
-          }
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": []
         }
       }
     },
@@ -657,7 +874,7 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"VMU A1\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
@@ -665,7 +882,8 @@
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
-            "library_name": "Flycast"
+            "library_name": "Flycast",
+            "library_version": "1dac369"
           }
         },
         "query": {
@@ -677,25 +895,55 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/dreamcast",
           "root_kind": "savefile_directory",
           "needs": [],
+          "fallback_dir": "/mnt/sd/retrodeck/saves",
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
+            "files": [],
+            "complete": false
           },
           "granularity": {
             "value": "per-game-file",
-            "option_value": "VMU A1"
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "VMU A1",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "shared-card"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
           },
           "caveats": [
-            "filenames-unverified",
-            "sorted-dir-missing"
+            {
+              "code": "filenames-unverified",
+              "data": {
+                "card": "flycast",
+                "mode": "VMU A1"
+              }
+            },
+            {
+              "code": "sorted-dir-missing",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+                "fallback_dir": "/mnt/sd/retrodeck/saves"
+              }
+            }
           ]
         }
       }
@@ -710,6 +958,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
         "catalogue_query": {
           "system": "n64"
         }
@@ -718,20 +969,27 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "emulators": [
           {
             "label": "Mupen64Plus-Next",
             "kind": "libretro",
-            "core_so": "mupen64plus_next_libretro.so"
+            "core_so": "mupen64plus_next_libretro.so",
+            "selection": null,
+            "caveats": []
           },
           {
             "label": "ParaLLEl N64",
             "kind": "libretro",
-            "core_so": "parallel_n64_libretro.so"
+            "core_so": "parallel_n64_libretro.so",
+            "selection": null,
+            "caveats": []
           }
         ]
       }
@@ -746,6 +1004,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
         },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
         "catalogue_query": {
           "system": "n64"
         }
@@ -754,15 +1015,20 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "emulators": [
           {
             "label": "ParaLLEl N64",
             "kind": "libretro",
-            "core_so": "parallel_n64_libretro.so"
+            "core_so": "parallel_n64_libretro.so",
+            "selection": null,
+            "caveats": []
           }
         ]
       }
@@ -778,6 +1044,9 @@
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n<gameList />\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
         "catalogue_query": {
           "system": "n64"
         }
@@ -786,20 +1055,27 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "emulators": [
           {
             "label": "ParaLLEl N64",
+            "kind": "libretro",
             "core_so": "parallel_n64_libretro.so",
-            "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\""
+            "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
+            "caveats": []
           },
           {
             "label": "Mupen64Plus-Next",
+            "kind": "libretro",
             "core_so": "mupen64plus_next_libretro.so",
-            "selection": null
+            "selection": null,
+            "caveats": []
           }
         ]
       }
@@ -810,7 +1086,7 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
           "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": "m"
@@ -820,7 +1096,8 @@
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
-            "library_name": "LRPS2"
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
           }
         },
         "query": {
@@ -832,25 +1109,39 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
           "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
           "root_kind": "system_directory",
           "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
           "file_set": {
             "state": "observed",
             "files": [
               "Mcd001.ps2"
-            ]
+            ],
+            "complete": false
           },
           "granularity": {
             "value": "shared-card",
             "option_key": "pcsx2_shared_memory_cards",
-            "option_value": "enabled"
-          }
+            "option_value": "enabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "per-game-file"
+              ]
+            ]
+          },
+          "caveats": []
         }
       }
     },
@@ -863,6 +1154,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
         },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
         "query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -871,8 +1165,11 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
             "root": "/mnt/sd/retrodeck",
-            "health": "ok"
+            "health": []
           }
         ],
         "save_location": {
@@ -881,11 +1178,398 @@
           "needs": [
             "library_name"
           ],
+          "fallback_dir": null,
+          "physical_dir": null,
           "file_set": {
             "state": "unknown",
-            "files": []
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "entry-route-selection-to-placement",
+      "rationale": "The natural client route: catalogue entry (with the gamelist selection applied) to its save placement in one ask. The promoted ParaLLEl entry resolves with its own core — the no-core caveat class does not exist on this path; the core is unaudited and the answer says so.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n<gameList />\n",
+          "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip": "",
+          "/mnt/sd/retrodeck/saves/Paper Mario (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/parallel_n64_libretro.so": {
+            "library_name": "ParaLLEl N64"
+          }
+        },
+        "entry_query": {
+          "system": "n64",
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Paper Mario (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "parallel_n64"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "entry-route-standalone-is-unresolved",
+      "rationale": "A standalone catalogue entry asked for its save location is a domain outcome with a stable code — outside current coverage, never a guess and never an exception.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/ps3/game/PS3_GAME/USRDIR/EBOOT.BIN": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_query": {
+          "system": "ps3",
+          "content_path": "/mnt/sd/retrodeck/roms/ps3/game"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_save_location": {
+          "unresolved": {
+            "code": "standalone-unsupported",
+            "data": {
+              "label": "RPCS3 Directory (Standalone)",
+              "system": "ps3"
+            }
           }
         }
+      }
+    },
+    {
+      "name": "secondary-handle-answers-its-own-config",
+      "rationale": "Coexisting installations: the query names the native handle explicitly, and the answer comes from the native cfg alone — no cross-installation fall-through from the higher-priority RetroDECK.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/roms/gb/Tetris (World).zip": "",
+          "/home/deck/ra-saves/Tetris (World).srm": "sram"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "query": {
+          "installation": "native_retroarch",
+          "content_path": "/home/deck/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          },
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/home/deck/ra-saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Tetris (World).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-marker-unreadable-is-present-and-broken",
+      "rationale": "An unreadable marker is a PRESENT, broken RetroDECK — detection triggers on existence, and health separates the read failure from the root fallout instead of hiding the installation.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/home/deck/retrodeck/saves"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/home/deck/retrodeck",
+            "health": [
+              "marker-unreadable"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "retrodeck-marker-invalid-json",
+      "rationale": "Malformed JSON is not the same as an empty config object: the marker parses to nothing, health says marker-invalid, and the path fallbacks still answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "not json {{"
+        },
+        "dirs": [
+          "/home/deck/retrodeck/saves"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/home/deck/retrodeck",
+            "health": [
+              "marker-invalid"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "sorted-dir-blocked-by-file-reverts-to-root",
+      "rationale": "A file where the sorted directory belongs: RetroArch's mkdir MUST fail and it reverts to the unsorted root (runloop.c:8844) — the fallback is not conditional, it is the known answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+          "/mnt/sd/retrodeck/saves/gba": "a file blocking the sorted dir"
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            },
+            {
+              "code": "sorted-dir-uncreatable",
+              "data": {
+                "intended": "/mnt/sd/retrodeck/saves/gba",
+                "effective": "/mnt/sd/retrodeck/saves"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "lrps2-dead-memcard-link-is-stated",
+      "rationale": "The dir_prep link into an unmounted volume: the emulator-side memcards path is dead. The answer keeps the emulator-side directory and states the dead link with its target — physical_dir stays null because there is no existing backing path.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/run/media/gone/retrodeck/saves/ps2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso",
+          "core_so": "pcsx2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "pcsx2_shared_memory_cards",
+            "option_value": "enabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "per-game-file"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "dead-symlink",
+              "data": {
+                "link": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "target": "/run/media/gone/retrodeck/saves/ps2/memcards",
+                "resolved": "/run/media/gone/retrodeck/saves/ps2/memcards"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-stale-marker-companion-missing",
+      "rationale": "settings.sh survives while the claimed org.libretro.RetroArch Flatpak is gone: the EmuDeck handle stays (it claims the standalone identity), and its health exposes the missing companion config instead of silently suppressing a bare handle.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/Emulation/roms/gba/game.zip": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "standalone_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": [
+              "companion-config-missing"
+            ]
+          }
+        ]
       }
     }
   ]

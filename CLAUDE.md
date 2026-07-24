@@ -48,7 +48,11 @@ basedpyright atlas tests scripts   # type-check (CI-enforced; pip install basedp
 - **Worktrees**: fresh worktrees need `mise trust && mise run setup` (per-directory venvs). The harness LSP diagnostics
   resolve against the _main checkout_ while you work in a worktree — trust `mise run test`, not stale diagnostics. The
   shell cwd resets between Bash calls: start commands with an explicit `cd` into the worktree.
-- The `machines` vector family models whole machines: `files`, `symlinks` (dead links included), `cores` (`null` =
-  present but unloadable). Configured save roots must exist in fixtures (H4 validation) — add a `.keep`.
+- The `machines` vector family (schema 2) models whole machines: `files` (string content, or
+  `{"status": "unreadable"|"invalid-text"}` for read failures), `dirs` (explicit empty directories), `inaccessible`,
+  `symlinks` (dead links included), `cores` (`null` = present but unloadable). Configured save roots must be
+  _directories_ in fixtures (`path_is_directory` validation) — list them in `dirs` or place a file inside. Expected
+  blocks are the canonical contract serializations (`atlas/contract.py`), asserted with exact equality — prose (sources,
+  messages) is non-contractual.
 - Live verification against the real RetroDECK installation on this machine is the final check for resolver changes;
   fixtures prove logic, the machine proves reality.

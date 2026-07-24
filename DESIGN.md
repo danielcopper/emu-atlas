@@ -40,17 +40,24 @@ is read or observed, never stored.
 import atlas
 
 installations = atlas.detect(home="/home/deck")
-# -> every arrangement present on the machine, each as its own handle.
+# -> every arrangement present on the machine, each as its own handle
+#    (one Installation protocol: kind, kinds, root, health, save_location).
 #    Never a silently chosen winner: ambiguity is a truthful result.
 
-inst = installations[0]              # e.g. RetroDeck(root=..., health=...)
-entries = inst.emulators_for("n64")  # the catalogue: (system, emulator) pairs in launch-priority order
+inst = installations[0]              # e.g. a RetroDeck handle — live, re-reads its sources per query
+inst.health()                        # structured: a tuple of issue caveats with stable codes; ok = no issues
+
+entries = inst.emulators_for("n64")  # the catalogue: launch entries in effective priority order
 emu = entries[0]                     # one emulator, as it is configured right now
 
 emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).zip")
-emu.bios_location()
-emu.save_granularity                 # per-game file / per-game folder / shared card — with the config that selects it
+# -> SavePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir)
+#    or Unresolved (a typed domain outcome, e.g. a standalone entry before that block lands).
+#    Granularity — per-game file / shared card, with the option that selects it — is part of the placement.
 ```
+
+(`bios_location()` on the emulator handle is target design — the BIOS entry point is on the roadmap; the registry itself
+ships today.)
 
 - **Installations are handles.** Every question is asked _of an installation_, never of a global "the system". A machine
   can carry RetroDECK, EmuDeck and a bare RetroArch side by side; each answers for itself. No cross-installation
@@ -58,9 +65,11 @@ emu.save_granularity                 # per-game file / per-game folder / shared 
 - **Detection labels markers, it does not partition.** EmuDeck _is_ a configured `org.libretro.RetroArch` — both
   descriptions of the same RetroArch are true at once, so marker checks are ordered (EmuDeck before "bare standalone")
   and a handle may carry more than one description.
-- **Detection reports health.** Present-and-complete, config-readable-but-root-missing (unmounted SD card), config
-  unreadable. A syntactically correct path into an absent mount is the classic silent failure; health makes it a stated
-  one. The config is the truth, never the existence of a folder — a stale secondary root must not win.
+- **Detection reports health, structurally.** Detection triggers on marker _existence_; health separates marker read
+  status, parse status, root state, and required-companion state into individual issue caveats with stable codes — a
+  present-but-broken installation (unreadable marker, unmounted SD card, stale EmuDeck whose claimed RetroArch config is
+  gone) is detected and states its issues, never invisible and never "ok". The config is the truth, never the existence
+  of a folder — a stale secondary root must not win.
 - **The emulator handle means "as currently configured".** Granularity, roots, and modes are config readings with
   provenance, not static facts. Where an alternative mode exists (Flycast per-game VMUs), the handle names the config
   that selects it.
@@ -72,19 +81,23 @@ emu.save_granularity                 # per-game file / per-game folder / shared 
 
 ## The machine seam
 
-All machine access goes through one injected seam. It abstracts **the machine**, not "text files":
+All machine access goes through one injected seam. It abstracts **the machine**, not "text files", and every operation
+reports an **explicit outcome** — failure modes are never collapsed:
 
 ```python
 class Machine(Protocol):
-    def read_text(self, path: str) -> str | None: ...
-    def glob(self, pattern: str) -> list[str]: ...
-    def exists(self, path: str) -> bool: ...
+    def read_text(self, path: str) -> ReadResult: ...     # status ok | missing | unreadable | invalid-text, plus text
+    def glob(self, pattern: str) -> list[str]: ...        # *, ?, [seq] within one segment; never crosses '/'
+    def path_kind(self, path: str) -> PathKind: ...       # file | directory | missing | inaccessible
     def readlink(self, path: str) -> str | None: ...      # symlink target, or None if not a link
     def query_core(self, so_path: str) -> CoreInfo | None: ...  # retro_get_system_info, or None if unloadable
 ```
 
+- The outcomes exist because the emulators branch on them — RetroArch applies a configured directory only when
+  `path_is_directory()` succeeds — and because health must distinguish _missing_ from _unreadable_ from _invalid_:
+  collapsing them turns a present-but-broken installation into an absent or healthy one.
 - `readlink` exists because RetroDECK's whole standalone save architecture is symlinks (`dir_prep`): the emulator-side
-  path and the real path are two truthful answers to different questions, and a dead link (`exists` → false, link
+  path and the real path are two truthful answers to different questions, and a dead link (`path_kind` → missing, link
   present) is a real state the resolver must be able to see.
 - `query_core` exists because `library_name` — the value that names sort-by-core directories _and_ the override
   directory — lives only in the core binary. Loading the core and asking it is the same read RetroArch performs; it is a
@@ -92,9 +105,10 @@ class Machine(Protocol):
   host process) and may cache per `.so` mtime/size — a memoized live read, never shipped data. `.info` files are **not**
   a substitute: `corename` disagrees with `library_name` for 56 of 210 installed cores.
 - In production the seam is the real filesystem plus a real core prober. In tests and conformance vectors it is a
-  **fixture machine**: files, symlinks, and core answers as plain data describing a whole machine — including broken
-  links and unloadable cores. One code path, two data sources; everything the resolver does is vector-testable,
-  including the failure states.
+  **fixture machine**: files (including unreadable and invalid-text ones), explicit empty directories, symlinks,
+  inaccessible paths, and core answers as plain data describing a whole machine. One code path, two data sources; parity
+  tests run the same cases against the fixture and a real filesystem tree, so everything the resolver does is
+  vector-testable — the failure states included.
 
 ## Placements
 
@@ -104,14 +118,19 @@ findings:
 - **Directory and file set are different kinds of knowledge.** The directory follows from one central rule (RetroArch's
   own path math, verified in `runloop.c`) and is answerable for every core at once. The file set is per-core behaviour
   with no metadata source. So the placement's directory is always resolvable; its file set may honestly be _unknown_ —
-  and for existing saves atlas can **observe** the set (`glob("<rom_stem>.*")`) instead of knowing it.
+  and for existing saves atlas can **observe** the set (literal, glob-escaped, with RetroArch's own bookkeeping files
+  filtered on source citation). _Observed_ is a snapshot of matching files, never a completeness claim; `complete` is a
+  separate assertion only a source-verified rule card can make.
 - **A hole is not an unknown.** `needs` lists holes the caller fills from the ROM at hand (`<rom_stem>`,
   `<content_dir>`). _Unknown_ means atlas cannot state the value and refuses to guess. These are distinct states and the
   type keeps them distinct.
 - **The root varies.** `savefile_directory`, `system_directory` (Flycast VMUs), or the ROM's own directory
   (`savefiles_in_content_dir`, or an unset save dir — RetroArch resolves that itself, it is not a hole).
-- **Filesystem state is part of the answer.** RetroArch silently reverts to the unsorted root when the sorted directory
-  cannot be created; a placement may therefore carry a state-dependent caveat, checked through the seam.
+- **Filesystem state is part of the answer.** A sorted directory that does not exist yet is a _conditional_ result:
+  RetroArch creates it on first save and silently reverts to the unsorted root when creation fails — the placement
+  carries that root structurally (`fallback_dir`), and when a file blocks the creation the fallback _is_ the answer. A
+  directory reached through symlinks reports the fully resolved backing path (`physical_dir`); a dead link is a stated
+  caveat.
 
 Every answer carries provenance: which config file produced each governing value, which default applied, which override
 won. Where a shipped reference config is readable on the machine (RetroDECK's Flatpak deployment; a distro's
@@ -138,9 +157,13 @@ rather than merely asserted.
 
 ## Vectors
 
-The conformance vectors are the portable artifact: fixture machine in (files, symlinks, core answers), expected answers
-out. A port that passes them demonstrably reads the machine the way the reference does. They are the contract for
-_resolver behaviour_ — not a data set to re-ship.
+The conformance vectors are the portable artifact: fixture machine in (files, dirs, symlinks, core answers — failure
+states included), expected answers out. Vector files are schema-versioned; expectations are the canonical contract
+serializations (`atlas/contract.py`) asserted with **exact equality** over every stable field — directories, root kinds,
+holes, file sets with completeness, granularity identity, caveat codes _and_ data, health issue codes. Structured fields
+are contractual; prose (sources, messages) is explicitly not. A port that passes them demonstrably reads the machine the
+way the reference does. They are the contract for _resolver behaviour_ — not a data set to re-ship — and each release
+publishes them as a versioned artifact.
 
 ## Vocabulary
 
@@ -176,10 +199,19 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
   platform needs is not on the machine and belongs in atlas, versioned and cited. Whether firmware needs an installer
   run instead of file placement is useful but omittable.
 
+## Settled since the rewrite
+
+- **Seam signatures**: explicit operation outcomes (`ReadResult`, `PathKind`) — see "The machine seam".
+- **Health representation**: a structured value on the handle (issue caveats with stable codes), mirrored into placement
+  caveats.
+- **Vector encoding**: schema-versioned files; whole machines including read-failure states; exact-equality contract
+  serializations.
+- **Consistency model**: handles are live; within one query every governing source is read exactly once and all
+  decisions derive from that snapshot.
+
 ## Open questions
 
-- Exact seam signatures (`CoreInfo` shape; error reporting for crashed vs. missing cores).
-- Vector-format encoding for symlinks and core answers.
 - The catalogue API when multiple frontends coexist on one EmuDeck install.
-- Health representation: field on the handle vs. part of provenance.
 - Exact canonical system-id set (lean toward ES-DE names).
+- Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only) — revisit with the
+  feature-detection extension (ROADMAP: card variants), which reworks the probe anyway.

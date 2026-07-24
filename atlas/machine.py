@@ -2,13 +2,21 @@
 
 atlas is a resolver: it answers questions about the running machine by reading
 the running machine. All of that reading goes through a :class:`Machine`, which
-abstracts the machine itself — files, symlinks, and the answers only a core
-binary can give — not merely "text files". In production the machine is the real
-one (:class:`RealMachine`); in tests and conformance vectors it is a fixture
-(:class:`FixtureMachine`): files, symlinks, and core answers as plain data
-describing a whole machine, including broken links and unloadable cores. One
-code path, two data sources, so everything atlas concludes is provable from
-data — the failure states included.
+abstracts the machine itself — files, directories, symlinks, and the answers
+only a core binary can give. In production the machine is the real one
+(:class:`RealMachine`); in tests and conformance vectors it is a fixture
+(:class:`FixtureMachine`): files, directories, symlinks, and core answers as
+plain data describing a whole machine, including broken links, unreadable
+files, and unloadable cores. One code path, two data sources, so everything
+atlas concludes is provable from data — the failure states included.
+
+Every operation reports an explicit outcome instead of collapsing failure
+modes: ``read_text`` distinguishes *missing* from *unreadable* from
+*invalid text*, and ``path_kind`` distinguishes a file from a directory from
+an inaccessible path. The resolver needs those distinctions because the
+emulators make them — RetroArch applies a configured directory only when
+``path_is_directory()`` succeeds — and because health reporting must never
+present a present-but-broken installation as absent or healthy.
 
 ``readlink`` exists because RetroDECK's standalone save architecture is symlinks
 (``dir_prep``): the emulator-side path and the real path are two truthful
@@ -17,6 +25,12 @@ must be able to see. ``query_core`` exists because ``library_name`` — the valu
 that names sort-by-core directories and the override directory — lives only in
 the core binary; loading the core and asking it is the same read RetroArch
 performs. A live read, never a shipped table.
+
+Glob semantics (normative, for ports): patterns support ``*``, ``?`` and
+``[seq]`` within one path segment; a wildcard never crosses a ``/``; matches
+are returned sorted, spelled the way the pattern reached them (a file matched
+through a symlinked directory keeps the link-side path, like a real
+filesystem's glob).
 """
 
 from __future__ import annotations
@@ -25,13 +39,45 @@ import fnmatch
 import glob as _glob
 import json
 import os
+import stat as _stat
 import subprocess
 import sys
 from dataclasses import dataclass
-from typing import Mapping, Protocol
+from typing import Iterable, Literal, Mapping, Protocol
 
 _CORE_PROBE_TIMEOUT_SECONDS = 15
 _MAX_SYMLINK_HOPS = 40
+
+ReadStatus = Literal["ok", "missing", "unreadable", "invalid-text"]
+PathKind = Literal["file", "directory", "missing", "inaccessible"]
+
+READ_OK: ReadStatus = "ok"
+READ_MISSING: ReadStatus = "missing"
+READ_UNREADABLE: ReadStatus = "unreadable"
+READ_INVALID_TEXT: ReadStatus = "invalid-text"
+
+KIND_FILE: PathKind = "file"
+KIND_DIRECTORY: PathKind = "directory"
+KIND_MISSING: PathKind = "missing"
+KIND_INACCESSIBLE: PathKind = "inaccessible"
+
+
+@dataclass(frozen=True, slots=True)
+class ReadResult:
+    """One text read's explicit outcome — ``text`` is set exactly when ``status`` is ok.
+
+    ``missing`` means the path (or a parent component) does not exist;
+    ``unreadable`` means it exists but cannot be read (permissions, a
+    directory, I/O error); ``invalid-text`` means bytes exist but are not
+    valid UTF-8 text. The distinctions are health signals, never collapsed.
+    """
+
+    status: ReadStatus
+    text: str | None = None
+
+    def __post_init__(self) -> None:
+        if (self.text is None) == (self.status == READ_OK):
+            raise ValueError(f"ReadResult: text must be set exactly when status is 'ok' (got {self.status!r})")
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,21 +95,21 @@ class CoreInfo:
 
 
 class Machine(Protocol):
-    """Narrow machine port: read a file, glob, test existence, follow links, ask a core.
+    """Narrow machine port: read a file, glob, classify a path, follow links, ask a core.
 
-    ``read_text`` returns ``None`` when the path does not exist or cannot be read
-    as text. ``glob`` returns matches sorted, so results are deterministic.
-    ``readlink`` returns the link target when the path itself is a symlink, else
-    ``None``. ``query_core`` returns the core's self-reported info, or ``None``
-    when the core cannot be loaded — the caller treats that as *unknown*, never
-    as a guess.
+    Every operation reports an explicit outcome; the caller decides what a
+    failure means — the seam never guesses. ``glob`` follows the normative
+    semantics in the module docstring. ``readlink`` returns the link target
+    when the path itself is a symlink, else ``None``. ``query_core`` returns
+    the core's self-reported info, or ``None`` when the core cannot be loaded —
+    the caller treats that as *unknown*, never as a guess.
     """
 
-    def read_text(self, path: str) -> str | None: ...
+    def read_text(self, path: str) -> ReadResult: ...
 
     def glob(self, pattern: str) -> list[str]: ...
 
-    def exists(self, path: str) -> bool: ...
+    def path_kind(self, path: str) -> PathKind: ...
 
     def readlink(self, path: str) -> str | None: ...
 
@@ -82,18 +128,29 @@ class RealMachine:
     def __init__(self) -> None:
         self._core_cache: dict[tuple[str, int, int], CoreInfo | None] = {}
 
-    def read_text(self, path: str) -> str | None:
+    def read_text(self, path: str) -> ReadResult:
         try:
             with open(path, encoding="utf-8") as f:
-                return f.read()
-        except (OSError, UnicodeDecodeError):
-            return None
+                return ReadResult(READ_OK, f.read())
+        except (FileNotFoundError, NotADirectoryError):
+            return ReadResult(READ_MISSING)
+        except UnicodeDecodeError:
+            return ReadResult(READ_INVALID_TEXT)
+        except OSError:
+            # Permissions, IsADirectoryError, I/O failure: present but unreadable.
+            return ReadResult(READ_UNREADABLE)
 
     def glob(self, pattern: str) -> list[str]:
-        return sorted(_glob.glob(pattern, recursive=True))
+        return sorted(_glob.glob(pattern))
 
-    def exists(self, path: str) -> bool:
-        return os.path.exists(path)
+    def path_kind(self, path: str) -> PathKind:
+        try:
+            st = os.stat(path)
+        except (FileNotFoundError, NotADirectoryError):
+            return KIND_MISSING
+        except OSError:
+            return KIND_INACCESSIBLE
+        return KIND_DIRECTORY if _stat.S_ISDIR(st.st_mode) else KIND_FILE
 
     def readlink(self, path: str) -> str | None:
         try:
@@ -142,31 +199,62 @@ class RealMachine:
         )
 
 
-class FixtureMachine:
-    """A machine backed by plain data: files, symlinks, and core answers.
+_GLOB_MAGIC = frozenset("*?[")
 
-    ``files`` maps absolute paths to contents. ``symlinks`` maps link paths to
-    their targets (absolute, or relative to the link's directory); path lookups
-    resolve symlink prefixes the way the kernel does, left to right, with a hop
-    limit against cycles — so a link to a target that is not in ``files`` is a
-    *dead* link: ``readlink`` shows it, ``exists`` says no, exactly like the
-    real thing. ``cores`` maps ``.so`` paths to core-answer objects
-    (``{"library_name": ...}``); a path mapped to ``None`` is a core that is
-    present but unloadable.
+# Fixture file specs: a plain string is readable content; an object states a
+# non-ok read outcome ({"status": "unreadable"} or {"status": "invalid-text"}).
+FixtureFileSpec = str | Mapping[str, str]
+
+
+class FixtureMachine:
+    """A machine backed by plain data: files, directories, symlinks, core answers.
+
+    ``files`` maps absolute paths to contents — a string is readable content;
+    ``{"status": "unreadable"}`` / ``{"status": "invalid-text"}`` is a file
+    that exists but yields that read outcome. ``dirs`` lists directories that
+    exist explicitly (parents of every known path are directories implicitly —
+    the list is how *empty* directories are stated). ``symlinks`` maps link
+    paths to their targets (absolute, or relative to the link's directory);
+    path lookups resolve symlink components the way the kernel does, left to
+    right, with a hop limit against cycles — so a link to a target that is not
+    in the fixture is a *dead* link: ``readlink`` shows it, ``path_kind`` says
+    missing, exactly like the real thing. ``cores`` maps ``.so`` paths to
+    core-answer objects (``{"library_name": ...}``); a path mapped to ``None``
+    is a core that is present but unloadable. ``inaccessible`` lists paths
+    whose state cannot be determined at all (a failing ``stat``).
     """
 
     def __init__(
         self,
-        files: Mapping[str, str],
+        files: Mapping[str, FixtureFileSpec],
         symlinks: Mapping[str, str] | None = None,
         cores: Mapping[str, Mapping[str, str | None] | None] | None = None,
+        dirs: Iterable[str] | None = None,
+        inaccessible: Iterable[str] | None = None,
     ) -> None:
-        self._files = dict(files)
+        self._files: dict[str, tuple[ReadStatus, str | None]] = {}
+        for path, spec in files.items():
+            if isinstance(spec, str):
+                self._files[path] = (READ_OK, spec)
+            else:
+                status = spec.get("status")
+                if status not in (READ_UNREADABLE, READ_INVALID_TEXT):
+                    raise ValueError(f"fixture file {path!r}: status must be 'unreadable' or 'invalid-text'")
+                self._files[path] = (status, None)
         self._symlinks = dict(symlinks or {})
         self._cores = dict(cores or {})
+        self._inaccessible = set(inaccessible or ())
+        self._dirs: set[str] = set(dirs or ())
+        # Every ancestor of a known path is a directory.
+        for path in (*self._files, *self._symlinks, *self._cores, *tuple(self._dirs), *self._inaccessible):
+            parent = os.path.dirname(path)
+            while parent and parent != "/":
+                self._dirs.add(parent)
+                parent = os.path.dirname(parent)
+        self._dirs.discard("")
 
     def _resolve(self, path: str) -> str:
-        """Resolve symlink prefixes in *path*, shortest prefix first, cycle-guarded."""
+        """Resolve symlink components in *path* (final one included), cycle-guarded."""
         for _ in range(_MAX_SYMLINK_HOPS):
             parts = path.split("/")
             replaced = False
@@ -184,29 +272,41 @@ class FixtureMachine:
                 return path
         return path
 
-    def _known_paths(self) -> list[str]:
-        return [*self._files, *self._symlinks, *self._cores]
+    def _resolve_parent(self, path: str) -> str:
+        """Resolve symlinks in the parent components only — the final one stays."""
+        parent, name = os.path.dirname(path), os.path.basename(path)
+        if not name or parent in ("", "/"):
+            return path
+        return os.path.join(self._resolve(parent), name)
 
-    def read_text(self, path: str) -> str | None:
-        return self._files.get(self._resolve(path))
+    def read_text(self, path: str) -> ReadResult:
+        if self._is_inaccessible(path):
+            return ReadResult(READ_UNREADABLE)
+        resolved = self._resolve(path)
+        if resolved in self._files:
+            status, text = self._files[resolved]
+            return ReadResult(status, text)
+        if resolved in self._cores:
+            return ReadResult(READ_INVALID_TEXT)  # a binary is not text
+        if resolved in self._dirs:
+            return ReadResult(READ_UNREADABLE)
+        return ReadResult(READ_MISSING)
 
-    def glob(self, pattern: str) -> list[str]:
-        # Resolve symlink prefixes in the pattern too, so a glob through a
-        # linked directory finds the real files — like the real filesystem.
-        patterns = {pattern, self._resolve(pattern)}
-        return sorted(
-            p for p in set(self._known_paths()) if any(fnmatch.fnmatch(p, pt) for pt in patterns)
-        )
-
-    def exists(self, path: str) -> bool:
+    def path_kind(self, path: str) -> PathKind:
+        if self._is_inaccessible(path):
+            return KIND_INACCESSIBLE
         resolved = self._resolve(path)
         if resolved in self._files or resolved in self._cores:
-            return True
-        prefix = resolved.rstrip("/") + "/"
-        return any(known.startswith(prefix) for known in self._known_paths())
+            return KIND_FILE
+        if resolved in self._dirs:
+            return KIND_DIRECTORY
+        return KIND_MISSING
+
+    def _is_inaccessible(self, path: str) -> bool:
+        return path in self._inaccessible or self._resolve(path) in self._inaccessible
 
     def readlink(self, path: str) -> str | None:
-        return self._symlinks.get(path)
+        return self._symlinks.get(self._resolve_parent(path))
 
     def query_core(self, so_path: str) -> CoreInfo | None:
         spec = self._cores.get(self._resolve(so_path))
@@ -220,3 +320,43 @@ class FixtureMachine:
             library_version=spec.get("library_version"),
             valid_extensions=spec.get("valid_extensions"),
         )
+
+    def _children(self, spelled_dir: str) -> set[str]:
+        """Entry names directly under *spelled_dir* (resolved like the kernel would)."""
+        real = self._resolve(spelled_dir) if spelled_dir else ""
+        prefix = real.rstrip("/") + "/"
+        names: set[str] = set()
+        for known in (*self._files, *self._symlinks, *self._cores, *self._dirs, *self._inaccessible):
+            if known.startswith(prefix):
+                names.add(known[len(prefix) :].split("/", 1)[0])
+        names.discard("")
+        return names
+
+    def _present_for_glob(self, spelled: str) -> bool:
+        # A symlink is listed by glob even when dead — like a real iterdir.
+        if self._resolve_parent(spelled) in self._symlinks:
+            return True
+        return self.path_kind(spelled) != KIND_MISSING
+
+    def glob(self, pattern: str) -> list[str]:
+        if not pattern.startswith("/"):
+            return []
+        results: set[str] = set()
+
+        def walk(base: str, segments: list[str]) -> None:
+            if not segments:
+                if base and self._present_for_glob(base):
+                    results.add(base)
+                return
+            segment, rest = segments[0], segments[1:]
+            if not segment:
+                walk(base, rest)
+            elif not _GLOB_MAGIC & set(segment):
+                walk(f"{base}/{segment}", rest)
+            else:
+                for child in self._children(base):
+                    if fnmatch.fnmatchcase(child, segment):
+                        walk(f"{base}/{child}", rest)
+
+        walk("", pattern.split("/")[1:])
+        return sorted(results)

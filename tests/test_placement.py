@@ -1,6 +1,8 @@
-"""Tests for atlas.placement — the placement type and its layout math."""
+"""Tests for atlas.placement — the placement type, its invariants, and layout math."""
 
 from __future__ import annotations
+
+import pytest
 
 from atlas.placement import (
     Caveat,
@@ -8,9 +10,58 @@ from atlas.placement import (
     ROOT_SAVEFILE_DIRECTORY,
     UNKNOWN_FILE_SET,
     FileSet,
+    SavePlacement,
     build_save_placement,
 )
 from atlas.retroarch_cfg import RETRODECK_DEFAULTS, resolve_save_layout
+
+
+class TestInvariants:
+    """M10: invalid states are constructor errors, and values are deeply immutable."""
+
+    def test_unknown_file_set_carries_no_files(self):
+        with pytest.raises(ValueError):
+            FileSet("unknown", ("a.srm",), "contradiction")
+
+    def test_unknown_file_set_carries_no_completeness_claim(self):
+        with pytest.raises(ValueError):
+            FileSet("unknown", (), "contradiction", complete=True)
+
+    def test_file_set_state_vocabulary_is_closed(self):
+        with pytest.raises(ValueError):
+            FileSet("guessed", (), "no such state")  # type: ignore[arg-type]
+
+    def test_root_kind_vocabulary_is_closed(self):
+        with pytest.raises(ValueError):
+            SavePlacement(
+                dir="/saves",
+                root_kind="wherever",  # type: ignore[arg-type]
+                needs=(),
+                file_set=UNKNOWN_FILE_SET,
+                sources=(),
+                caveats=(),
+            )
+
+    def test_placement_dir_must_be_non_empty(self):
+        with pytest.raises(ValueError):
+            SavePlacement(
+                dir="",
+                root_kind="savefile_directory",
+                needs=(),
+                file_set=UNKNOWN_FILE_SET,
+                sources=(),
+                caveats=(),
+            )
+
+    def test_caveat_data_is_read_only(self):
+        caveat = Caveat("health", "msg", {"issue": "root-missing"})
+        with pytest.raises(TypeError):
+            caveat.data["issue"] = "tampered"  # type: ignore[index]
+        assert caveat.data == {"issue": "root-missing"}
+
+    def test_caveat_code_must_be_non_empty(self):
+        with pytest.raises(ValueError):
+            Caveat("", "msg")
 
 HOME = "/home/deck"
 

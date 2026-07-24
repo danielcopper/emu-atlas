@@ -31,13 +31,28 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from types import MappingProxyType
+from typing import Literal, Mapping
 
 from atlas.retroarch_cfg import RetroArchCfg
 
-# Root kinds — where the placement's directory is anchored.
-ROOT_SAVEFILE_DIRECTORY = "savefile_directory"
-ROOT_CONTENT_DIRECTORY = "content_directory"
-ROOT_SYSTEM_DIRECTORY = "system_directory"
+# Root kinds — where the placement's directory is anchored. The closed
+# vocabularies are Literal types so an invalid state is a type error first
+# and a constructor error second (REVIEW M10).
+RootKind = Literal["savefile_directory", "content_directory", "system_directory"]
+FileSetState = Literal["observed", "declared", "unknown"]
+
+ROOT_SAVEFILE_DIRECTORY: RootKind = "savefile_directory"
+ROOT_CONTENT_DIRECTORY: RootKind = "content_directory"
+ROOT_SYSTEM_DIRECTORY: RootKind = "system_directory"
+
+_ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory")
+_FILE_SET_STATES = ("observed", "declared", "unknown")
+
+
+def _freeze(mapping: Mapping[str, str]) -> Mapping[str, str]:
+    """A read-only copy — frozen dataclasses stay deeply immutable."""
+    return MappingProxyType(dict(mapping))
 
 # Caveat codes — the stable, machine-readable identifiers clients branch on.
 # Part of the API contract; messages are for humans and may change freely.
@@ -55,6 +70,8 @@ CAVEAT_INVALID_SAVE_DIRECTORY = "invalid-save-directory"
 CAVEAT_CORE_SUSPECT = "core-suspect"
 CAVEAT_CORE_UNAUDITED = "core-unaudited"
 CAVEAT_CARD_MODE_UNCONFIRMED = "card-mode-unconfirmed"
+CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
+CAVEAT_DEAD_SYMLINK = "dead-symlink"
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,12 +82,18 @@ class Caveat:
     the API contract: clients branch on it, vectors assert it. ``message`` is
     the human-readable explanation and may change freely. ``data`` carries the
     machine-readable specifics (e.g. the fallback directory of a silent
-    revert). Decision-relevant → structured; explanatory → text.
+    revert) as a read-only mapping. Decision-relevant → structured;
+    explanatory → text.
     """
 
     code: str
     message: str
-    data: dict[str, str] = field(default_factory=dict)
+    data: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.code:
+            raise ValueError("Caveat: code must be a non-empty stable identifier")
+        object.__setattr__(self, "data", _freeze(self.data))
 
 _HOLE_CONTENT_DIR = "content_dir"
 _HOLE_LIBRARY_NAME = "library_name"
@@ -84,11 +107,23 @@ class FileSet:
     ``"declared"`` (``files`` come from a verified rule card — world knowledge
     with cited provenance, not a guess), or ``"unknown"`` (``files`` is empty;
     atlas refuses to guess). ``source`` says how the state was reached.
+
+    *Observed* means a snapshot of matching files currently seen — it never
+    implies the whole save. ``complete`` is the explicit completeness claim:
+    ``True`` only when a source-verified rule card closes the candidate
+    universe for the active mode; the generic observation can never earn it.
     """
 
-    state: str
+    state: FileSetState
     files: tuple[str, ...]
     source: str
+    complete: bool = False
+
+    def __post_init__(self) -> None:
+        if self.state not in _FILE_SET_STATES:
+            raise ValueError(f"FileSet: state must be one of {_FILE_SET_STATES}, got {self.state!r}")
+        if self.state == "unknown" and (self.files or self.complete):
+            raise ValueError("FileSet: an unknown set carries no files and no completeness claim")
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,15 +165,58 @@ class SavePlacement:
     :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`).
     ``file_set`` is observed or unknown, never guessed. ``sources`` is the
     provenance trail; ``caveats`` states every degradation explicitly.
+
+    A placement can be *conditional*: when ``dir`` does not exist yet,
+    RetroArch attempts to create it on first save and silently reverts to the
+    unsorted root when creation fails — ``fallback_dir`` names that root, so
+    the two possible outcomes are structural, not prose (REVIEW H5).
+    ``physical_dir`` is the fully link-resolved backing directory when ``dir``
+    reaches its files through symlinks (RetroDECK's ``dir_prep`` pattern) —
+    the emulator-side path and the physical path are two truthful answers to
+    different questions (REVIEW M7); a dead link is a ``dead-symlink`` caveat
+    instead.
     """
 
     dir: str
-    root_kind: str
+    root_kind: RootKind
     needs: tuple[str, ...]
     file_set: FileSet
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
     granularity: Granularity | None = None
+    fallback_dir: str | None = None
+    physical_dir: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.dir:
+            raise ValueError("SavePlacement: dir must be non-empty (an unanswerable placement is Unresolved)")
+        if self.root_kind not in _ROOT_KINDS:
+            raise ValueError(f"SavePlacement: root_kind must be one of {_ROOT_KINDS}, got {self.root_kind!r}")
+
+
+# Unresolved outcome codes — stable identifiers like caveat codes.
+UNRESOLVED_STANDALONE = "standalone-unsupported"
+
+
+@dataclass(frozen=True, slots=True)
+class Unresolved:
+    """A question atlas cannot answer for this entry — a domain outcome, not an error.
+
+    Returned where an answer route exists but the subject is outside the
+    resolver's current coverage (e.g. a standalone emulator entry before the
+    standalone block lands). ``code`` is a stable identifier clients branch
+    on; ``message`` says why; ``data`` carries the specifics. Callers switch
+    on the result type — nothing raises at runtime (REVIEW M8).
+    """
+
+    code: str
+    message: str
+    data: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.code:
+            raise ValueError("Unresolved: code must be a non-empty stable identifier")
+        object.__setattr__(self, "data", _freeze(self.data))
 
 
 def build_save_placement(

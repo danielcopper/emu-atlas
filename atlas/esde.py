@@ -33,6 +33,8 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Mapping
 
 _CORE_SO_RE = re.compile(r"([A-Za-z0-9_\-\[\]]+_libretro\.so)")
 
@@ -118,7 +120,10 @@ class GamelistSelections:
     """
 
     system_label: str | None
-    per_game: dict[str, str]
+    per_game: Mapping[str, str]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "per_game", MappingProxyType(dict(self.per_game)))
 
 
 def parse_gamelist(text: str) -> GamelistSelections:

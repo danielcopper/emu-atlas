@@ -81,21 +81,57 @@ class TestCoexistence:
 class TestHealth:
     def test_retrodeck_root_missing(self):
         installs = _detect({RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}'})
-        assert installs[0].health() == atlas.HEALTH_ROOT_MISSING
+        health = installs[0].health()
+        assert not health.ok
+        assert atlas.HEALTH_ISSUE_ROOT_MISSING in health.codes
 
-    def test_retrodeck_root_present(self):
+    def test_retrodeck_healthy(self):
+        installs = _detect(
+            {
+                RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
+                "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        assert installs[0].health() == atlas.Health()
+
+    def test_retrodeck_missing_saves_root_is_an_issue(self):
         installs = _detect(
             {
                 RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
                 "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
             }
         )
-        assert installs[0].health() == atlas.HEALTH_OK
+        assert installs[0].health().codes == (atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,)
 
     def test_retrodeck_unparseable_json(self):
         installs = _detect({RETRODECK_JSON: "not json{{"})
-        assert installs[0].health() == atlas.HEALTH_CONFIG_UNREADABLE
+        assert atlas.HEALTH_ISSUE_MARKER_INVALID in installs[0].health().codes
+
+    def test_retrodeck_unreadable_marker_is_detected_and_reported(self):
+        # An unreadable marker is a PRESENT, broken RetroDECK — it must not
+        # disappear from detection (REVIEW H10).
+        installs = _detect({RETRODECK_JSON: {"status": "unreadable"}})
+        assert [i.kind for i in installs] == ["retrodeck"]
+        assert atlas.HEALTH_ISSUE_MARKER_UNREADABLE in installs[0].health().codes
 
     def test_emudeck_saves_root_missing(self):
         installs = _detect({EMUDECK_SETTINGS: 'savesPath="/gone/Emulation/saves"\n'})
-        assert installs[0].health() == atlas.HEALTH_ROOT_MISSING
+        assert atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING in installs[0].health().codes
+
+    def test_emudeck_stale_marker_reports_missing_companion(self):
+        # settings.sh survives while the Flatpak is gone: the handle stays,
+        # and the companion issue makes the staleness visible (REVIEW H10).
+        installs = _detect(
+            {
+                EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+                "/home/deck/Emulation/roms/gba/game.zip": "",
+            },
+            dirs=["/home/deck/Emulation/saves"],
+        )
+        assert installs[0].health().codes == (atlas.HEALTH_ISSUE_COMPANION_CONFIG_MISSING,)
+
+    def test_bare_flatpak_unreadable_cfg(self):
+        installs = _detect({STANDALONE_CFG: {"status": "unreadable"}})
+        assert [i.kind for i in installs] == ["standalone_retroarch_flatpak"]
+        assert installs[0].health().codes == (atlas.HEALTH_ISSUE_CONFIG_UNREADABLE,)
