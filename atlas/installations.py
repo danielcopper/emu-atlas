@@ -684,6 +684,7 @@ def _retroarch_save_location(
     final_dir = placement.dir
     fallback_dir: str | None = None
     physical_dir: str | None = None
+    final_sources = list(placement.sources)
     if not placement.needs:
         # A sorted directory that does not exist yet is a CONDITIONAL result:
         # RetroArch creates it on first save and silently reverts to the
@@ -716,6 +717,20 @@ def _retroarch_save_location(
                         f"and silently reverts to {effective_root} if creation fails (runloop.c:8844)",
                         {"dir": final_dir, "fallback_dir": effective_root},
                     )
+                )
+        if card_mode is not None and card_mode.subdir and card_mode.root != ROOT_SYSTEM_DIRECTORY:
+            # A card core may nest its own subtree under the effective save
+            # directory: GET_SAVE_DIRECTORY hands the core the redirected
+            # (sorted, fallback-resolved) dir (runloop.c:2001, set at
+            # runloop.c:8977), and the core appends its subdir to whatever it
+            # received — so the subdir follows the fallback too.
+            final_dir = os.path.join(final_dir, card_mode.subdir)
+            if fallback_dir is not None:
+                fallback_dir = os.path.join(fallback_dir, card_mode.subdir)
+            if card is not None:
+                final_sources.append(
+                    f"rule card '{card.key}': core nests its saves under '{card_mode.subdir}/' in the "
+                    f"save directory — {card.provenance}"
                 )
         if rom_stem is not None:
             content_basename = os.path.basename(content_path) if content_path else None
@@ -772,7 +787,7 @@ def _retroarch_save_location(
         root_kind=placement.root_kind,
         needs=placement.needs,
         file_set=file_set,
-        sources=placement.sources,
+        sources=tuple(final_sources),
         caveats=tuple(caveats),
         granularity=granularity,
         fallback_dir=fallback_dir,

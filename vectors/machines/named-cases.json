@@ -1571,6 +1571,161 @@
           }
         ]
       }
+    },
+    {
+      "name": "opera-per-game-nvram-subdir",
+      "rationale": "3DO NVRAM (rule card 'opera'): the core nests opera/per_game under the effective save directory it receives from GET_SAVE_DIRECTORY (runloop.c:2001/8977). The default mode is per-game; the file name carries the opera_nvram_version option, so the set is observed, never declared. The card was never live-verified on any arrangement — the answer says so.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
+          "/mnt/sd/retrodeck/saves/opera/per_game/Road Rash (USA).0.srm": "nv"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
+            "library_name": "Opera"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd",
+          "core_so": "opera_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/opera/per_game",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Road Rash (USA).0.srm"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": "opera_nvram_storage",
+            "option_value": "per game",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "shared",
+                "shared-card"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "card": "opera",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-unverified",
+              "data": {
+                "card": "opera",
+                "mode": "per game"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "opera-shared-nvram-subdir",
+      "rationale": "The same core with opera_nvram_storage = shared switches to opera/shared with one card for every game — granularity and directory flip on one live-read option.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_storage = \"shared\"\n",
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
+            "library_name": "Opera"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd",
+          "core_so": "opera_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/opera/shared",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "opera_nvram_storage",
+            "option_value": "shared",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "per game",
+                "per-game-file"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "card": "opera",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-unverified",
+              "data": {
+                "card": "opera",
+                "mode": "shared"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
