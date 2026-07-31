@@ -10,9 +10,9 @@ instead of the in-flight run.
 
 **State (2026-07-31):**
 
-- **In flight: PSP → `ppsspp_libretro` (suspect run).** Plan: Ys — The Oath in Felghana (menu-save, fastest), via ES-DE
-  with the psp alternative emulator set to "PPSSPP" (the entry WITHOUT "Standalone"). A God-of-War attempt ran the wrong
-  emulator (standalone via decky launcher) and was abandoned. Pre-run evidence: the dir_prep skeletons under
+- **In flight: PSP → `ppsspp_libretro` (suspect run).** Plan: a quick menu-save game, launched via ES-DE with the psp
+  alternative emulator set to "PPSSPP" (the entry WITHOUT "Standalone"). A first attempt ran the wrong emulator
+  (standalone, via the decky launcher) and was abandoned. Pre-run evidence: the dir_prep skeletons under
   `config/retroarch/saves/{PPSSPP,Citra,dolphin-emu}/` contain only texture/mod dirs (`TEXTURES`, `load/mods`,
   `User/Load`) — the fourth-root hypothesis is wobbling; the save decides. Side finding to bank later: the standalone
   PPSSPP run may have written memstick data (baseline predates it).

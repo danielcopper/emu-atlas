@@ -14,8 +14,8 @@ dem anderen**, and audit waves stay small (2–3 cores per PR).
 
 **How to apply — one run:**
 
-1. Agree on ONE system/core with the user; pick a game where in-game saving is quick (menu-save games like Ys beat games
-   with distant save points).
+1. Agree on ONE system/core with the user; pick a game where in-game saving is quick (menu-save games beat games with
+   distant save points).
 2. **Launcher pitfall:** starting via decky-romm-sync forces the emulator through `-e %EMULATOR_...%` — for a libretro
    run the user must launch via ES-DE/RetroDECK directly with the system's alternative emulator set to the RetroArch
    entry. Verify with `ps aux | grep -iE "retroarch|<emu>"` that the intended binary runs (RetroArch with
