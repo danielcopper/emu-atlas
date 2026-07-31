@@ -43,6 +43,7 @@ import stat as _stat
 import subprocess
 import sys
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, Protocol
 
 _CORE_PROBE_TIMEOUT_SECONDS = 15
@@ -81,17 +82,42 @@ class ReadResult:
 
 
 @dataclass(frozen=True, slots=True)
-class CoreInfo:
-    """What a libretro core reports about itself via ``retro_get_system_info``.
+class CoreOption:
+    """One option definition a core registers: its default and legal values.
 
-    ``library_name`` is the value RetroArch uses for sort-by-core directories and
-    override directories — the display name, not the ``.so`` basename (they
-    differ for 87% of RetroDECK's shipped cores).
+    Captured from the registration call the core makes during
+    ``retro_set_environment`` — the same declaration RetroArch's option
+    manager validates persisted values against. A live read of the binary,
+    never shipped data.
+    """
+
+    key: str
+    default: str | None
+    values: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CoreInfo:
+    """What a libretro core reports about itself.
+
+    ``library_name`` (via ``retro_get_system_info``) is the value RetroArch
+    uses for sort-by-core directories and override directories — the display
+    name, not the ``.so`` basename (they differ for 87% of RetroDECK's shipped
+    cores). ``options`` is the set of option definitions the core registered
+    during ``retro_set_environment`` — the observable fact that identifies a
+    core *generation* better than any version string. ``None`` means *not
+    captured* (the probe saw no registration — some cores register later, in
+    ``retro_init``): unknown, never "registers nothing".
     """
 
     library_name: str
     library_version: str | None
     valid_extensions: str | None
+    options: Mapping[str, CoreOption] | None = None
+
+    def __post_init__(self) -> None:
+        if self.options is not None:
+            object.__setattr__(self, "options", MappingProxyType(dict(self.options)))
 
 
 class Machine(Protocol):
@@ -185,18 +211,54 @@ class RealMachine:
             return None
         if proc.returncode != 0:
             return None
-        try:
-            data = json.loads(proc.stdout.decode("utf-8", "replace"))
-        except (json.JSONDecodeError, ValueError):
+        # The probe prints one JSON object per line and later lines enrich
+        # earlier ones (two-phase design) — the last valid line wins, so a
+        # crash in the option-capture phase still yields the base answer.
+        data: dict[str, object] | None = None
+        for line in proc.stdout.decode("utf-8", "replace").splitlines():
+            try:
+                candidate = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if isinstance(candidate, dict):
+                data = candidate
+        if data is None:
             return None
         name = data.get("library_name")
         if not isinstance(name, str) or not name:
             return None
+        version = data.get("library_version")
+        extensions = data.get("valid_extensions")
         return CoreInfo(
             library_name=name,
-            library_version=data.get("library_version"),
-            valid_extensions=data.get("valid_extensions"),
+            library_version=version if isinstance(version, str) else None,
+            valid_extensions=extensions if isinstance(extensions, str) else None,
+            options=_parse_core_options(data.get("options")),
         )
+
+
+def _parse_core_options(raw: object) -> dict[str, CoreOption] | None:
+    """Parse a probe's / fixture's option map — ``None`` (not captured) stays ``None``.
+
+    A malformed entry is dropped rather than invented; a wholly malformed map
+    counts as not captured.
+    """
+    if not isinstance(raw, dict):
+        return None
+    options: dict[str, CoreOption] = {}
+    for key, spec in raw.items():
+        if not isinstance(key, str) or not key or not isinstance(spec, dict):
+            continue
+        default = spec.get("default")
+        values = spec.get("values")
+        if not isinstance(values, list) or not all(isinstance(v, str) for v in values):
+            values = []
+        options[key] = CoreOption(
+            key=key,
+            default=default if isinstance(default, str) else None,
+            values=tuple(values),
+        )
+    return options
 
 
 _GLOB_MAGIC = frozenset("*?[")
@@ -228,7 +290,7 @@ class FixtureMachine:
         self,
         files: Mapping[str, FixtureFileSpec],
         symlinks: Mapping[str, str] | None = None,
-        cores: Mapping[str, Mapping[str, str | None] | None] | None = None,
+        cores: Mapping[str, Mapping[str, object] | None] | None = None,
         dirs: Iterable[str] | None = None,
         inaccessible: Iterable[str] | None = None,
     ) -> None:
@@ -315,10 +377,13 @@ class FixtureMachine:
         name = spec.get("library_name")
         if not isinstance(name, str) or not name:
             return None
+        version = spec.get("library_version")
+        extensions = spec.get("valid_extensions")
         return CoreInfo(
             library_name=name,
-            library_version=spec.get("library_version"),
-            valid_extensions=spec.get("valid_extensions"),
+            library_version=version if isinstance(version, str) else None,
+            valid_extensions=extensions if isinstance(extensions, str) else None,
+            options=_parse_core_options(spec.get("options")),
         )
 
     def _children(self, spelled_dir: str) -> set[str]:

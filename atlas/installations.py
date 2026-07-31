@@ -39,6 +39,7 @@ from atlas.esde import (
 from atlas.machine import KIND_DIRECTORY, KIND_FILE, KIND_MISSING, Machine
 from atlas.oddities import lookup_audit, lookup_card
 from atlas.placement import (
+    CAVEAT_CARD_GENERATION_MISMATCH,
     CAVEAT_CARD_MODE_UNCONFIRMED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_SORTED_DIR_UNCREATABLE,
@@ -456,6 +457,37 @@ def _retroarch_save_location(
     card = lookup_card(so_basename=so_basename, library_name=library_name)
     granularity: Granularity | None = None
     card_mode = None
+
+    # Feature detection — the generation question made observable (the LRPS2
+    # lesson): when the probe captured which options this core REGISTERS, the
+    # card's governing option key decides applicability, not a version string.
+    # Key registered → the card generation is confirmed by evidence. Key not
+    # registered → the card describes a different generation and is NOT
+    # applied; stale knowledge with a warning would still be a guess. Options
+    # not captured (probe limitation, core registers later) → unknown, and the
+    # version comparison below keeps doing its job.
+    registered_options = info.options if info is not None else None
+    live_option = None
+    if card is not None and card.option_key is not None and registered_options is not None:
+        live_option = registered_options.get(card.option_key)
+        if live_option is None:
+            caveats.append(
+                Caveat(
+                    CAVEAT_CARD_GENERATION_MISMATCH,
+                    f"rule card '{card.key}' is governed by option {card.option_key!r}, which this core "
+                    "does not register — the card describes a different core generation and is not "
+                    "applied; this core's actual save behaviour is unknown until re-audited, so the "
+                    "standard answer below may miss the real save stack",
+                    {"card": card.key, "option_key": card.option_key},
+                )
+            )
+            card = None
+        else:
+            sources_extra.append(
+                f"feature-detected: core registers {card.option_key!r} (default "
+                f"{live_option.default!r}, values {list(live_option.values)}) — card generation "
+                "confirmed by observation, not by version comparison"
+            )
     if card is None and so_basename is not None:
         # A missing card is not evidence the standard rule is complete — the
         # audit verdict decides how loudly to say so (REVIEW H7).
@@ -510,7 +542,17 @@ def _retroarch_save_location(
                 elif verified.core_library_version != live_core_version:
                     drift["core_verified"] = verified.core_library_version
                     drift["core_live"] = live_core_version
-            if drift:
+            if (drift or missing) and live_option is not None:
+                # Feature detection outranks the version comparison: the
+                # governing option is observably registered, so a differing or
+                # unreadable version record is supplementary info, not an
+                # alarm (the false-alarm class the version check produced).
+                detail = str(drift) if drift else f"{', '.join(missing)} unavailable"
+                sources_extra.append(
+                    f"rule card '{card.key}': version records differ from this machine ({detail}), but "
+                    f"the governing option is feature-confirmed — the decision falls on observed evidence"
+                )
+            elif drift:
                 data = {"card": card.key, "arrangement": arrangement, "verification": "drifted", **drift}
                 if missing:
                     data["missing"] = ", ".join(missing)
@@ -555,6 +597,12 @@ def _retroarch_save_location(
                 alternatives=(),
             )
     elif card is not None:
+        # The registered default is a live read and outranks the card's
+        # shipped-generation copy — feature detection makes option defaults
+        # machine facts instead of world knowledge.
+        effective_default = card.option_default
+        if live_option is not None and live_option.default is not None:
+            effective_default = live_option.default
         opt_value, opt_source, options_file, opt_unconfirmed = _core_options_value(
             machine,
             layer_texts,
@@ -565,25 +613,46 @@ def _retroarch_save_location(
             content_dir_name=content_dir_name,
             rom_stem=rom_stem,
             option_key=card.option_key or "",
-            option_default=card.option_default or "",
+            option_default=effective_default or "",
             game_specific_options=game_specific_options,
         )
         card_mode = card.modes.get(opt_value)
         if card_mode is None:
-            # RetroArch's option manager keeps the core-declared default when a
-            # persisted value is invalid — it does not fall back to the
-            # standard rule (REVIEW M1).
-            card_mode = card.modes.get(card.option_default or "")
-            caveats.append(
-                Caveat(
-                    CAVEAT_UNKNOWN_OPTION_VALUE,
-                    f'core option {card.option_key} = "{opt_value}" is not a value the rule card knows — '
-                    f"applying the core default mode {card.option_default!r} as RetroArch would",
-                    {"card": card.key, "option_key": card.option_key or "", "value": opt_value},
+            live_registered_value = live_option is not None and opt_value in live_option.values
+            fallback_mode = card.modes.get(effective_default or "")
+            if live_registered_value or fallback_mode is None:
+                # Either the live core legitimately offers a value the card
+                # does not know, or even the effective default has no card
+                # mode — value-level generation drift. Applying any other
+                # mode would guess; the card steps aside.
+                caveats.append(
+                    Caveat(
+                        CAVEAT_CARD_GENERATION_MISMATCH,
+                        f'core option {card.option_key} = "{opt_value}" cannot be interpreted by rule '
+                        f"card '{card.key}' — the card lags this core's generation; the configured save "
+                        "behaviour is unknown until re-audited, and the standard answer below may miss "
+                        "the real save stack",
+                        {"card": card.key, "option_key": card.option_key or "", "value": opt_value},
+                    )
                 )
-            )
-            opt_value = card.option_default or opt_value
-        if opt_unconfirmed and card_mode is not None:
+                card = None
+                card_mode = None
+            else:
+                # RetroArch's option manager keeps the core-declared default
+                # when a persisted value is invalid — it does not fall back to
+                # the standard rule (REVIEW M1). With captured definitions the
+                # invalidity itself is confirmed against the live value set.
+                card_mode = fallback_mode
+                caveats.append(
+                    Caveat(
+                        CAVEAT_UNKNOWN_OPTION_VALUE,
+                        f'core option {card.option_key} = "{opt_value}" is not a value the rule card '
+                        f"knows — applying the core default mode {effective_default!r} as RetroArch would",
+                        {"card": card.key, "option_key": card.option_key or "", "value": opt_value},
+                    )
+                )
+                opt_value = effective_default or opt_value
+        if card is not None and opt_unconfirmed and card_mode is not None:
             caveats.append(
                 Caveat(
                     CAVEAT_CARD_MODE_UNCONFIRMED,
@@ -593,7 +662,7 @@ def _retroarch_save_location(
                     {"card": card.key, "option_key": card.option_key or "", "applied": opt_value},
                 )
             )
-        if card_mode is not None:
+        if card is not None and card_mode is not None:
             granularity = Granularity(
                 value=card_mode.granularity,
                 option_key=card.option_key,

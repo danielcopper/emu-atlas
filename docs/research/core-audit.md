@@ -105,10 +105,14 @@ on parsing version strings (the browser lesson: sniffing user agents loses; prob
   live. Only knowledge (cards) and procedures (parsers) can drift.
 - **Parsers grow tolerant, not switched.** The gamelist parser already handles both ES-DE's two-root quirk and
   well-formed XML through one code path. A format change extends the parser; both shapes stay supported.
-- **Cards will grow variants** dispatched on observable facts — e.g. the LRPS2 generation is identified by _which option
-  key the core registers_ (`pcsx2_memcard_slot_1` vs `pcsx2_shared_memory_cards`), not by a version string. The planned
-  `query_core` extension captures the option definitions the core registers in `retro_set_environment` — which also
-  makes option _defaults_ live-read instead of card-declared.
+- **Card applicability is feature-detected** (implemented): `query_core` captures the option definitions a core
+  registers in `retro_set_environment` (all API formats: `SET_VARIABLES`, `SET_CORE_OPTIONS`/`_INTL`, v2, v2 `_INTL`). A
+  card applies when its governing key is observably registered — then version drift is demoted to provenance; a key the
+  core does not register retires the card (`card-generation-mismatch`, the standard frame stays with the caveat);
+  registered defaults outrank the card's shipped-generation copy, and persisted values are validated against the live
+  value set. Not every core is capturable — LRPS2 itself registers its options after `retro_set_environment` (probe
+  shows none), so the uncaptured case falls back to the version comparison. Next step when an old generation gets
+  audited: per-generation card _variants_ keyed by their option signature.
 - **A vector per generation, never deleted.** Each supported generation keeps its fixture machine in the conformance
   vectors — that is the guarantee that understanding an old version survives supporting a new one.
 - The version matrix records what was _proven_; the caveat marks everything else as unverified rather than wrong.

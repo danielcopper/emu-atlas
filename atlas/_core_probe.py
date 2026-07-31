@@ -1,10 +1,26 @@
-"""Probe a libretro core for ``retro_get_system_info`` — run as a subprocess.
+"""Probe a libretro core — run as a subprocess.
 
 Invoked as ``python -m atlas._core_probe <core.so>`` by
 :meth:`atlas.machine.RealMachine.query_core`. The subprocess *is* the crash
-isolation: a core that segfaults on load takes this process down, not the host.
-On success a JSON object with ``library_name`` / ``library_version`` /
-``valid_extensions`` is written to stdout; any failure exits non-zero.
+isolation: a core that segfaults takes this process down, not the host.
+
+The probe emits one JSON object per line and the parent uses the LAST valid
+line — a deliberate two-phase design:
+
+1. ``retro_get_system_info`` (safe on every core) → the base line with
+   ``library_name`` / ``library_version`` / ``valid_extensions``.
+2. ``retro_set_environment`` with a capturing environment callback → an
+   enriched line adding ``options``: the option definitions the core
+   *registers* (key, default, values), in every format the API knows
+   (``SET_VARIABLES``, ``SET_CORE_OPTIONS``/``_INTL``, v2, v2 ``_INTL``;
+   command numbers and struct layouts per libretro.h @ RetroArch a79435a).
+
+Phase 2 is how the LRPS2 generation question becomes observable: which option
+keys a core registers identifies its generation better than any version
+string — and the registered defaults turn card defaults into live reads. A
+core that crashes in phase 2, or registers its options only later (e.g. in
+``retro_init``), simply yields no ``options`` — the caller treats that as
+*unknown*, never as "registers nothing".
 
 This is the same read RetroArch performs when it loads a core — a live read of
 the binary on disk, not a lookup.
@@ -16,6 +32,18 @@ import ctypes
 import json
 import os
 import sys
+from typing import Any
+
+RETRO_ENVIRONMENT_EXPERIMENTAL = 0x10000
+RETRO_ENVIRONMENT_SET_VARIABLES = 16
+RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION = 52
+RETRO_ENVIRONMENT_SET_CORE_OPTIONS = 53
+RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL = 54
+RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2 = 67
+RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2_INTL = 68
+
+RETRO_NUM_CORE_OPTION_VALUES_MAX = 128
+_MAX_DEFINITIONS = 4096  # defensive walk limit over NULL-terminated arrays
 
 
 class _RetroSystemInfo(ctypes.Structure):
@@ -28,8 +56,153 @@ class _RetroSystemInfo(ctypes.Structure):
     ]
 
 
+class _RetroVariable(ctypes.Structure):
+    _fields_ = [("key", ctypes.c_char_p), ("value", ctypes.c_char_p)]
+
+
+class _RetroCoreOptionValue(ctypes.Structure):
+    _fields_ = [("value", ctypes.c_char_p), ("label", ctypes.c_char_p)]
+
+
+class _RetroCoreOptionDefinition(ctypes.Structure):  # v1
+    _fields_ = [
+        ("key", ctypes.c_char_p),
+        ("desc", ctypes.c_char_p),
+        ("info", ctypes.c_char_p),
+        ("values", _RetroCoreOptionValue * RETRO_NUM_CORE_OPTION_VALUES_MAX),
+        ("default_value", ctypes.c_char_p),
+    ]
+
+
+class _RetroCoreOptionsIntl(ctypes.Structure):
+    _fields_ = [
+        ("us", ctypes.POINTER(_RetroCoreOptionDefinition)),
+        ("local", ctypes.POINTER(_RetroCoreOptionDefinition)),
+    ]
+
+
+class _RetroCoreOptionV2Definition(ctypes.Structure):
+    _fields_ = [
+        ("key", ctypes.c_char_p),
+        ("desc", ctypes.c_char_p),
+        ("desc_categorized", ctypes.c_char_p),
+        ("info", ctypes.c_char_p),
+        ("info_categorized", ctypes.c_char_p),
+        ("category_key", ctypes.c_char_p),
+        ("values", _RetroCoreOptionValue * RETRO_NUM_CORE_OPTION_VALUES_MAX),
+        ("default_value", ctypes.c_char_p),
+    ]
+
+
+class _RetroCoreOptionsV2(ctypes.Structure):
+    _fields_ = [
+        ("categories", ctypes.c_void_p),
+        ("definitions", ctypes.POINTER(_RetroCoreOptionV2Definition)),
+    ]
+
+
+class _RetroCoreOptionsV2Intl(ctypes.Structure):
+    _fields_ = [
+        ("us", ctypes.POINTER(_RetroCoreOptionsV2)),
+        ("local", ctypes.POINTER(_RetroCoreOptionsV2)),
+    ]
+
+
+_ENV_CALLBACK = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_uint, ctypes.c_void_p)
+
+
 def _decode(value: bytes | None) -> str | None:
     return value.decode("utf-8", "replace") if value else None
+
+
+def _option_values(values: "ctypes.Array[_RetroCoreOptionValue]") -> list[str]:
+    out: list[str] = []
+    for entry in values:
+        if not entry.value:
+            break
+        out.append(entry.value.decode("utf-8", "replace"))
+    return out
+
+
+class _OptionCapture:
+    """Collects option definitions from whichever SET call the core makes.
+
+    RetroArch applies the *last* registration when a core sends several
+    formats; walking every call and letting later ones overwrite earlier keys
+    mirrors that. ``seen`` stays False until any registration arrives — the
+    difference between "registers nothing" and "did not register here".
+    """
+
+    def __init__(self) -> None:
+        self.options: dict[str, dict[str, object]] = {}
+        self.seen = False
+
+    def _add(self, key: bytes | None, default: bytes | None, values: list[str]) -> None:
+        decoded = _decode(key)
+        if decoded:
+            self.options[decoded] = {"default": _decode(default), "values": values}
+
+    def handle(self, cmd: int, data: int | None) -> bool:
+        cmd &= ~RETRO_ENVIRONMENT_EXPERIMENTAL
+        if cmd == RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION:
+            if data:
+                ctypes.cast(data, ctypes.POINTER(ctypes.c_uint))[0] = 2
+            return True
+        if cmd == RETRO_ENVIRONMENT_SET_VARIABLES:
+            if data:
+                self.seen = True
+                variables = ctypes.cast(data, ctypes.POINTER(_RetroVariable))
+                for i in range(_MAX_DEFINITIONS):
+                    var = variables[i]
+                    if not var.key:
+                        break
+                    # "Description; default|second|third" — the first listed
+                    # value is the default (libretro.h, SET_VARIABLES).
+                    raw = _decode(var.value) or ""
+                    _, _, value_part = raw.partition("; ")
+                    values = value_part.split("|") if value_part else []
+                    self._add(var.key, values[0].encode() if values else None, values)
+            return True
+        if cmd == RETRO_ENVIRONMENT_SET_CORE_OPTIONS:
+            if data:
+                self._walk_v1(ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionDefinition)))
+            return True
+        if cmd == RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL:
+            if data:
+                intl = ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsIntl))[0]
+                if intl.us:
+                    self._walk_v1(intl.us)
+            return True
+        if cmd == RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2:
+            if data:
+                self._walk_v2(ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsV2))[0])
+            return True
+        if cmd == RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2_INTL:
+            if data:
+                intl = ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsV2Intl))[0]
+                if intl.us:
+                    self._walk_v2(intl.us[0])
+            return True
+        # Everything else is honestly unsupported; cores handle a false return.
+        return False
+
+    def _walk_v1(self, definitions: Any) -> None:
+        self.seen = True
+        for i in range(_MAX_DEFINITIONS):
+            definition = definitions[i]
+            if not definition.key:
+                break
+            self._add(definition.key, definition.default_value, _option_values(definition.values))
+
+    def _walk_v2(self, options: _RetroCoreOptionsV2) -> None:
+        self.seen = True
+        if not options.definitions:
+            return
+        for i in range(_MAX_DEFINITIONS):
+            definition = options.definitions[i]
+            if not definition.key:
+                break
+            self._add(definition.key, definition.default_value, _option_values(definition.values))
 
 
 def main(argv: list[str]) -> int:
@@ -48,14 +221,22 @@ def main(argv: list[str]) -> int:
     if not name:
         print("core reported no library_name", file=sys.stderr)
         return 1
-    json.dump(
-        {
-            "library_name": name,
-            "library_version": _decode(info.library_version),
-            "valid_extensions": _decode(info.valid_extensions),
-        },
-        sys.stdout,
-    )
+    base = {
+        "library_name": name,
+        "library_version": _decode(info.library_version),
+        "valid_extensions": _decode(info.valid_extensions),
+    }
+    # Phase 1: the base line survives even if phase 2 crashes the process.
+    print(json.dumps(base), flush=True)
+
+    capture = _OptionCapture()
+    callback = _ENV_CALLBACK(lambda cmd, data: capture.handle(cmd, data))
+    try:
+        lib.retro_set_environment(callback)
+    except (OSError, AttributeError):
+        return 0
+    if capture.seen:
+        print(json.dumps({**base, "options": capture.options}), flush=True)
     return 0
 
 

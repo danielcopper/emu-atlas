@@ -52,10 +52,11 @@ bare-RetroArch catalogue, override enumeration without a core, deviation warning
 
 ### 3. Card variants via feature detection
 
-Multi-generation cards dispatched on observable facts (which option keys the core registers), enabled by extending
-`query_core` to capture option definitions from `retro_set_environment` — also turns option defaults into live reads and
-gives probe failures distinct reporting. One vector per generation, kept forever. Design in
-`docs/research/core-audit.md`.
+**Foundation done:** `query_core` captures registered option definitions; card applicability is decided on the
+observable key (registered → confirmed, version drift demoted to provenance; missing → card retired with
+`card-generation-mismatch`); registered defaults and value sets are live reads. Remaining: per-generation card
+_variants_ keyed by their option signature — added when an old generation actually gets audited — and distinct
+probe-failure reporting. Design in `docs/research/core-audit.md`.
 
 ### 4. Standalone emulators (the second big block)
 
