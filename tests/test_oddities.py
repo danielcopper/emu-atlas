@@ -235,6 +235,110 @@ class TestLRPS2Card:
         assert p.file_set.files == ("Mcd001.ps2",)
 
 
+class TestFeatureDetection:
+    """Card applicability decided by what the core observably registers.
+
+    Key registered → card confirmed, version drift demoted to provenance.
+    Key gone → the card describes another generation and steps aside.
+    Options not captured → unknown; the version comparison keeps working.
+    """
+
+    FLYCAST_OPTIONS = {
+        "reicast_per_content_vmus": {
+            "default": "disabled",
+            "values": ["disabled", "VMU A1", "All VMUs"],
+        }
+    }
+
+    def _flycast(self, core_spec, files=None, rd_json=RD_JSON):
+        base = {
+            RETRODECK_JSON: rd_json,
+            RETRODECK_CFG: CFG,
+            ROM: "",
+            SAVES_KEEP: "",
+        }
+        base.update(files or {})
+        rd = _retrodeck(base, cores={f"{DEPLOY}/flycast_libretro.so": core_spec})
+        return rd.save_location(content_path=ROM, core_so="flycast_libretro.so")
+
+    def test_registered_key_confirms_card_despite_version_drift(self):
+        # Version drifted (fffffff ≠ pinned 1dac369), but the governing option
+        # is observably registered — no false alarm, decision on evidence.
+        p = self._flycast(
+            {
+                "library_name": "Flycast",
+                "library_version": "fffffff",
+                "options": self.FLYCAST_OPTIONS,
+            },
+            rd_json='{"version": "0.10.9b", "paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}',
+        )
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY  # card applied
+        assert not any(c.code == atlas.CAVEAT_UNVERIFIED_VERSION for c in p.caveats)
+        assert any("feature-detected" in s for s in p.sources)
+        assert any("version records differ" in s for s in p.sources)
+
+    def test_missing_key_retires_the_card(self):
+        # The LRPS2 lesson as a Flycast fixture: the core registers a
+        # different option vocabulary — the card must not be applied.
+        p = self._flycast(
+            {
+                "library_name": "Flycast",
+                "options": {"flycast_vmu_layout": {"default": "new", "values": ["new", "old"]}},
+            }
+        )
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY  # standard frame
+        assert p.granularity is None
+        mismatch = [c for c in p.caveats if c.code == atlas.CAVEAT_CARD_GENERATION_MISMATCH]
+        assert mismatch and mismatch[0].data["card"] == "flycast"
+
+    def test_uncaptured_options_fall_back_to_version_comparison(self):
+        p = self._flycast({"library_name": "Flycast"})
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY  # card applied as before
+        stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
+        assert stale  # runtime-version-unknown — unchanged behaviour
+
+    def test_live_default_outranks_card_default(self):
+        # The registered default says per-game VMUs — a generation that
+        # flipped its default. No options file present: the live default
+        # governs, not the card's shipped-generation copy.
+        options = {
+            "reicast_per_content_vmus": {
+                "default": "VMU A1",
+                "values": ["disabled", "VMU A1", "All VMUs"],
+            }
+        }
+        p = self._flycast({"library_name": "Flycast", "options": options})
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
+        assert p.granularity is not None
+        assert p.granularity.option_value == "VMU A1"
+
+    def test_stored_value_validated_against_live_definition(self):
+        # Persisted junk value: RetroArch keeps the core default — confirmed
+        # against the LIVE value set, applied via the card's default mode.
+        p = self._flycast(
+            {"library_name": "Flycast", "options": self.FLYCAST_OPTIONS},
+            files={OPTIONS_CFG: 'reicast_per_content_vmus = "sideways"\n'},
+        )
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
+        assert any(c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE for c in p.caveats)
+
+    def test_live_value_unknown_to_card_is_generation_drift(self):
+        # The live core registers a value the card has never heard of, and
+        # the user selected it — the card lags the generation; never guess.
+        options = {
+            "reicast_per_content_vmus": {
+                "default": "disabled",
+                "values": ["disabled", "VMU A1", "All VMUs", "VMU A1+A2"],
+            }
+        }
+        p = self._flycast(
+            {"library_name": "Flycast", "options": options},
+            files={OPTIONS_CFG: 'reicast_per_content_vmus = "VMU A1+A2"\n'},
+        )
+        assert p.granularity is None
+        assert any(c.code == atlas.CAVEAT_CARD_GENERATION_MISMATCH for c in p.caveats)
+
+
 class TestOperaCard:
     """3DO NVRAM: the core nests opera/per_game|shared under the save directory."""
 

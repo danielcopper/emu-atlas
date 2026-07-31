@@ -133,6 +133,38 @@ class TestFixtureCores:
         info = m.query_core("/cores/mgba_libretro.so")
         assert info == CoreInfo(library_name="mGBA", library_version=None, valid_extensions=None)
 
+    def test_absent_options_are_unknown_not_empty(self):
+        m = FixtureMachine({}, cores={"/cores/mgba_libretro.so": {"library_name": "mGBA"}})
+        info = m.query_core("/cores/mgba_libretro.so")
+        assert info is not None and info.options is None
+
+    def test_registered_options_are_captured(self):
+        m = FixtureMachine(
+            {},
+            cores={
+                "/cores/flycast_libretro.so": {
+                    "library_name": "Flycast",
+                    "options": {
+                        "reicast_per_content_vmus": {
+                            "default": "disabled",
+                            "values": ["disabled", "VMU A1"],
+                        }
+                    },
+                }
+            },
+        )
+        info = m.query_core("/cores/flycast_libretro.so")
+        assert info is not None and info.options is not None
+        option = info.options["reicast_per_content_vmus"]
+        assert option.default == "disabled"
+        assert option.values == ("disabled", "VMU A1")
+
+    def test_empty_options_map_means_registered_nothing(self):
+        # {} is evidence ("registered, and none are there"), unlike absence.
+        m = FixtureMachine({}, cores={"/cores/x_libretro.so": {"library_name": "X", "options": {}}})
+        info = m.query_core("/cores/x_libretro.so")
+        assert info is not None and info.options == {}
+
     def test_unloadable_core_is_none(self):
         m = FixtureMachine({}, cores={"/cores/applewin_libretro.so": None})
         assert m.query_core("/cores/applewin_libretro.so") is None

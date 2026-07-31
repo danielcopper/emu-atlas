@@ -41,7 +41,7 @@ from atlas.installations import (
     RetroDeck,
     StandaloneRetroArchFlatpak,
 )
-from atlas.machine import CoreInfo, FixtureMachine, Machine, RealMachine
+from atlas.machine import CoreInfo, CoreOption, FixtureMachine, Machine, RealMachine
 from atlas.oddities import (
     AuditEntry,
     CoreCard,
@@ -63,6 +63,7 @@ from atlas.placement import (
     CAVEAT_SYSTEM_DIR_UNSET,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     CAVEAT_UNVERIFIED_VERSION,
+    CAVEAT_CARD_GENERATION_MISMATCH,
     CAVEAT_CARD_MODE_UNCONFIRMED,
     CAVEAT_CORE_SUSPECT,
     CAVEAT_CORE_UNAUDITED,
@@ -109,6 +110,7 @@ __all__ = [
     "CAVEAT_INVALID_SAVE_DIRECTORY",
     "CAVEAT_CORE_UNAUDITED",
     "CAVEAT_CORE_SUSPECT",
+    "CAVEAT_CARD_GENERATION_MISMATCH",
     "CAVEAT_CARD_MODE_UNCONFIRMED",
     "CAVEAT_SORTED_DIR_UNCREATABLE",
     "CAVEAT_CORE_UNQUERYABLE",
@@ -124,6 +126,7 @@ __all__ = [
     "Caveat",
     "BiosRegistry",
     "CoreInfo",
+    "CoreOption",
     "EMUDECK_DEFAULTS",
     "EmuDeck",
     "EmulatorEntry",

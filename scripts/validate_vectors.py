@@ -69,6 +69,7 @@ KNOWN_CAVEAT_CODES = {
     "core-suspect",
     "core-unaudited",
     "card-mode-unconfirmed",
+    "card-generation-mismatch",
 }
 KNOWN_UNRESOLVED_CODES = {"standalone-unsupported"}
 
@@ -150,6 +151,21 @@ def _validate_input(name: str, inp: Any) -> None:
             continue  # present but unloadable
         if not isinstance(spec, dict) or not isinstance(spec.get("library_name"), str):
             fail(f"{name}: input.cores[{so_path!r}] must be null or an object with a string library_name")
+        options = spec.get("options")
+        if options is not None:
+            if not isinstance(options, dict):
+                fail(f"{name}: input.cores[{so_path!r}].options must be an object of option definitions")
+            for opt_key, opt_spec in options.items():
+                if (
+                    not isinstance(opt_key, str)
+                    or not isinstance(opt_spec, dict)
+                    or not set(opt_spec) <= {"default", "values"}
+                    or not isinstance(opt_spec.get("values", []), list)
+                ):
+                    fail(
+                        f"{name}: input.cores[{so_path!r}].options[{opt_key!r}] must be "
+                        "{'default': str|null, 'values': [str, ...]}"
+                    )
     if "query" in inp:
         _validate_query(name, inp["query"])
     if "catalogue_query" in inp:

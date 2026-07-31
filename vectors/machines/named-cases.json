@@ -1726,6 +1726,161 @@
           ]
         }
       }
+    },
+    {
+      "name": "feature-detection-confirms-card-over-version-drift",
+      "rationale": "The generation question decided by evidence, not version strings: the arrangement version drifted from the card's pin, but the probe shows the core REGISTERS the governing option with the card's value set — the card applies, no unverified-version alarm; the demotion is recorded in prose provenance (non-contractual).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.11.0\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "9999999",
+            "options": {
+              "reicast_per_content_vmus": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "VMU A1",
+                  "All VMUs"
+                ]
+              }
+            }
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/bios/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "feature-detection-retires-mismatched-card",
+      "rationale": "The LRPS2 lesson, structurally: this core generation does not register the card's governing option — the card describes another generation and steps aside instead of guessing. The answer is the standard frame with a card-generation-mismatch caveat; granularity is honestly absent.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369",
+            "options": {
+              "flycast_per_content_vmus2": {
+                "default": "off",
+                "values": [
+                  "off",
+                  "on"
+                ]
+              }
+            }
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": "/mnt/sd/retrodeck/saves",
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "card-generation-mismatch",
+              "data": {
+                "card": "flycast",
+                "option_key": "reicast_per_content_vmus"
+              }
+            },
+            {
+              "code": "sorted-dir-missing",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+                "fallback_dir": "/mnt/sd/retrodeck/saves"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

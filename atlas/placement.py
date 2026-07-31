@@ -70,6 +70,7 @@ CAVEAT_INVALID_SAVE_DIRECTORY = "invalid-save-directory"
 CAVEAT_CORE_SUSPECT = "core-suspect"
 CAVEAT_CORE_UNAUDITED = "core-unaudited"
 CAVEAT_CARD_MODE_UNCONFIRMED = "card-mode-unconfirmed"
+CAVEAT_CARD_GENERATION_MISMATCH = "card-generation-mismatch"
 CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
 CAVEAT_DEAD_SYMLINK = "dead-symlink"
 
