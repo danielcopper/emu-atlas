@@ -7,7 +7,8 @@ way the emulator does. The one rule that decides every "table or live?" question
 > knowledge is marked, versioned, and source-cited.
 
 Spec: `DESIGN.md`. Plan: `ROADMAP.md`. Where to pick up core work: `docs/research/coverage-matrix.md` (generated).
-Evidence: `docs/research/`. Itemized gaps: `docs/tasks/save-detection.md`.
+Evidence: `docs/research/`. Itemized gaps: `docs/tasks/save-detection.md`. Session-spanning working state (the live
+verification round, its protocol and baseline): `.claude/memory/` — read `MEMORY.md` there before resuming audit work.
 
 ## Ground rules
 
