@@ -93,6 +93,9 @@ CAVEAT_STANDALONE_EMULATOR = "standalone-emulator"
 CAVEAT_CATALOGUE_UNAVAILABLE = "emulator-catalogue-unavailable"
 CAVEAT_FIRMWARE_UNREADABLE = "firmware-unreadable"
 CAVEAT_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
+CAVEAT_SYSTEM_UNKNOWN = "system-unknown"
+CAVEAT_SYSTEM_ASSIGNMENT_DERIVED = "system-assignment-derived"
+CAVEAT_CORE_WITHOUT_SYSTEMNAME = "core-without-systemname"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
 # both declare firmware0_path = "filename.ext" with opt = "true/false". The
@@ -342,7 +345,24 @@ SYSTEMNAME_TO_SLUG: Mapping[str, str] = {
 # Per-file system overrides for multi-system cores. A core covering several
 # systems carries one ``systemname``, but its firmware belongs to different
 # systems — mGBA declares the Game Boy boot ROMs under "Game Boy/Game Boy
-# Color/Game Boy Advance". World knowledge, same as the map above.
+# Color/Game Boy Advance".
+#
+# Evidence level [D], derived — **not** [V]. Provenance: each entry is atlas's
+# reading of which machine a dump belongs to, cross-read against the platform
+# keys in RomM's ``backend/models/fixtures/known_bios_files.json``. There is no
+# upstream source that states this per file: libretro's ``.info`` carries one
+# ``systemname`` for the whole core and nothing per firmware entry, and
+# ``System.dat`` keys identities by name without a system. The disagreements are
+# real and this table takes a side: the Super Game Boy dumps (``SGB1.sfc``,
+# ``sgb_bios.bin``, …) are filed under ``snes`` here because the cartridge runs
+# in an SNES, while RomM files the same bytes under ``super-gb``.
+#
+# Deliberately incomplete, and not to be completed by hand — the set of boot-ROM
+# variants grows with every core release (SkyEmu alone adds ``dmg_rom.bin``,
+# ``dmg0_rom.bin``, ``cgb0_boot.bin``, ``cgb_agb_boot.bin``). A declaration this
+# table does not cover falls back to the core's ``systemname``, and where that
+# fallback can be wrong the answer says so — see
+# :func:`system_assignment_caveats`. Visible beats silent.
 FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
     # Game Boy family (mGBA, VBA-M, Mesen-S, Gambatte, SameBoy, …)
     "gb_bios.bin": "gb",
@@ -368,24 +388,40 @@ FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
 
 _NON_SLUG = re.compile(r"[^a-z0-9]+")
 
+SystemSource = Literal["override", "systemname", "slug", "none"]
 
-def system_for(file_name: str, systemname: str) -> str:
-    """The atlas system slug a declared file belongs to.
+SOURCE_OVERRIDE: SystemSource = "override"
+SOURCE_SYSTEMNAME: SystemSource = "systemname"
+SOURCE_SLUG: SystemSource = "slug"
+SOURCE_NONE: SystemSource = "none"
 
-    The per-file override wins (multi-system cores), then the ``systemname``
-    map. A ``systemname`` the map does not know is *slugified* rather than
-    dropped — a mechanical normalization of a string read off the machine, so
-    every declaration stays reachable by some slug — and an empty
-    ``systemname`` yields ``_unknown``.
+
+def system_decision(file_name: str, systemname: str) -> tuple[str, SystemSource]:
+    """The system slug for a declared file, *and how it was arrived at*.
+
+    Four ways, in order: the per-file override (the only one that knows which
+    machine a dump belongs to), the ``systemname`` map, a mechanical slug of an
+    unmapped ``systemname`` (so every declaration stays reachable by some slug),
+    and — when the ``.info`` states no ``systemname`` at all — ``_unknown``.
+
+    The *source* is the point. Everything but ``override`` assigns a file by
+    what its whole core is called, which is only sound while the core covers one
+    system. :func:`system_assignment_caveats` turns that into a stated caveat
+    instead of a silent guess.
     """
     override = FIRMWARE_SYSTEM_OVERRIDE.get(file_name)
     if override is not None:
-        return override
+        return override, SOURCE_OVERRIDE
     known = SYSTEMNAME_TO_SLUG.get(systemname)
     if known is not None:
-        return known
+        return known, SOURCE_SYSTEMNAME
     slug = _NON_SLUG.sub("-", systemname.lower()).strip("-")
-    return slug or "_unknown"
+    return (slug, SOURCE_SLUG) if slug else ("_unknown", SOURCE_NONE)
+
+
+def system_for(file_name: str, systemname: str) -> str:
+    """The atlas system slug a declared file belongs to."""
+    return system_decision(file_name, systemname)[0]
 
 
 @dataclass(frozen=True, slots=True)
@@ -403,6 +439,7 @@ class FirmwareDeclaration:
     description: str
     need: FirmwareNeed
     system: str
+    system_source: SystemSource
 
 
 @dataclass(frozen=True, slots=True)
@@ -413,6 +450,16 @@ class CoreDeclarations:
     nothing. That is the whole point: "this core is here and wants no firmware"
     is an answer, and it is a different answer from "atlas does not know this
     core", which has no :class:`CoreDeclarations` at all.
+
+    ``database`` is the ``.info`` field of that name, split on ``|``: the
+    libretro-database names the core covers. It is read purely as a *signal* —
+    more than one entry means the core serves several systems, which is what
+    makes a per-file assignment by ``systemname`` questionable. It is
+    deliberately not used to assign a system: it is a different vocabulary
+    (``Sinclair - ZX 81`` where ``systemname`` says ``ZX81``), and on a real
+    installation 88 of 117 single-entry database names are unknown to the
+    ``systemname`` map — leaning on it would mean maintaining a second table of
+    the same size.
     """
 
     core_so: str
@@ -420,12 +467,14 @@ class CoreDeclarations:
     systemname: str
     system: str
     firmware: tuple[FirmwareDeclaration, ...]
+    database: tuple[str, ...] = ()
 
 
-def _declarations_in(text: str) -> tuple[str, tuple[FirmwareDeclaration, ...]]:
-    """Parse one ``.info`` file into its ``systemname`` and firmware block."""
+def _declarations_in(text: str) -> tuple[str, tuple[str, ...], tuple[FirmwareDeclaration, ...]]:
+    """Parse one ``.info`` file into ``systemname``, ``database`` and firmware."""
     fields = parse_core_info(text)
     systemname = fields.get("systemname", "")
+    database = tuple(entry for entry in fields.get("database", "").split("|") if entry)
     declarations: list[FirmwareDeclaration] = []
     for key, path in fields.items():
         if not key.startswith("firmware") or not key.endswith("_path") or not path:
@@ -438,16 +487,18 @@ def _declarations_in(text: str) -> tuple[str, tuple[FirmwareDeclaration, ...]]:
             continue
         # A missing _opt means required (libretro's own reading).
         optional = fields.get(f"firmware{index}_opt", "false").strip().lower() == "true"
+        system, source = system_decision(file_name, systemname)
         declarations.append(
             FirmwareDeclaration(
                 path=path,
                 file_name=file_name,
                 description=fields.get(f"firmware{index}_desc", ""),
                 need=NEED_OPTIONAL if optional else NEED_REQUIRED,
-                system=system_for(file_name, systemname),
+                system=system,
+                system_source=source,
             )
         )
-    return systemname, tuple(declarations)
+    return systemname, database, tuple(declarations)
 
 
 def read_core_declarations(
@@ -476,7 +527,7 @@ def read_core_declarations(
         text = machine.read_text(info_path).text
         if text is None:
             continue
-        systemname, declarations = _declarations_in(text)
+        systemname, database, declarations = _declarations_in(text)
         cores.append(
             CoreDeclarations(
                 core_so=f"{stem}.so",
@@ -484,9 +535,72 @@ def read_core_declarations(
                 systemname=systemname,
                 system=system_for("", systemname),
                 firmware=declarations,
+                database=database,
             )
         )
     return tuple(sorted(cores, key=lambda c: c.core_so))
+
+
+def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
+    """State it when a core's firmware was filed by what the *core* is called.
+
+    Only the per-file override knows which machine a dump belongs to. Every
+    other route assigns a file by its core's ``systemname``, which is sound
+    exactly while the core covers one system — and the ``.info`` says when it
+    does not: ``database`` names every system the core serves.
+
+    Two distinct cases, never one bucket:
+
+    - **No ``systemname`` at all.** SkyEmu ships none, only a ``database``
+      naming three systems, so eight of its ten declarations land on
+      ``_unknown``. That is not a fallback that might be wrong, it is no
+      assignment at all, and it gets its own code.
+    - **Fallback on a multi-system core.** The core names one system, its
+      ``database`` names several, and at least one file was filed by the
+      former. mGBA's ``gba_bios.bin`` goes this way.
+
+    A core whose declarations are all override-assigned states nothing — there
+    is nothing uncertain to state. Neither does a core that declares no
+    firmware.
+    """
+    derived = tuple(d.file_name for d in core.firmware if d.system_source != SOURCE_OVERRIDE)
+    if not derived:
+        return ()
+    files = ", ".join(sorted(set(derived)))
+    if not core.systemname:
+        covers = (
+            f"its database field names {len(core.database)} systems ({'|'.join(core.database)})"
+            if core.database
+            else "and its .info names no database either, so nothing on the machine says what it covers"
+        )
+        return (
+            Caveat(
+                CAVEAT_CORE_WITHOUT_SYSTEMNAME,
+                f"{core.core_so} states no systemname in its .info, so nothing says which of its systems "
+                f"these files belong to and they are filed as _unknown: {files} — {covers}",
+                {
+                    "core_so": core.core_so,
+                    "files": files,
+                    "database": "|".join(core.database),
+                },
+            ),
+        )
+    if len(core.database) > 1:
+        return (
+            Caveat(
+                CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
+                f"{core.core_so} serves {len(core.database)} systems but states one systemname "
+                f"({core.systemname!r}); these files carry no per-file rule and were filed by it, so their "
+                f"system is derived and may be wrong: {files}",
+                {
+                    "core_so": core.core_so,
+                    "systemname": core.systemname,
+                    "files": files,
+                    "database": "|".join(core.database),
+                },
+            ),
+        )
+    return ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -781,7 +895,7 @@ def _resolve_cores(
                 label=None if labels is None else labels.get(core.core_so),
                 installed=True,
                 requirements=requirements,
-                caveats=(),
+                caveats=system_assignment_caveats(core),
             )
         )
     return tuple(resolved), answer_caveats
@@ -806,6 +920,15 @@ def firmware_for_core(
         return _empty_answer(context)
     match = next((c for c in context.cores if c.stem == stem), None)
     if match is None:
+        # The core-level twin of an unknown system: the caller named something
+        # this installation does not have. Saying "no firmware declared" here
+        # would read as "needs nothing" for a core that may declare plenty.
+        not_installed = Caveat(
+            CAVEAT_CORE_NOT_INSTALLED,
+            f"{stem}.so is not installed here (no .info of that name among the installed cores) — atlas has "
+            "no declaration for it, so the empty list means unknown, not 'needs nothing'",
+            {"core_so": f"{stem}.so"},
+        )
         return FirmwareAnswer(
             root=context.root,
             cores=(
@@ -814,21 +937,13 @@ def firmware_for_core(
                     label=None,
                     installed=False,
                     requirements=(),
-                    caveats=(
-                        Caveat(
-                            CAVEAT_CORE_NOT_INSTALLED,
-                            f"{stem}.so is not installed here (no .info of that name among the installed "
-                            "cores) — atlas has no declaration for it, so the empty list below means "
-                            "unknown, not 'needs nothing'",
-                            {"core_so": f"{stem}.so"},
-                        ),
-                    ),
+                    caveats=(not_installed,),
                 ),
             ),
             unclaimed=(),
             hash_checked=verify,
             sources=context.sources,
-            caveats=(*context.caveats, _no_declaration(f"firmware for core {stem}.so", {"core_so": f"{stem}.so"})),
+            caveats=(*context.caveats, not_installed),
         )
     cores, caveats = _resolve_cores(machine, context, (match,), verify=verify)
     return FirmwareAnswer(
@@ -938,11 +1053,26 @@ def firmware_for_system(
                     label=entry.label,
                     installed=True,
                     requirements=requirements,
-                    caveats=(),
+                    caveats=system_assignment_caveats(core),
                 )
             )
 
-    if not any(c.installed for c in resolved):
+    if not resolved:
+        # Nothing here covers that identifier — a different answer from "nobody
+        # declares firmware for it", and a different thing for a client to do.
+        # A consumer working in RomM slugs that forgets to translate ("dc" for
+        # ES-DE's "dreamcast") lands exactly here, and must not read it as
+        # "nothing needed".
+        caveats.append(
+            Caveat(
+                CAVEAT_SYSTEM_UNKNOWN,
+                f"no emulator on this machine covers the system {system!r} — nothing was resolved, so this "
+                "empty answer says the identifier is unknown here, not that nothing is needed; check the "
+                "vocabulary before reading it as complete",
+                {"system": system},
+            )
+        )
+    elif not any(c.installed for c in resolved):
         caveats.append(_no_declaration(f"firmware for system {system!r}", {"system": system}))
 
     return FirmwareAnswer(
@@ -1085,6 +1215,13 @@ def identify_firmware(
                 {"md5": identity.md5},
             )
         )
+    # An identification hands back requirements without their emulator, so any
+    # caveat about how those requirements got their system has to travel with
+    # them or it is lost.
+    wanting = {r.core_so for r in wanted}
+    for core in inventory.cores:
+        if core.core_so in wanting:
+            caveats.extend(core.caveats)
     return FirmwareIdentification(
         identity=identity, requirements=wanted, sources=context.sources, caveats=tuple(caveats)
     )

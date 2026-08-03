@@ -105,7 +105,7 @@
           "unclaimed": [],
           "caveats": [
             {
-              "code": "no-firmware-declaration",
+              "code": "core-not-installed",
               "data": {
                 "core_so": "mgba_libretro.so"
               }
@@ -653,8 +653,8 @@
       }
     },
     {
-      "name": "firmware-system-nobody-declares-is-empty-not-satisfied",
-      "rationale": "The defect this design exists to prevent. Asking about a system no installed core covers must yield an EMPTY list plus stated caveats — a caller that ignores caveats then sees nothing, which is honest, instead of 'no required files missing', which is a lie. The second caveat is load bearing too: without a frontend catalogue the emulators come from the cores' own systemname, so the identifier is an atlas slug and the answer says so.",
+      "name": "firmware-system-identifier-unknown-here-is-not-nothing-needed",
+      "rationale": "The defect this design exists to prevent, and the half of it that a single caveat code used to hide. Nothing on this machine covers 'n64', so the answer is EMPTY plus 'system-unknown' — the identifier is not known here. That is a different instruction to a client than 'nobody declares firmware for it': one says check your vocabulary, the other says nothing to do. A consumer working in RomM slugs that forgets to translate to the frontend's names lands exactly here. The second caveat is load bearing too: without a frontend catalogue the emulators come from the cores' own systemname, so the identifier is an atlas slug and the answer says so.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -696,12 +696,338 @@
               }
             },
             {
-              "code": "no-firmware-declaration",
+              "code": "system-unknown",
               "data": {
                 "system": "n64"
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-system-known-but-no-emulator-readable",
+      "rationale": "The other half of the split. ES-DE knows this system and names an emulator for it, so the identifier is right — what is missing is the core, and 'no-firmware-declaration' says there is no declaration to check against. A client must not read this as 'gb needs nothing': TGB Dual may declare plenty, it is simply not installed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"TGB Dual\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/tgbdual_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "tgbdual_libretro.so",
+              "label": "TGB Dual",
+              "installed": false,
+              "requirements": [],
+              "caveats": [
+                {
+                  "code": "core-not-installed",
+                  "data": {
+                    "core_so": "tgbdual_libretro.so",
+                    "label": "TGB Dual"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "no-firmware-declaration",
+              "data": {
+                "system": "gb"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-system-filed-by-the-core-name-says-so",
+      "rationale": "Only the per-file rule knows which machine a dump belongs to. mGBA serves three systems by its own database field but states one systemname, and gba_bios.bin carries no per-file rule — so its system was derived from what the whole core is called and may be wrong. The caveat names exactly which files went that way; gb_bios.bin does not appear in it, because a rule covered it. Visible beats silent: the table is deliberately not completed by hand, so the gap is reported instead.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mgba_libretro.info": "display_name = \"Nintendo - GB/GBC/GBA (mGBA)\"\nsystemname = \"Game Boy/Game Boy Color/Game Boy Advance\"\ndatabase = \"Nintendo - Game Boy|Nintendo - Game Boy Color|Nintendo - Game Boy Advance\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gba_bios.bin (Game Boy Advance BIOS)\"\nfirmware1_path = \"gba_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/mgba_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mgba_libretro.so",
+              "label": null,
+              "installed": true,
+              "requirements": [
+                {
+                  "core_so": "mgba_libretro.so",
+                  "system": "gb",
+                  "need": "optional",
+                  "file_name": "gb_bios.bin",
+                  "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
+                  "identity": {
+                    "md5": "32fbbd84168d3482956eb3c5051637f5",
+                    "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+                    "size": 256
+                  },
+                  "present": false,
+                  "checked": null
+                },
+                {
+                  "core_so": "mgba_libretro.so",
+                  "system": "gba",
+                  "need": "optional",
+                  "file_name": "gba_bios.bin",
+                  "path": "/home/deck/.config/retroarch/system/gba_bios.bin",
+                  "identity": {
+                    "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+                    "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+                    "size": 16384
+                  },
+                  "present": false,
+                  "checked": null
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "mgba_libretro.so",
+                    "systemname": "Game Boy/Game Boy Color/Game Boy Advance",
+                    "files": "gba_bios.bin",
+                    "database": "Nintendo - Game Boy|Nintendo - Game Boy Color|Nintendo - Game Boy Advance"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-multi-system-core-fully-ruled-states-nothing",
+      "rationale": "The counterpart, and the reason the caveat is not noise. This core also serves several systems, but every file it declares carries a per-file rule, so nothing about its assignment is derived and there is nothing to state. The signal fires on the gap, not on multi-system cores as such.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/covered_libretro.info": "display_name = \"Nintendo - GB/GBC (fully ruled)\"\nsystemname = \"Game Boy/Game Boy Color\"\ndatabase = \"Nintendo - Game Boy|Nintendo - Game Boy Color\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/covered_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "covered_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "covered_libretro.so",
+              "label": null,
+              "installed": true,
+              "requirements": [
+                {
+                  "core_so": "covered_libretro.so",
+                  "system": "gb",
+                  "need": "optional",
+                  "file_name": "gb_bios.bin",
+                  "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
+                  "identity": {
+                    "md5": "32fbbd84168d3482956eb3c5051637f5",
+                    "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+                    "size": 256
+                  },
+                  "present": false,
+                  "checked": null
+                },
+                {
+                  "core_so": "covered_libretro.so",
+                  "system": "gbc",
+                  "need": "optional",
+                  "file_name": "gbc_bios.bin",
+                  "path": "/home/deck/.config/retroarch/system/gbc_bios.bin",
+                  "identity": {
+                    "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+                    "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
+                    "size": 2304
+                  },
+                  "present": false,
+                  "checked": null
+                }
+              ],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-core-without-a-systemname-is-its-own-case",
+      "rationale": "SkyEmu ships no systemname at all — only a database naming three systems. That is not a fallback that might be wrong, it is no assignment at all, so its files land on the _unknown slug and get their own caveat code rather than being lumped in with 'the systemname is unmapped'. The per-file rule still applies where it has one, so cgb_boot.bin is filed as gbc: this is a stated gap, not a blanket 'nothing is known about this core'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/skyemu_libretro.info": "display_name = \"Multi (SkyEmu)\"\ndatabase = \"Nintendo - Nintendo DS|Nintendo - Game Boy|Nintendo - Game Boy Advance\"\nfirmware_count = 3\nfirmware0_desc = \"cgb_boot.bin (Game Boy Color boot ROM)\"\nfirmware0_path = \"cgb_boot.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gba_bios.bin (Game Boy Advance BIOS)\"\nfirmware1_path = \"gba_bios.bin\"\nfirmware1_opt = \"true\"\nfirmware2_desc = \"nds7.bin (DS ARM7 BIOS)\"\nfirmware2_path = \"nds7.bin\"\nfirmware2_opt = \"true\"\n",
+          "/usr/lib/libretro/skyemu_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "skyemu_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "skyemu_libretro.so",
+              "label": null,
+              "installed": true,
+              "requirements": [
+                {
+                  "core_so": "skyemu_libretro.so",
+                  "system": "gbc",
+                  "need": "optional",
+                  "file_name": "cgb_boot.bin",
+                  "path": "/home/deck/.config/retroarch/system/cgb_boot.bin",
+                  "identity": {
+                    "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+                    "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
+                    "size": 2304
+                  },
+                  "present": false,
+                  "checked": null
+                },
+                {
+                  "core_so": "skyemu_libretro.so",
+                  "system": "_unknown",
+                  "need": "optional",
+                  "file_name": "gba_bios.bin",
+                  "path": "/home/deck/.config/retroarch/system/gba_bios.bin",
+                  "identity": {
+                    "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+                    "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+                    "size": 16384
+                  },
+                  "present": false,
+                  "checked": null
+                },
+                {
+                  "core_so": "skyemu_libretro.so",
+                  "system": "_unknown",
+                  "need": "optional",
+                  "file_name": "nds7.bin",
+                  "path": "/home/deck/.config/retroarch/system/nds7.bin",
+                  "identity": null,
+                  "present": false,
+                  "checked": null
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "core-without-systemname",
+                  "data": {
+                    "core_so": "skyemu_libretro.so",
+                    "files": "gba_bios.bin, nds7.bin",
+                    "database": "Nintendo - Nintendo DS|Nintendo - Game Boy|Nintendo - Game Boy Advance"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
         }
       }
     },

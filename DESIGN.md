@@ -238,6 +238,18 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
   `installed` plus a caveat, never by list length. A file nobody declares is not a requirement at all; it is an
   `UnclaimedFile`, identified by **content**, and save data the rule cards claim never appears there. Hash checking is
   opt-in (`verify=`): policy and caching belong to the caller, not the library.
+- **A derived system assignment is stated, not hidden.** Only the per-file override table knows which machine a firmware
+  dump belongs to, and it is `[D]`, deliberately incomplete, and not to be completed by hand — boot-ROM variants arrive
+  with every core release. Everything else files a file by what its whole _core_ is called, which holds exactly while
+  the core covers one system, and the `.info` says when it does not: `database` names every system the core serves. When
+  a declaration falls back on a multi-system core, the answer carries `system-assignment-derived` naming the exact
+  files; a core with no `systemname` at all is a different state with its own code. `database` is read as that signal
+  only — it is a different vocabulary (`Sinclair - ZX 81` where `systemname` says `ZX81`), so assigning from it would
+  mean maintaining a second table of the same size.
+- **An empty answer says which kind of empty it is.** `system-unknown` means nothing here covers that identifier — a
+  consumer that failed to translate its own vocabulary lands there. `no-firmware-declaration` means the subject is
+  covered but no declaration could be established. One code for both would read as "nothing needed" in the case where
+  the right instruction is "you asked in the wrong vocabulary".
 
 ## Open questions
 

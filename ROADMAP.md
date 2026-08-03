@@ -88,6 +88,12 @@ The four firmware entry points ship: live `.info` declarations from the installe
   heuristic; only then can `checked` grow a fifth value that means something.
 - **The system vocabulary.** `firmware_for_system` speaks ES-DE's system name where a catalogue exists and an atlas slug
   where none does, and says which via a caveat. The canonical translation table is the real fix.
+- **Per-file system assignment.** `FIRMWARE_SYSTEM_OVERRIDE` is `[D]` and deliberately incomplete: it is atlas's own
+  reading, cross-read against RomM's `known_bios_files.json`, and the two disagree (the Super Game Boy dumps are `snes`
+  here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it — 42 of the 96
+  declaring cores on a real RetroDECK, plus 2 cores that ship no `systemname` at all. Growing the table by hand is a
+  race lost to every core release; a real fix needs a per-file source of truth, and none exists upstream today (`.info`
+  has one `systemname` per core, `System.dat` keys by name without a system).
 - **The unclaimed bucket has substructure.** It currently mixes genuine alternative BIOS revisions with core runtime
   data (blueMSX machine ROMs, PPSSPP assets, Dolphin `Sys`). Save artifacts are already excluded via the rule cards;
   runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save

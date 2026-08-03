@@ -115,10 +115,14 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   core atlas cannot read answers `installed=false` plus a caveat, so the same empty list never means two things.
   `identify_firmware` runs the download flow off content: one md5 comes back with every name it is known as and every
   destination on this machine that wants it. Files nobody declares are listed separately and identified by bytes; save
-  data the rule cards claim (Flycast's VMUs, PCSX2's memory cards) is excluded outright.
+  data the rule cards claim (Flycast's VMUs, PCSX2's memory cards) is excluded outright. Where a file's system had to be
+  derived from what its whole core is called — the per-file table is derived and deliberately incomplete — that
+  emulator's entry says so and names the files, and a core shipping no `systemname` at all is its own stated case. An
+  empty answer distinguishes "this identifier is unknown here" from "nothing declares firmware for it"; the two mean
+  different things to a client.
 - `atlas/contract.py` is the canonical JSON-shaped serialization of every answer — the same code the conformance run
   asserts with exact equality, available to consumers.
-- 332 tests, 48 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
+- 345 tests, 52 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
   blobs, and read-failure states), zero runtime dependencies, CI-verified wheel/sdist.
 
 What is not covered yet, and in which order it comes: `ROADMAP.md`. The systematic core-by-core state:

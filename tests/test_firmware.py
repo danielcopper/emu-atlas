@@ -21,9 +21,12 @@ from atlas.firmware import (
     CAVEAT_CATALOGUE_UNAVAILABLE,
     CAVEAT_CONTENT_UNIDENTIFIED,
     CAVEAT_CORE_NOT_INSTALLED,
+    CAVEAT_CORE_WITHOUT_SYSTEMNAME,
     CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_NO_FIRMWARE_DECLARATION,
     CAVEAT_STANDALONE_EMULATOR,
+    CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
+    CAVEAT_SYSTEM_UNKNOWN,
     CatalogueEntry,
     FirmwareContext,
     FirmwareIdentity,
@@ -35,6 +38,7 @@ from atlas.firmware import (
     load_hashes,
     read_core_declarations,
     save_artifact_paths,
+    system_decision,
     system_for,
 )
 from atlas.machine import FixtureFileSpec, FixtureMachine
@@ -99,6 +103,49 @@ firmware_count = 1
 firmware0_desc = "dmg_boot.bin"
 firmware0_path = "dmg_boot.bin"
 firmware0_opt = "true"
+"""
+
+# A multi-system core: one systemname, a database naming two systems, and one
+# declared file with no per-file rule.
+MGBA_INFO = """
+systemname = "Game Boy/Game Boy Color/Game Boy Advance"
+database = "Nintendo - Game Boy|Nintendo - Game Boy Advance"
+firmware_count = 2
+firmware0_desc = "gb_bios.bin"
+firmware0_path = "gb_bios.bin"
+firmware0_opt = "true"
+firmware1_desc = "gba_bios.bin"
+firmware1_path = "gba_bios.bin"
+firmware1_opt = "true"
+"""
+
+# A multi-system core whose every declaration carries a per-file rule.
+FULLY_OVERRIDDEN_INFO = """
+systemname = "Game Boy/Game Boy Color"
+database = "Nintendo - Game Boy|Nintendo - Game Boy Color"
+firmware_count = 2
+firmware0_desc = "gb_bios.bin"
+firmware0_path = "gb_bios.bin"
+firmware0_opt = "true"
+firmware1_desc = "gbc_bios.bin"
+firmware1_path = "gbc_bios.bin"
+firmware1_opt = "true"
+"""
+
+# SkyEmu ships no systemname at all — only a database naming three systems.
+SKYEMU_INFO = """
+display_name = "Multi (SkyEmu)"
+database = "Nintendo - Nintendo DS|Nintendo - Game Boy|Nintendo - Game Boy Advance"
+firmware_count = 3
+firmware0_desc = "cgb_boot.bin"
+firmware0_path = "cgb_boot.bin"
+firmware0_opt = "true"
+firmware1_desc = "gba_bios.bin"
+firmware1_path = "gba_bios.bin"
+firmware1_opt = "true"
+firmware2_desc = "nds7.bin"
+firmware2_path = "nds7.bin"
+firmware2_opt = "true"
 """
 
 TABLE = json.dumps(
@@ -374,6 +421,78 @@ class TestRequirementInvariants:
             )
 
 
+class TestSystemAssignmentIsVisible:
+    """A file filed by what its *core* is called must say so.
+
+    Only the per-file override knows which machine a dump belongs to; every
+    other route files a file by its core's ``systemname``, which holds exactly
+    while the core covers one system. The ``.info`` states when it does not.
+    """
+
+    def test_a_multi_system_core_falling_back_states_it(self):
+        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
+                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
+        core = firmware_for_core(machine, _context(machine), core_so="mgba_libretro.so").cores[0]
+        caveat = next(c for c in core.caveats if c.code == CAVEAT_SYSTEM_ASSIGNMENT_DERIVED)
+        # gb_bios.bin has a per-file rule; gba_bios.bin does not.
+        assert caveat.data["files"] == "gba_bios.bin"
+        assert caveat.data["database"] == "Nintendo - Game Boy|Nintendo - Game Boy Advance"
+
+    def test_full_override_coverage_states_nothing(self):
+        machine = _machine({f"{INFO_DIR}/covered_libretro.info": FULLY_OVERRIDDEN_INFO,
+                            f"{INFO_DIR}/covered_libretro.so": {"status": "invalid-text"}})
+        core = firmware_for_core(machine, _context(machine), core_so="covered_libretro.so").cores[0]
+        assert core.caveats == ()
+
+    def test_a_single_system_core_states_nothing(self):
+        # The fallback is sound when the core covers one system, however many
+        # of its files lack a per-file rule.
+        machine = _machine()
+        core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
+        assert core.caveats == ()
+
+    def test_a_core_without_a_systemname_is_its_own_case(self):
+        machine = _machine({f"{INFO_DIR}/skyemu_libretro.info": SKYEMU_INFO,
+                            f"{INFO_DIR}/skyemu_libretro.so": {"status": "invalid-text"}})
+        answer = firmware_for_core(machine, _context(machine), core_so="skyemu_libretro.so")
+        core = answer.cores[0]
+        assert [c.code for c in core.caveats] == [CAVEAT_CORE_WITHOUT_SYSTEMNAME]
+        assert [r.system for r in core.requirements if r.file_name == "gba_bios.bin"] == ["_unknown"]
+        # The override still applies where it has a rule, so this is not a
+        # blanket "we know nothing about this core".
+        assert [r.system for r in core.requirements if r.file_name == "cgb_boot.bin"] == ["gbc"]
+
+    def test_a_core_declaring_nothing_has_nothing_to_be_unsure_about(self):
+        machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
+                            f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"}})
+        core = firmware_for_core(machine, _context(machine), core_so="snes9x_libretro.so").cores[0]
+        assert core.caveats == ()
+
+    def test_the_source_of_every_assignment_is_recorded(self):
+        assert system_decision("gb_bios.bin", "Game Boy/Game Boy Color") == ("gb", "override")
+        assert system_decision("x.bin", "Sega - Dreamcast") == ("dc", "systemname")
+        assert system_decision("x.bin", "Some New Machine") == ("some-new-machine", "slug")
+        assert system_decision("x.bin", "") == ("_unknown", "none")
+
+    def test_the_caveat_travels_with_an_identification(self):
+        # identify_firmware hands back requirements without their emulator, so
+        # the caveat has to come along or it is lost.
+        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
+                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
+        identified = identify_firmware(machine, _context(machine), md5="ee" * 16)
+        assert [r.core_so for r in identified.requirements] == ["mgba_libretro.so"]
+        assert CAVEAT_SYSTEM_ASSIGNMENT_DERIVED in [c.code for c in identified.caveats]
+
+    def test_the_database_field_is_read_as_a_signal_not_as_a_name(self):
+        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
+                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
+        core = next(c for c in read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR) if c.stem == "mgba_libretro")
+        assert core.database == ("Nintendo - Game Boy", "Nintendo - Game Boy Advance")
+        # The core's own system still comes from systemname, never from
+        # database — the two disagree here, and systemname wins.
+        assert core.system == "gba"
+
+
 class TestPerSystemAnswer:
     """Criterion 2: which emulators run this system, and what does each want?"""
 
@@ -518,13 +637,29 @@ class TestNoDeclarationIsNeverSatisfied:
         assert answer.cores[0].requirements == ()
         assert answer.cores[0].requirements_met is None
         assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_CORE_NOT_INSTALLED]
-        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in answer.caveats]
+        # Not "nothing declares firmware": this core may declare plenty, it is
+        # simply not here.
+        assert [c.code for c in answer.caveats] == [CAVEAT_CORE_NOT_INSTALLED]
 
-    def test_a_system_nobody_declares_is_empty_with_a_caveat(self):
+    def test_an_identifier_nothing_covers_says_unknown_not_nothing_needed(self):
         machine = _machine()
         answer = firmware_for_system(machine, _context(machine), system="n64")
         assert answer.cores == ()
-        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in answer.caveats]
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_SYSTEM_UNKNOWN in codes
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_a_known_system_whose_emulators_cannot_be_read_is_a_different_code(self):
+        # The catalogue knows the system, so the identifier is right; what is
+        # missing is the cores. That is "no declaration to check against",
+        # never "this system needs nothing".
+        machine = _machine()
+        catalogue = (CatalogueEntry(label="TGB Dual", kind="libretro", core_so="tgbdual_libretro.so"),)
+        answer = firmware_for_system(machine, _context(machine), system="gb", catalogue=catalogue)
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_NO_FIRMWARE_DECLARATION in codes
+        assert CAVEAT_SYSTEM_UNKNOWN not in codes
+        assert [c.installed for c in answer.cores] == [False]
 
     def test_an_unresolvable_info_directory_yields_no_requirements(self):
         machine = FixtureMachine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})

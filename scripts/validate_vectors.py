@@ -111,7 +111,15 @@ KNOWN_CAVEAT_CODES = {
     "emulator-catalogue-unavailable",
     "firmware-unreadable",
     "firmware-content-unidentified",
+    "system-unknown",
+    "system-assignment-derived",
+    "core-without-systemname",
 }
+# The codes that may stand in for "nothing could be read here". Each says a
+# different thing to a client — nothing declares firmware, the identifier is
+# unknown here, the named core is absent — and none of them may be read as
+# "nothing needed".
+NOTHING_READ_CODES = {"no-firmware-declaration", "system-unknown", "core-not-installed"}
 KNOWN_UNRESOLVED_CODES = {"standalone-unsupported"}
 
 
@@ -457,9 +465,14 @@ def _validate_firmware(name: str, firmware: Any) -> None:
             if not hash_checked:
                 fail(f"{name}: an unclaimed file is identified by content — impossible without hash checking")
     if not any(core["installed"] for core in cores) and not any(
-        c["code"] == "no-firmware-declaration" for c in firmware["caveats"]
+        c["code"] in NOTHING_READ_CODES for c in firmware["caveats"]
     ):
-        fail(f"{name}: with no core declaration read, the answer must say so — empty must never read as complete")
+        fail(
+            f"{name}: with no core declaration read, the answer must carry one of {sorted(NOTHING_READ_CODES)} "
+            "— empty must never read as complete"
+        )
+    if any(c["code"] == "system-unknown" for c in firmware["caveats"]) and cores:
+        fail(f"{name}: 'system-unknown' means nothing covers the identifier — no emulator may be listed")
     _validate_caveats(name, firmware["caveats"])
 
 
