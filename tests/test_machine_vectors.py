@@ -21,6 +21,7 @@ import pytest
 import atlas
 from atlas.contract import (
     emulator_contract,
+    firmware_contract,
     installation_contract,
     placement_contract,
     unresolved_contract,
@@ -92,6 +93,14 @@ def test_machine_vector(vector):
             content_path=query.get("content_path"), core_so=query.get("core_so")
         )
         assert placement_contract(placement) == expected["save_location"], rationale
+
+    if "firmware" in expected:
+        firmware_query = inp["firmware_query"]
+        install = _select(installs, firmware_query.get("installation"), vector["name"])
+        report = install.firmware_status(
+            platform=firmware_query.get("platform"), verify=firmware_query.get("verify", False)
+        )
+        assert firmware_contract(report) == expected["firmware"], rationale
 
     if "entry_save_location" in expected:
         entry_query = inp["entry_query"]

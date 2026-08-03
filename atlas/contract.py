@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from atlas.firmware import FirmwareReport
 from atlas.installations import EmulatorEntry, Installation
 from atlas.placement import SavePlacement, Unresolved
 
@@ -63,6 +64,30 @@ def installation_contract(installation: Installation) -> dict[str, Any]:
         "kinds": list(installation.kinds),
         "root": installation.root(),
         "health": list(installation.health().codes),
+    }
+
+
+def firmware_contract(report: FirmwareReport) -> dict[str, Any]:
+    """The stable form of an :class:`~atlas.firmware.FirmwareReport`.
+
+    ``description`` is prose and stays out; ``hash_known`` is in, because it is
+    the difference between "not checked" and "not checkable" and a client
+    branches on it.
+    """
+    return {
+        "root": report.root,
+        "hash_checked": report.hash_checked,
+        "files": [
+            {
+                "path": f.path,
+                "state": f.state,
+                "required": f.required,
+                "hash_known": f.hash_known,
+                "cores": list(f.cores),
+            }
+            for f in report.files
+        ],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in report.caveats],
     }
 
 

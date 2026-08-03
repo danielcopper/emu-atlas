@@ -21,8 +21,18 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = 2
 
 INPUT_FIELDS_REQUIRED = {"home", "files"}
-INPUT_FIELDS_OPTIONAL = {"symlinks", "cores", "dirs", "inaccessible", "query", "catalogue_query", "entry_query"}
+INPUT_FIELDS_OPTIONAL = {
+    "symlinks",
+    "cores",
+    "dirs",
+    "inaccessible",
+    "query",
+    "catalogue_query",
+    "entry_query",
+    "firmware_query",
+}
 QUERY_FIELDS = {"content_path", "core_so", "installation"}
+FIRMWARE_QUERY_FIELDS = {"installation", "platform", "verify"}
 INSTALLATION_FIELDS = {"kind", "kinds", "root", "health"}
 PLACEMENT_FIELDS = {
     "dir",
@@ -35,11 +45,15 @@ PLACEMENT_FIELDS = {
     "caveats",
 }
 FILE_SET_FIELDS = {"state", "files", "complete"}
+FIRMWARE_FIELDS = {"root", "hash_checked", "files", "caveats"}
+FIRMWARE_FILE_FIELDS = {"path", "state", "required", "hash_known", "cores"}
+KNOWN_FIRMWARE_STATES = {"verified", "mismatch", "present", "missing", "undeclared"}
 GRANULARITY_FIELDS = {"value", "option_key", "option_value", "options_file", "alternatives"}
 CAVEAT_FIELDS = {"code", "data"}
 EMULATOR_FIELDS = {"label", "kind", "core_so", "selection", "caveats"}
 KNOWN_KINDS = {"retrodeck", "emudeck", "standalone_retroarch_flatpak", "native_retroarch"}
 KNOWN_FILE_STATUSES = {"unreadable", "invalid-text"}
+BLOB_FIELDS = {"md5", "sha1", "size"}
 KNOWN_HEALTH_ISSUES = {
     "marker-missing",
     "marker-unreadable",
@@ -70,6 +84,10 @@ KNOWN_CAVEAT_CODES = {
     "core-unaudited",
     "card-mode-unconfirmed",
     "card-generation-mismatch",
+    "no-firmware-declaration",
+    "info-path-unresolved",
+    "core-dir-unresolved",
+    "firmware-root-missing",
 }
 KNOWN_UNRESOLVED_CODES = {"standalone-unsupported"}
 
@@ -100,6 +118,18 @@ def _validate_query(name: str, query: Any) -> None:
         fail(f"{name}: input.query.installation must be one of {sorted(KNOWN_KINDS)}")
 
 
+def _validate_firmware_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict) or not set(query) <= FIRMWARE_QUERY_FIELDS:
+        fail(f"{name}: input.firmware_query keys must be a subset of {sorted(FIRMWARE_QUERY_FIELDS)}")
+    for key in ("installation", "platform"):
+        if key in query and (not isinstance(query[key], str) or not query[key]):
+            fail(f"{name}: input.firmware_query.{key} must be a non-empty string")
+    if "verify" in query and not isinstance(query["verify"], bool):
+        fail(f"{name}: input.firmware_query.verify must be a boolean")
+    if "installation" in query and query["installation"] not in KNOWN_KINDS:
+        fail(f"{name}: input.firmware_query.installation must be one of {sorted(KNOWN_KINDS)}")
+
+
 def _validate_entry_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.entry_query must be an object")
@@ -127,11 +157,24 @@ def _validate_input(name: str, inp: Any) -> None:
             fail(f"{name}: input.files keys must be strings")
         if isinstance(spec, str):
             continue
-        if not isinstance(spec, dict) or spec.get("status") not in KNOWN_FILE_STATUSES:
-            fail(
-                f"{name}: input.files[{path!r}] must be string content or "
-                f"{{'status': one of {sorted(KNOWN_FILE_STATUSES)}}}"
-            )
+        if not isinstance(spec, dict):
+            fail(f"{name}: input.files[{path!r}] must be string content or an object spec")
+        if "status" in spec:
+            if set(spec) != {"status"} or spec["status"] not in KNOWN_FILE_STATUSES:
+                fail(
+                    f"{name}: input.files[{path!r}] status spec must be exactly "
+                    f"{{'status': one of {sorted(KNOWN_FILE_STATUSES)}}}"
+                )
+            continue
+        # A binary blob: it exists, reads as invalid-text, and answers the
+        # declared identity for file_size / file_digest.
+        if not set(spec) or not set(spec) <= BLOB_FIELDS:
+            fail(f"{name}: input.files[{path!r}] blob spec keys must be a non-empty subset of {sorted(BLOB_FIELDS)}")
+        for key in ("md5", "sha1"):
+            if key in spec and (not isinstance(spec[key], str) or not spec[key]):
+                fail(f"{name}: input.files[{path!r}].{key} must be a non-empty string")
+        if "size" in spec and (not isinstance(spec["size"], int) or spec["size"] < 0):
+            fail(f"{name}: input.files[{path!r}].size must be a non-negative integer")
     for list_key in ("dirs", "inaccessible"):
         entries = inp.get(list_key, [])
         if not isinstance(entries, list) or not all(isinstance(e, str) and e for e in entries):
@@ -179,6 +222,8 @@ def _validate_input(name: str, inp: Any) -> None:
             fail(f"{name}: input.catalogue_query must carry 'system' plus optional 'content_path'")
     if "entry_query" in inp:
         _validate_entry_query(name, inp["entry_query"])
+    if "firmware_query" in inp:
+        _validate_firmware_query(name, inp["firmware_query"])
 
 
 def _validate_installations(name: str, installations: Any) -> None:
@@ -261,6 +306,41 @@ def _validate_entry_outcome(name: str, outcome: Any) -> None:
     _validate_placement(name, outcome)
 
 
+def _validate_firmware(name: str, firmware: Any) -> None:
+    _require_exact(name, firmware, FIRMWARE_FIELDS, "firmware")
+    root = firmware["root"]
+    if root is not None and (not isinstance(root, str) or not root):
+        fail(f"{name}: firmware.root must be null or a non-empty string")
+    if not isinstance(firmware["hash_checked"], bool):
+        fail(f"{name}: firmware.hash_checked must be a boolean")
+    files = firmware["files"]
+    if not isinstance(files, list):
+        fail(f"{name}: firmware.files must be a list")
+    if root is None and files:
+        fail(f"{name}: without a root there is nothing to state a file's state against — files must be empty")
+    for entry in files:
+        _require_exact(name, entry, FIRMWARE_FILE_FIELDS, "each firmware file")
+        if not isinstance(entry["path"], str) or not entry["path"]:
+            fail(f"{name}: firmware file path must be a non-empty string")
+        if entry["state"] not in KNOWN_FIRMWARE_STATES:
+            fail(f"{name}: firmware file state must be one of {sorted(KNOWN_FIRMWARE_STATES)}")
+        for flag in ("required", "hash_known"):
+            if not isinstance(entry[flag], bool):
+                fail(f"{name}: firmware file {flag} must be a boolean")
+        cores = entry["cores"]
+        if not isinstance(cores, list) or not all(isinstance(c, str) and c for c in cores):
+            fail(f"{name}: firmware file cores must be a list of non-empty core names")
+        if entry["state"] == "undeclared" and (cores or entry["required"]):
+            fail(f"{name}: an undeclared firmware file has no declaring core and is never required")
+        if entry["state"] != "undeclared" and not cores:
+            fail(f"{name}: a declared firmware file must name the core(s) that declare it")
+        if entry["state"] in ("verified", "mismatch") and not entry["hash_known"]:
+            fail(f"{name}: {entry['state']!r} is only reachable for a file whose identity is known")
+    if not firmware["hash_checked"] and any(f["state"] in ("verified", "mismatch") for f in files):
+        fail(f"{name}: no file can be verified or mismatched when hash checking did not run")
+    _validate_caveats(name, firmware["caveats"])
+
+
 def _validate_emulators(name: str, emulators: Any) -> None:
     if not isinstance(emulators, list):
         fail(f"{name}: expected.emulators must be a list")
@@ -286,7 +366,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     if not isinstance(expected, dict):
         fail(f"{name}: expected must be an object")
     keys = set(expected)
-    allowed = {"installations", "save_location", "emulators", "entry_save_location"}
+    allowed = {"installations", "save_location", "emulators", "entry_save_location", "firmware"}
     if "installations" not in keys or not keys <= allowed:
         fail(f"{name}: expected keys must be 'installations' plus optional {sorted(allowed - {'installations'})}")
     if ("emulators" in keys) != ("catalogue_query" in inp):
@@ -295,10 +375,10 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: a query and a save_location expectation must appear together")
     if ("entry_save_location" in keys) != ("entry_query" in inp):
         fail(f"{name}: entry_query and entry_save_location expectation must appear together")
+    if ("firmware" in keys) != ("firmware_query" in inp):
+        fail(f"{name}: firmware_query and firmware expectation must appear together")
     _validate_installations(name, expected["installations"])
-    if ("save_location" in keys or "entry_save_location" in keys or "emulators" in keys) and not expected[
-        "installations"
-    ]:
+    if (keys & {"save_location", "entry_save_location", "emulators", "firmware"}) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
     if "save_location" in keys:
         _validate_placement(name, expected["save_location"])
@@ -306,6 +386,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_emulators(name, expected["emulators"])
     if "entry_save_location" in keys:
         _validate_entry_outcome(name, expected["entry_save_location"])
+    if "firmware" in keys:
+        _validate_firmware(name, expected["firmware"])
 
 
 def validate_machines_vector(vector: dict[str, Any]) -> None:

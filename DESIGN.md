@@ -27,9 +27,11 @@ What legitimately lives _in_ atlas:
    other, which fallbacks apply. Pinned to the emulator versions they were read from.
 2. **Oddity rules** — per-emulator behaviour written nowhere on disk (Flycast roots its VMUs in `system_directory`;
    memory-card granularity semantics). Small, named, individually testable.
-3. **The BIOS registry** — which firmware files each platform/core wants, hashes and sizes. This is world knowledge by
-   nature: no config on the machine lists it. Core scope, not optional. (Whether a platform needs an _installer step_
-   rather than file placement — e.g. RPCS3 firmware — is bonus knowledge; nice to have, safe to omit.)
+3. **Firmware identities** — the `md5`/`sha1`/`size` triple that says what a correct firmware file's bytes are. This is
+   world knowledge by nature: no config on the machine lists it. Core scope, not optional. Which files a core _wants_ is
+   **not** in this list: RetroArch ships that declaration in the `.info` file next to every core, so it is read off the
+   machine like everything else. (Whether a platform needs an _installer step_ rather than file placement — e.g. RPCS3
+   firmware — is bonus knowledge; nice to have, safe to omit.)
 
 Everything else — paths, layouts, active settings, deviations from defaults, which files a save actually consists of —
 is read or observed, never stored.
@@ -56,8 +58,13 @@ emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).zip")
 #    Granularity — per-game file / shared card, with the option that selects it — is part of the placement.
 ```
 
-(`bios_location()` on the emulator handle is target design — the BIOS entry point is on the roadmap; the registry itself
-ships today.)
+```python
+inst.firmware_status(platform="psx", verify=True)
+# -> FirmwareReport (root, files, hash_checked, sources, caveats). Each file is
+#    verified | mismatch | present | missing | undeclared. There is no "unknown"
+#    state: having no declaration to check against is a caveat on an EMPTY
+#    answer, because empty is honest and "nothing missing" would be a lie.
+```
 
 - **Installations are handles.** Every question is asked _of an installation_, never of a global "the system". A machine
   can carry RetroDECK, EmuDeck and a bare RetroArch side by side; each answers for itself. No cross-installation
@@ -91,6 +98,8 @@ class Machine(Protocol):
     def path_kind(self, path: str) -> PathKind: ...       # file | directory | missing | inaccessible
     def readlink(self, path: str) -> str | None: ...      # symlink target, or None if not a link
     def query_core(self, so_path: str) -> CoreInfo | None: ...  # retro_get_system_info, or None if unloadable
+    def file_size(self, path: str) -> int | None: ...     # regular files only; None = cannot tell
+    def file_digest(self, path: str, algorithm: str) -> str | None: ...  # md5 | sha1; None = cannot tell
 ```
 
 - The outcomes exist because the emulators branch on them — RetroArch applies a configured directory only when
@@ -104,6 +113,10 @@ class Machine(Protocol):
   live read, not a table. The production implementation is process-isolated (a crashing core costs one answer, not the
   host process) and may cache per `.so` mtime/size — a memoized live read, never shipped data. `.info` files are **not**
   a substitute: `corename` disagrees with `library_name` for 56 of 210 installed cores.
+- `file_size` and `file_digest` exist because firmware identity is checked by content, not by name: a file present under
+  the right name may still be the wrong dump. `file_size` is the free pre-filter that settles most mismatches before any
+  bytes are hashed; `file_digest` is the paid answer, and the algorithm vocabulary is closed to `md5`/`sha1` so a port's
+  conformance is provable.
 - In production the seam is the real filesystem plus a real core prober. In tests and conformance vectors it is a
   **fixture machine**: files (including unreadable and invalid-text ones), explicit empty directories, symlinks,
   inaccessible paths, and core answers as plain data describing a whole machine. One code path, two data sources; parity
@@ -193,11 +206,13 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
   catalogue → caller names the core. No answer is ever invented to keep a field non-empty.
 
 - **`.info` is never a path source.** `corename` ≠ `library_name` for 27% of installed cores; the bsnes variants would
-  split one real save directory into three fictional ones. `.info` serves capability queries only.
+  split one real save directory into three fictional ones. `.info` serves capability and firmware-declaration queries
+  only — never a save path.
 
-- **BIOS registry is core world knowledge; installer-step knowledge is bonus.** Which files, hashes, and locations a
-  platform needs is not on the machine and belongs in atlas, versioned and cited. Whether firmware needs an installer
-  run instead of file placement is useful but omittable.
+- **Firmware splits at the boundary rule; installer-step knowledge is bonus.** Which files a core wants _is_ on the
+  machine (`.info` `firmwareN_path`), so it is read live and never shipped. What a correct file's bytes are is not on
+  the machine, so the identity table belongs in atlas, versioned and cited. Whether firmware needs an installer run
+  instead of file placement is useful but omittable.
 
 ## Settled since the rewrite
 
@@ -208,6 +223,9 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
   serializations.
 - **Consistency model**: handles are live; within one query every governing source is read exactly once and all
   decisions derive from that snapshot.
+- **Firmware state model**: `verified` / `mismatch` / `present` / `missing` for a declared file, `undeclared` for what
+  else is lying around. `unknown` is deliberately not a state — no declaration to check against is a caveat on an empty
+  answer. Hash checking is opt-in (`verify=`): policy and caching belong to the caller, not the library.
 
 ## Open questions
 

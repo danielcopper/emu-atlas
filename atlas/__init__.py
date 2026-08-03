@@ -4,25 +4,46 @@ A resolver, not a lookup: for any emulator installation on a machine, atlas
 answers which configs govern it and where saves and BIOS actually live — by
 reading the running machine the way the emulator does. Phase 1 covers RetroArch
 across the RetroDECK, EmuDeck, standalone-Flatpak, and native install flavors,
-plus the BIOS registry.
+plus firmware.
 
 Two entry points, per DESIGN.md:
 
 - :func:`atlas.detect` finds what is installed and returns installation handles;
 - every question is asked of a handle —
-  ``installation.save_location(content_path=..., core_so=...)``.
+  ``installation.save_location(content_path=..., core_so=...)``,
+  ``installation.firmware_status(platform=...)``.
 """
 
 from __future__ import annotations
 
-from atlas.bios import BiosEntry, BiosRegistry, load_registry
 from atlas.contract import (
     emulator_contract,
+    firmware_contract,
     installation_contract,
     placement_contract,
     unresolved_contract,
 )
 from atlas.core_info import parse_core_info
+from atlas.firmware import (
+    CAVEAT_CORE_DIR_UNRESOLVED,
+    CAVEAT_FIRMWARE_ROOT_MISSING,
+    CAVEAT_INFO_PATH_UNRESOLVED,
+    CAVEAT_NO_FIRMWARE_DECLARATION,
+    STATE_MISMATCH,
+    STATE_MISSING,
+    STATE_PRESENT,
+    STATE_UNDECLARED,
+    STATE_VERIFIED,
+    FirmwareDeclaration,
+    FirmwareFile,
+    FirmwareHash,
+    FirmwareHashes,
+    FirmwareReport,
+    FirmwareState,
+    load_hashes,
+    read_declarations,
+    resolve_firmware,
+)
 from atlas.detect import detect
 from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE, EmulatorSpec, GamelistSelections, parse_es_systems, parse_gamelist, parse_gamelist_alternative
 from atlas.installations import (
@@ -94,7 +115,6 @@ from atlas.retroarch_cfg import (
 )
 
 __all__ = [
-    "BiosEntry",
     "parse_es_systems",
     "lookup_card",
     "lookup_audit",
@@ -123,10 +143,24 @@ __all__ = [
     "CAVEAT_SYSTEM_DIR_UNSET",
     "CAVEAT_UNKNOWN_OPTION_VALUE",
     "CAVEAT_UNVERIFIED_VERSION",
+    "CAVEAT_CORE_DIR_UNRESOLVED",
+    "CAVEAT_FIRMWARE_ROOT_MISSING",
+    "CAVEAT_INFO_PATH_UNRESOLVED",
+    "CAVEAT_NO_FIRMWARE_DECLARATION",
     "Caveat",
-    "BiosRegistry",
     "CoreInfo",
     "CoreOption",
+    "STATE_MISMATCH",
+    "STATE_MISSING",
+    "STATE_PRESENT",
+    "STATE_UNDECLARED",
+    "STATE_VERIFIED",
+    "FirmwareDeclaration",
+    "FirmwareFile",
+    "FirmwareHash",
+    "FirmwareHashes",
+    "FirmwareReport",
+    "FirmwareState",
     "EMUDECK_DEFAULTS",
     "EmuDeck",
     "EmulatorEntry",
@@ -163,11 +197,14 @@ __all__ = [
     "build_save_placement",
     "detect",
     "emulator_contract",
+    "firmware_contract",
     "installation_contract",
     "placement_contract",
     "unresolved_contract",
     "interpret_cfg",
-    "load_registry",
+    "load_hashes",
+    "read_declarations",
+    "resolve_firmware",
     "parse_cfg_text",
     "parse_gamelist",
     "parse_gamelist_alternative",

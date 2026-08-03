@@ -10,6 +10,12 @@ of the resolver rebuild (PR #13; not tracked in the repo). The boundary rule and
 verification matrix and enforced maintenance, ES-DE catalogue with the full selection hierarchy, structured caveats,
 generated coverage matrix, and the review's correctness batch (H1–H4, H6–H9, H11, M1, M9, M11, M13).
 
+**Firmware at the boundary rule**: the packaged BIOS registry fused declarations (on the machine) with identities (not
+on the machine) and drifted in both directions — it missed three mandatory files RetroDECK's own cores declare and
+carried 181 paths for cores it does not ship. Declarations are now a live `.info` read limited to installed cores;
+identities stay a packaged, versioned table; and `is_required() -> bool` is gone, because a bool cannot say "I don't
+know" and collapsed it into "not required" → "nothing missing" → green.
+
 **Structural cleanup** (this branch) — everything the review flagged about the existing structure:
 
 - _Seam status model_ (H5, H10, M6, M7): explicit operation outcomes (`ReadResult`, `PathKind`), structured health as
@@ -70,10 +76,17 @@ Everything EmuDeck is vector-tested only, never validated against a real install
 the wild, its own emulator set (coverage-matrix `?` cells), frontend variants (ES-DE elsewhere / Pegasus / SRM),
 companion-health semantics beyond the config-missing case.
 
-### 6. BIOS entry point
+### 6. Firmware follow-ups
 
-`bios_location()` on the emulator handle (DESIGN target sketch): compose the registry's world knowledge with the live
-`system_directory`/`bios_path` resolution the save path already performs.
+`installation.firmware_status()` ships: live `.info` declarations from the installed cores, stated against the live
+`system_directory`, with the packaged identity table doing only what it can. What is left:
+
+- **The emulator-handle route.** A per-entry `firmware_status()` on `EmulatorEntry`, scoped to that one core, so the
+  catalogue answer and the firmware answer share a subject.
+- **Standalone emulators declare nothing.** An emulator without a libretro core ships no `.info`, so a correctly-named
+  firmware file in a directory no installed core knows about stays invisible. Part of block 4.
+- **RetroArch's platform default `system_directory`.** Unset in the configs currently yields an empty answer plus a
+  caveat; the default is presumably `system` under the config tree, but that is [O] — unverified, so unclaimed.
 
 ## Open research (needs the user's machine)
 

@@ -7,6 +7,7 @@ whole-machine model if both agree on every operation outcome.
 
 from __future__ import annotations
 
+import hashlib
 import os
 
 import pytest
@@ -40,6 +41,10 @@ class TestFixtureFiles:
         with pytest.raises(ValueError):
             FixtureMachine({"/a/f.txt": {"status": "sideways"}})
 
+    def test_object_spec_without_status_or_identity_is_rejected(self):
+        with pytest.raises(ValueError):
+            FixtureMachine({"/a/f.bin": {"note": "nothing usable"}})
+
     def test_path_kind_file_directory_missing(self):
         m = FixtureMachine({"/a/b/c.txt": ""})
         assert m.path_kind("/a/b/c.txt") == "file"
@@ -71,12 +76,50 @@ class TestFixtureFiles:
         assert m.glob("/s/a.*") == ["/s/a.srm"]
         assert m.glob("/s/*") == ["/s/a.srm", "/s/deep"]
 
+    def test_glob_wildcard_skips_hidden_names(self):
+        m = FixtureMachine({"/s/a.srm": "", "/s/.hidden": ""})
+        assert m.glob("/s/*") == ["/s/a.srm"]
+        assert m.glob("/s/.*") == ["/s/.hidden"]
+
     def test_glob_escaped_metacharacters_match_literally(self):
         import glob as glob_module
 
         m = FixtureMachine({"/s/Game [USA].srm": "", "/s/Game U.srm": ""})
         pattern = glob_module.escape("/s/Game [USA]") + ".*"
         assert m.glob(pattern) == ["/s/Game [USA].srm"]
+
+
+class TestFixtureIdentity:
+    """Size and digests — computed from string content, declared for blobs."""
+
+    def test_string_content_is_measured_and_hashed(self):
+        m = FixtureMachine({"/a/f.txt": "hello"})
+        assert m.file_size("/a/f.txt") == 5
+        assert m.file_digest("/a/f.txt", "md5") == hashlib.md5(b"hello").hexdigest()
+        assert m.file_digest("/a/f.txt", "sha1") == hashlib.sha1(b"hello").hexdigest()
+
+    def test_blob_declares_its_identity_and_is_not_text(self):
+        m = FixtureMachine({"/bios/scph5501.bin": {"md5": "abc", "sha1": "def", "size": 524288}})
+        assert m.path_kind("/bios/scph5501.bin") == "file"
+        assert m.read_text("/bios/scph5501.bin") == ReadResult("invalid-text")
+        assert m.file_size("/bios/scph5501.bin") == 524288
+        assert m.file_digest("/bios/scph5501.bin", "md5") == "abc"
+        assert m.file_digest("/bios/scph5501.bin", "sha1") == "def"
+
+    def test_blob_may_declare_only_what_it_knows(self):
+        m = FixtureMachine({"/bios/x.bin": {"size": 12}})
+        assert m.file_size("/bios/x.bin") == 12
+        assert m.file_digest("/bios/x.bin", "md5") is None
+
+    def test_missing_unreadable_and_directories_answer_none(self):
+        m = FixtureMachine({"/a/secret": {"status": "unreadable"}, "/a/b/c.txt": "x"})
+        for path in ("/a/gone.bin", "/a/secret", "/a/b"):
+            assert m.file_size(path) is None, path
+            assert m.file_digest(path, "md5") is None, path
+
+    def test_unknown_algorithm_is_none_not_an_error(self):
+        m = FixtureMachine({"/a/f.txt": "hello"})
+        assert m.file_digest("/a/f.txt", "sha256") is None
 
 
 class TestFixtureSymlinks:
@@ -229,6 +272,20 @@ class TestRealMachine:
         assert m.readlink(str(f)) is None
         assert m.path_kind(str(f)) == "file"
 
+    def test_file_size_and_digest(self, tmp_path):
+        (tmp_path / "f.bin").write_bytes(b"\x00\x01\x02")
+        (tmp_path / "d").mkdir()
+        m = RealMachine()
+        assert m.file_size(str(tmp_path / "f.bin")) == 3
+        assert m.file_digest(str(tmp_path / "f.bin"), "md5") == hashlib.md5(b"\x00\x01\x02").hexdigest()
+        for path in (str(tmp_path / "gone.bin"), str(tmp_path / "d")):
+            assert m.file_size(path) is None, path
+            assert m.file_digest(path, "md5") is None, path
+
+    def test_file_digest_rejects_unlisted_algorithm(self, tmp_path):
+        (tmp_path / "f.bin").write_bytes(b"x")
+        assert RealMachine().file_digest(str(tmp_path / "f.bin"), "sha256") is None
+
     def test_query_core_on_non_library_is_none(self, tmp_path):
         not_a_core = tmp_path / "fake.so"
         not_a_core.write_text("not an ELF")
@@ -253,6 +310,7 @@ class TestFixtureRealParity:
         "saves/Game.rtc": "r",
         "saves/Game [USA].srm": "u",
         "saves/deep/Game.srm": "d",
+        "saves/.hidden": "h",
     }
     DIRS = ["saves/empty"]
     SYMLINKS = {"links/saves": "saves", "links/dead": "gone-away"}
@@ -298,6 +356,9 @@ class TestFixtureRealParity:
         for path in probe_paths:
             assert fixture.path_kind(path) == real.path_kind(path), path
             assert fixture.read_text(path) == real.read_text(path), path
+            assert fixture.file_size(path) == real.file_size(path), path
+            for algorithm in ("md5", "sha1"):
+                assert fixture.file_digest(path, algorithm) == real.file_digest(path, algorithm), path
 
         for path in probe_paths:
             # Fixture links carry absolute targets, so compare resolved-ness only.
@@ -310,6 +371,7 @@ class TestFixtureRealParity:
             f"{base}/saves/empty/*",
             glob_module.escape(f"{base}/saves/Game [USA]") + ".*",
             f"{base}/saves/missing*",
+            f"{base}/saves/.*",
         ]
         for pattern in patterns:
             assert fixture.glob(pattern) == real.glob(pattern), pattern

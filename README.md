@@ -22,11 +22,11 @@ Four principles, fixed before any code:
   them side by side — and every question is asked _of an installation_, never of a global "the system":
   `installation.save_location(content_path=..., core_so=...)`, `installation.emulators_for(system)`.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
-  machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`) whose every operation reports an
-  explicit outcome — missing is not unreadable is not invalid text — because the emulators make those distinctions and
-  health reporting depends on them. In production the seam is the real machine. In tests and conformance vectors it is a
-  fixture machine — files, directories, symlinks, and core answers as plain data — so detection, config parsing, and
-  override chains are all provable from data, failure states included.
+  machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`, `file_size`, `file_digest`) whose every
+  operation reports an explicit outcome — missing is not unreadable is not invalid text — because the emulators make
+  those distinctions and health reporting depends on them. In production the seam is the real machine. In tests and
+  conformance vectors it is a fixture machine — files, directories, symlinks, and core answers as plain data — so
+  detection, config parsing, and override chains are all provable from data, failure states included.
 - **Placements are templates, not paths.** Where a concrete path cannot be known from configs alone, the answer carries
   named holes: `<rom_stem>` for RetroArch-style naming, `<save_id>` where the emulator keys saves off a serial or title
   id. Whoever can fill a hole fills it — [sigil](https://github.com/rommforge/argosy-sigil) is one supplier of
@@ -43,10 +43,11 @@ emu-atlas depends on nothing and nothing depends on it: sigil identifies, atlas 
    semantics), the save-directory math (`sort_by_content` / `sort_by_core`), core `.info` parsing, and the probe
    locations per install flavor (flatpak, native, RetroDECK; EmuDeck is planned — no production knowledge exists for it
    yet) as data.
-2. **BIOS registry** — which firmware files each platform and libretro core wants, with hashes and sizes (548 entries
-   across 54 platforms and 122 cores at extraction time), plus the classification rules (required / optional / unknown
-   relative to an active core); its generator and data provenance (`scripts/generate_bios_registry.py`,
-   `atlas/data/README.md`) live with the data.
+2. **Firmware** — split at the boundary rule. _Which_ files a core wants is read live off the machine, from the `.info`
+   files RetroArch ships next to its cores, so it can never drift against the cores an installation actually has. _What
+   a correct file's bytes are_ — the `md5` / `sha1` / `size` triple — is world knowledge and ships as a packaged,
+   versioned, source-cited table (388 identities); its generator and data provenance
+   (`scripts/generate_firmware_hashes.py`, `atlas/data/README.md`) live with the data.
 3. **ES-DE knowledge** — `es_systems.xml` / `es_find_rules.xml` parsing and launch-command classification, generalized
    across the frontends that ship ES-DE (RetroDECK, EmuDeck, standalone).
 4. **Standalone emulators** — per-emulator config parsing and save/BIOS placement rules (Dolphin, PPSSPP, RPCS3, …), as
@@ -69,7 +70,7 @@ Places this knowledge could plug in — options, not commitments:
 
 - **[decky-romm-sync](https://github.com/danielcopper/decky-romm-sync)** (first consumer): the PlatformEnvironment seam
   resolves paths and invocations per installation; the save-placement model composes atlas templates with sigil ids; the
-  BIOS service already runs on the registry extracted here.
+  BIOS service already runs on the firmware knowledge extracted here.
 - **Other RomM clients**: [grout](https://github.com/rommapp/grout) (Go, retro handhelds — where path dialects diverge
   hardest), [argosy](https://github.com/rommapp/argosy-launcher) (Android RetroArch layouts), and whatever comes next —
   each currently carries its own path knowledge.
@@ -104,10 +105,16 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
   verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer
   time.
+- `installation.firmware_status(platform=..., verify=...)` reads every installed core's firmware declarations live from
+  `libretro_info_path` (sandbox paths translated to the Flatpak deployment, declarations limited to cores whose `.so` is
+  actually there) and states each file against the live `system_directory`: `verified` / `mismatch` when the packaged
+  identity table covers it and verification was asked for, `present` when identity is unverified, `missing` when
+  declared but absent, `undeclared` for what else is lying around. There is no `unknown` state — having no declaration
+  is a caveat on an **empty** answer, so "nothing known" can never be mistaken for "nothing missing".
 - `atlas/contract.py` is the canonical JSON-shaped serialization of every answer — the same code the conformance run
   asserts with exact equality, available to consumers.
-- 246 tests, 33 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, and
-  read-failure states), zero runtime dependencies, CI-verified wheel/sdist.
+- 293 tests, 43 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
+  blobs, and read-failure states), zero runtime dependencies, CI-verified wheel/sdist.
 
 What is not covered yet, and in which order it comes: `ROADMAP.md`. The systematic core-by-core state:
 `docs/research/coverage-matrix.md`.

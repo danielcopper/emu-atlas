@@ -1,0 +1,255 @@
+{
+  "family": "machines",
+  "schema": 2,
+  "spec": "DESIGN.md — firmware: live core declarations against the packaged identity table",
+  "description": "Whole fixture machines in; the canonical firmware serialization (atlas/contract.py firmware_contract) out, asserted with exact equality. Each vector pins one state of the model: a declared file absent from disk (missing), present without a known identity (present), present and matching (verified), present and not matching (mismatch), and a file no installed core declares (undeclared). The load-bearing one is firmware-unknown-platform-is-empty-not-satisfied: having no declaration must produce an EMPTY list plus a caveat, never a satisfied-looking answer. Firmware blobs are stated as {md5, sha1, size} because firmware is not text and its identity is exactly what a real file would answer with.",
+  "vectors": [
+    {
+      "name": "retrodeck-firmware-sandbox-info-path-verified",
+      "rationale": "RetroDECK's libretro_info_path points into the Flatpak sandbox (/app/...); a caller running outside it must resolve that against the deployment's files/ root before it can read anything. With the identity table consulted, the present BIOS verifies and the optional one is honestly missing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": { "status": "invalid-text" },
+          "/mnt/sd/retrodeck/bios/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": ["/mnt/sd/retrodeck/saves"],
+        "firmware_query": { "platform": "psx", "verify": true }
+      },
+      "expected": {
+        "installations": [
+          { "kind": "retrodeck", "kinds": ["retrodeck"], "root": "/mnt/sd/retrodeck", "health": [] }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "files": [
+            {
+              "path": "psxonpsp660.bin",
+              "state": "missing",
+              "required": false,
+              "hash_known": true,
+              "cores": ["mednafen_psx_libretro"]
+            },
+            {
+              "path": "scph5501.bin",
+              "state": "verified",
+              "required": true,
+              "hash_known": true,
+              "cores": ["mednafen_psx_libretro"]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-wrong-bytes-at-the-right-size-mismatch",
+      "rationale": "A file present under the right name at the right size can still be the wrong dump. The size pre-filter passes, the digest does not, and the answer is mismatch — the state that is actionable and that a name-only check can never reach.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/flycast_libretro.info": "systemname = \"Sega - Dreamcast\"\nfirmware_count = 1\nfirmware0_desc = \"dc_boot.bin (Dreamcast BIOS)\"\nfirmware0_path = \"dc/dc_boot.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/flycast_libretro.so": { "status": "invalid-text" },
+          "/mnt/sd/retrodeck/bios/dc/dc_boot.bin": {
+            "md5": "00000000000000000000000000000000",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 2097152
+          }
+        },
+        "dirs": ["/mnt/sd/retrodeck/saves"],
+        "firmware_query": { "platform": "dc", "verify": true }
+      },
+      "expected": {
+        "installations": [
+          { "kind": "retrodeck", "kinds": ["retrodeck"], "root": "/mnt/sd/retrodeck", "health": [] }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "files": [
+            {
+              "path": "dc/dc_boot.bin",
+              "state": "mismatch",
+              "required": true,
+              "hash_known": true,
+              "cores": ["flycast_libretro"]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "native-firmware-host-info-path-present-and-missing",
+      "rationale": "A bare native RetroArch keeps its .info files at a plain host path — no sandbox translation, same code path. A declared file the identity table does not cover is 'present', not 'verified': identity unverified is a state, not a gap in the answer. hash_checked stays false because verification was not asked for.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/bluemsx_libretro.info": "systemname = \"MSX\"\nfirmware_count = 2\nfirmware0_desc = \"Databases/msxromdb.xml\"\nfirmware0_path = \"Databases/msxromdb.xml\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"Machines/Shared Roms/MSX.rom\"\nfirmware1_path = \"Machines/Shared Roms/MSX.rom\"\nfirmware1_opt = \"false\"\n",
+          "/usr/lib/libretro/bluemsx_libretro.so": { "status": "invalid-text" },
+          "/home/deck/.config/retroarch/system/Databases/msxromdb.xml": "<romdb/>"
+        },
+        "firmware_query": { "platform": "msx" }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": ["native_retroarch"],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "files": [
+            {
+              "path": "Databases/msxromdb.xml",
+              "state": "present",
+              "required": true,
+              "hash_known": false,
+              "cores": ["bluemsx_libretro"]
+            },
+            {
+              "path": "Machines/Shared Roms/MSX.rom",
+              "state": "missing",
+              "required": true,
+              "hash_known": false,
+              "cores": ["bluemsx_libretro"]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-unknown-platform-is-empty-not-satisfied",
+      "rationale": "The defect this design exists to prevent. Asking about a platform no installed core declares firmware for must yield an EMPTY file list plus a stated caveat — a caller that ignores caveats then sees nothing, which is honest, instead of seeing 'no required files missing', which is a lie.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": { "status": "invalid-text" },
+          "/mnt/sd/retrodeck/bios/keep.txt": "the bios dir exists"
+        },
+        "dirs": ["/mnt/sd/retrodeck/saves"],
+        "firmware_query": { "platform": "n64" }
+      },
+      "expected": {
+        "installations": [
+          { "kind": "retrodeck", "kinds": ["retrodeck"], "root": "/mnt/sd/retrodeck", "health": [] }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "files": [],
+          "caveats": [{ "code": "no-firmware-declaration", "data": { "platform": "n64" } }]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-undeclared-bounded-and-uninstalled-core-ignored",
+      "rationale": "Two bounds at once. A core that ships an .info but no .so declares nothing — that is how an over-broad .info set stops producing phantom requirements. And the undeclared scan covers only the system directory plus the subdirectories declarations name, so a stray file in bios/ and in bios/dc/ is reported while a whole core data tree under bios/mame2003-plus/ stays invisible.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/flycast_libretro.info": "systemname = \"Sega - Dreamcast\"\nfirmware_count = 1\nfirmware0_desc = \"dc_boot.bin (Dreamcast BIOS)\"\nfirmware0_path = \"dc/dc_boot.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/flycast_libretro.so": { "status": "invalid-text" },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/geolith_libretro.info": "systemname = \"Neo Geo\"\nfirmware_count = 1\nfirmware0_desc = \"neogeo.zip (Neo Geo MVS System ROM)\"\nfirmware0_path = \"neogeo.zip\"\nfirmware0_opt = \"false\"\n",
+          "/mnt/sd/retrodeck/bios/dc/dc_boot.bin": { "size": 2097152 },
+          "/mnt/sd/retrodeck/bios/dc/dc_flash.bin": { "size": 131072 },
+          "/mnt/sd/retrodeck/bios/scph1001.bin": { "size": 524288 },
+          "/mnt/sd/retrodeck/bios/mame2003-plus/samples/wboy.zip": { "size": 4096 }
+        },
+        "dirs": ["/mnt/sd/retrodeck/saves"],
+        "firmware_query": {}
+      },
+      "expected": {
+        "installations": [
+          { "kind": "retrodeck", "kinds": ["retrodeck"], "root": "/mnt/sd/retrodeck", "health": [] }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "files": [
+            {
+              "path": "dc/dc_boot.bin",
+              "state": "present",
+              "required": true,
+              "hash_known": true,
+              "cores": ["flycast_libretro"]
+            },
+            {
+              "path": "dc/dc_flash.bin",
+              "state": "undeclared",
+              "required": false,
+              "hash_known": false,
+              "cores": []
+            },
+            {
+              "path": "scph1001.bin",
+              "state": "undeclared",
+              "required": false,
+              "hash_known": true,
+              "cores": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-root-gone-states-the-root-not-each-file",
+      "rationale": "An unmounted card takes the whole firmware root with it. Every declared file is genuinely missing, so that is what is reported — but the caveat names the real cause, so a caller can tell 'your BIOS folder is gone' from 'these files were never installed'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/geolith_libretro.info": "systemname = \"Neo Geo\"\nfirmware_count = 1\nfirmware0_desc = \"neogeo.zip (Neo Geo MVS System ROM)\"\nfirmware0_path = \"neogeo.zip\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/geolith_libretro.so": { "status": "invalid-text" }
+        },
+        "firmware_query": { "platform": "neogeo" }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": ["native_retroarch"],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "files": [
+            {
+              "path": "neogeo.zip",
+              "state": "missing",
+              "required": true,
+              "hash_known": true,
+              "cores": ["geolith_libretro"]
+            }
+          ],
+          "caveats": [{ "code": "firmware-root-missing", "data": { "path": "/mnt/sd/retrodeck/bios" } }]
+        }
+      }
+    }
+  ]
+}
