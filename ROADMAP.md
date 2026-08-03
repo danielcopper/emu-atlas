@@ -78,13 +78,24 @@ companion-health semantics beyond the config-missing case.
 
 ### 6. Firmware follow-ups
 
-`installation.firmware_status()` ships: live `.info` declarations from the installed cores, stated against the live
+The four firmware entry points ship: live `.info` declarations from the installed cores, stated against the live
 `system_directory`, with the packaged identity table doing only what it can. What is left:
 
-- **The emulator-handle route.** A per-entry `firmware_status()` on `EmulatorEntry`, scoped to that one core, so the
-  catalogue answer and the firmware answer share a subject.
-- **Standalone emulators declare nothing.** An emulator without a libretro core ships no `.info`, so a correctly-named
-  firmware file in a directory no installed core knows about stays invisible. Part of block 4.
+- **Non-comparable identities.** 21 of the 388 packaged identities are archives or data packs (MAME-style romset zips,
+  `scummvm.zip`, `ecwolf.pk3`), whose whole-file hash changes with romset version and merge mode. A `mismatch` there may
+  be structurally meaningless — and `neogeo.zip` is one of the mandatory files this work exists to surface. The fix
+  belongs in the table (a per-entry statement of what kind of identity it is, with provenance), not in a file-extension
+  heuristic; only then can `checked` grow a fifth value that means something.
+- **The system vocabulary.** `firmware_for_system` speaks ES-DE's system name where a catalogue exists and an atlas slug
+  where none does, and says which via a caveat. The canonical translation table is the real fix.
+- **The unclaimed bucket has substructure.** It currently mixes genuine alternative BIOS revisions with core runtime
+  data (blueMSX machine ROMs, PPSSPP assets, Dolphin `Sys`). Save artifacts are already excluded via the rule cards;
+  runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save
+  side.
+- **The emulator-handle route.** A per-entry `firmware_for_core()` on `EmulatorEntry`, so the catalogue answer and the
+  firmware answer share a subject without the caller passing a `core_so` back in.
+- **Standalone emulators declare nothing.** An emulator without a libretro core ships no `.info`; the catalogue route
+  lists it and states it as unresolvable. Part of block 4.
 - **RetroArch's platform default `system_directory`.** Unset in the configs currently yields an empty answer plus a
   caveat; the default is presumably `system` under the config tree, but that is [O] — unverified, so unclaimed.
 

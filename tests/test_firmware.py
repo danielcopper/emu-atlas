@@ -1,10 +1,12 @@
-"""Tests for atlas.firmware — live declarations, the packaged table, and the state model.
+"""Tests for atlas.firmware — emulators, their firmware, and what is on disk.
 
-The states are the contract, so each one is proven from data: a declared file
-absent from disk, one present without a known identity, one whose identity
-matches, one whose identity does not, and a file nobody declared. The single
-most important case is the last class in this file: having *no declaration* is
-never allowed to look like *nothing missing*.
+The model is proven from data along its two axes: ``need`` is what an emulator
+asks for, ``present``/``checked`` is what the machine answers, and the four
+``checked`` values stay apart. Two classes carry the load. The first is
+:class:`TestNoDeclarationIsNeverSatisfied`: having no declaration must never
+look like nothing missing. The second is :class:`TestPartialReaderIsNotMisled`
+— a caller that renders one field and ignores the rest may end up uninformed,
+but never wrong.
 """
 
 from __future__ import annotations
@@ -16,12 +18,24 @@ from typing import Mapping
 import pytest
 
 from atlas.firmware import (
+    CAVEAT_CATALOGUE_UNAVAILABLE,
+    CAVEAT_CONTENT_UNIDENTIFIED,
+    CAVEAT_CORE_NOT_INSTALLED,
+    CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_NO_FIRMWARE_DECLARATION,
-    FirmwareFile,
+    CAVEAT_STANDALONE_EMULATOR,
+    CatalogueEntry,
+    FirmwareContext,
+    FirmwareIdentity,
+    FirmwareRequirement,
+    firmware_for_core,
+    firmware_for_system,
+    firmware_inventory,
+    identify_firmware,
     load_hashes,
-    platform_for,
-    read_declarations,
-    resolve_firmware,
+    read_core_declarations,
+    save_artifact_paths,
+    system_for,
 )
 from atlas.machine import FixtureFileSpec, FixtureMachine
 
@@ -48,7 +62,7 @@ firmware0_path = "dc/dc_boot.bin"
 firmware0_opt = "false"
 """
 
-# The same PSX file, declared as optional by a second core: required is the OR.
+# The same PSX file, declared as optional by a second core.
 PSX_SECOND_INFO = """
 systemname = "PlayStation"
 firmware_count = 1
@@ -58,222 +72,568 @@ firmware0_opt = "true"
 """
 
 TEMPLATE_INFO = """
+display_name = "Example"
 systemname = "Example"
 firmware_count = 1
-firmware0_desc = "Description of the firmware"
+firmware0_desc = "filename.ext (description)"
 firmware0_path = "filename.ext"
 firmware0_opt = "true/false"
 """
 
-HASHES = json.dumps(
+NO_FIRMWARE_INFO = """
+display_name = "Nintendo - SNES (Snes9x)"
+systemname = "Super Nintendo Entertainment System"
+"""
+
+GAMBATTE_INFO = """
+systemname = "Nintendo - Game Boy"
+firmware_count = 1
+firmware0_desc = "gb_bios.bin"
+firmware0_path = "gb_bios.bin"
+firmware0_opt = "true"
+"""
+
+SAMEBOY_INFO = """
+systemname = "Nintendo - Game Boy"
+firmware_count = 1
+firmware0_desc = "dmg_boot.bin"
+firmware0_path = "dmg_boot.bin"
+firmware0_opt = "true"
+"""
+
+TABLE = json.dumps(
     {
-        "_meta": {"version": "test"},
+        "_meta": {"generated_from": "test", "version": "0", "generated_at": "2026-01-01"},
         "files": {
-            "scph5501.bin": {"md5": "aaa", "sha1": "bbb", "size": 524288},
-            "dc_boot.bin": {"md5": hashlib.md5(b"boot-bytes").hexdigest(), "sha1": "x", "size": 10},
+            "scph5501.bin": {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8},
+            "dc/dc_boot.bin": {"md5": "cc" * 16, "sha1": "dd" * 20, "size": 4},
+            # One content, two canonical names — the gambatte/SameBoy case.
+            "gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5},
+            "dmg_boot.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5},
         },
     }
 )
 
 
-@pytest.fixture
-def hashes():
-    return load_hashes(HASHES)
-
-
-def _machine(
-    files: Mapping[str, FixtureFileSpec] | None = None,
-    cores: tuple[str, ...] = ("beetle_psx_libretro", "flycast_libretro"),
-) -> FixtureMachine:
-    """A machine with an .info set, the matching .so files, and a bios tree."""
-    tree: dict[str, FixtureFileSpec] = {
-        f"{INFO_DIR}/beetle_psx_libretro.info": PSX_INFO,
-        f"{INFO_DIR}/flycast_libretro.info": DC_INFO,
-        f"{INFO_DIR}/00_example_libretro.info": TEMPLATE_INFO,
+def _blob(content: bytes) -> dict[str, str | int]:
+    return {
+        "md5": hashlib.md5(content).hexdigest(),
+        "sha1": hashlib.sha1(content).hexdigest(),
+        "size": len(content),
     }
-    tree.update({f"{INFO_DIR}/{core}.so": {"status": "invalid-text"} for core in cores})
-    tree.update(files or {})
-    return FixtureMachine(tree, dirs=[BIOS_DIR, f"{BIOS_DIR}/dc"])
 
 
-def _report(machine, hashes, **kwargs):
-    declarations = read_declarations(machine, INFO_DIR, core_dir=INFO_DIR)
-    return resolve_firmware(machine, root=BIOS_DIR, declarations=declarations, hashes=hashes, **kwargs)
+def _machine(files: Mapping[str, FixtureFileSpec] | None = None, **kwargs: object) -> FixtureMachine:
+    tree: dict[str, FixtureFileSpec] = {
+        f"{INFO_DIR}/mednafen_psx_libretro.info": PSX_INFO,
+        f"{INFO_DIR}/mednafen_psx_libretro.so": {"status": "invalid-text"},
+    }
+    if files is not None:
+        tree.update(files)
+    return FixtureMachine(tree, **kwargs)  # type: ignore[arg-type]
 
 
-def _by_path(report) -> dict[str, FirmwareFile]:
-    return {f.path: f for f in report.files}
+def _context(machine: FixtureMachine, *, root: str | None = BIOS_DIR, core_dir: str | None = INFO_DIR):
+    return FirmwareContext(
+        root=root,
+        cores=read_core_declarations(machine, INFO_DIR, core_dir=core_dir),
+        hashes=load_hashes(TABLE),
+    )
 
 
-class TestPackagedHashes:
-    def test_loads_bundled_table(self):
-        table = load_hashes()
-        assert table.meta["version"] == "5.0.0"
-        assert len(table.names()) == 388
-        entry = table.get("scph5501.bin")
-        assert entry is not None and entry.size == 524288
+class TestHashTable:
+    """The packaged table: names in, identities out — and content in, names out."""
 
-    def test_absent_identity_is_a_normal_answer(self):
-        assert load_hashes().get("no-such-firmware.bin") is None
-
-    def test_for_path_matches_a_path_keyed_entry(self):
-        # Upstream keys the Dreamcast BIOS by its path, not its base name.
-        entry = load_hashes().for_path("dc/dc_boot.bin")
-        assert entry is not None and entry.name == "dc/dc_boot.bin"
+    def test_for_path_matches_the_declared_path_first(self):
+        hashes = load_hashes(TABLE)
+        identity = hashes.for_path("dc/dc_boot.bin")
+        assert identity is not None and identity.md5 == "cc" * 16
 
     def test_for_path_falls_back_to_the_base_name(self):
-        entry = load_hashes().for_path("some/prefix/scph5501.bin")
-        assert entry is not None and entry.name == "scph5501.bin"
+        # A core declaring "subdir/scph5501.bin" still names the same dump.
+        identity = load_hashes(TABLE).for_path("psx/scph5501.bin")
+        assert identity is not None and identity.size == 8
 
-    def test_incomplete_entry_is_rejected(self):
+    def test_an_uncovered_name_is_a_normal_none(self):
+        assert load_hashes(TABLE).for_path("neogeo.zip") is None
+
+    def test_known_as_carries_every_name_for_one_content(self):
+        identity = load_hashes(TABLE).for_path("gb_bios.bin")
+        assert identity is not None
+        assert identity.known_as == ("dmg_boot.bin", "gb_bios.bin")
+
+    def test_for_content_matches_by_bytes_not_by_name(self):
+        identity = load_hashes(TABLE).for_content(md5="EE" * 16)
+        assert identity is not None and identity.known_as == ("dmg_boot.bin", "gb_bios.bin")
+
+    def test_for_content_requires_every_supplied_field_to_agree(self):
+        hashes = load_hashes(TABLE)
+        assert hashes.for_content(md5="ee" * 16, size=5) is not None
+        assert hashes.for_content(md5="ee" * 16, size=6) is None
+        assert hashes.for_content(md5="ee" * 16, sha1="00" * 20) is None
+
+    def test_size_alone_is_not_an_identity(self):
         with pytest.raises(ValueError):
-            load_hashes(json.dumps({"files": {"x.bin": {"md5": "a", "sha1": "b"}}}))
+            load_hashes(TABLE).for_content(size=5)
+
+    def test_the_packaged_table_loads_and_is_not_empty(self):
+        packaged = load_hashes()
+        assert packaged.names()
+        assert packaged.meta["generated_from"]
+
+
+class TestSystemSlug:
+    """What a declaration belongs to — override, map, or a mechanical slug."""
+
+    def test_the_per_file_override_wins_over_the_core_systemname(self):
+        assert system_for("gb_bios.bin", "Game Boy/Game Boy Color/Game Boy Advance") == "gb"
+
+    def test_a_known_systemname_maps(self):
+        assert system_for("dc/dc_boot.bin", "Sega - Dreamcast") == "dc"
+
+    def test_an_unknown_systemname_is_slugified_not_dropped(self):
+        assert system_for("weird.bin", "Some New Machine") == "some-new-machine"
+
+    def test_an_empty_systemname_is_the_catch_all(self):
+        assert system_for("weird.bin", "") == "_unknown"
 
 
 class TestReadDeclarations:
-    def test_reads_paths_descriptions_and_opt(self):
-        declarations = read_declarations(_machine(), INFO_DIR, core_dir=INFO_DIR)
-        by_path = {d.path: d for d in declarations}
-        assert set(by_path) == {"scph5501.bin", "psxonpsp660.bin", "dc/dc_boot.bin"}
-        assert by_path["scph5501.bin"].required is True
-        assert by_path["psxonpsp660.bin"].required is False
-        assert by_path["dc/dc_boot.bin"].file_name == "dc_boot.bin"
-        assert by_path["dc/dc_boot.bin"].platform == "dc"
+    """The live read: every installed core, firmware or not."""
 
-    def test_template_info_files_are_dropped(self):
-        declarations = read_declarations(_machine(), INFO_DIR, core_dir=INFO_DIR)
-        assert not [d for d in declarations if d.path == "filename.ext"]
+    def test_a_core_without_firmware_is_still_read(self):
+        machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
+                            f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"}})
+        cores = {c.core_so: c for c in read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR)}
+        assert cores["snes9x_libretro.so"].firmware == ()
+        assert cores["snes9x_libretro.so"].system == "snes"
 
-    def test_core_without_an_so_does_not_declare(self):
-        machine = _machine(cores=("flycast_libretro",))
-        declarations = read_declarations(machine, INFO_DIR, core_dir=INFO_DIR)
-        assert {d.path for d in declarations} == {"dc/dc_boot.bin"}
+    def test_a_core_without_its_so_is_not_installed(self):
+        machine = _machine({f"{INFO_DIR}/flycast_libretro.info": DC_INFO})
+        cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR)
+        assert [c.core_so for c in cores] == ["mednafen_psx_libretro.so"]
 
     def test_without_a_core_dir_nothing_is_filtered(self):
-        machine = _machine(cores=())
-        declarations = read_declarations(machine, INFO_DIR, core_dir=None)
-        assert {d.path for d in declarations} == {"scph5501.bin", "psxonpsp660.bin", "dc/dc_boot.bin"}
+        machine = _machine({f"{INFO_DIR}/flycast_libretro.info": DC_INFO})
+        cores = read_core_declarations(machine, INFO_DIR)
+        assert {c.core_so for c in cores} == {"mednafen_psx_libretro.so", "flycast_libretro.so"}
 
-    def test_missing_opt_means_required(self):
-        machine = FixtureMachine(
-            {
-                f"{INFO_DIR}/x_libretro.info": 'systemname = "Sony - PlayStation"\nfirmware0_path = "x.bin"\n',
-                f"{INFO_DIR}/x_libretro.so": {"status": "invalid-text"},
-            }
+    def test_the_template_info_files_are_dropped(self):
+        machine = _machine({f"{INFO_DIR}/00_example_libretro.info": TEMPLATE_INFO,
+                            f"{INFO_DIR}/00_example_libretro.so": {"status": "invalid-text"}})
+        cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR)
+        assert all("filename.ext" not in d.path for c in cores for d in c.firmware)
+
+    def test_a_missing_opt_flag_means_required(self):
+        machine = _machine()
+        core = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR)[0]
+        needs = {d.file_name: d.need for d in core.firmware}
+        assert needs == {"scph5501.bin": "required", "psxonpsp660.bin": "optional"}
+
+
+class TestPerCoreAnswer:
+    """Criterion 1: does this core need firmware, and where does each file go?"""
+
+    def test_the_destination_is_absolute_whether_or_not_a_file_is_there(self):
+        answer = firmware_for_core(_machine(), _context(_machine()), core_so="mednafen_psx_libretro.so")
+        paths = {r.file_name: r.path for r in answer.requirements}
+        assert paths == {
+            "scph5501.bin": f"{BIOS_DIR}/scph5501.bin",
+            "psxonpsp660.bin": f"{BIOS_DIR}/psxonpsp660.bin",
+        }
+        assert all(not r.present for r in answer.requirements)
+
+    def test_a_subdirectory_is_part_of_the_destination(self):
+        machine = _machine({f"{INFO_DIR}/flycast_libretro.info": DC_INFO,
+                            f"{INFO_DIR}/flycast_libretro.so": {"status": "invalid-text"}})
+        answer = firmware_for_core(machine, _context(machine), core_so="flycast_libretro.so")
+        assert [r.path for r in answer.requirements] == [f"{BIOS_DIR}/dc/dc_boot.bin"]
+
+    @pytest.mark.parametrize("given", ["mednafen_psx_libretro.so", "mednafen_psx_libretro", "/x/y/mednafen_psx_libretro.so"])
+    def test_a_core_is_named_by_so_name_stem_or_path(self, given: str):
+        machine = _machine()
+        answer = firmware_for_core(machine, _context(machine), core_so=given)
+        assert [c.installed for c in answer.cores] == [True]
+
+    def test_an_installed_core_declaring_nothing_needs_nothing(self):
+        machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
+                            f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"}})
+        answer = firmware_for_core(machine, _context(machine), core_so="snes9x_libretro.so")
+        core = answer.cores[0]
+        assert core.installed is True
+        assert core.requirements == ()
+        assert core.requirements_met is True
+        assert [c.code for c in answer.caveats] == []
+
+    def test_requirements_met_counts_only_required_files(self):
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
+        answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
+        core = answer.cores[0]
+        assert [r.file_name for r in core.unmet] == []
+        assert core.requirements_met is True
+
+    def test_a_missing_required_file_is_unmet(self):
+        machine = _machine()
+        core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
+        assert [r.file_name for r in core.unmet] == ["scph5501.bin"]
+        assert core.requirements_met is False
+
+
+class TestCheckedAxis:
+    """The four values of ``checked`` — and that none of them collapse."""
+
+    def test_nothing_there_means_nothing_to_check(self):
+        machine = _machine()
+        requirement = _by_name(firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so"))
+        assert requirement["scph5501.bin"].present is False
+        assert requirement["scph5501.bin"].checked is None
+
+    def test_a_known_identity_not_asked_about_is_unchecked(self):
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
+        requirement = _by_name(firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so"))
+        assert requirement["scph5501.bin"].checked == "unchecked"
+
+    def test_an_unknown_identity_is_unknown_even_when_asked_about(self):
+        # psxonpsp660.bin is not in this table: no amount of verifying can
+        # establish what it is, which is a different answer from "not checked".
+        machine = _machine({f"{BIOS_DIR}/psxonpsp660.bin": _blob(b"whatever")})
+        answer = firmware_for_core(
+            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
         )
-        assert read_declarations(machine, INFO_DIR, core_dir=INFO_DIR)[0].required is True
+        assert _by_name(answer)["psxonpsp660.bin"].checked == "unknown"
 
-
-class TestStates:
-    def test_declared_and_absent_is_missing(self, hashes):
-        report = _report(_machine(), hashes)
-        assert _by_path(report)["scph5501.bin"].state == "missing"
-
-    def test_present_without_a_known_hash(self, hashes):
-        report = _report(_machine({f"{BIOS_DIR}/psxonpsp660.bin": "whatever"}), hashes)
-        entry = _by_path(report)["psxonpsp660.bin"]
-        assert (entry.state, entry.hash_known) == ("present", False)
-
-    def test_present_stays_present_when_verification_is_not_asked_for(self, hashes):
-        report = _report(_machine({f"{BIOS_DIR}/dc/dc_boot.bin": "boot-bytes"}), hashes)
-        entry = _by_path(report)["dc/dc_boot.bin"]
-        assert (entry.state, entry.hash_known, report.hash_checked) == ("present", True, False)
-
-    def test_matching_identity_verifies(self, hashes):
-        report = _report(_machine({f"{BIOS_DIR}/dc/dc_boot.bin": "boot-bytes"}), hashes, verify=True)
-        assert _by_path(report)["dc/dc_boot.bin"].state == "verified"
-
-    def test_wrong_bytes_at_the_right_size_mismatch(self, hashes):
-        wrong = {f"{BIOS_DIR}/dc/dc_boot.bin": {"md5": "not-the-boot-md5", "size": 10}}
-        report = _report(_machine(wrong), hashes, verify=True)
-        assert _by_path(report)["dc/dc_boot.bin"].state == "mismatch"
-
-    def test_wrong_size_mismatches_without_hashing(self, hashes):
-        # No digest declared at all: the size pre-filter has to settle it.
-        report = _report(_machine({f"{BIOS_DIR}/dc/dc_boot.bin": {"size": 11}}), hashes, verify=True)
-        assert _by_path(report)["dc/dc_boot.bin"].state == "mismatch"
-
-    def test_unreadable_present_file_is_never_assumed_verified(self, hashes):
-        unreadable = {f"{BIOS_DIR}/dc/dc_boot.bin": {"status": "unreadable"}}
-        report = _report(_machine(unreadable), hashes, verify=True)
-        assert _by_path(report)["dc/dc_boot.bin"].state == "present"
-
-    def test_required_is_the_or_across_declaring_cores(self, hashes):
-        machine = _machine(
-            {
-                f"{INFO_DIR}/second_libretro.info": PSX_SECOND_INFO,
-                f"{INFO_DIR}/second_libretro.so": {"status": "invalid-text"},
-            }
+    def test_matching_bytes_verify(self):
+        content = b"12345678"
+        table = json.dumps(
+            {"_meta": {}, "files": {"scph5501.bin": {**_blob(content), "md5": hashlib.md5(content).hexdigest()}}}
         )
-        entry = _by_path(_report(machine, hashes))["scph5501.bin"]
-        assert entry.required is True
-        assert entry.cores == ("beetle_psx_libretro", "second_libretro")
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(content)})
+        context = FirmwareContext(
+            root=BIOS_DIR,
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
+            hashes=load_hashes(table),
+        )
+        answer = firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so", verify=True)
+        assert _by_name(answer)["scph5501.bin"].checked == "verified"
+
+    def test_the_right_size_with_the_wrong_bytes_is_a_mismatch(self):
+        # Size passes the free pre-filter, the digest does not.
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"md5": "00" * 16, "sha1": "00" * 20, "size": 8}})
+        answer = firmware_for_core(
+            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+        )
+        assert _by_name(answer)["scph5501.bin"].checked == "mismatch"
+
+    def test_a_wrong_size_settles_it_without_reading_the_file(self):
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"size": 9}})
+        answer = firmware_for_core(
+            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+        )
+        assert _by_name(answer)["scph5501.bin"].checked == "mismatch"
+
+    def test_a_present_but_unreadable_file_stays_unknown_and_says_so(self):
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"size": 8}})
+        answer = firmware_for_core(
+            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+        )
+        assert _by_name(answer)["scph5501.bin"].checked == "unknown"
+        assert CAVEAT_FIRMWARE_UNREADABLE in [c.code for c in answer.caveats]
+
+    def test_hash_checked_records_whether_verification_ran(self):
+        machine = _machine()
+        context = _context(machine)
+        assert firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so").hash_checked is False
+        assert (
+            firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so", verify=True).hash_checked
+            is True
+        )
 
 
-class TestUndeclared:
-    def test_files_in_declared_directories_are_reported(self, hashes):
-        stray = {f"{BIOS_DIR}/stray.bin": "x", f"{BIOS_DIR}/dc/leftover.bin": "y"}
-        entries = _by_path(_report(_machine(stray), hashes))
-        assert entries["stray.bin"].state == "undeclared"
-        assert entries["dc/leftover.bin"].state == "undeclared"
-        assert entries["stray.bin"].required is False
+class TestRequirementInvariants:
+    """The dataclass refuses states that would lie."""
 
-    def test_directories_no_declaration_references_stay_invisible(self, hashes):
-        noise = {f"{BIOS_DIR}/mame2003-plus/samples/whatever.zip": "x"}
-        assert "mame2003-plus/samples/whatever.zip" not in _by_path(_report(_machine(noise), hashes))
-
-    def test_a_platform_query_does_not_report_undeclared(self, hashes):
-        report = _report(_machine({f"{BIOS_DIR}/stray.bin": "x"}), hashes, platform="psx")
-        assert all(f.state != "undeclared" for f in report.files)
-
-    def test_an_undeclared_file_cannot_claim_a_core(self):
+    def test_an_absent_file_cannot_carry_a_verdict(self):
         with pytest.raises(ValueError):
-            FirmwareFile(
-                path="x.bin",
-                file_name="x.bin",
-                description="",
-                required=False,
-                state="undeclared",
-                hash_known=False,
-                cores=("some_libretro",),
+            FirmwareRequirement(
+                core_so="x.so", system="psx", need="required", file_name="a.bin", path="/bios/a.bin",
+                description="", identity=None, present=False, checked="verified",
+            )
+
+    def test_a_present_file_must_state_one_of_the_four(self):
+        with pytest.raises(ValueError):
+            FirmwareRequirement(
+                core_so="x.so", system="psx", need="required", file_name="a.bin", path="/bios/a.bin",
+                description="", identity=None, present=True, checked=None,
+            )
+
+    def test_need_is_only_required_or_optional(self):
+        with pytest.raises(ValueError):
+            FirmwareRequirement(
+                core_so="x.so", system="psx", need="undeclared", file_name="a.bin",  # type: ignore[arg-type]
+                path="/bios/a.bin", description="", identity=None, present=False, checked=None,
             )
 
 
-class TestPlatformSelection:
-    def test_platform_filters_to_its_declarations(self, hashes):
-        report = _report(_machine(), hashes, platform="psx")
-        assert {f.path for f in report.files} == {"scph5501.bin", "psxonpsp660.bin"}
+class TestPerSystemAnswer:
+    """Criterion 2: which emulators run this system, and what does each want?"""
 
-    def test_systemname_variants_map_to_one_slug(self):
-        assert platform_for("scph5501.bin", "Sony - PlayStation") == "psx"
-        assert platform_for("scph5501.bin", "PlayStation") == "psx"
+    def test_without_a_catalogue_the_cores_own_systemname_enumerates(self):
+        machine = _gb_machine()
+        answer = firmware_for_system(machine, _context(machine), system="gb")
+        assert [c.core_so for c in answer.cores] == ["gambatte_libretro.so", "sameboy_libretro.so"]
+        assert CAVEAT_CATALOGUE_UNAVAILABLE in [c.code for c in answer.caveats]
 
-    def test_per_file_override_beats_the_systemname(self):
-        # mGBA covers three systems under one systemname; the boot ROMs do not.
-        assert platform_for("gbc_bios.bin", "Game Boy/Game Boy Color/Game Boy Advance") == "gbc"
+    def test_a_catalogue_lists_emulators_whose_core_is_not_installed(self):
+        machine = _gb_machine()
+        catalogue = (
+            CatalogueEntry(label="Gambatte", kind="libretro", core_so="gambatte_libretro.so"),
+            CatalogueEntry(label="TGB Dual", kind="libretro", core_so="tgbdual_libretro.so"),
+        )
+        answer = firmware_for_system(machine, _context(machine), system="gb", catalogue=catalogue)
+        by_label = {c.label: c for c in answer.cores}
+        assert by_label["TGB Dual"].installed is False
+        assert by_label["TGB Dual"].requirements == ()
+        assert by_label["TGB Dual"].requirements_met is None
+        assert [c.code for c in by_label["TGB Dual"].caveats] == [CAVEAT_CORE_NOT_INSTALLED]
 
-    def test_unknown_systemname_is_slugified_not_dropped(self):
-        assert platform_for("x.bin", "Some New Console") == "some-new-console"
-        assert platform_for("x.bin", "") == "_unknown"
+    def test_a_standalone_emulator_is_stated_not_dropped(self):
+        machine = _gb_machine()
+        catalogue = (
+            CatalogueEntry(label="Gambatte", kind="libretro", core_so="gambatte_libretro.so"),
+            CatalogueEntry(label="SameBoy (Standalone)", kind="standalone", core_so=None),
+        )
+        answer = firmware_for_system(machine, _context(machine), system="gb", catalogue=catalogue)
+        standalone = answer.cores[1]
+        assert standalone.installed is False
+        assert [c.code for c in standalone.caveats] == [CAVEAT_STANDALONE_EMULATOR]
+
+    def test_one_identity_under_two_names_leaves_both_requirements_standing(self):
+        # gb_bios.bin is on disk; SameBoy's dmg_boot.bin is byte-identical and
+        # still missing, because SameBoy opens dmg_boot.bin and nothing else.
+        machine = _gb_machine({f"{BIOS_DIR}/gb_bios.bin": _blob(b"boot!")})
+        answer = firmware_for_system(machine, _context(machine), system="gb")
+        by_core = {r.core_so: r for r in answer.requirements}
+        assert by_core["gambatte_libretro.so"].present is True
+        assert by_core["sameboy_libretro.so"].present is False
+        assert (
+            by_core["gambatte_libretro.so"].identity == by_core["sameboy_libretro.so"].identity
+        ), "the same bytes are expected at both destinations"
 
 
-class TestNothingKnownIsNotAllClear:
-    """The defect this module exists to prevent: no declaration must not read as satisfied."""
+class TestInventory:
+    """Criteria 5 and 6: the aggregate, and what nobody asked for."""
 
-    def test_unknown_platform_yields_an_empty_list_and_a_caveat(self, hashes):
-        report = _report(_machine(), hashes, platform="nintendo-switch")
-        assert report.files == ()
-        assert [c.code for c in report.caveats] == [CAVEAT_NO_FIRMWARE_DECLARATION]
-        assert report.caveats[0].data == {"platform": "nintendo-switch"}
+    def test_an_unclaimed_file_is_recognised_by_content(self):
+        content = b"boot!"
+        table = json.dumps({"_meta": {}, "files": {"gb_bios.bin": _blob(content)}})
+        machine = _machine({f"{BIOS_DIR}/mystery-name.bin": _blob(content)})
+        context = FirmwareContext(
+            root=BIOS_DIR,
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
+            hashes=load_hashes(table),
+        )
+        unclaimed = firmware_inventory(machine, context, verify=True).unclaimed
+        assert [f.path for f in unclaimed] == [f"{BIOS_DIR}/mystery-name.bin"]
+        assert unclaimed[0].known_as == ("gb_bios.bin",)
 
-    def test_no_declarations_at_all_still_caveats(self, hashes):
-        empty = FixtureMachine({}, dirs=[INFO_DIR, BIOS_DIR])
-        report = resolve_firmware(empty, root=BIOS_DIR, declarations=(), hashes=hashes)
-        assert report.files == ()
-        assert [c.code for c in report.caveats] == [CAVEAT_NO_FIRMWARE_DECLARATION]
+    def test_without_verification_no_claim_is_made_about_an_unclaimed_file(self):
+        machine = _machine({f"{BIOS_DIR}/scph1001.bin": _blob(b"whatever")})
+        unclaimed = firmware_inventory(machine, _context(machine)).unclaimed
+        assert unclaimed[0].identity is None
+        assert unclaimed[0].known_as == ()
 
-    def test_no_root_means_no_answer_at_all(self, hashes):
+    def test_save_data_the_rule_cards_claim_is_not_firmware(self):
+        machine = _machine(
+            {
+                f"{INFO_DIR}/flycast_libretro.info": DC_INFO,
+                f"{INFO_DIR}/flycast_libretro.so": {"status": "invalid-text"},
+                f"{BIOS_DIR}/dc/vmu_save_A1.bin": _blob(b"vmu"),
+                f"{BIOS_DIR}/dc/spare.bin": _blob(b"spare"),
+            }
+        )
+        paths = [f.path for f in firmware_inventory(machine, _context(machine)).unclaimed]
+        assert paths == [f"{BIOS_DIR}/dc/spare.bin"]
+
+    def test_the_scan_stays_in_the_directories_declarations_reference(self):
+        machine = _machine(
+            {
+                f"{INFO_DIR}/flycast_libretro.info": DC_INFO,
+                f"{INFO_DIR}/flycast_libretro.so": {"status": "invalid-text"},
+                f"{BIOS_DIR}/dc/stray.bin": _blob(b"a"),
+                f"{BIOS_DIR}/mame2003-plus/samples/wboy.zip": _blob(b"b"),
+            }
+        )
+        paths = [f.path for f in firmware_inventory(machine, _context(machine)).unclaimed]
+        assert paths == [f"{BIOS_DIR}/dc/stray.bin"]
+
+    def test_a_declared_file_is_never_unclaimed(self):
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
+        answer = firmware_inventory(machine, _context(machine))
+        assert answer.unclaimed == ()
+
+    def test_the_rule_cards_name_the_save_artifacts(self):
+        artifacts = save_artifact_paths()
+        assert "dc/vmu_save_A1.bin" in artifacts
+        assert "pcsx2/memcards/Mcd001.ps2" in artifacts
+
+
+class TestIdentification:
+    """Criterion 4: content in, every destination that wants it out."""
+
+    def test_one_content_answers_every_destination_that_wants_it(self):
+        machine = _gb_machine()
+        identified = identify_firmware(machine, _context(machine), md5="ee" * 16)
+        assert identified.known_as == ("dmg_boot.bin", "gb_bios.bin")
+        assert [(r.core_so, r.path) for r in identified.requirements] == [
+            ("sameboy_libretro.so", f"{BIOS_DIR}/dmg_boot.bin"),
+            ("gambatte_libretro.so", f"{BIOS_DIR}/gb_bios.bin"),
+        ]
+
+    def test_unrecognised_content_says_so_instead_of_answering_nothing(self):
+        machine = _gb_machine()
+        identified = identify_firmware(machine, _context(machine), md5="99" * 16)
+        assert identified.identity is None
+        assert identified.requirements == ()
+        assert CAVEAT_CONTENT_UNIDENTIFIED in [c.code for c in identified.caveats]
+
+    def test_recognised_content_nobody_here_wants_is_not_a_silent_empty(self):
+        machine = _machine()  # only the PSX core is installed
+        identified = identify_firmware(machine, _context(machine), md5="ee" * 16)
+        assert identified.identity is not None
+        assert identified.requirements == ()
+        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in identified.caveats]
+
+    def test_size_must_agree_when_it_is_supplied(self):
+        machine = _gb_machine()
+        assert identify_firmware(machine, _context(machine), md5="ee" * 16, size=99).identity is None
+
+
+class TestNoDeclarationIsNeverSatisfied:
+    """The defect the whole design exists to prevent."""
+
+    def test_an_unknown_core_answers_unknown_not_nothing(self):
         machine = _machine()
-        declarations = read_declarations(machine, INFO_DIR, core_dir=INFO_DIR)
-        report = resolve_firmware(machine, root=None, declarations=declarations, hashes=hashes)
-        assert (report.root, report.files, report.hash_checked) == (None, (), False)
+        answer = firmware_for_core(machine, _context(machine), core_so="mgba_libretro.so")
+        assert answer.cores[0].installed is False
+        assert answer.cores[0].requirements == ()
+        assert answer.cores[0].requirements_met is None
+        assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_CORE_NOT_INSTALLED]
+        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in answer.caveats]
+
+    def test_a_system_nobody_declares_is_empty_with_a_caveat(self):
+        machine = _machine()
+        answer = firmware_for_system(machine, _context(machine), system="n64")
+        assert answer.cores == ()
+        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in answer.caveats]
+
+    def test_an_unresolvable_info_directory_yields_no_requirements(self):
+        machine = FixtureMachine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
+        context = FirmwareContext(root=BIOS_DIR, cores=(), hashes=load_hashes(TABLE))
+        answer = firmware_inventory(machine, context)
+        assert answer.requirements == ()
+        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in answer.caveats]
+
+    def test_without_a_root_there_is_nothing_to_resolve_against(self):
+        machine = _machine()
+        context = FirmwareContext(
+            root=None,
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
+            hashes=load_hashes(TABLE),
+        )
+        for answer in (
+            firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so"),
+            firmware_for_system(machine, context, system="psx"),
+            firmware_inventory(machine, context),
+        ):
+            assert answer.root is None
+            assert answer.cores == ()
+            assert answer.unclaimed == ()
+
+
+class TestPartialReaderIsNotMisled:
+    """A caller that renders one field must never be shown something false.
+
+    The review's question, answered as a test: across every answer shape this
+    module can produce, no single field can be read as "all good" when it is
+    not. Uninformed is acceptable; wrong is not.
+    """
+
+    @staticmethod
+    def _answers():
+        installed = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
+        gb = _gb_machine({f"{BIOS_DIR}/gb_bios.bin": _blob(b"boot!")})
+        empty = _machine()
+        unreadable = _machine({f"{BIOS_DIR}/scph5501.bin": {"size": 8}})
+        for machine, answer in (
+            (installed, firmware_for_core(installed, _context(installed), core_so="mednafen_psx_libretro.so")),
+            (installed, firmware_inventory(installed, _context(installed), verify=True)),
+            (gb, firmware_for_system(gb, _context(gb), system="gb", verify=True)),
+            (empty, firmware_for_core(empty, _context(empty), core_so="mgba_libretro.so")),
+            (empty, firmware_for_system(empty, _context(empty), system="n64")),
+            (unreadable, firmware_inventory(unreadable, _context(unreadable), verify=True)),
+        ):
+            yield machine, answer
+
+    def test_an_empty_requirement_list_is_either_explained_or_genuinely_empty(self):
+        for _, answer in self._answers():
+            for core in answer.cores:
+                if core.requirements:
+                    continue
+                assert core.installed or core.caveats, (
+                    "an empty list from a core atlas could not read must say so"
+                )
+
+    def test_requirements_never_come_from_a_core_that_was_not_read(self):
+        for _, answer in self._answers():
+            for core in answer.cores:
+                assert core.installed or not core.requirements
+
+    def test_a_verdict_never_appears_without_verification(self):
+        for _, answer in self._answers():
+            if answer.hash_checked:
+                continue
+            assert all(r.checked not in ("verified", "mismatch") for r in answer.requirements)
+
+    def test_presence_and_the_check_never_disagree(self):
+        for _, answer in self._answers():
+            for requirement in answer.requirements:
+                assert (requirement.checked is None) is (not requirement.present)
+
+    def test_an_unidentifiable_file_never_reads_as_merely_unchecked(self):
+        for _, answer in self._answers():
+            for requirement in answer.requirements:
+                if requirement.present and requirement.identity is None:
+                    assert requirement.checked == "unknown"
+
+    def test_an_unclaimed_file_never_carries_a_name_it_was_not_matched_by(self):
+        for _, answer in self._answers():
+            for unclaimed in answer.unclaimed:
+                assert (unclaimed.known_as == ()) is (unclaimed.identity is None)
+
+    def test_requirements_met_is_never_true_out_of_ignorance(self):
+        for _, answer in self._answers():
+            for core in answer.cores:
+                if core.requirements_met is True:
+                    assert core.installed and not core.unmet
+
+
+def _by_name(answer) -> dict[str, FirmwareRequirement]:
+    return {r.file_name: r for r in answer.requirements}
+
+
+def _gb_machine(files: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:
+    tree: dict[str, FixtureFileSpec] = {
+        f"{INFO_DIR}/gambatte_libretro.info": GAMBATTE_INFO,
+        f"{INFO_DIR}/gambatte_libretro.so": {"status": "invalid-text"},
+        f"{INFO_DIR}/sameboy_libretro.info": SAMEBOY_INFO,
+        f"{INFO_DIR}/sameboy_libretro.so": {"status": "invalid-text"},
+    }
+    if files is not None:
+        tree.update(files)
+    return FixtureMachine(tree)  # type: ignore[arg-type]
+
+
+def test_identity_equality_is_content_equality():
+    left = FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, known_as=("x",))
+    right = FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, known_as=("x",))
+    assert left == right

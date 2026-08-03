@@ -20,7 +20,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from atlas.firmware import FirmwareReport
+from atlas.firmware import (
+    FirmwareAnswer,
+    FirmwareIdentification,
+    FirmwareIdentity,
+    FirmwareRequirement,
+)
 from atlas.installations import EmulatorEntry, Installation
 from atlas.placement import SavePlacement, Unresolved
 
@@ -67,27 +72,64 @@ def installation_contract(installation: Installation) -> dict[str, Any]:
     }
 
 
-def firmware_contract(report: FirmwareReport) -> dict[str, Any]:
-    """The stable form of an :class:`~atlas.firmware.FirmwareReport`.
+def _identity_contract(identity: FirmwareIdentity | None) -> dict[str, Any] | None:
+    if identity is None:
+        return None
+    return {"md5": identity.md5, "sha1": identity.sha1, "size": identity.size}
 
-    ``description`` is prose and stays out; ``hash_known`` is in, because it is
-    the difference between "not checked" and "not checkable" and a client
-    branches on it.
+
+def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
+    return {
+        "core_so": requirement.core_so,
+        "system": requirement.system,
+        "need": requirement.need,
+        "file_name": requirement.file_name,
+        "path": requirement.path,
+        "identity": _identity_contract(requirement.identity),
+        "present": requirement.present,
+        "checked": requirement.checked,
+    }
+
+
+def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.firmware.FirmwareAnswer`.
+
+    ``description`` is prose and stays out. ``installed`` is in, because it is
+    the difference between "this core needs nothing" and "atlas knows nothing
+    about this core", and an empty requirement list alone cannot carry it.
     """
     return {
-        "root": report.root,
-        "hash_checked": report.hash_checked,
-        "files": [
+        "root": answer.root,
+        "hash_checked": answer.hash_checked,
+        "cores": [
+            {
+                "core_so": core.core_so,
+                "label": core.label,
+                "installed": core.installed,
+                "requirements": [_requirement_contract(r) for r in core.requirements],
+                "caveats": [{"code": c.code, "data": dict(c.data)} for c in core.caveats],
+            }
+            for core in answer.cores
+        ],
+        "unclaimed": [
             {
                 "path": f.path,
-                "state": f.state,
-                "required": f.required,
-                "hash_known": f.hash_known,
-                "cores": list(f.cores),
+                "identity": _identity_contract(f.identity),
+                "known_as": list(f.known_as),
             }
-            for f in report.files
+            for f in answer.unclaimed
         ],
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in report.caveats],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+    }
+
+
+def identification_contract(identification: FirmwareIdentification) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.firmware.FirmwareIdentification`."""
+    return {
+        "identity": _identity_contract(identification.identity),
+        "known_as": list(identification.known_as),
+        "requirements": [_requirement_contract(r) for r in identification.requirements],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in identification.caveats],
     }
 
 

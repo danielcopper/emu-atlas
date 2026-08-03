@@ -59,10 +59,18 @@ emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).zip")
 ```
 
 ```python
-inst.firmware_status(platform="psx", verify=True)
-# -> FirmwareReport (root, files, hash_checked, sources, caveats). Each file is
-#    verified | mismatch | present | missing | undeclared. There is no "unknown"
-#    state: having no declaration to check against is a caveat on an EMPTY
+inst.firmware_for_core(core_so="mgba_libretro.so")   # does this emulator need firmware, and where does it go?
+inst.firmware_for_system(system="gb")                # which emulators run this system, and what does each want?
+inst.firmware_inventory(verify=True)                 # everything installed, plus what nobody asks for
+inst.identify_firmware(md5="32fbbd84...")            # this content — where does it go, under what name?
+# -> FirmwareAnswer (root, cores, unclaimed, hash_checked, sources, caveats).
+#    A firmware requirement belongs to an EMULATOR: the core decides the file
+#    name and the absolute destination, the packaged identity decides whether
+#    what lies there is the right thing. Two axes, never merged:
+#      need     required | optional            — what the emulator asks for
+#      checked  verified | mismatch | unchecked | unknown  — what the machine says
+#    "unchecked" (we did not look) and "unknown" (we looked and cannot tell) are
+#    different answers. Having no declaration at all is a caveat on an EMPTY
 #    answer, because empty is honest and "nothing missing" would be a lie.
 ```
 
@@ -223,13 +231,22 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
   serializations.
 - **Consistency model**: handles are live; within one query every governing source is read exactly once and all
   decisions derive from that snapshot.
-- **Firmware state model**: `verified` / `mismatch` / `present` / `missing` for a declared file, `undeclared` for what
-  else is lying around. `unknown` is deliberately not a state — no declaration to check against is a caveat on an empty
-  answer. Hash checking is opt-in (`verify=`): policy and caching belong to the caller, not the library.
+- **Firmware is emulator-centric.** A requirement is one `(core, declared file)` pair: the core decides the expected
+  name and the absolute destination, the packaged identity decides whether what lies there is right. `need` (`required`
+  / `optional`) and `checked` (`verified` / `mismatch` / `unchecked` / `unknown`) are independent axes, and neither
+  `unchecked` vs `unknown` nor "core needs nothing" vs "core unknown" may collapse — the second pair is told apart by
+  `installed` plus a caveat, never by list length. A file nobody declares is not a requirement at all; it is an
+  `UnclaimedFile`, identified by **content**, and save data the rule cards claim never appears there. Hash checking is
+  opt-in (`verify=`): policy and caching belong to the caller, not the library.
 
 ## Open questions
 
 - The catalogue API when multiple frontends coexist on one EmuDeck install.
-- Exact canonical system-id set (lean toward ES-DE names).
+- Exact canonical system-id set (lean toward ES-DE names). It bites today: `firmware_for_system` speaks the frontend's
+  system name where a catalogue exists and an atlas slug where none does (`dreamcast` vs `dc`), and states which via a
+  caveat rather than translating.
+- Whether `checked` needs a fifth value for artifacts whose whole-file hash is not a meaningful identity — MAME-style
+  romset zips hash differently per romset version and merge mode. 21 of the 388 packaged identities are archives or data
+  packs; deciding this needs per-entry provenance in the table, not an extension heuristic.
 - Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only) — revisit with the
   feature-detection extension (ROADMAP: card variants), which reworks the probe anyway.

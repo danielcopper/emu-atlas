@@ -40,12 +40,18 @@ from atlas.firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_FIRMWARE_ROOT_MISSING,
     CAVEAT_INFO_PATH_UNRESOLVED,
-    FirmwareDeclaration,
-    FirmwareReport,
+    CatalogueEntry,
+    CoreDeclarations,
+    FirmwareAnswer,
+    FirmwareContext,
+    FirmwareIdentification,
     load_hashes,
-    read_declarations,
-    resolve_firmware,
+    read_core_declarations,
 )
+from atlas.firmware import firmware_for_core as _resolve_for_core
+from atlas.firmware import firmware_for_system as _resolve_for_system
+from atlas.firmware import firmware_inventory as _resolve_inventory
+from atlas.firmware import identify_firmware as _resolve_identification
 from atlas.machine import KIND_DIRECTORY, KIND_FILE, KIND_MISSING, Machine
 from atlas.oddities import lookup_audit, lookup_card
 from atlas.placement import (
@@ -896,25 +902,25 @@ def _cfg_directory(
     return resolved
 
 
-def _retroarch_firmware_status(
+def _retroarch_firmware_context(
     machine: Machine,
     *,
     home: str,
     app_id: str | None,
     global_text: str | None,
     cfg_label: str,
-    platform: str | None,
-    verify: bool,
-) -> FirmwareReport:
-    """The shared firmware resolver: live declarations against the live system directory.
+) -> FirmwareContext:
+    """One live read of everything a firmware answer needs, for any arrangement.
 
     One path for every arrangement (D2): RetroDECK, EmuDeck and a bare
     RetroArch differ only in which cfg is read and whether its paths need
-    sandbox translation. ``libretro_info_path`` names the ``.info`` files that
-    declare what the installed cores want; ``libretro_directory`` says which of
-    those cores are actually installed; ``system_directory`` is the root the
+    sandbox translation. The three keys are read independently and may point
+    anywhere: ``libretro_info_path`` names the ``.info`` files that declare
+    what the installed cores want, ``libretro_directory`` says which of those
+    cores are actually installed, and ``system_directory`` is the root the
     declared paths are relative to — the same directory RetroArch hands cores
-    when they look their firmware up.
+    when they look their firmware up. RetroDECK happens to collapse the first
+    two into one directory; nothing here assumes it.
     """
     parsed = parse_cfg_text(global_text) if global_text is not None else {}
     caveats: list[Caveat] = []
@@ -944,7 +950,7 @@ def _retroarch_firmware_status(
 
     info_dir = _cfg_directory(machine, parsed, "libretro_info_path", home=home, app_id=app_id)
     core_dir = _cfg_directory(machine, parsed, "libretro_directory", home=home, app_id=app_id)
-    declarations: tuple[FirmwareDeclaration, ...] = ()
+    cores: tuple[CoreDeclarations, ...] = ()
     if info_dir is None:
         caveats.append(
             Caveat(
@@ -966,18 +972,49 @@ def _retroarch_firmware_status(
             )
         else:
             sources.append(f"declarations limited to cores installed in {core_dir}")
-        declarations = read_declarations(machine, info_dir, core_dir=core_dir)
+        cores = read_core_declarations(machine, info_dir, core_dir=core_dir)
 
-    return resolve_firmware(
-        machine,
+    return FirmwareContext(
         root=root,
-        declarations=declarations,
+        cores=cores,
         hashes=load_hashes(),
-        platform=platform,
-        verify=verify,
         sources=tuple(sources),
         caveats=tuple(caveats),
     )
+
+
+class _FirmwareQueries:
+    """The four firmware entry points, over one live context per query.
+
+    Every handle answers the same four questions; only the way its context is
+    assembled differs. An installation whose frontend catalogue can enumerate a
+    system's emulators overrides :meth:`firmware_for_system` to pass it.
+    """
+
+    _machine: Machine
+
+    def _firmware_context(self) -> FirmwareContext:
+        raise NotImplementedError  # pragma: no cover - every handle supplies one
+
+    def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer:
+        """Does *core_so* need firmware, where does each file go, and is it there?"""
+        return _resolve_for_core(self._machine, self._firmware_context(), core_so=core_so, verify=verify)
+
+    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer:
+        """Which emulators can run *system*, and what does each of them want?"""
+        return _resolve_for_system(self._machine, self._firmware_context(), system=system, verify=verify)
+
+    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
+        """Every installed core's firmware, plus what is lying around unclaimed."""
+        return _resolve_inventory(self._machine, self._firmware_context(), verify=verify)
+
+    def identify_firmware(
+        self, *, md5: str | None = None, sha1: str | None = None, size: int | None = None
+    ) -> FirmwareIdentification:
+        """What is this content, and which requirements here does it satisfy?"""
+        return _resolve_identification(
+            self._machine, self._firmware_context(), md5=md5, sha1=sha1, size=size
+        )
 
 
 def _card_files(files: tuple[str, ...], rom_stem: str | None) -> tuple[str, ...] | None:
@@ -1091,7 +1128,7 @@ class EmulatorEntry:
         )
 
 
-class RetroDeck:
+class RetroDeck(_FirmwareQueries):
     """A RetroDECK installation — cfg is the truth, ``retrodeck.json`` is context.
 
     The handle is *live*: it stores only its identity (home) and the machine
@@ -1339,23 +1376,30 @@ class RetroDeck:
         config, marker_issues = self._read_marker()
         return self._save_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
 
-    def firmware_status(self, *, platform: str | None = None, verify: bool = False) -> FirmwareReport:
-        """Which firmware this RetroDECK's installed cores declare, and the state of each.
-
-        ``platform`` narrows the answer to one platform slug; omit it for the
-        whole installation — the only form that also reports ``undeclared``
-        files. ``verify`` turns on identity checking (size pre-filter, then
-        md5); it is off by default because the caller owns that policy and its
-        caching.
-        """
-        return _retroarch_firmware_status(
+    def _firmware_context(self) -> FirmwareContext:
+        return _retroarch_firmware_context(
             self._machine,
             home=self._home,
             app_id=self._APP_ID,
             global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
             cfg_label="retroarch.cfg",
-            platform=platform,
-            verify=verify,
+        )
+
+    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer:
+        """Which emulators RetroDECK offers for *system*, and what each of them wants.
+
+        *system* is the ES-DE system name (``"gb"``, ``"dreamcast"``), the same
+        vocabulary :meth:`emulators_for` speaks — the catalogue is the
+        enumeration, so an emulator whose core is not installed and a
+        standalone emulator both appear, stated as such instead of silently
+        dropped.
+        """
+        catalogue = tuple(
+            CatalogueEntry(label=entry.label, kind=entry.kind, core_so=entry.core_so)
+            for entry in self.emulators_for(system)
+        )
+        return _resolve_for_system(
+            self._machine, self._firmware_context(), system=system, catalogue=catalogue, verify=verify
         )
 
     def entry_save_location(
@@ -1423,7 +1467,7 @@ def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
     return result
 
 
-class EmuDeck:
+class EmuDeck(_FirmwareQueries):
     """An EmuDeck arrangement — ``settings.sh`` is its truth, the standalone
     ``org.libretro.RetroArch`` Flatpak is its RetroArch.
 
@@ -1560,24 +1604,19 @@ class EmuDeck:
             extra_caveats=_health_caveats(health),
         )
 
-    def firmware_status(self, *, platform: str | None = None, verify: bool = False) -> FirmwareReport:
-        """Which firmware EmuDeck's RetroArch declares, resolved from the standalone Flatpak cfg.
-
-        The cfg is the truth here too: ``settings.sh`` names a ``biosPath``,
-        but what RetroArch actually hands its cores is ``system_directory``.
-        """
-        return _retroarch_firmware_status(
+    def _firmware_context(self) -> FirmwareContext:
+        """The cfg is the truth here too: ``settings.sh`` names a ``biosPath``,
+        but what RetroArch actually hands its cores is ``system_directory``."""
+        return _retroarch_firmware_context(
             self._machine,
             home=self._home,
             app_id=self._RA_APP_ID,
             global_text=self._machine.read_text(self._companion_cfg_path()).text,
             cfg_label="retroarch.cfg",
-            platform=platform,
-            verify=verify,
         )
 
 
-class _RetroArchInstall:
+class _RetroArchInstall(_FirmwareQueries):
     """Shared behavior for a bare RetroArch install (standalone Flatpak or native).
 
     The saves root comes from the cfg's ``savefile_directory``; when unset,
@@ -1656,16 +1695,13 @@ class _RetroArchInstall:
             extra_caveats=_health_caveats(health),
         )
 
-    def firmware_status(self, *, platform: str | None = None, verify: bool = False) -> FirmwareReport:
-        """Which firmware this RetroArch install's cores declare, and the state of each."""
-        return _retroarch_firmware_status(
+    def _firmware_context(self) -> FirmwareContext:
+        return _retroarch_firmware_context(
             self._machine,
             home=self._home,
             app_id=self._app_id,
             global_text=self._machine.read_text(self._cfg_path()).text,
             cfg_label="retroarch.cfg",
-            platform=platform,
-            verify=verify,
         )
 
 
@@ -1715,6 +1751,12 @@ class Installation(Protocol):
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavePlacement: ...
 
-    def firmware_status(
-        self, *, platform: str | None = None, verify: bool = False
-    ) -> FirmwareReport: ...
+    def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer: ...
+
+    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer: ...
+
+    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer: ...
+
+    def identify_firmware(
+        self, *, md5: str | None = None, sha1: str | None = None, size: int | None = None
+    ) -> FirmwareIdentification: ...

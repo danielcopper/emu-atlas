@@ -7,8 +7,8 @@ by nature — no config on the machine states it — so it ships inside the `atl
 `atlas.firmware.load_hashes`. At the current release it holds **388 firmware identities**.
 
 Which files a core _wants_ is deliberately not in here. Those declarations sit in the `.info` files RetroArch ships next
-to its cores, so atlas reads them off the running machine (`atlas.firmware.read_declarations`) instead of shipping a
-snapshot that drifts against the cores an installation actually has. The filename is where that split shows.
+to its cores, so atlas reads them off the running machine (`atlas.firmware.read_core_declarations`) instead of shipping
+a snapshot that drifts against the cores an installation actually has. The filename is where that split shows.
 
 Shape:
 
@@ -28,8 +28,18 @@ Shape:
   (`dc/dc_boot.bin`, `pcsx2/bios/…` — 91 of the 388 entries). `FirmwareHashes.for_path` therefore matches a declared
   path first and its base name second, which stays unambiguous only while no base name is claimed by two entries — a
   test pins that. Every entry carries all three of `md5`, `sha1`, and `size`.
+- **One content, several names.** 18 of the 369 distinct contents are keyed under more than one name — `dmg_boot.bin` ≡
+  `gb_bios.bin`, `dc/boot.bin` ≡ `dc/dc_boot.bin`, `bios.sms` ≡ `bios_E.sms` ≡ `bios_U.sms`.
+  `FirmwareHashes.for_content` indexes that direction, which is what makes "these bytes belong at these three
+  destinations" answerable. Note that a shared identity never satisfies a requirement under another name: SameBoy opens
+  `dmg_boot.bin` and nothing else.
 - The table covers only what `System.dat` covers. A declared file with no entry here is a **normal** state, not a gap in
-  the data — `atlas.firmware` reports it as `present` with `hash_known` false, never as verified.
+  the data — `atlas.firmware` reports it as present with `checked` = `unknown`, never as verified.
+- **Not every identity is a whole-file dump.** 21 entries are archives or data packs (MAME-style romset zips such as
+  `neogeo.zip` and `dc/naomi.zip`, plus `scummvm.zip`, `Dinothawr.zip`, `ecwolf.pk3`, `prboom.wad`). A romset zip hashes
+  differently per romset version and merge mode, and a data pack tracks its core's version, so a `mismatch` on one of
+  these says less than it appears to. The table does not yet distinguish those entries from real dumps; doing so needs
+  per-entry provenance, not a guess from the file extension (ROADMAP, block 6).
 
 ## Upstream source
 

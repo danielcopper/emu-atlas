@@ -13,6 +13,7 @@ guarantee silently shadow another.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -30,9 +31,12 @@ INPUT_FIELDS_OPTIONAL = {
     "catalogue_query",
     "entry_query",
     "firmware_query",
+    "identify_query",
 }
 QUERY_FIELDS = {"content_path", "core_so", "installation"}
-FIRMWARE_QUERY_FIELDS = {"installation", "platform", "verify"}
+FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify"}
+KNOWN_FIRMWARE_QUERY_KINDS = {"core", "system", "inventory"}
+IDENTIFY_QUERY_FIELDS = {"installation", "md5", "sha1", "size"}
 INSTALLATION_FIELDS = {"kind", "kinds", "root", "health"}
 PLACEMENT_FIELDS = {
     "dir",
@@ -45,9 +49,23 @@ PLACEMENT_FIELDS = {
     "caveats",
 }
 FILE_SET_FIELDS = {"state", "files", "complete"}
-FIRMWARE_FIELDS = {"root", "hash_checked", "files", "caveats"}
-FIRMWARE_FILE_FIELDS = {"path", "state", "required", "hash_known", "cores"}
-KNOWN_FIRMWARE_STATES = {"verified", "mismatch", "present", "missing", "undeclared"}
+FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats"}
+FIRMWARE_CORE_FIELDS = {"core_so", "label", "installed", "requirements", "caveats"}
+FIRMWARE_REQUIREMENT_FIELDS = {
+    "core_so",
+    "system",
+    "need",
+    "file_name",
+    "path",
+    "identity",
+    "present",
+    "checked",
+}
+UNCLAIMED_FIELDS = {"path", "identity", "known_as"}
+IDENTIFICATION_FIELDS = {"identity", "known_as", "requirements", "caveats"}
+IDENTITY_FIELDS = {"md5", "sha1", "size"}
+KNOWN_FIRMWARE_NEEDS = {"required", "optional"}
+KNOWN_FIRMWARE_CHECKED = {"verified", "mismatch", "unchecked", "unknown"}
 GRANULARITY_FIELDS = {"value", "option_key", "option_value", "options_file", "alternatives"}
 CAVEAT_FIELDS = {"code", "data"}
 EMULATOR_FIELDS = {"label", "kind", "core_so", "selection", "caveats"}
@@ -88,6 +106,11 @@ KNOWN_CAVEAT_CODES = {
     "info-path-unresolved",
     "core-dir-unresolved",
     "firmware-root-missing",
+    "core-not-installed",
+    "standalone-emulator",
+    "emulator-catalogue-unavailable",
+    "firmware-unreadable",
+    "firmware-content-unidentified",
 }
 KNOWN_UNRESOLVED_CODES = {"standalone-unsupported"}
 
@@ -121,13 +144,36 @@ def _validate_query(name: str, query: Any) -> None:
 def _validate_firmware_query(name: str, query: Any) -> None:
     if not isinstance(query, dict) or not set(query) <= FIRMWARE_QUERY_FIELDS:
         fail(f"{name}: input.firmware_query keys must be a subset of {sorted(FIRMWARE_QUERY_FIELDS)}")
-    for key in ("installation", "platform"):
+    for key in ("installation", "kind", "core_so", "system"):
         if key in query and (not isinstance(query[key], str) or not query[key]):
             fail(f"{name}: input.firmware_query.{key} must be a non-empty string")
     if "verify" in query and not isinstance(query["verify"], bool):
         fail(f"{name}: input.firmware_query.verify must be a boolean")
     if "installation" in query and query["installation"] not in KNOWN_KINDS:
         fail(f"{name}: input.firmware_query.installation must be one of {sorted(KNOWN_KINDS)}")
+    kind = query.get("kind")
+    if kind not in KNOWN_FIRMWARE_QUERY_KINDS:
+        fail(f"{name}: input.firmware_query.kind must be one of {sorted(KNOWN_FIRMWARE_QUERY_KINDS)}")
+    if kind == "core" and "core_so" not in query:
+        fail(f"{name}: a 'core' firmware query needs input.firmware_query.core_so")
+    if kind == "system" and "system" not in query:
+        fail(f"{name}: a 'system' firmware query needs input.firmware_query.system")
+    if kind == "inventory" and ({"core_so", "system"} & set(query)):
+        fail(f"{name}: an 'inventory' firmware query takes neither core_so nor system")
+
+
+def _validate_identify_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict) or not set(query) <= IDENTIFY_QUERY_FIELDS:
+        fail(f"{name}: input.identify_query keys must be a subset of {sorted(IDENTIFY_QUERY_FIELDS)}")
+    for key in ("installation", "md5", "sha1"):
+        if key in query and (not isinstance(query[key], str) or not query[key]):
+            fail(f"{name}: input.identify_query.{key} must be a non-empty string")
+    if "size" in query and not isinstance(query["size"], int):
+        fail(f"{name}: input.identify_query.size must be an integer")
+    if "installation" in query and query["installation"] not in KNOWN_KINDS:
+        fail(f"{name}: input.identify_query.installation must be one of {sorted(KNOWN_KINDS)}")
+    if "md5" not in query and "sha1" not in query:
+        fail(f"{name}: input.identify_query needs md5 or sha1 — size alone is not an identity")
 
 
 def _validate_entry_query(name: str, query: Any) -> None:
@@ -224,6 +270,8 @@ def _validate_input(name: str, inp: Any) -> None:
         _validate_entry_query(name, inp["entry_query"])
     if "firmware_query" in inp:
         _validate_firmware_query(name, inp["firmware_query"])
+    if "identify_query" in inp:
+        _validate_identify_query(name, inp["identify_query"])
 
 
 def _validate_installations(name: str, installations: Any) -> None:
@@ -306,39 +354,141 @@ def _validate_entry_outcome(name: str, outcome: Any) -> None:
     _validate_placement(name, outcome)
 
 
+def _validate_identity(name: str, identity: Any, what: str) -> None:
+    _require_exact(name, identity, IDENTITY_FIELDS, what)
+    for key in ("md5", "sha1"):
+        if not isinstance(identity[key], str) or not identity[key]:
+            fail(f"{name}: {what} {key} must be a non-empty string")
+    if not isinstance(identity["size"], int) or identity["size"] < 0:
+        fail(f"{name}: {what} size must be a non-negative integer")
+
+
+def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: bool) -> None:
+    _require_exact(name, entry, FIRMWARE_REQUIREMENT_FIELDS, "each firmware requirement")
+    for key in ("core_so", "system", "file_name", "path"):
+        if not isinstance(entry[key], str) or not entry[key]:
+            fail(f"{name}: firmware requirement {key} must be a non-empty string")
+    if entry["need"] not in KNOWN_FIRMWARE_NEEDS:
+        fail(f"{name}: firmware requirement need must be one of {sorted(KNOWN_FIRMWARE_NEEDS)}")
+    if not entry["path"].startswith(f"{root}/"):
+        fail(f"{name}: a requirement's path must be the absolute destination under the root {root!r}")
+    if os.path.basename(entry["path"]) != entry["file_name"]:
+        fail(f"{name}: a requirement's file_name must be the name at the end of its destination path")
+    if not isinstance(entry["present"], bool):
+        fail(f"{name}: firmware requirement present must be a boolean")
+    identity = entry["identity"]
+    if identity is not None:
+        _validate_identity(name, identity, "a requirement's identity")
+    checked = entry["checked"]
+    if not entry["present"]:
+        if checked is not None:
+            fail(f"{name}: nothing is there to check, so checked must be null")
+        return
+    if checked not in KNOWN_FIRMWARE_CHECKED:
+        fail(f"{name}: firmware requirement checked must be one of {sorted(KNOWN_FIRMWARE_CHECKED)}")
+    if identity is None and checked != "unknown":
+        fail(f"{name}: with no known identity the bytes cannot be established — checked must be 'unknown'")
+    if identity is not None and not hash_checked and checked != "unchecked":
+        fail(f"{name}: without hash checking a known identity can only be 'unchecked', never a verdict")
+
+
 def _validate_firmware(name: str, firmware: Any) -> None:
     _require_exact(name, firmware, FIRMWARE_FIELDS, "firmware")
     root = firmware["root"]
     if root is not None and (not isinstance(root, str) or not root):
         fail(f"{name}: firmware.root must be null or a non-empty string")
-    if not isinstance(firmware["hash_checked"], bool):
+    hash_checked = firmware["hash_checked"]
+    if not isinstance(hash_checked, bool):
         fail(f"{name}: firmware.hash_checked must be a boolean")
-    files = firmware["files"]
-    if not isinstance(files, list):
-        fail(f"{name}: firmware.files must be a list")
-    if root is None and files:
-        fail(f"{name}: without a root there is nothing to state a file's state against — files must be empty")
-    for entry in files:
-        _require_exact(name, entry, FIRMWARE_FILE_FIELDS, "each firmware file")
-        if not isinstance(entry["path"], str) or not entry["path"]:
-            fail(f"{name}: firmware file path must be a non-empty string")
-        if entry["state"] not in KNOWN_FIRMWARE_STATES:
-            fail(f"{name}: firmware file state must be one of {sorted(KNOWN_FIRMWARE_STATES)}")
-        for flag in ("required", "hash_known"):
-            if not isinstance(entry[flag], bool):
-                fail(f"{name}: firmware file {flag} must be a boolean")
-        cores = entry["cores"]
-        if not isinstance(cores, list) or not all(isinstance(c, str) and c for c in cores):
-            fail(f"{name}: firmware file cores must be a list of non-empty core names")
-        if entry["state"] == "undeclared" and (cores or entry["required"]):
-            fail(f"{name}: an undeclared firmware file has no declaring core and is never required")
-        if entry["state"] != "undeclared" and not cores:
-            fail(f"{name}: a declared firmware file must name the core(s) that declare it")
-        if entry["state"] in ("verified", "mismatch") and not entry["hash_known"]:
-            fail(f"{name}: {entry['state']!r} is only reachable for a file whose identity is known")
-    if not firmware["hash_checked"] and any(f["state"] in ("verified", "mismatch") for f in files):
-        fail(f"{name}: no file can be verified or mismatched when hash checking did not run")
+    cores = firmware["cores"]
+    unclaimed = firmware["unclaimed"]
+    if not isinstance(cores, list) or not isinstance(unclaimed, list):
+        fail(f"{name}: firmware.cores and firmware.unclaimed must be lists")
+    if root is None:
+        if cores or unclaimed:
+            fail(
+                f"{name}: without a root there is nothing to resolve against — cores and unclaimed must be empty"
+            )
+        _validate_caveats(name, firmware["caveats"])
+        return
+    for core in cores:
+        _require_exact(name, core, FIRMWARE_CORE_FIELDS, "each firmware core")
+        core_so = core["core_so"]
+        if core_so is not None and (not isinstance(core_so, str) or not core_so):
+            fail(f"{name}: firmware core core_so must be null or a non-empty string")
+        label = core["label"]
+        if label is not None and (not isinstance(label, str) or not label):
+            fail(f"{name}: firmware core label must be null or a non-empty string")
+        if core_so is None and label is None:
+            fail(f"{name}: an emulator with neither a core nor a catalogue label cannot be identified")
+        if not isinstance(core["installed"], bool):
+            fail(f"{name}: firmware core installed must be a boolean")
+        requirements = core["requirements"]
+        if not isinstance(requirements, list):
+            fail(f"{name}: firmware core requirements must be a list")
+        if not core["installed"]:
+            if requirements:
+                fail(f"{name}: a core atlas could not read declares nothing — its requirements must be empty")
+            if not core["caveats"]:
+                fail(
+                    f"{name}: an empty requirement list from an unread core must state why, or it reads as "
+                    "'needs nothing'"
+                )
+        for entry in requirements:
+            if entry["core_so"] != core_so:
+                fail(f"{name}: a requirement must name the core it is listed under")
+            _validate_requirement(name, entry, root=root, hash_checked=hash_checked)
+        _validate_caveats(name, core["caveats"])
+    for entry in unclaimed:
+        _require_exact(name, entry, UNCLAIMED_FIELDS, "each unclaimed file")
+        if not isinstance(entry["path"], str) or not entry["path"].startswith(f"{root}/"):
+            fail(f"{name}: an unclaimed file's path must be absolute under the root {root!r}")
+        identity = entry["identity"]
+        known_as = entry["known_as"]
+        if not isinstance(known_as, list) or not all(isinstance(n, str) and n for n in known_as):
+            fail(f"{name}: unclaimed known_as must be a list of non-empty names")
+        if identity is None:
+            if known_as:
+                fail(f"{name}: an unrecognised file is known as nothing — known_as must be empty")
+        else:
+            _validate_identity(name, identity, "an unclaimed file's identity")
+            if not known_as:
+                fail(f"{name}: recognised content is known under at least the name it was matched by")
+            if not hash_checked:
+                fail(f"{name}: an unclaimed file is identified by content — impossible without hash checking")
+    if not any(core["installed"] for core in cores) and not any(
+        c["code"] == "no-firmware-declaration" for c in firmware["caveats"]
+    ):
+        fail(f"{name}: with no core declaration read, the answer must say so — empty must never read as complete")
     _validate_caveats(name, firmware["caveats"])
+
+
+def _validate_identification(name: str, identification: Any) -> None:
+    _require_exact(name, identification, IDENTIFICATION_FIELDS, "identification")
+    identity = identification["identity"]
+    known_as = identification["known_as"]
+    if not isinstance(known_as, list) or not all(isinstance(n, str) and n for n in known_as):
+        fail(f"{name}: identification known_as must be a list of non-empty names")
+    if identity is None:
+        if known_as or identification["requirements"]:
+            fail(f"{name}: unrecognised content has no names and satisfies nothing")
+        if not any(c["code"] == "firmware-content-unidentified" for c in identification["caveats"]):
+            fail(f"{name}: unrecognised content must say so, or an empty answer reads as 'wanted nowhere'")
+    else:
+        _validate_identity(name, identity, "the identification's identity")
+        if not known_as:
+            fail(f"{name}: recognised content is known under at least one name")
+    for entry in identification["requirements"]:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            fail(f"{name}: each identified requirement must carry its absolute destination path")
+        if entry.get("identity") != identity:
+            fail(f"{name}: identification returns only requirements that expect exactly this content")
+        # The destination directory stands in for the root here: an
+        # identification is about content, and carries no root of its own.
+        _validate_requirement(
+            name, entry, root=os.path.dirname(entry["path"]), hash_checked=False
+        )
+    _validate_caveats(name, identification["caveats"])
 
 
 def _validate_emulators(name: str, emulators: Any) -> None:
@@ -366,7 +516,14 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     if not isinstance(expected, dict):
         fail(f"{name}: expected must be an object")
     keys = set(expected)
-    allowed = {"installations", "save_location", "emulators", "entry_save_location", "firmware"}
+    allowed = {
+        "installations",
+        "save_location",
+        "emulators",
+        "entry_save_location",
+        "firmware",
+        "identification",
+    }
     if "installations" not in keys or not keys <= allowed:
         fail(f"{name}: expected keys must be 'installations' plus optional {sorted(allowed - {'installations'})}")
     if ("emulators" in keys) != ("catalogue_query" in inp):
@@ -377,8 +534,12 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: entry_query and entry_save_location expectation must appear together")
     if ("firmware" in keys) != ("firmware_query" in inp):
         fail(f"{name}: firmware_query and firmware expectation must appear together")
+    if ("identification" in keys) != ("identify_query" in inp):
+        fail(f"{name}: identify_query and identification expectation must appear together")
     _validate_installations(name, expected["installations"])
-    if (keys & {"save_location", "entry_save_location", "emulators", "firmware"}) and not expected["installations"]:
+    if (
+        keys & {"save_location", "entry_save_location", "emulators", "firmware", "identification"}
+    ) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
     if "save_location" in keys:
         _validate_placement(name, expected["save_location"])
@@ -388,6 +549,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_entry_outcome(name, expected["entry_save_location"])
     if "firmware" in keys:
         _validate_firmware(name, expected["firmware"])
+    if "identification" in keys:
+        _validate_identification(name, expected["identification"])
 
 
 def validate_machines_vector(vector: dict[str, Any]) -> None:

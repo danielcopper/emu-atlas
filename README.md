@@ -105,15 +105,20 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
   verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer
   time.
-- `installation.firmware_status(platform=..., verify=...)` reads every installed core's firmware declarations live from
-  `libretro_info_path` (sandbox paths translated to the Flatpak deployment, declarations limited to cores whose `.so` is
-  actually there) and states each file against the live `system_directory`: `verified` / `mismatch` when the packaged
-  identity table covers it and verification was asked for, `present` when identity is unverified, `missing` when
-  declared but absent, `undeclared` for what else is lying around. There is no `unknown` state — having no declaration
-  is a caveat on an **empty** answer, so "nothing known" can never be mistaken for "nothing missing".
+- Firmware, in four calls over one live read — `firmware_for_core(core_so=...)`, `firmware_for_system(system=...)`,
+  `firmware_inventory()`, `identify_firmware(md5=...)`. Every installed core's declarations come from
+  `libretro_info_path` (sandbox paths translated to the Flatpak deployment, limited to cores whose `.so` is actually
+  there) and each requirement states its **absolute destination** under the live `system_directory` whether or not a
+  file is sitting there. Two axes stay apart: `need` is `required` / `optional`, `checked` is `verified` / `mismatch` /
+  `unchecked` (identity known, not asked about) / `unknown` (cannot be established) — "we did not look" is never the
+  same answer as "we looked and cannot tell". A core that is installed and declares nothing answers "needs nothing"; a
+  core atlas cannot read answers `installed=false` plus a caveat, so the same empty list never means two things.
+  `identify_firmware` runs the download flow off content: one md5 comes back with every name it is known as and every
+  destination on this machine that wants it. Files nobody declares are listed separately and identified by bytes; save
+  data the rule cards claim (Flycast's VMUs, PCSX2's memory cards) is excluded outright.
 - `atlas/contract.py` is the canonical JSON-shaped serialization of every answer — the same code the conformance run
   asserts with exact equality, available to consumers.
-- 293 tests, 43 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
+- 332 tests, 48 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
   blobs, and read-failure states), zero runtime dependencies, CI-verified wheel/sdist.
 
 What is not covered yet, and in which order it comes: `ROADMAP.md`. The systematic core-by-core state:
