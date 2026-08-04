@@ -82,21 +82,27 @@ def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
     return {
         "core_so": requirement.core_so,
         "system": requirement.system,
+        "system_source": requirement.system_source,
         "need": requirement.need,
         "file_name": requirement.file_name,
         "path": requirement.path,
         "identity": _identity_contract(requirement.identity),
         "present": requirement.present,
         "checked": requirement.checked,
+        "satisfied": requirement.satisfied,
     }
 
 
 def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
     """The stable form of a :class:`~atlas.firmware.FirmwareAnswer`.
 
-    ``description`` is prose and stays out. ``installed`` is in, because it is
-    the difference between "this core needs nothing" and "atlas knows nothing
-    about this core", and an empty requirement list alone cannot carry it.
+    ``description`` is prose and stays out. Three derived fields are in on
+    purpose, because a consumer deriving them itself is exactly how the answer
+    gets read wrongly: ``declaration`` separates "this core needs nothing" from
+    "atlas knows nothing about this core", ``satisfied`` says whether one file
+    is actually usable (a *present* file with the wrong bytes is not), and
+    ``requirements_met`` is the single number a client renders — never ``true``
+    out of ignorance, never ``true`` with a required file known to be wrong.
     """
     return {
         "root": answer.root,
@@ -105,7 +111,8 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
             {
                 "core_so": core.core_so,
                 "label": core.label,
-                "installed": core.installed,
+                "declaration": core.declaration,
+                "requirements_met": core.requirements_met,
                 "requirements": [_requirement_contract(r) for r in core.requirements],
                 "caveats": [{"code": c.code, "data": dict(c.data)} for c in core.caveats],
             }

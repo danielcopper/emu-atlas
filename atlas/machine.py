@@ -219,14 +219,25 @@ class RealMachine:
     def file_digest(self, path: str, algorithm: str) -> str | None:
         if algorithm not in DIGEST_ALGORITHMS:
             return None
+        # Regular files only, checked BEFORE opening: reading a FIFO or a
+        # character device blocks forever, and this runs inside a library entry
+        # point that hashes whatever a config points at. A hang is not a
+        # degraded answer, it is no answer at all.
+        try:
+            st = os.stat(path)
+        except OSError:
+            return None
+        if not _stat.S_ISREG(st.st_mode):
+            return None
         digest = hashlib.new(algorithm)
         try:
             with open(path, "rb") as f:
                 while chunk := f.read(_DIGEST_CHUNK_BYTES):
                     digest.update(chunk)
         except OSError:
-            # Missing, unreadable, a directory, or an I/O failure mid-read:
-            # all of them mean the identity cannot be stated.
+            # Unreadable, or an I/O failure mid-read: the identity cannot be
+            # stated. (A path that stopped being a regular file between the
+            # stat and the open lands here too.)
             return None
         return digest.hexdigest()
 

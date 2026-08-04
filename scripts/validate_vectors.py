@@ -50,17 +50,28 @@ PLACEMENT_FIELDS = {
 }
 FILE_SET_FIELDS = {"state", "files", "complete"}
 FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats"}
-FIRMWARE_CORE_FIELDS = {"core_so", "label", "installed", "requirements", "caveats"}
+FIRMWARE_CORE_FIELDS = {
+    "core_so",
+    "label",
+    "declaration",
+    "requirements_met",
+    "requirements",
+    "caveats",
+}
 FIRMWARE_REQUIREMENT_FIELDS = {
     "core_so",
     "system",
+    "system_source",
     "need",
     "file_name",
     "path",
     "identity",
     "present",
     "checked",
+    "satisfied",
 }
+KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent"}
+KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none"}
 UNCLAIMED_FIELDS = {"path", "identity", "known_as"}
 IDENTIFICATION_FIELDS = {"identity", "known_as", "requirements", "caveats"}
 IDENTITY_FIELDS = {"md5", "sha1", "size"}
@@ -114,6 +125,13 @@ KNOWN_CAVEAT_CODES = {
     "system-unknown",
     "system-assignment-derived",
     "core-without-systemname",
+    "system-assignment-may-hide-cores",
+    "core-info-unreadable",
+    "emulator-catalogue-unreadable",
+    "firmware-path-obstructed",
+    "firmware-path-inaccessible",
+    "firmware-path-escapes-root",
+    "firmware-content-contradictory",
 }
 # The codes that may stand in for "nothing could be read here". Each says a
 # different thing to a client — nothing declares firmware, the identifier is
@@ -378,19 +396,33 @@ def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: boo
             fail(f"{name}: firmware requirement {key} must be a non-empty string")
     if entry["need"] not in KNOWN_FIRMWARE_NEEDS:
         fail(f"{name}: firmware requirement need must be one of {sorted(KNOWN_FIRMWARE_NEEDS)}")
+    if entry["system_source"] not in KNOWN_SYSTEM_SOURCES:
+        fail(f"{name}: firmware requirement system_source must be one of {sorted(KNOWN_SYSTEM_SOURCES)}")
+    if entry["system_source"] == "none" and entry["system"] != "_unknown":
+        fail(f"{name}: with no source for the system the slug must be '_unknown'")
     if not entry["path"].startswith(f"{root}/"):
         fail(f"{name}: a requirement's path must be the absolute destination under the root {root!r}")
+    if os.path.normpath(entry["path"]) != entry["path"]:
+        fail(f"{name}: a requirement's path must be normalized — no '..' segment may survive into an answer")
     if os.path.basename(entry["path"]) != entry["file_name"]:
         fail(f"{name}: a requirement's file_name must be the name at the end of its destination path")
-    if not isinstance(entry["present"], bool):
-        fail(f"{name}: firmware requirement present must be a boolean")
+    present = entry["present"]
+    if present is not None and not isinstance(present, bool):
+        fail(f"{name}: firmware requirement present must be true, false, or null when it could not be looked at")
     identity = entry["identity"]
     if identity is not None:
         _validate_identity(name, identity, "a requirement's identity")
     checked = entry["checked"]
-    if not entry["present"]:
+    satisfied = entry["satisfied"]
+    if satisfied is not None and not isinstance(satisfied, bool):
+        fail(f"{name}: firmware requirement satisfied must be true, false, or null")
+    if present is not True:
         if checked is not None:
-            fail(f"{name}: nothing is there to check, so checked must be null")
+            fail(f"{name}: no file is there to check, so checked must be null")
+        # Nothing there is unsatisfied; could-not-look is undetermined.
+        expected = False if present is False else None
+        if satisfied is not expected:
+            fail(f"{name}: with present={present!r} the requirement's satisfied must be {expected!r}")
         return
     if checked not in KNOWN_FIRMWARE_CHECKED:
         fail(f"{name}: firmware requirement checked must be one of {sorted(KNOWN_FIRMWARE_CHECKED)}")
@@ -398,6 +430,13 @@ def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: boo
         fail(f"{name}: with no known identity the bytes cannot be established — checked must be 'unknown'")
     if identity is not None and not hash_checked and checked != "unchecked":
         fail(f"{name}: without hash checking a known identity can only be 'unchecked', never a verdict")
+    # The invariant a present-but-wrong file used to slip through.
+    if checked == "mismatch" and satisfied is not False:
+        fail(f"{name}: a file whose bytes are known to be wrong is never satisfied, present or not")
+    if checked == "unknown" and identity is not None and satisfied is not None:
+        fail(f"{name}: a known identity that could not be established leaves satisfied undetermined")
+    if checked in ("verified", "unchecked") and satisfied is not True:
+        fail(f"{name}: a present file with nothing against it is satisfied")
 
 
 def _validate_firmware(name: str, firmware: Any) -> None:
@@ -429,12 +468,13 @@ def _validate_firmware(name: str, firmware: Any) -> None:
             fail(f"{name}: firmware core label must be null or a non-empty string")
         if core_so is None and label is None:
             fail(f"{name}: an emulator with neither a core nor a catalogue label cannot be identified")
-        if not isinstance(core["installed"], bool):
-            fail(f"{name}: firmware core installed must be a boolean")
+        declaration = core["declaration"]
+        if declaration not in KNOWN_DECLARATION_STATES:
+            fail(f"{name}: firmware core declaration must be one of {sorted(KNOWN_DECLARATION_STATES)}")
         requirements = core["requirements"]
         if not isinstance(requirements, list):
             fail(f"{name}: firmware core requirements must be a list")
-        if not core["installed"]:
+        if declaration != "read":
             if requirements:
                 fail(f"{name}: a core atlas could not read declares nothing — its requirements must be empty")
             if not core["caveats"]:
@@ -446,6 +486,25 @@ def _validate_firmware(name: str, firmware: Any) -> None:
             if entry["core_so"] != core_so:
                 fail(f"{name}: a requirement must name the core it is listed under")
             _validate_requirement(name, entry, root=root, hash_checked=hash_checked)
+        # The one number a client renders: it may never be true out of
+        # ignorance, and never with a required file that is not usable.
+        met = core["requirements_met"]
+        if met is not None and not isinstance(met, bool):
+            fail(f"{name}: firmware core requirements_met must be true, false, or null")
+        required = [r for r in requirements if r["need"] == "required"]
+        if declaration != "read":
+            expected = None
+        elif any(r["satisfied"] is False for r in required):
+            expected = False
+        elif any(r["satisfied"] is None for r in required):
+            expected = None
+        else:
+            expected = True
+        if met is not expected:
+            fail(
+                f"{name}: requirements_met must be {expected!r} for this core — it is the one field a client "
+                "renders, and deriving it wrongly is the whole failure mode"
+            )
         _validate_caveats(name, core["caveats"])
     for entry in unclaimed:
         _require_exact(name, entry, UNCLAIMED_FIELDS, "each unclaimed file")
@@ -464,15 +523,24 @@ def _validate_firmware(name: str, firmware: Any) -> None:
                 fail(f"{name}: recognised content is known under at least the name it was matched by")
             if not hash_checked:
                 fail(f"{name}: an unclaimed file is identified by content — impossible without hash checking")
-    if not any(core["installed"] for core in cores) and not any(
+    if not any(core["declaration"] == "read" for core in cores) and not any(
         c["code"] in NOTHING_READ_CODES for c in firmware["caveats"]
     ):
         fail(
             f"{name}: with no core declaration read, the answer must carry one of {sorted(NOTHING_READ_CODES)} "
             "— empty must never read as complete"
         )
-    if any(c["code"] == "system-unknown" for c in firmware["caveats"]) and cores:
-        fail(f"{name}: 'system-unknown' means nothing covers the identifier — no emulator may be listed")
+    if any(c["code"] == "system-unknown" for c in firmware["caveats"]):
+        if cores:
+            fail(f"{name}: 'system-unknown' means nothing covers the identifier — no emulator may be listed")
+        # A read failure is not evidence about the machine. Claiming an
+        # identifier is unknown requires that the enumeration actually ran.
+        blind = {"emulator-catalogue-unreadable", "info-path-unresolved"}
+        if any(c["code"] in blind for c in firmware["caveats"]):
+            fail(
+                f"{name}: 'system-unknown' claims the machine has no such emulator, which an answer that "
+                "could not read the enumeration may never say"
+            )
     _validate_caveats(name, firmware["caveats"])
 
 

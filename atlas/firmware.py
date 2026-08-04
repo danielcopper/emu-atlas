@@ -63,7 +63,15 @@ from typing import Any, Literal, Mapping
 
 from atlas.core_info import parse_core_info
 from atlas.esde import KIND_LIBRETRO
-from atlas.machine import DIGEST_MD5, DIGEST_SHA1, KIND_FILE, Machine
+from atlas.machine import (
+    DIGEST_MD5,
+    DIGEST_SHA1,
+    KIND_DIRECTORY,
+    KIND_FILE,
+    KIND_INACCESSIBLE,
+    READ_OK,
+    Machine,
+)
 from atlas.oddities import load_oddities
 from atlas.placement import ROOT_SYSTEM_DIRECTORY, Caveat
 
@@ -96,6 +104,13 @@ CAVEAT_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
 CAVEAT_SYSTEM_UNKNOWN = "system-unknown"
 CAVEAT_SYSTEM_ASSIGNMENT_DERIVED = "system-assignment-derived"
 CAVEAT_CORE_WITHOUT_SYSTEMNAME = "core-without-systemname"
+CAVEAT_ASSIGNMENT_MAY_HIDE_CORES = "system-assignment-may-hide-cores"
+CAVEAT_CORE_INFO_UNREADABLE = "core-info-unreadable"
+CAVEAT_CATALOGUE_UNREADABLE = "emulator-catalogue-unreadable"
+CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
+CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
+CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT = "firmware-path-escapes-root"
+CAVEAT_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
 # both declare firmware0_path = "filename.ext" with opt = "true/false". The
@@ -202,6 +217,34 @@ class FirmwareHashes:
                 continue
             return self._identity(self._files[names[0]])
         return None
+
+    def contradicts_itself(
+        self, *, md5: str | None = None, sha1: str | None = None, size: int | None = None
+    ) -> bool:
+        """Did :meth:`for_content` miss because the *fields* disagree, not the content?
+
+        A caller passing an md5 and a sha1 from two different files gets no
+        match — and reporting that as "unknown content" points them at the
+        table when the problem is the request. True when the table knows every
+        supplied field on its own but no single entry carries them together.
+        """
+        given = [
+            ("md5", md5),
+            ("sha1", sha1),
+            ("size", size),
+        ]
+        supplied = [(field, value) for field, value in given if value is not None]
+        if len(supplied) < 2:
+            return False
+        for field, value in supplied:
+            probe = {field: value}
+            if field == "size":
+                # size alone is not an identity; ask whether any entry has it.
+                if not any(entry_size == value for _, _, entry_size in self._contents):
+                    return False
+            elif self.for_content(**probe) is None:  # type: ignore[arg-type]
+                return False
+        return True
 
 
 def _content_key(md5: str, sha1: str, size: int) -> tuple[str, str, int]:
@@ -363,6 +406,13 @@ SYSTEMNAME_TO_SLUG: Mapping[str, str] = {
 # table does not cover falls back to the core's ``systemname``, and where that
 # fallback can be wrong the answer says so — see
 # :func:`system_assignment_caveats`. Visible beats silent.
+#
+# Entries are added only where the file's machine is not in question, and each
+# addition shrinks how often that caveat has to fire. Versioned like the
+# packaged data files it stands beside.
+FIRMWARE_SYSTEM_OVERRIDE_VERSION = "2"
+FIRMWARE_SYSTEM_OVERRIDE_REVIEWED = "2026-08-04"
+
 FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
     # Game Boy family (mGBA, VBA-M, Mesen-S, Gambatte, SameBoy, …)
     "gb_bios.bin": "gb",
@@ -384,9 +434,61 @@ FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
     "bios_J.sms": "sms",
     # Game Gear (Genesis Plus GX)
     "bios.gg": "gg",
+    # SNES enhancement chips, declared by every bsnes variant and by Snes9x.
+    # These are cartridge coprocessor ROMs — they exist only inside SNES
+    # cartridges, so the machine is not in question. Ten installed bsnes
+    # variants used to carry a derived-assignment caveat for these alone.
+    "dsp1.data.rom": "snes",
+    "dsp1.program.rom": "snes",
+    "dsp1b.data.rom": "snes",
+    "dsp1b.program.rom": "snes",
+    "dsp2.data.rom": "snes",
+    "dsp2.program.rom": "snes",
+    "dsp3.data.rom": "snes",
+    "dsp3.program.rom": "snes",
+    "dsp4.data.rom": "snes",
+    "dsp4.program.rom": "snes",
+    "cx4.data.rom": "snes",
+    "st010.data.rom": "snes",
+    "st010.program.rom": "snes",
+    "st011.data.rom": "snes",
+    "st011.program.rom": "snes",
+    "st018.data.rom": "snes",
+    "st018.program.rom": "snes",
+    # The Satellaview BIOS, an SNES add-on — same vocabulary choice as the
+    # Super Game Boy dumps above, as are bsnes's names for the SGB dumps.
+    "BS-X.bin": "snes",
+    "sgb.boot.rom": "snes",
+    "sgb1.boot.rom": "snes",
+    "sgb2.boot.rom": "snes",
+    "sgb1.program.rom": "snes",
+    "sgb2.program.rom": "snes",
+    # Famicom Disk System, declared by the NES cores under systemname
+    # "Nintendo Entertainment System" — a genuinely wrong assignment without
+    # this rule, and the same class of error as 5200.rom below.
+    "disksys.rom": "fds",
+    # Nintendo DS / DSi, declared by melonDS, DeSmuME and NooDS. The names are
+    # DS-specific; the generic "firmware.bin" several of them also declare is
+    # deliberately not listed, because a bare name that generic cannot be
+    # claimed for one system.
+    "bios7.bin": "nds",
+    "bios9.bin": "nds",
+    "dsi_bios7.bin": "nds",
+    "dsi_bios9.bin": "nds",
+    "dsi_firmware.bin": "nds",
+    "dsi_nand.bin": "nds",
+    # Atari 5200 (atari800, whose systemname is "Atari 8-bit Family"). Without
+    # this the 5200 BIOS is filed under atari800 and a query for atari5200
+    # cannot reach it at all.
+    "5200.rom": "atari5200",
 }
 
 _NON_SLUG = re.compile(r"[^a-z0-9]+")
+
+# A ``systemname`` that names several machines at once. libretro writes these
+# as a slash list, with or without spaces: "Game Boy/Game Boy Color",
+# "GameCube / Wii", "Atari ST/STE/TT/Falcon".
+_SEVERAL_SYSTEMS = re.compile(r"\s*/\s*")
 
 SystemSource = Literal["override", "systemname", "slug", "none"]
 
@@ -453,13 +555,16 @@ class CoreDeclarations:
 
     ``database`` is the ``.info`` field of that name, split on ``|``: the
     libretro-database names the core covers. It is read purely as a *signal* —
-    more than one entry means the core serves several systems, which is what
-    makes a per-file assignment by ``systemname`` questionable. It is
-    deliberately not used to assign a system: it is a different vocabulary
-    (``Sinclair - ZX 81`` where ``systemname`` says ``ZX81``), and on a real
-    installation 88 of 117 single-entry database names are unknown to the
-    ``systemname`` map — leaning on it would mean maintaining a second table of
+    it is deliberately not used to assign a system, because it is a different
+    vocabulary (``Sinclair - ZX 81`` where ``systemname`` says ``ZX81``), and on
+    a real installation 88 of 117 single-entry database names are unknown to the
+    ``systemname`` map; leaning on it would mean maintaining a second table of
     the same size.
+
+    ``info_status`` is the read status of the ``.info`` itself. A core whose
+    ``.so`` is on disk but whose ``.info`` is missing, unreadable, or not UTF-8
+    is still *here* — atlas simply does not know what it wants, which is a state
+    of its own and never a silent deletion from the inventory.
     """
 
     core_so: str
@@ -468,6 +573,39 @@ class CoreDeclarations:
     system: str
     firmware: tuple[FirmwareDeclaration, ...]
     database: tuple[str, ...] = ()
+    info_status: str = READ_OK
+
+    @property
+    def serves_several_systems(self) -> bool:
+        """Does the machine say this core covers more than one system?
+
+        Three independent readings, any of which counts, because each one is
+        evidence and missing it means staying silent about a wrong assignment:
+
+        - ``database`` names several systems (mGBA, Genesis Plus GX);
+        - ``systemname`` itself names several (``ColecoVision/CreatiVision/My
+          Vision``, ``GameCube / Wii``) — the same separator
+          :data:`SYSTEMNAME_TO_SLUG` is already keyed on;
+        - the two disagree where both are mappable (vice_x128 says ``C128``
+          while its database says ``Commodore - 64``): one source contradicting
+          the other is exactly a reason not to trust either blindly.
+
+        Over-firing says "this could be derived" when it is not; staying silent
+        says nothing when it is. The first is recoverable, so the reading is
+        deliberately generous. A core with a ``systemname`` and no ``database``
+        has only one source and is taken at its word — stated here because it is
+        an assumption, not a reading.
+        """
+        if len(self.database) > 1:
+            return True
+        if _SEVERAL_SYSTEMS.search(self.systemname):
+            return True
+        if len(self.database) == 1:
+            from_database = SYSTEMNAME_TO_SLUG.get(self.database[0])
+            from_systemname = SYSTEMNAME_TO_SLUG.get(self.systemname)
+            if from_database is not None and from_systemname is not None:
+                return from_database != from_systemname
+        return False
 
 
 def _declarations_in(text: str) -> tuple[str, tuple[str, ...], tuple[FirmwareDeclaration, ...]]:
@@ -506,28 +644,41 @@ def read_core_declarations(
 ) -> tuple[CoreDeclarations, ...]:
     """Read what every *installed* core declares, live, from its ``.info`` file.
 
-    Globs ``info_dir`` for ``.info`` files and parses each one. When *core_dir*
-    is given, a core counts only if its ``.so`` is actually there: an ``.info``
-    set routinely covers more cores than an installation ships (RetroDECK: 292
-    ``.info`` against 211 ``.so``), and firmware demanded by a core that cannot
-    run is exactly the noise a shipped table produced. With *core_dir* ``None``
-    nothing is filtered — the caller states that gap as a caveat rather than
-    having it silently narrow the answer.
+    When *core_dir* is given the **cores** are the enumeration: every ``.so``
+    there is an installed core, and its ``.info`` is what atlas reads *about*
+    it. That way a core whose ``.info`` is missing, unreadable, or not UTF-8
+    still appears — carrying its read status instead of vanishing from the
+    inventory. The other direction matters too: an ``.info`` set routinely
+    covers more cores than an installation ships (RetroDECK: 292 ``.info``
+    against 211 ``.so``), and firmware demanded by a core that cannot run is
+    exactly the noise a shipped table produced.
+
+    With *core_dir* ``None`` there is no core enumeration to be had, so the
+    ``.info`` files are the enumeration and nothing is filtered — the caller
+    states that gap as a caveat rather than having it silently narrow the
+    answer.
 
     libretro's two template ``.info`` files are dropped by name: they declare
     the literal placeholder ``filename.ext``.
     """
+    if core_dir is None:
+        stems = [
+            os.path.basename(path)[: -len(".info")]
+            for path in machine.glob(os.path.join(_glob_escape(info_dir), "*.info"))
+        ]
+    else:
+        stems = [
+            os.path.basename(path)[: -len(".so")]
+            for path in machine.glob(os.path.join(_glob_escape(core_dir), "*.so"))
+        ]
     cores: list[CoreDeclarations] = []
-    for info_path in machine.glob(os.path.join(_glob_escape(info_dir), "*.info")):
-        stem = os.path.basename(info_path)[: -len(".info")]
+    for stem in stems:
         if stem in TEMPLATE_INFO_STEMS:
             continue
-        if core_dir is not None and machine.path_kind(os.path.join(core_dir, f"{stem}.so")) != KIND_FILE:
-            continue
-        text = machine.read_text(info_path).text
-        if text is None:
-            continue
-        systemname, database, declarations = _declarations_in(text)
+        result = machine.read_text(os.path.join(info_dir, f"{stem}.info"))
+        systemname, database, declarations = ("", (), ())
+        if result.text is not None:
+            systemname, database, declarations = _declarations_in(result.text)
         cores.append(
             CoreDeclarations(
                 core_so=f"{stem}.so",
@@ -536,6 +687,7 @@ def read_core_declarations(
                 system=system_for("", systemname),
                 firmware=declarations,
                 database=database,
+                info_status=result.status,
             )
         )
     return tuple(sorted(cores, key=lambda c: c.core_so))
@@ -555,9 +707,10 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
       naming three systems, so eight of its ten declarations land on
       ``_unknown``. That is not a fallback that might be wrong, it is no
       assignment at all, and it gets its own code.
-    - **Fallback on a multi-system core.** The core names one system, its
-      ``database`` names several, and at least one file was filed by the
-      former. mGBA's ``gba_bios.bin`` goes this way.
+    - **Fallback on a multi-system core.** The core covers several systems by
+      any of the readings in :attr:`CoreDeclarations.serves_several_systems`,
+      and at least one file was filed by its single ``systemname``. mGBA's
+      ``gba_bios.bin`` goes this way.
 
     A core whose declarations are all override-assigned states nothing — there
     is nothing uncertain to state. Neither does a core that declares no
@@ -585,11 +738,11 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
                 },
             ),
         )
-    if len(core.database) > 1:
+    if core.serves_several_systems:
         return (
             Caveat(
                 CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
-                f"{core.core_so} serves {len(core.database)} systems but states one systemname "
+                f"{core.core_so} covers more than one system but states one systemname "
                 f"({core.systemname!r}); these files carry no per-file rule and were filed by it, so their "
                 f"system is derived and may be wrong: {files}",
                 {
@@ -613,65 +766,132 @@ class FirmwareRequirement:
     question a download flow asks.
 
     ``need`` says what the core asks for; ``present`` and ``checked`` say what
-    the machine holds. ``checked`` is ``None`` exactly when nothing is there to
-    check, and otherwise keeps its four values apart: ``unchecked`` (identity
-    known, verification not asked for) is not ``unknown`` (no identity known,
-    so it cannot be established), and neither is a verdict.
+    the machine holds. ``present`` is ``None`` when atlas could not look at all
+    (an inaccessible path) — "could not look" is not "not there". ``checked`` is
+    ``None`` exactly when there is no file to check, and otherwise keeps its
+    four values apart: ``unchecked`` (identity known, verification not asked
+    for) is not ``unknown`` (it could not be established), and neither is a
+    verdict.
     """
 
     core_so: str
     system: str
+    system_source: SystemSource
     need: FirmwareNeed
     file_name: str
     path: str
     description: str
     identity: FirmwareIdentity | None
-    present: bool
+    present: bool | None
     checked: FirmwareChecked | None
 
     def __post_init__(self) -> None:
         if self.need not in FIRMWARE_NEEDS:
             raise ValueError(f"FirmwareRequirement: need must be one of {FIRMWARE_NEEDS}, got {self.need!r}")
-        if self.present:
+        if self.present is True:
             if self.checked not in FIRMWARE_CHECKED:
                 raise ValueError(
                     f"FirmwareRequirement: a present file must state one of {FIRMWARE_CHECKED}, got {self.checked!r}"
                 )
         elif self.checked is not None:
-            raise ValueError("FirmwareRequirement: nothing is there to check, so checked must be None")
+            raise ValueError("FirmwareRequirement: no file is there to check, so checked must be None")
+
+    @property
+    def satisfied(self) -> bool | None:
+        """Is the right file where this core will look for it?
+
+        ``True`` only when a file is there and nothing atlas established
+        contradicts it. ``False`` when there is no file, or when its bytes are
+        the wrong ones — a **present** file can absolutely fail this, which is
+        the whole reason the identity table exists. ``None`` when it cannot be
+        told apart: the path could not be looked at, or the file is there with a
+        known identity that could not be established (unreadable bytes).
+
+        ``unchecked`` and an unknown identity both count as satisfied: the file
+        is under the right name and atlas was either not asked to look closer or
+        cannot. Saying ``None`` there would make the answer useless for every
+        caller who did not opt into hashing.
+        """
+        if self.present is None:
+            return None
+        if self.present is False:
+            return False
+        if self.checked == CHECKED_MISMATCH:
+            return False
+        if self.checked == CHECKED_UNKNOWN and self.identity is not None:
+            # We know what it should be and could not read what it is.
+            return None
+        return True
+
+
+CoreDeclarationState = Literal["read", "unreadable", "absent"]
+
+DECLARATION_READ: CoreDeclarationState = "read"
+DECLARATION_UNREADABLE: CoreDeclarationState = "unreadable"
+DECLARATION_ABSENT: CoreDeclarationState = "absent"
+
+CORE_DECLARATION_STATES = ("read", "unreadable", "absent")
 
 
 @dataclass(frozen=True, slots=True)
 class CoreFirmware:
     """What one emulator wants, resolved against the live firmware root.
 
-    ``installed`` is the load-bearing flag. ``True`` means atlas read this
-    core's own declaration off the machine, so an empty ``requirements`` is the
-    answer "this core needs no firmware". ``False`` means there was nothing to
-    read — the empty list then means *unknown*, never *nothing needed*, and a
-    caveat says which flavor of nothing it was.
+    ``declaration`` is the load-bearing field, and it has three values because
+    an empty ``requirements`` list has three meanings:
+
+    - ``read`` — atlas read this core's own ``.info``, so an empty list is the
+      answer "this core needs no firmware".
+    - ``unreadable`` — the core is here, its declaration is not (missing,
+      unreadable, or not UTF-8). What it wants is unknown.
+    - ``absent`` — no such core here at all, or a standalone emulator that
+      ships no ``.info``.
+
+    Only the first makes an empty list mean *complete*; the other two make it
+    mean *unknown*, and each carries a caveat saying which.
     """
 
     core_so: str | None
     label: str | None
-    installed: bool
+    declaration: CoreDeclarationState
     requirements: tuple[FirmwareRequirement, ...]
     caveats: tuple[Caveat, ...]
 
+    def __post_init__(self) -> None:
+        if self.declaration not in CORE_DECLARATION_STATES:
+            raise ValueError(
+                f"CoreFirmware: declaration must be one of {CORE_DECLARATION_STATES}, got {self.declaration!r}"
+            )
+        if self.declaration != DECLARATION_READ and self.requirements:
+            raise ValueError("CoreFirmware: requirements can only come from a declaration that was read")
+        if self.declaration != DECLARATION_READ and not self.caveats:
+            raise ValueError("CoreFirmware: an unread declaration must state why, or its empty list lies")
+
     @property
     def unmet(self) -> tuple[FirmwareRequirement, ...]:
-        """Required files that are not where this core will look for them."""
-        return tuple(r for r in self.requirements if r.need == NEED_REQUIRED and not r.present)
+        """Required files that are demonstrably not usable — absent or wrong."""
+        return tuple(r for r in self.requirements if r.need == NEED_REQUIRED and r.satisfied is False)
+
+    @property
+    def undetermined(self) -> tuple[FirmwareRequirement, ...]:
+        """Required files atlas could not judge — unreadable or unlookable."""
+        return tuple(r for r in self.requirements if r.need == NEED_REQUIRED and r.satisfied is None)
 
     @property
     def requirements_met(self) -> bool | None:
-        """Are all *required* files in place? ``None`` when atlas cannot say.
+        """Are all *required* files in place and right? ``None`` when atlas cannot say.
 
-        The tri-state is the point: a core whose declaration could not be read
-        answers ``None``, so "can I launch this right now" can never be
-        answered ``True`` out of ignorance.
+        The tri-state is the point, and it is the one number a client renders:
+        a core whose declaration could not be read answers ``None``, and so does
+        one whose required file is there but could not be judged. ``True`` is
+        never reached out of ignorance — and never with a required file whose
+        bytes are known to be wrong.
         """
-        return None if not self.installed else not self.unmet
+        if self.declaration != DECLARATION_READ:
+            return None
+        if self.unmet:
+            return False
+        return None if self.undetermined else True
 
 
 @dataclass(frozen=True, slots=True)
@@ -744,11 +964,17 @@ class FirmwareContext:
     Assembled once per query by the installation handle, then shared by every
     entry point below, so a single answer can never mix two revisions of the
     configs it was derived from.
+
+    ``cores_read`` says whether the core enumeration happened at all. An empty
+    ``cores`` means two different things — this installation ships no cores, or
+    atlas never got to look — and only the first licenses a statement about what
+    the machine has.
     """
 
     root: str | None
     cores: tuple[CoreDeclarations, ...]
     hashes: FirmwareHashes
+    cores_read: bool = True
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
 
@@ -760,6 +986,20 @@ class CatalogueEntry:
     label: str
     kind: str
     core_so: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class Catalogue:
+    """A frontend's emulator enumeration for one system — and whether it was read.
+
+    The distinction is the whole point: an enumeration that came back empty says
+    the frontend knows no emulator for that system, while one that could not be
+    read says nothing at all. Collapsing them turns a read failure into a claim
+    about the machine.
+    """
+
+    entries: tuple[CatalogueEntry, ...]
+    read: bool = True
 
 
 _SAVE_ARTIFACTS: frozenset[str] | None = None
@@ -793,9 +1033,38 @@ def save_artifact_paths() -> frozenset[str]:
 
 def _observe(
     machine: Machine, path: str, identity: FirmwareIdentity | None, *, verify: bool
-) -> tuple[bool, FirmwareChecked | None, Caveat | None]:
-    """What the machine says about one destination: present, and how sure we are."""
-    if machine.path_kind(path) != KIND_FILE:
+) -> tuple[bool | None, FirmwareChecked | None, Caveat | None]:
+    """What the machine says about one destination: present, and how sure we are.
+
+    All four path kinds are distinct answers, because the caller acts on each
+    differently. A directory sitting at the destination is not "missing" in any
+    useful sense — nothing can be placed there — and an inaccessible path is not
+    an absent file, it is a look that did not happen.
+    """
+    kind = machine.path_kind(path)
+    if kind == KIND_INACCESSIBLE:
+        return (
+            None,
+            None,
+            Caveat(
+                CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
+                f"{path} cannot be looked at (permissions or an I/O failure), so whether the file is there "
+                "is unknown — this is not an absent file",
+                {"path": path},
+            ),
+        )
+    if kind == KIND_DIRECTORY:
+        return (
+            False,
+            None,
+            Caveat(
+                CAVEAT_FIRMWARE_PATH_OBSTRUCTED,
+                f"a directory sits at {path}, where this core expects a file — no file is there, and none "
+                "can be placed there until the directory is gone",
+                {"path": path},
+            ),
+        )
+    if kind != KIND_FILE:
         return False, None, None
     if identity is None:
         # Nothing to check against — and that is not the same as "not checked".
@@ -823,6 +1092,23 @@ def _observe(
     return True, CHECKED_VERIFIED if matches else CHECKED_MISMATCH, None
 
 
+def destination_under(root: str, declared: str) -> str | None:
+    """The absolute destination for a declared path, or ``None`` if it escapes *root*.
+
+    ``firmwareN_path`` is a relative path by contract, but it is read from a
+    config file a user (or anything writing that file) can edit, and every read
+    atlas then does — presence, size, digest, and the directories the unclaimed
+    scan walks — is derived from it. An absolute path would discard the root
+    entirely and ``..`` would climb out of it, so a declaration that does not
+    stay under the firmware root is refused rather than followed.
+    """
+    if os.path.isabs(declared):
+        return None
+    candidate = os.path.normpath(os.path.join(root, declared))
+    prefix = root if root.endswith("/") else f"{root}/"
+    return candidate if candidate.startswith(prefix) else None
+
+
 def _requirements_for(
     machine: Machine,
     context: FirmwareContext,
@@ -835,7 +1121,18 @@ def _requirements_for(
     requirements: list[FirmwareRequirement] = []
     caveats: list[Caveat] = []
     for declaration in core.firmware:
-        path = os.path.join(root, declaration.path)
+        path = destination_under(root, declaration.path)
+        if path is None:
+            caveats.append(
+                Caveat(
+                    CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
+                    f"{core.core_so} declares {declaration.path!r}, which does not stay under the firmware "
+                    f"root {root} — atlas will not read or place a file outside it, so this declaration is "
+                    "left out of the answer",
+                    {"core_so": core.core_so, "declared": declaration.path, "root": root},
+                )
+            )
+            continue
         identity = context.hashes.for_path(declaration.path)
         present, checked, caveat = _observe(machine, path, identity, verify=verify)
         if caveat is not None:
@@ -844,6 +1141,7 @@ def _requirements_for(
             FirmwareRequirement(
                 core_so=core.core_so,
                 system=declaration.system,
+                system_source=declaration.system_source,
                 need=declaration.need,
                 file_name=declaration.file_name,
                 path=path,
@@ -887,18 +1185,60 @@ def _resolve_cores(
     resolved: list[CoreFirmware] = []
     answer_caveats: list[Caveat] = []
     for core in cores:
+        label = None if labels is None else labels.get(core.core_so)
+        if core.info_status != READ_OK:
+            resolved.append(_undeclarable_core(core, label))
+            continue
         requirements, caveats = _requirements_for(machine, context, core, verify=verify)
         answer_caveats.extend(caveats)
         resolved.append(
             CoreFirmware(
                 core_so=core.core_so,
-                label=None if labels is None else labels.get(core.core_so),
-                installed=True,
+                label=label,
+                declaration=DECLARATION_READ,
                 requirements=requirements,
                 caveats=system_assignment_caveats(core),
             )
         )
     return tuple(resolved), answer_caveats
+
+
+def _cores_a_derived_assignment_may_hide(
+    all_cores: tuple[CoreDeclarations, ...], selected: tuple[CoreDeclarations, ...]
+) -> tuple[CoreDeclarations, ...]:
+    """Installed cores this system query could not reach *because* of a derived slug.
+
+    Without a frontend catalogue the selection is keyed on the cores' own
+    ``systemname``. A core whose firmware was filed by a system that was derived
+    rather than ruled can therefore sit under the wrong slug — and then it is not
+    selected, so the caveat that would have said so never gets attached either.
+    That blind spot is precisely what the signal exists for, so the answer names
+    the candidates instead of quietly being short.
+    """
+    chosen = {core.core_so for core in selected}
+    return tuple(
+        core
+        for core in all_cores
+        if core.core_so not in chosen and system_assignment_caveats(core)
+    )
+
+
+def _undeclarable_core(core: CoreDeclarations, label: str | None) -> CoreFirmware:
+    """A core that is here, whose ``.info`` is not — present, and unexplained."""
+    return CoreFirmware(
+        core_so=core.core_so,
+        label=label,
+        declaration=DECLARATION_UNREADABLE,
+        requirements=(),
+        caveats=(
+            Caveat(
+                CAVEAT_CORE_INFO_UNREADABLE,
+                f"{core.core_so} is installed, but its .info could not be read ({core.info_status}) — what "
+                "this core wants is unknown, so the empty list below is not 'needs nothing'",
+                {"core_so": core.core_so, "status": core.info_status},
+            ),
+        ),
+    )
 
 
 def firmware_for_core(
@@ -908,10 +1248,10 @@ def firmware_for_core(
 
     *core_so* is the core's ``.so`` name (``"mgba_libretro.so"``), its bare
     stem, or a full path — all three name the same core. An installed core that
-    declares nothing answers with ``installed`` true and an empty requirement
-    list: that is the honest "no, it needs nothing". A core this installation
-    does not ship answers ``installed`` false plus
-    :data:`CAVEAT_CORE_NOT_INSTALLED`, and its empty list means unknown.
+    declares nothing answers ``declaration="read"`` with an empty requirement
+    list: that is the honest "no, it needs nothing". A core whose ``.info``
+    could not be read answers ``"unreadable"``, and one this installation does
+    not ship answers ``"absent"`` — in both, the empty list means unknown.
     """
     stem = os.path.basename(core_so)
     if stem.endswith(".so"):
@@ -922,12 +1262,21 @@ def firmware_for_core(
     if match is None:
         # The core-level twin of an unknown system: the caller named something
         # this installation does not have. Saying "no firmware declared" here
-        # would read as "needs nothing" for a core that may declare plenty.
-        not_installed = Caveat(
-            CAVEAT_CORE_NOT_INSTALLED,
-            f"{stem}.so is not installed here (no .info of that name among the installed cores) — atlas has "
-            "no declaration for it, so the empty list means unknown, not 'needs nothing'",
-            {"core_so": f"{stem}.so"},
+        # would read as "needs nothing" for a core that may declare plenty —
+        # and when the cores were never enumerated, atlas cannot even claim
+        # absence, so it says only that nothing could be read.
+        reason = (
+            Caveat(
+                CAVEAT_CORE_NOT_INSTALLED,
+                f"{stem}.so is not installed here (it is not among the cores atlas enumerated) — there is no "
+                "declaration for it, so the empty list means unknown, not 'needs nothing'",
+                {"core_so": f"{stem}.so"},
+            )
+            if context.cores_read
+            else _no_declaration(
+                f"anything for {stem}.so, because the installed cores could not be enumerated at all",
+                {"core_so": f"{stem}.so"},
+            )
         )
         return FirmwareAnswer(
             root=context.root,
@@ -935,15 +1284,15 @@ def firmware_for_core(
                 CoreFirmware(
                     core_so=f"{stem}.so",
                     label=None,
-                    installed=False,
+                    declaration=DECLARATION_ABSENT,
                     requirements=(),
-                    caveats=(not_installed,),
+                    caveats=(reason,),
                 ),
             ),
             unclaimed=(),
             hash_checked=verify,
             sources=context.sources,
-            caveats=(*context.caveats, not_installed),
+            caveats=(*context.caveats, reason),
         )
     cores, caveats = _resolve_cores(machine, context, (match,), verify=verify)
     return FirmwareAnswer(
@@ -961,7 +1310,7 @@ def firmware_for_system(
     context: FirmwareContext,
     *,
     system: str,
-    catalogue: tuple[CatalogueEntry, ...] | None = None,
+    catalogue: Catalogue | None = None,
     verify: bool = False,
 ) -> FirmwareAnswer:
     """Which emulators can run *system*, and what each of them wants.
@@ -986,8 +1335,20 @@ def firmware_for_system(
     caveats: list[Caveat] = []
     by_stem = {core.stem: core for core in context.cores}
     resolved: list[CoreFirmware] = []
+    # Whether the enumeration happened at all decides whether this answer may
+    # say anything about the machine when it comes back empty.
+    enumerated = context.cores_read if catalogue is None else catalogue.read
 
-    if catalogue is None:
+    if catalogue is not None and not catalogue.read:
+        caveats.append(
+            Caveat(
+                CAVEAT_CATALOGUE_UNREADABLE,
+                "the frontend's emulator catalogue could not be read, so which emulators run this system is "
+                "unknown — this answer is empty because atlas could not look, not because nothing is there",
+                {"system": system},
+            )
+        )
+    elif catalogue is None:
         caveats.append(
             Caveat(
                 CAVEAT_CATALOGUE_UNAVAILABLE,
@@ -1005,14 +1366,26 @@ def firmware_for_system(
         cores, observation_caveats = _resolve_cores(machine, context, selected, verify=verify)
         resolved.extend(cores)
         caveats.extend(observation_caveats)
-    else:
-        for entry in catalogue:
+        hidden = _cores_a_derived_assignment_may_hide(context.cores, selected)
+        if hidden:
+            names = ", ".join(sorted(c.core_so for c in hidden))
+            caveats.append(
+                Caveat(
+                    CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
+                    f"this list is keyed on the cores' own systemname, and {len(hidden)} installed core(s) "
+                    "file at least one firmware file by a system that was derived rather than ruled — if an "
+                    f"emulator you expected is missing here, it is one of these: {names}",
+                    {"count": str(len(hidden)), "cores": names, "system": system},
+                )
+            )
+    if catalogue is not None and catalogue.read:
+        for entry in catalogue.entries:
             if entry.kind != KIND_LIBRETRO or entry.core_so is None:
                 resolved.append(
                     CoreFirmware(
                         core_so=entry.core_so,
                         label=entry.label,
-                        installed=False,
+                        declaration=DECLARATION_ABSENT,
                         requirements=(),
                         caveats=(
                             Caveat(
@@ -1031,7 +1404,7 @@ def firmware_for_system(
                     CoreFirmware(
                         core_so=entry.core_so,
                         label=entry.label,
-                        installed=False,
+                        declaration=DECLARATION_ABSENT,
                         requirements=(),
                         caveats=(
                             Caveat(
@@ -1045,19 +1418,22 @@ def firmware_for_system(
                     )
                 )
                 continue
+            if core.info_status != READ_OK:
+                resolved.append(_undeclarable_core(core, entry.label))
+                continue
             requirements, observation_caveats = _requirements_for(machine, context, core, verify=verify)
             caveats.extend(observation_caveats)
             resolved.append(
                 CoreFirmware(
                     core_so=core.core_so,
                     label=entry.label,
-                    installed=True,
+                    declaration=DECLARATION_READ,
                     requirements=requirements,
                     caveats=system_assignment_caveats(core),
                 )
             )
 
-    if not resolved:
+    if not resolved and enumerated:
         # Nothing here covers that identifier — a different answer from "nobody
         # declares firmware for it", and a different thing for a client to do.
         # A consumer working in RomM slugs that forgets to translate ("dc" for
@@ -1072,7 +1448,7 @@ def firmware_for_system(
                 {"system": system},
             )
         )
-    elif not any(c.installed for c in resolved):
+    elif not any(c.declaration == DECLARATION_READ for c in resolved):
         caveats.append(_no_declaration(f"firmware for system {system!r}", {"system": system}))
 
     return FirmwareAnswer(
@@ -1147,7 +1523,14 @@ def firmware_inventory(machine: Machine, context: FirmwareContext, *, verify: bo
     if context.root is None:
         return _empty_answer(context)
     cores, caveats = _resolve_cores(machine, context, context.cores, verify=verify)
-    claimed = {d.path for core in context.cores for d in core.firmware}
+    # Only declarations that stay under the root define the scan, so a config
+    # pointing outside it can never widen where atlas reads or hashes.
+    claimed = {
+        d.path
+        for core in context.cores
+        for d in core.firmware
+        if destination_under(context.root, d.path) is not None
+    }
     unclaimed, unclaimed_caveats = _unclaimed_files(machine, context, claimed, verify=verify)
     caveats.extend(unclaimed_caveats)
     if not claimed:
@@ -1187,14 +1570,28 @@ def identify_firmware(
     identity = context.hashes.for_content(md5=md5, sha1=sha1, size=size)
     caveats: list[Caveat] = list(context.caveats)
     if identity is None:
-        caveats.append(
-            Caveat(
-                CAVEAT_CONTENT_UNIDENTIFIED,
-                "the packaged identity table does not recognise this content — that is a normal answer "
-                "(the table covers only what System.dat covers), so it says nothing about the file's worth",
-                {k: v for k, v in (("md5", md5), ("sha1", sha1)) if v is not None},
+        stated = {k: v for k, v in (("md5", md5), ("sha1", sha1)) if v is not None}
+        if context.hashes.contradicts_itself(md5=md5, sha1=sha1, size=size):
+            # The table knows these fields, just not together. Blaming the table
+            # would send the caller looking in the wrong place.
+            caveats.append(
+                Caveat(
+                    CAVEAT_CONTENT_CONTRADICTORY,
+                    "the fields given describe no single file: the table knows them, but not as one entry — "
+                    "no file has all of them at once, so the request contradicts itself rather than the "
+                    "content being unknown",
+                    stated,
+                )
             )
-        )
+        else:
+            caveats.append(
+                Caveat(
+                    CAVEAT_CONTENT_UNIDENTIFIED,
+                    "the packaged identity table does not recognise this content — that is a normal answer "
+                    "(the table covers only what System.dat covers), so it says nothing about the file's worth",
+                    stated,
+                )
+            )
         return FirmwareIdentification(
             identity=None, requirements=(), sources=context.sources, caveats=tuple(caveats)
         )
@@ -1215,12 +1612,14 @@ def identify_firmware(
                 {"md5": identity.md5},
             )
         )
-    # An identification hands back requirements without their emulator, so any
-    # caveat about how those requirements got their system has to travel with
-    # them or it is lost.
-    wanting = {r.core_so for r in wanted}
+    # An identification hands back requirements without their emulator, so a
+    # caveat about how one of them got its system has to travel with it or it is
+    # lost. Only about *these* requirements, though: a core's caveat names the
+    # files it is about, and attaching it because some other file of the same
+    # core was derived puts warnings about files that are not in this answer.
+    derived_in_answer = {r.core_so for r in wanted if r.system_source != SOURCE_OVERRIDE}
     for core in inventory.cores:
-        if core.core_so in wanting:
+        if core.core_so in derived_in_answer:
             caveats.extend(core.caveats)
     return FirmwareIdentification(
         identity=identity, requirements=wanted, sources=context.sources, caveats=tuple(caveats)

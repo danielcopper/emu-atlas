@@ -42,7 +42,8 @@
             {
               "core_so": "snes9x_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": true,
               "requirements": [],
               "caveats": []
             }
@@ -90,7 +91,8 @@
             {
               "core_so": "mgba_libretro.so",
               "label": null,
-              "installed": false,
+              "declaration": "absent",
+              "requirements_met": null,
               "requirements": [],
               "caveats": [
                 {
@@ -159,11 +161,13 @@
             {
               "core_so": "mednafen_psx_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
                   "system": "psx",
+                  "system_source": "systemname",
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/mnt/sd/retrodeck/bios/psxonpsp660.bin",
@@ -173,11 +177,13 @@
                     "size": 524288
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
                   "system": "psx",
+                  "system_source": "systemname",
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
@@ -187,7 +193,8 @@
                     "size": 524288
                   },
                   "present": true,
-                  "checked": "verified"
+                  "checked": "verified",
+                  "satisfied": true
                 }
               ],
               "caveats": []
@@ -247,11 +254,13 @@
             {
               "core_so": "gambatte_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": true,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
                   "system": "gb",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "gb_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
@@ -261,11 +270,13 @@
                     "size": 256
                   },
                   "present": true,
-                  "checked": "verified"
+                  "checked": "verified",
+                  "satisfied": true
                 },
                 {
                   "core_so": "gambatte_libretro.so",
                   "system": "gbc",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "gbc_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gbc_bios.bin",
@@ -275,7 +286,8 @@
                     "size": 2304
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": []
@@ -283,11 +295,13 @@
             {
               "core_so": "sameboy_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": true,
               "requirements": [
                 {
                   "core_so": "sameboy_libretro.so",
                   "system": "gbc",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "cgb_boot.bin",
                   "path": "/home/deck/.config/retroarch/system/cgb_boot.bin",
@@ -297,11 +311,13 @@
                     "size": 2304
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 },
                 {
                   "core_so": "sameboy_libretro.so",
                   "system": "gb",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "dmg_boot.bin",
                   "path": "/home/deck/.config/retroarch/system/dmg_boot.bin",
@@ -311,7 +327,8 @@
                     "size": 256
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": []
@@ -341,6 +358,7 @@
             {
               "core_so": "sameboy_libretro.so",
               "system": "gb",
+              "system_source": "override",
               "need": "optional",
               "file_name": "dmg_boot.bin",
               "path": "/home/deck/.config/retroarch/system/dmg_boot.bin",
@@ -350,11 +368,13 @@
                 "size": 256
               },
               "present": false,
-              "checked": null
+              "checked": null,
+              "satisfied": false
             },
             {
               "core_so": "gambatte_libretro.so",
               "system": "gb",
+              "system_source": "override",
               "need": "optional",
               "file_name": "gb_bios.bin",
               "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
@@ -364,7 +384,8 @@
                 "size": 256
               },
               "present": true,
-              "checked": "unchecked"
+              "checked": "unchecked",
+              "satisfied": true
             }
           ],
           "caveats": []
@@ -416,11 +437,13 @@
             {
               "core_so": "flycast_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": false,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
                   "system": "dc",
+                  "system_source": "systemname",
                   "need": "required",
                   "file_name": "dc_boot.bin",
                   "path": "/mnt/sd/retrodeck/bios/dc/dc_boot.bin",
@@ -430,7 +453,8 @@
                     "size": 2097152
                   },
                   "present": true,
-                  "checked": "mismatch"
+                  "checked": "mismatch",
+                  "satisfied": false
                 }
               ],
               "caveats": []
@@ -497,11 +521,13 @@
             {
               "core_so": "flycast_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": false,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
                   "system": "dc",
+                  "system_source": "systemname",
                   "need": "required",
                   "file_name": "dc_boot.bin",
                   "path": "/mnt/sd/retrodeck/bios/dc/dc_boot.bin",
@@ -511,7 +537,8 @@
                     "size": 2097152
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": []
@@ -584,11 +611,13 @@
             {
               "core_so": "gambatte_libretro.so",
               "label": "Gambatte",
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": true,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
                   "system": "gb",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "gb_bios.bin",
                   "path": "/mnt/sd/retrodeck/bios/gb_bios.bin",
@@ -598,11 +627,13 @@
                     "size": 256
                   },
                   "present": true,
-                  "checked": "unchecked"
+                  "checked": "unchecked",
+                  "satisfied": true
                 },
                 {
                   "core_so": "gambatte_libretro.so",
                   "system": "gbc",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "gbc_bios.bin",
                   "path": "/mnt/sd/retrodeck/bios/gbc_bios.bin",
@@ -612,7 +643,8 @@
                     "size": 2304
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": []
@@ -620,7 +652,8 @@
             {
               "core_so": "tgbdual_libretro.so",
               "label": "TGB Dual",
-              "installed": false,
+              "declaration": "absent",
+              "requirements_met": null,
               "requirements": [],
               "caveats": [
                 {
@@ -635,7 +668,8 @@
             {
               "core_so": null,
               "label": "SameBoy (Standalone)",
-              "installed": false,
+              "declaration": "absent",
+              "requirements_met": null,
               "requirements": [],
               "caveats": [
                 {
@@ -746,7 +780,8 @@
             {
               "core_so": "tgbdual_libretro.so",
               "label": "TGB Dual",
-              "installed": false,
+              "declaration": "absent",
+              "requirements_met": null,
               "requirements": [],
               "caveats": [
                 {
@@ -809,11 +844,13 @@
             {
               "core_so": "mgba_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": true,
               "requirements": [
                 {
                   "core_so": "mgba_libretro.so",
                   "system": "gb",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "gb_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
@@ -823,11 +860,13 @@
                     "size": 256
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 },
                 {
                   "core_so": "mgba_libretro.so",
                   "system": "gba",
+                  "system_source": "systemname",
                   "need": "optional",
                   "file_name": "gba_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gba_bios.bin",
@@ -837,7 +876,8 @@
                     "size": 16384
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": [
@@ -896,11 +936,13 @@
             {
               "core_so": "covered_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": true,
               "requirements": [
                 {
                   "core_so": "covered_libretro.so",
                   "system": "gb",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "gb_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
@@ -910,11 +952,13 @@
                     "size": 256
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 },
                 {
                   "core_so": "covered_libretro.so",
                   "system": "gbc",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "gbc_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gbc_bios.bin",
@@ -924,7 +968,8 @@
                     "size": 2304
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": []
@@ -973,11 +1018,13 @@
             {
               "core_so": "skyemu_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": true,
               "requirements": [
                 {
                   "core_so": "skyemu_libretro.so",
                   "system": "gbc",
+                  "system_source": "override",
                   "need": "optional",
                   "file_name": "cgb_boot.bin",
                   "path": "/home/deck/.config/retroarch/system/cgb_boot.bin",
@@ -987,11 +1034,13 @@
                     "size": 2304
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 },
                 {
                   "core_so": "skyemu_libretro.so",
                   "system": "_unknown",
+                  "system_source": "none",
                   "need": "optional",
                   "file_name": "gba_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gba_bios.bin",
@@ -1001,17 +1050,20 @@
                     "size": 16384
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 },
                 {
                   "core_so": "skyemu_libretro.so",
                   "system": "_unknown",
+                  "system_source": "none",
                   "need": "optional",
                   "file_name": "nds7.bin",
                   "path": "/home/deck/.config/retroarch/system/nds7.bin",
                   "identity": null,
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": [
@@ -1067,27 +1119,32 @@
             {
               "core_so": "bluemsx_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": false,
               "requirements": [
                 {
                   "core_so": "bluemsx_libretro.so",
                   "system": "msx",
+                  "system_source": "systemname",
                   "need": "required",
                   "file_name": "msxromdb.xml",
                   "path": "/home/deck/.config/retroarch/system/Databases/msxromdb.xml",
                   "identity": null,
                   "present": true,
-                  "checked": "unknown"
+                  "checked": "unknown",
+                  "satisfied": true
                 },
                 {
                   "core_so": "bluemsx_libretro.so",
                   "system": "msx",
+                  "system_source": "systemname",
                   "need": "required",
                   "file_name": "MSX.rom",
                   "path": "/home/deck/.config/retroarch/system/Machines/Shared Roms/MSX.rom",
                   "identity": null,
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": []
@@ -1147,11 +1204,13 @@
             {
               "core_so": "mednafen_psx_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": false,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
                   "system": "psx",
+                  "system_source": "systemname",
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/home/deck/Emulation/tools/system/psxonpsp660.bin",
@@ -1161,11 +1220,13 @@
                     "size": 524288
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
                   "system": "psx",
+                  "system_source": "systemname",
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/home/deck/Emulation/tools/system/scph5501.bin",
@@ -1175,7 +1236,8 @@
                     "size": 524288
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": []
@@ -1183,6 +1245,545 @@
           ],
           "unclaimed": [],
           "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-required-file-with-the-wrong-bytes-is-not-met",
+      "rationale": "The one number a client renders, and the case it used to get wrong. scph5501.bin is required, it is present, and it is the wrong dump — right size, wrong digest. present=true alone would read as all-clear, so satisfied and requirements_met are in the contract and both say false. A consumer deriving 'met' from need+present lands in exactly the trap this vector pins.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/scph5501.bin": {
+            "md5": "00000000000000000000000000000000",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/mnt/sd/retrodeck/bios/psxonpsp660.bin",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288
+                  },
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "present": true,
+                  "checked": "mismatch",
+                  "satisfied": false
+                }
+              ],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-required-file-that-could-not-be-judged-is-undecided",
+      "rationale": "The other way requirements_met must not reach true. The file is there under the right name and the table knows what it should be, but its bytes cannot be read — so the check is 'unknown', satisfied is null, and the core answers null rather than claiming all-clear. Present-and-unreadable is not present-and-fine.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/scph5501.bin": {
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/mnt/sd/retrodeck/bios/psxonpsp660.bin",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288
+                  },
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null
+                }
+              ],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-unreadable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/scph5501.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-path-that-cannot-be-looked-at-is-not-an-absent-file",
+      "rationale": "Four path kinds, four answers. The declared destination cannot be read at all, so present is null — 'could not look' is not 'not there' — checked stays null, satisfied is undecided, and requirements_met refuses to be true. A directory sitting where a file belongs is the fourth kind: no file is there, and none can be placed there either, which only the caveat says.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.config/retroarch/system/psxonpsp660.bin"
+        ],
+        "inaccessible": [
+          "/home/deck/.config/retroarch/system/scph5501.bin"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288
+                  },
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "present": null,
+                  "checked": null,
+                  "satisfied": null
+                }
+              ],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-path-inaccessible",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/scph5501.bin"
+              }
+            },
+            {
+              "code": "firmware-path-obstructed",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-unreadable-info-leaves-the-core-in-the-inventory",
+      "rationale": "An installed core whose .info cannot be read used to disappear from the inventory with no caveat at all — four cores on disk, one in the answer. The cores are the enumeration now, so it stays, with declaration='unreadable': the core is here, what it wants is unknown, and that is a third state next to 'needs nothing' and 'not here'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/flycast_libretro.info": {
+            "status": "unreadable"
+          },
+          "/usr/lib/libretro/flycast_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/lib/libretro/genesis_plus_gx_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "inventory"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "flycast_libretro.so",
+              "label": null,
+              "declaration": "unreadable",
+              "requirements_met": null,
+              "requirements": [],
+              "caveats": [
+                {
+                  "code": "core-info-unreadable",
+                  "data": {
+                    "core_so": "flycast_libretro.so",
+                    "status": "unreadable"
+                  }
+                }
+              ]
+            },
+            {
+              "core_so": "genesis_plus_gx_libretro.so",
+              "label": null,
+              "declaration": "unreadable",
+              "requirements_met": null,
+              "requirements": [],
+              "caveats": [
+                {
+                  "code": "core-info-unreadable",
+                  "data": {
+                    "core_so": "genesis_plus_gx_libretro.so",
+                    "status": "missing"
+                  }
+                }
+              ]
+            },
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288
+                  },
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-a-declared-path-never-leaves-the-firmware-root",
+      "rationale": "firmwareN_path is relative by contract, but it comes out of an editable config and every read atlas then does is derived from it — presence, size, digest, and the directories the unclaimed scan walks. A declaration that climbs out of the root is refused and stated, so the scan cannot be steered at files outside the firmware tree. The core's other, well-formed declaration is answered normally: this is a refusal, not a dropped core.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/escape_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"escapes upward\"\nfirmware0_path = \"../../../etc/shadow\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware1_path = \"scph5501.bin\"\nfirmware1_opt = \"false\"\n",
+          "/usr/lib/libretro/escape_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/etc/shadow": "root:!:0:0:99999:7:::"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "escape_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "escape_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-path-escapes-root",
+              "data": {
+                "core_so": "escape_libretro.so",
+                "declared": "../../../etc/shadow",
+                "root": "/home/deck/.config/retroarch/system"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-an-unreadable-catalogue-claims-nothing",
+      "rationale": "system-unknown is a statement about the machine, so it needs the enumeration to have actually happened. Here ES-DE's es_systems.xml cannot be read: the answer is empty, but it says the catalogue could not be read and that no declaration was established — never 'no emulator here covers gb', which would turn a read failure into a fact.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": {
+            "status": "unreadable"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/gambatte_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {
+                "system": "gb"
+              }
+            },
+            {
+              "code": "no-firmware-declaration",
+              "data": {
+                "system": "gb"
+              }
+            }
+          ]
         }
       }
     },
@@ -1221,11 +1822,13 @@
             {
               "core_so": "geolith_libretro.so",
               "label": null,
-              "installed": true,
+              "declaration": "read",
+              "requirements_met": false,
               "requirements": [
                 {
                   "core_so": "geolith_libretro.so",
                   "system": "neogeo",
+                  "system_source": "systemname",
                   "need": "required",
                   "file_name": "neogeo.zip",
                   "path": "/mnt/sd/retrodeck/bios/neogeo.zip",
@@ -1235,7 +1838,8 @@
                     "size": 1859335
                   },
                   "present": false,
-                  "checked": null
+                  "checked": null,
+                  "satisfied": false
                 }
               ],
               "caveats": []

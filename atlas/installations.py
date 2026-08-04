@@ -40,6 +40,7 @@ from atlas.firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_FIRMWARE_ROOT_MISSING,
     CAVEAT_INFO_PATH_UNRESOLVED,
+    Catalogue,
     CatalogueEntry,
     CoreDeclarations,
     FirmwareAnswer,
@@ -978,6 +979,10 @@ def _retroarch_firmware_context(
         root=root,
         cores=cores,
         hashes=load_hashes(),
+        # An empty core list means "this installation ships none" only if the
+        # directory holding them was actually reached. Otherwise atlas never
+        # looked, and must not turn that into a statement about the machine.
+        cores_read=info_dir is not None,
         sources=tuple(sources),
         caveats=tuple(caveats),
     )
@@ -1260,19 +1265,33 @@ class RetroDeck(_FirmwareQueries):
     # user overlay under <rd_home>/ES-DE/custom_systems (observed layout).
     _ESDE_BUNDLED_SANDBOX = "/app/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
 
-    def _catalogue(self, root: str) -> dict[str, tuple[EmulatorSpec, ...]]:
+    def _read_catalogue(self, root: str) -> tuple[dict[str, tuple[EmulatorSpec, ...]], bool]:
+        """The merged ES-DE catalogue, and whether the bundled layer could be read.
+
+        The second value is not a detail: an empty catalogue because the shipped
+        ``es_systems.xml`` was unreadable says nothing about which emulators
+        exist, while an empty *lookup* in a catalogue that was read says the
+        frontend knows none for that system. The custom overlay is genuinely
+        optional, so only the bundled layer decides.
+        """
         bundled: dict[str, tuple[EmulatorSpec, ...]] = {}
+        read = False
         bundled_path = _flatpak_host_path(self._machine, self._home, self._APP_ID, self._ESDE_BUNDLED_SANDBOX)
         if bundled_path is not None:
             text = self._machine.read_text(bundled_path).text
             if text is not None:
                 bundled = parse_es_systems(text, source="es_systems.xml (bundled)")
+                read = True
         custom: dict[str, tuple[EmulatorSpec, ...]] = {}
         custom_path = os.path.join(root, "ES-DE", "custom_systems", "es_systems.xml")
         custom_text = self._machine.read_text(custom_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, source="es_systems.xml (custom_systems overlay)")
-        return merge_layers(bundled, custom)
+            read = True
+        return merge_layers(bundled, custom), read
+
+    def _catalogue(self, root: str) -> dict[str, tuple[EmulatorSpec, ...]]:
+        return self._read_catalogue(root)[0]
 
     def systems(self) -> tuple[str, ...]:
         """Every system the catalogue declares, sorted."""
@@ -1392,11 +1411,19 @@ class RetroDeck(_FirmwareQueries):
         vocabulary :meth:`emulators_for` speaks — the catalogue is the
         enumeration, so an emulator whose core is not installed and a
         standalone emulator both appear, stated as such instead of silently
-        dropped.
+        dropped. Whether that catalogue could be read travels with it: an
+        unreadable ``es_systems.xml`` must never come out as "this machine has
+        no emulator for that system".
         """
-        catalogue = tuple(
-            CatalogueEntry(label=entry.label, kind=entry.kind, core_so=entry.core_so)
-            for entry in self.emulators_for(system)
+        config, _ = self._read_marker()
+        root = self._config_path(config, "rd_home_path", "")[0]
+        _, read = self._read_catalogue(root)
+        catalogue = Catalogue(
+            entries=tuple(
+                CatalogueEntry(label=entry.label, kind=entry.kind, core_so=entry.core_so)
+                for entry in self.emulators_for(system)
+            ),
+            read=read,
         )
         return _resolve_for_system(
             self._machine, self._firmware_context(), system=system, catalogue=catalogue, verify=verify

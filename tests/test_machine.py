@@ -286,6 +286,24 @@ class TestRealMachine:
         (tmp_path / "f.bin").write_bytes(b"x")
         assert RealMachine().file_digest(str(tmp_path / "f.bin"), "sha256") is None
 
+    def test_file_digest_never_blocks_on_a_path_that_is_not_a_regular_file(self, tmp_path):
+        """The seam promises regular files only, and a hang is not an answer.
+
+        Opening a FIFO with no writer blocks forever, and this runs inside a
+        library entry point that hashes whatever a config points at — one such
+        node at a declared firmware path would take the whole answer with it.
+        The guard is checked before the open, so both the size and the digest
+        come back as "cannot tell". A regression does not fail this test, it
+        hangs it — which is the failure mode being guarded against.
+        """
+        fifo = tmp_path / "scph5501.bin"
+        os.mkfifo(fifo)
+        m = RealMachine()
+        assert m.file_digest(str(fifo), "md5") is None
+        assert m.file_size(str(fifo)) is None
+        # A character device is the same class of trap.
+        assert m.file_digest("/dev/zero", "md5") is None
+
     def test_query_core_on_non_library_is_none(self, tmp_path):
         not_a_core = tmp_path / "fake.so"
         not_a_core.write_text("not an ELF")

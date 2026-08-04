@@ -249,7 +249,19 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
 - **An empty answer says which kind of empty it is.** `system-unknown` means nothing here covers that identifier — a
   consumer that failed to translate its own vocabulary lands there. `no-firmware-declaration` means the subject is
   covered but no declaration could be established. One code for both would read as "nothing needed" in the case where
-  the right instruction is "you asked in the wrong vocabulary".
+  the right instruction is "you asked in the wrong vocabulary". `system-unknown` is a claim about the machine, so it
+  requires that the enumeration was actually read: a failed catalogue read or an unresolvable `.info` directory may
+  never be turned into "no emulator here covers that".
+- **`requirements_met` is the number a client renders, so atlas states it.** It is `true` only when every required file
+  is there _and_ nothing established contradicts it — a present file with the wrong bytes makes it `false`, and one
+  whose identity could not be established makes it `null`. `satisfied` per requirement and `requirements_met` per core
+  are both in the contract for one reason: a consumer deriving them from `need` and `present` gets the mismatch case
+  wrong, which is exactly how a verified-broken BIOS reads as all-clear.
+- **Every path outcome stays distinct.** A file, a missing file, a directory in the way (nothing can be placed there),
+  and a path that could not be looked at are four answers, not two. `present` is therefore `true`/`false`/`null`, and
+  the seam's own rule holds: a present-but-broken state is never reported as absent or healthy. Declared paths are
+  bounded to the firmware root — `firmwareN_path` comes out of an editable config and drives every read that follows, so
+  one that climbs out is refused and stated rather than followed.
 
 ## Open questions
 
