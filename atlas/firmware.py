@@ -1219,6 +1219,13 @@ class Destination:
     path: str | None = None
     refusal: str | None = None
 
+    def __post_init__(self) -> None:
+        if (self.path is None) == (self.refusal is None):
+            raise ValueError(
+                "Destination: exactly one of path and refusal is set — a landing place without a refusal, "
+                f"or a refusal without one, got path={self.path!r} refusal={self.refusal!r}"
+            )
+
 
 def destination_under(machine: Machine, root: str, declared: str) -> Destination:
     """Where a declared path lands under *root* — resolved, in the kernel's order.

@@ -105,6 +105,19 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
     is actually usable (a *present* file with the wrong bytes is not), and
     ``requirements_met`` is the single number a client renders — never ``true``
     out of ignorance, never ``true`` with a required file known to be wrong.
+    Two limits of it belong next to each other, because a consumer that renders
+    only this field cannot see either:
+
+    - With ``hash_checked`` false it is ``null`` wherever a required file's
+      identity is known and was not verified. Presence is not the question the
+      field asks; a caller who wants a green light passes ``verify``.
+    - It can be ``true`` over a required file the packaged table does not cover
+      at all (``checked`` ``unknown`` with ``identity`` ``null``). Nothing
+      further can ever be established about such a file, so withholding the
+      answer would withhold it forever — but "in place under the right name" is
+      all that was checked. On the reference machine that is three requirements
+      across two cores (blueMSX's databases and machine ROMs, Dolphin's
+      ``codehandler.bin``).
     ``found`` is the path kind actually read, which ``present`` alone cannot
     carry (a directory at the destination is not a missing file), and
     ``refused`` names declarations atlas would not follow, with the reason,

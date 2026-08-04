@@ -101,6 +101,18 @@ The four firmware entry points ship: live `.info` declarations from the installe
   data (blueMSX machine ROMs, PPSSPP assets, Dolphin `Sys`). Save artifacts are already excluded via the rule cards;
   runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save
   side.
+- **Malformed declarations are dropped silently** (own issue). `_declarations_in` skips a `firmwareN_path` that is
+  empty, whose basename is empty, or whose index is not numeric — no requirement, no refusal, no caveat, and
+  `requirements_met` stays `true`. That is the same class as the hole `refused` closed, one layer earlier.
+  `firmware_count` is present in every `.info` on the reference machine and is never read; comparing it against the
+  number of parsed declarations is the free cross-check.
+- **TOCTOU between resolving and reading.** The root bound is checked on resolved paths, but the read that follows is a
+  second syscall against the same name, so a path swapped in between is not covered. Closing it fully needs
+  `openat2(RESOLVE_BENEATH)` — a syscall the seam does not expose today — so what exists is a bound, not a sandbox.
+- **`cores_read=False` prose overstates.** When the core enumeration comes back empty, the caveat text says the cores
+  "could not be enumerated", which is the safe reading but not always what happened — an installation genuinely shipping
+  no cores gets the same sentence. Caveat text is explicitly non-contractual (`atlas/contract.py`), so this is wording,
+  not behavior.
 - **The emulator-handle route.** A per-entry `firmware_for_core()` on `EmulatorEntry`, so the catalogue answer and the
   firmware answer share a subject without the caller passing a `core_so` back in.
 - **Standalone emulators declare nothing.** An emulator without a libretro core ships no `.info`; the catalogue route

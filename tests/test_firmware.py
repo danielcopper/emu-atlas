@@ -43,6 +43,7 @@ from atlas.firmware import (
     NEED_REQUIRED,
     Catalogue,
     CatalogueEntry,
+    Destination,
     FirmwareContext,
     FirmwareIdentity,
     FirmwareRequirement,
@@ -662,6 +663,12 @@ class TestResolutionIsTheKernelsOrder:
         paths = [f.path for f in firmware_inventory(machine, _context(machine), verify=True).unclaimed]
         assert paths == [f"{BIOS_DIR}/pcsx2/scph5501.bin"] or paths == []
         assert not any(p.startswith("/etc") for p in paths)
+
+    def test_a_destination_cannot_be_both_or_neither(self):
+        # The docstring's invariant, enforced where the object is built.
+        for kwargs in ({}, {"path": "/bios/x.bin", "refusal": CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT}):
+            with pytest.raises(ValueError):
+                Destination(**kwargs)  # type: ignore[arg-type]
 
     def test_resolve_links_follows_the_seam(self):
         machine = FixtureMachine({"/real/f.bin": "x"}, symlinks={"/via": "/real", "/real/inner": "/real"})
