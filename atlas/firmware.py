@@ -43,6 +43,10 @@ Two axes, kept apart on purpose (:class:`FirmwareRequirement`):
   ``unknown`` means it cannot be established at all. "We did not look" and "we
   looked and cannot tell" must never collapse into one value.
 
+The invariant that ties the two together: ``checked is None`` exactly when
+``present is not True`` — nothing at the destination, or a look that did not
+happen, leaves nothing to check.
+
 *Unknown* is deliberately not a ``need``. Having no declaration to check
 against is a property of the answer, not of a file, so it is a
 :class:`~atlas.placement.Caveat` (:data:`CAVEAT_NO_FIRMWARE_DECLARATION`)
@@ -69,8 +73,10 @@ from atlas.machine import (
     KIND_DIRECTORY,
     KIND_FILE,
     KIND_INACCESSIBLE,
+    KIND_MISSING,
     READ_OK,
     Machine,
+    PathKind,
 )
 from atlas.oddities import load_oddities
 from atlas.placement import ROOT_SYSTEM_DIRECTORY, Caveat
@@ -735,6 +741,7 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
                     "core_so": core.core_so,
                     "files": files,
                     "database": "|".join(core.database),
+                    "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
                 },
             ),
         )
@@ -750,6 +757,7 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
                     "systemname": core.systemname,
                     "files": files,
                     "database": "|".join(core.database),
+                    "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
                 },
             ),
         )
@@ -765,13 +773,13 @@ class FirmwareRequirement:
     stated whether or not a file is there, because "where does this go" is the
     question a download flow asks.
 
-    ``need`` says what the core asks for; ``present`` and ``checked`` say what
-    the machine holds. ``present`` is ``None`` when atlas could not look at all
-    (an inaccessible path) — "could not look" is not "not there". ``checked`` is
-    ``None`` exactly when there is no file to check, and otherwise keeps its
-    four values apart: ``unchecked`` (identity known, verification not asked
-    for) is not ``unknown`` (it could not be established), and neither is a
-    verdict.
+    ``need`` says what the core asks for; ``found`` and ``checked`` say what the
+    machine holds. ``found`` is the path kind read at the destination and keeps
+    all four apart — a directory in the way is not a missing file, and a path
+    that could not be looked at is neither. ``checked`` is ``None`` exactly when
+    there is nothing at the destination to check, and otherwise keeps its four
+    values apart: ``unchecked`` (identity known, verification not asked for) is
+    not ``unknown`` (it could not be established), and neither is a verdict.
     """
 
     core_so: str
@@ -782,46 +790,86 @@ class FirmwareRequirement:
     path: str
     description: str
     identity: FirmwareIdentity | None
-    present: bool | None
+    found: PathKind
     checked: FirmwareChecked | None
 
     def __post_init__(self) -> None:
         if self.need not in FIRMWARE_NEEDS:
             raise ValueError(f"FirmwareRequirement: need must be one of {FIRMWARE_NEEDS}, got {self.need!r}")
-        if self.present is True:
+        if self.found not in (KIND_FILE, KIND_DIRECTORY, KIND_MISSING, KIND_INACCESSIBLE):
+            raise ValueError(f"FirmwareRequirement: found must be a path kind, got {self.found!r}")
+        if self.found in (KIND_FILE, KIND_DIRECTORY):
             if self.checked not in FIRMWARE_CHECKED:
                 raise ValueError(
-                    f"FirmwareRequirement: a present file must state one of {FIRMWARE_CHECKED}, got {self.checked!r}"
+                    f"FirmwareRequirement: something is there, so checked must be one of {FIRMWARE_CHECKED}, "
+                    f"got {self.checked!r}"
                 )
         elif self.checked is not None:
-            raise ValueError("FirmwareRequirement: no file is there to check, so checked must be None")
+            raise ValueError("FirmwareRequirement: nothing is there to check, so checked must be None")
+
+    @property
+    def present(self) -> bool | None:
+        """Is anything at the destination? ``None`` when atlas could not look.
+
+        Derived from :attr:`found`, and deliberately three-valued: "could not
+        look" is not "not there".
+        """
+        if self.found == KIND_INACCESSIBLE:
+            return None
+        return self.found in (KIND_FILE, KIND_DIRECTORY)
 
     @property
     def satisfied(self) -> bool | None:
         """Is the right file where this core will look for it?
 
-        ``True`` only when a file is there and nothing atlas established
-        contradicts it. ``False`` when there is no file, or when its bytes are
-        the wrong ones — a **present** file can absolutely fail this, which is
-        the whole reason the identity table exists. ``None`` when it cannot be
-        told apart: the path could not be looked at, or the file is there with a
-        known identity that could not be established (unreadable bytes).
+        ``True`` only when a file is there and atlas *established* that it is
+        the right one. ``False`` when nothing is there, or when the bytes are
+        known to be wrong — a present file can absolutely fail this, which is
+        the whole reason the identity table exists. ``None`` for everything atlas
+        did not establish:
 
-        ``unchecked`` and an unknown identity both count as satisfied: the file
-        is under the right name and atlas was either not asked to look closer or
-        cannot. Saying ``None`` there would make the answer useless for every
-        caller who did not opt into hashing.
+        - the path could not be looked at;
+        - a directory sits there (something is present, nothing is confirmed);
+        - the identity is known and could not be read (unreadable bytes);
+        - the identity is known and verification was **not asked for**.
+
+        That last one is the load-bearing case. Without hashing, "a file with
+        the right name is there" is all atlas knows, and calling it satisfied
+        would be an all-clear it did not earn. It is affordable to say so: a
+        verified single-core answer costs 0.03 s and the whole tree 0.8 s on the
+        reference machine, so a caller who wants the green light can ask for it.
+
+        A file whose identity the table does not cover stays ``True``: nothing
+        further can ever be established about it, so withholding the answer
+        would withhold it forever.
         """
-        if self.present is None:
+        if self.found == KIND_INACCESSIBLE:
             return None
-        if self.present is False:
+        if self.found == KIND_MISSING:
             return False
+        if self.found == KIND_DIRECTORY:
+            return None
         if self.checked == CHECKED_MISMATCH:
             return False
+        if self.checked == CHECKED_UNCHECKED:
+            return None
         if self.checked == CHECKED_UNKNOWN and self.identity is not None:
-            # We know what it should be and could not read what it is.
             return None
         return True
+
+
+@dataclass(frozen=True, slots=True)
+class RefusedDeclaration:
+    """A declaration atlas would not follow, because it leaves the firmware root.
+
+    It is not a requirement — there is no destination to state — but it is a
+    firmware file this core asked for, so it has to stay visible on the core.
+    Otherwise ``unmet`` and ``undetermined`` together would look like the whole
+    story while a required file had been quietly dropped.
+    """
+
+    declared: str
+    need: FirmwareNeed
 
 
 CoreDeclarationState = Literal["read", "unreadable", "absent"]
@@ -856,6 +904,7 @@ class CoreFirmware:
     declaration: CoreDeclarationState
     requirements: tuple[FirmwareRequirement, ...]
     caveats: tuple[Caveat, ...]
+    refused: tuple[RefusedDeclaration, ...] = ()
 
     def __post_init__(self) -> None:
         if self.declaration not in CORE_DECLARATION_STATES:
@@ -866,6 +915,8 @@ class CoreFirmware:
             raise ValueError("CoreFirmware: requirements can only come from a declaration that was read")
         if self.declaration != DECLARATION_READ and not self.caveats:
             raise ValueError("CoreFirmware: an unread declaration must state why, or its empty list lies")
+        if self.refused and not self.caveats:
+            raise ValueError("CoreFirmware: a refused declaration must state why, or it vanishes")
 
     @property
     def unmet(self) -> tuple[FirmwareRequirement, ...]:
@@ -874,7 +925,7 @@ class CoreFirmware:
 
     @property
     def undetermined(self) -> tuple[FirmwareRequirement, ...]:
-        """Required files atlas could not judge — unreadable or unlookable."""
+        """Required files atlas could not judge — unverified, unreadable, or unlookable."""
         return tuple(r for r in self.requirements if r.need == NEED_REQUIRED and r.satisfied is None)
 
     @property
@@ -882,16 +933,23 @@ class CoreFirmware:
         """Are all *required* files in place and right? ``None`` when atlas cannot say.
 
         The tri-state is the point, and it is the one number a client renders:
-        a core whose declaration could not be read answers ``None``, and so does
-        one whose required file is there but could not be judged. ``True`` is
-        never reached out of ignorance — and never with a required file whose
-        bytes are known to be wrong.
+        ``None`` when the declaration could not be read, when a required file
+        could not be judged — including one that was simply never verified — or
+        when a required declaration was refused for leaving the firmware root.
+        ``True`` is never reached out of ignorance, and never with a required
+        file whose bytes are known to be wrong.
+
+        Note what follows for ``verify=False``: a core whose required files have
+        known identities answers ``None``, not ``True``. Presence alone is not
+        the question this field asks.
         """
         if self.declaration != DECLARATION_READ:
             return None
         if self.unmet:
             return False
-        return None if self.undetermined else True
+        if self.undetermined:
+            return None
+        return None if any(r.need == NEED_REQUIRED for r in self.refused) else True
 
 
 @dataclass(frozen=True, slots=True)
@@ -1033,8 +1091,8 @@ def save_artifact_paths() -> frozenset[str]:
 
 def _observe(
     machine: Machine, path: str, identity: FirmwareIdentity | None, *, verify: bool
-) -> tuple[bool | None, FirmwareChecked | None, Caveat | None]:
-    """What the machine says about one destination: present, and how sure we are.
+) -> tuple[PathKind, FirmwareChecked | None, Caveat | None]:
+    """What the machine says about one destination: what is there, and how sure we are.
 
     All four path kinds are distinct answers, because the caller acts on each
     differently. A directory sitting at the destination is not "missing" in any
@@ -1044,42 +1102,47 @@ def _observe(
     kind = machine.path_kind(path)
     if kind == KIND_INACCESSIBLE:
         return (
-            None,
+            kind,
             None,
             Caveat(
                 CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
-                f"{path} cannot be looked at (permissions or an I/O failure), so whether the file is there "
+                f"{path} cannot be looked at (permissions or an I/O failure), so whether anything is there "
                 "is unknown — this is not an absent file",
                 {"path": path},
             ),
         )
     if kind == KIND_DIRECTORY:
+        # Not necessarily wrong: LRPS2 declares "pcsx2/bios" and means the
+        # folder, and RetroDECK links it to the firmware root. Atlas states what
+        # is there and establishes nothing — telling the caller to clear the
+        # path would break exactly that arrangement.
         return (
-            False,
-            None,
+            kind,
+            CHECKED_UNKNOWN,
             Caveat(
                 CAVEAT_FIRMWARE_PATH_OBSTRUCTED,
-                f"a directory sits at {path}, where this core expects a file — no file is there, and none "
-                "can be placed there until the directory is gone",
+                f"a directory is at {path}, where this core's declaration names a file — some cores declare "
+                "a folder instead (LRPS2 does), so this may be correct; either way nothing about it can be "
+                "established, and it is not a missing file",
                 {"path": path},
             ),
         )
     if kind != KIND_FILE:
-        return False, None, None
+        return kind, None, None
     if identity is None:
         # Nothing to check against — and that is not the same as "not checked".
-        return True, CHECKED_UNKNOWN, None
+        return KIND_FILE, CHECKED_UNKNOWN, None
     if not verify:
-        return True, CHECKED_UNCHECKED, None
+        return KIND_FILE, CHECKED_UNCHECKED, None
     # Size is a free pre-filter: a wrong size settles the question without
     # reading a byte of the file.
     size = machine.file_size(path)
     if size is not None and size != identity.size:
-        return True, CHECKED_MISMATCH, None
+        return KIND_FILE, CHECKED_MISMATCH, None
     digest = machine.file_digest(path, DIGEST_MD5)
     if digest is None:
         return (
-            True,
+            KIND_FILE,
             CHECKED_UNKNOWN,
             Caveat(
                 CAVEAT_FIRMWARE_UNREADABLE,
@@ -1089,24 +1152,75 @@ def _observe(
             ),
         )
     matches = digest.lower() == identity.md5.lower()
-    return True, CHECKED_VERIFIED if matches else CHECKED_MISMATCH, None
+    return KIND_FILE, CHECKED_VERIFIED if matches else CHECKED_MISMATCH, None
 
 
-def destination_under(root: str, declared: str) -> str | None:
+_RESOLVE_HOPS = 64
+
+
+def resolve_links(machine: Machine, path: str) -> str | None:
+    """Follow symlinks segment by segment, the way the kernel would.
+
+    ``None`` when the chain does not settle within :data:`_RESOLVE_HOPS` hops —
+    a loop, or a deliberately deep chain. Goes through the seam's ``readlink``,
+    so a fixture machine resolves exactly like the real one.
+    """
+    parts = [p for p in path.split("/") if p and p != "."]
+    resolved = "/"
+    hops = _RESOLVE_HOPS
+    while parts:
+        segment = parts.pop(0)
+        if segment == "..":
+            resolved = os.path.dirname(resolved) or "/"
+            continue
+        candidate = os.path.join(resolved, segment)
+        target = machine.readlink(candidate)
+        if target is None:
+            resolved = candidate
+            continue
+        hops -= 1
+        if hops <= 0:
+            return None
+        if os.path.isabs(target):
+            resolved = "/"
+        # A relative target is relative to the directory holding the link,
+        # which is exactly where `resolved` already stands.
+        parts = [p for p in target.split("/") if p and p != "."] + parts
+    return resolved
+
+
+def destination_under(machine: Machine, root: str, declared: str) -> str | None:
     """The absolute destination for a declared path, or ``None`` if it escapes *root*.
 
     ``firmwareN_path`` is a relative path by contract, but it is read from a
     config file a user (or anything writing that file) can edit, and every read
     atlas then does — presence, size, digest, and the directories the unclaimed
-    scan walks — is derived from it. An absolute path would discard the root
-    entirely and ``..`` would climb out of it, so a declaration that does not
-    stay under the firmware root is refused rather than followed.
+    scan walks — is derived from it. An absolute path discards the root and
+    ``..`` climbs out of it, so both are refused.
+
+    A lexical check is not enough, and that is the whole point of doing this
+    through the seam: ``bios/etclink/hostname`` stays under the root on paper
+    while ``etclink`` is a symlink to ``/etc``. The declared path and the root
+    are therefore both **resolved** before they are compared, and the answer is
+    still the unresolved path — that is where the core will look, and the
+    kernel resolves it the same way we just did.
     """
     if os.path.isabs(declared):
         return None
     candidate = os.path.normpath(os.path.join(root, declared))
     prefix = root if root.endswith("/") else f"{root}/"
-    return candidate if candidate.startswith(prefix) else None
+    if not candidate.startswith(prefix):
+        return None
+    resolved_root = resolve_links(machine, root)
+    resolved = resolve_links(machine, candidate)
+    if resolved_root is None or resolved is None:
+        return None
+    resolved_prefix = resolved_root if resolved_root.endswith("/") else f"{resolved_root}/"
+    # The root itself is inside the tree, not outside it: RetroDECK links
+    # bios/pcsx2/bios back to the firmware root so LRPS2 finds its folder, and
+    # that resolves to the root exactly.
+    inside = resolved == resolved_root or resolved.startswith(resolved_prefix)
+    return candidate if inside else None
 
 
 def _requirements_for(
@@ -1115,28 +1229,43 @@ def _requirements_for(
     core: CoreDeclarations,
     *,
     verify: bool,
-) -> tuple[tuple[FirmwareRequirement, ...], tuple[Caveat, ...]]:
+) -> tuple[tuple[FirmwareRequirement, ...], tuple[RefusedDeclaration, ...], tuple[Caveat, ...], list[Caveat]]:
+    """Resolve one core's declarations: what it wants, what was refused, and why.
+
+    Returns ``(requirements, refused, core_caveats, answer_caveats)``. The
+    refusal caveat belongs to the **core** — it is a fact about that core's
+    declaration, and if it only travelled on the answer, a caller reading one
+    emulator's entry would see a requirement list that silently lost a file.
+    """
     root = context.root
     assert root is not None  # callers resolve the empty-root answer before getting here
     requirements: list[FirmwareRequirement] = []
-    caveats: list[Caveat] = []
+    refused: list[RefusedDeclaration] = []
+    core_caveats: list[Caveat] = []
+    answer_caveats: list[Caveat] = []
     for declaration in core.firmware:
-        path = destination_under(root, declaration.path)
+        path = destination_under(machine, root, declaration.path)
         if path is None:
-            caveats.append(
+            refused.append(RefusedDeclaration(declared=declaration.path, need=declaration.need))
+            core_caveats.append(
                 Caveat(
                     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
                     f"{core.core_so} declares {declaration.path!r}, which does not stay under the firmware "
-                    f"root {root} — atlas will not read or place a file outside it, so this declaration is "
-                    "left out of the answer",
-                    {"core_so": core.core_so, "declared": declaration.path, "root": root},
+                    f"root {root} once symlinks are resolved — atlas will not read or place a file outside "
+                    f"it, so this {declaration.need} file is refused rather than answered",
+                    {
+                        "core_so": core.core_so,
+                        "declared": declaration.path,
+                        "need": declaration.need,
+                        "root": root,
+                    },
                 )
             )
             continue
         identity = context.hashes.for_path(declaration.path)
-        present, checked, caveat = _observe(machine, path, identity, verify=verify)
+        found, checked, caveat = _observe(machine, path, identity, verify=verify)
         if caveat is not None:
-            caveats.append(caveat)
+            answer_caveats.append(caveat)
         requirements.append(
             FirmwareRequirement(
                 core_so=core.core_so,
@@ -1147,11 +1276,16 @@ def _requirements_for(
                 path=path,
                 description=declaration.description,
                 identity=identity,
-                present=present,
+                found=found,
                 checked=checked,
             )
         )
-    return tuple(sorted(requirements, key=lambda r: r.path)), tuple(caveats)
+    return (
+        tuple(sorted(requirements, key=lambda r: r.path)),
+        tuple(refused),
+        tuple(core_caveats),
+        answer_caveats,
+    )
 
 
 def _empty_answer(context: FirmwareContext, extra: tuple[Caveat, ...] = ()) -> FirmwareAnswer:
@@ -1189,22 +1323,25 @@ def _resolve_cores(
         if core.info_status != READ_OK:
             resolved.append(_undeclarable_core(core, label))
             continue
-        requirements, caveats = _requirements_for(machine, context, core, verify=verify)
-        answer_caveats.extend(caveats)
+        requirements, refused, core_caveats, observed = _requirements_for(
+            machine, context, core, verify=verify
+        )
+        answer_caveats.extend(observed)
         resolved.append(
             CoreFirmware(
                 core_so=core.core_so,
                 label=label,
                 declaration=DECLARATION_READ,
                 requirements=requirements,
-                caveats=system_assignment_caveats(core),
+                caveats=(*core_caveats, *system_assignment_caveats(core)),
+                refused=refused,
             )
         )
     return tuple(resolved), answer_caveats
 
 
 def _cores_a_derived_assignment_may_hide(
-    all_cores: tuple[CoreDeclarations, ...], selected: tuple[CoreDeclarations, ...]
+    all_cores: tuple[CoreDeclarations, ...], selected: tuple[CoreDeclarations, ...], system: str
 ) -> tuple[CoreDeclarations, ...]:
     """Installed cores this system query could not reach *because* of a derived slug.
 
@@ -1212,14 +1349,22 @@ def _cores_a_derived_assignment_may_hide(
     ``systemname``. A core whose firmware was filed by a system that was derived
     rather than ruled can therefore sit under the wrong slug — and then it is not
     selected, so the caveat that would have said so never gets attached either.
-    That blind spot is precisely what the signal exists for, so the answer names
-    the candidates instead of quietly being short.
+
+    A candidate has to be one: the core must have a derived assignment **and**
+    its own ``database`` must name the queried system. That is on-machine
+    evidence that this core covers it, so atari800 shows up for ``atari5200``
+    (its database names ``Atari - 5200`` while its systemname says ``Atari
+    8-bit Family``) while thirty unrelated cores do not. Listing every derived
+    core instead would put atari800 and blueMSX under a PlayStation query and
+    train the reader to skip the line.
     """
     chosen = {core.core_so for core in selected}
     return tuple(
         core
         for core in all_cores
-        if core.core_so not in chosen and system_assignment_caveats(core)
+        if core.core_so not in chosen
+        and any(SYSTEMNAME_TO_SLUG.get(name) == system for name in core.database)
+        and system_assignment_caveats(core)
     )
 
 
@@ -1366,16 +1511,21 @@ def firmware_for_system(
         cores, observation_caveats = _resolve_cores(machine, context, selected, verify=verify)
         resolved.extend(cores)
         caveats.extend(observation_caveats)
-        hidden = _cores_a_derived_assignment_may_hide(context.cores, selected)
+        hidden = _cores_a_derived_assignment_may_hide(context.cores, selected, system)
         if hidden:
             names = ", ".join(sorted(c.core_so for c in hidden))
             caveats.append(
                 Caveat(
                     CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
                     f"this list is keyed on the cores' own systemname, and {len(hidden)} installed core(s) "
-                    "file at least one firmware file by a system that was derived rather than ruled — if an "
-                    f"emulator you expected is missing here, it is one of these: {names}",
-                    {"count": str(len(hidden)), "cores": names, "system": system},
+                    f"name {system!r} in their database while filing firmware by a system that was derived "
+                    f"rather than ruled — an emulator missing from this list is one of these: {names}",
+                    {
+                        "count": str(len(hidden)),
+                        "cores": names,
+                        "system": system,
+                        "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
+                    },
                 )
             )
     if catalogue is not None and catalogue.read:
@@ -1400,36 +1550,47 @@ def firmware_for_system(
                 continue
             core = by_stem.get(entry.core_so[: -len(".so")] if entry.core_so.endswith(".so") else entry.core_so)
             if core is None:
+                # Same guard as the per-core route: absence is a claim, and it
+                # needs the core enumeration to have happened.
+                reason = (
+                    Caveat(
+                        CAVEAT_CORE_NOT_INSTALLED,
+                        f"the catalogue declares {entry.label} on {entry.core_so}, but that core is "
+                        "not installed here — atlas has no declaration for it, so the empty list "
+                        "means unknown, not 'needs nothing'",
+                        {"core_so": entry.core_so, "label": entry.label},
+                    )
+                    if context.cores_read
+                    else _no_declaration(
+                        f"anything for {entry.core_so}, because the installed cores could not be enumerated",
+                        {"core_so": entry.core_so, "label": entry.label},
+                    )
+                )
                 resolved.append(
                     CoreFirmware(
                         core_so=entry.core_so,
                         label=entry.label,
                         declaration=DECLARATION_ABSENT,
                         requirements=(),
-                        caveats=(
-                            Caveat(
-                                CAVEAT_CORE_NOT_INSTALLED,
-                                f"the catalogue declares {entry.label} on {entry.core_so}, but that core is "
-                                "not installed here — atlas has no declaration for it, so the empty list "
-                                "means unknown, not 'needs nothing'",
-                                {"core_so": entry.core_so, "label": entry.label},
-                            ),
-                        ),
+                        caveats=(reason,),
                     )
                 )
                 continue
             if core.info_status != READ_OK:
                 resolved.append(_undeclarable_core(core, entry.label))
                 continue
-            requirements, observation_caveats = _requirements_for(machine, context, core, verify=verify)
-            caveats.extend(observation_caveats)
+            requirements, refused, core_caveats, observed = _requirements_for(
+                machine, context, core, verify=verify
+            )
+            caveats.extend(observed)
             resolved.append(
                 CoreFirmware(
                     core_so=core.core_so,
                     label=entry.label,
                     declaration=DECLARATION_READ,
                     requirements=requirements,
-                    caveats=system_assignment_caveats(core),
+                    caveats=(*core_caveats, *system_assignment_caveats(core)),
+                    refused=refused,
                 )
             )
 
@@ -1529,7 +1690,7 @@ def firmware_inventory(machine: Machine, context: FirmwareContext, *, verify: bo
         d.path
         for core in context.cores
         for d in core.firmware
-        if destination_under(context.root, d.path) is not None
+        if destination_under(machine, context.root, d.path) is not None
     }
     unclaimed, unclaimed_caveats = _unclaimed_files(machine, context, claimed, verify=verify)
     caveats.extend(unclaimed_caveats)

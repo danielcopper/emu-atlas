@@ -980,9 +980,13 @@ def _retroarch_firmware_context(
         cores=cores,
         hashes=load_hashes(),
         # An empty core list means "this installation ships none" only if the
-        # directory holding them was actually reached. Otherwise atlas never
-        # looked, and must not turn that into a statement about the machine.
-        cores_read=info_dir is not None,
+        # enumeration actually produced something. A directory that resolves but
+        # cannot be listed — an I/O error on the SD card the whole RetroDECK
+        # tree lives on, a mode change — comes back from glob as an empty list,
+        # indistinguishable from a genuinely empty directory. Refusing to claim
+        # absence in that case costs a weaker caveat on a core-less install and
+        # buys never turning a read failure into "that core is not here".
+        cores_read=info_dir is not None and bool(cores),
         sources=tuple(sources),
         caveats=tuple(caveats),
     )
@@ -1281,13 +1285,17 @@ class RetroDeck(_FirmwareQueries):
             text = self._machine.read_text(bundled_path).text
             if text is not None:
                 bundled = parse_es_systems(text, source="es_systems.xml (bundled)")
-                read = True
+                # Read AND parsed: parse_es_systems answers {} for malformed
+                # XML, and an enumeration that came back empty because the file
+                # is broken is not an enumeration. RetroDECK ships the custom
+                # overlay fully commented out, so it parses to zero systems by
+                # design and can never stand in for this.
+                read = bool(bundled)
         custom: dict[str, tuple[EmulatorSpec, ...]] = {}
         custom_path = os.path.join(root, "ES-DE", "custom_systems", "es_systems.xml")
         custom_text = self._machine.read_text(custom_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, source="es_systems.xml (custom_systems overlay)")
-            read = True
         return merge_layers(bundled, custom), read
 
     def _catalogue(self, root: str) -> dict[str, tuple[EmulatorSpec, ...]]:

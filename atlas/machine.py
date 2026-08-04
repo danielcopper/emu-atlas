@@ -180,6 +180,19 @@ class RealMachine:
         self._core_cache: dict[tuple[str, int, int], CoreInfo | None] = {}
 
     def read_text(self, path: str) -> ReadResult:
+        # Regular files only, checked BEFORE opening — for the same reason
+        # file_digest checks: opening a FIFO with no writer blocks forever, and
+        # these paths come out of config files. A ``.info`` that is a FIFO would
+        # hang the whole firmware answer rather than degrade it.
+        try:
+            st = os.stat(path)
+        except (FileNotFoundError, NotADirectoryError):
+            return ReadResult(READ_MISSING)
+        except OSError:
+            return ReadResult(READ_UNREADABLE)
+        if not _stat.S_ISREG(st.st_mode):
+            # A directory, a FIFO, a device: present, and not readable as text.
+            return ReadResult(READ_UNREADABLE)
         try:
             with open(path, encoding="utf-8") as f:
                 return ReadResult(READ_OK, f.read())
@@ -188,7 +201,7 @@ class RealMachine:
         except UnicodeDecodeError:
             return ReadResult(READ_INVALID_TEXT)
         except OSError:
-            # Permissions, IsADirectoryError, I/O failure: present but unreadable.
+            # Permissions, I/O failure: present but unreadable.
             return ReadResult(READ_UNREADABLE)
 
     def glob(self, pattern: str) -> list[str]:

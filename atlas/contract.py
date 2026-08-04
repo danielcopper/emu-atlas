@@ -87,6 +87,7 @@ def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
         "file_name": requirement.file_name,
         "path": requirement.path,
         "identity": _identity_contract(requirement.identity),
+        "found": requirement.found,
         "present": requirement.present,
         "checked": requirement.checked,
         "satisfied": requirement.satisfied,
@@ -103,6 +104,10 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
     is actually usable (a *present* file with the wrong bytes is not), and
     ``requirements_met`` is the single number a client renders — never ``true``
     out of ignorance, never ``true`` with a required file known to be wrong.
+    ``found`` is the path kind actually read, which ``present`` alone cannot
+    carry (a directory at the destination is not a missing file), and
+    ``refused`` names declarations atlas would not follow, so a dropped file
+    can never make a core look complete.
     """
     return {
         "root": answer.root,
@@ -114,6 +119,7 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
                 "declaration": core.declaration,
                 "requirements_met": core.requirements_met,
                 "requirements": [_requirement_contract(r) for r in core.requirements],
+                "refused": [{"declared": r.declared, "need": r.need} for r in core.refused],
                 "caveats": [{"code": c.code, "data": dict(c.data)} for c in core.caveats],
             }
             for core in answer.cores

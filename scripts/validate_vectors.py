@@ -56,8 +56,11 @@ FIRMWARE_CORE_FIELDS = {
     "declaration",
     "requirements_met",
     "requirements",
+    "refused",
     "caveats",
 }
+REFUSED_FIELDS = {"declared", "need"}
+KNOWN_PATH_KINDS = {"file", "directory", "missing", "inaccessible"}
 FIRMWARE_REQUIREMENT_FIELDS = {
     "core_so",
     "system",
@@ -66,6 +69,7 @@ FIRMWARE_REQUIREMENT_FIELDS = {
     "file_name",
     "path",
     "identity",
+    "found",
     "present",
     "checked",
     "satisfied",
@@ -406,9 +410,13 @@ def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: boo
         fail(f"{name}: a requirement's path must be normalized — no '..' segment may survive into an answer")
     if os.path.basename(entry["path"]) != entry["file_name"]:
         fail(f"{name}: a requirement's file_name must be the name at the end of its destination path")
+    found = entry["found"]
+    if found not in KNOWN_PATH_KINDS:
+        fail(f"{name}: firmware requirement found must be one of {sorted(KNOWN_PATH_KINDS)}")
     present = entry["present"]
-    if present is not None and not isinstance(present, bool):
-        fail(f"{name}: firmware requirement present must be true, false, or null when it could not be looked at")
+    expected_present = None if found == "inaccessible" else found in ("file", "directory")
+    if present is not expected_present:
+        fail(f"{name}: with found={found!r} the requirement's present must be {expected_present!r}")
     identity = entry["identity"]
     if identity is not None:
         _validate_identity(name, identity, "a requirement's identity")
@@ -416,16 +424,21 @@ def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: boo
     satisfied = entry["satisfied"]
     if satisfied is not None and not isinstance(satisfied, bool):
         fail(f"{name}: firmware requirement satisfied must be true, false, or null")
-    if present is not True:
+    if found in ("missing", "inaccessible"):
         if checked is not None:
-            fail(f"{name}: no file is there to check, so checked must be null")
-        # Nothing there is unsatisfied; could-not-look is undetermined.
-        expected = False if present is False else None
+            fail(f"{name}: nothing is there to check, so checked must be null")
+        expected = False if found == "missing" else None
         if satisfied is not expected:
-            fail(f"{name}: with present={present!r} the requirement's satisfied must be {expected!r}")
+            fail(f"{name}: with found={found!r} the requirement's satisfied must be {expected!r}")
         return
     if checked not in KNOWN_FIRMWARE_CHECKED:
         fail(f"{name}: firmware requirement checked must be one of {sorted(KNOWN_FIRMWARE_CHECKED)}")
+    if found == "directory":
+        # Something is there and nothing about it was established — a core may
+        # even have meant the folder (LRPS2 does).
+        if checked != "unknown" or satisfied is not None:
+            fail(f"{name}: a directory at the destination is checked='unknown' with satisfied null")
+        return
     if identity is None and checked != "unknown":
         fail(f"{name}: with no known identity the bytes cannot be established — checked must be 'unknown'")
     if identity is not None and not hash_checked and checked != "unchecked":
@@ -433,10 +446,12 @@ def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: boo
     # The invariant a present-but-wrong file used to slip through.
     if checked == "mismatch" and satisfied is not False:
         fail(f"{name}: a file whose bytes are known to be wrong is never satisfied, present or not")
-    if checked == "unknown" and identity is not None and satisfied is not None:
-        fail(f"{name}: a known identity that could not be established leaves satisfied undetermined")
-    if checked in ("verified", "unchecked") and satisfied is not True:
-        fail(f"{name}: a present file with nothing against it is satisfied")
+    if checked == "unknown" and satisfied is not (None if identity is not None else True):
+        fail(f"{name}: 'unknown' is undetermined when an identity exists and settled when none can")
+    if checked == "unchecked" and satisfied is not None:
+        fail(f"{name}: an identity that exists and was not verified is not an all-clear")
+    if checked == "verified" and satisfied is not True:
+        fail(f"{name}: a verified file is satisfied")
 
 
 def _validate_firmware(name: str, firmware: Any) -> None:
@@ -491,12 +506,26 @@ def _validate_firmware(name: str, firmware: Any) -> None:
         met = core["requirements_met"]
         if met is not None and not isinstance(met, bool):
             fail(f"{name}: firmware core requirements_met must be true, false, or null")
+        refused = core["refused"]
+        if not isinstance(refused, list):
+            fail(f"{name}: firmware core refused must be a list")
+        for item in refused:
+            _require_exact(name, item, REFUSED_FIELDS, "each refused declaration")
+            if not isinstance(item["declared"], str) or not item["declared"]:
+                fail(f"{name}: a refused declaration must state what was declared")
+            if item["need"] not in KNOWN_FIRMWARE_NEEDS:
+                fail(f"{name}: a refused declaration's need must be one of {sorted(KNOWN_FIRMWARE_NEEDS)}")
+        if refused and not core["caveats"]:
+            fail(f"{name}: a refused declaration must be stated, or the file vanishes from the answer")
         required = [r for r in requirements if r["need"] == "required"]
         if declaration != "read":
             expected = None
         elif any(r["satisfied"] is False for r in required):
             expected = False
         elif any(r["satisfied"] is None for r in required):
+            expected = None
+        elif any(r["need"] == "required" for r in refused):
+            # A required file atlas refused to look at is not an all-clear.
             expected = None
         else:
             expected = True

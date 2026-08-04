@@ -45,6 +45,7 @@
               "declaration": "read",
               "requirements_met": true,
               "requirements": [],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -94,6 +95,7 @@
               "declaration": "absent",
               "requirements_met": null,
               "requirements": [],
+              "refused": [],
               "caveats": [
                 {
                   "code": "core-not-installed",
@@ -176,6 +178,7 @@
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
                     "size": 524288
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -192,11 +195,13 @@
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
                     "size": 524288
                   },
+                  "found": "file",
                   "present": true,
                   "checked": "verified",
                   "satisfied": true
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -269,6 +274,7 @@
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
                     "size": 256
                   },
+                  "found": "file",
                   "present": true,
                   "checked": "verified",
                   "satisfied": true
@@ -285,11 +291,13 @@
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
                     "size": 2304
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             },
             {
@@ -310,6 +318,7 @@
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
                     "size": 2304
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -326,11 +335,13 @@
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
                     "size": 256
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -367,6 +378,7 @@
                 "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
                 "size": 256
               },
+              "found": "missing",
               "present": false,
               "checked": null,
               "satisfied": false
@@ -383,9 +395,10 @@
                 "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
                 "size": 256
               },
+              "found": "file",
               "present": true,
               "checked": "unchecked",
-              "satisfied": true
+              "satisfied": null
             }
           ],
           "caveats": []
@@ -452,11 +465,13 @@
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
                     "size": 2097152
                   },
+                  "found": "file",
                   "present": true,
                   "checked": "mismatch",
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -536,11 +551,13 @@
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
                     "size": 2097152
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -626,9 +643,10 @@
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
                     "size": 256
                   },
+                  "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": true
+                  "satisfied": null
                 },
                 {
                   "core_so": "gambatte_libretro.so",
@@ -642,11 +660,13 @@
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
                     "size": 2304
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             },
             {
@@ -655,6 +675,7 @@
               "declaration": "absent",
               "requirements_met": null,
               "requirements": [],
+              "refused": [],
               "caveats": [
                 {
                   "code": "core-not-installed",
@@ -671,6 +692,7 @@
               "declaration": "absent",
               "requirements_met": null,
               "requirements": [],
+              "refused": [],
               "caveats": [
                 {
                   "code": "standalone-emulator",
@@ -783,6 +805,7 @@
               "declaration": "absent",
               "requirements_met": null,
               "requirements": [],
+              "refused": [],
               "caveats": [
                 {
                   "code": "core-not-installed",
@@ -859,6 +882,7 @@
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
                     "size": 256
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -875,11 +899,13 @@
                     "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
                     "size": 16384
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": [
                 {
                   "code": "system-assignment-derived",
@@ -887,7 +913,8 @@
                     "core_so": "mgba_libretro.so",
                     "systemname": "Game Boy/Game Boy Color/Game Boy Advance",
                     "files": "gba_bios.bin",
-                    "database": "Nintendo - Game Boy|Nintendo - Game Boy Color|Nintendo - Game Boy Advance"
+                    "database": "Nintendo - Game Boy|Nintendo - Game Boy Color|Nintendo - Game Boy Advance",
+                    "table_version": "2"
                   }
                 }
               ]
@@ -951,6 +978,7 @@
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
                     "size": 256
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -967,11 +995,13 @@
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
                     "size": 2304
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -1033,6 +1063,7 @@
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
                     "size": 2304
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -1049,6 +1080,7 @@
                     "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
                     "size": 16384
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -1061,18 +1093,21 @@
                   "file_name": "nds7.bin",
                   "path": "/home/deck/.config/retroarch/system/nds7.bin",
                   "identity": null,
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": [
                 {
                   "code": "core-without-systemname",
                   "data": {
                     "core_so": "skyemu_libretro.so",
                     "files": "gba_bios.bin, nds7.bin",
-                    "database": "Nintendo - Nintendo DS|Nintendo - Game Boy|Nintendo - Game Boy Advance"
+                    "database": "Nintendo - Nintendo DS|Nintendo - Game Boy|Nintendo - Game Boy Advance",
+                    "table_version": "2"
                   }
                 }
               ]
@@ -1130,6 +1165,7 @@
                   "file_name": "msxromdb.xml",
                   "path": "/home/deck/.config/retroarch/system/Databases/msxromdb.xml",
                   "identity": null,
+                  "found": "file",
                   "present": true,
                   "checked": "unknown",
                   "satisfied": true
@@ -1142,11 +1178,13 @@
                   "file_name": "MSX.rom",
                   "path": "/home/deck/.config/retroarch/system/Machines/Shared Roms/MSX.rom",
                   "identity": null,
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -1219,6 +1257,7 @@
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
                     "size": 524288
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -1235,11 +1274,13 @@
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
                     "size": 524288
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -1308,6 +1349,7 @@
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
                     "size": 524288
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -1324,11 +1366,13 @@
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
                     "size": 524288
                   },
+                  "found": "file",
                   "present": true,
                   "checked": "mismatch",
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -1395,6 +1439,7 @@
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
                     "size": 524288
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -1411,11 +1456,13 @@
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
                     "size": 524288
                   },
+                  "found": "file",
                   "present": true,
                   "checked": "unknown",
                   "satisfied": null
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -1489,9 +1536,10 @@
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
                     "size": 524288
                   },
-                  "present": false,
-                  "checked": null,
-                  "satisfied": false
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -1505,11 +1553,13 @@
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
                     "size": 524288
                   },
+                  "found": "inaccessible",
                   "present": null,
                   "checked": null,
                   "satisfied": null
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -1580,6 +1630,7 @@
               "declaration": "unreadable",
               "requirements_met": null,
               "requirements": [],
+              "refused": [],
               "caveats": [
                 {
                   "code": "core-info-unreadable",
@@ -1596,6 +1647,7 @@
               "declaration": "unreadable",
               "requirements_met": null,
               "requirements": [],
+              "refused": [],
               "caveats": [
                 {
                   "code": "core-info-unreadable",
@@ -1624,6 +1676,7 @@
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
                     "size": 524288
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
@@ -1640,11 +1693,13 @@
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
                     "size": 524288
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],
@@ -1707,25 +1762,33 @@
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
                     "size": 524288
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
-              "caveats": []
+              "refused": [
+                {
+                  "declared": "../../../etc/shadow",
+                  "need": "required"
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "firmware-path-escapes-root",
+                  "data": {
+                    "core_so": "escape_libretro.so",
+                    "declared": "../../../etc/shadow",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system"
+                  }
+                }
+              ]
             }
           ],
           "unclaimed": [],
-          "caveats": [
-            {
-              "code": "firmware-path-escapes-root",
-              "data": {
-                "core_so": "escape_libretro.so",
-                "declared": "../../../etc/shadow",
-                "root": "/home/deck/.config/retroarch/system"
-              }
-            }
-          ]
+          "caveats": []
         }
       }
     },
@@ -1788,6 +1851,305 @@
       }
     },
     {
+      "name": "firmware-a-symlinked-declaration-does-not-escape-the-root",
+      "rationale": "A lexical check is not a boundary. 'etclink/hostname' stays under the firmware root on paper while etclink is a symlink to /etc, so the declared path and the root are both resolved through the seam before they are compared. The declaration is refused, it stays visible on the core as a refusal rather than vanishing, requirements_met is null because a required file was never looked at, and the unclaimed scan never gains /etc as a directory: only ps1.bin, a real file in the root, comes back.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/escape_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"reaches /etc through a symlink\"\nfirmware0_path = \"etclink/hostname\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/escape_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/etc/hostname": "steamdeck\n",
+          "/etc/shadow": "root:!:0:0:99999:7:::",
+          "/home/deck/.config/retroarch/system/ps1.bin": {
+            "md5": "22222222222222222222222222222222",
+            "sha1": "2222222222222222222222222222222222222222",
+            "size": 16
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/etclink": "/etc"
+        },
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "escape_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [
+                {
+                  "declared": "etclink/hostname",
+                  "need": "required"
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "firmware-path-escapes-root",
+                  "data": {
+                    "core_so": "escape_libretro.so",
+                    "declared": "etclink/hostname",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [
+            {
+              "path": "/home/deck/.config/retroarch/system/ps1.bin",
+              "identity": null,
+              "known_as": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "no-firmware-declaration",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-directory-at-the-destination-establishes-nothing",
+      "rationale": "LRPS2 declares 'pcsx2/bios' and means the folder; RetroDECK links it to the firmware root, so a directory at a declared path can be exactly right. Atlas states what is there — found=directory, present=true, checked=unknown — and establishes nothing: satisfied is null and the core answers null rather than reporting a missing file or telling the caller to clear the path.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": {
+            "size": 4194304
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-path-obstructed",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/pcsx2/bios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-unverified-is-not-an-all-clear",
+      "rationale": "The same machine, twice. With verify=false the required file is there under the right name and the table knows what it should be — nobody looked, so satisfied is null and requirements_met is null. Presence is not the question this field answers, and a client rendering it must not get a green light nobody earned. The verified twin of this fixture is retrodeck-firmware-core-sandbox-info-path-verified-and-missing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-a-broken-catalogue-file-claims-nothing",
+      "rationale": "The read succeeded and the parse did not. Malformed XML yields zero systems, which must not be mistaken for 'the frontend knows no emulator for this system' — and RetroDECK ships its custom overlay fully commented out, so the overlay can never stand in as evidence that the catalogue was read. flycast is installed and declares; the answer says the catalogue could not be read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList><system><name>gb</name>\n",
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <!-- everything commented out -->\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/flycast_libretro.info": "systemname = \"Sega - Dreamcast\"\nfirmware_count = 1\nfirmware0_desc = \"dc_boot.bin (Dreamcast BIOS)\"\nfirmware0_path = \"dc/dc_boot.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/flycast_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "dreamcast"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {
+                "system": "dreamcast"
+              }
+            },
+            {
+              "code": "no-firmware-declaration",
+              "data": {
+                "system": "dreamcast"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "firmware-root-gone-states-the-root-not-each-file",
       "rationale": "An unmounted card takes the whole firmware root with it. Every declared file is genuinely not there, so that is what is reported — but the caveat names the real cause, so a caller can tell 'your BIOS folder is gone' from 'these files were never installed'.",
       "input": {
@@ -1837,11 +2199,13 @@
                     "sha1": "deb62b0074b8cae4f162c257662136733cfc76ad",
                     "size": 1859335
                   },
+                  "found": "missing",
                   "present": false,
                   "checked": null,
                   "satisfied": false
                 }
               ],
+              "refused": [],
               "caveats": []
             }
           ],

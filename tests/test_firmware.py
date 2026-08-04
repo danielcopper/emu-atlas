@@ -147,6 +147,17 @@ firmware1_path = "gbc_bios.bin"
 firmware1_opt = "true"
 """
 
+# atari800: its database names the 5200 while its systemname does not, which is
+# exactly how a core ends up unreachable under the right slug.
+ATARI800_INFO = """
+systemname = "Atari 8-bit Family"
+database = "Atari - 5200|Atari - 8-bit Family"
+firmware_count = 1
+firmware0_desc = "ATARIXL.ROM"
+firmware0_path = "ATARIXL.ROM"
+firmware0_opt = "true"
+"""
+
 # SkyEmu ships no systemname at all — only a database naming three systems.
 SKYEMU_INFO = """
 display_name = "Multi (SkyEmu)"
@@ -331,11 +342,47 @@ class TestPerCoreAnswer:
         assert [c.code for c in answer.caveats] == []
 
     def test_requirements_met_counts_only_required_files(self):
-        machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
-        answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
-        core = answer.cores[0]
+        # Verified, so the answer can be earned: the optional file is absent and
+        # that alone must not make the core fail.
+        content = b"12345678"
+        table = json.dumps({"_meta": {}, "files": {"scph5501.bin": _blob(content)}})
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(content)})
+        context = FirmwareContext(
+            root=BIOS_DIR,
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
+            hashes=load_hashes(table),
+        )
+        core = firmware_for_core(
+            machine, context, core_so="mednafen_psx_libretro.so", verify=True
+        ).cores[0]
         assert [r.file_name for r in core.unmet] == []
         assert core.requirements_met is True
+
+    def test_an_unverified_known_identity_is_not_an_all_clear(self):
+        """verify=False must not hand out a green light it did not earn.
+
+        The file is there under the right name and the table knows what it
+        should be — but nobody looked, so the honest answer is "undetermined",
+        not "met". A caller who wants the green light asks for it; on the
+        reference machine that costs 0.03 s for one core.
+        """
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
+        core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
+        required = next(r for r in core.requirements if r.need == NEED_REQUIRED)
+        assert required.found == "file" and required.checked == "unchecked"
+        assert required.satisfied is None
+        assert core.unmet == ()
+        assert [r.file_name for r in core.undetermined] == ["scph5501.bin"]
+        assert core.requirements_met is None
+
+    def test_a_file_no_table_covers_stays_settled(self):
+        # Nothing further can EVER be established about it, so withholding the
+        # answer would withhold it forever.
+        machine = _machine({f"{BIOS_DIR}/psxonpsp660.bin": _blob(b"unknown to the table")})
+        answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
+        uncovered = next(r for r in answer.requirements if r.file_name == "psxonpsp660.bin")
+        assert uncovered.identity is None and uncovered.checked == CHECKED_UNKNOWN
+        assert uncovered.satisfied is True
 
     def test_a_missing_required_file_is_unmet(self):
         machine = _machine()
@@ -421,7 +468,7 @@ class TestRequirementInvariants:
         with pytest.raises(ValueError):
             FirmwareRequirement(
                 core_so="x.so", system="psx", system_source="systemname", need="required",
-                file_name="a.bin", path="/bios/a.bin", description="", identity=None, present=False,
+                file_name="a.bin", path="/bios/a.bin", description="", identity=None, found="missing",
                 checked="verified",
             )
 
@@ -429,7 +476,7 @@ class TestRequirementInvariants:
         with pytest.raises(ValueError):
             FirmwareRequirement(
                 core_so="x.so", system="psx", system_source="systemname", need="required",
-                file_name="a.bin", path="/bios/a.bin", description="", identity=None, present=True,
+                file_name="a.bin", path="/bios/a.bin", description="", identity=None, found="file",
                 checked=None,
             )
 
@@ -438,7 +485,7 @@ class TestRequirementInvariants:
             FirmwareRequirement(
                 core_so="x.so", system="psx", system_source="systemname",
                 need="undeclared", file_name="a.bin",  # type: ignore[arg-type]
-                path="/bios/a.bin", description="", identity=None, present=False, checked=None,
+                path="/bios/a.bin", description="", identity=None, found="missing", checked=None,
             )
 
 
@@ -449,6 +496,7 @@ class TestWhatTheMachineWouldNotSay:
         machine = _machine(inaccessible=[f"{BIOS_DIR}/scph5501.bin"])
         answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
         blocked = next(r for r in answer.requirements if r.file_name == "scph5501.bin")
+        assert blocked.found == "inaccessible"
         assert blocked.present is None, "could not look is not 'not there'"
         assert blocked.checked is None
         assert blocked.satisfied is None
@@ -459,9 +507,14 @@ class TestWhatTheMachineWouldNotSay:
         machine = _machine(dirs=[f"{BIOS_DIR}/scph5501.bin"])
         answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
         blocked = next(r for r in answer.requirements if r.file_name == "scph5501.bin")
-        # No file is there, which is true — but "download it to this path"
-        # cannot work either, and only the caveat says that.
-        assert blocked.present is False and blocked.satisfied is False
+        # Something is there and nothing about it was established — LRPS2 even
+        # declares a folder on purpose, so this is not a missing file and not
+        # an invitation to delete anything.
+        assert blocked.found == "directory"
+        assert blocked.present is True
+        assert blocked.checked == CHECKED_UNKNOWN
+        assert blocked.satisfied is None
+        assert answer.cores[0].requirements_met is None
         assert CAVEAT_FIRMWARE_PATH_OBSTRUCTED in [c.code for c in answer.caveats]
 
     def test_an_unreadable_info_leaves_the_core_in_the_answer(self):
@@ -494,8 +547,13 @@ class TestWhatTheMachineWouldNotSay:
             }
         )
         answer = firmware_for_core(machine, _context(machine), core_so="escape_libretro.so", verify=True)
-        assert answer.requirements == ()
-        assert CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT in [c.code for c in answer.caveats]
+        core = answer.cores[0]
+        assert core.requirements == ()
+        # The refusal is a fact about THIS core, so it lives on the core — and
+        # a required file atlas would not look at is never an all-clear.
+        assert [r.declared for r in core.refused] == [declared]
+        assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT]
+        assert core.requirements_met is None
 
     def test_an_escaping_declaration_does_not_widen_the_unclaimed_scan(self):
         info = 'systemname = "Escape"\nfirmware_count = 1\nfirmware0_path = "../etc/passwd"\n'
@@ -511,13 +569,14 @@ class TestWhatTheMachineWouldNotSay:
         assert paths == [f"{BIOS_DIR}/stray.bin"]
 
     def test_destination_under_refuses_what_leaves_the_root(self):
-        assert destination_under("/bios", "dc/dc_boot.bin") == "/bios/dc/dc_boot.bin"
-        assert destination_under("/bios", "./scph5501.bin") == "/bios/scph5501.bin"
-        assert destination_under("/bios", "/etc/shadow") is None
-        assert destination_under("/bios", "../etc/shadow") is None
-        assert destination_under("/bios", "dc/../../etc/shadow") is None
+        m = _machine()
+        assert destination_under(m, "/bios", "dc/dc_boot.bin") == "/bios/dc/dc_boot.bin"
+        assert destination_under(m, "/bios", "./scph5501.bin") == "/bios/scph5501.bin"
+        assert destination_under(m, "/bios", "/etc/shadow") is None
+        assert destination_under(m, "/bios", "../etc/shadow") is None
+        assert destination_under(m, "/bios", "dc/../../etc/shadow") is None
         # A sibling directory sharing the root's prefix is not inside it.
-        assert destination_under("/bios", "../bios-backup/x.bin") is None
+        assert destination_under(m, "/bios", "../bios-backup/x.bin") is None
 
 
 class TestSystemAssignmentIsVisible:
@@ -632,12 +691,20 @@ class TestSystemAssignmentIsVisible:
         # Without a catalogue the selection is keyed on the cores' own
         # systemname, so a core filed under the wrong slug is unreachable AND
         # its caveat never gets attached. The answer names the candidates.
-        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
-                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
+        machine = _machine({f"{INFO_DIR}/atari800_libretro.info": ATARI800_INFO,
+                            f"{INFO_DIR}/atari800_libretro.so": {"status": "invalid-text"}})
         answer = firmware_for_system(machine, _context(machine), system="atari5200")
         assert answer.cores == ()
         hiding = next(c for c in answer.caveats if c.code == CAVEAT_ASSIGNMENT_MAY_HIDE_CORES)
-        assert hiding.data["cores"] == "mgba_libretro.so"
+        assert hiding.data["cores"] == "atari800_libretro.so"
+
+    def test_it_names_only_cores_whose_own_database_covers_the_question(self):
+        # mGBA is derived too, but nothing on the machine says it covers the
+        # Atari 5200 — naming it would train the reader to skip the line.
+        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
+                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
+        answer = firmware_for_system(machine, _context(machine), system="atari5200")
+        assert CAVEAT_ASSIGNMENT_MAY_HIDE_CORES not in [c.code for c in answer.caveats]
 
     def test_a_system_query_that_reaches_every_core_hides_nothing(self):
         machine = _gb_machine()
@@ -967,7 +1034,9 @@ class TestPartialReaderIsNotMisled:
     def test_presence_and_the_check_never_disagree(self):
         for _, answer in self._answers():
             for requirement in answer.requirements:
-                assert (requirement.checked is None) is (not requirement.present)
+                # Identity, not truthiness: present=False and present=None are
+                # different answers and only one of them is falsy by accident.
+                assert (requirement.checked is None) is (requirement.present is not True)
 
     def test_an_unidentifiable_file_never_reads_as_merely_unchecked(self):
         for _, answer in self._answers():
@@ -1002,7 +1071,7 @@ class TestPartialReaderIsNotMisled:
                 for requirement in core.requirements:
                     if requirement.need != NEED_REQUIRED:
                         continue
-                    assert requirement.present is True, "all-clear over a file that is not there"
+                    assert requirement.found == "file", "all-clear over something that is not a file"
                     assert requirement.checked != CHECKED_MISMATCH, (
                         "all-clear over a file whose bytes are known to be wrong"
                     )
@@ -1022,7 +1091,7 @@ class TestPartialReaderIsNotMisled:
             machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
         ).cores[0]
         wrong = next(r for r in core.requirements if r.file_name == "scph5501.bin")
-        assert wrong.present is True and wrong.checked == CHECKED_MISMATCH
+        assert wrong.found == "file" and wrong.checked == CHECKED_MISMATCH
         assert wrong.satisfied is False
         assert [r.file_name for r in core.unmet] == ["scph5501.bin"]
         assert core.requirements_met is False
@@ -1033,7 +1102,7 @@ class TestPartialReaderIsNotMisled:
             machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
         ).cores[0]
         undecided = next(r for r in core.requirements if r.file_name == "scph5501.bin")
-        assert undecided.present is True and undecided.checked == CHECKED_UNKNOWN
+        assert undecided.found == "file" and undecided.checked == CHECKED_UNKNOWN
         assert undecided.satisfied is None
         assert core.unmet == ()
         assert [r.file_name for r in core.undetermined] == ["scph5501.bin"]
