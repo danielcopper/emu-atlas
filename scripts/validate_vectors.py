@@ -117,6 +117,7 @@ KNOWN_CAVEAT_CODES = {
     "invalid-save-directory",
     "core-suspect",
     "core-unaudited",
+    "core-multi-option",
     "card-mode-unconfirmed",
     "card-generation-mismatch",
     "no-firmware-declaration",

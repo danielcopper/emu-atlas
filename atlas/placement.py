@@ -69,6 +69,7 @@ CAVEAT_UNVERIFIED_VERSION = "unverified-version"
 CAVEAT_INVALID_SAVE_DIRECTORY = "invalid-save-directory"
 CAVEAT_CORE_SUSPECT = "core-suspect"
 CAVEAT_CORE_UNAUDITED = "core-unaudited"
+CAVEAT_CORE_MULTI_OPTION = "core-multi-option"
 CAVEAT_CARD_MODE_UNCONFIRMED = "card-mode-unconfirmed"
 CAVEAT_CARD_GENERATION_MISMATCH = "card-generation-mismatch"
 CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
@@ -166,6 +167,12 @@ class SavePlacement:
     :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`).
     ``file_set`` is observed or unknown, never guessed. ``sources`` is the
     provenance trail; ``caveats`` states every degradation explicitly.
+
+    ``granularity`` is ``None`` wherever no rule card states it. That alone
+    does not separate "nothing to report" from "atlas deliberately does not
+    state this", so the separation is a caveat, not an empty field: a core
+    whose granularity depends on options atlas does not interpret carries
+    :data:`CAVEAT_CORE_MULTI_OPTION` naming those options.
 
     A placement can be *conditional*: when ``dir`` does not exist yet,
     RetroArch attempts to create it on first save and silently reverts to the

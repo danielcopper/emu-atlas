@@ -144,7 +144,9 @@ findings:
   separate assertion only a source-verified rule card can make.
 - **A hole is not an unknown.** `needs` lists holes the caller fills from the ROM at hand (`<rom_stem>`,
   `<content_dir>`). _Unknown_ means atlas cannot state the value and refuses to guess. These are distinct states and the
-  type keeps them distinct.
+  type keeps them distinct — and an empty field is never one of them: where atlas deliberately does not state a value
+  (`granularity` for a core whose file set depends on options it does not interpret), a caveat says so and names what it
+  depends on, because nothing separates a blank field from nothing-to-report.
 - **The root varies.** `savefile_directory`, `system_directory` (Flycast VMUs), or the ROM's own directory
   (`savefiles_in_content_dir`, or an unset save dir — RetroArch resolves that itself, it is not a hole).
 - **Filesystem state is part of the answer.** A sorted directory that does not exist yet is a _conditional_ result:

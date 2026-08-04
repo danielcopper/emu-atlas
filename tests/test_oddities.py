@@ -388,6 +388,74 @@ class TestOperaCard:
         assert p.file_set.files == ("Game.0.srm",)
 
 
+class TestAuditVerdictCaveats:
+    """A verdict a caller cannot see is a verdict that did not happen.
+
+    ``granularity`` is ``None`` for every core without a rule card, so the
+    verdict has to arrive as a caveat or not at all.
+    """
+
+    def _query(self, *, core_so, library_name, system, rom, extra_files=None):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                f"/mnt/sd/retrodeck/roms/{system}/{rom}": "",
+                f"/mnt/sd/retrodeck/saves/{system}/.keep": "",
+                **(extra_files or {}),
+            },
+            cores={f"{DEPLOY}/{core_so}": {"library_name": library_name}},
+        )
+        return rd.save_location(content_path=f"/mnt/sd/retrodeck/roms/{system}/{rom}", core_so=core_so)
+
+    def test_multi_option_verdict_names_the_options_that_decide_granularity(self):
+        p = self._query(
+            core_so="swanstation_libretro.so",
+            library_name="SwanStation",
+            system="psx",
+            rom="Vagrant Story (USA).chd",
+        )
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MULTI_OPTION]
+        assert stated and stated[0].data["core"] == "swanstation"
+        assert stated[0].data["options"].split(", ") == [
+            "swanstation_MemoryCards_Card1Type",
+            "swanstation_MemoryCards_Card2Type",
+            "swanstation_MemoryCards_UsePlaylistTitle",
+        ]
+
+    def test_standard_verdict_stays_silent(self):
+        # The pair from issue #23: same empty granularity, different meaning.
+        p = self._query(
+            core_so="mgba_libretro.so",
+            library_name="mGBA",
+            system="gba",
+            rom="Golden Sun (USA).zip",
+        )
+        assert p.granularity is None
+        assert p.caveats == ()
+
+    def test_standard_dir_verdict_stays_silent_and_observes_the_core_written_set(self):
+        # standard-dir means the file set is core-owned, not that anything is
+        # withheld: no core option governs it, the files are content-keyed, and
+        # the literal <rom_stem>.* observation reports all of them.
+        stem = "Sega Rally Championship (USA)"
+        p = self._query(
+            core_so="mednafen_saturn_libretro.so",
+            library_name="Beetle Saturn",
+            system="saturn",
+            rom=f"{stem}.chd",
+            extra_files={
+                f"/mnt/sd/retrodeck/saves/saturn/{stem}.bcr": "backup",
+                f"/mnt/sd/retrodeck/saves/saturn/{stem}.bkr": "backup",
+                f"/mnt/sd/retrodeck/saves/saturn/{stem}.smpc": "smpc",
+            },
+        )
+        assert p.caveats == ()
+        assert p.file_set.state == "observed"
+        assert p.file_set.files == (f"{stem}.bcr", f"{stem}.bkr", f"{stem}.smpc")
+
+
 class TestStrictLoaders:
     """Packaged data is validated, never coerced — a broken build fails loudly."""
 
@@ -402,7 +470,7 @@ class TestStrictLoaders:
     def test_unknown_verdict_is_rejected(self):
         text = json.dumps(
             {
-                "schema": 2,
+                "schema": 3,
                 "cores": {
                     "x": {
                         "verdict": "fine-probably",
@@ -419,7 +487,7 @@ class TestStrictLoaders:
     def test_audit_capability_and_note_are_loaded(self):
         text = json.dumps(
             {
-                "schema": 2,
+                "schema": 3,
                 "cores": {
                     "x": {
                         "verdict": "standard",
@@ -437,7 +505,7 @@ class TestStrictLoaders:
     def test_missing_per_game_capability_is_rejected(self):
         text = json.dumps(
             {
-                "schema": 2,
+                "schema": 3,
                 "cores": {"x": {"verdict": "standard", "note": "source-verified", "verified": {}}},
             }
         )
@@ -447,7 +515,7 @@ class TestStrictLoaders:
     def test_non_boolean_per_game_capability_is_rejected(self):
         text = json.dumps(
             {
-                "schema": 2,
+                "schema": 3,
                 "cores": {
                     "x": {
                         "verdict": "standard",
@@ -465,7 +533,7 @@ class TestStrictLoaders:
     def test_invalid_audit_note_is_rejected(self, note):
         text = json.dumps(
             {
-                "schema": 2,
+                "schema": 3,
                 "cores": {
                     "x": {
                         "verdict": "standard",
@@ -477,6 +545,78 @@ class TestStrictLoaders:
             }
         )
         with pytest.raises(ValueError, match="note"):
+            load_audit(text)
+
+    def test_multi_option_save_options_are_loaded(self):
+        text = json.dumps(
+            {
+                "schema": 3,
+                "cores": {
+                    "x": {
+                        "verdict": "multi-option",
+                        "per_game_capable": True,
+                        "note": "source-verified",
+                        "save_options": ["x_card1", "x_card2"],
+                        "verified": {},
+                    }
+                },
+            }
+        )
+        assert load_audit(text)["x"].save_options == ("x_card1", "x_card2")
+
+    def test_multi_option_without_save_options_is_rejected(self):
+        # The verdict IS the claim that options decide the answer — an entry
+        # that cannot name them would make the caveat say "unknown" again.
+        text = json.dumps(
+            {
+                "schema": 3,
+                "cores": {
+                    "x": {
+                        "verdict": "multi-option",
+                        "per_game_capable": True,
+                        "note": "source-verified",
+                        "verified": {},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="save_options"):
+            load_audit(text)
+
+    def test_save_options_on_another_verdict_are_rejected(self):
+        text = json.dumps(
+            {
+                "schema": 3,
+                "cores": {
+                    "x": {
+                        "verdict": "standard",
+                        "per_game_capable": True,
+                        "note": "source-verified",
+                        "save_options": ["x_card1"],
+                        "verified": {},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="save_options"):
+            load_audit(text)
+
+    def test_non_string_save_options_are_rejected(self):
+        text = json.dumps(
+            {
+                "schema": 3,
+                "cores": {
+                    "x": {
+                        "verdict": "multi-option",
+                        "per_game_capable": True,
+                        "note": "source-verified",
+                        "save_options": [1],
+                        "verified": {},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="save_options"):
             load_audit(text)
 
     def test_non_boolean_complete_is_rejected(self):

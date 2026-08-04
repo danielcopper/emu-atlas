@@ -94,7 +94,9 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   `rgui_config_directory`), `library_name` read live from the core binary through the Flatpak-deployment translation,
   file sets observed literally (glob-escaped, RetroArch's `.ldci` bookkeeping filtered) or honestly unknown, granularity
   plus the option that switches it where a rule card exists (Flycast, LRPS2), and structured caveats for every stated
-  degradation. A sorted directory that does not exist yet is a conditional answer with a structural `fallback_dir`; a
+  degradation. Where the granularity is deliberately not stated — a core whose file set depends on options atlas does
+  not interpret — the answer says so and names those options, so "unstated" never arrives looking like "nothing to
+  report". A sorted directory that does not exist yet is a conditional answer with a structural `fallback_dir`; a
   placement reached through symlinks reports its `physical_dir`, and a dead `dir_prep` link is a stated caveat, not a
   silent path.
 - `installation.emulators_for(system, content_path=...)` reads the ES-DE catalogue live (bundled + custom overlay) and

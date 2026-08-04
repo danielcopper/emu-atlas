@@ -9,7 +9,7 @@ source, binary, or observation; no = absence is proven; ? = not established. Thi
 one machine. The row set is RetroDECK's shipped matrix. Verdicts and evidence levels are defined in
 `docs/research/core-audit.md`.
 
-Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 2) sha256 `d19b4bd1f757`.
+Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 3) sha256 `2954cf159625`.
 
 **Status:** libretro 17/159 audited · standalone 0/22 audited
 
