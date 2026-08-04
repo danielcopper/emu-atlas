@@ -29,6 +29,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
     CAVEAT_FIRMWARE_PATH_OBSTRUCTED,
+    CAVEAT_FIRMWARE_PATH_UNRESOLVABLE,
     CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_NO_FIRMWARE_DECLARATION,
     CAVEAT_STANDALONE_EMULATOR,
@@ -52,6 +53,7 @@ from atlas.firmware import (
     identify_firmware,
     load_hashes,
     read_core_declarations,
+    resolve_links,
     save_artifact_paths,
     system_decision,
     system_for,
@@ -468,16 +470,16 @@ class TestRequirementInvariants:
         with pytest.raises(ValueError):
             FirmwareRequirement(
                 core_so="x.so", system="psx", system_source="systemname", need="required",
-                file_name="a.bin", path="/bios/a.bin", description="", identity=None, found="missing",
-                checked="verified",
+                file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
+                found="missing", checked="verified",
             )
 
     def test_a_present_file_must_state_one_of_the_four(self):
         with pytest.raises(ValueError):
             FirmwareRequirement(
                 core_so="x.so", system="psx", system_source="systemname", need="required",
-                file_name="a.bin", path="/bios/a.bin", description="", identity=None, found="file",
-                checked=None,
+                file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
+                found="file", checked=None,
             )
 
     def test_need_is_only_required_or_optional(self):
@@ -485,7 +487,8 @@ class TestRequirementInvariants:
             FirmwareRequirement(
                 core_so="x.so", system="psx", system_source="systemname",
                 need="undeclared", file_name="a.bin",  # type: ignore[arg-type]
-                path="/bios/a.bin", description="", identity=None, found="missing", checked=None,
+                path="/bios/a.bin", declared="a.bin", description="", identity=None, found="missing",
+                checked=None,
             )
 
 
@@ -570,13 +573,102 @@ class TestWhatTheMachineWouldNotSay:
 
     def test_destination_under_refuses_what_leaves_the_root(self):
         m = _machine()
-        assert destination_under(m, "/bios", "dc/dc_boot.bin") == "/bios/dc/dc_boot.bin"
-        assert destination_under(m, "/bios", "./scph5501.bin") == "/bios/scph5501.bin"
-        assert destination_under(m, "/bios", "/etc/shadow") is None
-        assert destination_under(m, "/bios", "../etc/shadow") is None
-        assert destination_under(m, "/bios", "dc/../../etc/shadow") is None
-        # A sibling directory sharing the root's prefix is not inside it.
-        assert destination_under(m, "/bios", "../bios-backup/x.bin") is None
+        assert destination_under(m, "/bios", "dc/dc_boot.bin").path == "/bios/dc/dc_boot.bin"
+        assert destination_under(m, "/bios", "./scph5501.bin").path == "/bios/scph5501.bin"
+        for declared in ("/etc/shadow", "../etc/shadow", "dc/../../etc/shadow", "../bios-backup/x.bin"):
+            outcome = destination_under(m, "/bios", declared)
+            assert outcome.path is None, declared
+            assert outcome.refusal == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT, declared
+
+
+class TestResolutionIsTheKernelsOrder:
+    """Symlink cases — the ones a lexical check cannot reach, which is the point."""
+
+    def _escaping(self, declared: str, **kwargs: object) -> FixtureMachine:
+        info = (
+            'systemname = "Sony - PlayStation"\n'
+            "firmware_count = 1\n"
+            f'firmware0_path = "{declared}"\n'
+            'firmware0_opt = "false"\n'
+        )
+        tree: dict[str, FixtureFileSpec] = {
+            f"{INFO_DIR}/escape_libretro.info": info,
+            f"{INFO_DIR}/escape_libretro.so": {"status": "invalid-text"},
+            "/etc/shadow": "root:!:0:0:::",
+            f"{BIOS_DIR}/pcsx2/scph5501.bin": _blob(b"12345678"),
+            "/elsewhere/scph5501.bin": _blob(b"12345678"),
+        }
+        return FixtureMachine(tree, **kwargs)  # type: ignore[arg-type]
+
+    def test_a_symlinked_component_is_followed_before_the_bound_is_checked(self):
+        machine = self._escaping("etclink/shadow", symlinks={f"{BIOS_DIR}/etclink": "/etc"})
+        answer = firmware_for_core(machine, _context(machine), core_so="escape_libretro.so")
+        assert answer.requirements == ()
+        assert [r.reason for r in answer.cores[0].refused] == [CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT]
+
+    def test_dotdot_applies_to_where_the_link_landed_not_to_the_spelling(self):
+        """The kernel resolves, then walks up. Collapsing '..' first is a different path.
+
+        With ``pcsx2/bios`` linked to the firmware root, ``pcsx2/bios/../x`` is
+        ``<root>/../x`` — outside. A lexical reading answers ``<root>/pcsx2/x``,
+        which exists here and would verify: a green light for a file the core
+        never opens.
+        """
+        machine = self._escaping(
+            "pcsx2/bios/../scph5501.bin", symlinks={f"{BIOS_DIR}/pcsx2/bios": BIOS_DIR}
+        )
+        answer = firmware_for_core(machine, _context(machine), core_so="escape_libretro.so", verify=True)
+        assert answer.requirements == (), "the lexical reading would have verified /bios/pcsx2/scph5501.bin"
+        assert [r.reason for r in answer.cores[0].refused] == [CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT]
+        assert answer.cores[0].requirements_met is None
+
+    def test_the_root_itself_is_inside_the_root(self):
+        # RetroDECK links bios/pcsx2/bios back to the firmware root; an earlier
+        # revision refused exactly this and broke a stock installation.
+        machine = FixtureMachine(
+            {
+                f"{INFO_DIR}/pcsx2_libretro.info": (
+                    'systemname = "Sony - PlayStation"\n'
+                    "firmware_count = 1\n"
+                    'firmware0_path = "pcsx2/bios/scph5501.bin"\n'
+                    'firmware0_opt = "false"\n'
+                ),
+                f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
+                f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678"),
+            },
+            symlinks={f"{BIOS_DIR}/pcsx2/bios": BIOS_DIR},
+        )
+        answer = firmware_for_core(machine, _context(machine), core_so="pcsx2_libretro.so")
+        requirement = answer.requirements[0]
+        assert requirement.declared == "pcsx2/bios/scph5501.bin"
+        # Resolved, so this and a direct declaration are ONE destination — a
+        # placing client cannot end up writing two copies.
+        assert requirement.path == f"{BIOS_DIR}/scph5501.bin"
+        assert requirement.found == "file"
+
+    def test_an_unresolvable_path_is_refused_for_its_own_reason(self):
+        machine = self._escaping(
+            "loop/scph5501.bin",
+            symlinks={f"{BIOS_DIR}/loop": f"{BIOS_DIR}/loop2", f"{BIOS_DIR}/loop2": f"{BIOS_DIR}/loop"},
+        )
+        answer = firmware_for_core(machine, _context(machine), core_so="escape_libretro.so")
+        refused = answer.cores[0].refused[0]
+        assert refused.reason == CAVEAT_FIRMWARE_PATH_UNRESOLVABLE
+        assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_FIRMWARE_PATH_UNRESOLVABLE]
+        assert answer.cores[0].requirements_met is None
+
+    def test_an_escaping_declaration_never_widens_the_unclaimed_scan(self):
+        machine = self._escaping("etclink/shadow", symlinks={f"{BIOS_DIR}/etclink": "/etc"})
+        paths = [f.path for f in firmware_inventory(machine, _context(machine), verify=True).unclaimed]
+        assert paths == [f"{BIOS_DIR}/pcsx2/scph5501.bin"] or paths == []
+        assert not any(p.startswith("/etc") for p in paths)
+
+    def test_resolve_links_follows_the_seam(self):
+        machine = FixtureMachine({"/real/f.bin": "x"}, symlinks={"/via": "/real", "/real/inner": "/real"})
+        assert resolve_links(machine, "/via/f.bin") == "/real/f.bin"
+        assert resolve_links(machine, "/via/inner/f.bin") == "/real/f.bin"
+        assert resolve_links(machine, "/plain/path") == "/plain/path"
+        assert resolve_links(machine, "/via/../real/f.bin") == "/real/f.bin"
 
 
 class TestSystemAssignmentIsVisible:

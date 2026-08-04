@@ -75,6 +75,7 @@ from atlas.machine import (
     KIND_INACCESSIBLE,
     KIND_MISSING,
     READ_OK,
+    SYMLINK_HOPS,
     Machine,
     PathKind,
 )
@@ -116,6 +117,8 @@ CAVEAT_CATALOGUE_UNREADABLE = "emulator-catalogue-unreadable"
 CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
 CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
 CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT = "firmware-path-escapes-root"
+CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
+CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
 CAVEAT_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
@@ -768,10 +771,14 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
 class FirmwareRequirement:
     """One (core, declared file) pair — the atom of the whole model.
 
-    ``path`` is the **absolute** destination: the installation's live system
-    directory plus the declared relative path, subdirectory included. It is
-    stated whether or not a file is there, because "where does this go" is the
-    question a download flow asks.
+    ``path`` is the **absolute, resolved** destination — where the file really
+    lands once the kernel has followed every symlink on the way. It is stated
+    whether or not a file is there, because "where does this go" is the question
+    a download flow asks, and resolving it means two declarations of the same
+    file are one place rather than two (LRPS2's ``pcsx2/bios`` *is* the firmware
+    root on RetroDECK, so a placing client would otherwise write two copies).
+    ``declared`` keeps the string the core spelled, which is the name it will
+    open — nothing is lost by resolving.
 
     ``need`` says what the core asks for; ``found`` and ``checked`` say what the
     machine holds. ``found`` is the path kind read at the destination and keeps
@@ -788,6 +795,7 @@ class FirmwareRequirement:
     need: FirmwareNeed
     file_name: str
     path: str
+    declared: str
     description: str
     identity: FirmwareIdentity | None
     found: PathKind
@@ -860,16 +868,20 @@ class FirmwareRequirement:
 
 @dataclass(frozen=True, slots=True)
 class RefusedDeclaration:
-    """A declaration atlas would not follow, because it leaves the firmware root.
+    """A declaration atlas would not follow — it leaves the root, or will not resolve.
 
     It is not a requirement — there is no destination to state — but it is a
     firmware file this core asked for, so it has to stay visible on the core.
     Otherwise ``unmet`` and ``undetermined`` together would look like the whole
     story while a required file had been quietly dropped.
+
+    ``reason`` is the caveat code that says *why*: leaving the root and being
+    unresolvable are different facts about the machine.
     """
 
     declared: str
     need: FirmwareNeed
+    reason: str
 
 
 CoreDeclarationState = Literal["read", "unreadable", "absent"]
@@ -1155,19 +1167,24 @@ def _observe(
     return KIND_FILE, CHECKED_VERIFIED if matches else CHECKED_MISMATCH, None
 
 
-_RESOLVE_HOPS = 64
-
-
 def resolve_links(machine: Machine, path: str) -> str | None:
     """Follow symlinks segment by segment, the way the kernel would.
 
-    ``None`` when the chain does not settle within :data:`_RESOLVE_HOPS` hops —
-    a loop, or a deliberately deep chain. Goes through the seam's ``readlink``,
-    so a fixture machine resolves exactly like the real one.
+    ``None`` when the chain does not settle within
+    :data:`~atlas.machine.SYMLINK_HOPS` hops — a loop, or a chain longer than
+    the kernel would follow, both of which are ``ELOOP``. Goes through the
+    seam's ``readlink`` and uses the seam's hop limit, so a fixture machine
+    resolves exactly like the real one; a limit that differed anywhere would
+    make vectors built on it prove nothing.
+
+    ``..`` is applied to the *resolved* path, not to the spelling. That is the
+    whole point: the kernel resolves a component and then walks up from where
+    it landed, so ``link/..`` leaves the link's target directory, not the
+    directory the link sits in.
     """
     parts = [p for p in path.split("/") if p and p != "."]
     resolved = "/"
-    hops = _RESOLVE_HOPS
+    hops = SYMLINK_HOPS
     while parts:
         segment = parts.pop(0)
         if segment == "..":
@@ -1179,7 +1196,7 @@ def resolve_links(machine: Machine, path: str) -> str | None:
             resolved = candidate
             continue
         hops -= 1
-        if hops <= 0:
+        if hops < 0:
             return None
         if os.path.isabs(target):
             resolved = "/"
@@ -1189,38 +1206,54 @@ def resolve_links(machine: Machine, path: str) -> str | None:
     return resolved
 
 
-def destination_under(machine: Machine, root: str, declared: str) -> str | None:
-    """The absolute destination for a declared path, or ``None`` if it escapes *root*.
+@dataclass(frozen=True, slots=True)
+class Destination:
+    """Where a declared path actually lands — or why atlas would not follow it.
+
+    Exactly one of ``path`` and ``refusal`` is set. ``refusal`` is a caveat
+    code, and there are two of them on purpose: "this leaves the firmware root"
+    and "this could not be resolved at all" are different facts, and a consumer
+    branching on a code it can trust must not be handed the wrong one.
+    """
+
+    path: str | None = None
+    refusal: str | None = None
+
+
+def destination_under(machine: Machine, root: str, declared: str) -> Destination:
+    """Where a declared path lands under *root* — resolved, in the kernel's order.
 
     ``firmwareN_path`` is a relative path by contract, but it is read from a
     config file a user (or anything writing that file) can edit, and every read
     atlas then does — presence, size, digest, and the directories the unclaimed
-    scan walks — is derived from it. An absolute path discards the root and
-    ``..`` climbs out of it, so both are refused.
+    scan walks — is derived from it. An absolute path discards the root, so it
+    is refused outright.
 
-    A lexical check is not enough, and that is the whole point of doing this
-    through the seam: ``bios/etclink/hostname`` stays under the root on paper
-    while ``etclink`` is a symlink to ``/etc``. The declared path and the root
-    are therefore both **resolved** before they are compared, and the answer is
-    still the unresolved path — that is where the core will look, and the
-    kernel resolves it the same way we just did.
+    Everything else is decided on **resolved** paths, and nothing is normalized
+    first. Collapsing ``..`` lexically before resolving would eat the component
+    in front of it even when that component is a symlink, and the kernel does
+    the opposite: it resolves the component and applies ``..`` to where it
+    landed. With ``pcsx2/bios`` linked to the firmware root,
+    ``pcsx2/bios/../x.bin`` is ``<root>/../x.bin`` to the kernel — outside — and
+    ``<root>/pcsx2/x.bin`` to a lexical reading. The kernel opens the file, so
+    the kernel's reading is the one that counts.
+
+    The answer is the resolved path. Two declarations that land on the same
+    file then look like one place, which is what keeps a placing client from
+    writing two copies: LRPS2's ``pcsx2/bios`` *is* the firmware root here.
     """
     if os.path.isabs(declared):
-        return None
-    candidate = os.path.normpath(os.path.join(root, declared))
-    prefix = root if root.endswith("/") else f"{root}/"
-    if not candidate.startswith(prefix):
-        return None
+        return Destination(refusal=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT)
     resolved_root = resolve_links(machine, root)
-    resolved = resolve_links(machine, candidate)
+    resolved = resolve_links(machine, os.path.join(root, declared))
     if resolved_root is None or resolved is None:
-        return None
+        return Destination(refusal=CAVEAT_FIRMWARE_PATH_UNRESOLVABLE)
     resolved_prefix = resolved_root if resolved_root.endswith("/") else f"{resolved_root}/"
     # The root itself is inside the tree, not outside it: RetroDECK links
     # bios/pcsx2/bios back to the firmware root so LRPS2 finds its folder, and
     # that resolves to the root exactly.
     inside = resolved == resolved_root or resolved.startswith(resolved_prefix)
-    return candidate if inside else None
+    return Destination(path=resolved) if inside else Destination(refusal=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT)
 
 
 def _requirements_for(
@@ -1244,15 +1277,23 @@ def _requirements_for(
     core_caveats: list[Caveat] = []
     answer_caveats: list[Caveat] = []
     for declaration in core.firmware:
-        path = destination_under(machine, root, declaration.path)
-        if path is None:
-            refused.append(RefusedDeclaration(declared=declaration.path, need=declaration.need))
+        destination = destination_under(machine, root, declaration.path)
+        if destination.path is None:
+            refusal = destination.refusal or CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT
+            refused.append(
+                RefusedDeclaration(declared=declaration.path, need=declaration.need, reason=refusal)
+            )
+            why = (
+                f"does not stay under the firmware root {root} once symlinks are resolved"
+                if refusal == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT
+                else "cannot be resolved at all — a symlink loop, or a chain longer than the kernel follows"
+            )
             core_caveats.append(
                 Caveat(
-                    CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
-                    f"{core.core_so} declares {declaration.path!r}, which does not stay under the firmware "
-                    f"root {root} once symlinks are resolved — atlas will not read or place a file outside "
-                    f"it, so this {declaration.need} file is refused rather than answered",
+                    refusal,
+                    f"{core.core_so} declares {declaration.path!r}, which {why} — atlas will not read or "
+                    f"place a file it cannot vouch for, so this {declaration.need} file is refused rather "
+                    "than answered",
                     {
                         "core_so": core.core_so,
                         "declared": declaration.path,
@@ -1262,6 +1303,7 @@ def _requirements_for(
                 )
             )
             continue
+        path = destination.path
         identity = context.hashes.for_path(declaration.path)
         found, checked, caveat = _observe(machine, path, identity, verify=verify)
         if caveat is not None:
@@ -1274,6 +1316,7 @@ def _requirements_for(
                 need=declaration.need,
                 file_name=declaration.file_name,
                 path=path,
+                declared=declaration.path,
                 description=declaration.description,
                 identity=identity,
                 found=found,
@@ -1641,18 +1684,21 @@ def _unclaimed_files(
     """
     root = context.root
     assert root is not None
-    artifacts = save_artifact_paths()
-    directories = {""} | {os.path.dirname(p) for p in claimed if os.path.dirname(p)}
+    resolved_root = resolve_links(machine, root) or root
+    artifacts = {os.path.join(resolved_root, name) for name in save_artifact_paths()}
+    # Every claimed path is already resolved and known to be under the root, so
+    # the directories derived from them are too — a declaration that escaped or
+    # would not resolve never reaches this set, and therefore never widens where
+    # atlas looks or hashes.
+    directories = {resolved_root} | {os.path.dirname(p) for p in claimed}
     found: list[UnclaimedFile] = []
     caveats: list[Caveat] = []
-    for relative_dir in sorted(directories):
-        directory = os.path.join(root, relative_dir) if relative_dir else root
+    for directory in sorted(directories):
         for entry in machine.glob(os.path.join(_glob_escape(directory), "*")):
             if machine.path_kind(entry) != KIND_FILE:
                 continue
-            name = os.path.basename(entry)
-            relative = f"{relative_dir}/{name}" if relative_dir else name
-            if relative in claimed or relative in artifacts:
+            resolved_entry = resolve_links(machine, entry) or entry
+            if resolved_entry in claimed or resolved_entry in artifacts:
                 continue
             identity: FirmwareIdentity | None = None
             if verify:
@@ -1668,7 +1714,7 @@ def _unclaimed_files(
                     )
                 else:
                     identity = context.hashes.for_content(md5=digest, sha1=sha1)
-            found.append(UnclaimedFile(path=entry, identity=identity))
+            found.append(UnclaimedFile(path=resolved_entry, identity=identity))
     return tuple(sorted(found, key=lambda f: f.path)), caveats
 
 
@@ -1686,12 +1732,12 @@ def firmware_inventory(machine: Machine, context: FirmwareContext, *, verify: bo
     cores, caveats = _resolve_cores(machine, context, context.cores, verify=verify)
     # Only declarations that stay under the root define the scan, so a config
     # pointing outside it can never widen where atlas reads or hashes.
-    claimed = {
-        d.path
-        for core in context.cores
-        for d in core.firmware
-        if destination_under(machine, context.root, d.path) is not None
-    }
+    claimed: set[str] = set()
+    for core in context.cores:
+        for declaration in core.firmware:
+            landing = destination_under(machine, context.root, declaration.path).path
+            if landing is not None:
+                claimed.add(landing)
     unclaimed, unclaimed_caveats = _unclaimed_files(machine, context, claimed, verify=verify)
     caveats.extend(unclaimed_caveats)
     if not claimed:

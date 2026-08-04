@@ -86,6 +86,7 @@ def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
         "need": requirement.need,
         "file_name": requirement.file_name,
         "path": requirement.path,
+        "declared": requirement.declared,
         "identity": _identity_contract(requirement.identity),
         "found": requirement.found,
         "present": requirement.present,
@@ -106,8 +107,11 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
     out of ignorance, never ``true`` with a required file known to be wrong.
     ``found`` is the path kind actually read, which ``present`` alone cannot
     carry (a directory at the destination is not a missing file), and
-    ``refused`` names declarations atlas would not follow, so a dropped file
-    can never make a core look complete.
+    ``refused`` names declarations atlas would not follow, with the reason,
+    so a dropped file can never make a core look complete. ``path`` is the
+    **resolved** destination and ``declared`` the string the core spelled: two
+    declarations that land on one file are one place, and the name the core
+    opens is still stated.
     """
     return {
         "root": answer.root,
@@ -119,7 +123,7 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
                 "declaration": core.declaration,
                 "requirements_met": core.requirements_met,
                 "requirements": [_requirement_contract(r) for r in core.requirements],
-                "refused": [{"declared": r.declared, "need": r.need} for r in core.refused],
+                "refused": [{"declared": r.declared, "need": r.need, "reason": r.reason} for r in core.refused],
                 "caveats": [{"code": c.code, "data": dict(c.data)} for c in core.caveats],
             }
             for core in answer.cores

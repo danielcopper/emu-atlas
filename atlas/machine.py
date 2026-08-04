@@ -56,7 +56,16 @@ from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, Protocol
 
 _CORE_PROBE_TIMEOUT_SECONDS = 15
-_MAX_SYMLINK_HOPS = 40
+SYMLINK_HOPS = 40
+"""How many symlink hops a path may take before it counts as unresolvable.
+
+Linux answers ``ELOOP`` after 40 (``SYMLOOP_MAX``), and both machines use this
+one number so a chain that resolves on the real filesystem resolves in a
+fixture and one that does not fails in both. A fixture that disagreed inside
+some window would make every vector built on it prove nothing.
+"""
+
+_MAX_SYMLINK_HOPS = SYMLINK_HOPS
 
 # Digest algorithms the seam answers for. Closed on purpose: these are the two
 # libretro-database's System.dat carries, and a port must implement exactly
@@ -409,9 +418,16 @@ class FixtureMachine:
                 parent = os.path.dirname(parent)
         self._dirs.discard("")
 
-    def _resolve(self, path: str) -> str:
-        """Resolve symlink components in *path* (final one included), cycle-guarded."""
-        for _ in range(_MAX_SYMLINK_HOPS):
+    def _resolve(self, path: str) -> str | None:
+        """Resolve symlink components in *path* (final one included).
+
+        ``None`` when the chain does not settle within :data:`SYMLINK_HOPS`
+        hops — a loop, or a chain longer than the kernel would follow. Returning
+        the half-resolved path instead would make ``ELOOP`` unrepresentable in a
+        fixture, and every caller below would then answer something the real
+        machine never answers.
+        """
+        for _ in range(SYMLINK_HOPS):
             parts = path.split("/")
             replaced = False
             for i in range(2, len(parts) + 1):
@@ -426,19 +442,23 @@ class FixtureMachine:
                     break
             if not replaced:
                 return path
-        return path
+        return None
 
-    def _resolve_parent(self, path: str) -> str:
+    def _resolve_parent(self, path: str) -> str | None:
         """Resolve symlinks in the parent components only — the final one stays."""
         parent, name = os.path.dirname(path), os.path.basename(path)
         if not name or parent in ("", "/"):
             return path
-        return os.path.join(self._resolve(parent), name)
+        resolved_parent = self._resolve(parent)
+        return None if resolved_parent is None else os.path.join(resolved_parent, name)
 
     def read_text(self, path: str) -> ReadResult:
         if self._is_inaccessible(path):
             return ReadResult(READ_UNREADABLE)
         resolved = self._resolve(path)
+        if resolved is None:
+            # ELOOP: os.stat fails, so the real machine cannot read it either.
+            return ReadResult(READ_UNREADABLE)
         if resolved in self._files:
             status, text = self._files[resolved]
             return ReadResult(status, text)
@@ -452,6 +472,10 @@ class FixtureMachine:
         if self._is_inaccessible(path):
             return KIND_INACCESSIBLE
         resolved = self._resolve(path)
+        if resolved is None:
+            # ELOOP: os.stat raises OSError, which the real machine reports as
+            # inaccessible — never as an absent file.
+            return KIND_INACCESSIBLE
         if resolved in self._files or resolved in self._cores:
             return KIND_FILE
         if resolved in self._dirs:
@@ -459,15 +483,23 @@ class FixtureMachine:
         return KIND_MISSING
 
     def _is_inaccessible(self, path: str) -> bool:
-        return path in self._inaccessible or self._resolve(path) in self._inaccessible
+        if path in self._inaccessible:
+            return True
+        resolved = self._resolve(path)
+        # A chain that never settles is ELOOP: the real machine fails to stat
+        # it, which every operation here reports as inaccessible.
+        return resolved is None or resolved in self._inaccessible
 
     def readlink(self, path: str) -> str | None:
-        return self._symlinks.get(self._resolve_parent(path))
+        parent = self._resolve_parent(path)
+        return None if parent is None else self._symlinks.get(parent)
 
     def file_size(self, path: str) -> int | None:
         if self._is_inaccessible(path):
             return None
         resolved = self._resolve(path)
+        if resolved is None:
+            return None
         declared = self._blobs.get(resolved, {}).get("size")
         if isinstance(declared, int):
             return declared
@@ -478,6 +510,8 @@ class FixtureMachine:
         if algorithm not in DIGEST_ALGORITHMS or self._is_inaccessible(path):
             return None
         resolved = self._resolve(path)
+        if resolved is None:
+            return None
         declared = self._blobs.get(resolved, {}).get(algorithm)
         if isinstance(declared, str):
             return declared
@@ -487,7 +521,8 @@ class FixtureMachine:
         return hashlib.new(algorithm, text.encode("utf-8")).hexdigest()
 
     def query_core(self, so_path: str) -> CoreInfo | None:
-        spec = self._cores.get(self._resolve(so_path))
+        resolved = self._resolve(so_path)
+        spec = self._cores.get(resolved) if resolved is not None else None
         if not spec:
             return None
         name = spec.get("library_name")
@@ -505,6 +540,8 @@ class FixtureMachine:
     def _children(self, spelled_dir: str) -> set[str]:
         """Entry names directly under *spelled_dir* (resolved like the kernel would)."""
         real = self._resolve(spelled_dir) if spelled_dir else ""
+        if real is None:
+            return set()
         prefix = real.rstrip("/") + "/"
         names: set[str] = set()
         for known in (*self._files, *self._symlinks, *self._cores, *self._dirs, *self._inaccessible):

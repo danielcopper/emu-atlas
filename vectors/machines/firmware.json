@@ -173,6 +173,7 @@
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/mnt/sd/retrodeck/bios/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
@@ -190,6 +191,7 @@
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
@@ -269,6 +271,7 @@
                   "need": "optional",
                   "file_name": "gb_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
+                  "declared": "gb_bios.bin",
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
@@ -286,6 +289,7 @@
                   "need": "optional",
                   "file_name": "gbc_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gbc_bios.bin",
+                  "declared": "gbc_bios.bin",
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
@@ -313,6 +317,7 @@
                   "need": "optional",
                   "file_name": "cgb_boot.bin",
                   "path": "/home/deck/.config/retroarch/system/cgb_boot.bin",
+                  "declared": "cgb_boot.bin",
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
@@ -330,6 +335,7 @@
                   "need": "optional",
                   "file_name": "dmg_boot.bin",
                   "path": "/home/deck/.config/retroarch/system/dmg_boot.bin",
+                  "declared": "dmg_boot.bin",
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
@@ -373,6 +379,7 @@
               "need": "optional",
               "file_name": "dmg_boot.bin",
               "path": "/home/deck/.config/retroarch/system/dmg_boot.bin",
+              "declared": "dmg_boot.bin",
               "identity": {
                 "md5": "32fbbd84168d3482956eb3c5051637f5",
                 "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
@@ -390,6 +397,7 @@
               "need": "optional",
               "file_name": "gb_bios.bin",
               "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
+              "declared": "gb_bios.bin",
               "identity": {
                 "md5": "32fbbd84168d3482956eb3c5051637f5",
                 "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
@@ -460,6 +468,7 @@
                   "need": "required",
                   "file_name": "dc_boot.bin",
                   "path": "/mnt/sd/retrodeck/bios/dc/dc_boot.bin",
+                  "declared": "dc/dc_boot.bin",
                   "identity": {
                     "md5": "e10c53c2f8b90bab96ead2d368858623",
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
@@ -546,6 +555,7 @@
                   "need": "required",
                   "file_name": "dc_boot.bin",
                   "path": "/mnt/sd/retrodeck/bios/dc/dc_boot.bin",
+                  "declared": "dc/dc_boot.bin",
                   "identity": {
                     "md5": "e10c53c2f8b90bab96ead2d368858623",
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
@@ -638,6 +648,7 @@
                   "need": "optional",
                   "file_name": "gb_bios.bin",
                   "path": "/mnt/sd/retrodeck/bios/gb_bios.bin",
+                  "declared": "gb_bios.bin",
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
@@ -655,6 +666,7 @@
                   "need": "optional",
                   "file_name": "gbc_bios.bin",
                   "path": "/mnt/sd/retrodeck/bios/gbc_bios.bin",
+                  "declared": "gbc_bios.bin",
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
@@ -877,6 +889,7 @@
                   "need": "optional",
                   "file_name": "gb_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
+                  "declared": "gb_bios.bin",
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
@@ -894,6 +907,7 @@
                   "need": "optional",
                   "file_name": "gba_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gba_bios.bin",
+                  "declared": "gba_bios.bin",
                   "identity": {
                     "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
                     "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
@@ -973,6 +987,7 @@
                   "need": "optional",
                   "file_name": "gb_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gb_bios.bin",
+                  "declared": "gb_bios.bin",
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
@@ -990,6 +1005,7 @@
                   "need": "optional",
                   "file_name": "gbc_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gbc_bios.bin",
+                  "declared": "gbc_bios.bin",
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
@@ -1058,6 +1074,7 @@
                   "need": "optional",
                   "file_name": "cgb_boot.bin",
                   "path": "/home/deck/.config/retroarch/system/cgb_boot.bin",
+                  "declared": "cgb_boot.bin",
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
@@ -1075,6 +1092,7 @@
                   "need": "optional",
                   "file_name": "gba_bios.bin",
                   "path": "/home/deck/.config/retroarch/system/gba_bios.bin",
+                  "declared": "gba_bios.bin",
                   "identity": {
                     "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
                     "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
@@ -1092,6 +1110,7 @@
                   "need": "optional",
                   "file_name": "nds7.bin",
                   "path": "/home/deck/.config/retroarch/system/nds7.bin",
+                  "declared": "nds7.bin",
                   "identity": null,
                   "found": "missing",
                   "present": false,
@@ -1164,6 +1183,7 @@
                   "need": "required",
                   "file_name": "msxromdb.xml",
                   "path": "/home/deck/.config/retroarch/system/Databases/msxromdb.xml",
+                  "declared": "Databases/msxromdb.xml",
                   "identity": null,
                   "found": "file",
                   "present": true,
@@ -1177,6 +1197,7 @@
                   "need": "required",
                   "file_name": "MSX.rom",
                   "path": "/home/deck/.config/retroarch/system/Machines/Shared Roms/MSX.rom",
+                  "declared": "Machines/Shared Roms/MSX.rom",
                   "identity": null,
                   "found": "missing",
                   "present": false,
@@ -1252,6 +1273,7 @@
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/home/deck/Emulation/tools/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
@@ -1269,6 +1291,7 @@
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/home/deck/Emulation/tools/system/scph5501.bin",
+                  "declared": "scph5501.bin",
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
@@ -1344,6 +1367,7 @@
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/mnt/sd/retrodeck/bios/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
@@ -1361,6 +1385,7 @@
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
@@ -1434,6 +1459,7 @@
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/mnt/sd/retrodeck/bios/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
@@ -1451,6 +1477,7 @@
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
@@ -1531,6 +1558,7 @@
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
@@ -1548,6 +1576,7 @@
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
@@ -1671,6 +1700,7 @@
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
@@ -1688,6 +1718,7 @@
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
@@ -1757,6 +1788,7 @@
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
@@ -1771,7 +1803,8 @@
               "refused": [
                 {
                   "declared": "../../../etc/shadow",
-                  "need": "required"
+                  "need": "required",
+                  "reason": "firmware-path-escapes-root"
                 }
               ],
               "caveats": [
@@ -1901,7 +1934,8 @@
               "refused": [
                 {
                   "declared": "etclink/hostname",
-                  "need": "required"
+                  "need": "required",
+                  "reason": "firmware-path-escapes-root"
                 }
               ],
               "caveats": [
@@ -1982,6 +2016,7 @@
                   "need": "required",
                   "file_name": "bios",
                   "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "declared": "pcsx2/bios",
                   "identity": null,
                   "found": "directory",
                   "present": true,
@@ -2055,6 +2090,7 @@
                   "need": "optional",
                   "file_name": "psxonpsp660.bin",
                   "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
@@ -2072,6 +2108,7 @@
                   "need": "required",
                   "file_name": "scph5501.bin",
                   "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
@@ -2150,6 +2187,221 @@
       }
     },
     {
+      "name": "firmware-dotdot-is-applied-where-the-symlink-landed",
+      "rationale": "Resolution order, and it is not a preference: the kernel resolves a component and then walks up from where it landed, so 'pcsx2/bios/../scph5501.bin' with pcsx2/bios linked to the firmware root means <root>/../scph5501.bin — outside. Collapsing '..' lexically first would eat the symlink before anything looked at it and answer <root>/pcsx2/scph5501.bin, verifying a file the core will never open. The kernel opens the file, so the declaration is refused, the refusal names the reason, and requirements_met stays out of true.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"climbs out through the bios symlink\"\nfirmware0_path = \"pcsx2/bios/../scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          },
+          "/home/deck/.config/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios": "/home/deck/.config/retroarch/system"
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [
+                {
+                  "declared": "pcsx2/bios/../scph5501.bin",
+                  "need": "required",
+                  "reason": "firmware-path-escapes-root"
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "firmware-path-escapes-root",
+                  "data": {
+                    "core_so": "pcsx2_libretro.so",
+                    "declared": "pcsx2/bios/../scph5501.bin",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-the-root-itself-is-inside-the-root",
+      "rationale": "The live arrangement, pinned: RetroDECK links bios/pcsx2/bios back to the firmware root so LRPS2 finds its folder, and that resolves to the root exactly. Equality is inside, not outside — an earlier revision refused it and broke a stock installation. The answer carries the RESOLVED path, so a file declared through the link and the same file declared directly are one destination rather than two, and 'declared' keeps the name the core actually opens.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"through the bios link\"\nfirmware0_path = \"pcsx2/bios/scph39001.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph39001.bin": {
+            "size": 4194304
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios": "/home/deck/.config/retroarch/system"
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph39001.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph39001.bin",
+                  "declared": "pcsx2/bios/scph39001.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-a-path-that-will-not-resolve-is-not-an-escape",
+      "rationale": "resolve_links answers 'no' for two different facts, and a caveat code is contractual. A symlink loop is not a path leaving the firmware root — a consumer branching on firmware-path-escapes-root would act on something that did not happen. The refusal carries its own code, and refused records which fact it rests on.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/looper_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"behind a symlink loop\"\nfirmware0_path = \"loop/scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/looper_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/loop": "/home/deck/.config/retroarch/system/loop2",
+          "/home/deck/.config/retroarch/system/loop2": "/home/deck/.config/retroarch/system/loop"
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "looper_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "looper_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [
+                {
+                  "declared": "loop/scph5501.bin",
+                  "need": "required",
+                  "reason": "firmware-path-unresolvable"
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "firmware-path-unresolvable",
+                  "data": {
+                    "core_so": "looper_libretro.so",
+                    "declared": "loop/scph5501.bin",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
       "name": "firmware-root-gone-states-the-root-not-each-file",
       "rationale": "An unmounted card takes the whole firmware root with it. Every declared file is genuinely not there, so that is what is reported — but the caveat names the real cause, so a caller can tell 'your BIOS folder is gone' from 'these files were never installed'.",
       "input": {
@@ -2194,6 +2446,7 @@
                   "need": "required",
                   "file_name": "neogeo.zip",
                   "path": "/mnt/sd/retrodeck/bios/neogeo.zip",
+                  "declared": "neogeo.zip",
                   "identity": {
                     "md5": "00dad01abdbf8ea9e79ad2fe11bdb182",
                     "sha1": "deb62b0074b8cae4f162c257662136733cfc76ad",

@@ -59,7 +59,8 @@ FIRMWARE_CORE_FIELDS = {
     "refused",
     "caveats",
 }
-REFUSED_FIELDS = {"declared", "need"}
+REFUSED_FIELDS = {"declared", "need", "reason"}
+KNOWN_REFUSAL_REASONS = {"firmware-path-escapes-root", "firmware-path-unresolvable"}
 KNOWN_PATH_KINDS = {"file", "directory", "missing", "inaccessible"}
 FIRMWARE_REQUIREMENT_FIELDS = {
     "core_so",
@@ -68,6 +69,7 @@ FIRMWARE_REQUIREMENT_FIELDS = {
     "need",
     "file_name",
     "path",
+    "declared",
     "identity",
     "found",
     "present",
@@ -135,6 +137,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-path-obstructed",
     "firmware-path-inaccessible",
     "firmware-path-escapes-root",
+    "firmware-path-unresolvable",
     "firmware-content-contradictory",
 }
 # The codes that may stand in for "nothing could be read here". Each says a
@@ -395,7 +398,7 @@ def _validate_identity(name: str, identity: Any, what: str) -> None:
 
 def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: bool) -> None:
     _require_exact(name, entry, FIRMWARE_REQUIREMENT_FIELDS, "each firmware requirement")
-    for key in ("core_so", "system", "file_name", "path"):
+    for key in ("core_so", "system", "file_name", "path", "declared"):
         if not isinstance(entry[key], str) or not entry[key]:
             fail(f"{name}: firmware requirement {key} must be a non-empty string")
     if entry["need"] not in KNOWN_FIRMWARE_NEEDS:
@@ -408,8 +411,10 @@ def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: boo
         fail(f"{name}: a requirement's path must be the absolute destination under the root {root!r}")
     if os.path.normpath(entry["path"]) != entry["path"]:
         fail(f"{name}: a requirement's path must be normalized — no '..' segment may survive into an answer")
-    if os.path.basename(entry["path"]) != entry["file_name"]:
-        fail(f"{name}: a requirement's file_name must be the name at the end of its destination path")
+    if os.path.basename(entry["declared"]) != entry["file_name"]:
+        fail(f"{name}: a requirement's file_name must be the name the core spelled at the end of 'declared'")
+    if os.path.isabs(entry["declared"]):
+        fail(f"{name}: a declared firmware path is relative to the root; an absolute one is never answered")
     found = entry["found"]
     if found not in KNOWN_PATH_KINDS:
         fail(f"{name}: firmware requirement found must be one of {sorted(KNOWN_PATH_KINDS)}")
@@ -515,6 +520,10 @@ def _validate_firmware(name: str, firmware: Any) -> None:
                 fail(f"{name}: a refused declaration must state what was declared")
             if item["need"] not in KNOWN_FIRMWARE_NEEDS:
                 fail(f"{name}: a refused declaration's need must be one of {sorted(KNOWN_FIRMWARE_NEEDS)}")
+            if item["reason"] not in KNOWN_REFUSAL_REASONS:
+                fail(f"{name}: a refusal must say which fact it rests on: {sorted(KNOWN_REFUSAL_REASONS)}")
+            if not any(c["code"] == item["reason"] for c in core["caveats"]):
+                fail(f"{name}: a refusal's reason must be stated as a caveat on the same core")
         if refused and not core["caveats"]:
             fail(f"{name}: a refused declaration must be stated, or the file vanishes from the answer")
         required = [r for r in requirements if r["need"] == "required"]

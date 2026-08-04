@@ -40,6 +40,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
     CAVEAT_FIRMWARE_PATH_OBSTRUCTED,
+    CAVEAT_FIRMWARE_PATH_UNRESOLVABLE,
     CAVEAT_FIRMWARE_ROOT_MISSING,
     CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_CORE_WITHOUT_SYSTEMNAME,
@@ -62,6 +63,7 @@ from atlas.firmware import (
     NEED_REQUIRED,
     Catalogue,
     CatalogueEntry,
+    Destination,
     CoreDeclarations,
     CoreDeclarationState,
     CoreFirmware,
@@ -109,7 +111,7 @@ from atlas.installations import (
     RetroDeck,
     StandaloneRetroArchFlatpak,
 )
-from atlas.machine import CoreInfo, CoreOption, FixtureMachine, Machine, RealMachine
+from atlas.machine import SYMLINK_HOPS, CoreInfo, CoreOption, FixtureMachine, Machine, RealMachine
 from atlas.oddities import (
     AuditEntry,
     CoreCard,
@@ -202,6 +204,7 @@ __all__ = [
     "CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT",
     "CAVEAT_FIRMWARE_PATH_INACCESSIBLE",
     "CAVEAT_FIRMWARE_PATH_OBSTRUCTED",
+    "CAVEAT_FIRMWARE_PATH_UNRESOLVABLE",
     "CAVEAT_FIRMWARE_ROOT_MISSING",
     "CAVEAT_FIRMWARE_UNREADABLE",
     "CAVEAT_INFO_PATH_UNRESOLVED",
@@ -213,6 +216,7 @@ __all__ = [
     "DECLARATION_READ",
     "DECLARATION_UNREADABLE",
     "Catalogue",
+    "Destination",
     "FIRMWARE_SYSTEM_OVERRIDE",
     "FIRMWARE_SYSTEM_OVERRIDE_REVIEWED",
     "FIRMWARE_SYSTEM_OVERRIDE_VERSION",
@@ -263,6 +267,7 @@ __all__ = [
     "KIND_STANDALONE",
     "LayoutDefaults",
     "Machine",
+    "SYMLINK_HOPS",
     "NativeRetroArch",
     "RETRODECK_DEFAULTS",
     "ROOT_CONTENT_DIRECTORY",

@@ -12,7 +12,7 @@ import os
 
 import pytest
 
-from atlas.machine import CoreInfo, FixtureMachine, ReadResult, RealMachine
+from atlas.machine import SYMLINK_HOPS, CoreInfo, FixtureMachine, ReadResult, RealMachine
 
 
 class TestReadResult:
@@ -155,10 +155,51 @@ class TestFixtureSymlinks:
         m = FixtureMachine({"/data/real/f.txt": "x"}, symlinks={"/data/link": "real"})
         assert m.read_text("/data/link/f.txt") == ReadResult("ok", "x")
 
-    def test_link_cycle_does_not_hang(self):
-        m = FixtureMachine({}, symlinks={"/a": "/b", "/b": "/a"})
-        assert m.read_text("/a/f.txt") == ReadResult("missing")
-        assert m.path_kind("/a/f.txt") == "missing"
+    def test_a_link_cycle_answers_inaccessible_not_missing(self, tmp_path):
+        """ELOOP has to be representable in a fixture, and answer as the kernel does.
+
+        A cycle is not an absent file: the real machine's ``os.stat`` raises
+        ``OSError(ELOOP)``, which the seam reports as *inaccessible*. A fixture
+        that returned the half-resolved path instead would answer ``missing``,
+        and every vector built on it would assert the safe-looking wrong thing.
+        """
+        fixture = FixtureMachine({}, symlinks={"/a": "/b", "/b": "/a"})
+        os.symlink(tmp_path / "b", tmp_path / "a")
+        os.symlink(tmp_path / "a", tmp_path / "b")
+        real = RealMachine()
+        for machine, base in ((fixture, "/a"), (real, str(tmp_path / "a"))):
+            path = f"{base}/f.txt"
+            assert machine.path_kind(path) == "inaccessible", machine
+            assert machine.read_text(path).status == "unreadable", machine
+            assert machine.file_size(path) is None, machine
+            assert machine.file_digest(path, "md5") is None, machine
+
+    def test_the_hop_limit_matches_the_kernel_on_both_machines(self, tmp_path):
+        """A chain the kernel follows must resolve in a fixture, and vice versa.
+
+        Anything else leaves a window where the two disagree — and the fixture
+        would be the one claiming the safe answer.
+        """
+        from atlas.firmware import resolve_links
+
+        def chain(length: int, root: str) -> dict[str, str]:
+            links = {f"{root}/l{i}": f"{root}/l{i + 1}" for i in range(length)}
+            return links
+
+        for length, resolves in ((SYMLINK_HOPS - 1, True), (SYMLINK_HOPS + 1, False)):
+            links = chain(length, "/c")
+            fixture = FixtureMachine({f"/c/l{length}": "end"}, symlinks=links)
+            assert (resolve_links(fixture, "/c/l0") is not None) is resolves, length
+            assert (fixture.path_kind("/c/l0") != "inaccessible") is resolves, length
+
+            base = tmp_path / f"n{length}"
+            base.mkdir()
+            (base / f"l{length}").write_text("end")
+            for i in reversed(range(length)):
+                os.symlink(base / f"l{i + 1}", base / f"l{i}")
+            real = RealMachine()
+            assert (real.path_kind(str(base / "l0")) != "inaccessible") is resolves, length
+            assert (resolve_links(real, str(base / "l0")) is not None) is resolves, length
 
     def test_glob_through_link_keeps_link_spelling(self):
         # A real filesystem's glob returns the pattern-side spelling, not the target.
