@@ -21,6 +21,8 @@ import pytest
 import atlas
 from atlas.contract import (
     emulator_contract,
+    firmware_contract,
+    identification_contract,
     installation_contract,
     placement_contract,
     unresolved_contract,
@@ -92,6 +94,29 @@ def test_machine_vector(vector):
             content_path=query.get("content_path"), core_so=query.get("core_so")
         )
         assert placement_contract(placement) == expected["save_location"], rationale
+
+    if "firmware" in expected:
+        firmware_query = inp["firmware_query"]
+        install = _select(installs, firmware_query.get("installation"), vector["name"])
+        verify = firmware_query.get("verify", False)
+        kind = firmware_query["kind"]
+        if kind == "core":
+            answer = install.firmware_for_core(core_so=firmware_query["core_so"], verify=verify)
+        elif kind == "system":
+            answer = install.firmware_for_system(system=firmware_query["system"], verify=verify)
+        else:
+            answer = install.firmware_inventory(verify=verify)
+        assert firmware_contract(answer) == expected["firmware"], rationale
+
+    if "identification" in expected:
+        identify_query = inp["identify_query"]
+        install = _select(installs, identify_query.get("installation"), vector["name"])
+        identified = install.identify_firmware(
+            md5=identify_query.get("md5"),
+            sha1=identify_query.get("sha1"),
+            size=identify_query.get("size"),
+        )
+        assert identification_contract(identified) == expected["identification"], rationale
 
     if "entry_save_location" in expected:
         entry_query = inp["entry_query"]

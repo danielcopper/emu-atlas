@@ -10,6 +10,12 @@ of the resolver rebuild (PR #13; not tracked in the repo). The boundary rule and
 verification matrix and enforced maintenance, ES-DE catalogue with the full selection hierarchy, structured caveats,
 generated coverage matrix, and the review's correctness batch (H1–H4, H6–H9, H11, M1, M9, M11, M13).
 
+**Firmware at the boundary rule**: the packaged BIOS registry fused declarations (on the machine) with identities (not
+on the machine) and drifted in both directions — it missed three mandatory files RetroDECK's own cores declare and
+carried 181 paths for cores it does not ship. Declarations are now a live `.info` read limited to installed cores;
+identities stay a packaged, versioned table; and `is_required() -> bool` is gone, because a bool cannot say "I don't
+know" and collapsed it into "not required" → "nothing missing" → green.
+
 **Structural cleanup** (this branch) — everything the review flagged about the existing structure:
 
 - _Seam status model_ (H5, H10, M6, M7): explicit operation outcomes (`ReadResult`, `PathKind`), structured health as
@@ -70,10 +76,49 @@ Everything EmuDeck is vector-tested only, never validated against a real install
 the wild, its own emulator set (coverage-matrix `?` cells), frontend variants (ES-DE elsewhere / Pegasus / SRM),
 companion-health semantics beyond the config-missing case.
 
-### 6. BIOS entry point
+### 6. Firmware follow-ups
 
-`bios_location()` on the emulator handle (DESIGN target sketch): compose the registry's world knowledge with the live
-`system_directory`/`bios_path` resolution the save path already performs.
+The four firmware entry points ship: live `.info` declarations from the installed cores, stated against the live
+`system_directory`, with the packaged identity table doing only what it can. What is left:
+
+- **Non-comparable identities.** 21 of the 388 packaged identities are archives or data packs (MAME-style romset zips,
+  `scummvm.zip`, `ecwolf.pk3`), whose whole-file hash changes with romset version and merge mode. A `mismatch` there may
+  be structurally meaningless — and `neogeo.zip` is one of the mandatory files this work exists to surface. The fix
+  belongs in the table (a per-entry statement of what kind of identity it is, with provenance), not in a file-extension
+  heuristic; only then can `checked` grow a fifth value that means something.
+- **The system vocabulary.** `firmware_for_system` speaks ES-DE's system name where a catalogue exists and an atlas slug
+  where none does, and says which via a caveat. The canonical translation table is the real fix.
+- **Per-file system assignment.** `FIRMWARE_SYSTEM_OVERRIDE` is `[D]` and deliberately incomplete: it is atlas's own
+  reading, cross-read against RomM's `known_bios_files.json`, and the two disagree (the Super Game Boy dumps are `snes`
+  here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it — 33 of the 96
+  declaring cores on a real RetroDECK, plus 2 cores that ship no `systemname` at all. Growing the table by hand is a
+  race lost to every core release; a real fix needs a per-file source of truth, and none exists upstream today (`.info`
+  has one `systemname` per core, `System.dat` keys by name without a system). Two known limits of the signal: a core
+  with a `systemname` and no `database` has only one source and is taken at its word, and the "two sources disagree"
+  reading needs both names mapped, which the largely-unmapped database vocabulary often prevents (vice_x128 says `C128`
+  while its database says `Commodore - 64`, and atlas cannot compare them).
+- **The unclaimed bucket has substructure.** It currently mixes genuine alternative BIOS revisions with core runtime
+  data (blueMSX machine ROMs, PPSSPP assets, Dolphin `Sys`). Save artifacts are already excluded via the rule cards;
+  runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save
+  side.
+- **Malformed declarations are dropped silently** (own issue). `_declarations_in` skips a `firmwareN_path` that is
+  empty, whose basename is empty, or whose index is not numeric — no requirement, no refusal, no caveat, and
+  `requirements_met` stays `true`. That is the same class as the hole `refused` closed, one layer earlier.
+  `firmware_count` is present in every `.info` on the reference machine and is never read; comparing it against the
+  number of parsed declarations is the free cross-check.
+- **TOCTOU between resolving and reading.** The root bound is checked on resolved paths, but the read that follows is a
+  second syscall against the same name, so a path swapped in between is not covered. Closing it fully needs
+  `openat2(RESOLVE_BENEATH)` — a syscall the seam does not expose today — so what exists is a bound, not a sandbox.
+- **`cores_read=False` prose overstates.** When the core enumeration comes back empty, the caveat text says the cores
+  "could not be enumerated", which is the safe reading but not always what happened — an installation genuinely shipping
+  no cores gets the same sentence. Caveat text is explicitly non-contractual (`atlas/contract.py`), so this is wording,
+  not behavior.
+- **The emulator-handle route.** A per-entry `firmware_for_core()` on `EmulatorEntry`, so the catalogue answer and the
+  firmware answer share a subject without the caller passing a `core_so` back in.
+- **Standalone emulators declare nothing.** An emulator without a libretro core ships no `.info`; the catalogue route
+  lists it and states it as unresolvable. Part of block 4.
+- **RetroArch's platform default `system_directory`.** Unset in the configs currently yields an empty answer plus a
+  caveat; the default is presumably `system` under the config tree, but that is [O] — unverified, so unclaimed.
 
 ## Open research (needs the user's machine)
 

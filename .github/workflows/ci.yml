@@ -73,9 +73,9 @@ jobs:
           assert importlib.metadata.version('emu-atlas') == os.environ['EXPECTED'], (
               importlib.metadata.version('emu-atlas'), os.environ['EXPECTED'])
           import atlas
-          from atlas.bios import load_registry
+          from atlas.firmware import load_hashes
           from atlas.oddities import load_audit, load_oddities
-          assert load_oddities() and load_audit() and load_registry().platforms()
+          assert load_oddities() and load_audit() and load_hashes().names()
           assert importlib.resources.files('atlas').joinpath('py.typed').is_file()
           "
       - name: Verify the sdist carries the vectors

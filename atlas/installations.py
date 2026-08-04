@@ -36,6 +36,23 @@ from atlas.esde import (
     parse_es_systems,
     parse_gamelist,
 )
+from atlas.firmware import (
+    CAVEAT_CORE_DIR_UNRESOLVED,
+    CAVEAT_FIRMWARE_ROOT_MISSING,
+    CAVEAT_INFO_PATH_UNRESOLVED,
+    Catalogue,
+    CatalogueEntry,
+    CoreDeclarations,
+    FirmwareAnswer,
+    FirmwareContext,
+    FirmwareIdentification,
+    load_hashes,
+    read_core_declarations,
+)
+from atlas.firmware import firmware_for_core as _resolve_for_core
+from atlas.firmware import firmware_for_system as _resolve_for_system
+from atlas.firmware import firmware_inventory as _resolve_inventory
+from atlas.firmware import identify_firmware as _resolve_identification
 from atlas.machine import KIND_DIRECTORY, KIND_FILE, KIND_MISSING, Machine
 from atlas.oddities import lookup_audit, lookup_card
 from atlas.placement import (
@@ -864,6 +881,151 @@ def _retroarch_save_location(
     )
 
 
+def _cfg_directory(
+    machine: Machine, parsed: dict[str, str], key: str, *, home: str, app_id: str | None
+) -> str | None:
+    """Resolve a cfg directory key to a host directory that exists, or ``None``.
+
+    The configured value may point into a Flatpak sandbox (``/app/...``); a
+    caller running outside it needs the deployment path instead. ``None`` means
+    unset, reset, unresolvable, or not an existing directory — one honest miss,
+    never a path handed out as if it were usable.
+    """
+    raw = parsed.get(key)
+    if raw is None:
+        return None
+    expanded = expand_home(raw, home=home)
+    if expanded is None:
+        return None
+    resolved = _flatpak_host_path(machine, home, app_id, expanded) if app_id is not None else expanded
+    if resolved is None or machine.path_kind(resolved) != KIND_DIRECTORY:
+        return None
+    return resolved
+
+
+def _retroarch_firmware_context(
+    machine: Machine,
+    *,
+    home: str,
+    app_id: str | None,
+    global_text: str | None,
+    cfg_label: str,
+) -> FirmwareContext:
+    """One live read of everything a firmware answer needs, for any arrangement.
+
+    One path for every arrangement (D2): RetroDECK, EmuDeck and a bare
+    RetroArch differ only in which cfg is read and whether its paths need
+    sandbox translation. The three keys are read independently and may point
+    anywhere: ``libretro_info_path`` names the ``.info`` files that declare
+    what the installed cores want, ``libretro_directory`` says which of those
+    cores are actually installed, and ``system_directory`` is the root the
+    declared paths are relative to — the same directory RetroArch hands cores
+    when they look their firmware up. RetroDECK happens to collapse the first
+    two into one directory; nothing here assumes it.
+    """
+    parsed = parse_cfg_text(global_text) if global_text is not None else {}
+    caveats: list[Caveat] = []
+    sources: list[str] = []
+
+    raw_system = parsed.get("system_directory")
+    root = expand_home(raw_system, home=home) if raw_system is not None else None
+    if root is None:
+        caveats.append(
+            Caveat(
+                CAVEAT_SYSTEM_DIR_UNSET,
+                "system_directory is unset in the configs — its RetroArch default is not resolved yet, so "
+                "there is no root to check firmware against",
+            )
+        )
+    else:
+        sources.append(f'{cfg_label}: system_directory = "{raw_system}"')
+        if machine.path_kind(root) != KIND_DIRECTORY:
+            caveats.append(
+                Caveat(
+                    CAVEAT_FIRMWARE_ROOT_MISSING,
+                    f"the configured system_directory {root} is not an existing directory — every declared "
+                    "file below is missing because the whole firmware root is gone, not one file at a time",
+                    {"path": root},
+                )
+            )
+
+    info_dir = _cfg_directory(machine, parsed, "libretro_info_path", home=home, app_id=app_id)
+    core_dir = _cfg_directory(machine, parsed, "libretro_directory", home=home, app_id=app_id)
+    cores: tuple[CoreDeclarations, ...] = ()
+    if info_dir is None:
+        caveats.append(
+            Caveat(
+                CAVEAT_INFO_PATH_UNRESOLVED,
+                "libretro_info_path does not resolve to a readable directory on this machine — the cores' "
+                "own firmware declarations cannot be read, so nothing below is declared",
+            )
+        )
+    else:
+        sources.append(f"core declarations read live from {info_dir} (.info firmwareN_path)")
+        if core_dir is None:
+            caveats.append(
+                Caveat(
+                    CAVEAT_CORE_DIR_UNRESOLVED,
+                    "libretro_directory does not resolve to a readable directory — which cores are actually "
+                    "installed cannot be checked, so declarations by cores this installation does not ship "
+                    "are included",
+                )
+            )
+        else:
+            sources.append(f"declarations limited to cores installed in {core_dir}")
+        cores = read_core_declarations(machine, info_dir, core_dir=core_dir)
+
+    return FirmwareContext(
+        root=root,
+        cores=cores,
+        hashes=load_hashes(),
+        # An empty core list means "this installation ships none" only if the
+        # enumeration actually produced something. A directory that resolves but
+        # cannot be listed — an I/O error on the SD card the whole RetroDECK
+        # tree lives on, a mode change — comes back from glob as an empty list,
+        # indistinguishable from a genuinely empty directory. Refusing to claim
+        # absence in that case costs a weaker caveat on a core-less install and
+        # buys never turning a read failure into "that core is not here".
+        cores_read=info_dir is not None and bool(cores),
+        sources=tuple(sources),
+        caveats=tuple(caveats),
+    )
+
+
+class _FirmwareQueries:
+    """The four firmware entry points, over one live context per query.
+
+    Every handle answers the same four questions; only the way its context is
+    assembled differs. An installation whose frontend catalogue can enumerate a
+    system's emulators overrides :meth:`firmware_for_system` to pass it.
+    """
+
+    _machine: Machine
+
+    def _firmware_context(self) -> FirmwareContext:
+        raise NotImplementedError  # pragma: no cover - every handle supplies one
+
+    def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer:
+        """Does *core_so* need firmware, where does each file go, and is it there?"""
+        return _resolve_for_core(self._machine, self._firmware_context(), core_so=core_so, verify=verify)
+
+    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer:
+        """Which emulators can run *system*, and what does each of them want?"""
+        return _resolve_for_system(self._machine, self._firmware_context(), system=system, verify=verify)
+
+    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
+        """Every installed core's firmware, plus what is lying around unclaimed."""
+        return _resolve_inventory(self._machine, self._firmware_context(), verify=verify)
+
+    def identify_firmware(
+        self, *, md5: str | None = None, sha1: str | None = None, size: int | None = None
+    ) -> FirmwareIdentification:
+        """What is this content, and which requirements here does it satisfy?"""
+        return _resolve_identification(
+            self._machine, self._firmware_context(), md5=md5, sha1=sha1, size=size
+        )
+
+
 def _card_files(files: tuple[str, ...], rom_stem: str | None) -> tuple[str, ...] | None:
     """Substitute the ``<rom_stem>`` hole in a card's declared file list.
 
@@ -975,7 +1137,7 @@ class EmulatorEntry:
         )
 
 
-class RetroDeck:
+class RetroDeck(_FirmwareQueries):
     """A RetroDECK installation — cfg is the truth, ``retrodeck.json`` is context.
 
     The handle is *live*: it stores only its identity (home) and the machine
@@ -1107,19 +1269,37 @@ class RetroDeck:
     # user overlay under <rd_home>/ES-DE/custom_systems (observed layout).
     _ESDE_BUNDLED_SANDBOX = "/app/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
 
-    def _catalogue(self, root: str) -> dict[str, tuple[EmulatorSpec, ...]]:
+    def _read_catalogue(self, root: str) -> tuple[dict[str, tuple[EmulatorSpec, ...]], bool]:
+        """The merged ES-DE catalogue, and whether the bundled layer could be read.
+
+        The second value is not a detail: an empty catalogue because the shipped
+        ``es_systems.xml`` was unreadable says nothing about which emulators
+        exist, while an empty *lookup* in a catalogue that was read says the
+        frontend knows none for that system. The custom overlay is genuinely
+        optional, so only the bundled layer decides.
+        """
         bundled: dict[str, tuple[EmulatorSpec, ...]] = {}
+        read = False
         bundled_path = _flatpak_host_path(self._machine, self._home, self._APP_ID, self._ESDE_BUNDLED_SANDBOX)
         if bundled_path is not None:
             text = self._machine.read_text(bundled_path).text
             if text is not None:
                 bundled = parse_es_systems(text, source="es_systems.xml (bundled)")
+                # Read AND parsed: parse_es_systems answers {} for malformed
+                # XML, and an enumeration that came back empty because the file
+                # is broken is not an enumeration. RetroDECK ships the custom
+                # overlay fully commented out, so it parses to zero systems by
+                # design and can never stand in for this.
+                read = bool(bundled)
         custom: dict[str, tuple[EmulatorSpec, ...]] = {}
         custom_path = os.path.join(root, "ES-DE", "custom_systems", "es_systems.xml")
         custom_text = self._machine.read_text(custom_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, source="es_systems.xml (custom_systems overlay)")
-        return merge_layers(bundled, custom)
+        return merge_layers(bundled, custom), read
+
+    def _catalogue(self, root: str) -> dict[str, tuple[EmulatorSpec, ...]]:
+        return self._read_catalogue(root)[0]
 
     def systems(self) -> tuple[str, ...]:
         """Every system the catalogue declares, sorted."""
@@ -1223,6 +1403,40 @@ class RetroDeck:
         config, marker_issues = self._read_marker()
         return self._save_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
 
+    def _firmware_context(self) -> FirmwareContext:
+        return _retroarch_firmware_context(
+            self._machine,
+            home=self._home,
+            app_id=self._APP_ID,
+            global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
+            cfg_label="retroarch.cfg",
+        )
+
+    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer:
+        """Which emulators RetroDECK offers for *system*, and what each of them wants.
+
+        *system* is the ES-DE system name (``"gb"``, ``"dreamcast"``), the same
+        vocabulary :meth:`emulators_for` speaks — the catalogue is the
+        enumeration, so an emulator whose core is not installed and a
+        standalone emulator both appear, stated as such instead of silently
+        dropped. Whether that catalogue could be read travels with it: an
+        unreadable ``es_systems.xml`` must never come out as "this machine has
+        no emulator for that system".
+        """
+        config, _ = self._read_marker()
+        root = self._config_path(config, "rd_home_path", "")[0]
+        _, read = self._read_catalogue(root)
+        catalogue = Catalogue(
+            entries=tuple(
+                CatalogueEntry(label=entry.label, kind=entry.kind, core_so=entry.core_so)
+                for entry in self.emulators_for(system)
+            ),
+            read=read,
+        )
+        return _resolve_for_system(
+            self._machine, self._firmware_context(), system=system, catalogue=catalogue, verify=verify
+        )
+
     def entry_save_location(
         self,
         spec: EmulatorSpec,
@@ -1288,7 +1502,7 @@ def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
     return result
 
 
-class EmuDeck:
+class EmuDeck(_FirmwareQueries):
     """An EmuDeck arrangement — ``settings.sh`` is its truth, the standalone
     ``org.libretro.RetroArch`` Flatpak is its RetroArch.
 
@@ -1425,8 +1639,19 @@ class EmuDeck:
             extra_caveats=_health_caveats(health),
         )
 
+    def _firmware_context(self) -> FirmwareContext:
+        """The cfg is the truth here too: ``settings.sh`` names a ``biosPath``,
+        but what RetroArch actually hands its cores is ``system_directory``."""
+        return _retroarch_firmware_context(
+            self._machine,
+            home=self._home,
+            app_id=self._RA_APP_ID,
+            global_text=self._machine.read_text(self._companion_cfg_path()).text,
+            cfg_label="retroarch.cfg",
+        )
 
-class _RetroArchInstall:
+
+class _RetroArchInstall(_FirmwareQueries):
     """Shared behavior for a bare RetroArch install (standalone Flatpak or native).
 
     The saves root comes from the cfg's ``savefile_directory``; when unset,
@@ -1505,6 +1730,15 @@ class _RetroArchInstall:
             extra_caveats=_health_caveats(health),
         )
 
+    def _firmware_context(self) -> FirmwareContext:
+        return _retroarch_firmware_context(
+            self._machine,
+            home=self._home,
+            app_id=self._app_id,
+            global_text=self._machine.read_text(self._cfg_path()).text,
+            cfg_label="retroarch.cfg",
+        )
+
 
 class StandaloneRetroArchFlatpak(_RetroArchInstall):
     """The ``org.libretro.RetroArch`` Flatpak install."""
@@ -1551,3 +1785,13 @@ class Installation(Protocol):
     def save_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavePlacement: ...
+
+    def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer: ...
+
+    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer: ...
+
+    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer: ...
+
+    def identify_firmware(
+        self, *, md5: str | None = None, sha1: str | None = None, size: int | None = None
+    ) -> FirmwareIdentification: ...

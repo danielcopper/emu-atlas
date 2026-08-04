@@ -26,17 +26,26 @@ that names sort-by-core directories and the override directory — lives only in
 the core binary; loading the core and asking it is the same read RetroArch
 performs. A live read, never a shipped table.
 
+``file_size`` and ``file_digest`` exist because firmware identity is checked by
+content, not by name: a file present under the right name may still be the
+wrong dump. ``file_size`` is the free pre-filter (one ``stat``) that settles
+most mismatches before any bytes are hashed; ``file_digest`` is the paid
+answer. Both return ``None`` for *cannot tell* — never a sentinel that a caller
+could mistake for a real value.
+
 Glob semantics (normative, for ports): patterns support ``*``, ``?`` and
-``[seq]`` within one path segment; a wildcard never crosses a ``/``; matches
-are returned sorted, spelled the way the pattern reached them (a file matched
-through a symlinked directory keeps the link-side path, like a real
-filesystem's glob).
+``[seq]`` within one path segment; a wildcard never crosses a ``/``; a wildcard
+segment never matches a name starting with ``.`` (only a segment that itself
+starts with ``.`` does); matches are returned sorted, spelled the way the
+pattern reached them (a file matched through a symlinked directory keeps the
+link-side path, like a real filesystem's glob).
 """
 
 from __future__ import annotations
 
 import fnmatch
 import glob as _glob
+import hashlib
 import json
 import os
 import stat as _stat
@@ -47,7 +56,25 @@ from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, Protocol
 
 _CORE_PROBE_TIMEOUT_SECONDS = 15
-_MAX_SYMLINK_HOPS = 40
+SYMLINK_HOPS = 40
+"""How many symlink hops a path may take before it counts as unresolvable.
+
+Linux answers ``ELOOP`` after 40 (``SYMLOOP_MAX``), and both machines use this
+one number so a chain that resolves on the real filesystem resolves in a
+fixture and one that does not fails in both. A fixture that disagreed inside
+some window would make every vector built on it prove nothing.
+"""
+
+_MAX_SYMLINK_HOPS = SYMLINK_HOPS
+
+# Digest algorithms the seam answers for. Closed on purpose: these are the two
+# libretro-database's System.dat carries, and a port must implement exactly
+# them (an open algorithm parameter would make conformance unprovable).
+DIGEST_MD5 = "md5"
+DIGEST_SHA1 = "sha1"
+DIGEST_ALGORITHMS = (DIGEST_MD5, DIGEST_SHA1)
+
+_DIGEST_CHUNK_BYTES = 1 << 20
 
 ReadStatus = Literal["ok", "missing", "unreadable", "invalid-text"]
 PathKind = Literal["file", "directory", "missing", "inaccessible"]
@@ -128,7 +155,10 @@ class Machine(Protocol):
     semantics in the module docstring. ``readlink`` returns the link target
     when the path itself is a symlink, else ``None``. ``query_core`` returns
     the core's self-reported info, or ``None`` when the core cannot be loaded —
-    the caller treats that as *unknown*, never as a guess.
+    the caller treats that as *unknown*, never as a guess. ``file_size`` and
+    ``file_digest`` answer for regular files only and return ``None`` whenever
+    the answer cannot be determined (missing, unreadable, not a regular file,
+    or an algorithm outside :data:`DIGEST_ALGORITHMS`).
     """
 
     def read_text(self, path: str) -> ReadResult: ...
@@ -140,6 +170,10 @@ class Machine(Protocol):
     def readlink(self, path: str) -> str | None: ...
 
     def query_core(self, so_path: str) -> CoreInfo | None: ...
+
+    def file_size(self, path: str) -> int | None: ...
+
+    def file_digest(self, path: str, algorithm: str) -> str | None: ...
 
 
 class RealMachine:
@@ -155,6 +189,19 @@ class RealMachine:
         self._core_cache: dict[tuple[str, int, int], CoreInfo | None] = {}
 
     def read_text(self, path: str) -> ReadResult:
+        # Regular files only, checked BEFORE opening — for the same reason
+        # file_digest checks: opening a FIFO with no writer blocks forever, and
+        # these paths come out of config files. A ``.info`` that is a FIFO would
+        # hang the whole firmware answer rather than degrade it.
+        try:
+            st = os.stat(path)
+        except (FileNotFoundError, NotADirectoryError):
+            return ReadResult(READ_MISSING)
+        except OSError:
+            return ReadResult(READ_UNREADABLE)
+        if not _stat.S_ISREG(st.st_mode):
+            # A directory, a FIFO, a device: present, and not readable as text.
+            return ReadResult(READ_UNREADABLE)
         try:
             with open(path, encoding="utf-8") as f:
                 return ReadResult(READ_OK, f.read())
@@ -163,7 +210,7 @@ class RealMachine:
         except UnicodeDecodeError:
             return ReadResult(READ_INVALID_TEXT)
         except OSError:
-            # Permissions, IsADirectoryError, I/O failure: present but unreadable.
+            # Permissions, I/O failure: present but unreadable.
             return ReadResult(READ_UNREADABLE)
 
     def glob(self, pattern: str) -> list[str]:
@@ -183,6 +230,38 @@ class RealMachine:
             return os.readlink(path) if os.path.islink(path) else None
         except OSError:
             return None
+
+    def file_size(self, path: str) -> int | None:
+        try:
+            st = os.stat(path)
+        except OSError:
+            return None
+        return st.st_size if _stat.S_ISREG(st.st_mode) else None
+
+    def file_digest(self, path: str, algorithm: str) -> str | None:
+        if algorithm not in DIGEST_ALGORITHMS:
+            return None
+        # Regular files only, checked BEFORE opening: reading a FIFO or a
+        # character device blocks forever, and this runs inside a library entry
+        # point that hashes whatever a config points at. A hang is not a
+        # degraded answer, it is no answer at all.
+        try:
+            st = os.stat(path)
+        except OSError:
+            return None
+        if not _stat.S_ISREG(st.st_mode):
+            return None
+        digest = hashlib.new(algorithm)
+        try:
+            with open(path, "rb") as f:
+                while chunk := f.read(_DIGEST_CHUNK_BYTES):
+                    digest.update(chunk)
+        except OSError:
+            # Unreadable, or an I/O failure mid-read: the identity cannot be
+            # stated. (A path that stopped being a regular file between the
+            # stat and the open lands here too.)
+            return None
+        return digest.hexdigest()
 
     def query_core(self, so_path: str) -> CoreInfo | None:
         try:
@@ -264,8 +343,18 @@ def _parse_core_options(raw: object) -> dict[str, CoreOption] | None:
 _GLOB_MAGIC = frozenset("*?[")
 
 # Fixture file specs: a plain string is readable content; an object states a
-# non-ok read outcome ({"status": "unreadable"} or {"status": "invalid-text"}).
-FixtureFileSpec = str | Mapping[str, str]
+# non-ok read outcome ({"status": "unreadable"} or {"status": "invalid-text"})
+# or a binary blob's identity ({"md5": ..., "sha1": ..., "size": ...}).
+#
+# A blob is how a fixture states a firmware file: firmware is not text, and its
+# identity is exactly the size and digests a real one would answer with — so
+# the fixture declares them rather than carrying bytes that would have to hash
+# to a real dump's md5. A string-content file needs no declaration: its size
+# and digests are computed from the content, so fixture and real machine agree
+# by construction.
+FixtureFileSpec = str | Mapping[str, str | int]
+
+_BLOB_KEYS = ("size", *DIGEST_ALGORITHMS)
 
 
 class FixtureMachine:
@@ -273,7 +362,9 @@ class FixtureMachine:
 
     ``files`` maps absolute paths to contents — a string is readable content;
     ``{"status": "unreadable"}`` / ``{"status": "invalid-text"}`` is a file
-    that exists but yields that read outcome. ``dirs`` lists directories that
+    that exists but yields that read outcome; ``{"md5": ..., "sha1": ...,
+    "size": ...}`` is a binary blob that exists, reads as ``invalid-text``, and
+    answers those values for ``file_digest`` / ``file_size``. ``dirs`` lists directories that
     exist explicitly (parents of every known path are directories implicitly —
     the list is how *empty* directories are stated). ``symlinks`` maps link
     paths to their targets (absolute, or relative to the link's directory);
@@ -295,14 +386,26 @@ class FixtureMachine:
         inaccessible: Iterable[str] | None = None,
     ) -> None:
         self._files: dict[str, tuple[ReadStatus, str | None]] = {}
+        self._blobs: dict[str, dict[str, str | int]] = {}
         for path, spec in files.items():
             if isinstance(spec, str):
                 self._files[path] = (READ_OK, spec)
-            else:
-                status = spec.get("status")
-                if status not in (READ_UNREADABLE, READ_INVALID_TEXT):
-                    raise ValueError(f"fixture file {path!r}: status must be 'unreadable' or 'invalid-text'")
-                self._files[path] = (status, None)
+                continue
+            status = spec.get("status")
+            if status is None:
+                if not any(key in spec for key in _BLOB_KEYS):
+                    raise ValueError(
+                        f"fixture file {path!r}: an object spec must carry a 'status' or at least one "
+                        f"of {list(_BLOB_KEYS)}"
+                    )
+                # A blob exists and is not text — the same answer a real
+                # firmware file gives read_text.
+                self._files[path] = (READ_INVALID_TEXT, None)
+                self._blobs[path] = dict(spec)
+                continue
+            if status not in (READ_UNREADABLE, READ_INVALID_TEXT):
+                raise ValueError(f"fixture file {path!r}: status must be 'unreadable' or 'invalid-text'")
+            self._files[path] = (status, None)
         self._symlinks = dict(symlinks or {})
         self._cores = dict(cores or {})
         self._inaccessible = set(inaccessible or ())
@@ -315,9 +418,16 @@ class FixtureMachine:
                 parent = os.path.dirname(parent)
         self._dirs.discard("")
 
-    def _resolve(self, path: str) -> str:
-        """Resolve symlink components in *path* (final one included), cycle-guarded."""
-        for _ in range(_MAX_SYMLINK_HOPS):
+    def _resolve(self, path: str) -> str | None:
+        """Resolve symlink components in *path* (final one included).
+
+        ``None`` when the chain does not settle within :data:`SYMLINK_HOPS`
+        hops — a loop, or a chain longer than the kernel would follow. Returning
+        the half-resolved path instead would make ``ELOOP`` unrepresentable in a
+        fixture, and every caller below would then answer something the real
+        machine never answers.
+        """
+        for _ in range(SYMLINK_HOPS):
             parts = path.split("/")
             replaced = False
             for i in range(2, len(parts) + 1):
@@ -332,19 +442,23 @@ class FixtureMachine:
                     break
             if not replaced:
                 return path
-        return path
+        return None
 
-    def _resolve_parent(self, path: str) -> str:
+    def _resolve_parent(self, path: str) -> str | None:
         """Resolve symlinks in the parent components only — the final one stays."""
         parent, name = os.path.dirname(path), os.path.basename(path)
         if not name or parent in ("", "/"):
             return path
-        return os.path.join(self._resolve(parent), name)
+        resolved_parent = self._resolve(parent)
+        return None if resolved_parent is None else os.path.join(resolved_parent, name)
 
     def read_text(self, path: str) -> ReadResult:
         if self._is_inaccessible(path):
             return ReadResult(READ_UNREADABLE)
         resolved = self._resolve(path)
+        if resolved is None:
+            # ELOOP: os.stat fails, so the real machine cannot read it either.
+            return ReadResult(READ_UNREADABLE)
         if resolved in self._files:
             status, text = self._files[resolved]
             return ReadResult(status, text)
@@ -358,6 +472,10 @@ class FixtureMachine:
         if self._is_inaccessible(path):
             return KIND_INACCESSIBLE
         resolved = self._resolve(path)
+        if resolved is None:
+            # ELOOP: os.stat raises OSError, which the real machine reports as
+            # inaccessible — never as an absent file.
+            return KIND_INACCESSIBLE
         if resolved in self._files or resolved in self._cores:
             return KIND_FILE
         if resolved in self._dirs:
@@ -365,13 +483,46 @@ class FixtureMachine:
         return KIND_MISSING
 
     def _is_inaccessible(self, path: str) -> bool:
-        return path in self._inaccessible or self._resolve(path) in self._inaccessible
+        if path in self._inaccessible:
+            return True
+        resolved = self._resolve(path)
+        # A chain that never settles is ELOOP: the real machine fails to stat
+        # it, which every operation here reports as inaccessible.
+        return resolved is None or resolved in self._inaccessible
 
     def readlink(self, path: str) -> str | None:
-        return self._symlinks.get(self._resolve_parent(path))
+        parent = self._resolve_parent(path)
+        return None if parent is None else self._symlinks.get(parent)
+
+    def file_size(self, path: str) -> int | None:
+        if self._is_inaccessible(path):
+            return None
+        resolved = self._resolve(path)
+        if resolved is None:
+            return None
+        declared = self._blobs.get(resolved, {}).get("size")
+        if isinstance(declared, int):
+            return declared
+        text = self._files.get(resolved, (READ_MISSING, None))[1]
+        return len(text.encode("utf-8")) if text is not None else None
+
+    def file_digest(self, path: str, algorithm: str) -> str | None:
+        if algorithm not in DIGEST_ALGORITHMS or self._is_inaccessible(path):
+            return None
+        resolved = self._resolve(path)
+        if resolved is None:
+            return None
+        declared = self._blobs.get(resolved, {}).get(algorithm)
+        if isinstance(declared, str):
+            return declared
+        text = self._files.get(resolved, (READ_MISSING, None))[1]
+        if text is None:
+            return None
+        return hashlib.new(algorithm, text.encode("utf-8")).hexdigest()
 
     def query_core(self, so_path: str) -> CoreInfo | None:
-        spec = self._cores.get(self._resolve(so_path))
+        resolved = self._resolve(so_path)
+        spec = self._cores.get(resolved) if resolved is not None else None
         if not spec:
             return None
         name = spec.get("library_name")
@@ -389,6 +540,8 @@ class FixtureMachine:
     def _children(self, spelled_dir: str) -> set[str]:
         """Entry names directly under *spelled_dir* (resolved like the kernel would)."""
         real = self._resolve(spelled_dir) if spelled_dir else ""
+        if real is None:
+            return set()
         prefix = real.rstrip("/") + "/"
         names: set[str] = set()
         for known in (*self._files, *self._symlinks, *self._cores, *self._dirs, *self._inaccessible):
@@ -419,7 +572,12 @@ class FixtureMachine:
             elif not _GLOB_MAGIC & set(segment):
                 walk(f"{base}/{segment}", rest)
             else:
+                # A wildcard never matches a leading dot — the same hidden-file
+                # rule a real glob applies, so a dotfile is invisible to both.
+                hidden_ok = segment.startswith(".")
                 for child in self._children(base):
+                    if not hidden_ok and child.startswith("."):
+                        continue
                     if fnmatch.fnmatchcase(child, segment):
                         walk(f"{base}/{child}", rest)
 

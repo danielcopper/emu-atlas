@@ -7,11 +7,12 @@ whole-machine model if both agree on every operation outcome.
 
 from __future__ import annotations
 
+import hashlib
 import os
 
 import pytest
 
-from atlas.machine import CoreInfo, FixtureMachine, ReadResult, RealMachine
+from atlas.machine import SYMLINK_HOPS, CoreInfo, FixtureMachine, ReadResult, RealMachine
 
 
 class TestReadResult:
@@ -39,6 +40,10 @@ class TestFixtureFiles:
     def test_unknown_file_status_is_rejected(self):
         with pytest.raises(ValueError):
             FixtureMachine({"/a/f.txt": {"status": "sideways"}})
+
+    def test_object_spec_without_status_or_identity_is_rejected(self):
+        with pytest.raises(ValueError):
+            FixtureMachine({"/a/f.bin": {"note": "nothing usable"}})
 
     def test_path_kind_file_directory_missing(self):
         m = FixtureMachine({"/a/b/c.txt": ""})
@@ -71,12 +76,50 @@ class TestFixtureFiles:
         assert m.glob("/s/a.*") == ["/s/a.srm"]
         assert m.glob("/s/*") == ["/s/a.srm", "/s/deep"]
 
+    def test_glob_wildcard_skips_hidden_names(self):
+        m = FixtureMachine({"/s/a.srm": "", "/s/.hidden": ""})
+        assert m.glob("/s/*") == ["/s/a.srm"]
+        assert m.glob("/s/.*") == ["/s/.hidden"]
+
     def test_glob_escaped_metacharacters_match_literally(self):
         import glob as glob_module
 
         m = FixtureMachine({"/s/Game [USA].srm": "", "/s/Game U.srm": ""})
         pattern = glob_module.escape("/s/Game [USA]") + ".*"
         assert m.glob(pattern) == ["/s/Game [USA].srm"]
+
+
+class TestFixtureIdentity:
+    """Size and digests — computed from string content, declared for blobs."""
+
+    def test_string_content_is_measured_and_hashed(self):
+        m = FixtureMachine({"/a/f.txt": "hello"})
+        assert m.file_size("/a/f.txt") == 5
+        assert m.file_digest("/a/f.txt", "md5") == hashlib.md5(b"hello").hexdigest()
+        assert m.file_digest("/a/f.txt", "sha1") == hashlib.sha1(b"hello").hexdigest()
+
+    def test_blob_declares_its_identity_and_is_not_text(self):
+        m = FixtureMachine({"/bios/scph5501.bin": {"md5": "abc", "sha1": "def", "size": 524288}})
+        assert m.path_kind("/bios/scph5501.bin") == "file"
+        assert m.read_text("/bios/scph5501.bin") == ReadResult("invalid-text")
+        assert m.file_size("/bios/scph5501.bin") == 524288
+        assert m.file_digest("/bios/scph5501.bin", "md5") == "abc"
+        assert m.file_digest("/bios/scph5501.bin", "sha1") == "def"
+
+    def test_blob_may_declare_only_what_it_knows(self):
+        m = FixtureMachine({"/bios/x.bin": {"size": 12}})
+        assert m.file_size("/bios/x.bin") == 12
+        assert m.file_digest("/bios/x.bin", "md5") is None
+
+    def test_missing_unreadable_and_directories_answer_none(self):
+        m = FixtureMachine({"/a/secret": {"status": "unreadable"}, "/a/b/c.txt": "x"})
+        for path in ("/a/gone.bin", "/a/secret", "/a/b"):
+            assert m.file_size(path) is None, path
+            assert m.file_digest(path, "md5") is None, path
+
+    def test_unknown_algorithm_is_none_not_an_error(self):
+        m = FixtureMachine({"/a/f.txt": "hello"})
+        assert m.file_digest("/a/f.txt", "sha256") is None
 
 
 class TestFixtureSymlinks:
@@ -112,10 +155,51 @@ class TestFixtureSymlinks:
         m = FixtureMachine({"/data/real/f.txt": "x"}, symlinks={"/data/link": "real"})
         assert m.read_text("/data/link/f.txt") == ReadResult("ok", "x")
 
-    def test_link_cycle_does_not_hang(self):
-        m = FixtureMachine({}, symlinks={"/a": "/b", "/b": "/a"})
-        assert m.read_text("/a/f.txt") == ReadResult("missing")
-        assert m.path_kind("/a/f.txt") == "missing"
+    def test_a_link_cycle_answers_inaccessible_not_missing(self, tmp_path):
+        """ELOOP has to be representable in a fixture, and answer as the kernel does.
+
+        A cycle is not an absent file: the real machine's ``os.stat`` raises
+        ``OSError(ELOOP)``, which the seam reports as *inaccessible*. A fixture
+        that returned the half-resolved path instead would answer ``missing``,
+        and every vector built on it would assert the safe-looking wrong thing.
+        """
+        fixture = FixtureMachine({}, symlinks={"/a": "/b", "/b": "/a"})
+        os.symlink(tmp_path / "b", tmp_path / "a")
+        os.symlink(tmp_path / "a", tmp_path / "b")
+        real = RealMachine()
+        for machine, base in ((fixture, "/a"), (real, str(tmp_path / "a"))):
+            path = f"{base}/f.txt"
+            assert machine.path_kind(path) == "inaccessible", machine
+            assert machine.read_text(path).status == "unreadable", machine
+            assert machine.file_size(path) is None, machine
+            assert machine.file_digest(path, "md5") is None, machine
+
+    def test_the_hop_limit_matches_the_kernel_on_both_machines(self, tmp_path):
+        """A chain the kernel follows must resolve in a fixture, and vice versa.
+
+        Anything else leaves a window where the two disagree — and the fixture
+        would be the one claiming the safe answer.
+        """
+        from atlas.firmware import resolve_links
+
+        def chain(length: int, root: str) -> dict[str, str]:
+            links = {f"{root}/l{i}": f"{root}/l{i + 1}" for i in range(length)}
+            return links
+
+        for length, resolves in ((SYMLINK_HOPS - 1, True), (SYMLINK_HOPS + 1, False)):
+            links = chain(length, "/c")
+            fixture = FixtureMachine({f"/c/l{length}": "end"}, symlinks=links)
+            assert (resolve_links(fixture, "/c/l0") is not None) is resolves, length
+            assert (fixture.path_kind("/c/l0") != "inaccessible") is resolves, length
+
+            base = tmp_path / f"n{length}"
+            base.mkdir()
+            (base / f"l{length}").write_text("end")
+            for i in reversed(range(length)):
+                os.symlink(base / f"l{i + 1}", base / f"l{i}")
+            real = RealMachine()
+            assert (real.path_kind(str(base / "l0")) != "inaccessible") is resolves, length
+            assert (resolve_links(real, str(base / "l0")) is not None) is resolves, length
 
     def test_glob_through_link_keeps_link_spelling(self):
         # A real filesystem's glob returns the pattern-side spelling, not the target.
@@ -229,6 +313,38 @@ class TestRealMachine:
         assert m.readlink(str(f)) is None
         assert m.path_kind(str(f)) == "file"
 
+    def test_file_size_and_digest(self, tmp_path):
+        (tmp_path / "f.bin").write_bytes(b"\x00\x01\x02")
+        (tmp_path / "d").mkdir()
+        m = RealMachine()
+        assert m.file_size(str(tmp_path / "f.bin")) == 3
+        assert m.file_digest(str(tmp_path / "f.bin"), "md5") == hashlib.md5(b"\x00\x01\x02").hexdigest()
+        for path in (str(tmp_path / "gone.bin"), str(tmp_path / "d")):
+            assert m.file_size(path) is None, path
+            assert m.file_digest(path, "md5") is None, path
+
+    def test_file_digest_rejects_unlisted_algorithm(self, tmp_path):
+        (tmp_path / "f.bin").write_bytes(b"x")
+        assert RealMachine().file_digest(str(tmp_path / "f.bin"), "sha256") is None
+
+    def test_file_digest_never_blocks_on_a_path_that_is_not_a_regular_file(self, tmp_path):
+        """The seam promises regular files only, and a hang is not an answer.
+
+        Opening a FIFO with no writer blocks forever, and this runs inside a
+        library entry point that hashes whatever a config points at — one such
+        node at a declared firmware path would take the whole answer with it.
+        The guard is checked before the open, so both the size and the digest
+        come back as "cannot tell". A regression does not fail this test, it
+        hangs it — which is the failure mode being guarded against.
+        """
+        fifo = tmp_path / "scph5501.bin"
+        os.mkfifo(fifo)
+        m = RealMachine()
+        assert m.file_digest(str(fifo), "md5") is None
+        assert m.file_size(str(fifo)) is None
+        # A character device is the same class of trap.
+        assert m.file_digest("/dev/zero", "md5") is None
+
     def test_query_core_on_non_library_is_none(self, tmp_path):
         not_a_core = tmp_path / "fake.so"
         not_a_core.write_text("not an ELF")
@@ -253,6 +369,7 @@ class TestFixtureRealParity:
         "saves/Game.rtc": "r",
         "saves/Game [USA].srm": "u",
         "saves/deep/Game.srm": "d",
+        "saves/.hidden": "h",
     }
     DIRS = ["saves/empty"]
     SYMLINKS = {"links/saves": "saves", "links/dead": "gone-away"}
@@ -298,6 +415,9 @@ class TestFixtureRealParity:
         for path in probe_paths:
             assert fixture.path_kind(path) == real.path_kind(path), path
             assert fixture.read_text(path) == real.read_text(path), path
+            assert fixture.file_size(path) == real.file_size(path), path
+            for algorithm in ("md5", "sha1"):
+                assert fixture.file_digest(path, algorithm) == real.file_digest(path, algorithm), path
 
         for path in probe_paths:
             # Fixture links carry absolute targets, so compare resolved-ness only.
@@ -310,6 +430,7 @@ class TestFixtureRealParity:
             f"{base}/saves/empty/*",
             glob_module.escape(f"{base}/saves/Game [USA]") + ".*",
             f"{base}/saves/missing*",
+            f"{base}/saves/.*",
         ]
         for pattern in patterns:
             assert fixture.glob(pattern) == real.glob(pattern), pattern

@@ -20,6 +20,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from atlas.firmware import (
+    FirmwareAnswer,
+    FirmwareIdentification,
+    FirmwareIdentity,
+    FirmwareRequirement,
+)
 from atlas.installations import EmulatorEntry, Installation
 from atlas.placement import SavePlacement, Unresolved
 
@@ -63,6 +69,97 @@ def installation_contract(installation: Installation) -> dict[str, Any]:
         "kinds": list(installation.kinds),
         "root": installation.root(),
         "health": list(installation.health().codes),
+    }
+
+
+def _identity_contract(identity: FirmwareIdentity | None) -> dict[str, Any] | None:
+    if identity is None:
+        return None
+    return {"md5": identity.md5, "sha1": identity.sha1, "size": identity.size}
+
+
+def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
+    return {
+        "core_so": requirement.core_so,
+        "system": requirement.system,
+        "system_source": requirement.system_source,
+        "need": requirement.need,
+        "file_name": requirement.file_name,
+        "path": requirement.path,
+        "declared": requirement.declared,
+        "identity": _identity_contract(requirement.identity),
+        "found": requirement.found,
+        "present": requirement.present,
+        "checked": requirement.checked,
+        "satisfied": requirement.satisfied,
+    }
+
+
+def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.firmware.FirmwareAnswer`.
+
+    ``description`` is prose and stays out. Three derived fields are in on
+    purpose, because a consumer deriving them itself is exactly how the answer
+    gets read wrongly: ``declaration`` separates "this core needs nothing" from
+    "atlas knows nothing about this core", ``satisfied`` says whether one file
+    is actually usable (a *present* file with the wrong bytes is not), and
+    ``requirements_met`` is the single number a client renders — never ``true``
+    out of ignorance, never ``true`` with a required file known to be wrong.
+    Two limits of it belong next to each other, because a consumer that renders
+    only this field cannot see either:
+
+    - With ``hash_checked`` false it is ``null`` wherever a required file's
+      identity is known and was not verified. Presence is not the question the
+      field asks; a caller who wants a green light passes ``verify``.
+    - It can be ``true`` over a required file the packaged table does not cover
+      at all (``checked`` ``unknown`` with ``identity`` ``null``). Nothing
+      further can ever be established about such a file, so withholding the
+      answer would withhold it forever — but "in place under the right name" is
+      all that was checked. On the reference machine that is three requirements
+      across two cores (blueMSX's databases and machine ROMs, Dolphin's
+      ``codehandler.bin``).
+    ``found`` is the path kind actually read, which ``present`` alone cannot
+    carry (a directory at the destination is not a missing file), and
+    ``refused`` names declarations atlas would not follow, with the reason,
+    so a dropped file can never make a core look complete. ``path`` is the
+    **resolved** destination and ``declared`` the string the core spelled: two
+    declarations that land on one file are one place, and the name the core
+    opens is still stated.
+    """
+    return {
+        "root": answer.root,
+        "hash_checked": answer.hash_checked,
+        "cores": [
+            {
+                "core_so": core.core_so,
+                "label": core.label,
+                "declaration": core.declaration,
+                "requirements_met": core.requirements_met,
+                "requirements": [_requirement_contract(r) for r in core.requirements],
+                "refused": [{"declared": r.declared, "need": r.need, "reason": r.reason} for r in core.refused],
+                "caveats": [{"code": c.code, "data": dict(c.data)} for c in core.caveats],
+            }
+            for core in answer.cores
+        ],
+        "unclaimed": [
+            {
+                "path": f.path,
+                "identity": _identity_contract(f.identity),
+                "known_as": list(f.known_as),
+            }
+            for f in answer.unclaimed
+        ],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+    }
+
+
+def identification_contract(identification: FirmwareIdentification) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.firmware.FirmwareIdentification`."""
+    return {
+        "identity": _identity_contract(identification.identity),
+        "known_as": list(identification.known_as),
+        "requirements": [_requirement_contract(r) for r in identification.requirements],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in identification.caveats],
     }
 
 
