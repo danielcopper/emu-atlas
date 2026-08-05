@@ -27,7 +27,8 @@ Four principles, fixed before any code:
 
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, standalone installs, any of
   them side by side — and every question is asked _of an installation_, never of a global "the system":
-  `installation.save_location(content_path=..., core_so=...)`, `installation.emulators_for(system)`.
+  `installation.save_location(content_path=..., core_so=...)` on every handle, `installation.emulators_for(system)` on
+  the RetroDECK handle, the only one with a frontend catalogue today.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
   machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`, `file_size`, `file_digest`) whose every
   operation reports an explicit outcome — missing is not unreadable is not invalid text — because the emulators make
@@ -35,9 +36,9 @@ Four principles, fixed before any code:
   conformance vectors it is a fixture machine — files, directories, symlinks, and core answers as plain data — so
   detection, config parsing, and override chains are all provable from data, failure states included.
 - **Placements are templates, not paths.** Where a concrete path cannot be known from configs alone, the answer carries
-  named holes: `<rom_stem>` for RetroArch-style naming, `<save_id>` where the emulator keys saves off a serial or title
-  id. Whoever can fill a hole fills it — [sigil](https://github.com/rommforge/argosy-sigil) is one supplier of
-  `<save_id>`, not a dependency.
+  named holes: `<content_dir>` when the layout keys on the ROM's own folder and no ROM was named, `<library_name>` when
+  the core would not load. Whoever can fill a hole fills it — the planned `<save_id>` hole, for emulators that key saves
+  off a serial or title id, has [sigil](https://github.com/rommforge/argosy-sigil) as one supplier, not as a dependency.
 - **Every answer carries provenance.** Which config file said so, which default applied. Debugging a user's broken setup
   is the daily reality of every consumer; explainability is a feature, not a log line.
 
@@ -60,7 +61,8 @@ emu-atlas depends on nothing and nothing depends on it: sigil identifies, atlas 
 4. **Standalone emulators** — per-emulator config parsing and save/BIOS placement rules (Dolphin, PPSSPP, RPCS3, …), as
    multi-emulator support becomes concrete.
 5. **A canonical system vocabulary** — atlas ids plus translation tables for the naming dialects (RomM slugs, ES-DE
-   system names, RetroArch core/database names).
+   system names, RetroArch core/database names); planned, so until it lands a query speaks the vocabulary of the source
+   that enumerates it.
 
 Conformance follows the gavel pattern: language-neutral vectors, each one a fixture machine in and the expected
 installations + placements out.
@@ -106,10 +108,11 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   report". A sorted directory that does not exist yet is a conditional answer with a structural `fallback_dir`; a
   placement reached through symlinks reports its `physical_dir`, and a dead `dir_prep` link is a stated caveat, not a
   silent path.
-- `installation.emulators_for(system, content_path=...)` reads the ES-DE catalogue live (bundled + custom overlay) and
-  resolves the effective default through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` >
-  declared order. Entries carry their core, so placement answers on that path need no core argument; a standalone entry
-  answers with a typed `Unresolved` outcome instead of raising.
+- `installation.emulators_for(system, content_path=...)` — on the RetroDECK handle, the only one carrying a frontend
+  catalogue today — reads the ES-DE catalogue live (bundled + custom overlay) and resolves the effective default through
+  the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. Entries carry their
+  core, so placement answers on that path need no core argument; a standalone entry answers with a typed `Unresolved`
+  outcome instead of raising.
 - The audit trail: `docs/research/coverage-matrix.md` (generated, with full source identity) tracks every referenced
   emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
   verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer
@@ -134,7 +137,7 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   different things to a client.
 - `atlas/contract.py` is the canonical JSON-shaped serialization of every answer — the same code the conformance run
   asserts with exact equality, available to consumers.
-- 392 tests, 65 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
+- 403 tests, 68 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
   blobs, and read-failure states), zero runtime dependencies, CI-verified wheel/sdist.
 
 What is not covered yet, and in which order it comes: `ROADMAP.md`. The systematic core-by-core state:

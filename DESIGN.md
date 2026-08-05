@@ -42,19 +42,25 @@ is read or observed, never stored.
 import atlas
 
 installations = atlas.detect(home="/home/deck")
-# -> every arrangement present on the machine, each as its own handle
-#    (one Installation protocol: kind, kinds, root, health, save_location).
+# -> every arrangement present on the machine, each as its own handle (one Installation
+#    protocol: kind, kinds, root, health, save_location, plus the four firmware calls below).
 #    Never a silently chosen winner: ambiguity is a truthful result.
 
 inst = installations[0]              # e.g. a RetroDeck handle — live, re-reads its sources per query
 inst.health()                        # structured: a tuple of issue caveats with stable codes; ok = no issues
 
-entries = inst.emulators_for("n64")  # the catalogue: launch entries in effective priority order
-emu = entries[0]                     # one emulator, as it is configured right now
+inst.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
+                   core_so="mupen64plus_next_libretro.so")
+# -> the primary route: the caller names the core. It is the only save route on the handles
+#    with no frontend catalogue — EmuDeck, the standalone Flatpak, the native install.
 
-emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).zip")
-# -> SavePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir)
-#    or Unresolved (a typed domain outcome, e.g. a standalone entry before that block lands).
+entries = inst.emulators_for("n64")  # the catalogue: launch entries in effective priority order
+emu = entries[0]                     # RetroDECK handles only today — one emulator, as configured right now
+emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64")   # the entry carries its own core
+
+# -> SavePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir),
+#    or — on the entry route — Unresolved (a typed domain outcome, e.g. a standalone entry
+#    before that block lands).
 #    Granularity — per-game file / shared card, with the option that selects it — is part of the placement.
 ```
 
@@ -63,7 +69,9 @@ inst.firmware_for_core(core_so="mgba_libretro.so")   # does this emulator need f
 inst.firmware_for_system(system="gb")                # which emulators run this system, and what does each want?
 inst.firmware_inventory(verify=True)                 # everything installed, plus what nobody asks for
 inst.identify_firmware(md5="32fbbd84...")            # this content — where does it go, under what name?
-# -> FirmwareAnswer (root, cores, unclaimed, hash_checked, sources, caveats).
+# -> the first three: FirmwareAnswer (root, cores, unclaimed, hash_checked, sources, caveats).
+#    identify_firmware answers off content, so it has its own shape:
+#    FirmwareIdentification (identity, known_as, requirements, sources, caveats).
 #    A firmware requirement belongs to an EMULATOR: the core decides the file
 #    name and the absolute destination, the packaged identity decides whether
 #    what lies there is the right thing. Two axes, never merged:
@@ -143,9 +151,10 @@ findings:
   and for existing saves atlas can **observe** the set (literal, glob-escaped, with RetroArch's own bookkeeping files
   filtered on source citation). _Observed_ is a snapshot of matching files, never a completeness claim; `complete` is a
   separate assertion only a source-verified rule card can make.
-- **A hole is not an unknown.** `needs` lists holes the caller fills from the ROM at hand (`<rom_stem>`,
-  `<content_dir>`). _Unknown_ means atlas cannot state the value and refuses to guess. These are distinct states and the
-  type keeps them distinct — and an empty field is never one of them: where atlas deliberately does not state a value
+- **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
+  `library_name` when the core would not load, and — on the rule-card route — `system_directory` when the configs state
+  none. _Unknown_ means atlas cannot state the value and refuses to guess. These are distinct states and the type keeps
+  them distinct — and an empty field is never one of them: where atlas deliberately does not state a value
   (`granularity` for a core whose file set depends on options it does not interpret), a caveat says so and names what it
   depends on, because nothing separates a blank field from nothing-to-report.
 - **The root varies.** `savefile_directory`, `system_directory` (Flycast VMUs), or the ROM's own directory
@@ -174,7 +183,7 @@ rather than merely asserted.
 | ---------------------------------- | ----------------------------------------------------------------------- |
 | Python clients (decky-romm-sync)   | import directly; vendor by copying (`pip install --target py_modules/`) |
 | Non-Python clients (grout, argosy) | implement the resolver natively; prove conformance against the vectors  |
-| Non-Python tools on a Python host  | optional `python -m atlas … --json` process call                        |
+| Non-Python tools on a Python host  | planned: a `python -m atlas … --json` process call — no CLI ships today |
 
 `dependencies = []` is a contract, not an accident: zero-dependency pure Python is what makes vendoring a directory copy
 — no compiled parts, no architecture question, no version conflicts inside a plugin bundle.
@@ -191,9 +200,13 @@ publishes them as a versioned artifact.
 
 ## Vocabulary
 
-Atlas defines canonical system ids and ships translation tables for the dialects it meets (RomM `slug` / `fs_slug`,
-ES-DE `system`, RetroArch core and database names). Public functions accept canonical ids; translators are explicit
-(`atlas.systems.from_romm_slug("gba")`), never guessed.
+_Planned; nothing of this is built._ Atlas is to define canonical system ids and ship translation tables for the
+dialects it meets (RomM `slug` / `fs_slug`, ES-DE `system`, RetroArch core and database names), with public functions
+accepting canonical ids and explicit translators (`from_romm_slug("gba")`) — never guessing. Today there is no
+translation layer at all: a query takes the vocabulary of whichever source enumerates it — the frontend's system name
+where a catalogue exists, an atlas slug where none does — and `firmware_for_system` states that switch as a caveat
+instead of translating. The canonical id set is itself still open (see Open questions); the ROADMAP names the
+translation table as the real fix.
 
 ## Settled decisions
 
