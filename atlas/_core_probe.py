@@ -5,7 +5,8 @@ Invoked as ``python -m atlas._core_probe <core.so>`` by
 isolation: a core that segfaults takes this process down, not the host.
 
 The probe emits one JSON object per line and the parent uses the LAST valid
-line — a deliberate two-phase design:
+line — whatever reached it before the process stopped, however it stopped — a
+deliberate two-phase design:
 
 1. ``retro_get_system_info`` (safe on every core) → the base line with
    ``library_name`` / ``library_version`` / ``valid_extensions``.

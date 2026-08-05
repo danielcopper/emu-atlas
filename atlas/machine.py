@@ -181,7 +181,9 @@ class RealMachine:
     ``query_core`` runs the probe in a subprocess (``atlas._core_probe``) so a
     crashing core costs one answer, not the host process, and memoizes per
     ``(path, mtime, size)`` — a cached live read, not shipped data: the cache
-    invalidates the moment the ``.so`` changes.
+    invalidates the moment the ``.so`` changes. The child is pointed back at
+    this package (:func:`_probe_environment`) and answers with whatever it
+    printed before it stopped (:func:`_parse_probe_output`).
     """
 
     def __init__(self) -> None:
@@ -284,35 +286,75 @@ class RealMachine:
                 [sys.executable, "-m", "atlas._core_probe", so_path],
                 capture_output=True,
                 timeout=_CORE_PROBE_TIMEOUT_SECONDS,
+                env=_probe_environment(),
             )
-        except (OSError, subprocess.TimeoutExpired):
+        except subprocess.TimeoutExpired as expired:
+            # A core that hangs in the option-capture phase printed its base
+            # answer before it hung; the exception carries what was captured.
+            return _parse_probe_output(expired.stdout)
+        except OSError:
+            # The probe never ran — nothing was read, nothing can be said.
             return None
-        if proc.returncode != 0:
-            return None
-        # The probe prints one JSON object per line and later lines enrich
-        # earlier ones (two-phase design) — the last valid line wins, so a
-        # crash in the option-capture phase still yields the base answer.
-        data: dict[str, object] | None = None
-        for line in proc.stdout.decode("utf-8", "replace").splitlines():
-            try:
-                candidate = json.loads(line)
-            except ValueError:
-                continue
-            if isinstance(candidate, dict):
-                data = candidate
-        if data is None:
-            return None
-        name = data.get("library_name")
-        if not isinstance(name, str) or not name:
-            return None
-        version = data.get("library_version")
-        extensions = data.get("valid_extensions")
-        return CoreInfo(
-            library_name=name,
-            library_version=version if isinstance(version, str) else None,
-            valid_extensions=extensions if isinstance(extensions, str) else None,
-            options=_parse_core_options(data.get("options")),
-        )
+        return _parse_probe_output(proc.stdout)
+
+
+def _parse_probe_output(stdout: bytes | None) -> CoreInfo | None:
+    """Read the core's answer out of whatever the probe printed before it stopped.
+
+    The probe prints one JSON object per line and later lines enrich earlier
+    ones (two-phase design), so the last valid line wins. How the process
+    *ended* is deliberately not consulted: the subprocess exists because cores
+    crash — in ``retro_set_environment``, the option-capture phase — and by
+    then the phase-1 answer carrying ``library_name`` has already been
+    delivered. Discarding it on a non-zero exit would throw away a read that
+    succeeded. A run that printed no usable line is ``None``: unknown, whether
+    it exited cleanly or not.
+    """
+    data: dict[str, object] | None = None
+    for line in (stdout or b"").decode("utf-8", "replace").splitlines():
+        try:
+            candidate = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(candidate, dict):
+            data = candidate
+    if data is None:
+        return None
+    name = data.get("library_name")
+    if not isinstance(name, str) or not name:
+        return None
+    version = data.get("library_version")
+    extensions = data.get("valid_extensions")
+    return CoreInfo(
+        library_name=name,
+        library_version=version if isinstance(version, str) else None,
+        valid_extensions=extensions if isinstance(extensions, str) else None,
+        options=_parse_core_options(data.get("options")),
+    )
+
+
+def _probe_environment() -> dict[str, str] | None:
+    """The probe child's environment: this package's location ahead of ``PYTHONPATH``.
+
+    The child imports ``atlas._core_probe`` by name, and under the vendoring
+    model — this package copied into a host that puts it on ``sys.path`` at
+    runtime — nothing on the child's default path leads back to it: every core
+    would come back unknown, for a missing module rather than for anything
+    about the core. Prepending the directory that holds this package keeps the
+    child on the same atlas the parent runs, and leaves the rest of the
+    environment, an inherited ``PYTHONPATH`` included, intact.
+
+    ``None`` when this module has no file behind it (a frozen build): the child
+    then inherits the environment unchanged, which is the best that can be said.
+    """
+    location = globals().get("__file__")
+    if not isinstance(location, str) or not location:
+        return None
+    package_root = os.path.dirname(os.path.dirname(os.path.abspath(location)))
+    env = dict(os.environ)
+    inherited = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = f"{package_root}{os.pathsep}{inherited}" if inherited else package_root
+    return env
 
 
 def _parse_core_options(raw: object) -> dict[str, CoreOption] | None:
