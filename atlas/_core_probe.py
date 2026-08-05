@@ -32,7 +32,7 @@ import ctypes
 import json
 import os
 import sys
-from typing import Any
+from typing import Any, Callable
 
 RETRO_ENVIRONMENT_EXPERIMENTAL = 0x10000
 RETRO_ENVIRONMENT_SET_VARIABLES = 16
@@ -136,6 +136,17 @@ class _OptionCapture:
     def __init__(self) -> None:
         self.options: dict[str, dict[str, object]] = {}
         self.seen = False
+        # One entry per registration call the API knows; the command number
+        # picks the reader, and a call arriving without data is answered
+        # (True) without reading anything.
+        self._readers: dict[int, Callable[[int], None]] = {
+            RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION: self._answer_options_version,
+            RETRO_ENVIRONMENT_SET_VARIABLES: self._read_variables,
+            RETRO_ENVIRONMENT_SET_CORE_OPTIONS: self._read_v1,
+            RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL: self._read_v1_intl,
+            RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2: self._read_v2,
+            RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2_INTL: self._read_v2_intl,
+        }
 
     def _add(self, key: bytes | None, default: bytes | None, values: list[str]) -> None:
         decoded = _decode(key)
@@ -143,48 +154,46 @@ class _OptionCapture:
             self.options[decoded] = {"default": _decode(default), "values": values}
 
     def handle(self, cmd: int, data: int | None) -> bool:
-        cmd &= ~RETRO_ENVIRONMENT_EXPERIMENTAL
-        if cmd == RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION:
-            if data:
-                ctypes.cast(data, ctypes.POINTER(ctypes.c_uint))[0] = 2
-            return True
-        if cmd == RETRO_ENVIRONMENT_SET_VARIABLES:
-            if data:
-                self.seen = True
-                variables = ctypes.cast(data, ctypes.POINTER(_RetroVariable))
-                for i in range(_MAX_DEFINITIONS):
-                    var = variables[i]
-                    if not var.key:
-                        break
-                    # "Description; default|second|third" — the first listed
-                    # value is the default (libretro.h, SET_VARIABLES).
-                    raw = _decode(var.value) or ""
-                    _, _, value_part = raw.partition("; ")
-                    values = value_part.split("|") if value_part else []
-                    self._add(var.key, values[0].encode() if values else None, values)
-            return True
-        if cmd == RETRO_ENVIRONMENT_SET_CORE_OPTIONS:
-            if data:
-                self._walk_v1(ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionDefinition)))
-            return True
-        if cmd == RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL:
-            if data:
-                intl = ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsIntl))[0]
-                if intl.us:
-                    self._walk_v1(intl.us)
-            return True
-        if cmd == RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2:
-            if data:
-                self._walk_v2(ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsV2))[0])
-            return True
-        if cmd == RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2_INTL:
-            if data:
-                intl = ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsV2Intl))[0]
-                if intl.us:
-                    self._walk_v2(intl.us[0])
-            return True
-        # Everything else is honestly unsupported; cores handle a false return.
-        return False
+        reader = self._readers.get(cmd & ~RETRO_ENVIRONMENT_EXPERIMENTAL)
+        if reader is None:
+            # Everything else is honestly unsupported; cores handle a false return.
+            return False
+        if data:
+            reader(data)
+        return True
+
+    def _answer_options_version(self, data: int) -> None:
+        ctypes.cast(data, ctypes.POINTER(ctypes.c_uint))[0] = 2
+
+    def _read_variables(self, data: int) -> None:
+        self.seen = True
+        variables = ctypes.cast(data, ctypes.POINTER(_RetroVariable))
+        for i in range(_MAX_DEFINITIONS):
+            var = variables[i]
+            if not var.key:
+                break
+            # "Description; default|second|third" — the first listed
+            # value is the default (libretro.h, SET_VARIABLES).
+            raw = _decode(var.value) or ""
+            _, _, value_part = raw.partition("; ")
+            values = value_part.split("|") if value_part else []
+            self._add(var.key, values[0].encode() if values else None, values)
+
+    def _read_v1(self, data: int) -> None:
+        self._walk_v1(ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionDefinition)))
+
+    def _read_v1_intl(self, data: int) -> None:
+        intl = ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsIntl))[0]
+        if intl.us:
+            self._walk_v1(intl.us)
+
+    def _read_v2(self, data: int) -> None:
+        self._walk_v2(ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsV2))[0])
+
+    def _read_v2_intl(self, data: int) -> None:
+        intl = ctypes.cast(data, ctypes.POINTER(_RetroCoreOptionsV2Intl))[0]
+        if intl.us:
+            self._walk_v2(intl.us[0])
 
     def _walk_v1(self, definitions: Any) -> None:
         self.seen = True

@@ -297,7 +297,7 @@ class RealMachine:
         for line in proc.stdout.decode("utf-8", "replace").splitlines():
             try:
                 candidate = json.loads(line)
-            except (json.JSONDecodeError, ValueError):
+            except ValueError:
                 continue
             if isinstance(candidate, dict):
                 data = candidate
@@ -357,6 +357,50 @@ FixtureFileSpec = str | Mapping[str, str | int]
 _BLOB_KEYS = ("size", *DIGEST_ALGORITHMS)
 
 
+def _index_fixture_files(
+    files: Mapping[str, FixtureFileSpec],
+) -> tuple[dict[str, tuple[ReadStatus, str | None]], dict[str, dict[str, str | int]]]:
+    """Split the declared file specs into read outcomes and blob identities.
+
+    A malformed spec raises rather than being coerced: a fixture that cannot be
+    read as written would otherwise prove something about a machine nobody
+    described.
+    """
+    read: dict[str, tuple[ReadStatus, str | None]] = {}
+    blobs: dict[str, dict[str, str | int]] = {}
+    for path, spec in files.items():
+        if isinstance(spec, str):
+            read[path] = (READ_OK, spec)
+            continue
+        status = spec.get("status")
+        if status is None:
+            if not any(key in spec for key in _BLOB_KEYS):
+                raise ValueError(
+                    f"fixture file {path!r}: an object spec must carry a 'status' or at least one "
+                    f"of {list(_BLOB_KEYS)}"
+                )
+            # A blob exists and is not text — the same answer a real
+            # firmware file gives read_text.
+            read[path] = (READ_INVALID_TEXT, None)
+            blobs[path] = dict(spec)
+            continue
+        if status not in (READ_UNREADABLE, READ_INVALID_TEXT):
+            raise ValueError(f"fixture file {path!r}: status must be 'unreadable' or 'invalid-text'")
+        read[path] = (status, None)
+    return read, blobs
+
+
+def _ancestor_dirs(paths: Iterable[str]) -> set[str]:
+    """Every ancestor of the given paths — a known path's parents are directories."""
+    dirs: set[str] = set()
+    for path in paths:
+        parent = os.path.dirname(path)
+        while parent and parent != "/":
+            dirs.add(parent)
+            parent = os.path.dirname(parent)
+    return dirs
+
+
 class FixtureMachine:
     """A machine backed by plain data: files, directories, symlinks, core answers.
 
@@ -385,37 +429,15 @@ class FixtureMachine:
         dirs: Iterable[str] | None = None,
         inaccessible: Iterable[str] | None = None,
     ) -> None:
-        self._files: dict[str, tuple[ReadStatus, str | None]] = {}
-        self._blobs: dict[str, dict[str, str | int]] = {}
-        for path, spec in files.items():
-            if isinstance(spec, str):
-                self._files[path] = (READ_OK, spec)
-                continue
-            status = spec.get("status")
-            if status is None:
-                if not any(key in spec for key in _BLOB_KEYS):
-                    raise ValueError(
-                        f"fixture file {path!r}: an object spec must carry a 'status' or at least one "
-                        f"of {list(_BLOB_KEYS)}"
-                    )
-                # A blob exists and is not text — the same answer a real
-                # firmware file gives read_text.
-                self._files[path] = (READ_INVALID_TEXT, None)
-                self._blobs[path] = dict(spec)
-                continue
-            if status not in (READ_UNREADABLE, READ_INVALID_TEXT):
-                raise ValueError(f"fixture file {path!r}: status must be 'unreadable' or 'invalid-text'")
-            self._files[path] = (status, None)
+        self._files, self._blobs = _index_fixture_files(files)
         self._symlinks = dict(symlinks or {})
         self._cores = dict(cores or {})
         self._inaccessible = set(inaccessible or ())
         self._dirs: set[str] = set(dirs or ())
         # Every ancestor of a known path is a directory.
-        for path in (*self._files, *self._symlinks, *self._cores, *tuple(self._dirs), *self._inaccessible):
-            parent = os.path.dirname(path)
-            while parent and parent != "/":
-                self._dirs.add(parent)
-                parent = os.path.dirname(parent)
+        self._dirs |= _ancestor_dirs(
+            (*self._files, *self._symlinks, *self._cores, *tuple(self._dirs), *self._inaccessible)
+        )
         self._dirs.discard("")
 
     def _resolve(self, path: str) -> str | None:
@@ -428,20 +450,29 @@ class FixtureMachine:
         machine never answers.
         """
         for _ in range(SYMLINK_HOPS):
-            parts = path.split("/")
-            replaced = False
-            for i in range(2, len(parts) + 1):
-                prefix = "/".join(parts[:i])
-                if prefix in self._symlinks:
-                    target = self._symlinks[prefix]
-                    if not target.startswith("/"):
-                        target = os.path.normpath(os.path.join(os.path.dirname(prefix), target))
-                    rest = "/".join(parts[i:])
-                    path = target + ("/" + rest if rest else "")
-                    replaced = True
-                    break
-            if not replaced:
+            spliced = self._splice_first_symlink(path)
+            if spliced is None:
                 return path
+            path = spliced
+        return None
+
+    def _splice_first_symlink(self, path: str) -> str | None:
+        """*path* with its leftmost symlink component replaced by that link's target.
+
+        ``None`` when no component is a link — the path is then fully resolved.
+        A relative target is spliced against the directory holding the link, the
+        way the kernel reads it.
+        """
+        parts = path.split("/")
+        for i in range(2, len(parts) + 1):
+            prefix = "/".join(parts[:i])
+            if prefix not in self._symlinks:
+                continue
+            target = self._symlinks[prefix]
+            if not target.startswith("/"):
+                target = os.path.normpath(os.path.join(os.path.dirname(prefix), target))
+            rest = "/".join(parts[i:])
+            return target + ("/" + rest if rest else "")
         return None
 
     def _resolve_parent(self, path: str) -> str | None:
@@ -556,30 +587,37 @@ class FixtureMachine:
             return True
         return self.path_kind(spelled) != KIND_MISSING
 
+    def _matching_children(self, base: str, segment: str) -> list[str]:
+        """Entry names under *base* that the wildcard *segment* matches.
+
+        A wildcard never matches a leading dot — the same hidden-file rule a
+        real glob applies, so a dotfile is invisible to both.
+        """
+        hidden_ok = segment.startswith(".")
+        return [
+            child
+            for child in self._children(base)
+            if (hidden_ok or not child.startswith(".")) and fnmatch.fnmatchcase(child, segment)
+        ]
+
+    def _walk_glob(self, base: str, segments: list[str], results: set[str]) -> None:
+        """Match *segments* against the tree below *base*, collecting hits in *results*."""
+        if not segments:
+            if base and self._present_for_glob(base):
+                results.add(base)
+            return
+        segment, rest = segments[0], segments[1:]
+        if not segment:
+            self._walk_glob(base, rest, results)
+        elif not _GLOB_MAGIC & set(segment):
+            self._walk_glob(f"{base}/{segment}", rest, results)
+        else:
+            for child in self._matching_children(base, segment):
+                self._walk_glob(f"{base}/{child}", rest, results)
+
     def glob(self, pattern: str) -> list[str]:
         if not pattern.startswith("/"):
             return []
         results: set[str] = set()
-
-        def walk(base: str, segments: list[str]) -> None:
-            if not segments:
-                if base and self._present_for_glob(base):
-                    results.add(base)
-                return
-            segment, rest = segments[0], segments[1:]
-            if not segment:
-                walk(base, rest)
-            elif not _GLOB_MAGIC & set(segment):
-                walk(f"{base}/{segment}", rest)
-            else:
-                # A wildcard never matches a leading dot — the same hidden-file
-                # rule a real glob applies, so a dotfile is invisible to both.
-                hidden_ok = segment.startswith(".")
-                for child in self._children(base):
-                    if not hidden_ok and child.startswith("."):
-                        continue
-                    if fnmatch.fnmatchcase(child, segment):
-                        walk(f"{base}/{child}", rest)
-
-        walk("", pattern.split("/")[1:])
+        self._walk_glob("", pattern.split("/")[1:], results)
         return sorted(results)
