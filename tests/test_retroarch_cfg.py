@@ -300,6 +300,35 @@ class TestSavefileDirectoryValidation:
             ("retroarch.cfg", "/run/media/gone/saves")
         ]
 
+    def test_a_refused_global_is_marked_superseded_when_an_override_rescues_it(self):
+        cfg = _chain(
+            'savefile_directory = "/run/media/gone/saves"\n',
+            'savefile_directory = "/mnt/sd/other"',
+            is_directory=_only("/mnt/sd/other"),
+        )
+        assert cfg.savefile_directory == "/mnt/sd/other"
+        assert [(r.layer, r.superseded) for r in cfg.rejected_directories] == [("retroarch.cfg", True)]
+
+    def test_a_refusal_the_chain_never_got_past_is_not_superseded(self):
+        cfg = _chain(
+            'savefile_directory = "/mnt/sd/saves"\n',
+            'savefile_directory = "/run/media/gone/saves"',
+            is_directory=_only("/mnt/sd/saves"),
+        )
+        assert [(r.layer, r.superseded) for r in cfg.rejected_directories] == [("override 1", False)]
+
+    def test_a_reset_after_a_refusal_also_supersedes_it(self):
+        # "default" sets the platform default outright, so the root that stands
+        # was chosen after the refusal even though it is the same directory the
+        # refusal would have fallen back to.
+        cfg = _chain(
+            'savefile_directory = "/run/media/gone/saves"\n',
+            'savefile_directory = "default"',
+            is_directory=_only(),
+        )
+        assert cfg.savefile_directory is None
+        assert [r.superseded for r in cfg.rejected_directories] == [True]
+
     def test_a_usable_override_still_wins(self):
         cfg = _chain(
             'savefile_directory = "/mnt/sd/saves"\n',

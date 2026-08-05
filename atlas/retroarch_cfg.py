@@ -106,16 +106,24 @@ class IgnoredSetting:
 class RejectedDirectory:
     """A ``savefile_directory`` RetroArch read and refused as a saves root.
 
-    ``path_is_directory`` failed on it, so that read set nothing and the
-    directory standing before it — the global cfg's, or the platform default —
-    stands on (``configuration.c:6920-6932``). ``layer`` names the file that
-    stated the value, ``value`` the value as RetroArch tested it (``~``
-    expanded). Unlike :class:`IgnoredSetting` this is not a spelling mistake:
-    the value is well-formed, the machine just has no such directory.
+    ``path_is_directory`` failed on it, so that read set nothing
+    (``configuration.c:6920-6932``). ``layer`` names the file that stated the
+    value, ``value`` the value as RetroArch tested it (``~`` expanded). Unlike
+    :class:`IgnoredSetting` this is not a spelling mistake: the value is
+    well-formed, the machine just has no such directory.
+
+    ``superseded`` says where the root that ends up standing came from, which
+    is not the same story in both directions. Normally the refusal is the last
+    word and what stands is what preceded it — the global cfg's root, or the
+    platform default. But the global cfg can be the one refused while an
+    override then supplies a usable root: the standing root is then set *after*
+    the refusal, and ``superseded`` is true. Saying it the other way round
+    would invert the causality.
     """
 
     layer: str
     value: str
+    superseded: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -517,12 +525,16 @@ def _resolve_savefile_directory(
         f"default: {_SAVEFILE_DIRECTORY} unset — RetroArch platform default applies "
         "(saves under the config tree, platform_unix.c:2133-2134)"
     )
-    rejected: list[RejectedDirectory] = []
-    for label, parsed, is_override in _read_layers(layers, _SAVEFILE_DIRECTORY):
+    # Which read produced the root that stands decides how a refusal reads: a
+    # refusal the chain never got past fell back to what preceded it, while one
+    # a later read overwrote did not — see RejectedDirectory.superseded.
+    refusals: list[tuple[int, str, str]] = []
+    last_set = -1
+    for index, (label, parsed, is_override) in enumerate(_read_layers(layers, _SAVEFILE_DIRECTORY)):
         raw = parsed.values[_SAVEFILE_DIRECTORY]
         suffix = " (override wins)" if is_override else ""
         if raw == _UNSET_VALUE:
-            savefile_directory = None
+            savefile_directory, last_set = None, index
             source = (
                 f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" — resets to the RetroArch '
                 f"platform default{suffix}"
@@ -530,10 +542,14 @@ def _resolve_savefile_directory(
             continue
         candidate = expand_home(raw, home=home)
         if candidate is None or (is_directory is not None and not is_directory(candidate)):
-            rejected.append(RejectedDirectory(label, candidate if candidate is not None else raw))
+            refusals.append((index, label, candidate if candidate is not None else raw))
             continue
-        savefile_directory = candidate
+        savefile_directory, last_set = candidate, index
         source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}"{suffix}'
+    rejected = [
+        RejectedDirectory(label, value, superseded=index < last_set)
+        for index, label, value in refusals
+    ]
     return savefile_directory, source, tuple(rejected)
 
 

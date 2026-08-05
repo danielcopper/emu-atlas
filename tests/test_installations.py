@@ -832,6 +832,42 @@ class TestOverrideChainSemantics:
             }
         ]
 
+    def test_a_refused_global_root_can_be_rescued_by_an_override(self):
+        # The one direction where the standing root is set AFTER the refusal:
+        # the global cfg is refused, the override then supplies a usable root.
+        # The message must not claim that root predates the rejected file.
+        p = self._psp_query(
+            'savefile_directory = "/run/media/gone/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+            'libretro_directory = "/app/cores"\n',
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'savefile_directory = "/mnt/sd/other"',
+                "/mnt/sd/other/.keep": "",
+            },
+        )
+        assert p.dir == "/mnt/sd/other"
+        invalid = [c for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY]
+        assert [c.data for c in invalid] == [
+            {
+                "layer": "retroarch.cfg",
+                "configured": "/run/media/gone/saves",
+                "effective": "/mnt/sd/other",
+            }
+        ]
+        assert "a later file in the chain set" in invalid[0].message
+        assert "stood before this file" not in invalid[0].message
+
+    def test_a_refusal_the_chain_never_got_past_names_the_earlier_root(self):
+        p = self._psp_query(
+            self.GLOBAL_CFG,
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'savefile_directory = "/run/media/gone/saves"'
+            },
+        )
+        invalid = [c for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY]
+        assert "stood before this file" in invalid[0].message
+        assert "a later file in the chain set" not in invalid[0].message
+
     def test_a_shadowed_override_is_not_the_fallback_for_an_unusable_one(self):
         # The merged config holds the GAME override's root; the core override's
         # was overwritten before any getter saw it, so the refusal falls back to

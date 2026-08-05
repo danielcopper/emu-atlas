@@ -913,19 +913,28 @@ def _rejected_dir_caveats(
 ) -> tuple[Caveat, ...]:
     """The saves roots the configs state and RetroArch refuses, layer by layer.
 
-    ``path_is_directory`` failed, so that read set nothing and the directory
-    standing before it stays (``configuration.c:6920-6932``) — which after an
-    override is the global cfg's root, not the platform default. The layer is
-    named because that is what tells a caller which file to fix.
+    ``path_is_directory`` failed, so that read set nothing
+    (``configuration.c:6920-6932``) and some other read decides the root. Which
+    one is not fixed: usually the refusal is the last word and what stands
+    preceded it — after an override, the global cfg's root rather than the
+    platform default — but a refused global cfg can be followed by an override
+    that supplies a usable root, and then the standing root was set afterwards.
+    The message says whichever it was; claiming the wrong one would teach a
+    reader a causality RetroArch does not have. The layer is named either way,
+    because that is what tells a caller which file to fix.
     """
     caveats: list[Caveat] = []
     for entry in rejected:
+        stands = (
+            f"writes to {effective!r} instead, the root a later file in the chain set"
+            if entry.superseded
+            else f"keeps {effective!r}, the root that stood before this file"
+        )
         caveats.append(
             Caveat(
                 CAVEAT_INVALID_SAVE_DIRECTORY,
                 f"{entry.layer}: savefile_directory {entry.value!r} is not an existing directory "
-                f"— RetroArch refuses it and keeps {effective!r}, the root that stood before this "
-                "file (configuration.c:6920-6932)",
+                f"— RetroArch refuses it and {stands} (configuration.c:6920-6932)",
                 {"layer": entry.layer, "configured": entry.value, "effective": effective},
             )
         )
