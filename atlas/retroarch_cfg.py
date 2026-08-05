@@ -147,6 +147,43 @@ def expand_home(raw: str, *, home: str) -> str | None:
     return stripped
 
 
+# One layer of the chain: its provenance label, its parsed keys, and whether it
+# is an override (the global cfg is not).
+_Layer = tuple[str, dict[str, str], bool]
+
+
+def _resolve_flag(layers: Sequence[_Layer], key: str, *, default: bool, defaults_label: str) -> tuple[bool, str]:
+    """One boolean key through the chain — later layers win, provenance follows."""
+    value, source = default, f"default: {key} = {str(default).lower()} ({defaults_label})"
+    for label, parsed, is_override in layers:
+        if key in parsed:
+            value = _as_bool(parsed[key])
+            source = f'{label}: {key} = "{parsed[key]}"' + (" (override wins)" if is_override else "")
+    return value, source
+
+
+def _resolve_savefile_directory(layers: Sequence[_Layer], *, home: str) -> tuple[str | None, str]:
+    """The saves root through the chain — ``None`` when the platform default applies."""
+    savefile_directory: str | None = None
+    source = (
+        f"default: {_SAVEFILE_DIRECTORY} unset — RetroArch platform default applies "
+        "(saves under the config tree, platform_unix.c:1844)"
+    )
+    for label, parsed, is_override in layers:
+        if _SAVEFILE_DIRECTORY in parsed:
+            raw = parsed[_SAVEFILE_DIRECTORY]
+            savefile_directory = expand_home(raw, home=home)
+            suffix = " (override wins)" if is_override else ""
+            if savefile_directory is None:
+                source = (
+                    f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" — resets to the RetroArch '
+                    f"platform default{suffix}"
+                )
+            else:
+                source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}"{suffix}'
+    return savefile_directory, source
+
+
 def resolve_save_layout(
     global_text: str | None,
     *,
@@ -173,40 +210,22 @@ def resolve_save_layout(
         exactly the files that exist, already read through the machine seam.
         Each layer overrides only the keys it actually sets.
     """
-    layers: list[tuple[str, dict[str, str], bool]] = [
+    layers: list[_Layer] = [
         (cfg_label, parse_cfg_text(global_text) if global_text is not None else {}, False)
     ]
     layers.extend((label, parse_cfg_text(text), True) for label, text in overrides)
 
-    def _flag(key: str, default: bool) -> tuple[bool, str]:
-        value, source = default, f"default: {key} = {str(default).lower()} ({defaults.label})"
-        for label, parsed, is_override in layers:
-            if key in parsed:
-                value = _as_bool(parsed[key])
-                source = f'{label}: {key} = "{parsed[key]}"' + (" (override wins)" if is_override else "")
-        return value, source
-
-    in_content_dir, s1 = _flag(_IN_CONTENT_DIR, defaults.savefiles_in_content_dir)
-    sort_by_content, s2 = _flag(_SORT_BY_CONTENT, defaults.sort_by_content)
-    sort_by_core, s3 = _flag(_SORT_BY_CORE, defaults.sort_by_core)
-
-    savefile_directory: str | None = None
-    dir_source = (
-        f"default: {_SAVEFILE_DIRECTORY} unset — RetroArch platform default applies "
-        "(saves under the config tree, platform_unix.c:1844)"
+    defaults_label = defaults.label
+    in_content_dir, s1 = _resolve_flag(
+        layers, _IN_CONTENT_DIR, default=defaults.savefiles_in_content_dir, defaults_label=defaults_label
     )
-    for label, parsed, is_override in layers:
-        if _SAVEFILE_DIRECTORY in parsed:
-            raw = parsed[_SAVEFILE_DIRECTORY]
-            savefile_directory = expand_home(raw, home=home)
-            suffix = " (override wins)" if is_override else ""
-            if savefile_directory is None:
-                dir_source = (
-                    f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" — resets to the RetroArch '
-                    f"platform default{suffix}"
-                )
-            else:
-                dir_source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}"{suffix}'
+    sort_by_content, s2 = _resolve_flag(
+        layers, _SORT_BY_CONTENT, default=defaults.sort_by_content, defaults_label=defaults_label
+    )
+    sort_by_core, s3 = _resolve_flag(
+        layers, _SORT_BY_CORE, default=defaults.sort_by_core, defaults_label=defaults_label
+    )
+    savefile_directory, dir_source = _resolve_savefile_directory(layers, home=home)
 
     return RetroArchCfg(
         savefiles_in_content_dir=in_content_dir,

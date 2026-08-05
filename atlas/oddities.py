@@ -18,7 +18,7 @@ import importlib.resources
 import json
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Mapping
+from typing import Any, Mapping
 
 # Packaged-data schema versions. The loaders are strict: unknown schema or
 # malformed entries raise instead of coercing — a broken build must fail
@@ -96,6 +96,27 @@ class CoreCard:
         return library_name is not None and library_name in self.library_names
 
 
+def _save_mode(mode: Any, where: str) -> SaveMode:
+    """One entry of a card's ``modes`` block — validated, never coerced."""
+    root = _expect_str(mode.get("root"), f"{where}: root")
+    if root not in _KNOWN_MODE_ROOTS:
+        raise ValueError(f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
+    files = mode.get("files")
+    observe = mode.get("observe")
+    complete = mode.get("complete", False)
+    if not isinstance(complete, bool):
+        # bool("false") is True in Python — never coerce this claim.
+        raise ValueError(f"{where}: 'complete' must be a JSON boolean")
+    return SaveMode(
+        root=root,
+        subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
+        files=_expect_str_list(files, f"{where}: files") if files is not None else None,
+        granularity=_expect_str(mode.get("granularity"), f"{where}: granularity"),
+        observe=_expect_str_list(observe, f"{where}: observe") if observe is not None else None,
+        complete=complete,
+    )
+
+
 def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
     """Load the packaged rule cards (or *text* when supplied, for tests).
 
@@ -118,26 +139,10 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
         identifiers = entry.get("identifiers", {})
         saves = entry.get("saves", {})
         governing = saves.get("governing_option") or {}
-        modes: dict[str, SaveMode] = {}
-        for value, mode in saves.get("modes", {}).items():
-            mode_where = f"{where} mode {value!r}"
-            root = _expect_str(mode.get("root"), f"{mode_where}: root")
-            if root not in _KNOWN_MODE_ROOTS:
-                raise ValueError(f"{mode_where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
-            files = mode.get("files")
-            observe = mode.get("observe")
-            complete = mode.get("complete", False)
-            if not isinstance(complete, bool):
-                # bool("false") is True in Python — never coerce this claim.
-                raise ValueError(f"{mode_where}: 'complete' must be a JSON boolean")
-            modes[value] = SaveMode(
-                root=root,
-                subdir=_expect_opt_str(mode.get("subdir"), f"{mode_where}: subdir"),
-                files=_expect_str_list(files, f"{mode_where}: files") if files is not None else None,
-                granularity=_expect_str(mode.get("granularity"), f"{mode_where}: granularity"),
-                observe=_expect_str_list(observe, f"{mode_where}: observe") if observe is not None else None,
-                complete=complete,
-            )
+        modes: dict[str, SaveMode] = {
+            value: _save_mode(mode, f"{where} mode {value!r}")
+            for value, mode in saves.get("modes", {}).items()
+        }
         provenance = entry.get("provenance", {})
         cards.append(
             CoreCard(
@@ -202,6 +207,49 @@ class AuditEntry:
         object.__setattr__(self, "verified", MappingProxyType(dict(self.verified)))
 
 
+def _verified_on(rec: Any, where: str) -> VerifiedOn | None:
+    """One arrangement's verification record — ``None`` stays *never verified*."""
+    if rec is None:
+        return None
+    return VerifiedOn(
+        version=_expect_opt_str(rec.get("version"), f"{where}.version"),
+        core_library_version=_expect_opt_str(rec.get("core_library_version"), f"{where}.core_library_version"),
+        date=_expect_opt_str(rec.get("date"), f"{where}.date"),
+    )
+
+
+def _audit_entry(key: str, entry: Any) -> AuditEntry:
+    """One core's audit entry — verdict, capability, and what it was verified on."""
+    where = f"audit {key!r}"
+    verdict = _expect_str(entry.get("verdict"), f"{where}: verdict")
+    if verdict not in _KNOWN_VERDICTS:
+        raise ValueError(f"{where}: verdict must be one of {sorted(_KNOWN_VERDICTS)}, got {verdict!r}")
+    if "per_game_capable" not in entry:
+        raise ValueError(f"{where}: missing required field 'per_game_capable'")
+    per_game_capable = _expect_opt_bool(entry["per_game_capable"], f"{where}: per_game_capable")
+    note = _expect_str(entry.get("note"), f"{where}: note")
+    save_options = _expect_str_list(entry.get("save_options", []), f"{where}: save_options")
+    if verdict == "multi-option" and not save_options:
+        raise ValueError(
+            f"{where}: a 'multi-option' verdict must list the governing options in 'save_options' — "
+            "the verdict states the granularity depends on them"
+        )
+    if verdict != "multi-option" and save_options:
+        raise ValueError(f"{where}: 'save_options' belongs to a 'multi-option' verdict, got {verdict!r}")
+    verified: dict[str, VerifiedOn | None] = {
+        arrangement: _verified_on(rec, f"{where}: verified[{arrangement!r}]")
+        for arrangement, rec in entry.get("verified", {}).items()
+    }
+    return AuditEntry(
+        key=key,
+        verdict=verdict,
+        per_game_capable=per_game_capable,
+        note=note,
+        verified=verified,
+        save_options=save_options,
+    )
+
+
 def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
     """Load the packaged verification matrix (``data/core_audit.json``)."""
     if text is None:
@@ -212,47 +260,7 @@ def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
             f"core_audit: unsupported schema {raw.get('schema') if isinstance(raw, dict) else None!r} "
             f"(this atlas reads schema {AUDIT_SCHEMA})"
         )
-    entries: dict[str, AuditEntry] = {}
-    for key, entry in raw.get("cores", {}).items():
-        where = f"audit {key!r}"
-        verdict = _expect_str(entry.get("verdict"), f"{where}: verdict")
-        if verdict not in _KNOWN_VERDICTS:
-            raise ValueError(f"{where}: verdict must be one of {sorted(_KNOWN_VERDICTS)}, got {verdict!r}")
-        if "per_game_capable" not in entry:
-            raise ValueError(f"{where}: missing required field 'per_game_capable'")
-        per_game_capable = _expect_opt_bool(entry["per_game_capable"], f"{where}: per_game_capable")
-        note = _expect_str(entry.get("note"), f"{where}: note")
-        save_options = _expect_str_list(entry.get("save_options", []), f"{where}: save_options")
-        if verdict == "multi-option" and not save_options:
-            raise ValueError(
-                f"{where}: a 'multi-option' verdict must list the governing options in 'save_options' — "
-                "the verdict states the granularity depends on them"
-            )
-        if verdict != "multi-option" and save_options:
-            raise ValueError(f"{where}: 'save_options' belongs to a 'multi-option' verdict, got {verdict!r}")
-        verified: dict[str, VerifiedOn | None] = {}
-        for arrangement, rec in entry.get("verified", {}).items():
-            rec_where = f"{where}: verified[{arrangement!r}]"
-            verified[arrangement] = (
-                VerifiedOn(
-                    version=_expect_opt_str(rec.get("version"), f"{rec_where}.version"),
-                    core_library_version=_expect_opt_str(
-                        rec.get("core_library_version"), f"{rec_where}.core_library_version"
-                    ),
-                    date=_expect_opt_str(rec.get("date"), f"{rec_where}.date"),
-                )
-                if rec is not None
-                else None
-            )
-        entries[key] = AuditEntry(
-            key=key,
-            verdict=verdict,
-            per_game_capable=per_game_capable,
-            note=note,
-            verified=verified,
-            save_options=save_options,
-        )
-    return entries
+    return {key: _audit_entry(key, entry) for key, entry in raw.get("cores", {}).items()}
 
 
 _AUDIT: dict[str, AuditEntry] | None = None

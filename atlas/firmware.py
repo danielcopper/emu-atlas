@@ -79,7 +79,7 @@ from atlas.machine import (
     Machine,
     PathKind,
 )
-from atlas.oddities import load_oddities
+from atlas.oddities import SaveMode, load_oddities
 from atlas.placement import ROOT_SYSTEM_DIRECTORY, Caveat
 
 FirmwareNeed = Literal["required", "optional"]
@@ -496,8 +496,9 @@ _NON_SLUG = re.compile(r"[^a-z0-9]+")
 
 # A ``systemname`` that names several machines at once. libretro writes these
 # as a slash list, with or without spaces: "Game Boy/Game Boy Color",
-# "GameCube / Wii", "Atari ST/STE/TT/Falcon".
-_SEVERAL_SYSTEMS = re.compile(r"\s*/\s*")
+# "GameCube / Wii", "Atari ST/STE/TT/Falcon" — the slash carries the whole
+# signal, so it is looked for literally; the spacing around it says nothing.
+_SEVERAL_SYSTEMS_SEPARATOR = "/"
 
 SystemSource = Literal["override", "systemname", "slug", "none"]
 
@@ -607,7 +608,7 @@ class CoreDeclarations:
         """
         if len(self.database) > 1:
             return True
-        if _SEVERAL_SYSTEMS.search(self.systemname):
+        if _SEVERAL_SYSTEMS_SEPARATOR in self.systemname:
             return True
         if len(self.database) == 1:
             from_database = SYSTEMNAME_TO_SLUG.get(self.database[0])
@@ -725,46 +726,46 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
     is nothing uncertain to state. Neither does a core that declares no
     firmware.
     """
+    caveats: list[Caveat] = []
     derived = tuple(d.file_name for d in core.firmware if d.system_source != SOURCE_OVERRIDE)
-    if not derived:
-        return ()
-    files = ", ".join(sorted(set(derived)))
-    if not core.systemname:
-        covers = (
-            f"its database field names {len(core.database)} systems ({'|'.join(core.database)})"
-            if core.database
-            else "and its .info names no database either, so nothing on the machine says what it covers"
-        )
-        return (
-            Caveat(
-                CAVEAT_CORE_WITHOUT_SYSTEMNAME,
-                f"{core.core_so} states no systemname in its .info, so nothing says which of its systems "
-                f"these files belong to and they are filed as _unknown: {files} — {covers}",
-                {
-                    "core_so": core.core_so,
-                    "files": files,
-                    "database": "|".join(core.database),
-                    "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
-                },
-            ),
-        )
-    if core.serves_several_systems:
-        return (
-            Caveat(
-                CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
-                f"{core.core_so} covers more than one system but states one systemname "
-                f"({core.systemname!r}); these files carry no per-file rule and were filed by it, so their "
-                f"system is derived and may be wrong: {files}",
-                {
-                    "core_so": core.core_so,
-                    "systemname": core.systemname,
-                    "files": files,
-                    "database": "|".join(core.database),
-                    "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
-                },
-            ),
-        )
-    return ()
+    if derived:
+        files = ", ".join(sorted(set(derived)))
+        if not core.systemname:
+            covers = (
+                f"its database field names {len(core.database)} systems ({'|'.join(core.database)})"
+                if core.database
+                else "and its .info names no database either, so nothing on the machine says what it covers"
+            )
+            caveats.append(
+                Caveat(
+                    CAVEAT_CORE_WITHOUT_SYSTEMNAME,
+                    f"{core.core_so} states no systemname in its .info, so nothing says which of its systems "
+                    f"these files belong to and they are filed as _unknown: {files} — {covers}",
+                    {
+                        "core_so": core.core_so,
+                        "files": files,
+                        "database": "|".join(core.database),
+                        "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
+                    },
+                )
+            )
+        elif core.serves_several_systems:
+            caveats.append(
+                Caveat(
+                    CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
+                    f"{core.core_so} covers more than one system but states one systemname "
+                    f"({core.systemname!r}); these files carry no per-file rule and were filed by it, so their "
+                    f"system is derived and may be wrong: {files}",
+                    {
+                        "core_so": core.core_so,
+                        "systemname": core.systemname,
+                        "files": files,
+                        "database": "|".join(core.database),
+                        "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
+                    },
+                )
+            )
+    return tuple(caveats)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1075,6 +1076,19 @@ class Catalogue:
 _SAVE_ARTIFACTS: frozenset[str] | None = None
 
 
+def _mode_save_files(mode: SaveMode) -> set[str]:
+    """The concrete files one save mode claims, relative to the firmware root.
+
+    A file name still carrying a template hole names no concrete file, so it
+    claims nothing here.
+    """
+    return {
+        f"{mode.subdir}/{name}" if mode.subdir else name
+        for name in (*(mode.files or ()), *(mode.observe or ()))
+        if "<" not in name
+    }
+
+
 def save_artifact_paths() -> frozenset[str]:
     """Paths under the firmware root that the save rule cards claim as *save* data.
 
@@ -1091,12 +1105,8 @@ def save_artifact_paths() -> frozenset[str]:
         paths: set[str] = set()
         for card in load_oddities():
             for mode in card.modes.values():
-                if mode.root != ROOT_SYSTEM_DIRECTORY:
-                    continue
-                for name in (*(mode.files or ()), *(mode.observe or ())):
-                    if "<" in name:  # an unfilled template names no concrete file
-                        continue
-                    paths.add(f"{mode.subdir}/{name}" if mode.subdir else name)
+                if mode.root == ROOT_SYSTEM_DIRECTORY:
+                    paths.update(_mode_save_files(mode))
         _SAVE_ARTIFACTS = frozenset(paths)
     return _SAVE_ARTIFACTS
 
@@ -1500,6 +1510,127 @@ def firmware_for_core(
     )
 
 
+def _cores_by_systemname(
+    machine: Machine, context: FirmwareContext, system: str, *, verify: bool
+) -> tuple[list[CoreFirmware], list[Caveat]]:
+    """The emulators for *system* where no frontend catalogue exists.
+
+    The installed cores' own ``systemname`` is then the only enumeration there
+    is, so the identifier is an atlas slug rather than a frontend system name —
+    stated, because the two are different vocabularies.
+    """
+    caveats = [
+        Caveat(
+            CAVEAT_CATALOGUE_UNAVAILABLE,
+            "this installation ships no emulator catalogue, so the emulators for a system are derived "
+            "from the installed cores' own systemname — the identifier is an atlas system slug, not a "
+            "frontend system name",
+            {"system": system},
+        )
+    ]
+    selected = tuple(
+        core
+        for core in context.cores
+        if core.system == system or any(d.system == system for d in core.firmware)
+    )
+    cores, observation_caveats = _resolve_cores(machine, context, selected, verify=verify)
+    caveats.extend(observation_caveats)
+    hidden = _cores_a_derived_assignment_may_hide(context.cores, selected, system)
+    if hidden:
+        names = ", ".join(sorted(c.core_so for c in hidden))
+        caveats.append(
+            Caveat(
+                CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
+                f"this list is keyed on the cores' own systemname, and {len(hidden)} installed core(s) "
+                f"name {system!r} in their database while filing firmware by a system that was derived "
+                f"rather than ruled — an emulator missing from this list is one of these: {names}",
+                {
+                    "count": str(len(hidden)),
+                    "cores": names,
+                    "system": system,
+                    "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
+                },
+            )
+        )
+    return list(cores), caveats
+
+
+def _catalogue_entry_core(
+    machine: Machine,
+    context: FirmwareContext,
+    entry: CatalogueEntry,
+    by_stem: Mapping[str, CoreDeclarations],
+    *,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """One catalogue entry resolved, plus the observations it produced.
+
+    Four states, kept apart: a standalone emulator, a core the catalogue names
+    that is not installed, an installed core whose ``.info`` could not be read,
+    and one that was read.
+    """
+    if entry.kind != KIND_LIBRETRO or entry.core_so is None:
+        return (
+            CoreFirmware(
+                core_so=entry.core_so,
+                label=entry.label,
+                declaration=DECLARATION_ABSENT,
+                requirements=(),
+                caveats=(
+                    Caveat(
+                        CAVEAT_STANDALONE_EMULATOR,
+                        f"{entry.label} is a standalone emulator — its firmware rules are not "
+                        "resolvable yet (ROADMAP.md), so the empty list means unknown",
+                        {"label": entry.label},
+                    ),
+                ),
+            ),
+            [],
+        )
+    core = by_stem.get(entry.core_so[: -len(".so")] if entry.core_so.endswith(".so") else entry.core_so)
+    if core is None:
+        # Same guard as the per-core route: absence is a claim, and it
+        # needs the core enumeration to have happened.
+        reason = (
+            Caveat(
+                CAVEAT_CORE_NOT_INSTALLED,
+                f"the catalogue declares {entry.label} on {entry.core_so}, but that core is "
+                "not installed here — atlas has no declaration for it, so the empty list "
+                "means unknown, not 'needs nothing'",
+                {"core_so": entry.core_so, "label": entry.label},
+            )
+            if context.cores_read
+            else _no_declaration(
+                f"anything for {entry.core_so}, because the installed cores could not be enumerated",
+                {"core_so": entry.core_so, "label": entry.label},
+            )
+        )
+        return (
+            CoreFirmware(
+                core_so=entry.core_so,
+                label=entry.label,
+                declaration=DECLARATION_ABSENT,
+                requirements=(),
+                caveats=(reason,),
+            ),
+            [],
+        )
+    if core.info_status != READ_OK:
+        return _undeclarable_core(core, entry.label), []
+    requirements, refused, core_caveats, observed = _requirements_for(machine, context, core, verify=verify)
+    return (
+        CoreFirmware(
+            core_so=core.core_so,
+            label=entry.label,
+            declaration=DECLARATION_READ,
+            requirements=requirements,
+            caveats=(*core_caveats, *system_assignment_caveats(core)),
+            refused=refused,
+        ),
+        observed,
+    )
+
+
 def firmware_for_system(
     machine: Machine,
     context: FirmwareContext,
@@ -1527,14 +1658,15 @@ def firmware_for_system(
     if context.root is None:
         return _empty_answer(context)
 
-    caveats: list[Caveat] = []
-    by_stem = {core.stem: core for core in context.cores}
     resolved: list[CoreFirmware] = []
+    caveats: list[Caveat] = []
     # Whether the enumeration happened at all decides whether this answer may
     # say anything about the machine when it comes back empty.
     enumerated = context.cores_read if catalogue is None else catalogue.read
 
-    if catalogue is not None and not catalogue.read:
+    if catalogue is None:
+        resolved, caveats = _cores_by_systemname(machine, context, system, verify=verify)
+    elif not catalogue.read:
         caveats.append(
             Caveat(
                 CAVEAT_CATALOGUE_UNREADABLE,
@@ -1543,106 +1675,12 @@ def firmware_for_system(
                 {"system": system},
             )
         )
-    elif catalogue is None:
-        caveats.append(
-            Caveat(
-                CAVEAT_CATALOGUE_UNAVAILABLE,
-                "this installation ships no emulator catalogue, so the emulators for a system are derived "
-                "from the installed cores' own systemname — the identifier is an atlas system slug, not a "
-                "frontend system name",
-                {"system": system},
-            )
-        )
-        selected = tuple(
-            core
-            for core in context.cores
-            if core.system == system or any(d.system == system for d in core.firmware)
-        )
-        cores, observation_caveats = _resolve_cores(machine, context, selected, verify=verify)
-        resolved.extend(cores)
-        caveats.extend(observation_caveats)
-        hidden = _cores_a_derived_assignment_may_hide(context.cores, selected, system)
-        if hidden:
-            names = ", ".join(sorted(c.core_so for c in hidden))
-            caveats.append(
-                Caveat(
-                    CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
-                    f"this list is keyed on the cores' own systemname, and {len(hidden)} installed core(s) "
-                    f"name {system!r} in their database while filing firmware by a system that was derived "
-                    f"rather than ruled — an emulator missing from this list is one of these: {names}",
-                    {
-                        "count": str(len(hidden)),
-                        "cores": names,
-                        "system": system,
-                        "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
-                    },
-                )
-            )
-    if catalogue is not None and catalogue.read:
+    else:
+        by_stem = {core.stem: core for core in context.cores}
         for entry in catalogue.entries:
-            if entry.kind != KIND_LIBRETRO or entry.core_so is None:
-                resolved.append(
-                    CoreFirmware(
-                        core_so=entry.core_so,
-                        label=entry.label,
-                        declaration=DECLARATION_ABSENT,
-                        requirements=(),
-                        caveats=(
-                            Caveat(
-                                CAVEAT_STANDALONE_EMULATOR,
-                                f"{entry.label} is a standalone emulator — its firmware rules are not "
-                                "resolvable yet (ROADMAP.md), so the empty list means unknown",
-                                {"label": entry.label},
-                            ),
-                        ),
-                    )
-                )
-                continue
-            core = by_stem.get(entry.core_so[: -len(".so")] if entry.core_so.endswith(".so") else entry.core_so)
-            if core is None:
-                # Same guard as the per-core route: absence is a claim, and it
-                # needs the core enumeration to have happened.
-                reason = (
-                    Caveat(
-                        CAVEAT_CORE_NOT_INSTALLED,
-                        f"the catalogue declares {entry.label} on {entry.core_so}, but that core is "
-                        "not installed here — atlas has no declaration for it, so the empty list "
-                        "means unknown, not 'needs nothing'",
-                        {"core_so": entry.core_so, "label": entry.label},
-                    )
-                    if context.cores_read
-                    else _no_declaration(
-                        f"anything for {entry.core_so}, because the installed cores could not be enumerated",
-                        {"core_so": entry.core_so, "label": entry.label},
-                    )
-                )
-                resolved.append(
-                    CoreFirmware(
-                        core_so=entry.core_so,
-                        label=entry.label,
-                        declaration=DECLARATION_ABSENT,
-                        requirements=(),
-                        caveats=(reason,),
-                    )
-                )
-                continue
-            if core.info_status != READ_OK:
-                resolved.append(_undeclarable_core(core, entry.label))
-                continue
-            requirements, refused, core_caveats, observed = _requirements_for(
-                machine, context, core, verify=verify
-            )
+            core, observed = _catalogue_entry_core(machine, context, entry, by_stem, verify=verify)
+            resolved.append(core)
             caveats.extend(observed)
-            resolved.append(
-                CoreFirmware(
-                    core_so=core.core_so,
-                    label=entry.label,
-                    declaration=DECLARATION_READ,
-                    requirements=requirements,
-                    caveats=(*core_caveats, *system_assignment_caveats(core)),
-                    refused=refused,
-                )
-            )
 
     if not resolved and enumerated:
         # Nothing here covers that identifier — a different answer from "nobody
@@ -1670,6 +1708,52 @@ def firmware_for_system(
         sources=context.sources,
         caveats=(*context.caveats, *caveats),
     )
+
+
+def _unclaimed_identity(
+    machine: Machine, context: FirmwareContext, path: str, *, verify: bool
+) -> tuple[FirmwareIdentity | None, Caveat | None]:
+    """What an unclaimed file *is*, by content — nothing at all without ``verify``.
+
+    The name is exactly what is not to be trusted about a file nobody declared,
+    so without hashing atlas states the file and says nothing about it.
+    """
+    if not verify:
+        return None, None
+    digest = machine.file_digest(path, DIGEST_MD5)
+    sha1 = machine.file_digest(path, DIGEST_SHA1)
+    if digest is None or sha1 is None:
+        return None, Caveat(
+            CAVEAT_FIRMWARE_UNREADABLE,
+            f"{path} is there but its bytes cannot be read, so what it is stays unknown",
+            {"path": path},
+        )
+    return context.hashes.for_content(md5=digest, sha1=sha1), None
+
+
+def _unclaimed_in(
+    machine: Machine,
+    context: FirmwareContext,
+    directory: str,
+    claimed: set[str],
+    artifacts: set[str],
+    *,
+    verify: bool,
+) -> tuple[list[UnclaimedFile], list[Caveat]]:
+    """The files in one directory that no installed core asks for."""
+    found: list[UnclaimedFile] = []
+    caveats: list[Caveat] = []
+    for entry in machine.glob(os.path.join(_glob_escape(directory), "*")):
+        if machine.path_kind(entry) != KIND_FILE:
+            continue
+        resolved_entry = resolve_links(machine, entry) or entry
+        if resolved_entry in claimed or resolved_entry in artifacts:
+            continue
+        identity, caveat = _unclaimed_identity(machine, context, entry, verify=verify)
+        if caveat is not None:
+            caveats.append(caveat)
+        found.append(UnclaimedFile(path=resolved_entry, identity=identity))
+    return found, caveats
 
 
 def _unclaimed_files(
@@ -1701,27 +1785,11 @@ def _unclaimed_files(
     found: list[UnclaimedFile] = []
     caveats: list[Caveat] = []
     for directory in sorted(directories):
-        for entry in machine.glob(os.path.join(_glob_escape(directory), "*")):
-            if machine.path_kind(entry) != KIND_FILE:
-                continue
-            resolved_entry = resolve_links(machine, entry) or entry
-            if resolved_entry in claimed or resolved_entry in artifacts:
-                continue
-            identity: FirmwareIdentity | None = None
-            if verify:
-                digest = machine.file_digest(entry, DIGEST_MD5)
-                sha1 = machine.file_digest(entry, DIGEST_SHA1)
-                if digest is None or sha1 is None:
-                    caveats.append(
-                        Caveat(
-                            CAVEAT_FIRMWARE_UNREADABLE,
-                            f"{entry} is there but its bytes cannot be read, so what it is stays unknown",
-                            {"path": entry},
-                        )
-                    )
-                else:
-                    identity = context.hashes.for_content(md5=digest, sha1=sha1)
-            found.append(UnclaimedFile(path=resolved_entry, identity=identity))
+        in_directory, unreadable = _unclaimed_in(
+            machine, context, directory, claimed, artifacts, verify=verify
+        )
+        found.extend(in_directory)
+        caveats.extend(unreadable)
     return tuple(sorted(found, key=lambda f: f.path)), caveats
 
 

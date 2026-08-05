@@ -36,7 +36,11 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping
 
-_CORE_SO_RE = re.compile(r"([A-Za-z0-9_\-\[\]]+_libretro\.so)")
+# The core ``.so`` inside a launch command. The name run is bounded by
+# NAME_MAX (255): an unbounded quantifier in front of the ``_libretro`` suffix
+# rescans a long name from every position it fails at, and no run longer than
+# a file name can be one anyway.
+_CORE_SO_RE = re.compile(r"([A-Za-z0-9_\-\[\]]{1,255}_libretro\.so)")
 
 KIND_LIBRETRO = "libretro"
 KIND_STANDALONE = "standalone"
@@ -60,6 +64,31 @@ class EmulatorSpec:
     selection: str | None = None
 
 
+def _launch_entries(system_el: ET.Element, *, system: str, source: str) -> tuple[EmulatorSpec, ...]:
+    """The launch entries one ``<system>`` declares, in declared order.
+
+    A command naming a ``*_libretro.so`` is a libretro entry (the basename is
+    extracted); anything else is standalone. Classification only.
+    """
+    entries: list[EmulatorSpec] = []
+    for command_el in system_el.findall("command"):
+        command = (command_el.text or "").strip()
+        if not command:
+            continue
+        match = _CORE_SO_RE.search(command)
+        entries.append(
+            EmulatorSpec(
+                system=system,
+                label=(command_el.get("label") or "").strip(),
+                kind=KIND_LIBRETRO if match else KIND_STANDALONE,
+                core_so=match.group(1) if match else None,
+                command=command,
+                source=source,
+            )
+        )
+    return tuple(entries)
+
+
 def parse_es_systems(text: str, *, source: str) -> dict[str, tuple[EmulatorSpec, ...]]:
     """Parse one ``es_systems.xml`` layer into ``{system: entries-in-order}``.
 
@@ -74,23 +103,7 @@ def parse_es_systems(text: str, *, source: str) -> dict[str, tuple[EmulatorSpec,
         name = (system_el.findtext("name") or "").strip()
         if not name:
             continue
-        entries: list[EmulatorSpec] = []
-        for command_el in system_el.findall("command"):
-            command = (command_el.text or "").strip()
-            if not command:
-                continue
-            match = _CORE_SO_RE.search(command)
-            entries.append(
-                EmulatorSpec(
-                    system=name,
-                    label=(command_el.get("label") or "").strip(),
-                    kind=KIND_LIBRETRO if match else KIND_STANDALONE,
-                    core_so=match.group(1) if match else None,
-                    command=command,
-                    source=source,
-                )
-            )
-        result[name] = tuple(entries)
+        result[name] = _launch_entries(system_el, system=name, source=source)
     return result
 
 
