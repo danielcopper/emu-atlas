@@ -80,6 +80,7 @@ from atlas.placement import (
     CAVEAT_FILENAMES_UNVERIFIED,
     CAVEAT_HEALTH,
     CAVEAT_NO_CORE,
+    CAVEAT_SANDBOX_PATH_UNTRANSLATED,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYSTEM_DIR_UNSET,
     CAVEAT_UNKNOWN_OPTION_VALUE,
@@ -183,24 +184,159 @@ def _split_content_path(content_path: str) -> tuple[str, str, str]:
     return content_dir_path, content_dir_name, rom_stem
 
 
-def _flatpak_host_path(machine: Machine, home: str, app_id: str, path: str) -> str | None:
-    """Translate a sandbox-internal ``/app/...`` path to its host location.
+# Flatpak binds the app's private XDG directories into the sandbox under /var, so
+# an emulator running inside one writes those spellings into its own config: the
+# live RetroDECK 0.10.9b cfg names its override directory
+# "/var/config/retroarch/config". Verified on this machine — /var/config and
+# ~/.var/app/<app id>/config are the same inode, as are /var/data and /var/cache
+# against .../data and .../cache (docs/research/retrodeck-save-placement.md,
+# "Flatpak sandbox spellings").
+_SANDBOX_XDG_BINDS: tuple[tuple[str, str], ...] = (
+    ("/var/config", "config"),
+    ("/var/data", "data"),
+    ("/var/cache", "cache"),
+)
 
-    A Flatpak app's ``/app`` is the deployment's ``files/`` directory, reachable
-    from the host under the system or user installation. Returns the first
-    candidate that exists, or ``None`` — an honest miss, never a guess.
+# Prefixes that name something else inside the sandbox than on the host, once the
+# binds above, /app, and the machine's own home are ruled out: the rest of /var is
+# the runtime's own filesystem (a different device from the host's /var), and
+# /run/user is the sandbox's private runtime directory. Everything else a cfg can
+# name — /run/media, /home, /mnt — is shared with the host and passes untouched.
+_SANDBOX_ONLY_PREFIXES: tuple[str, ...] = ("/var/", "/run/user/")
+
+# On an ostree host (Fedora Silverblue, Bazzite — both ship RetroDECK) /home is a
+# symlink to /var/home, so real home directories live *under* /var and are shared
+# with the sandbox like any other home. The machine's own home is checked first,
+# but the cfg may spell a home path either way (RetroArch resolves the symlink,
+# the caller may not), so the literal prefix is host-side too.
+_OSTREE_HOME = "/var/home/"
+
+
+@dataclass(frozen=True, slots=True)
+class _CfgPath:
+    """A cfg path value as the host can read it, and what the translation did.
+
+    ``path`` is ``None`` when the value names a location that exists only inside
+    the Flatpak sandbox: atlas cannot read there, and says so rather than
+    resolving against a host path that means something else.
     """
-    if not path.startswith("/app/"):
-        return path
-    rest = path[len("/app/") :]
-    for base in (
-        f"/var/lib/flatpak/app/{app_id}/current/active/files",
-        os.path.join(home, ".local", "share", "flatpak", "app", app_id, "current", "active", "files"),
-    ):
-        candidate = os.path.join(base, rest)
-        if machine.path_kind(candidate) != KIND_MISSING:
-            return candidate
-    return None
+
+    key: str
+    configured: str
+    path: str | None
+    translated: bool = False
+
+    @property
+    def caveats(self) -> tuple[Caveat, ...]:
+        """The degradation, when the sandbox spelling has no host location."""
+        if self.path is not None:
+            return ()
+        return (
+            Caveat(
+                CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                f'{self.key} = "{self.configured}" names a location inside the Flatpak sandbox that '
+                "has no equivalent on this host — atlas cannot read what the emulator reads there",
+                {"key": self.key, "path": self.configured},
+            ),
+        )
+
+    @property
+    def note(self) -> str:
+        """Provenance suffix naming the host spelling — empty when nothing moved."""
+        if self.path is None or not self.translated:
+            return ""
+        return f" — Flatpak sandbox path, on the host {self.path}"
+
+
+@dataclass(frozen=True, slots=True)
+class _Sandbox:
+    """Where a Flatpak app's own cfg spellings live when read from the host.
+
+    Every cfg value that becomes a host read passes through here: an app writes
+    its config from inside its sandbox, so the paths in it are sandbox paths.
+    ``app_id`` is ``None`` for a native install — its cfg is host-native, a
+    ``/var/...`` value there is a real (if unusual) host path, and translating
+    it would invent a location the emulator never uses.
+    """
+
+    machine: Machine
+    home: str
+    app_id: str | None
+
+    def host(self, key: str, path: str) -> _CfgPath:
+        """*path* as this host reads it, with the provenance *key* names it by."""
+        translated, was_sandbox = self._translate(path)
+        return _CfgPath(key, path, translated, was_sandbox)
+
+    def bundled(self, path: str) -> str | None:
+        """A path the app ships inside its own tree, as the host reads it.
+
+        No config key is involved, so no provenance travels with it: the caller
+        knows which file it asked for and reports a miss in its own terms.
+        """
+        return self._translate(path)[0]
+
+    def _translate(self, path: str) -> tuple[str | None, bool]:
+        """``(host path or None, whether this was a sandbox spelling)``.
+
+        The XDG binds are a deterministic per-app mapping, so they translate
+        unconditionally and the caller's own existence check stays the one that
+        decides usability. ``/app`` has two possible deployment roots (system
+        and user install), so there the existing one is the answer.
+        """
+        app_id = self.app_id
+        if app_id is None or not path.startswith("/") or self._is_host_home(path):
+            return path, False
+        for prefix, xdg_dir in _SANDBOX_XDG_BINDS:
+            if path == prefix or path.startswith(prefix + "/"):
+                rest = path[len(prefix) :].lstrip("/")
+                app_dir = os.path.join(self.home, ".var", "app", app_id, xdg_dir)
+                return (os.path.join(app_dir, rest) if rest else app_dir), True
+        if path.startswith("/app/"):
+            return self._deployment_path(app_id, path[len("/app/") :]), True
+        if path.startswith(_SANDBOX_ONLY_PREFIXES):
+            return None, True
+        return path, False
+
+    def _is_host_home(self, path: str) -> bool:
+        """Does *path* lie in a home directory, which is shared with the sandbox?
+
+        Checked before the sandbox-only prefixes because an ostree host puts
+        real homes under ``/var/home`` — a machine whose home is
+        ``/var/home/deck`` must not have its own configured directories read as
+        sandbox-internal.
+        """
+        return path == self.home or path.startswith((self.home + "/", _OSTREE_HOME))
+
+    def _deployment_path(self, app_id: str, rest: str) -> str | None:
+        """The app's ``/app`` tree on the host: the deployment's ``files/``."""
+        for base in (
+            f"/var/lib/flatpak/app/{app_id}/current/active/files",
+            os.path.join(self.home, ".local", "share", "flatpak", "app", app_id, "current", "active", "files"),
+        ):
+            candidate = os.path.join(base, rest)
+            if self.machine.path_kind(candidate) != KIND_MISSING:
+                return candidate
+        return None
+
+    def cfg_path(self, key: str, raw: str | None) -> _CfgPath | None:
+        """One cfg key resolved to a host path — ``None`` when the key is unset.
+
+        Blank and the literal ``"default"`` are RetroArch's "unset" spellings
+        (:func:`expand_home`), and unset is the caller's own question.
+        """
+        expanded = expand_home(raw, home=self.home) if raw is not None else None
+        return self.host(key, expanded) if expanded is not None else None
+
+
+def _core_directory_in(sandbox: _Sandbox, global_text: str) -> str | None:
+    """A cfg snapshot's ``libretro_directory`` as a host path, or ``None``.
+
+    Where the core binaries live is a question every arrangement asks the same
+    way; only which app's spellings the cfg is written in differs.
+    """
+    resolved = sandbox.cfg_path("libretro_directory", parse_cfg_text(global_text).get("libretro_directory"))
+    return resolved.path if resolved is not None else None
 
 
 def _cfg_bool(raw: str | None, default: bool) -> bool:
@@ -290,27 +426,44 @@ def _resolve_chain_key(layer_texts: list[str], key: str) -> str | None:
     return value
 
 
+def _global_options_file(
+    layer_texts: list[str], *, sandbox: _Sandbox, retroarch_config_dir: str
+) -> tuple[str, tuple[Caveat, ...]]:
+    """The global core-options file: ``core_options_path``, else the default name.
+
+    Read through the chain like RetroArch does, and translated out of its
+    sandbox spelling; an untranslatable one keeps the configured value, so the
+    read misses and the caveat says why instead of the answer claiming the
+    default file governed.
+    """
+    configured = sandbox.cfg_path("core_options_path", _resolve_chain_key(layer_texts, "core_options_path"))
+    if configured is None:
+        return os.path.join(retroarch_config_dir, "retroarch-core-options.cfg"), ()
+    return (
+        configured.path if configured.path is not None else configured.configured,
+        configured.caveats,
+    )
+
+
 def _option_file_candidates(
     layer_texts: list[str],
     *,
-    home: str,
-    retroarch_config_dir: str,
     override_config_dir: str,
+    global_file: str,
     library_name: str | None,
     content_dir_name: str | None,
     rom_stem: str | None,
     game_specific_options: bool,
-) -> tuple[list[str], str, bool]:
+) -> tuple[list[str], bool]:
     """The options files that could govern an option, in RetroArch's priority order.
 
     Game ``.opt``, folder ``.opt``, per-core ``.opt`` (when
-    ``global_core_options`` is off), then the global options file
-    (``core_options_path`` or ``retroarch-core-options.cfg``) — the same order
-    ``validate_per_core_options`` walks.
+    ``global_core_options`` is off), then the global options file — the same
+    order ``validate_per_core_options`` walks.
 
-    Returns ``(candidates, global_file, unconfirmed)``, where ``unconfirmed``
-    is true when a path that needs ``library_name`` could exist but cannot be
-    built because the core was unqueryable.
+    Returns ``(candidates, unconfirmed)``, where ``unconfirmed`` is true when a
+    path that needs ``library_name`` could exist but cannot be built because the
+    core was unqueryable.
     """
     candidates: list[str] = []
     if library_name and game_specific_options:
@@ -324,21 +477,16 @@ def _option_file_candidates(
     unconfirmed = library_name is None and (game_specific_options or per_core_options)
     if library_name and per_core_options:
         candidates.append(os.path.join(override_config_dir, library_name, f"{library_name}.opt"))
-    custom_path = _resolve_chain_key(layer_texts, "core_options_path")
-    global_file = expand_home(custom_path, home=home) if custom_path is not None else None
-    if global_file is None:
-        global_file = os.path.join(retroarch_config_dir, "retroarch-core-options.cfg")
     candidates.append(global_file)
-    return candidates, global_file, unconfirmed
+    return candidates, unconfirmed
 
 
 def _core_options_value(
     machine: Machine,
     layer_texts: list[str],
     *,
-    home: str,
-    retroarch_config_dir: str,
     override_config_dir: str,
+    global_file: str,
     library_name: str | None,
     content_dir_name: str | None,
     rom_stem: str | None,
@@ -350,9 +498,8 @@ def _core_options_value(
 
     Priority (``runloop.c`` ``validate_per_core_options``): game ``.opt``,
     folder ``.opt``, per-core ``.opt`` (when ``global_core_options`` is off),
-    then the global options file (``core_options_path`` or
-    ``retroarch-core-options.cfg``). A key absent from the governing file falls
-    back to the core default — it does not fall through to another file.
+    then *global_file*. A key absent from the governing file falls back to the
+    core default — it does not fall through to another file.
 
     Returns ``(value, provenance, options_file, unconfirmed)``:
     ``options_file`` is the file a caller would edit to change the option, and
@@ -360,11 +507,10 @@ def _core_options_value(
     ``library_name`` could exist but cannot be checked (the core was
     unqueryable) — the returned value may then not be the effective one.
     """
-    candidates, global_file, unconfirmed = _option_file_candidates(
+    candidates, unconfirmed = _option_file_candidates(
         layer_texts,
-        home=home,
-        retroarch_config_dir=retroarch_config_dir,
         override_config_dir=override_config_dir,
+        global_file=global_file,
         library_name=library_name,
         content_dir_name=content_dir_name,
         rom_stem=rom_stem,
@@ -404,10 +550,11 @@ class _SaveQuery:
     The arrangements differ only in which cfg governs them and how their cores
     are found, so they hand the shared resolver the same question object —
     ``global_text`` is the global cfg's content, read exactly once by the
-    caller (REVIEW M4).
+    caller (REVIEW M4), and ``sandbox`` says which app's spellings the cfg is
+    written in (the machine home travels with it).
     """
 
-    home: str
+    sandbox: _Sandbox
     global_cfg_path: str
     global_text: str | None
     cfg_label: str
@@ -502,27 +649,35 @@ class _OverrideGates:
     game_specific_options: bool
     override_config_dir: str
     sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
 
 
-def _override_gates(global_text: str | None, *, home: str, override_config_dir: str) -> _OverrideGates:
+def _override_gates(
+    global_text: str | None, *, sandbox: _Sandbox, override_config_dir: str
+) -> _OverrideGates:
     """The gates, read from the global cfg — an override cannot enable itself.
 
     ``auto_overrides_enable`` and ``game_specific_options`` both default true
     (config.def.h); ``rgui_config_directory`` relocates the application config
-    dir used for override ``.cfg`` and option ``.opt`` files.
+    dir used for override ``.cfg`` and option ``.opt`` files, and a Flatpak's
+    cfg spells it sandbox-side, so it is translated to where the host reads it.
+    An untranslatable spelling keeps the configured value: the reads below then
+    miss, which is the truth (atlas cannot see those files), while falling back
+    to the default directory would apply overrides that do not govern.
     """
     global_layer = [global_text] if global_text is not None else []
     auto_overrides = _cfg_bool(_resolve_chain_key(global_layer, "auto_overrides_enable"), True)
     game_specific_options = _cfg_bool(_resolve_chain_key(global_layer, "game_specific_options"), True)
     rgui_dir_raw = _resolve_chain_key(global_layer, "rgui_config_directory")
-    rgui_dir = expand_home(rgui_dir_raw, home=home) if rgui_dir_raw is not None else None
+    rgui_dir = sandbox.cfg_path("rgui_config_directory", rgui_dir_raw)
     if rgui_dir is None:
         return _OverrideGates(auto_overrides, game_specific_options, override_config_dir)
     return _OverrideGates(
         auto_overrides,
         game_specific_options,
-        rgui_dir,
-        (f'retroarch.cfg: rgui_config_directory = "{rgui_dir_raw}"',),
+        rgui_dir.path if rgui_dir.path is not None else rgui_dir.configured,
+        (f'retroarch.cfg: rgui_config_directory = "{rgui_dir_raw}"{rgui_dir.note}',),
+        rgui_dir.caveats,
     )
 
 
@@ -569,6 +724,43 @@ def _override_layers(
         if text is not None:
             overrides.append((label, text))
     return overrides, ()
+
+
+@dataclass(frozen=True, slots=True)
+class _SaveRoot:
+    """The configured saves root as the host sees it — and whether it can look.
+
+    ``reachable`` is false for a sandbox path with no host location: RetroArch's
+    own "is this an existing directory" test cannot be reproduced from here,
+    so it is not performed rather than answered from a read that never applied.
+    """
+
+    layout: RetroArchCfg
+    reachable: bool = True
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
+    """The resolved saves root as the host reads it — the cfg may spell it sandbox-side.
+
+    An untranslatable spelling stays as configured: it is where the emulator
+    writes, in the only namespace that names it, and the caveat states that
+    atlas cannot follow it there. Substituting a host directory would answer
+    with a location this RetroArch never touches.
+    """
+    configured = layout.savefile_directory
+    if configured is None:
+        return _SaveRoot(layout)
+    resolved = sandbox.host("savefile_directory", configured)
+    if resolved.path == configured:
+        return _SaveRoot(layout)
+    if resolved.path is None:
+        return _SaveRoot(layout, reachable=False, caveats=resolved.caveats)
+    return _SaveRoot(
+        _dc_replace(layout, savefile_directory=resolved.path),
+        sources=(f'savefile_directory = "{configured}"{resolved.note}',),
+    )
 
 
 def _reject_unusable_save_dir(
@@ -851,8 +1043,9 @@ class _CardApplication:
 
 def _apply_card(
     machine: Machine,
-    query: _SaveQuery,
     *,
+    sandbox: _Sandbox,
+    retroarch_config_dir: str,
     card: CoreCard,
     live_option: CoreOption | None,
     library_name: str | None,
@@ -866,6 +1059,11 @@ def _apply_card(
     registered default is a live read and outranks the card's shipped-generation
     copy — feature detection makes option defaults machine facts instead of
     world knowledge.
+
+    The options files are resolved here rather than per query because this is
+    where they are read: a card that governs nothing consults none of them, and
+    an unreachable ``core_options_path`` is only a degradation for an answer
+    that would have looked there.
     """
     if card.option_key is None:
         mode = card.modes.get("always")
@@ -887,12 +1085,14 @@ def _apply_card(
     effective_default = card.option_default
     if live_option is not None and live_option.default is not None:
         effective_default = live_option.default
+    global_file, options_file_caveats = _global_options_file(
+        layer_texts, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir
+    )
     opt_value, opt_source, options_file, opt_unconfirmed = _core_options_value(
         machine,
         layer_texts,
-        home=query.home,
-        retroarch_config_dir=os.path.dirname(query.global_cfg_path),
         override_config_dir=gates.override_config_dir,
+        global_file=global_file,
         library_name=library_name,
         content_dir_name=content.dir_name,
         rom_stem=content.rom_stem,
@@ -900,7 +1100,7 @@ def _apply_card(
         option_default=effective_default or "",
         game_specific_options=gates.game_specific_options,
     )
-    caveats: list[Caveat] = []
+    caveats: list[Caveat] = [*options_file_caveats]
     applied: CoreCard | None = card
     mode = card.modes.get(opt_value)
     if mode is None:
@@ -971,7 +1171,7 @@ def _card_file_set(
 def _system_directory_placement(
     machine: Machine,
     *,
-    home: str,
+    sandbox: _Sandbox,
     cfg_label: str,
     card: CoreCard,
     mode: SaveMode,
@@ -981,24 +1181,33 @@ def _system_directory_placement(
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
 ) -> SavePlacement:
-    """The placement for a card whose core keeps its saves under ``system_directory``."""
+    """The placement for a card whose core keeps its saves under ``system_directory``.
+
+    A configured value that only exists inside the sandbox leaves the same hole
+    an unset one does — the caller has to supply the host location — but says
+    which of the two it is: the key is set, atlas just cannot reach it.
+    """
     card_sources = list(sources)
     all_caveats = list(caveats)
     raw_system = _resolve_chain_key(layer_texts, "system_directory")
-    system_dir = expand_home(raw_system, home=home) if raw_system is not None else None
+    resolved = sandbox.cfg_path("system_directory", raw_system)
     needs: tuple[str, ...] = ()
-    if system_dir is None:
+    if resolved is None or resolved.path is None:
         base = "<system_directory>"
         needs = ("system_directory",)
-        all_caveats.append(
-            Caveat(
-                CAVEAT_SYSTEM_DIR_UNSET,
-                "system_directory is unset in the configs — its RetroArch default is not resolved yet",
+        all_caveats.extend(
+            resolved.caveats
+            if resolved is not None
+            else (
+                Caveat(
+                    CAVEAT_SYSTEM_DIR_UNSET,
+                    "system_directory is unset in the configs — its RetroArch default is not resolved yet",
+                ),
             )
         )
     else:
-        base = system_dir
-        card_sources.append(f'{cfg_label} chain: system_directory = "{raw_system}"')
+        base = resolved.path
+        card_sources.append(f'{cfg_label} chain: system_directory = "{raw_system}"{resolved.note}')
     directory = os.path.join(base, mode.subdir) if mode.subdir else base
     card_sources.append(f"rule card '{card.key}': core keeps saves under system_directory — {card.provenance}")
     file_set = _card_file_set(
@@ -1141,6 +1350,30 @@ def _nest_card_subdir(
     return os.path.join(directory, mode.subdir), nested_fallback, sources
 
 
+def _observed_at(
+    machine: Machine,
+    *,
+    directory: str,
+    content: _Content,
+    content_path: str | None,
+    card: CoreCard | None,
+    mode: SaveMode | None,
+) -> tuple[FileSet, str | None, tuple[Caveat, ...]]:
+    """What lies at the resolved directory: the file set and the link view."""
+    file_set = UNKNOWN_FILE_SET
+    if content.rom_stem is not None:
+        file_set = _observed_file_set(
+            machine,
+            directory=directory,
+            rom_stem=content.rom_stem,
+            content_path=content_path,
+            card=card,
+            mode=mode,
+        )
+    physical_dir, link_caveats = _link_view(machine, directory)
+    return file_set, physical_dir, link_caveats
+
+
 def _standard_placement(
     machine: Machine,
     query: _SaveQuery,
@@ -1152,6 +1385,7 @@ def _standard_placement(
     card: CoreCard | None,
     mode: SaveMode | None,
     granularity: Granularity | None,
+    reachable: bool,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
 ) -> SavePlacement:
@@ -1161,6 +1395,13 @@ def _standard_placement(
     filesystem still decides, so a sorted directory that is not there yet, a
     card core's nested subtree and the files actually present are all resolved
     against the machine before the answer is stated.
+
+    Unless the root cannot be reached from here (*reachable* false, a sandbox
+    path with no host location): the path math still applies and ``dir`` still
+    names where the emulator writes, but every observation of the result —
+    whether the sorted directory exists, what it links to, which files lie in
+    it — would come from a read that never applied, so none is performed and
+    ``fallback_dir`` stays empty rather than claiming a fallback nobody takes.
     """
     all_caveats = list(caveats)
     if card is not None and mode is not None and granularity is not None and mode.files is None:
@@ -1188,29 +1429,29 @@ def _standard_placement(
     physical_dir: str | None = None
     final_sources = list(placement.sources)
     if not placement.needs:
-        if placement.root_kind == ROOT_CONTENT_DIRECTORY:
-            effective_root = content.dir_path
-        else:
-            effective_root = layout.savefile_directory or platform_default_dir
-        final_dir, fallback_dir, sorted_dir_caveats = _sorted_dir_fallback(
-            machine, intended_dir=final_dir, effective_root=effective_root
-        )
-        all_caveats.extend(sorted_dir_caveats)
+        if reachable:
+            if placement.root_kind == ROOT_CONTENT_DIRECTORY:
+                effective_root = content.dir_path
+            else:
+                effective_root = layout.savefile_directory or platform_default_dir
+            final_dir, fallback_dir, sorted_dir_caveats = _sorted_dir_fallback(
+                machine, intended_dir=final_dir, effective_root=effective_root
+            )
+            all_caveats.extend(sorted_dir_caveats)
         final_dir, fallback_dir, subdir_sources = _nest_card_subdir(
             final_dir, fallback_dir, card=card, mode=mode
         )
         final_sources.extend(subdir_sources)
-        if content.rom_stem is not None:
-            file_set = _observed_file_set(
+        if reachable:
+            file_set, physical_dir, link_caveats = _observed_at(
                 machine,
                 directory=final_dir,
-                rom_stem=content.rom_stem,
+                content=content,
                 content_path=query.content_path,
                 card=card,
                 mode=mode,
             )
-        physical_dir, link_caveats = _link_view(machine, final_dir)
-        all_caveats.extend(link_caveats)
+            all_caveats.extend(link_caveats)
 
     return SavePlacement(
         dir=final_dir,
@@ -1241,9 +1482,10 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
     sources_extra = [*query.extra_sources, *core.sources]
 
     gates = _override_gates(
-        query.global_text, home=query.home, override_config_dir=query.override_config_dir
+        query.global_text, sandbox=query.sandbox, override_config_dir=query.override_config_dir
     )
     sources_extra.extend(gates.sources)
+    caveats.extend(gates.caveats)
     overrides, override_sources = _override_layers(
         machine, gates=gates, library_name=core.library_name, content=content
     )
@@ -1251,21 +1493,26 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
 
     layout = resolve_save_layout(
         query.global_text,
-        home=query.home,
+        home=query.sandbox.home,
         cfg_label=query.cfg_label,
         defaults=query.defaults,
         overrides=overrides,
     )
     layer_texts = [t for t in (query.global_text, *(text for _, text in overrides)) if t is not None]
+    saves_root = _host_save_dir(query.sandbox, layout)
+    layout = saves_root.layout
+    sources_extra.extend(saves_root.sources)
+    caveats.extend(saves_root.caveats)
 
     # The RetroArch platform default saves dir — 'saves' under the config tree
     # (platform_unix.c:2133-2134) — is the effective root whenever the key is unset,
     # reset, or points at anything that is not an existing directory.
     platform_default_dir = os.path.join(os.path.dirname(query.global_cfg_path), "saves")
-    layout, invalid_dir_caveats = _reject_unusable_save_dir(
-        machine, layout, platform_default_dir=platform_default_dir
-    )
-    caveats.extend(invalid_dir_caveats)
+    if saves_root.reachable:
+        layout, invalid_dir_caveats = _reject_unusable_save_dir(
+            machine, layout, platform_default_dir=platform_default_dir
+        )
+        caveats.extend(invalid_dir_caveats)
 
     # Rule cards: cores whose save behaviour deviates from the standard rule.
     # The card names the governing option; its current value is read live.
@@ -1293,7 +1540,8 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
         caveats.extend(verification_caveats)
         applied = _apply_card(
             machine,
-            query,
+            sandbox=query.sandbox,
+            retroarch_config_dir=os.path.dirname(query.global_cfg_path),
             card=card,
             live_option=choice.live_option,
             library_name=core.library_name,
@@ -1307,7 +1555,7 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
     if card is not None and card_mode is not None and card_mode.root == ROOT_SYSTEM_DIRECTORY:
         return _system_directory_placement(
             machine,
-            home=query.home,
+            sandbox=query.sandbox,
             cfg_label=query.cfg_label,
             card=card,
             mode=card_mode,
@@ -1328,38 +1576,35 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
         card=card,
         mode=card_mode,
         granularity=granularity,
+        reachable=saves_root.reachable,
         sources=tuple(sources_extra),
         caveats=tuple(caveats),
     )
 
 
 def _cfg_directory(
-    machine: Machine, parsed: dict[str, str], key: str, *, home: str, app_id: str | None
-) -> str | None:
+    sandbox: _Sandbox, parsed: dict[str, str], key: str
+) -> tuple[str | None, tuple[Caveat, ...]]:
     """Resolve a cfg directory key to a host directory that exists, or ``None``.
 
-    The configured value may point into a Flatpak sandbox (``/app/...``); a
-    caller running outside it needs the deployment path instead. ``None`` means
-    unset, reset, unresolvable, or not an existing directory — one honest miss,
-    never a path handed out as if it were usable.
+    The configured value is written in the emulator's own spelling, which inside
+    a Flatpak means the sandbox's (``/app/...``, ``/var/config/...``); a caller
+    running outside it needs the host location instead. ``None`` means unset,
+    reset, unresolvable, or not an existing directory — one honest miss, never a
+    path handed out as if it were usable — and a sandbox path with no host
+    location comes with the caveat that says so.
     """
-    raw = parsed.get(key)
-    if raw is None:
-        return None
-    expanded = expand_home(raw, home=home)
-    if expanded is None:
-        return None
-    resolved = _flatpak_host_path(machine, home, app_id, expanded) if app_id is not None else expanded
-    if resolved is None or machine.path_kind(resolved) != KIND_DIRECTORY:
-        return None
-    return resolved
+    resolved = sandbox.cfg_path(key, parsed.get(key))
+    if resolved is None:
+        return None, ()
+    if resolved.path is None or sandbox.machine.path_kind(resolved.path) != KIND_DIRECTORY:
+        return None, resolved.caveats
+    return resolved.path, ()
 
 
 def _retroarch_firmware_context(
-    machine: Machine,
     *,
-    home: str,
-    app_id: str | None,
+    sandbox: _Sandbox,
     global_text: str | None,
     cfg_label: str,
 ) -> FirmwareContext:
@@ -1375,13 +1620,15 @@ def _retroarch_firmware_context(
     when they look their firmware up. RetroDECK happens to collapse the first
     two into one directory; nothing here assumes it.
     """
+    machine = sandbox.machine
     parsed = parse_cfg_text(global_text) if global_text is not None else {}
     caveats: list[Caveat] = []
     sources: list[str] = []
 
     raw_system = parsed.get("system_directory")
-    root = expand_home(raw_system, home=home) if raw_system is not None else None
-    if root is None:
+    configured_system = sandbox.cfg_path("system_directory", raw_system)
+    root = configured_system.path if configured_system is not None else None
+    if configured_system is None:
         caveats.append(
             Caveat(
                 CAVEAT_SYSTEM_DIR_UNSET,
@@ -1389,8 +1636,10 @@ def _retroarch_firmware_context(
                 "there is no root to check firmware against",
             )
         )
+    elif root is None:
+        caveats.extend(configured_system.caveats)
     else:
-        sources.append(f'{cfg_label}: system_directory = "{raw_system}"')
+        sources.append(f'{cfg_label}: system_directory = "{raw_system}"{configured_system.note}')
         if machine.path_kind(root) != KIND_DIRECTORY:
             caveats.append(
                 Caveat(
@@ -1401,8 +1650,9 @@ def _retroarch_firmware_context(
                 )
             )
 
-    info_dir = _cfg_directory(machine, parsed, "libretro_info_path", home=home, app_id=app_id)
-    core_dir = _cfg_directory(machine, parsed, "libretro_directory", home=home, app_id=app_id)
+    info_dir, info_caveats = _cfg_directory(sandbox, parsed, "libretro_info_path")
+    core_dir, core_dir_caveats = _cfg_directory(sandbox, parsed, "libretro_directory")
+    caveats.extend((*info_caveats, *core_dir_caveats))
     cores: tuple[CoreDeclarations, ...] = ()
     if info_dir is None:
         caveats.append(
@@ -1700,19 +1950,19 @@ class RetroDeck(_FirmwareQueries):
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._APP_ID, "config", "retroarch")
 
+    def _sandbox(self) -> _Sandbox:
+        return _Sandbox(self._machine, self._home, self._APP_ID)
+
     def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
         """Resolve a core ``.so`` basename against a cfg snapshot's ``libretro_directory``.
 
-        The configured value points into the sandbox (``/app/...``); translate it
-        to the host deployment. ``None`` when nothing resolvable — never a guess.
+        The configured value is written in the sandbox's spelling (live:
+        ``/app/retrodeck/components/...``) and is translated to where the host
+        reads it. ``None`` when nothing resolvable — never a guess.
         """
         if global_text is None:
             return None
-        raw = parse_cfg_text(global_text).get("libretro_directory", "")
-        if not raw:
-            return None
-        raw = expand_home(raw, home=self._home) or raw
-        cores_dir = _flatpak_host_path(self._machine, self._home, self._APP_ID, raw)
+        cores_dir = _core_directory_in(self._sandbox(), global_text)
         if cores_dir is None:
             return None
         return os.path.join(cores_dir, core_so)
@@ -1732,7 +1982,7 @@ class RetroDeck(_FirmwareQueries):
         """
         bundled: dict[str, tuple[EmulatorSpec, ...]] = {}
         read = False
-        bundled_path = _flatpak_host_path(self._machine, self._home, self._APP_ID, self._ESDE_BUNDLED_SANDBOX)
+        bundled_path = self._sandbox().bundled(self._ESDE_BUNDLED_SANDBOX)
         if bundled_path is not None:
             text = self._machine.read_text(bundled_path).text
             if text is not None:
@@ -1831,7 +2081,7 @@ class RetroDeck(_FirmwareQueries):
         return _retroarch_save_location(
             self._machine,
             _SaveQuery(
-                home=self._home,
+                sandbox=self._sandbox(),
                 global_cfg_path=global_cfg_path,
                 global_text=global_text,
                 cfg_label=RETROARCH_CFG,
@@ -1859,9 +2109,7 @@ class RetroDeck(_FirmwareQueries):
 
     def _firmware_context(self) -> FirmwareContext:
         return _retroarch_firmware_context(
-            self._machine,
-            home=self._home,
-            app_id=self._APP_ID,
+            sandbox=self._sandbox(),
             global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
             cfg_label=RETROARCH_CFG,
         )
@@ -2059,14 +2307,13 @@ class EmuDeck(_FirmwareQueries):
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
 
+    def _sandbox(self) -> _Sandbox:
+        return _Sandbox(self._machine, self._home, self._RA_APP_ID)
+
     def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
         if global_text is None:
             return None
-        raw = parse_cfg_text(global_text).get("libretro_directory", "")
-        if not raw:
-            return None
-        raw = expand_home(raw, home=self._home) or raw
-        cores_dir = _flatpak_host_path(self._machine, self._home, self._RA_APP_ID, raw)
+        cores_dir = _core_directory_in(self._sandbox(), global_text)
         if cores_dir is None:
             return None
         return os.path.join(cores_dir, core_so)
@@ -2080,7 +2327,7 @@ class EmuDeck(_FirmwareQueries):
         return _retroarch_save_location(
             self._machine,
             _SaveQuery(
-                home=self._home,
+                sandbox=self._sandbox(),
                 global_cfg_path=global_cfg_path,
                 global_text=cfg.text,
                 cfg_label=RETROARCH_CFG,
@@ -2099,9 +2346,7 @@ class EmuDeck(_FirmwareQueries):
         """The cfg is the truth here too: ``settings.sh`` names a ``biosPath``,
         but what RetroArch actually hands its cores is ``system_directory``."""
         return _retroarch_firmware_context(
-            self._machine,
-            home=self._home,
-            app_id=self._RA_APP_ID,
+            sandbox=self._sandbox(),
             global_text=self._machine.read_text(self._companion_cfg_path()).text,
             cfg_label=RETROARCH_CFG,
         )
@@ -2154,17 +2399,21 @@ class _RetroArchInstall(_FirmwareQueries):
         """Bare installs: the cfg is the marker — health is its read status."""
         return self._health_from(self._machine.read_text(self._cfg_path()).status)
 
+    def _sandbox(self) -> _Sandbox:
+        """This install's cfg spellings — a native install's are the host's own.
+
+        ``_app_id`` is ``None`` for :class:`NativeRetroArch`: it writes its cfg
+        outside any sandbox, so a ``/var/...`` value there is a real host path
+        (odd, but the user's), and the existence checks downstream judge it like
+        any other. Translating it would move the answer to a directory this
+        RetroArch never touches.
+        """
+        return _Sandbox(self._machine, self._home, self._app_id)
+
     def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
         if global_text is None:
             return None
-        raw = parse_cfg_text(global_text).get("libretro_directory", "")
-        if not raw:
-            return None
-        raw = expand_home(raw, home=self._home) or raw
-        if self._app_id is not None:
-            cores_dir = _flatpak_host_path(self._machine, self._home, self._app_id, raw)
-        else:
-            cores_dir = raw
+        cores_dir = _core_directory_in(self._sandbox(), global_text)
         if cores_dir is None:
             return None
         return os.path.join(cores_dir, core_so)
@@ -2176,7 +2425,7 @@ class _RetroArchInstall(_FirmwareQueries):
         return _retroarch_save_location(
             self._machine,
             _SaveQuery(
-                home=self._home,
+                sandbox=self._sandbox(),
                 global_cfg_path=self._cfg_path(),
                 global_text=cfg.text,
                 cfg_label=RETROARCH_CFG,
@@ -2193,9 +2442,7 @@ class _RetroArchInstall(_FirmwareQueries):
 
     def _firmware_context(self) -> FirmwareContext:
         return _retroarch_firmware_context(
-            self._machine,
-            home=self._home,
-            app_id=self._app_id,
+            sandbox=self._sandbox(),
             global_text=self._machine.read_text(self._cfg_path()).text,
             cfg_label=RETROARCH_CFG,
         )

@@ -74,6 +74,7 @@ CAVEAT_CARD_MODE_UNCONFIRMED = "card-mode-unconfirmed"
 CAVEAT_CARD_GENERATION_MISMATCH = "card-generation-mismatch"
 CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
 CAVEAT_DEAD_SYMLINK = "dead-symlink"
+CAVEAT_SANDBOX_PATH_UNTRANSLATED = "sandbox-path-untranslated"
 
 
 @dataclass(frozen=True, slots=True)

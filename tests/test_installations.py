@@ -403,6 +403,262 @@ class TestEmuDeck:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
 
 
+class TestFlatpakSandboxPaths:
+    """A Flatpak app writes its config from inside its sandbox, so the paths in
+    it are sandbox paths: the live RetroDECK cfg spells its override directory
+    ``/var/config/retroarch/config``, which Flatpak binds to
+    ``~/.var/app/<app id>/config/retroarch/config`` on the host."""
+
+    SANDBOX_CFG_DIR = "/var/config/retroarch"
+    SORTED_CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+        'libretro_directory = "/app/cores"\n'
+    )
+
+    def _psp_query(self, cfg_lines, files=None):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: cfg_lines,
+                "/mnt/sd/retrodeck/saves/.keep": "",
+                "/mnt/sd/retrodeck/roms/psp/Game.iso": "",
+                **(files or {}),
+            },
+            cores={f"{RD_DEPLOY_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
+        )
+        return rd.save_location(
+            content_path="/mnt/sd/retrodeck/roms/psp/Game.iso", core_so="ppsspp_libretro.so"
+        )
+
+    def test_override_dir_in_sandbox_spelling_reaches_the_host_override(self):
+        # The stock RetroDECK override config/PPSSPP/PPSSPP.cfg flips the layout
+        # flat; reached only if the sandbox spelling is translated.
+        p = self._psp_query(
+            self.SORTED_CFG + f'rgui_config_directory = "{self.SANDBOX_CFG_DIR}/config"\n',
+            files={f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "false"'},
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+
+    def test_translation_names_both_spellings_in_the_sources(self):
+        p = self._psp_query(self.SORTED_CFG + f'rgui_config_directory = "{self.SANDBOX_CFG_DIR}/config"\n')
+        assert any(
+            f'rgui_config_directory = "{self.SANDBOX_CFG_DIR}/config"' in s and RETRODECK_OVERRIDES in s
+            for s in p.sources
+        )
+
+    def test_untranslatable_override_dir_is_stated_not_silent(self):
+        # /var/db is the runtime's own filesystem inside the sandbox — no host
+        # location exists, so the overrides there cannot be read from here.
+        p = self._psp_query(self.SORTED_CFG + 'rgui_config_directory = "/var/db/retroarch/config"\n')
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED] == [
+            {"key": "rgui_config_directory", "path": "/var/db/retroarch/config"}
+        ]
+
+    def test_save_directory_in_sandbox_spelling_is_translated(self):
+        p = self._psp_query(
+            'savefile_directory = "/var/data/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n',
+            files={f"{HOME}/.var/app/net.retrodeck.retrodeck/data/saves/.keep": ""},
+        )
+        assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/data/saves"
+
+    def test_untranslatable_save_directory_keeps_the_emulators_own_path(self):
+        # RetroArch's "not an existing directory" test happens inside the
+        # sandbox; atlas cannot reproduce it, so it must not report its outcome.
+        p = self._psp_query(
+            'savefile_directory = "/run/user/1000/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+            'libretro_directory = "/app/cores"\n'
+        )
+        assert p.dir == "/run/user/1000/saves"
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED in codes
+        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY not in codes
+
+    def test_host_shared_paths_pass_through_untranslated(self):
+        # /run/media is the same directory inside and outside the sandbox.
+        p = self._psp_query(
+            'savefile_directory = "/run/media/deck/card/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n',
+            files={"/run/media/deck/card/saves/.keep": ""},
+        )
+        assert p.dir == "/run/media/deck/card/saves"
+
+    def test_options_path_in_sandbox_spelling_governs_the_option(self):
+        # The card's option is read from the file core_options_path names —
+        # here in the sandbox's spelling of the app's own config directory.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                    'libretro_directory = "/app/cores"\nglobal_core_options = "true"\n'
+                    f'core_options_path = "{self.SANDBOX_CFG_DIR}/opts.cfg"\n'
+                ),
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg": (
+                    'opera_nvram_storage = "shared"'
+                ),
+                "/mnt/sd/retrodeck/saves/.keep": "",
+                "/mnt/sd/retrodeck/roms/3do/Game.chd": "",
+            },
+            cores={f"{RD_DEPLOY_CORES}/opera_libretro.so": {"library_name": "Opera"}},
+        )
+        p = rd.save_location(
+            content_path="/mnt/sd/retrodeck/roms/3do/Game.chd", core_so="opera_libretro.so"
+        )
+        assert p.granularity is not None
+        assert p.granularity.option_value == "shared"
+
+    def test_unreachable_root_is_not_observed_at_all(self):
+        # The sorted directory, its fallback and the link view all come from
+        # reads that cannot apply to a path atlas just declared unreadable.
+        p = self._psp_query(
+            'savefile_directory = "/run/user/1000/saves"\n'
+            'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+            'libretro_directory = "/app/cores"\n'
+        )
+        assert p.dir == "/run/user/1000/saves/psp"  # RetroArch's path math still applies
+        assert (p.fallback_dir, p.physical_dir, p.file_set.state) == (None, None, "unknown")
+        assert atlas.CAVEAT_SORTED_DIR_MISSING not in [c.code for c in p.caveats]
+
+    def test_untranslatable_options_path_is_silent_for_a_core_that_reads_none(self):
+        # A core without a rule card consults no options file, so an
+        # unreachable core_options_path is not a degradation of its answer.
+        p = self._psp_query(
+            'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+            'libretro_directory = "/app/cores"\ncore_options_path = "/var/db/opts.cfg"\n'
+        )
+        assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED not in [c.code for c in p.caveats]
+
+    def test_native_install_cfg_is_not_translated(self):
+        # NativeRetroArch writes its cfg outside any sandbox: /var/config there
+        # is a real host path, and substituting one would answer with a
+        # directory this RetroArch never touches.
+        machine = atlas.FixtureMachine(
+            {
+                f"{HOME}/.config/retroarch/retroarch.cfg": (
+                    'savefile_directory = "/var/config/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/var/config/saves/.keep": "",
+                f"{HOME}/roms/gba/Game.zip": "",
+            }
+        )
+        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        assert p.dir == "/var/config/saves"
+
+
+class TestOstreeHomeIsHostSide:
+    """Fedora Silverblue and Bazzite — both ship RetroDECK — make ``/home`` a
+    symlink to ``/var/home``, so real home directories live under ``/var``.
+    Nothing scopes atlas to SteamOS: ``home`` is whatever the caller passes."""
+
+    HOME = "/var/home/deck"
+    CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
+    JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
+    MARKER = '{"paths": {"rd_home_path": "/var/home/deck/retrodeck", "saves_path": "/var/home/deck/retrodeck/saves"}}'
+
+    def _retrodeck_at(self, home, cfg_body, files=None, cores=None):
+        machine = atlas.FixtureMachine(
+            {
+                self.JSON: self.MARKER,
+                self.CFG: cfg_body,
+                f"{self.HOME}/retrodeck/saves/.keep": "",
+                f"{self.HOME}/retrodeck/roms/gba/Game.zip": "",
+                **(files or {}),
+            },
+            cores=cores,
+        )
+        return atlas.RetroDeck(home, machine)
+
+    def test_configured_directories_under_var_home_are_not_sandbox_paths(self):
+        rd = self._retrodeck_at(
+            self.HOME,
+            f'savefile_directory = "{self.HOME}/retrodeck/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n',
+        )
+        p = rd.save_location(content_path=f"{self.HOME}/retrodeck/roms/gba/Game.zip")
+        assert p.dir == f"{self.HOME}/retrodeck/saves"
+        assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED not in [c.code for c in p.caveats]
+
+    def test_firmware_root_under_var_home_still_resolves(self):
+        rd = self._retrodeck_at(
+            self.HOME,
+            f'system_directory = "{self.HOME}/retrodeck/bios"\n',
+            files={f"{self.HOME}/retrodeck/bios/panafz1.bin": "rom"},
+        )
+        assert rd.firmware_inventory().root == f"{self.HOME}/retrodeck/bios"
+
+    def test_var_home_is_host_side_even_when_home_is_spelled_the_other_way(self):
+        # RetroArch resolves /home -> /var/home when it writes the cfg, while
+        # the caller may still pass the symlink spelling as `home` — so the
+        # configured path matches neither `home` nor a sandbox bind.
+        machine = atlas.FixtureMachine(
+            {
+                RETRODECK_JSON: self.MARKER,
+                RETRODECK_CFG: f'system_directory = "{self.HOME}/retrodeck/bios"\n',
+                f"{self.HOME}/retrodeck/bios/panafz1.bin": "rom",
+                f"{self.HOME}/retrodeck/saves/.keep": "",
+            }
+        )
+        rd = atlas.RetroDeck(HOME, machine)
+        assert rd.firmware_inventory().root == f"{self.HOME}/retrodeck/bios"
+
+    def test_the_apps_own_config_dir_still_translates_into_that_home(self):
+        # /var/config is still a bind of the app's config directory — which on
+        # this host lives under /var/home. Both halves have to hold at once.
+        overrides = f"{self.HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config"
+        rd = self._retrodeck_at(
+            self.HOME,
+            f'savefile_directory = "{self.HOME}/retrodeck/saves"\n'
+            'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+            'libretro_directory = "/app/cores"\n'
+            'rgui_config_directory = "/var/config/retroarch/config"\n',
+            files={f"{overrides}/mGBA/mGBA.cfg": 'sort_savefiles_by_content_enable = "false"'},
+            cores={f"{RD_DEPLOY_CORES}/mgba_libretro.so": {"library_name": "mGBA"}},
+        )
+        p = rd.save_location(
+            content_path=f"{self.HOME}/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so"
+        )
+        assert p.dir == f"{self.HOME}/retrodeck/saves"
+
+
+class TestSandboxPathsInFirmware:
+    CORE_INFO = 'display_name = "Opera"\nfirmware_count = "1"\nfirmware0_path = "panafz1.bin"\n'
+
+    def test_info_path_in_sandbox_spelling_resolves_on_the_host(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'system_directory = "/mnt/sd/retrodeck/bios"\n'
+                    'libretro_info_path = "/var/config/retroarch/cores"\n'
+                ),
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/cores/opera_libretro.info": (
+                    self.CORE_INFO
+                ),
+                "/mnt/sd/retrodeck/bios/panafz1.bin": "rom",
+            }
+        )
+        assert [c.core_so for c in rd.firmware_inventory().cores] == ["opera_libretro.so"]
+
+    def test_untranslatable_system_directory_is_stated_not_reported_missing(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'system_directory = "/var/db/bios"\n',
+            }
+        )
+        answer = rd.firmware_inventory()
+        assert answer.root is None
+        assert [c.data for c in answer.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED] == [
+            {"key": "system_directory", "path": "/var/db/bios"}
+        ]
+
+
 class TestBareRetroArch:
     def test_native_upstream_default_sorts_by_core(self):
         # config.def.h:982 — upstream defaults to sort-by-core.

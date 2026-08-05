@@ -133,6 +133,7 @@ else:
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain          |
 | `health`                                    | the installation itself has issues; `data["issue"]` carries the health code                   |
 | `unverified-version`                        | the rule card was never verified against this emulator version                                |
+| `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read   |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
