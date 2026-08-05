@@ -25,7 +25,6 @@ directory). A regeneration is a deliberate, reviewable data diff — see
 """
 import argparse
 import json
-import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -50,13 +49,46 @@ ROM_ENTRY = re.compile(
 )
 
 
-def parse_system_dat(database_dir):
-    """Parse ``dat/System.dat`` into ``{filename: {"md5", "sha1", "size"}}``."""
-    dat_path = os.path.join(database_dir, "dat", "System.dat")
-    if not os.path.isfile(dat_path):
-        print(f"Error: {dat_path} not found", file=sys.stderr)
-        raise SystemExit(1)
+def resolve_database(raw: str) -> Path:
+    """Resolve ``--database`` to the ``dat/System.dat`` this generator reads.
 
+    The checkout is a clone the user made wherever they keep sources, so no
+    base directory bounds it; what identifies a usable one is the file below
+    it. Resolving the checkout and the file separately and then requiring the
+    file to still be inside the checkout keeps a symlinked ``dat/`` from
+    pointing the read at something else. Raises ``ValueError`` for the caller
+    to report as an argument error.
+    """
+    database_dir = Path(raw).resolve()
+    if not database_dir.is_dir():
+        raise ValueError(f"database directory not found: {raw}")
+    dat_path = (database_dir / "dat" / "System.dat").resolve()
+    if not dat_path.is_relative_to(database_dir):
+        raise ValueError(f"dat/System.dat leaves the checkout {database_dir} (resolves to {dat_path})")
+    if not dat_path.is_file():
+        raise ValueError(f"{dat_path} not found — is {raw} a libretro-database checkout?")
+    return dat_path
+
+
+def resolve_output(raw: str) -> Path:
+    """Resolve ``-o`` to the JSON file to write.
+
+    The generator writes one file into a directory that already exists; it
+    never creates a directory tree, so a mistyped path is refused here instead
+    of scattering directories. Raises ``ValueError`` like ``resolve_database``.
+    """
+    output_path = Path(raw).resolve()
+    if output_path.suffix != ".json":
+        raise ValueError(f"output must be a .json path, got {raw}")
+    if output_path.is_dir():
+        raise ValueError(f"output path is a directory: {output_path}")
+    if not output_path.parent.is_dir():
+        raise ValueError(f"output directory does not exist: {output_path.parent}")
+    return output_path
+
+
+def parse_system_dat(dat_path):
+    """Parse ``dat/System.dat`` into ``{filename: {"md5", "sha1", "size"}}``."""
     try:
         with open(dat_path, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()
@@ -71,10 +103,10 @@ def parse_system_dat(database_dir):
     return hashes
 
 
-def build_table(database_dir):
+def build_table(dat_path):
     """Build the complete identity table, file names sorted."""
-    print(f"Parsing System.dat from {database_dir}...", file=sys.stderr)
-    hashes = parse_system_dat(database_dir)
+    print(f"Parsing System.dat from {dat_path}...", file=sys.stderr)
+    hashes = parse_system_dat(dat_path)
     print(f"  Found {len(hashes)} firmware identities", file=sys.stderr)
     return {
         "_meta": {
@@ -109,17 +141,21 @@ def main():
     )
     args = parser.parse_args()
 
-    if not os.path.isdir(args.database):
-        parser.error(f"database directory not found: {args.database}")
+    # Both paths a run takes from its arguments are resolved and checked before
+    # anything opens them, and only the resolved forms are used from here on.
+    try:
+        dat_path = resolve_database(args.database)
+        output_path = resolve_output(args.output)
+    except ValueError as exc:
+        parser.error(str(exc))
 
-    table = build_table(args.database)
+    table = build_table(dat_path)
 
-    os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
-    with open(args.output, "w", encoding="utf-8", newline="\n") as f:
+    with open(output_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(table, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
-    print(f"Wrote {args.output} ({len(table['files'])} firmware identities)", file=sys.stderr)
+    print(f"Wrote {output_path} ({len(table['files'])} firmware identities)", file=sys.stderr)
 
 
 if __name__ == "__main__":

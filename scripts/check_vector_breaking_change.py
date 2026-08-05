@@ -26,6 +26,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VECTOR_GLOB = "vectors/*/*.json"
 TITLE_BANG = re.compile(r"^[a-z]+(\([^)]*\))?!:")
+# The base ref reaches git as an argument, so it must not be able to pose as an
+# option: the leading letter or digit is the guard, and the rest is git's
+# revision grammar as this gate meets it — "origin/main", a tag, a SHA, and the
+# expressions a local run reaches for ("HEAD~3", "HEAD^", "main@{upstream}").
+# argv stays a list and nothing downstream quotes or escapes, so refusing an
+# unusable ref up front is the whole defence.
+REF_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./~^@{}+-]*")
 
 
 def _git(*args: str) -> str:
@@ -77,6 +84,12 @@ def find_breaking_changes(base_ref: str) -> list[str]:
 
 def main() -> None:
     base_ref = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
+    if not REF_NAME.fullmatch(base_ref):
+        print(
+            f"not a usable base ref: {base_ref!r} — expected a ref or revision "
+            "expression (origin/main, v1.2.3, HEAD~3), starting with a letter or digit"
+        )
+        raise SystemExit(1)
     merge_base = _git("merge-base", base_ref, "HEAD").strip()
     findings = find_breaking_changes(merge_base)
 

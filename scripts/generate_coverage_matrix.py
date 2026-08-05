@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import string
 import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
@@ -35,12 +36,34 @@ DEFAULT_ES_SYSTEMS = Path(
     "components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
 )
 
-_CORE_SO_RE = re.compile(r"([A-Za-z0-9_\-\[\]]+)_libretro\.so")
+_CORE_SO_SUFFIX = "_libretro.so"
+_CORE_NAME_CHARS = frozenset(string.ascii_letters + string.digits + "_-[]")
 _RUNNER_RE = re.compile(r"%EMULATOR_([A-Z0-9_\-]+)%")
 
 ARRANGEMENTS = ("retrodeck", "emudeck", "bare")
 ARRANGEMENT_HEADERS = {"retrodeck": "RetroDECK", "emudeck": "EmuDeck", "bare": "RetroArch (bare)"}
 AUDIT_SCHEMA = 3
+
+
+def core_short_name(command: str) -> str | None:
+    """The ``<name>`` of the leftmost ``<name>_libretro.so`` in *command*, or None.
+
+    The name's characters include the '_' that opens the suffix, so a regex
+    ``[...]+_libretro\\.so`` has to try the run at every position of the command
+    line and give it back again — quadratic, and measurably so. Locating the
+    literal suffix and walking the name backwards is one pass.
+    """
+    suffix_at = command.find(_CORE_SO_SUFFIX)
+    while suffix_at != -1:
+        start = suffix_at
+        while start and command[start - 1] in _CORE_NAME_CHARS:
+            start -= 1
+        if start != suffix_at:
+            return command[start:suffix_at]
+        # A suffix with no name before it (e.g. a bare "_libretro.so") is not a
+        # core; the next occurrence still can be.
+        suffix_at = command.find(_CORE_SO_SUFFIX, suffix_at + 1)
+    return None
 
 
 def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
@@ -52,9 +75,9 @@ def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, 
         name = (system_el.findtext("name") or "").strip()
         for command_el in system_el.findall("command"):
             command = (command_el.text or "").strip()
-            core = _CORE_SO_RE.search(command)
+            core = core_short_name(command)
             if core:
-                libretro[core.group(1)].add(name)
+                libretro[core].add(name)
                 continue
             runner = _RUNNER_RE.search(command)
             if runner and runner.group(1) != "RETROARCH":
@@ -126,12 +149,33 @@ def systems_summary(systems: set[str], limit: int = 4) -> str:
     return ", ".join(ordered[:limit]) + f", … ({len(ordered)})"
 
 
-def main() -> None:
-    es_systems_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_ES_SYSTEMS
-    if not es_systems_path.exists():
-        print(f"es_systems.xml not found at {es_systems_path} — pass a path as argv[1]")
-        raise SystemExit(1)
+def es_systems_source(argv: list[str]) -> Path:
+    """The es_systems.xml to read: the one named on the command line, or the
+    RetroDECK deployment's.
 
+    A passed path must be an existing ``.xml`` file; no base directory bounds
+    it, because the file belongs to whichever deployment is being read.
+    Resolve, then check, then use only the resolved path — a check against the
+    raw string could pass while the read that follows takes a different path
+    through a '..' segment or a symlink.
+    """
+    if len(argv) <= 1:
+        if not DEFAULT_ES_SYSTEMS.is_file():
+            print(f"es_systems.xml not found at {DEFAULT_ES_SYSTEMS} — pass a path as argv[1]")
+            raise SystemExit(1)
+        return DEFAULT_ES_SYSTEMS
+    path = Path(argv[1]).resolve()
+    if path.suffix != ".xml":
+        print(f"not an es_systems.xml: {argv[1]} (expected a .xml file)")
+        raise SystemExit(1)
+    if not path.is_file():
+        print(f"es_systems.xml not found at {path} — pass a readable file as argv[1]")
+        raise SystemExit(1)
+    return path
+
+
+def main() -> None:
+    es_systems_path = es_systems_source(sys.argv)
     audit_schema, audit = load_audit_data(AUDIT_PATH)
     libretro, standalone = collect_rows(es_systems_path)
     # Full source identity for exact reproduction: content hashes name the
