@@ -45,7 +45,7 @@ Small branches from main, one concern each, per-branch PRs.
 
 ### 1. Core-by-core audit (continuous)
 
-The grind toward "libretro complete" — queue in the coverage matrix (11/159 audited). Method pinned in
+The grind toward "libretro complete" — queue and current audited count in the coverage matrix. Method pinned in
 `docs/research/core-audit.md`. Next: cores whose options scan shows save-related keys; the suspect trio
 (dolphin/azahar/ppsspp-libretro) needs one live run each (user). Multi-option cores (Beetle family, ReARMed,
 SwanStation) need the code-rule-plus-card route for file-set/granularity precision.
@@ -118,7 +118,8 @@ The four firmware entry points ship: live `.info` declarations from the installe
 - **Standalone emulators declare nothing.** An emulator without a libretro core ships no `.info`; the catalogue route
   lists it and states it as unresolvable. Part of block 4.
 - **RetroArch's platform default `system_directory`.** Unset in the configs currently yields an empty answer plus a
-  caveat; the default is presumably `system` under the config tree, but that is [O] — unverified, so unclaimed.
+  caveat; the default is `system` under the config tree — [V] `platform_unix.c:2142-2143` at the pinned revision, the
+  same desktop-Linux block that assigns the SRAM default. Claiming it is now a resolver change, not a research gap.
 
 ## Open research (needs the user's machine)
 

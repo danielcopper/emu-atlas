@@ -120,7 +120,8 @@ class Machine(Protocol):
   directory — lives only in the core binary. Loading the core and asking it is the same read RetroArch performs; it is a
   live read, not a table. The production implementation is process-isolated (a crashing core costs one answer, not the
   host process) and may cache per `.so` mtime/size — a memoized live read, never shipped data. `.info` files are **not**
-  a substitute: `corename` disagrees with `library_name` for 56 of 210 installed cores.
+  a substitute: `corename` disagrees with `library_name` for 56 of the 203 installed cores that load and declare a
+  `corename` (reference machine, recounted 2026-08-05).
 - `file_size` and `file_digest` exist because firmware identity is checked by content, not by name: a file present under
   the right name may still be the wrong dump. `file_size` is the free pre-filter that settles most mismatches before any
   bytes are hashed; `file_digest` is the paid answer, and the algorithm vocabulary is closed to `md5`/`sha1` so a port's
@@ -215,9 +216,9 @@ ES-DE `system`, RetroArch core and database names). Public functions accept cano
   explicit: missing reference config → deviation check omitted; unloadable core → `library_name` unknown; absent
   catalogue → caller names the core. No answer is ever invented to keep a field non-empty.
 
-- **`.info` is never a path source.** `corename` ≠ `library_name` for 27% of installed cores; the bsnes variants would
-  split one real save directory into three fictional ones. `.info` serves capability and firmware-declaration queries
-  only — never a save path.
+- **`.info` is never a path source.** `corename` ≠ `library_name` for 27% of the installed cores that load and declare a
+  `corename`; the bsnes variants would split one real save directory into three fictional ones. `.info` serves
+  capability and firmware-declaration queries only — never a save path.
 
 - **Firmware splits at the boundary rule; installer-step knowledge is bonus.** Which files a core wants _is_ on the
   machine (`.info` `firmwareN_path`), so it is read live and never shipped. What a correct file's bytes are is not on

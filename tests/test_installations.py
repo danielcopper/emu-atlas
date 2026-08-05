@@ -51,7 +51,7 @@ class TestRetroDeckSaveLocation:
 
     def test_missing_cfg_uses_platform_default(self):
         # Platform defaults are initialized before config load
-        # (platform_unix.c:1844); upstream compile defaults sort by core.
+        # (platform_unix.c:2133-2134); upstream compile defaults sort by core.
         rd = _retrodeck(
             {RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/roms/gba/Game.zip": ""}
         )

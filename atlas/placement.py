@@ -241,7 +241,7 @@ def build_save_placement(
     """Compose a :class:`SavePlacement` from a resolved layout and the caller's fills.
 
     ``platform_default_dir`` is the arrangement's RetroArch platform default
-    saves directory (``saves`` under the config tree, ``platform_unix.c:1844``)
+    saves directory (``saves`` under the config tree, ``platform_unix.c:2133-2134``)
     — the effective root whenever ``savefile_directory`` is unset or reset.
     ``content_dir_path`` / ``content_dir_name`` derive from the content path
     when the caller supplied one (the ROM's own directory and its basename);
