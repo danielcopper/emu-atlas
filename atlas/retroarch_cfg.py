@@ -74,13 +74,15 @@ class RetroArchCfg:
     ``savefile_directory`` is the resolved saves-root value with ``~`` expanded,
     or ``None`` when the platform default applies (key absent, blank, or the
     literal ``"default"``). RetroArch initializes platform default directories
-    before applying the config — on Unix the SRAM default is ``saves`` under
-    the RetroArch config tree (``platform_unix.c:1844``) — so an unset key
-    means *that* directory, never the ROM's directory (the ``runloop.c:8786``
-    content fallback fires only when the effective dir is still empty, which
-    the platform defaults prevent on desktop). The caller supplies the
-    concrete platform default. ``sources`` records, per governing key, which
-    file (or default) produced the value; when an override won, it names it.
+    before applying the config — on desktop Unix the SRAM default is ``saves``
+    under the RetroArch config tree (``platform_unix.c:2133-2134``; that tree is
+    ``$XDG_CONFIG_HOME/retroarch`` or ``$HOME/.config/retroarch``,
+    ``platform_unix.c:1943-1957``) — so an unset key means *that* directory,
+    never the ROM's directory (the ``runloop.c:8786`` content fallback fires
+    only when the effective dir is still empty, which the platform defaults
+    prevent on desktop). The caller supplies the concrete platform default.
+    ``sources`` records, per governing key, which file (or default) produced
+    the value; when an override won, it names it.
     """
 
     savefiles_in_content_dir: bool
@@ -167,7 +169,7 @@ def _resolve_savefile_directory(layers: Sequence[_Layer], *, home: str) -> tuple
     savefile_directory: str | None = None
     source = (
         f"default: {_SAVEFILE_DIRECTORY} unset — RetroArch platform default applies "
-        "(saves under the config tree, platform_unix.c:1844)"
+        "(saves under the config tree, platform_unix.c:2133-2134)"
     )
     for label, parsed, is_override in layers:
         if _SAVEFILE_DIRECTORY in parsed:

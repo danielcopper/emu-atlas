@@ -103,7 +103,7 @@ class TestRoots:
         assert p.root_kind == ROOT_CONTENT_DIRECTORY
 
     def test_unset_directory_is_platform_default_root(self):
-        # platform_unix.c:1844 — defaults are initialized before config load;
+        # platform_unix.c:2133-2134 — defaults are initialized before config load;
         # an unset key means 'saves' under the config tree, never the ROM dir.
         p = _build(
             'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n',

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 import atlas
 from atlas.esde import merge_layers, parse_es_systems
 

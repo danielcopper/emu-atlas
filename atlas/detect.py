@@ -29,7 +29,7 @@ from atlas.installations import (
     RetroDeck,
     StandaloneRetroArchFlatpak,
 )
-from atlas.machine import Machine, RealMachine
+from atlas.machine import KIND_MISSING, Machine, RealMachine
 
 
 def detect(home: str, machine: Machine | None = None) -> list[Installation]:
@@ -47,19 +47,19 @@ def detect(home: str, machine: Machine | None = None) -> list[Installation]:
     # A marker that exists but cannot be read or parsed is a PRESENT, broken
     # installation — detection triggers on existence; health states the rest
     # (REVIEW H10). The handles are live: they re-read their sources per query.
-    if machine.path_kind(os.path.join(home, RETRODECK_JSON_SUFFIX)) != "missing":
+    if machine.path_kind(os.path.join(home, RETRODECK_JSON_SUFFIX)) != KIND_MISSING:
         found.append(RetroDeck(home, machine))
 
-    emudeck_present = machine.path_kind(os.path.join(home, EMUDECK_SETTINGS_SUFFIX)) != "missing"
+    emudeck_present = machine.path_kind(os.path.join(home, EMUDECK_SETTINGS_SUFFIX)) != KIND_MISSING
     if emudeck_present:
         found.append(EmuDeck(home, machine))
 
     # EmuDeck claims the standalone Flatpak — same RetroArch, two descriptions,
     # one handle. Only an unclaimed Flatpak appears as its own installation.
-    if not emudeck_present and machine.path_kind(os.path.join(home, STANDALONE_FLATPAK_CFG_SUFFIX)) != "missing":
+    if not emudeck_present and machine.path_kind(os.path.join(home, STANDALONE_FLATPAK_CFG_SUFFIX)) != KIND_MISSING:
         found.append(StandaloneRetroArchFlatpak(home, machine))
 
-    if machine.path_kind(os.path.join(home, NATIVE_CFG_SUFFIX)) != "missing":
+    if machine.path_kind(os.path.join(home, NATIVE_CFG_SUFFIX)) != KIND_MISSING:
         found.append(NativeRetroArch(home, machine))
 
     return found

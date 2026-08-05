@@ -118,7 +118,6 @@ CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
 CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
 CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT = "firmware-path-escapes-root"
 CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
-CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
 CAVEAT_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:

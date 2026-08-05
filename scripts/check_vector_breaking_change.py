@@ -90,7 +90,17 @@ def main() -> None:
             "expression (origin/main, v1.2.3, HEAD~3), starting with a letter or digit"
         )
         raise SystemExit(1)
-    merge_base = _git("merge-base", base_ref, "HEAD").strip()
+    try:
+        merge_base = _git("merge-base", base_ref, "HEAD").strip()
+    except subprocess.CalledProcessError:
+        # Well-formed but not resolvable here: an unfetched ref, a typo, or a
+        # history unrelated to HEAD. Same exit code as an unusable ref — the
+        # gate cannot run, and it says which ref it choked on.
+        print(
+            f"cannot use base ref {base_ref!r}: git found no merge base with HEAD "
+            "— the ref is unknown in this repository (fetch it) or its history is unrelated"
+        )
+        raise SystemExit(1) from None
     findings = find_breaking_changes(merge_base)
 
     if not findings:

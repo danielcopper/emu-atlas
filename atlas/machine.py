@@ -65,8 +65,6 @@ fixture and one that does not fails in both. A fixture that disagreed inside
 some window would make every vector built on it prove nothing.
 """
 
-_MAX_SYMLINK_HOPS = SYMLINK_HOPS
-
 # Digest algorithms the seam answers for. Closed on purpose: these are the two
 # libretro-database's System.dat carries, and a port must implement exactly
 # them (an open algorithm parameter would make conformance unprovable).
@@ -129,9 +127,10 @@ class CoreInfo:
 
     ``library_name`` (via ``retro_get_system_info``) is the value RetroArch
     uses for sort-by-core directories and override directories — the display
-    name, not the ``.so`` basename (they differ for 87% of RetroDECK's shipped
-    cores). ``options`` is the set of option definitions the core registered
-    during ``retro_set_environment`` — the observable fact that identifies a
+    name, not the ``.so`` basename: the two disagree for 183 of the 210 loadable
+    cores RetroDECK ships (reference machine, recounted 2026-08-05). ``options``
+    is the set of option definitions the core registered during
+    ``retro_set_environment`` — the observable fact that identifies a
     core *generation* better than any version string. ``None`` means *not
     captured* (the probe saw no registration — some cores register later, in
     ``retro_init``): unknown, never "registers nothing".

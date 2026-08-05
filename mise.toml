@@ -10,7 +10,9 @@ description = "Install the package (editable) and test deps into the local venv"
 run = "uv pip install -e '.[dev]'"
 
 [tasks.test]
-description = "Run the unit tests and the machine-vector runner"
+description = "Validate the vector shapes, then run the unit tests and the machine-vector runner"
+# Shape first: a malformed vector must fail here, not be silently skipped by the runner.
+depends = ["validate"]
 run = "python -m pytest tests -q"
 
 [tasks.validate]

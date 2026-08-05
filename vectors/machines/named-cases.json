@@ -514,7 +514,7 @@
     },
     {
       "name": "standalone-flatpak-savefile-directory-absent",
-      "rationale": "An unset savefile_directory means the RetroArch platform default — 'saves' under the config tree (platform_unix.c:1844) — never the ROM's directory; upstream compile defaults then sort by core.",
+      "rationale": "An unset savefile_directory means the RetroArch platform default — 'saves' under the config tree (platform_unix.c:2133-2134) — never the ROM's directory; upstream compile defaults then sort by core.",
       "input": {
         "home": "/home/user",
         "files": {
@@ -1147,7 +1147,7 @@
     },
     {
       "name": "retrodeck-cfg-missing-platform-default-applies",
-      "rationale": "A RetroDECK whose retroarch.cfg is missing: RetroArch initializes platform defaults before config load (platform_unix.c:1844), so the effective root is 'saves' under the config tree — never the ROM's directory — and the upstream compile defaults govern sorting (sort_savefiles_enable=true, config.def.h:982).",
+      "rationale": "A RetroDECK whose retroarch.cfg is missing: RetroArch initializes platform defaults before config load (platform_unix.c:2133-2134), so the effective root is 'saves' under the config tree — never the ROM's directory — and the upstream compile defaults govern sorting (sort_savefiles_enable=true, config.def.h:982).",
       "input": {
         "home": "/home/deck",
         "files": {

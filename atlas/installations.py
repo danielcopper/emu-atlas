@@ -53,7 +53,16 @@ from atlas.firmware import firmware_for_core as _resolve_for_core
 from atlas.firmware import firmware_for_system as _resolve_for_system
 from atlas.firmware import firmware_inventory as _resolve_inventory
 from atlas.firmware import identify_firmware as _resolve_identification
-from atlas.machine import KIND_DIRECTORY, KIND_FILE, KIND_MISSING, CoreInfo, CoreOption, Machine
+from atlas.machine import (
+    KIND_DIRECTORY,
+    KIND_FILE,
+    KIND_MISSING,
+    READ_MISSING,
+    READ_OK,
+    CoreInfo,
+    CoreOption,
+    Machine,
+)
 from atlas.oddities import CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
 from atlas.placement import (
     CAVEAT_CARD_GENERATION_MISMATCH,
@@ -189,7 +198,7 @@ def _flatpak_host_path(machine: Machine, home: str, app_id: str, path: str) -> s
         os.path.join(home, ".local", "share", "flatpak", "app", app_id, "current", "active", "files"),
     ):
         candidate = os.path.join(base, rest)
-        if machine.path_kind(candidate) != "missing":
+        if machine.path_kind(candidate) != KIND_MISSING:
             return candidate
     return None
 
@@ -568,7 +577,7 @@ def _reject_unusable_save_dir(
     """RetroArch keeps a configured save dir only while it is an existing directory.
 
     Otherwise the prior effective one — the platform default, ``saves`` under
-    the config tree (``platform_unix.c:1844``) — stays
+    the config tree (``platform_unix.c:2133-2134``) — stays
     (``configuration.c:6916``), and the rejection is stated rather than
     silently applied.
     """
@@ -1250,7 +1259,7 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
     layer_texts = [t for t in (query.global_text, *(text for _, text in overrides)) if t is not None]
 
     # The RetroArch platform default saves dir — 'saves' under the config tree
-    # (platform_unix.c:1844) — is the effective root whenever the key is unset,
+    # (platform_unix.c:2133-2134) — is the effective root whenever the key is unset,
     # reset, or points at anything that is not an existing directory.
     platform_default_dir = os.path.join(os.path.dirname(query.global_cfg_path), "saves")
     layout, invalid_dir_caveats = _reject_unusable_save_dir(
@@ -1609,7 +1618,7 @@ class RetroDeck(_FirmwareQueries):
         """
         path = self._marker_path()
         result = self._machine.read_text(path)
-        if result.status == "missing":
+        if result.status == READ_MISSING:
             return {}, (Caveat(HEALTH_ISSUE_MARKER_MISSING, f"marker {path} does not exist", {"path": path}),)
         if result.text is None:
             return {}, (
@@ -1974,7 +1983,7 @@ class EmuDeck(_FirmwareQueries):
         """One live read of ``settings.sh`` → (settings, marker issues)."""
         path = self._marker_path()
         result = self._machine.read_text(path)
-        if result.status == "missing":
+        if result.status == READ_MISSING:
             return {}, (Caveat(HEALTH_ISSUE_MARKER_MISSING, f"marker {path} does not exist", {"path": path}),)
         if result.text is None:
             return {}, (
@@ -2101,10 +2110,13 @@ class EmuDeck(_FirmwareQueries):
 class _RetroArchInstall(_FirmwareQueries):
     """Shared behavior for a bare RetroArch install (standalone Flatpak or native).
 
-    The saves root comes from the cfg's ``savefile_directory``; when unset,
-    RetroArch resolves it to the ROM's own directory (``runloop.c:8786``) — a
-    rule, not a hole. Bare installs get RetroArch's upstream compile-time
-    defaults, under which ``sort_savefiles_enable`` is **true**.
+    The saves root comes from the cfg's ``savefile_directory``; when unset, the
+    RetroArch platform default applies — ``saves`` under the config tree that
+    holds ``retroarch.cfg`` (``platform_unix.c:2133-2134``), never the ROM's own
+    directory (the ``runloop.c:8786`` content fallback fires only when the
+    effective dir is still empty, which the platform defaults prevent on
+    desktop). Bare installs get RetroArch's upstream compile-time defaults,
+    under which ``sort_savefiles_enable`` is **true**.
     """
 
     kinds: tuple[str, ...] = ()
@@ -2124,9 +2136,9 @@ class _RetroArchInstall(_FirmwareQueries):
 
     def _health_from(self, cfg_status: str) -> Health:
         path = self._cfg_path()
-        if cfg_status == "ok":
+        if cfg_status == READ_OK:
             return Health()
-        if cfg_status == "missing":
+        if cfg_status == READ_MISSING:
             return Health((Caveat(HEALTH_ISSUE_MARKER_MISSING, f"marker {path} does not exist", {"path": path}),))
         return Health(
             (
