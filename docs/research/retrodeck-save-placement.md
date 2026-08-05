@@ -447,12 +447,27 @@ Three live sources answer three different questions:
 | RetroArch playlists (`*.lpl`)   | **fact** — which core actually launched a ROM               | empty on the observed machine (everything launches via ES-DE)       |
 
 **[V]** The user's saved per-system emulator choice is **not** in `es_settings.xml` (only `AlternativeEmulatorPerGame`
-lives there). It is stored in the system's `gamelists/<system>/gamelist.xml` as a top-level
+lives there). It is stored in the system's `gamelists/<system>/gamelist.xml` as an
 `<alternativeEmulator><label>…</label></alternativeEmulator>` element whose label matches the command's `label`
-attribute in `es_systems.xml` — and ES-DE writes that file with **two root elements** (the declaration, then
-`<alternativeEmulator>`, then `<gameList>`), i.e. not well-formed XML. Observed live after switching n64 and psx on a
-real installation. A parser must tolerate the quirk; a label matching no declared entry falls back to declared order, as
-ES-DE itself does.
+attribute in `es_systems.xml`. The element occurs in **two locations**, and both are live:
+
+- **Beside `<gameList>`** — ES-DE writes it there with `doc.prepend_child` (`es-app/src/GamelistFileParser.cpp:420` when
+  updating an existing gamelist, `:444` when creating one), which makes the file two root elements after the
+  declaration, i.e. not well-formed XML. Observed live after switching an emulator on a real installation.
+- **Inside `<gameList>`** — the standards-compliant location. ES-DE reads it in either place, document level first
+  (`GamelistFileParser.cpp:190-192`, upstream `9207fc77`, 2026-07-29, "Added forward compatibility for reading the
+  alternativeEmulator element from the gameList root element"); the commit's own comment states the plan to write it
+  there in a future release. A gamelist on the reference installation carries this shape today.
+
+**[V]** RetroDECK's launcher reads the same element itself for launches outside the ES-DE UI — `libexec/run_game.sh`
+lines 125-135, an `awk` range over `<alternativeEmulator>`…`</alternativeEmulator>` — so it finds either location,
+independent of the ES-DE build. The ES-DE build that 0.10.9b ships (release `retrodeck-main-20260414-105925`) predates
+`9207fc77` and therefore only reads the element beside `<gameList>`: on that build a nested element steers a launcher
+run but not an ES-DE-UI run.
+
+A parser must therefore accept both locations, in ES-DE's order; a label matching no declared entry falls back to
+declared order, as ES-DE itself does. Deeper nesting is not a location either reader is documented to write — a `<game>`
+carries its own choice as `<altemulator>` — so the lookup stays depth-bounded.
 
 When no catalogue exists (bare RetroArch, EmuDeck without ES-DE), the caller names the core; a default cannot be read
 and must not be invented.

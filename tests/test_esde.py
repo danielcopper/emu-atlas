@@ -176,9 +176,45 @@ class TestGamelistAlternative:
         "<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n"
         "<gameList />\n"
     )
+    # The standards-compliant location, observed live on RetroDECK 0.10.9b.
+    NESTED_SAMPLE = (
+        '<?xml version="1.0"?>\n'
+        "<gameList>\n"
+        "  <alternativeEmulator>\n    <label>ParaLLEl N64</label>\n  </alternativeEmulator>\n"
+        "</gameList>\n"
+    )
 
     def test_parses_the_real_two_root_quirk(self):
         assert atlas.parse_gamelist_alternative(self.REAL_SAMPLE) == "ParaLLEl N64"
+
+    def test_parses_the_nested_shape(self):
+        assert atlas.parse_gamelist_alternative(self.NESTED_SAMPLE) == "ParaLLEl N64"
+
+    def test_document_level_wins_over_nested(self):
+        # ES-DE takes the document-level element when both exist, label or not.
+        both = (
+            "<alternativeEmulator><label>ParaLLEl N64</label></alternativeEmulator>"
+            "<gameList><alternativeEmulator><label>Mupen64Plus-Next</label></alternativeEmulator></gameList>"
+        )
+        assert atlas.parse_gamelist_alternative(both) == "ParaLLEl N64"
+
+    def test_labelless_document_level_element_states_nothing(self):
+        # ES-DE picks the document-level element, then reads its label — an
+        # empty one selects nothing, it does not fall back to the nested one.
+        both = (
+            "<alternativeEmulator />"
+            "<gameList><alternativeEmulator><label>ParaLLEl N64</label></alternativeEmulator></gameList>"
+        )
+        assert atlas.parse_gamelist_alternative(both) is None
+
+    def test_selection_inside_a_game_is_not_a_system_selection(self):
+        # Neither reader looks there; a game's own choice is <altemulator>.
+        text = (
+            "<gameList><game><path>./Fixture Game.zip</path>"
+            "<alternativeEmulator><label>ParaLLEl N64</label></alternativeEmulator>"
+            "</game></gameList>"
+        )
+        assert atlas.parse_gamelist_alternative(text) is None
 
     def test_absent_selection_is_none(self):
         assert atlas.parse_gamelist_alternative('<?xml version="1.0"?>\n<gameList />') is None
@@ -194,6 +230,16 @@ class TestGamelistAlternative:
         assert [e.label for e in entries] == ["ParaLLEl N64", "Mupen64Plus-Next"]
         assert entries[0].selection == 'gamelist.xml: alternativeEmulator = "ParaLLEl N64"'
         assert entries[1].selection is None
+
+    def test_nested_selection_promotes_entry_to_default(self):
+        # The live shape: what emulators_for answers must not depend on where
+        # ES-DE happened to write the element.
+        rd = _catalogue_fixture(
+            {"/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": self.NESTED_SAMPLE}
+        )
+        entries = rd.emulators_for("n64")
+        assert [e.label for e in entries] == ["ParaLLEl N64", "Mupen64Plus-Next"]
+        assert entries[0].selection == 'gamelist.xml: alternativeEmulator = "ParaLLEl N64"'
 
     def test_unmatched_selection_keeps_declared_order(self):
         # ES-DE falls back to the declared default on an unknown label; so does atlas.

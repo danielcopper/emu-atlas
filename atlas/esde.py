@@ -126,10 +126,11 @@ class GamelistSelections:
     """The user's emulator choices stored in a system's ``gamelist.xml``.
 
     ``system_label`` is the per-system choice (``<alternativeEmulator><label>``,
-    top-level); ``per_game`` maps each game entry's gamelist-relative path
-    (``./`` stripped; a file path, or a folder path for directory entries) to
-    its ``<altemulator>`` label. Both tag names are verified against the ES-DE
-    binary's strings; the per-game hierarchy is game > system > declared.
+    beside or inside ``<gameList>`` — see :func:`parse_gamelist`); ``per_game``
+    maps each game entry's gamelist-relative path (``./`` stripped; a file
+    path, or a folder path for directory entries) to its ``<altemulator>``
+    label. Both tag names are verified against the ES-DE binary's strings; the
+    per-game hierarchy is game > system > declared.
     """
 
     system_label: str | None
@@ -140,12 +141,30 @@ class GamelistSelections:
 
 
 def parse_gamelist(text: str) -> GamelistSelections:
-    """Parse a ``gamelist.xml`` for emulator selections — tolerant of ES-DE's quirk.
+    """Parse a ``gamelist.xml`` for emulator selections — both shapes ES-DE reads.
 
-    ES-DE writes the file with **two root elements** (``<alternativeEmulator>``
-    before ``<gameList>``) — not well-formed XML, observed live on RetroDECK
-    0.10.9b. Wrapping in a synthetic root parses both that and well-formed
-    variants; anything unparseable yields empty selections, never a guess.
+    The per-system selection lives in one of two places, and atlas reads it
+    where ES-DE reads it, in ES-DE's own order — the document-level element
+    first, the ``<gameList>`` child as the fallback
+    (``es-app/src/GamelistFileParser.cpp:190-192``, ES-DE commit ``9207fc77``):
+
+    1. as a **second root element** before ``<gameList>`` — what ES-DE writes
+       today (``doc.prepend_child``, same file line 420 when updating an
+       existing gamelist and line 444 when creating one), and not well-formed
+       XML.
+    2. as a **child of ``<gameList>``** — the standards-compliant location
+       ES-DE is moving to ("Added forward compatibility for reading the
+       alternativeEmulator element from the gameList root element",
+       2026-07-29). This is the shape observed live on RetroDECK 0.10.9b,
+       whose launcher matches it too (``libexec/run_game.sh:125-135``, an awk
+       range over the file).
+
+    Deeper in the tree — inside a ``<game>`` — is not a place ES-DE looks for
+    the *system* selection (a game's own choice is ``<altemulator>``), so the
+    lookup stays depth-bounded instead of searching the whole document.
+
+    Wrapping in a synthetic root parses the two-root quirk and well-formed
+    variants alike; anything unparseable yields empty selections, never a guess.
     """
     stripped = text.strip()
     if stripped.startswith("<?"):
@@ -156,7 +175,14 @@ def parse_gamelist(text: str) -> GamelistSelections:
         root = ET.fromstring(f"<atlas-wrapper>{stripped}</atlas-wrapper>")
     except ET.ParseError:
         return GamelistSelections(system_label=None, per_game={})
-    system_label = (root.findtext("alternativeEmulator/label") or "").strip() or None
+    selection_el = root.find("alternativeEmulator")
+    if selection_el is None:
+        game_list = root.find("gameList")
+        if game_list is not None:
+            selection_el = game_list.find("alternativeEmulator")
+    system_label: str | None = None
+    if selection_el is not None:
+        system_label = (selection_el.findtext("label") or "").strip() or None
     per_game: dict[str, str] = {}
     for game in root.iter("game"):
         path = (game.findtext("path") or "").strip()

@@ -1081,6 +1081,53 @@
       }
     },
     {
+      "name": "catalogue-gamelist-selection-inside-gamelist-promotes-default",
+      "rationale": "The same saved choice, written where ES-DE is moving it: <alternativeEmulator> as a child of <gameList> instead of a second root element (ES-DE reads both, document level first — GamelistFileParser.cpp:190-192; the nested shape is what RetroDECK 0.10.9b carries live). Where the element sits must not change which emulator atlas calls the effective default.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n  <alternativeEmulator>\n    <label>ParaLLEl N64</label>\n  </alternativeEmulator>\n</gameList>\n",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "emulators": [
+          {
+            "label": "ParaLLEl N64",
+            "kind": "libretro",
+            "core_so": "parallel_n64_libretro.so",
+            "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
+            "caveats": []
+          },
+          {
+            "label": "Mupen64Plus-Next",
+            "kind": "libretro",
+            "core_so": "mupen64plus_next_libretro.so",
+            "selection": null,
+            "caveats": []
+          }
+        ]
+      }
+    },
+    {
       "name": "lrps2-shared-memcards-through-symlink",
       "rationale": "LRPS2's default (pcsx2_shared_memory_cards=enabled, libretro_core_options.h:169) keeps shared memory cards under <system_directory>/pcsx2/memcards. Under RetroDECK that path is a dir_prep symlink into the saves tree; the observed card is found through the link. The option's 'disabled' mode switches to per-game <rom_stem>.ps2 in the save directory (verified in libretro/ps2 source).",
       "input": {
