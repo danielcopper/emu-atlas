@@ -797,6 +797,55 @@ class TestOverrideChainSemantics:
         p = self._psp_query(self.GLOBAL_CFG + 'video_driver="gl"\n')
         assert not [c for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED]
 
+    # The two directory keys read a blank value in opposite directions, and the
+    # pair below is the reason: rgui_config_directory is a handled path setting
+    # (configuration.c:1736) that the generic loop writes untested (:6536-6537),
+    # savefile_directory is not (:1709, skipped at :6534-6535) and reaches only
+    # the block that demands path_is_directory (:6914-6933). Neither is a bug —
+    # asserting them side by side is what keeps a later reader from ruling that
+    # one of them is.
+
+    def test_blank_rgui_config_directory_clears_it_and_moves_the_tree(self):
+        beside = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch"
+        p = self._psp_query(
+            self.GLOBAL_CFG + 'rgui_config_directory = ""\n',
+            files={
+                f"{beside}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "true"',
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'savefile_directory = "/mnt/sd/wrong"',
+                "/mnt/sd/retrodeck/saves/psp/.keep": "",
+            },
+        )
+        # The tree moved: the override beside retroarch.cfg is the one read.
+        assert p.dir == "/mnt/sd/retrodeck/saves/psp"
+
+    def test_blank_savefile_directory_in_an_override_changes_nothing(self):
+        p = self._psp_query(
+            self.GLOBAL_CFG,
+            files={f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'savefile_directory = ""'},
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves"  # not the platform default
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY] == [
+            {
+                "layer": "core override config/PPSSPP/PPSSPP.cfg",
+                "configured": "",
+                "effective": "/mnt/sd/retrodeck/saves",
+            }
+        ]
+
+    def test_a_shadowed_override_is_not_the_fallback_for_an_unusable_one(self):
+        # The merged config holds the GAME override's root; the core override's
+        # was overwritten before any getter saw it, so the refusal falls back to
+        # the global cfg's root, not to /mnt/sd/other.
+        p = self._psp_query(
+            self.GLOBAL_CFG,
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'savefile_directory = "/mnt/sd/other"',
+                f"{RETRODECK_OVERRIDES}/PPSSPP/Game.cfg": 'savefile_directory = "/run/media/gone/saves"',
+                "/mnt/sd/other/.keep": "",
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+
 
 class TestOstreeHomeIsHostSide:
     """Fedora Silverblue and Bazzite — both ship RetroDECK — make ``/home`` a

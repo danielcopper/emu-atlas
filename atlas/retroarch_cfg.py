@@ -485,8 +485,28 @@ def _resolve_savefile_directory(
     ``path_is_directory`` or the read sets nothing and what stood before it
     stands on. Without an *is_directory* check the values are taken as written
     — except the empty string, which ``path_is_directory`` refuses on every
-    machine, and which ``config_get_path`` hands on as a value like any other
-    (``config_file.c:1202-1216``): blank is a rejected value, not a reset.
+    machine.
+
+    **Blank means opposite things for the two directory keys, and that is not
+    a bug in either.** One boolean in the settings table decides it — the
+    ``handle_setting`` argument of ``SETTING_PATH``:
+
+    - ``savefile_directory`` passes ``false`` (``configuration.c:1709``), so
+      the generic path loop skips it (``:6534-6535``) and the special block
+      above is the only thing that sets it. ``config_get_path`` returns true
+      for an entry whose value is empty and hands the empty string on
+      unchanged (``config_file.c:1202-1216``), ``path_is_directory("")``
+      fails, and the read is a no-op — blank **keeps** the standing root.
+    - ``rgui_config_directory`` passes ``true`` (``configuration.c:1736``), so
+      the generic path loop writes whatever the config holds with no test at
+      all (``:6536-6537``) — blank **clears** it, exactly as the literal
+      ``default`` does two hundred lines later (``:6825-6826``), and an empty
+      ``directory_menu_config`` then falls back to the directory of
+      ``retroarch.cfg`` (``file_path_special.c:203-206``).
+
+    So a blank saves root in an override changes nothing, while a blank
+    override directory moves the entire override tree. atlas reproduces both
+    (:func:`atlas.installations._override_directory` holds the second).
 
     An application-relative value (``:`` prefix) is kept as written: it names a
     directory only the running process knows, and the consumer states that

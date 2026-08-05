@@ -111,7 +111,12 @@ class TestSavefileDirectory:
         assert cfg.savefile_directory is None
         assert any("platform default" in s for s in cfg.sources)
 
-    def test_blank_is_unset(self):
+    def test_blank_reaches_the_platform_default_by_being_refused(self):
+        # Blank is NOT this key's unset spelling (that is only "default"):
+        # config_get_path hands the empty value on and path_is_directory refuses
+        # it (configuration.c:1709 vs :1736 — see _resolve_savefile_directory).
+        # With one layer nothing stood before the read, so the answer is the
+        # platform default either way; in an override the two diverge.
         cfg = _cfg('savefile_directory = ""\n')
         assert cfg.savefile_directory is None
 
@@ -517,7 +522,9 @@ class TestBooleanVocabulary:
         )
         assert cfg.sort_by_core is False  # the EmuDeck default stands, unchanged
 
-    def test_rejected_override_value_leaves_the_previous_layer_standing(self):
+    def test_rejected_override_value_leaves_the_global_layer_standing(self):
+        # "the global layer", not "the previous layer": what a refused value
+        # falls back to is always the boot load's value — see TestReadsPerKey.
         cfg = resolve_save_layout(
             'sort_savefiles_by_content_enable = "false"\n',
             home=HOME,

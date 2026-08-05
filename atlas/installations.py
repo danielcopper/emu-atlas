@@ -746,11 +746,22 @@ def _override_directory(
 
     ``fill_pathname_application_special`` takes ``rgui_config_directory`` when
     it holds a value and otherwise falls back to the directory of the loaded
-    ``retroarch.cfg`` (file_path_special.c:196-207) — one level above the
+    ``retroarch.cfg`` (file_path_special.c:203-206) — one level above the
     platform default ``config`` subdirectory. So an *absent* key means the
     platform default, while a key set to blank or the literal ``default``
-    clears the setting (configuration.c:6825-6826) and moves the whole override
-    tree up into the config directory itself.
+    clears the setting and moves the whole override tree up into the config
+    directory itself: this key is a *handled* path setting
+    (``SETTING_PATH(..., handle_setting=true)``, configuration.c:1736), so the
+    generic loop writes whatever the config holds without testing it
+    (:6536-6537) — an empty value included — and ``default`` is cleared
+    separately at :6825-6826.
+
+    That is the exact opposite of what blank does to ``savefile_directory``,
+    which passes ``handle_setting=false`` (:1709), is skipped by that loop
+    (:6534-6535), and reaches only the block that demands ``path_is_directory``
+    (:6914-6933) — so a blank value there is refused and changes nothing.
+    Neither is a bug; :func:`atlas.retroarch_cfg._resolve_savefile_directory`
+    carries the full pair.
 
     A Flatpak's cfg spells the directory sandbox-side, so it is translated to
     where the host reads it; an untranslatable spelling keeps the configured
