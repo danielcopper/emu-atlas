@@ -351,7 +351,8 @@ class TestLinkView:
         assert p.dir == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
         assert p.physical_dir is None
         dead = [c for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
-        assert dead and dead[0].data["link"] == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+        assert dead
+        assert dead[0].data["link"] == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
 
     def test_rejected_save_root_through_dead_link_says_why(self):
         machine = atlas.FixtureMachine(

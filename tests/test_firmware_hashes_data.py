@@ -42,8 +42,10 @@ class TestTopLevel:
 
     def test_meta_has_generated_from_and_version(self, table):
         meta = table["_meta"]
-        assert isinstance(meta.get("generated_from"), str) and meta["generated_from"]
-        assert isinstance(meta.get("version"), str) and meta["version"]
+        assert isinstance(meta.get("generated_from"), str)
+        assert meta["generated_from"]
+        assert isinstance(meta.get("version"), str)
+        assert meta["version"]
 
     def test_files_is_a_nonempty_object(self, table):
         assert isinstance(table["files"], dict)
@@ -56,8 +58,10 @@ class TestTopLevel:
 class TestEntryShape:
     def test_keys_are_non_empty_strings(self, table):
         for name in table["files"]:
-            assert isinstance(name, str) and name, name
-            assert not name.startswith("/") and not name.endswith("/"), name
+            assert isinstance(name, str), name
+            assert name, name
+            assert not name.startswith("/"), name
+            assert not name.endswith("/"), name
 
     def test_base_names_are_unique_across_both_key_forms(self, table):
         # Upstream keys some entries by a relative path (dc/dc_boot.bin) and
@@ -70,10 +74,12 @@ class TestEntryShape:
 
     def test_every_entry_is_exactly_the_identity_triple(self, table):
         for name, entry in table["files"].items():
-            assert isinstance(entry, dict) and set(entry) == ENTRY_KEYS, name
+            assert isinstance(entry, dict), name
+            assert set(entry) == ENTRY_KEYS, name
 
     def test_identities_are_well_formed(self, table):
         for name, entry in table["files"].items():
             assert MD5_HEX.match(entry["md5"]), f"{name}: md5 {entry['md5']!r}"
             assert SHA1_HEX.match(entry["sha1"]), f"{name}: sha1 {entry['sha1']!r}"
-            assert isinstance(entry["size"], int) and entry["size"] > 0, name
+            assert isinstance(entry["size"], int), name
+            assert entry["size"] > 0, name
