@@ -3365,6 +3365,194 @@
           ]
         }
       }
+    },
+    {
+      "name": "per-game-selection-stops-at-the-game-that-declares-it",
+      "rationale": "The live psx gamelist's shape (RetroDECK 0.10.9b): a root-level ./<name>.m3u carrying the <altemulator>, a <folder> of the same name, and inside it a second <name>.m3u carrying none. Gamelist paths are relative to the system's ROM directory, so they are resolved against it and compared as whole paths — matched by suffix at any depth, the nested namesake inherits a selection ES-DE would never give it: a promoted first entry for the wrong emulator, and a per-game-override caveat on a game that carries no override.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n\t<game>\n\t\t<path>./Game.m3u</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
+          "/mnt/sd/retrodeck/roms/n64/Game.m3u": "",
+          "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u": "",
+          "/mnt/sd/retrodeck/saves/Game.srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/parallel_n64_libretro.so": {
+            "library_name": "ParaLLEl N64"
+          }
+        },
+        "catalogue_query": {
+          "system": "n64",
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u"
+        },
+        "entry_query": {
+          "system": "n64",
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u",
+          "label": "Mupen64Plus-Next"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "emulators": [
+          {
+            "label": "Mupen64Plus-Next",
+            "kind": "libretro",
+            "core_so": "mupen64plus_next_libretro.so",
+            "selection": null,
+            "caveats": []
+          },
+          {
+            "label": "ParaLLEl N64",
+            "kind": "libretro",
+            "core_so": "parallel_n64_libretro.so",
+            "selection": null,
+            "caveats": []
+          }
+        ],
+        "entry_save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game.srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "per-game-selection-reaches-the-game-that-declares-it",
+      "rationale": "The other half of the anchor: the same machine asked about the game the <altemulator> is written on. Its emulator leads the entry list with the per-game provenance, and the entry route for a different emulator states the override the caller is about to contradict — anchoring must not cost the match it is there to place correctly.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n\t<game>\n\t\t<path>./Game.m3u</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
+          "/mnt/sd/retrodeck/roms/n64/Game.m3u": "",
+          "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u": "",
+          "/mnt/sd/retrodeck/saves/Game.srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/parallel_n64_libretro.so": {
+            "library_name": "ParaLLEl N64"
+          }
+        },
+        "catalogue_query": {
+          "system": "n64",
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.m3u"
+        },
+        "entry_query": {
+          "system": "n64",
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.m3u",
+          "label": "Mupen64Plus-Next"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "emulators": [
+          {
+            "label": "ParaLLEl N64",
+            "kind": "libretro",
+            "core_so": "parallel_n64_libretro.so",
+            "selection": "gamelist.xml: altemulator = \"ParaLLEl N64\" (per-game)",
+            "caveats": []
+          },
+          {
+            "label": "Mupen64Plus-Next",
+            "kind": "libretro",
+            "core_so": "mupen64plus_next_libretro.so",
+            "selection": null,
+            "caveats": []
+          }
+        ],
+        "entry_save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game.srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "per-game-override",
+              "data": {
+                "label": "ParaLLEl N64"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-marker-path-of-the-wrong-type",
+      "rationale": "retrodeck.json is editable and its paths drive every read that follows, so a value that is not a path string makes the marker invalid — the same present-but-broken state malformed JSON produces. Handed on unchecked it reaches the seam as a path: os.stat reads an int as a file descriptor, so the answer can describe something that is not a path at all. The fallback roots still answer, and health says which state this is.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": 0}}"
+        },
+        "dirs": [
+          "/home/deck/retrodeck/saves"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/home/deck/retrodeck",
+            "health": [
+              "marker-invalid"
+            ]
+          }
+        ]
+      }
     }
   ]
 }

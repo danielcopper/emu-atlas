@@ -327,3 +327,132 @@ class TestPerGameAltemulator:
         override = [c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
         assert override
         assert override[0].data["label"] == "Mupen64Plus-Next"
+
+
+class TestPerGameMatchIsAnchored:
+    """A per-game selection belongs to one game, not to every same-named file.
+
+    The shape is the live psx gamelist's (RetroDECK 0.10.9b): a root-level
+    ``./<name>.m3u`` carrying the ``<altemulator>``, a ``<folder>`` of the same
+    name, and inside it a second ``<name>.m3u`` carrying none. Matched by path
+    suffix at any depth, the nested file inherits a selection ES-DE would never
+    give it — so entries are resolved against the system's own ROM
+    directory and compared as whole paths.
+    """
+
+    ROMS = "/mnt/sd/retrodeck/roms/n64"
+    GAMELIST = (
+        '<?xml version="1.0"?>\n'
+        "<gameList>\n"
+        "\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n"
+        "\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n"
+        "\t<game>\n\t\t<path>./Game.m3u</path>\n"
+        "\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n"
+        "</gameList>\n"
+    )
+    FILES = {"/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": GAMELIST}
+
+    def test_the_game_that_carries_the_override_still_matches(self):
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for("n64", content_path=f"{self.ROMS}/Game.m3u")
+        assert entries[0].label == "ParaLLEl N64"
+        assert entries[0].selection == 'gamelist.xml: altemulator = "ParaLLEl N64" (per-game)'
+
+    def test_same_name_one_level_down_does_not_inherit_it(self):
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for("n64", content_path=f"{self.ROMS}/Collection/Game.m3u")
+        assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
+        assert all(e.selection is None for e in entries)
+
+    def test_same_name_deep_below_does_not_inherit_it(self):
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for("n64", content_path=f"{self.ROMS}/deep/sub/Game.m3u")
+        assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
+
+    def test_content_outside_the_systems_rom_directory_matches_nothing(self):
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for("n64", content_path="/elsewhere/Game.m3u")
+        assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
+
+    def test_a_redundant_spelling_of_the_same_path_still_matches(self):
+        rd = _catalogue_fixture(self.FILES)
+        entries = rd.emulators_for("n64", content_path=f"{self.ROMS}/Collection/..//Game.m3u")
+        assert entries[0].label == "ParaLLEl N64"
+
+    def test_directory_entry_covers_the_files_inside_it(self):
+        # The multi-disc convention: the gamelist names the folder, the content
+        # is a disc inside it.
+        rd = _catalogue_fixture(
+            {
+                "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": (
+                    '<?xml version="1.0"?>\n<gameList>\n'
+                    "\t<game>\n\t\t<path>./Collection</path>\n"
+                    "\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n"
+                )
+            }
+        )
+        entries = rd.emulators_for("n64", content_path=f"{self.ROMS}/Collection/disc1.cue")
+        assert entries[0].label == "ParaLLEl N64"
+        # …and not a file two levels below it, which is a different game.
+        deeper = rd.emulators_for("n64", content_path=f"{self.ROMS}/Collection/extra/disc1.cue")
+        assert deeper[0].label == "Mupen64Plus-Next"
+
+    def test_the_file_entry_wins_over_a_directory_entry_covering_it(self):
+        rd = _catalogue_fixture(
+            {
+                "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": (
+                    '<?xml version="1.0"?>\n<gameList>\n'
+                    "\t<game>\n\t\t<path>./Collection</path>\n"
+                    "\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n"
+                    "\t<game>\n\t\t<path>./Collection/disc1.cue</path>\n"
+                    "\t\t<altemulator>Mupen64Plus-Next</altemulator>\n\t</game>\n</gameList>\n"
+                )
+            }
+        )
+        entries = rd.emulators_for("n64", content_path=f"{self.ROMS}/Collection/disc1.cue")
+        assert entries[0].label == "Mupen64Plus-Next"
+
+    def test_a_symlinked_spelling_of_the_rom_directory_does_not_match(self):
+        # The stated limit: the comparison is lexical. Resolving links would
+        # cost a read per gamelist entry per query, which is what the
+        # one-read-per-source rule exists to prevent — so the same file reached
+        # through a link falls back to the per-system answer instead.
+        rd = _catalogue_fixture(
+            self.FILES, symlinks={"/mnt/sd/link-to-roms": "/mnt/sd/retrodeck/roms"}
+        )
+        entries = rd.emulators_for("n64", content_path="/mnt/sd/link-to-roms/n64/Game.m3u")
+        assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
+
+    def test_the_anchor_follows_a_configured_roms_path(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: (
+                    '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+                    '"saves_path": "/mnt/sd/retrodeck/saves", "roms_path": "/mnt/sd/games"}}'
+                ),
+                BUNDLED_ESDE: BUNDLED_XML,
+                **self.FILES,
+            }
+        )
+        assert rd.emulators_for("n64", content_path="/mnt/sd/games/n64/Game.m3u")[0].label == (
+            "ParaLLEl N64"
+        )
+        # The default location is no longer the system's ROM directory.
+        assert rd.emulators_for("n64", content_path=f"{self.ROMS}/Game.m3u")[0].label == (
+            "Mupen64Plus-Next"
+        )
+
+    def test_the_entry_route_attaches_no_override_caveat_to_the_wrong_game(self):
+        rd = _catalogue_fixture(
+            {**self.FILES, RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'}
+        )
+        mupen = rd.emulators_for("n64")[0]
+        nested = mupen.save_location(content_path=f"{self.ROMS}/Collection/Game.m3u")
+        assert isinstance(nested, atlas.SavePlacement)
+        assert not [c for c in nested.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
+        # The game that does carry it still gets it.
+        owner = mupen.save_location(content_path=f"{self.ROMS}/Game.m3u")
+        assert isinstance(owner, atlas.SavePlacement)
+        assert [c.data["label"] for c in owner.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE] == [
+            "ParaLLEl N64"
+        ]
