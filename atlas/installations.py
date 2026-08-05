@@ -28,6 +28,7 @@ from typing import Any, Callable, Mapping, Protocol, Sequence, runtime_checkable
 
 from dataclasses import dataclass, replace as _dc_replace
 
+from atlas.content_path import content_file_name, split_content_path
 from atlas.esde import (
     KIND_LIBRETRO,
     EmulatorSpec,
@@ -70,6 +71,8 @@ from atlas.placement import (
     CAVEAT_CARD_MODE_UNCONFIRMED,
     CAVEAT_CFG_LINE_DROPPED,
     CAVEAT_CFG_VALUE_REJECTED,
+    CAVEAT_CONTENT_DIR_OBSERVATION,
+    CAVEAT_CONTENT_PATH_UNNAMED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_SORTED_DIR_UNCREATABLE,
     CAVEAT_CORE_MULTI_OPTION,
@@ -175,22 +178,6 @@ STANDALONE_FLATPAK_CFG_SUFFIX = os.path.join(
     ".var", "app", RETROARCH_FLATPAK_APP_ID, "config", "retroarch", RETROARCH_CFG
 )
 NATIVE_CFG_SUFFIX = os.path.join(".config", "retroarch", RETROARCH_CFG)
-
-
-def _split_content_path(content_path: str) -> tuple[str, str, str]:
-    """Derive ``(content_dir_path, content_dir_name, rom_stem)`` from a content path.
-
-    ``content_dir`` is the ROM's parent directory name
-    (``fill_pathname_parent_dir_name``, ``runloop.c:8781``); ``rom_stem`` is the
-    basename truncated at the last dot, but not when the name begins with one
-    (``runloop.c:8710``).
-    """
-    content_dir_path = os.path.dirname(content_path)
-    content_dir_name = os.path.basename(content_dir_path)
-    base = os.path.basename(content_path)
-    dot = base.rfind(".")
-    rom_stem = base[:dot] if dot > 0 else base
-    return content_dir_path, content_dir_name, rom_stem
 
 
 # Flatpak binds the app's private XDG directories into the sandbox under /var, so
@@ -623,7 +610,10 @@ class _Content:
     """The ROM's coordinates — every value a placement fills in from the content.
 
     All three stay ``None`` when no content was named: the holes then remain
-    holes (``needs``), and nothing about the ROM is guessed.
+    holes (``needs``), and nothing about the ROM is guessed. ``rom_stem`` is
+    ``None`` for a named content path too when RetroArch's path math derives no
+    name from it — the directory still resolves, but nothing is named after a
+    name that does not exist.
     """
 
     dir_path: str | None = None
@@ -632,10 +622,39 @@ class _Content:
 
 
 def _content_coordinates(content_path: str | None) -> _Content:
-    """Split a content path into the coordinates the placement asks it for."""
-    if content_path is None:
+    """Split a content path into the coordinates the placement asks it for.
+
+    An empty string names nothing at all — not even a directory — so it fills
+    no coordinate and every hole stays a hole, exactly as if no content had been
+    passed. The caller still states *that* it was asked with one
+    (:func:`_unnamed_content_caveat`), and the empty answer stays out of the
+    directory: a placement's ``dir`` may not be empty.
+    """
+    if not content_path:
         return _Content()
-    return _Content(*_split_content_path(content_path))
+    dir_path, dir_name, rom_stem = split_content_path(content_path)
+    return _Content(dir_path, dir_name, rom_stem or None)
+
+
+def _unnamed_content_caveat(content_path: str) -> Caveat:
+    """A content path RetroArch's own path math derives no name from.
+
+    Reached by a path whose last component is empty and carries no dot
+    (``/roms/psx/Game/``) — the truncation at runloop.c:8710-8711 finds nothing
+    to cut, ``fill_pathname`` then concatenates the extension onto an empty
+    name (file_path.c:345-358) and the save is called ``.srm`` — and by the
+    empty string, which names nothing whatsoever. Naming files after an empty
+    stem would make every dotfile in the directory a save, so atlas states the
+    fact and observes nothing; a domain answer with a caveat, never an
+    exception.
+    """
+    return Caveat(
+        CAVEAT_CONTENT_PATH_UNNAMED,
+        f"content path {content_path!r} names no file — RetroArch's path math "
+        "(runloop.c:8673-8713) derives an empty name from it, so save file names are not stated "
+        "and no files are observed; name the content file itself, without a trailing slash",
+        {"content_path": content_path},
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1460,9 +1479,11 @@ def _observed_file_set(
     (``[``, ``]``) — escaped so ``[`` matches ``[`` (REVIEW M2). RetroArch's own
     bookkeeping next to saves is filtered with a source citation: the
     disk-control index ``<stem>.ldci`` (disk_index_file.c:201-249,
-    file_path_special.h:83) is not save data.
+    file_path_special.h:83) is not save data. The content file itself is
+    filtered by the name it has on disk — for content inside an archive that is
+    the archive, which shares the stem whenever it is named after its entry.
     """
-    content_basename = os.path.basename(content_path) if content_path else None
+    content_file = content_file_name(content_path) if content_path else None
     pattern = os.path.join(_glob_escape(directory), _glob_escape(rom_stem) + ".*")
     companions = {f"{rom_stem}.ldci"}
     matches = [
@@ -1470,7 +1491,7 @@ def _observed_file_set(
         for m in machine.glob(pattern)
         # In content-dir mode the ROM shares the save's directory and
         # stem — the content file itself is never part of the save set.
-        if os.path.basename(m) != content_basename and os.path.basename(m) not in companions
+        if os.path.basename(m) != content_file and os.path.basename(m) not in companions
     ]
     declared = None
     if card is not None and mode is not None and mode.files is not None:
@@ -1522,6 +1543,41 @@ def _nest_card_subdir(
     return os.path.join(directory, mode.subdir), nested_fallback, sources
 
 
+def _content_dir_caveat(directory: str) -> Caveat:
+    """What an observation in the content's own directory can and cannot say.
+
+    The observation is a glob for the name RetroArch saves under
+    (runloop.c:8720), and in the ROM's own directory that name belongs to the
+    *content* first: the remaining tracks of a ``.cue``, the box art and manual
+    a frontend stores beside it, the archive the ROM was extracted from. Telling
+    those from save data would take a source that says which extensions are
+    content — atlas has none (rule cards state files per core, not per content
+    format), and an invented list of ROM extensions is exactly the guess this
+    resolver refuses. So the observation is stated for what it is: everything
+    lying there under the content's name, never a completeness claim
+    (REVIEW M10).
+    """
+    return Caveat(
+        CAVEAT_CONTENT_DIR_OBSERVATION,
+        f"the files observed lie in the content's own directory ({directory}) and are matched by the "
+        "content's name — files belonging to the content itself (further disc tracks, cover art, "
+        "manuals) cannot be told from save data here, so this set may be wider than the save",
+        {"dir": directory},
+    )
+
+
+def _is_content_dir(directory: str, content: _Content) -> bool:
+    """Is the directory just observed the content's own — the one atlas does not own?
+
+    Normalized on both sides: the same directory can reach the placement as the
+    content's own path and as a configured ``savefile_directory`` spelled with a
+    trailing slash, and it is the same directory either way.
+    """
+    if content.dir_path is None:
+        return False
+    return os.path.normpath(directory) == os.path.normpath(content.dir_path)
+
+
 def _observed_at(
     machine: Machine,
     *,
@@ -1533,6 +1589,7 @@ def _observed_at(
 ) -> tuple[FileSet, str | None, tuple[Caveat, ...]]:
     """What lies at the resolved directory: the file set and the link view."""
     file_set = UNKNOWN_FILE_SET
+    caveats: tuple[Caveat, ...] = ()
     if content.rom_stem is not None:
         file_set = _observed_file_set(
             machine,
@@ -1542,8 +1599,10 @@ def _observed_at(
             card=card,
             mode=mode,
         )
+        if file_set.state == "observed" and _is_content_dir(directory, content):
+            caveats = (_content_dir_caveat(directory),)
     physical_dir, link_caveats = _link_view(machine, directory)
-    return file_set, physical_dir, link_caveats
+    return file_set, physical_dir, (*caveats, *link_caveats)
 
 
 def _standard_placement(
@@ -1651,6 +1710,8 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
     content = _content_coordinates(query.content_path)
     core = _identify_core(machine, core_so=query.core_so, core_path_resolver=query.core_path_resolver)
     caveats = [*query.extra_caveats, *core.caveats]
+    if query.content_path is not None and content.rom_stem is None:
+        caveats.append(_unnamed_content_caveat(query.content_path))
     sources_extra = [*query.extra_sources, *core.sources]
 
     retroarch_config_dir = os.path.dirname(query.global_cfg_path)

@@ -8,7 +8,9 @@ keep the save for this content?". Its shape follows the research findings
   follows from RetroArch's central path rule and is always resolvable; the file
   set is per-core behaviour with no metadata source. For existing saves atlas
   *observes* the set (``glob("<rom_stem>.*")``); otherwise it is honestly
-  ``unknown`` — never guessed. The old fixed ``<rom_stem>.srm`` filename is
+  ``unknown`` — never guessed. An observation in the ROM's own directory says so
+  (``content-dir-observation``): there the content shares the name and no source
+  tells the two apart. The old fixed ``<rom_stem>.srm`` filename is
   gone: ``.srm`` is only what RetroArch itself writes, and cores like Beetle
   Saturn write ``.bcr``/``.bkr``/``.smpc`` on their own.
 - **A hole is not an unknown.** ``needs`` lists holes the caller fills from the
@@ -78,6 +80,8 @@ CAVEAT_SANDBOX_PATH_UNTRANSLATED = "sandbox-path-untranslated"
 CAVEAT_APP_RELATIVE_PATH_UNEXPANDED = "app-relative-path-unexpanded"
 CAVEAT_CFG_LINE_DROPPED = "cfg-line-dropped"
 CAVEAT_CFG_VALUE_REJECTED = "cfg-value-rejected"
+CAVEAT_CONTENT_DIR_OBSERVATION = "content-dir-observation"
+CAVEAT_CONTENT_PATH_UNNAMED = "content-path-unnamed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +107,19 @@ class Caveat:
 
 _HOLE_CONTENT_DIR = "content_dir"
 _HOLE_LIBRARY_NAME = "library_name"
+
+
+def _holes(named: list[str]) -> tuple[str, ...]:
+    """The distinct holes of a template, in the order they first appear.
+
+    One template can name the same hole twice — ``savefiles_in_content_dir``
+    roots at the content directory and ``sort_savefiles_by_content_enable``
+    appends its name again (``runloop.c:8789`` then ``:8827``), so the directory
+    really is ``<content_dir>/<content_dir>``. The caller still fills one value,
+    and ``needs`` is the list of things to fill, not of positions to substitute
+    (REVIEW L4).
+    """
+    return tuple(dict.fromkeys(named))
 
 
 @dataclass(frozen=True, slots=True)
@@ -292,7 +309,7 @@ def build_save_placement(
     return SavePlacement(
         dir=directory,
         root_kind=root_kind,
-        needs=tuple(needs),
+        needs=_holes(needs),
         file_set=file_set,
         sources=tuple(all_sources),
         caveats=tuple(caveats),

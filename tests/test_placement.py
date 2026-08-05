@@ -163,6 +163,24 @@ class TestHoles:
         assert p.dir == "<content_dir>"
         assert p.needs == ("content_dir",)
 
+    def test_one_hole_named_twice_is_named_once(self):
+        # L4: the content directory really is nested under itself
+        # (runloop.c:8789 then :8827), but the caller fills one value.
+        p = _build(
+            'savefiles_in_content_dir = "true"\n'
+            'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+        )
+        assert p.dir == "<content_dir>/<content_dir>"
+        assert p.needs == ("content_dir",)
+
+    def test_deduping_keeps_the_order_the_holes_appear_in(self):
+        p = _build(
+            'savefiles_in_content_dir = "true"\n'
+            'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "true"\n'
+        )
+        assert p.dir == "<content_dir>/<content_dir>/<library_name>"
+        assert p.needs == ("content_dir", "library_name")
+
 
 class TestFileSetAndProvenance:
     def test_default_file_set_is_unknown_never_guessed(self):

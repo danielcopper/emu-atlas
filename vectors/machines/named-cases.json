@@ -2945,6 +2945,426 @@
           ]
         }
       }
+    },
+    {
+      "name": "archive-content-path-names-the-entry",
+      "rationale": "Content inside an archive is named '<archive>#<entry>'. RetroArch cuts at the archive delimiter before truncating the extension (runloop.c:8702-8713, path_basename file_path.c:692-700), so the ROM is named after the entry, in the archive's own directory: the save of Pack.zip#Golden Sun (USA).gba is 'Golden Sun (USA).srm' under saves/gba, and it is observed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Pack.zip": "",
+          "/mnt/sd/retrodeck/saves/gba/Golden Sun (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Pack.zip#Golden Sun (USA).gba",
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/gba",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Golden Sun (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "archive-entry-name-finds-the-per-game-override",
+      "rationale": "The game override is named after the same runtime basename (configuration.c:7095 reads config/<library_name>/<name>.cfg), so an archive entry only finds its override once the name is the entry's: this one switches sort-by-content off and the save lands flat in saves/, not saves/gba.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/Golden Sun (USA).cfg": "sort_savefiles_by_content_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Pack.zip": "",
+          "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Pack.zip#Golden Sun (USA).gba",
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Golden Sun (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "content-dir-observation-states-what-it-saw",
+      "rationale": "savefiles_in_content_dir: the observation runs in the ROM's own directory, where everything the content consists of carries the ROM's name — the second disc track and the cover art match the same glob as the save. atlas states the whole set and says with a caveat that it may be wider than the save; filtering by extension would be a guess (REVIEW M10).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefiles_in_content_dir = \"true\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Game.cue": "FILE \"Game.bin\" BINARY\n",
+          "/mnt/sd/retrodeck/roms/psx/Game.bin": "track",
+          "/mnt/sd/retrodeck/roms/psx/Game.png": "cover",
+          "/mnt/sd/retrodeck/roms/psx/Game.srm": "sram",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Game.cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/roms/psx",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game.bin",
+              "Game.png",
+              "Game.srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            },
+            {
+              "code": "content-dir-observation",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/roms/psx"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "content-dir-root-and-sort-name-one-hole-once",
+      "rationale": "With savefiles_in_content_dir and sort-by-content both on, RetroArch really nests the content directory under itself (runloop.c:8789 then :8827) — but the caller fills one value, so the template carries two positions and 'needs' names the hole once (REVIEW L4).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefiles_in_content_dir = \"true\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "query": {
+          "installation": "retrodeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "<content_dir>/<content_dir>",
+          "root_kind": "content_directory",
+          "needs": [
+            "content_dir"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "trailing-slash-content-path-names-the-same-file",
+      "rationale": "A trailing slash disappears in RetroArch's own math: path_basename returns nothing (file_path.c:692-700) and the last dot is cut all the same (runloop.c:8710), so 'roms/psx/Game.cue/' is the same ROM as 'roms/psx/Game.cue' — same directory, same observed save (REVIEW L11).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Game.cue": "",
+          "/mnt/sd/retrodeck/saves/psx/Game.srm": "sram"
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Game.cue/"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game.srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "content-path-without-a-name-is-refused",
+      "rationale": "A path whose last component is empty and carries no dot leaves RetroArch's basename empty — it would write a save called '.srm' (file_path.c:345-358). Naming files after an empty stem would report every dotfile in the save directory as the save, so atlas observes nothing and states the refusal; the directory still resolves (REVIEW L11).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Game/disc.bin": "",
+          "/mnt/sd/retrodeck/saves/psx/.hidden": "not a save"
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Game/"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            },
+            {
+              "code": "content-path-unnamed",
+              "data": {
+                "content_path": "/mnt/sd/retrodeck/roms/psx/Game/"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "dotted-directory-truncates-the-way-retroarch-does",
+      "rationale": "The truncation at runloop.c:8710-8711 cuts at the last dot of the whole path, guarded only by 'not at index 0'. An extensionless ROM under a directory whose name carries a dot is therefore named after the directory's first half, one level up — atlas mirrors it, because the answer has to name the file this emulator writes.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/My.Games/rom": "",
+          "/mnt/sd/retrodeck/saves/roms/My.srm": "sram"
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/My.Games/rom"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/roms",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "My.srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "trailing-slash-content-path-keeps-the-content-out-of-the-set",
+      "rationale": "Same machine and same ROM as 'content-dir-observation-states-what-it-saw', named with a trailing slash: RetroArch derives the same name from both (path_basename returns nothing, the dot is cut all the same), so the answer must be the same down to the file set — in particular the content file itself stays out of it, which only holds if the slash is normalized on the filtering side too.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefiles_in_content_dir = \"true\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Game.cue": "FILE \"Game.bin\" BINARY\n",
+          "/mnt/sd/retrodeck/roms/psx/Game.bin": "track",
+          "/mnt/sd/retrodeck/roms/psx/Game.png": "cover",
+          "/mnt/sd/retrodeck/roms/psx/Game.srm": "sram",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Game.cue/"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/roms/psx",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game.bin",
+              "Game.png",
+              "Game.srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            },
+            {
+              "code": "content-dir-observation",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/roms/psx"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

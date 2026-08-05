@@ -102,6 +102,24 @@ placement.dir    # '/…/saves/<content_dir>'
 placement.needs  # ('content_dir',)
 ```
 
+A hole is named once even when the template repeats it: with `savefiles_in_content_dir` _and_ sort-by-content the
+directory really is `<content_dir>/<content_dir>`. The two positions are **not** the same string — the root is the ROM's
+directory, the sort stage is that directory's _name_, so a ROM in `/roms/psx` lands in `/roms/psx/psx`. Pass
+`content_path` and atlas fills both correctly; `needs` only tells you which fact is missing.
+
+### What `content_path` may be
+
+Pass the path the way RetroArch gets it, and atlas names the content the way RetroArch names it
+(`runloop_path_set_basename`):
+
+- **Content inside an archive** is `"<archive>#<entry>"` — `…/Pack.zip#Game.n64` is the ROM `Game` in `…/`, so its save
+  is `Game.srm`, not `Pack.zip#Game.srm`. A `#` that is not preceded by `.zip`/`.7z`/`.zst`/`.apk` is an ordinary
+  character in a file name.
+- **A trailing slash** changes nothing (`…/Game.cue/` is `…/Game.cue`) — unless the last component carries no dot at
+  all, in which case RetroArch derives no name and atlas says so (`content-path-unnamed`) instead of guessing.
+- **A dot in a directory name** truncates the path there when the ROM itself has no extension: `/roms/My.Games/rom` is
+  named `/roms/My` and the save lands one level up. That is upstream behaviour, mirrored deliberately.
+
 ### Reading the file set
 
 `file_set.state` is one of three honest states — branch on it:
@@ -131,11 +149,18 @@ else:
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified     |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it) |
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain          |
+| `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below  |
+| `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                        |
 | `health`                                    | the installation itself has issues; `data["issue"]` carries the health code                   |
 | `unverified-version`                        | the rule card was never verified against this emulator version                                |
 | `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read   |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
+
+`content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
+to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the
+cover art, the archive the ROM came in. atlas states the whole set rather than filtering by an invented list of content
+extensions; `complete` is `false`, and deciding which of those files are yours to upload is the client's call.
 
 ## Which emulator would launch this? (the catalogue)
 

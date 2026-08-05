@@ -102,6 +102,50 @@ RetroArch.
 reverts to the unsorted root (`runloop.c:8844`). The answer therefore depends on filesystem state, not on configuration
 alone — read-only media or missing permissions change where a save lands.
 
+### How the content is named — `runloop_path_set_basename`
+
+**[V]** Every value above is derived from one string, `runtime_content_path_basename`, built once per load in
+`runloop_path_set_basename` (`runloop.c:8673-8713`): the content directory is `fill_pathname_basedir` of it
+(`runloop.c:8789`), the sort-by-content component `fill_pathname_parent_dir_name` of it (`runloop.c:8781`), and the save
+file is its last component with `.srm` appended. Naming the content wrongly therefore moves the directory _and_ the file
+name at once.
+
+**[V]** The save file is named **twice**, and the second naming governs. `runloop_path_set_names` first builds
+`fill_pathname(basename, ".srm")` (`runloop.c:8720`), which truncates a _second_ extension off the stem — `Game.v1.1`
+would become `Game.v1.srm`. `runloop_path_set_redirect` then overwrites it whenever the resolved save path is a
+directory (which is every case atlas answers) with `fill_pathname_dir(name.savefile, basename, ".srm")`
+(`runloop.c:8929-8936`), and `fill_pathname_dir` appends the basename's last component unchanged
+(`file_path.c:436-443`). So the save of `…/Game.v1.1.n64` is `Game.v1.1.srm`: the stem is cut once, by
+`runloop_path_set_basename`, and never again.
+
+**[V]** **Content inside an archive is named after the entry, not the archive.** Under `HAVE_COMPRESSION` the basename
+is rebuilt from two archive-aware calls before any extension is cut: `path_basedir_wrapper` truncates at the archive
+delimiter and keeps the directory (`file_path.c:1322-1341`), `path_basename` returns everything _after_ the delimiter
+(`file_path.c:692-700`). So `/roms/n64/pack.zip#Game.n64` becomes `/roms/n64/Game` — save `Game.srm` in `roms/n64` — and
+`/roms/n64/pack.7z#disc/Game.n64` becomes `/roms/n64/disc/Game`, an in-archive folder that lands in the path.
+
+**[V]** The delimiter is not simply "the first `#`": `path_get_archive_delim` (`file_path.c:172-220`) accepts only a `#`
+directly preceded by `.7z`, `.zip`, `.zst` or `.apk` (letters case-insensitive, at least one character before the dot),
+so `Game #2.gb` is one ordinary file name.
+
+**[V]** `HAVE_COMPRESSION` is set unconditionally by the build system (`Makefile.common:1988` — "the ZIP archive backend
+decodes DEFLATE through the built-in inflate when zlib is not present"), and the RetroArch shipped in RetroDECK 0.10.9b
+reports `7zip extraction support: yes` / `zip extraction support: yes` under `--features`. The compressed branch is the
+one that runs.
+
+**[V]** **The extension is truncated on the whole path, not on the basename.** The cut is
+`strrchr(runtime_content_path_basename, '.')` guarded by `dst - <start of the path> > 0` (`runloop.c:8710-8711`) — the
+comment says "not when the path is relative and begins with a dot", and that is all the guard does: it protects index 0.
+For an extensionless ROM under a directory whose name carries a dot the last dot _is_ in the directory name, so
+`/roms/My.Games/rom` is named `/roms/My` and its save is written to `/roms/My.srm`, one level up from the ROM. A
+trailing slash falls out of the same math: `path_basename` returns nothing for `/roms/psx/Game.cue/` and the dot is cut
+anyway, so it names the same ROM as the path without the slash.
+
+**[D]** A path whose last component is empty _and_ carries no dot (`/roms/psx/Game/`) leaves the basename ending in a
+slash: `fill_pathname` finds no dot in an empty basename and concatenates, so RetroArch would write
+`/roms/psx/Game/.srm` (`file_path.c:345-358`). atlas states that the path names no file instead of observing a
+directory's dotfiles.
+
 ### RetroDECK's shipped defaults
 
 **[V]** From `components/retroarch/rd_config/retroarch.cfg`:
@@ -316,6 +360,12 @@ cores at once. File-set knowledge is per core, sourced only from each core's own
 different kinds of knowledge with different acquisition costs and different completeness. In the resolver model the
 file-set question largely dissolves: for existing saves the resolver **observes** the set (`glob("<rom_stem>.*")`), and
 a server-supplied save brings its own filenames — only the directory must be resolved.
+
+**[V]** The observation is honest about one blind spot: with `savefiles_in_content_dir` it runs in the ROM's own
+directory, where the content shares the ROM's name (`Game.bin` next to `Game.cue`, cover art, the archive itself). No
+shipped source says which extensions are content — `supported_extensions` is per core, not per content file, and it
+would not cover a frontend's box art — so the set is stated in full with a `content-dir-observation` caveat rather than
+filtered against an invented list.
 
 ## 8. Cores that ignore the save directory
 

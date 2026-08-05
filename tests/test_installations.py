@@ -236,6 +236,179 @@ class TestRetroDeckSaveLocation:
         assert p.file_set.files == ("Tetris (World) (Rev 1).rtc", "Tetris (World) (Rev 1).srm")
 
 
+class TestArchiveContentResolves:
+    """The consequences of the stem: the observed set and the per-game override."""
+
+    ARCHIVE = "/mnt/sd/retrodeck/roms/gba/Pack.zip"
+    ENTRY = f"{ARCHIVE}#Golden Sun (USA).gba"
+    CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+        'libretro_directory = "/app/cores"\n'
+    )
+
+    def _machine(self, extra=None):
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: self.CFG,
+            self.ARCHIVE: "",
+            "/mnt/sd/retrodeck/saves/gba/Golden Sun (USA).srm": "sram",
+            **(extra or {}),
+        }
+        return _retrodeck(files, cores={f"{RD_DEPLOY_CORES}/mgba_libretro.so": {"library_name": "mGBA"}})
+
+    def test_the_entry_names_the_save(self):
+        rd = self._machine()
+        p = rd.save_location(content_path=self.ENTRY, core_so="mgba_libretro.so")
+        assert p.dir == "/mnt/sd/retrodeck/saves/gba"
+        assert p.file_set.files == ("Golden Sun (USA).srm",)
+
+    def test_the_game_override_is_found_under_the_entry_name(self):
+        rd = self._machine(
+            {
+                f"{RETRODECK_OVERRIDES}/mGBA/Golden Sun (USA).cfg": (
+                    'sort_savefiles_by_content_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram",
+            }
+        )
+        p = rd.save_location(content_path=self.ENTRY, core_so="mgba_libretro.so")
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+
+    def test_the_archive_itself_is_not_a_save(self):
+        # In content-dir mode the archive lies where the save does and carries
+        # the same stem when it is named after its entry.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefiles_in_content_dir = "true"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+                "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).srm": "sram",
+            }
+        )
+        p = rd.save_location(
+            content_path="/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip#Golden Sun (USA).gba"
+        )
+        assert p.file_set.files == ("Golden Sun (USA).srm",)
+
+
+class TestContentDirObservation:
+    """M10: an observation in the ROM's own directory says what it is."""
+
+    CFG = (
+        'savefiles_in_content_dir = "true"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+    )
+    CUE = "/mnt/sd/retrodeck/roms/psx/Game.cue"
+
+    def _machine(self):
+        return _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: self.CFG,
+                self.CUE: "FILE \"Game.bin\" BINARY\n",
+                "/mnt/sd/retrodeck/roms/psx/Game.bin": "track",
+                "/mnt/sd/retrodeck/roms/psx/Game.png": "cover",
+                "/mnt/sd/retrodeck/roms/psx/Game.srm": "sram",
+            }
+        )
+
+    def test_the_content_siblings_are_stated_not_hidden(self):
+        p = self._machine().save_location(content_path=self.CUE)
+        assert p.file_set.state == "observed"
+        assert p.file_set.files == ("Game.bin", "Game.png", "Game.srm")
+        assert p.file_set.complete is False
+
+    def test_the_observation_carries_the_caveat_that_says_so(self):
+        p = self._machine().save_location(content_path=self.CUE)
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_CONTENT_DIR_OBSERVATION)
+        assert caveat.data == {"dir": "/mnt/sd/retrodeck/roms/psx"}
+
+    def test_a_trailing_slash_still_filters_the_content_file(self):
+        # The ROM is filtered by the name it has on disk, and that name has to
+        # survive the trailing slash the rest of the math already normalizes
+        # away — otherwise the content file reads as save data.
+        with_slash = self._machine().save_location(content_path=f"{self.CUE}/")
+        without = self._machine().save_location(content_path=self.CUE)
+        assert with_slash.file_set.files == without.file_set.files
+        assert "Game.cue" not in with_slash.file_set.files
+
+    def test_a_save_directory_of_its_own_carries_no_such_caveat(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                self.CUE: "",
+                "/mnt/sd/retrodeck/saves/Game.srm": "sram",
+            }
+        )
+        p = rd.save_location(content_path=self.CUE)
+        assert p.file_set.files == ("Game.srm",)
+        assert not any(c.code == atlas.CAVEAT_CONTENT_DIR_OBSERVATION for c in p.caveats)
+
+
+class TestUnnamedContentPath:
+    """L11: a content path RetroArch derives no name from is refused, loudly."""
+
+    CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+    )
+
+    def _machine(self):
+        return _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: self.CFG,
+                "/mnt/sd/retrodeck/roms/psx/Game/disc.bin": "",
+                "/mnt/sd/retrodeck/saves/psx/.hidden": "not a save",
+            }
+        )
+
+    def test_no_dotfile_is_reported_as_a_save(self):
+        p = self._machine().save_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
+        assert p.file_set.state == "unknown"
+        assert p.file_set.files == ()
+
+    def test_the_refusal_is_stated(self):
+        p = self._machine().save_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_CONTENT_PATH_UNNAMED)
+        assert caveat.data == {"content_path": "/mnt/sd/retrodeck/roms/psx/Game/"}
+
+    def test_the_directory_is_still_answered(self):
+        # The name is missing, not the layout: the sort component is the
+        # directory of the last component (file_path.c:493-534).
+        p = self._machine().save_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
+        assert p.dir == "/mnt/sd/retrodeck/saves/psx"
+
+    def test_an_empty_content_path_is_answered_not_raised(self):
+        # An empty string fills no coordinate at all, so every hole stays a
+        # hole — and the answer says why it was not filled. Domain states never
+        # raise, and a content-directory root would otherwise build an empty
+        # dir (which SavePlacement refuses).
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefiles_in_content_dir = "true"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/saves/.keep": "",
+            }
+        )
+        p = rd.save_location(content_path="")
+        assert p.dir == "<content_dir>"
+        assert p.needs == ("content_dir",)
+        assert p.file_set.state == "unknown"
+        assert any(c.code == atlas.CAVEAT_CONTENT_PATH_UNNAMED for c in p.caveats)
+
+
 class TestConditionalPlacement:
     """H5: an absent sorted directory is a conditional result, not a fact."""
 
