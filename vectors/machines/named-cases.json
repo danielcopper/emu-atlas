@@ -2595,6 +2595,356 @@
           ]
         }
       }
+    },
+    {
+      "name": "unusable-override-save-root-keeps-the-global-root",
+      "rationale": "The per-core override points savefile_directory at an unmounted card while the game override flips the sort. RetroArch merges the whole chain into one config and reloads the global cfg through it (configuration.c:7161-7243) WITHOUT config_set_defaults, so the value it refuses by path_is_directory (:6920) leaves the boot load's root standing - the global cfg's own /mnt/sd/retrodeck/saves, not the platform default. The rejection names the layer that stated it, because that is the file a caller has to fix.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "savefile_directory = \"/run/media/gone/saves\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/Lumines (USA).cfg": "sort_savefiles_by_content_enable = \"true\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/psp"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psp",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "core override config/PPSSPP/PPSSPP.cfg",
+                "configured": "/run/media/gone/saves",
+                "effective": "/mnt/sd/retrodeck/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "override-switches-the-game-opt-layer-off",
+      "rationale": "The per-core override sets game_specific_options = false. RetroArch reads that setting from the MERGED config: the core's retro_set_environment (runloop.c:5037) drives runloop_init_core_options and its settings->bools.game_specific_options read (runloop.c:1529-1530), one step after config_load_override merged the overrides (:5003). So the game .opt beside it is never consulted and the global options file governs - shared VMUs under system_directory instead of the per-game mode the .opt asks for. Contrast auto_overrides_enable, which is captured before the merge (:4941).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Flycast.cfg": "game_specific_options = \"false\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Shenmue (Europe).opt": "reicast_per_content_vmus = \"VMU A1\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/bios/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "card": "flycast",
+                "arrangement": "retrodeck",
+                "verification": "runtime-version-unknown",
+                "missing": "arrangement_version, core_library_version"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "dropped-rgui-config-directory-line-moves-the-override-tree",
+      "rationale": "rgui_config_directory is written with no space before the '=', so RetroArch's key scan swallows the '=' and drops the line (config_file.c:596-623). The override tree therefore stays at the platform default beside retroarch.cfg, and the PPSSPP override sitting in the directory the line names is never read - the answer keeps the global layout with nothing else to show for it. The dropped line is stated: it governs where every override and .opt file is looked for, so losing it silently would move the whole chain.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory=\"/mnt/sd/retrodeck/rgui\"\n",
+          "/mnt/sd/retrodeck/rgui/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"true\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/psp"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "cfg-line-dropped",
+              "data": {
+                "key": "rgui_config_directory",
+                "line": "rgui_config_directory=\"/mnt/sd/retrodeck/rgui\""
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "shadowed-override-save-root-is-not-the-fallback",
+      "rationale": "Three layers set savefile_directory: the global cfg (valid), the core override (valid, and a real directory on this machine), the game override (an unmounted card). The chain is merged into one config before anything is read (config_file.c:768-805), so the getter sees ONE entry for the key - the game override's. The core override's value was overwritten in the merge and never reaches a getter at all. When the entry the getter does see is refused, the reload that refused it ran without config_set_defaults (configuration.c:7243), so what stands is what the BOOT load left: the global cfg's own value. A resolver that folds layer by layer answers with the shadowed core override instead, and is wrong on both keys below. Here that means /mnt/sd/retrodeck/saves, NOT the core override's /mnt/sd/other.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "savefile_directory = \"/mnt/sd/other\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/Lumines (USA).cfg": "savefile_directory = \"/run/media/gone/saves\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/other/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "game override config/PPSSPP/Lumines (USA).cfg",
+                "configured": "/run/media/gone/saves",
+                "effective": "/mnt/sd/retrodeck/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "shadowed-override-boolean-is-not-the-fallback",
+      "rationale": "Three layers set sort_savefiles_by_content_enable: the global cfg (true), the core override (false), the game override (\"yes\", which config_get_bool refuses - config_file.c:1227-1262). The chain is merged into one config before anything is read (config_file.c:768-805), so the getter sees ONE entry for the key - the game override's. The core override's value was overwritten in the merge and never reaches a getter at all. When the entry the getter does see is refused, the reload that refused it ran without config_set_defaults (configuration.c:7243), so what stands is what the BOOT load left: the global cfg's own value. A resolver that folds layer by layer answers with the shadowed core override instead, and is wrong on both keys below. Here that means the global 'true' governs and saves land in saves/psp, NOT the core override's flat 'false'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/Lumines (USA).cfg": "sort_savefiles_by_content_enable = \"yes\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/psp"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psp",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "cfg-value-rejected",
+              "data": {
+                "key": "sort_savefiles_by_content_enable",
+                "value": "yes"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

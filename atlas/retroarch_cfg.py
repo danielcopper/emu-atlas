@@ -9,6 +9,10 @@ config values, resolved through a four-layer chain in which later files win
 3. ``config/<library_name>/<content_dir>.cfg`` — content-dir override
 4. ``config/<library_name>/<rom_name>.cfg`` — game override
 
+"Later files win" is where the chain ends, not how it is walked: RetroArch
+merges the whole chain into ONE config and reads each key from it once — see
+:func:`_read_layers`, which is what every resolution here folds over.
+
 This module resolves the four governing keys through that chain and reports both
 the resolved value and the provenance of each — which file won, which default
 applied. Defaults differ per install flavor and are passed in as
@@ -21,7 +25,7 @@ Pure text in, value object out. No I/O — the machine seam supplies the texts.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Callable, Sequence
 
 _IN_CONTENT_DIR = "savefiles_in_content_dir"
 _SORT_BY_CONTENT = "sort_savefiles_by_content_enable"
@@ -99,6 +103,30 @@ class IgnoredSetting:
 
 
 @dataclass(frozen=True, slots=True)
+class RejectedDirectory:
+    """A ``savefile_directory`` RetroArch read and refused as a saves root.
+
+    ``path_is_directory`` failed on it, so that read set nothing
+    (``configuration.c:6920-6932``). ``layer`` names the file that stated the
+    value, ``value`` the value as RetroArch tested it (``~`` expanded). Unlike
+    :class:`IgnoredSetting` this is not a spelling mistake: the value is
+    well-formed, the machine just has no such directory.
+
+    ``superseded`` says where the root that ends up standing came from, which
+    is not the same story in both directions. Normally the refusal is the last
+    word and what stands is what preceded it — the global cfg's root, or the
+    platform default. But the global cfg can be the one refused while an
+    override then supplies a usable root: the standing root is then set *after*
+    the refusal, and ``superseded`` is true. Saying it the other way round
+    would invert the causality.
+    """
+
+    layer: str
+    value: str
+    superseded: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class RetroArchCfg:
     """The save-layout decision resolved through the override chain, with provenance.
 
@@ -116,7 +144,9 @@ class RetroArchCfg:
     the value; when an override won, it names it. ``ignored`` carries the
     governing settings the configs *state* and RetroArch does not apply — a
     line its parser drops, a value its typed getter refuses — so a caller sees
-    why the file and the answer disagree.
+    why the file and the answer disagree. ``rejected_directories`` is the same
+    kind of gap for the saves root: values RetroArch read and found not to be
+    directories.
     """
 
     savefiles_in_content_dir: bool
@@ -125,6 +155,7 @@ class RetroArchCfg:
     savefile_directory: str | None
     sources: tuple[str, ...]
     ignored: tuple[IgnoredSetting, ...] = ()
+    rejected_directories: tuple[RejectedDirectory, ...] = ()
 
 
 # RetroArch's parser, ported line for line from ``config_file.c`` (pinned
@@ -333,33 +364,157 @@ def expand_home(raw: str, *, home: str) -> str | None:
 # it is an override (the global cfg is not).
 _Layer = tuple[str, ParsedCfg, bool]
 
+# One layer as a caller holds it before parsing: label and text, in load order.
+CfgLayer = tuple[str, str]
+
+# ``path_is_directory`` as the machine answers it. A value the caller cannot
+# test — a path that exists only inside a sandbox — must answer true: the
+# emulator's own test still decides, atlas simply did not perform it, and
+# answering false would reject a directory that is very likely there.
+DirectoryCheck = Callable[[str], bool]
+
+
+def _parse_layers(layers: Sequence[CfgLayer]) -> list[_Layer]:
+    """Text layers as parsed layers — the global cfg first, its overrides after."""
+    return [(label, parse_cfg(text), index > 0) for index, (label, text) in enumerate(layers)]
+
+
+def _read_layers(layers: Sequence[_Layer], key: str) -> list[_Layer]:
+    """The layers RetroArch actually reads *key* from, in the order it reads them.
+
+    Not one load per override: ``config_load_override`` collects the override
+    files that exist and makes a SINGLE reload of the global cfg
+    (``configuration.c:7161-7243``), during which ``config_append_file`` merges
+    each override into one config where "the key-value pairs of the new config
+    file takes priority over the old" (``config_file.c:768-805``, appended at
+    ``configuration.c:6355-6392``). A getter therefore sees exactly one entry
+    per key — the last file that sets it.
+
+    That reload runs without ``config_set_defaults`` (``:7243``), so whatever
+    it refuses leaves standing what the BOOT load left: the global cfg alone,
+    read the same way, on top of the compile-time defaults. Two reads, then,
+    not four — a layer between those two is shadowed, and its value never
+    reaches a getter at all.
+    """
+    reads: list[_Layer] = []
+    if layers and key in layers[0][1].values:
+        reads.append(layers[0])
+    overriding = [layer for layer in layers[1:] if key in layer[1].values]
+    if overriding:
+        reads.append(overriding[-1])
+    return reads
+
+
+def _apply_bool(layer: _Layer, key: str, standing: bool) -> tuple[bool, IgnoredSetting | None]:
+    """One read of a boolean setting: what stands after it, and any refusal.
+
+    A value outside RetroArch's boolean vocabulary is a no-op — the loop that
+    applies boolean settings writes nothing when ``config_get_bool`` fails
+    (``configuration.c:6412-6417``), so *standing* stands on.
+    """
+    label, parsed, _ = layer
+    raw = parsed.values[key]
+    decoded = cfg_bool(raw)
+    if decoded is None:
+        return standing, IgnoredSetting(IGNORED_VALUE_REJECTED, label, key, raw)
+    return decoded, None
+
+
+def _dropped_lines(layers: Sequence[_Layer], key: str) -> tuple[IgnoredSetting, ...]:
+    """Lines aimed at *key* that RetroArch's parser refused, across the chain."""
+    return tuple(
+        IgnoredSetting(IGNORED_LINE_DROPPED, label, line.key, line.line)
+        for label, parsed, _ in layers
+        for line in parsed.dropped
+        if line.key == key
+    )
+
+
+def chain_bool(
+    layers: Sequence[CfgLayer], key: str, *, default: bool
+) -> tuple[bool, tuple[IgnoredSetting, ...]]:
+    """One boolean key as RetroArch reads it through the chain (:func:`_read_layers`).
+
+    Returns the effective value and the settings the configs state that it does
+    not reflect — values the typed getter refuses, lines the parser drops.
+    """
+    parsed_layers = _parse_layers(layers)
+    value = default
+    ignored: list[IgnoredSetting] = []
+    for layer in _read_layers(parsed_layers, key):
+        value, refused = _apply_bool(layer, key, value)
+        if refused is not None:
+            ignored.append(refused)
+    return value, (*ignored, *_dropped_lines(parsed_layers, key))
+
+
+def chain_value(
+    layers: Sequence[CfgLayer], key: str
+) -> tuple[str | None, tuple[IgnoredSetting, ...]]:
+    """One raw key as RetroArch reads it through the chain — ``None`` when unset.
+
+    The generic path/array loops write whatever the merged config holds
+    (``configuration.c:6532-6537``), so the last layer that sets the key is the
+    answer; only ``savefile_directory`` and its savestate twin are validated
+    before they are applied (``:6914-6960``). The dropped lines travel along:
+    a line the parser refused sets nothing, and nothing else in the answer says so.
+    """
+    parsed_layers = _parse_layers(layers)
+    reads = _read_layers(parsed_layers, key)
+    value = reads[-1][1].values[key] if reads else None
+    return value, _dropped_lines(parsed_layers, key)
+
 
 def _resolve_flag(
     layers: Sequence[_Layer], key: str, *, default: bool, defaults_label: str
 ) -> tuple[bool, str, tuple[IgnoredSetting, ...]]:
-    """One boolean key through the chain — later layers win, provenance follows.
-
-    A layer whose value is outside RetroArch's boolean vocabulary is a no-op
-    *at that layer*: the value from the layer before it (or the default)
-    stands, exactly as the bool loop leaves it (``configuration.c:6412-6417``).
-    """
+    """One boolean key through the chain, with provenance — see :func:`chain_bool`."""
     value, source = default, f"default: {key} = {str(default).lower()} ({defaults_label})"
     ignored: list[IgnoredSetting] = []
-    for label, parsed, is_override in layers:
-        raw = parsed.values.get(key)
-        if raw is None:
+    for layer in _read_layers(layers, key):
+        label, parsed, is_override = layer
+        value, refused = _apply_bool(layer, key, value)
+        if refused is not None:
+            ignored.append(refused)
             continue
-        decoded = cfg_bool(raw)
-        if decoded is None:
-            ignored.append(IgnoredSetting(IGNORED_VALUE_REJECTED, label, key, raw))
-            continue
-        value = decoded
+        raw = parsed.values[key]
         source = f'{label}: {key} = "{raw}"' + (" (override wins)" if is_override else "")
     return value, source, tuple(ignored)
 
 
-def _resolve_savefile_directory(layers: Sequence[_Layer], *, home: str) -> tuple[str | None, str]:
+def _resolve_savefile_directory(
+    layers: Sequence[_Layer], *, home: str, is_directory: DirectoryCheck | None
+) -> tuple[str | None, str, tuple[RejectedDirectory, ...]]:
     """The saves root through the chain — ``None`` when the platform default applies.
+
+    Each read is validated the way ``config_load_file`` validates it
+    (``configuration.c:6914-6933``): the literal ``default`` resets to the
+    platform default unconditionally, and every other value must pass
+    ``path_is_directory`` or the read sets nothing and what stood before it
+    stands on. Without an *is_directory* check the values are taken as written
+    — except the empty string, which ``path_is_directory`` refuses on every
+    machine.
+
+    **Blank means opposite things for the two directory keys, and that is not
+    a bug in either.** One boolean in the settings table decides it — the
+    ``handle_setting`` argument of ``SETTING_PATH``:
+
+    - ``savefile_directory`` passes ``false`` (``configuration.c:1709``), so
+      the generic path loop skips it (``:6534-6535``) and the special block
+      above is the only thing that sets it. ``config_get_path`` returns true
+      for an entry whose value is empty and hands the empty string on
+      unchanged (``config_file.c:1202-1216``), ``path_is_directory("")``
+      fails, and the read is a no-op — blank **keeps** the standing root.
+    - ``rgui_config_directory`` passes ``true`` (``configuration.c:1736``), so
+      the generic path loop writes whatever the config holds with no test at
+      all (``:6536-6537``) — blank **clears** it, exactly as the literal
+      ``default`` does two hundred lines later (``:6825-6826``), and an empty
+      ``directory_menu_config`` then falls back to the directory of
+      ``retroarch.cfg`` (``file_path_special.c:203-206``).
+
+    So a blank saves root in an override changes nothing, while a blank
+    override directory moves the entire override tree. atlas reproduces both
+    (:func:`atlas.installations._override_directory` holds the second).
 
     An application-relative value (``:`` prefix) is kept as written: it names a
     directory only the running process knows, and the consumer states that
@@ -370,20 +525,32 @@ def _resolve_savefile_directory(layers: Sequence[_Layer], *, home: str) -> tuple
         f"default: {_SAVEFILE_DIRECTORY} unset — RetroArch platform default applies "
         "(saves under the config tree, platform_unix.c:2133-2134)"
     )
-    for label, parsed, is_override in layers:
-        raw = parsed.values.get(_SAVEFILE_DIRECTORY)
-        if raw is None:
-            continue
-        savefile_directory = expand_home(raw, home=home)
+    # Which read produced the root that stands decides how a refusal reads: a
+    # refusal the chain never got past fell back to what preceded it, while one
+    # a later read overwrote did not — see RejectedDirectory.superseded.
+    refusals: list[tuple[int, str, str]] = []
+    last_set = -1
+    for index, (label, parsed, is_override) in enumerate(_read_layers(layers, _SAVEFILE_DIRECTORY)):
+        raw = parsed.values[_SAVEFILE_DIRECTORY]
         suffix = " (override wins)" if is_override else ""
-        if savefile_directory is None:
+        if raw == _UNSET_VALUE:
+            savefile_directory, last_set = None, index
             source = (
                 f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" — resets to the RetroArch '
                 f"platform default{suffix}"
             )
-        else:
-            source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}"{suffix}'
-    return savefile_directory, source
+            continue
+        candidate = expand_home(raw, home=home)
+        if candidate is None or (is_directory is not None and not is_directory(candidate)):
+            refusals.append((index, label, candidate if candidate is not None else raw))
+            continue
+        savefile_directory, last_set = candidate, index
+        source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}"{suffix}'
+    rejected = [
+        RejectedDirectory(label, value, superseded=index < last_set)
+        for index, label, value in refusals
+    ]
+    return savefile_directory, source, tuple(rejected)
 
 
 def _dropped_governing_lines(layers: Sequence[_Layer]) -> tuple[IgnoredSetting, ...]:
@@ -407,9 +574,14 @@ def resolve_save_layout(
     home: str,
     cfg_label: str,
     defaults: LayoutDefaults,
-    overrides: Sequence[tuple[str, str]] = (),
+    overrides: Sequence[CfgLayer] = (),
+    is_directory: DirectoryCheck | None = None,
 ) -> RetroArchCfg:
-    """Resolve the save layout through the override chain — later layers win.
+    """Resolve the save layout through the override chain, as RetroArch reads it.
+
+    The overrides are merged into the global cfg and each key is read from the
+    result — the last file that sets it wins, and a value RetroArch refuses
+    falls back to the global cfg's own (:func:`_read_layers`).
 
     Parameters
     ----------
@@ -426,6 +598,10 @@ def resolve_save_layout(
         ``(label, text)`` pairs in load order (core, content-dir, game) —
         exactly the files that exist, already read through the machine seam.
         Each layer overrides only the keys it actually sets.
+    is_directory:
+        ``path_is_directory`` as this machine answers it, used to validate each
+        ``savefile_directory`` RetroArch reads. Omitted, the values are taken
+        as written and ``rejected_directories`` reports only the blank one.
     """
     empty = ParsedCfg({})
     layers: list[_Layer] = [
@@ -443,7 +619,9 @@ def resolve_save_layout(
     sort_by_core, s3, i3 = _resolve_flag(
         layers, _SORT_BY_CORE, default=defaults.sort_by_core, defaults_label=defaults_label
     )
-    savefile_directory, dir_source = _resolve_savefile_directory(layers, home=home)
+    savefile_directory, dir_source, rejected = _resolve_savefile_directory(
+        layers, home=home, is_directory=is_directory
+    )
 
     return RetroArchCfg(
         savefiles_in_content_dir=in_content_dir,
@@ -452,6 +630,7 @@ def resolve_save_layout(
         savefile_directory=savefile_directory,
         sources=(s1, s2, s3, dir_source),
         ignored=(*_dropped_governing_lines(layers), *i1, *i2, *i3),
+        rejected_directories=rejected,
     )
 
 
