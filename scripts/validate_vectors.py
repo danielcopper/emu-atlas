@@ -128,6 +128,8 @@ KNOWN_CAVEAT_CODES = {
     "app-relative-path-unexpanded",
     "cfg-line-dropped",
     "cfg-value-rejected",
+    "content-dir-observation",
+    "content-path-unnamed",
     "no-firmware-declaration",
     "info-path-unresolved",
     "core-dir-unresolved",
