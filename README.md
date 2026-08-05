@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="assets/compass-rose-animated.gif" alt="" width="180">
+
 # emu-atlas
+
+<h3>Where an emulator installation actually keeps its saves and BIOS — read live off the machine, not off a list</h3>
 
 [![CI](https://github.com/danielcopper/emu-atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/danielcopper/emu-atlas/actions/workflows/ci.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=danielcopper_emu-atlas&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danielcopper_emu-atlas)
@@ -6,6 +12,8 @@
 [![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=danielcopper_emu-atlas&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=danielcopper_emu-atlas)
 [![Reliability](https://sonarcloud.io/api/project_badges/measure?project=danielcopper_emu-atlas&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=danielcopper_emu-atlas)
 [![Security](https://sonarcloud.io/api/project_badges/measure?project=danielcopper_emu-atlas&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=danielcopper_emu-atlas)
+
+</div>
 
 The map of where emulators keep things — a resolver answering live, for any emulator installation on a machine: which
 config files govern it, how they override each other, and where saves and BIOS actually live.

@@ -2,6 +2,7 @@
   "pythonVersion": "3.11",
   "typeCheckingMode": "basic",
   "include": ["atlas", "tests", "scripts"],
+  "extraPaths": ["scripts/logo"],
   "exclude": [".venv", "build", ".claude"],
   "reportMissingModuleSource": "none",
   "reportMissingImports": "warning",
