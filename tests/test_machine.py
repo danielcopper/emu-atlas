@@ -9,9 +9,15 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+import atlas.machine
 from atlas.machine import SYMLINK_HOPS, CoreInfo, FixtureMachine, ReadResult, RealMachine
 
 
@@ -358,6 +364,172 @@ class TestRealMachine:
     def test_query_core_on_missing_path_is_none(self):
         m = RealMachine()
         assert m.query_core("/nonexistent/core.so") is None
+
+
+def _fake_core(tmp_path):
+    """A path that passes the stat query_core does — the probe itself is stubbed."""
+    so = tmp_path / "mgba_libretro.so"
+    so.write_bytes(b"\x7fELF")
+    return str(so)
+
+
+def _stub_probe(monkeypatch, *, stdout=b"", returncode=0, raises=None):
+    """Answer the probe spawn without running it; returns the captured calls."""
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append({"argv": argv, **kwargs})
+        if raises is not None:
+            raise raises
+        return subprocess.CompletedProcess(argv, returncode, stdout, b"")
+
+    monkeypatch.setattr(
+        atlas.machine,
+        "subprocess",
+        SimpleNamespace(run=fake_run, TimeoutExpired=subprocess.TimeoutExpired),
+    )
+    return calls
+
+
+class TestCoreProbeAnswer:
+    """What the probe printed is the answer — however the process ended.
+
+    The subprocess exists because cores crash inside ``retro_set_environment``,
+    and the phase-1 line carrying ``library_name`` is printed *before* that risk
+    is taken. A crash, a hang or a traceback afterwards must not discard a read
+    that already succeeded: the caller would see *unknown* for a value the
+    machine had already answered.
+    """
+
+    BASE = b'{"library_name": "mGBA", "library_version": "0.10.5", "valid_extensions": "gb|gba"}\n'
+    ENRICHED = (
+        b'{"library_name": "mGBA", "library_version": "0.10.5", "valid_extensions": "gb|gba", '
+        b'"options": {"mgba_gb_model": {"default": "Autodetect", "values": ["Autodetect", "Game Boy"]}}}\n'
+    )
+    MGBA = CoreInfo(library_name="mGBA", library_version="0.10.5", valid_extensions="gb|gba")
+
+    def test_clean_exit_yields_the_base_answer(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, stdout=self.BASE)
+        assert RealMachine().query_core(_fake_core(tmp_path)) == self.MGBA
+
+    def test_crash_after_the_base_line_keeps_it(self, tmp_path, monkeypatch):
+        # -11 is a SIGSEGV in retro_set_environment: precisely the crash the
+        # subprocess isolates, taken after the base line was already delivered.
+        _stub_probe(monkeypatch, stdout=self.BASE, returncode=-11)
+        assert RealMachine().query_core(_fake_core(tmp_path)) == self.MGBA
+
+    def test_crash_after_the_options_line_keeps_the_options(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, stdout=self.BASE + self.ENRICHED, returncode=1)
+        info = RealMachine().query_core(_fake_core(tmp_path))
+        assert info is not None
+        assert info.options is not None
+        assert info.options["mgba_gb_model"].default == "Autodetect"
+
+    def test_trailing_garbage_does_not_displace_the_base_line(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, stdout=self.BASE + b"Segmentation fault (core dumped)\n", returncode=-11)
+        assert RealMachine().query_core(_fake_core(tmp_path)) == self.MGBA
+
+    def test_timeout_keeps_what_was_printed_before_the_hang(self, tmp_path, monkeypatch):
+        expired = subprocess.TimeoutExpired(cmd=["probe"], timeout=15, output=self.BASE)
+        _stub_probe(monkeypatch, raises=expired)
+        assert RealMachine().query_core(_fake_core(tmp_path)) == self.MGBA
+
+    def test_timeout_before_anything_was_printed_is_unknown(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, raises=subprocess.TimeoutExpired(cmd=["probe"], timeout=15))
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
+    def test_probe_that_cannot_be_spawned_is_unknown(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, raises=OSError("cannot spawn"))
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
+    def test_output_without_a_json_line_is_unknown(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, stdout=b"cannot load core: libGL.so.1: cannot open shared object file\n")
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
+    def test_nothing_printed_at_all_is_unknown(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, stdout=b"", returncode=1)
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
+    def test_line_without_a_library_name_is_unknown(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, stdout=b'{"library_version": "0.10.5"}\n')
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
+
+class TestCoreProbeEnvironment:
+    """The probe child must reach the atlas that spawned it.
+
+    Vendoring is a directory copy the host puts on ``sys.path`` at runtime —
+    nothing on the child's default path leads back to it. A child that cannot
+    import ``atlas._core_probe`` answers *unknown* for every core, for a reason
+    that has nothing to do with the cores.
+    """
+
+    def test_child_is_pointed_at_this_package(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        monkeypatch.setenv("ATLAS_UNRELATED_VARIABLE", "kept")
+        calls = _stub_probe(monkeypatch, stdout=b"")
+        RealMachine().query_core(_fake_core(tmp_path))
+        env = calls[0]["env"]
+        first = env["PYTHONPATH"].split(os.pathsep)[0]
+        assert os.path.isfile(os.path.join(first, "atlas", "_core_probe.py"))
+        assert env["ATLAS_UNRELATED_VARIABLE"] == "kept"
+
+    def test_inherited_pythonpath_is_kept_behind_it(self, tmp_path, monkeypatch):
+        inherited = os.pathsep.join(("/host/py_modules", "/host/extra"))
+        monkeypatch.setenv("PYTHONPATH", inherited)
+        calls = _stub_probe(monkeypatch, stdout=b"")
+        RealMachine().query_core(_fake_core(tmp_path))
+        entries = calls[0]["env"]["PYTHONPATH"].split(os.pathsep)
+        assert os.path.isfile(os.path.join(entries[0], "atlas", "_core_probe.py"))
+        assert os.pathsep.join(entries[1:]) == inherited
+
+    def test_a_package_with_no_file_behind_it_changes_nothing(self, tmp_path, monkeypatch):
+        """A frozen build states no location, so the child inherits the environment.
+
+        Nothing can be pointed at when there is no path to point at — and a
+        guessed one would send the child to somebody else's atlas.
+        """
+        monkeypatch.delattr(atlas.machine, "__file__")
+        calls = _stub_probe(monkeypatch, stdout=b"")
+        RealMachine().query_core(_fake_core(tmp_path))
+        # env=None is how subprocess spells "inherit the parent's environment".
+        assert calls[0]["env"] is None
+
+    def test_a_vendored_copy_probes_with_its_own_module(self, tmp_path):
+        """The load-bearing case: atlas copied into a host, reachable only via its sys.path.
+
+        The copy's probe module is replaced by a marker, so the answer names
+        which atlas the grandchild imported. Without the environment the child
+        falls back to whatever ``atlas`` its interpreter happens to find — here,
+        none at all in a real vendored deployment.
+        """
+        vendored = tmp_path / "py_modules"
+        shutil.copytree(
+            Path(__file__).resolve().parents[1] / "atlas",
+            vendored / "atlas",
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
+        (vendored / "atlas" / "_core_probe.py").write_text(
+            'import json\n\nprint(json.dumps({"library_name": "VENDORED"}), flush=True)\n'
+        )
+        fake_core = tmp_path / "not_a_core.so"
+        fake_core.write_bytes(b"not an ELF")
+        program = (
+            f"import sys; sys.path.insert(0, {str(vendored)!r})\n"
+            "from atlas.machine import RealMachine\n"
+            f"print(RealMachine().query_core({str(fake_core)!r}))\n"
+        )
+        host_env = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+        proc = subprocess.run(
+            [sys.executable, "-c", program],
+            capture_output=True,
+            text=True,
+            cwd="/",
+            env=host_env,
+            timeout=60,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert "VENDORED" in proc.stdout, f"stdout={proc.stdout!r} stderr={proc.stderr!r}"
 
 
 class TestFixtureRealParity:
