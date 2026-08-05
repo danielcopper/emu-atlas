@@ -75,6 +75,9 @@ CAVEAT_CARD_GENERATION_MISMATCH = "card-generation-mismatch"
 CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
 CAVEAT_DEAD_SYMLINK = "dead-symlink"
 CAVEAT_SANDBOX_PATH_UNTRANSLATED = "sandbox-path-untranslated"
+CAVEAT_APP_RELATIVE_PATH_UNEXPANDED = "app-relative-path-unexpanded"
+CAVEAT_CFG_LINE_DROPPED = "cfg-line-dropped"
+CAVEAT_CFG_VALUE_REJECTED = "cfg-value-rejected"
 
 
 @dataclass(frozen=True, slots=True)

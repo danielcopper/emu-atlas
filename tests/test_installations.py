@@ -551,6 +551,123 @@ class TestFlatpakSandboxPaths:
         assert p.dir == "/var/config/saves"
 
 
+class TestCfgFidelity:
+    """A config atlas reads more permissively than RetroArch would attest paths
+    the emulator never uses — so the resolver drops what the parser drops, keeps
+    the previous value where the getter refuses one, and says so."""
+
+    SORTED_CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+        'libretro_directory = "/app/cores"\n'
+    )
+
+    def _psp_query(self, cfg_lines, files=None):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: cfg_lines,
+                "/mnt/sd/retrodeck/saves/.keep": "",
+                "/mnt/sd/retrodeck/roms/psp/Game.iso": "",
+                **(files or {}),
+            },
+            cores={f"{RD_DEPLOY_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
+        )
+        return rd.save_location(
+            content_path="/mnt/sd/retrodeck/roms/psp/Game.iso", core_so="ppsspp_libretro.so"
+        )
+
+    def test_dropped_save_dir_line_falls_back_and_is_stated(self):
+        # RetroArch drops 'savefile_directory="…"' (no space before the '='), so
+        # the platform default governs — and the answer says which line was lost.
+        p = self._psp_query(
+            'savefile_directory="/mnt/sd/retrodeck/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+            'libretro_directory = "/app/cores"\n'
+        )
+        assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED] == [
+            {"key": "savefile_directory", "line": 'savefile_directory="/mnt/sd/retrodeck/saves"'}
+        ]
+
+    def test_rejected_override_value_keeps_the_global_layout_and_is_stated(self):
+        p = self._psp_query(
+            self.SORTED_CFG,
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "yes"'
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves/psp"  # the global "true" still governs
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_VALUE_REJECTED] == [
+            {"key": "sort_savefiles_by_content_enable", "value": "yes"}
+        ]
+
+    def test_rejected_gate_value_keeps_the_gates_default(self):
+        # auto_overrides_enable defaults true; "no" is not a boolean, so the
+        # override below still applies — it is not silently switched off.
+        p = self._psp_query(
+            self.SORTED_CFG + 'auto_overrides_enable = "no"\n',
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "false"'
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_VALUE_REJECTED] == [
+            {"key": "auto_overrides_enable", "value": "no"}
+        ]
+
+    def test_cleared_rgui_dir_puts_overrides_beside_retroarch_cfg(self):
+        # rgui_config_directory = "default" clears the setting
+        # (configuration.c:6825), and the override directory then falls back to
+        # the directory of retroarch.cfg itself (file_path_special.c:196-207) —
+        # one level above the platform-default 'config' subdirectory.
+        beside = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch"
+        p = self._psp_query(
+            self.SORTED_CFG + 'rgui_config_directory = "default"\n',
+            files={
+                f"{beside}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "false"',
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'savefile_directory = "/mnt/sd/wrong"',
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+
+    def test_absent_rgui_dir_keeps_the_config_subdirectory(self):
+        p = self._psp_query(
+            self.SORTED_CFG,
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "false"'
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+
+    def test_app_relative_save_dir_is_stated_unexpanded(self):
+        # ':' resolves against the running RetroArch executable's own directory
+        # (file_path.c:1066-1101) — unknowable from disk, so atlas states the
+        # value as configured instead of testing a host path it invented.
+        p = self._psp_query(
+            'savefile_directory = ":/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+            'libretro_directory = "/app/cores"\n'
+        )
+        assert p.dir == ":/saves"
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_APP_RELATIVE_PATH_UNEXPANDED in codes
+        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY not in codes
+        assert p.file_set.state == "unknown"
+
+    def test_app_relative_override_dir_reads_no_overrides(self):
+        p = self._psp_query(
+            self.SORTED_CFG + 'rgui_config_directory = ":/config"\n',
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "false"'
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves/psp"  # the unreachable override did not apply
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_APP_RELATIVE_PATH_UNEXPANDED] == [
+            {"key": "rgui_config_directory", "path": ":/config"}
+        ]
+
+
 class TestOstreeHomeIsHostSide:
     """Fedora Silverblue and Bazzite — both ship RetroDECK — make ``/home`` a
     symlink to ``/var/home``, so real home directories live under ``/var``.
