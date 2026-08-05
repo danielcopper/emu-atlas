@@ -28,6 +28,7 @@ from atlas.firmware import (
     CAVEAT_CORE_WITHOUT_SYSTEMNAME,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
+    CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
     CAVEAT_FIRMWARE_PATH_OBSTRUCTED,
     CAVEAT_FIRMWARE_PATH_UNRESOLVABLE,
     CAVEAT_FIRMWARE_UNREADABLE,
@@ -59,7 +60,7 @@ from atlas.firmware import (
     system_decision,
     system_for,
 )
-from atlas.machine import FixtureFileSpec, FixtureMachine
+from atlas.machine import CoreInfo, FixtureFileSpec, FixtureMachine, PathKind, ReadResult
 
 INFO_DIR = "/cores"
 BIOS_DIR = "/bios"
@@ -81,6 +82,16 @@ systemname = "Sega - Dreamcast"
 firmware_count = 1
 firmware0_desc = "dc_boot.bin (Dreamcast BIOS)"
 firmware0_path = "dc/dc_boot.bin"
+firmware0_opt = "false"
+"""
+
+# LRPS2 declares a FOLDER rather than a file, and RetroDECK links that folder
+# back to the firmware root — so this declaration lands on the root itself.
+LRPS2_FOLDER_INFO = """
+systemname = "Sony PlayStation 2"
+firmware_count = 1
+firmware0_desc = "pcsx2/bios (PS2 BIOS directory)"
+firmware0_path = "pcsx2/bios"
 firmware0_opt = "false"
 """
 
@@ -587,6 +598,45 @@ class TestWhatTheMachineWouldNotSay:
             assert outcome.path is None, declared
             assert outcome.refusal == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT, declared
 
+    def test_destination_under_refuses_a_declaration_that_names_no_file(self):
+        # Each of these resolves to a perfectly legal directory — "dc/.." to the
+        # firmware root itself — so nothing here is caught by the root bound.
+        m = _machine()
+        for declared in (".", "dc/..", "dc/.", ".."):
+            outcome = destination_under(m, "/bios", declared)
+            assert outcome.path is None, declared
+            assert outcome.refusal == CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE, declared
+
+    @pytest.mark.parametrize("declared", [".", "dc/.."])
+    def test_a_declaration_that_names_no_file_is_refused_not_answered(self, declared: str):
+        """A directory step is not a firmware file, however well it resolves.
+
+        Answered as a requirement it points at a directory (the root itself for
+        ``dc/..``), which reads as "a directory sits where a file belongs" —
+        obstruction, a fact about the *machine*. The fact here is about the
+        declaration, and the core's own refusal list is where it belongs.
+        """
+        info = (
+            'systemname = "Odd"\n'
+            "firmware_count = 1\n"
+            f'firmware0_path = "{declared}"\n'
+            'firmware0_opt = "false"\n'
+        )
+        machine = _machine(
+            {
+                f"{INFO_DIR}/odd_libretro.info": info,
+                f"{INFO_DIR}/odd_libretro.so": {"status": "invalid-text"},
+                f"{BIOS_DIR}/dc/dc_boot.bin": _blob(b"boot"),
+            }
+        )
+        core = firmware_for_core(machine, _context(machine), core_so="odd_libretro.so").cores[0]
+        assert core.requirements == ()
+        assert [r.declared for r in core.refused] == [declared]
+        assert [r.reason for r in core.refused] == [CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE]
+        assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE]
+        # A required file atlas would not follow is never an all-clear.
+        assert core.requirements_met is None
+
 
 class TestResolutionIsTheKernelsOrder:
     """Symlink cases — the ones a lexical check cannot reach, which is the point."""
@@ -954,6 +1004,78 @@ class TestInventory:
         answer = firmware_inventory(machine, _context(machine))
         assert answer.unclaimed == ()
 
+    def test_the_scan_never_climbs_above_the_firmware_root(self):
+        """A folder declaration may land on the root — its parent is not the tree.
+
+        LRPS2 declares ``pcsx2/bios`` and means the folder, and RetroDECK links
+        that back to the firmware root, so the claimed path *is* the root. The
+        directory holding it is one level above the firmware tree, and
+        scanning it reports whatever lies there as unclaimed firmware — hashed,
+        under ``verify``.
+        """
+        machine = _machine(
+            {
+                f"{INFO_DIR}/pcsx2_libretro.info": LRPS2_FOLDER_INFO,
+                f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
+                f"{BIOS_DIR}/scph1001.bin": _blob(b"in the tree"),
+                "/private-notes.txt": _blob(b"one level above the firmware root"),
+            },
+            symlinks={f"{BIOS_DIR}/pcsx2/bios": BIOS_DIR},
+        )
+        answer = firmware_inventory(machine, _context(machine), verify=True)
+        assert [f.path for f in answer.unclaimed] == [f"{BIOS_DIR}/scph1001.bin"]
+
+    def test_a_save_artifact_behind_a_symlinked_directory_is_still_a_save(self):
+        # dir_prep links whole firmware subdirectories elsewhere, so the card's
+        # "dc/vmu_save_A1.bin" and the file the scan finds are the same file
+        # under two spellings — and a memory card is not firmware either way.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/flycast_libretro.info": DC_INFO,
+                f"{INFO_DIR}/flycast_libretro.so": {"status": "invalid-text"},
+                f"{BIOS_DIR}/dreamcast/vmu_save_A1.bin": _blob(b"vmu"),
+                f"{BIOS_DIR}/dreamcast/spare.bin": _blob(b"spare"),
+            },
+            symlinks={f"{BIOS_DIR}/dc": f"{BIOS_DIR}/dreamcast"},
+        )
+        paths = [f.path for f in firmware_inventory(machine, _context(machine)).unclaimed]
+        assert paths == [f"{BIOS_DIR}/dreamcast/spare.bin"]
+
+    def test_an_entry_that_cannot_be_looked_at_is_stated_not_dropped(self):
+        # Skipping it silently would be the collapse the status model exists to
+        # prevent; listing it would invent a file atlas never saw.
+        machine = _machine(
+            {f"{BIOS_DIR}/scph1001.bin": _blob(b"whatever")},
+            inaccessible=[f"{BIOS_DIR}/locked.bin"],
+        )
+        answer = firmware_inventory(machine, _context(machine))
+        assert [f.path for f in answer.unclaimed] == [f"{BIOS_DIR}/scph1001.bin"]
+        blocked = next(c for c in answer.caveats if c.code == CAVEAT_FIRMWARE_PATH_INACCESSIBLE)
+        assert blocked.data["path"] == f"{BIOS_DIR}/locked.bin"
+
+    def test_a_declared_destination_that_cannot_be_looked_at_is_stated_once(self):
+        # The requirement side already states it, so the scan must not state it
+        # again: one fact, twice in one answer, from two routes.
+        machine = _machine(inaccessible=[f"{BIOS_DIR}/scph5501.bin"])
+        answer = firmware_inventory(machine, _context(machine))
+        blocked = [c for c in answer.caveats if c.code == CAVEAT_FIRMWARE_PATH_INACCESSIBLE]
+        assert [c.data["path"] for c in blocked] == [f"{BIOS_DIR}/scph5501.bin"]
+
+    def test_an_unreadable_save_artifact_is_never_called_a_firmware_file(self):
+        # Readable or not, a memory card the rule cards claim is not this scan's
+        # subject — a caveat wondering whether it is undeclared firmware is the
+        # same category error the exclusion exists to prevent.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/flycast_libretro.info": DC_INFO,
+                f"{INFO_DIR}/flycast_libretro.so": {"status": "invalid-text"},
+            },
+            inaccessible=[f"{BIOS_DIR}/dc/vmu_save_A1.bin"],
+        )
+        answer = firmware_inventory(machine, _context(machine))
+        assert answer.unclaimed == ()
+        assert [c.code for c in answer.caveats] == []
+
     def test_the_rule_cards_name_the_save_artifacts(self):
         artifacts = save_artifact_paths()
         assert "dc/vmu_save_A1.bin" in artifacts
@@ -1004,6 +1126,39 @@ class TestIdentification:
         machine = _gb_machine()
         identified = identify_firmware(machine, _context(machine), md5="99" * 16, sha1="99" * 20)
         assert CAVEAT_CONTENT_UNIDENTIFIED in [c.code for c in identified.caveats]
+
+    def test_identification_answers_exactly_what_the_inventory_holds(self):
+        # The two routes resolve the same declarations, so an identification is
+        # the inventory's requirement list filtered by content — never a
+        # different set, and never a different order.
+        machine = _gb_machine({f"{BIOS_DIR}/gb_bios.bin": _blob(b"boot!")})
+        context = _context(machine)
+        identified = identify_firmware(machine, context, md5="ee" * 16)
+        from_inventory = tuple(
+            r
+            for r in firmware_inventory(machine, context).requirements
+            if r.identity is not None and r.identity.md5 == "ee" * 16
+        )
+        assert identified.requirements == from_inventory
+
+    def test_identifying_content_does_not_walk_the_firmware_tree(self):
+        """A lookup by bytes must not pay for the scan that answers another question.
+
+        Which requirements want this content comes from the declarations plus a
+        look at each destination. The unclaimed scan globs and stats every
+        directory a declaration references to find files *nobody* declared —
+        none of which reaches this answer.
+        """
+        inner = _gb_machine({f"{BIOS_DIR}/stray.bin": _blob(b"stray")})
+        context = _context(inner)
+        counted = _CountingMachine(inner)
+        identified = identify_firmware(counted, context, md5="ee" * 16)
+        assert [r.path for r in identified.requirements] == [
+            f"{BIOS_DIR}/dmg_boot.bin",
+            f"{BIOS_DIR}/gb_bios.bin",
+        ]
+        assert counted.calls.get("glob", 0) == 0
+        assert counted.calls.get("file_digest", 0) == 0
 
 
 class TestNoDeclarationIsNeverSatisfied:
@@ -1218,6 +1373,50 @@ class TestPartialReaderIsNotMisled:
 
 def _by_name(answer) -> dict[str, FirmwareRequirement]:
     return {r.file_name: r for r in answer.requirements}
+
+
+class _CountingMachine:
+    """A machine that answers like the one it wraps and counts every seam call.
+
+    What a route reads is part of what it promises: a table lookup that walks
+    the firmware tree costs a caller a glob and a stat per declared directory,
+    and no assertion about the answer can see that.
+    """
+
+    def __init__(self, inner: FixtureMachine) -> None:
+        self._inner = inner
+        self.calls: dict[str, int] = {}
+
+    def _count(self, operation: str) -> None:
+        self.calls[operation] = self.calls.get(operation, 0) + 1
+
+    def read_text(self, path: str) -> ReadResult:
+        self._count("read_text")
+        return self._inner.read_text(path)
+
+    def glob(self, pattern: str) -> list[str]:
+        self._count("glob")
+        return self._inner.glob(pattern)
+
+    def path_kind(self, path: str) -> PathKind:
+        self._count("path_kind")
+        return self._inner.path_kind(path)
+
+    def readlink(self, path: str) -> str | None:
+        self._count("readlink")
+        return self._inner.readlink(path)
+
+    def query_core(self, so_path: str) -> CoreInfo | None:
+        self._count("query_core")
+        return self._inner.query_core(so_path)
+
+    def file_size(self, path: str) -> int | None:
+        self._count("file_size")
+        return self._inner.file_size(path)
+
+    def file_digest(self, path: str, algorithm: str) -> str | None:
+        self._count("file_digest")
+        return self._inner.file_digest(path, algorithm)
 
 
 def _gb_machine(files: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:

@@ -191,9 +191,13 @@ for core in answer.cores:
         req.present                # True | False | None       — what lies at the destination
         req.checked                # 'verified' | 'mismatch' | 'unchecked' | 'unknown' | None (nothing there to check)
         req.satisfied              # True | False | None       — present AND nothing contradicts it
-    core.refused                   # declarations atlas would not follow (path escapes the root), with reasons
+    core.refused                   # declarations atlas would not follow, each with the reason it was refused
 answer.unclaimed                   # files in the firmware tree that no installed core declares, identified by content
 ```
+
+`unclaimed` never lists dot-files — the scan globs each directory and a wildcard does not match a leading dot, so
+tooling residue like `.directory` stays out of the answer by design (a core that _declares_ a dotted path still gets its
+requirement: declarations are resolved, never globbed).
 
 The two axes never merge: `need` is what the emulator asks for, `checked` is what the machine says. `"unchecked"` means
 _we did not look_ (you passed `verify=False`); `"unknown"` means _we looked and cannot tell_ (no packaged identity for

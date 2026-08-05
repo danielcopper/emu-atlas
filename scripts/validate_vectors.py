@@ -60,7 +60,11 @@ FIRMWARE_CORE_FIELDS = {
     "caveats",
 }
 REFUSED_FIELDS = {"declared", "need", "reason"}
-KNOWN_REFUSAL_REASONS = {"firmware-path-escapes-root", "firmware-path-unresolvable"}
+KNOWN_REFUSAL_REASONS = {
+    "firmware-path-escapes-root",
+    "firmware-path-unresolvable",
+    "firmware-path-names-no-file",
+}
 KNOWN_PATH_KINDS = {"file", "directory", "missing", "inaccessible"}
 FIRMWARE_REQUIREMENT_FIELDS = {
     "core_so",
@@ -140,6 +144,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-path-inaccessible",
     "firmware-path-escapes-root",
     "firmware-path-unresolvable",
+    "firmware-path-names-no-file",
     "firmware-content-contradictory",
 }
 # The codes that may stand in for "nothing could be read here". Each says a
@@ -456,7 +461,10 @@ def _validate_requirement_fields(name: str, entry: Any) -> None:
 
 
 def _validate_requirement_path(name: str, entry: Any, root: str) -> None:
-    if not entry["path"].startswith(f"{root}/"):
+    # The root itself is a legal destination: LRPS2 declares the FOLDER
+    # "pcsx2/bios", and RetroDECK links it back to the firmware root, so that
+    # declaration resolves to the root exactly.
+    if entry["path"] != root and not entry["path"].startswith(f"{root}/"):
         fail(f"{name}: a requirement's path must be the absolute destination under the root {root!r}")
     if os.path.normpath(entry["path"]) != entry["path"]:
         fail(f"{name}: a requirement's path must be normalized — no '..' segment may survive into an answer")
