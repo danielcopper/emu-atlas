@@ -9,6 +9,8 @@ from atlas.retroarch_cfg import (
     RETRODECK_DEFAULTS,
     UPSTREAM_DEFAULTS,
     cfg_bool,
+    chain_bool,
+    chain_value,
     interpret_cfg,
     is_app_relative,
     parse_cfg,
@@ -21,6 +23,23 @@ HOME = "/home/deck"
 
 def _cfg(text):
     return interpret_cfg(text, home=HOME, cfg_label="retroarch.cfg")
+
+
+def _chain(global_text, *overrides, is_directory=None):
+    """The layout resolved over a labelled chain — layer N is ``override N``."""
+    return resolve_save_layout(
+        global_text,
+        home=HOME,
+        cfg_label="retroarch.cfg",
+        defaults=RETRODECK_DEFAULTS,
+        overrides=[(f"override {i}", text) for i, text in enumerate(overrides, start=1)],
+        is_directory=is_directory,
+    )
+
+
+def _only(*existing):
+    """A ``path_is_directory`` answering true for exactly *existing*."""
+    return lambda value: value in existing
 
 
 class TestDefaults:
@@ -156,6 +175,183 @@ class TestOverrideChain:
             overrides=[("game override", 'savefile_directory = "/mnt/elsewhere"')],
         )
         assert cfg.savefile_directory == "/mnt/elsewhere"
+
+
+class TestReadsPerKey:
+    """RetroArch reads a key TWICE, not once per layer.
+
+    ``config_load_override`` appends every existing override into one config and
+    reloads the global cfg through it (configuration.c:7161-7243,
+    config_file.c:768-805), so a getter sees a single entry per key — the last
+    file that sets it. That reload skips ``config_set_defaults`` (:7243), so
+    what it refuses leaves the boot load's value standing: the global cfg alone.
+    A layer between those two never reaches a getter at all.
+    """
+
+    def test_a_shadowed_layer_is_not_the_fallback_for_a_refused_one(self):
+        # The game override's "yes" is what config_get_bool sees and refuses, so
+        # the setting keeps what the BOOT load left — the global "true". The core
+        # override's "false" was overwritten in the merged config and never read.
+        cfg = _chain(
+            'sort_savefiles_by_content_enable = "true"\n',
+            'sort_savefiles_by_content_enable = "false"',
+            'sort_savefiles_by_content_enable = "yes"',
+        )
+        assert cfg.sort_by_content is True
+
+    def test_a_shadowed_layer_is_not_reported_as_refused(self):
+        # Only the value a getter actually read can be refused; the shadowed
+        # layer's spelling is legal and simply lost the merge.
+        cfg = _chain(
+            'sort_savefiles_enable = "true"\n',
+            'sort_savefiles_enable = "yes"',
+            'sort_savefiles_enable = "false"',
+        )
+        assert cfg.sort_by_core is False
+        assert cfg.ignored == ()
+
+    def test_the_last_layer_still_wins_when_its_value_is_good(self):
+        cfg = _chain(
+            'sort_savefiles_enable = "true"\n',
+            'sort_savefiles_enable = "false"',
+            'sort_savefiles_enable = "true"',
+        )
+        assert cfg.sort_by_core is True
+
+    def test_a_refused_value_with_no_global_entry_falls_to_the_compile_default(self):
+        # Nothing stood before the override load: config_set_defaults left the
+        # flavour default, and the refused value does not replace it.
+        cfg = _chain(None, 'sort_savefiles_enable = "true"', 'sort_savefiles_enable = "yes"')
+        assert cfg.sort_by_core is False  # RetroDECK ships sort-by-core off
+
+    def test_chain_bool_reads_the_last_layer_that_sets_the_key(self):
+        value, ignored = chain_bool(
+            [
+                ("retroarch.cfg", 'game_specific_options = "true"'),
+                ("core override", 'game_specific_options = "false"'),
+            ],
+            "game_specific_options",
+            default=True,
+        )
+        assert value is False
+        assert ignored == ()
+
+    def test_chain_bool_keeps_the_global_value_when_the_override_is_refused(self):
+        value, ignored = chain_bool(
+            [
+                ("retroarch.cfg", 'global_core_options = "true"'),
+                ("core override", 'global_core_options = "on"'),
+            ],
+            "global_core_options",
+            default=False,
+        )
+        assert value is True
+        assert [(i.kind, i.layer, i.key, i.text) for i in ignored] == [
+            (IGNORED_VALUE_REJECTED, "core override", "global_core_options", "on")
+        ]
+
+    def test_chain_value_reads_the_last_layer_and_reports_dropped_lines(self):
+        value, ignored = chain_value(
+            [
+                ("retroarch.cfg", 'rgui_config_directory="/a"'),
+                ("core override", 'rgui_config_directory = "/b"'),
+            ],
+            "rgui_config_directory",
+        )
+        assert value == "/b"
+        assert [(i.kind, i.layer, i.key, i.text) for i in ignored] == [
+            (IGNORED_LINE_DROPPED, "retroarch.cfg", "rgui_config_directory", 'rgui_config_directory="/a"')
+        ]
+
+    def test_chain_value_is_none_when_no_layer_sets_the_key(self):
+        assert chain_value([("retroarch.cfg", 'video_driver = "gl"')], "core_options_path") == (None, ())
+
+
+class TestSavefileDirectoryValidation:
+    """``path_is_directory`` decides per read (configuration.c:6914-6933).
+
+    A value that is not an existing directory sets nothing, so the root from
+    before that read stands — after an override that is the global cfg's root,
+    not the platform default.
+    """
+
+    def test_an_unusable_override_keeps_the_global_root(self):
+        cfg = _chain(
+            'savefile_directory = "/mnt/sd/saves"\n',
+            'savefile_directory = "/run/media/gone/saves"',
+            is_directory=_only("/mnt/sd/saves"),
+        )
+        assert cfg.savefile_directory == "/mnt/sd/saves"
+        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [
+            ("override 1", "/run/media/gone/saves")
+        ]
+
+    def test_an_unusable_global_falls_to_the_platform_default(self):
+        # The single-layer case, unchanged: nothing stood before the boot load
+        # but the platform default that config_set_defaults installed.
+        cfg = _chain('savefile_directory = "/run/media/gone/saves"\n', is_directory=_only())
+        assert cfg.savefile_directory is None
+        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [
+            ("retroarch.cfg", "/run/media/gone/saves")
+        ]
+
+    def test_a_usable_override_still_wins(self):
+        cfg = _chain(
+            'savefile_directory = "/mnt/sd/saves"\n',
+            'savefile_directory = "/mnt/sd/other"',
+            is_directory=_only("/mnt/sd/saves", "/mnt/sd/other"),
+        )
+        assert cfg.savefile_directory == "/mnt/sd/other"
+        assert cfg.rejected_directories == ()
+
+    def test_a_shadowed_layer_is_not_the_fallback_for_an_unusable_one(self):
+        # The merged config holds the game override's path; the core override's
+        # was overwritten before any getter saw it, so the global root stands.
+        cfg = _chain(
+            'savefile_directory = "/mnt/sd/saves"\n',
+            'savefile_directory = "/mnt/sd/other"',
+            'savefile_directory = "/run/media/gone/saves"',
+            is_directory=_only("/mnt/sd/saves", "/mnt/sd/other"),
+        )
+        assert cfg.savefile_directory == "/mnt/sd/saves"
+
+    def test_literal_default_in_an_override_resets_past_a_valid_global(self):
+        # "default" is not validated at all (configuration.c:6918) — it sets the
+        # platform default outright.
+        cfg = _chain(
+            'savefile_directory = "/mnt/sd/saves"\n',
+            'savefile_directory = "default"',
+            is_directory=_only("/mnt/sd/saves"),
+        )
+        assert cfg.savefile_directory is None
+
+    def test_blank_in_an_override_is_refused_not_a_reset(self):
+        # config_get_path hands an empty entry on like any other value
+        # (config_file.c:1202-1216) and path_is_directory("") fails — so the
+        # global root stays, where a reset would have dropped it.
+        cfg = _chain(
+            'savefile_directory = "/mnt/sd/saves"\n',
+            'savefile_directory = ""',
+            is_directory=_only("/mnt/sd/saves"),
+        )
+        assert cfg.savefile_directory == "/mnt/sd/saves"
+        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [("override 1", "")]
+
+    def test_blank_is_refused_even_without_a_directory_check(self):
+        # No machine is needed for this one: "" is a directory nowhere.
+        cfg = _chain('savefile_directory = ""\n')
+        assert cfg.savefile_directory is None
+        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [("retroarch.cfg", "")]
+
+    def test_the_check_sees_the_expanded_value(self):
+        cfg = _chain('savefile_directory = "~/saves"\n', is_directory=_only(f"{HOME}/saves"))
+        assert cfg.savefile_directory == f"{HOME}/saves"
+        assert cfg.rejected_directories == ()
+
+    def test_without_a_check_every_written_path_is_taken_as_written(self):
+        cfg = _chain('savefile_directory = "/mnt/sd/saves"\n', 'savefile_directory = "/nowhere"')
+        assert cfg.savefile_directory == "/nowhere"
+        assert cfg.rejected_directories == ()
 
 
 class TestParsingEdgeCases:

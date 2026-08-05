@@ -188,6 +188,51 @@ installation.
 **[V]** When overrides are found, RetroArch unsets the command-line save/state path flags before reloading
 (`configuration.c:7240`), so an override file can set `savefile_directory` even when `--save` was passed.
 
+### One merge, two reads — what "later files win" does not mean
+
+**[V]** The chain is not loaded layer by layer. `config_load_override()` collects the override files that exist into a
+single `|`-joined list and makes **one** reload of the global config (`configuration.c:7243`); inside it,
+`config_append_file` merges every listed file into one `config_file_t` where "the key-value pairs of the new config file
+takes priority over the old" (`config_file.c:768-805`, appended at `configuration.c:6355-6392`). A getter therefore sees
+exactly **one entry per key** — the last file that sets it. A layer between the global cfg and that last file is
+shadowed: its value never reaches a getter at all.
+
+**[V]** That reload runs **without** `config_set_defaults` (`configuration.c:7243`; the boot path calls it first,
+`:5907`, and it is what seeds the platform default saves dir, `:5743-5744`). So whatever the reload refuses leaves
+standing what the boot load left — the global cfg alone, read the same way. Two reads, then, not four:
+
+| what the merged config holds    | effective value                               |
+| ------------------------------- | --------------------------------------------- |
+| a value the getter accepts      | that value                                    |
+| a value the getter refuses      | the global cfg's own value, validated at boot |
+| nothing (key absent everywhere) | the compile-time default (`config.def.h`)     |
+
+**[V]** For `savefile_directory` the "getter accepts" test is `path_is_directory` (`configuration.c:6914-6933`), run per
+load. Three branches, and only the first two set anything:
+
+- the literal `default` → the platform default, **unvalidated** (`:6918`)
+- an existing directory → that directory (`:6920-6922`)
+- anything else → `RARCH_WARN`, nothing set (`:6931-6932`)
+
+The empty string falls in the third branch, not the first: `config_get_path` returns true for an entry whose value is
+empty and hands it on unchanged (`config_file.c:1202-1216`), and `path_is_directory("")` fails. So
+`savefile_directory = ""` in an override **keeps the global cfg's root**, where `savefile_directory = "default"` drops
+it. A resolver that treats blank and `default` as one spelling answers the same for a lone global cfg and differently
+for every override.
+
+**[V]** The two-read model is also what separates the two option gates, which otherwise look interchangeable:
+
+| setting                 | read at                                                          | can an override change it? |
+| ----------------------- | ---------------------------------------------------------------- | -------------------------- |
+| `auto_overrides_enable` | copied into a local at `runloop.c:4941`, used at `:5002-5003`    | no — read before the merge |
+| `game_specific_options` | `runloop.c:1529`, reached via `retro_set_environment` at `:5037` | yes — read after the merge |
+| `global_core_options`   | `runloop.c:1530`, same call site                                 | yes                        |
+
+`config_load_override` runs at `runloop.c:5003`; the core's own `retro_set_environment` at `:5037` drives
+`runloop_init_core_options`, which is where the two option gates are read out of `settings->bools`. A per-core override
+that says `game_specific_options = "false"` therefore really does keep RetroArch out of the game and folder `.opt`
+files.
+
 ### Flatpak sandbox spellings
 
 **[V]** RetroDECK's RetroArch runs inside the Flatpak, so the paths it writes into its own cfg are the paths it sees

@@ -14,6 +14,7 @@ RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retr
 RETRODECK_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
 OPTIONS_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
 FLYCAST_GAME_OPT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Shenmue (Europe).opt"
+FLYCAST_CORE_OVERRIDE = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Flycast.cfg"
 
 RD_JSON = '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}'
 SAVES_KEEP = "/mnt/sd/retrodeck/saves/.keep"
@@ -159,6 +160,44 @@ class TestFlycastResolution:
         assert p.granularity is not None
         assert p.granularity.value == "shared-card"
         assert any(c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE and c.data["value"] == "something new" for c in p.caveats)
+
+    def test_override_can_switch_the_game_opt_layer_off(self):
+        # game_specific_options is read from the MERGED config: the core's own
+        # retro_set_environment (runloop.c:5037) drives runloop_init_core_options
+        # and its settings->bools.game_specific_options read (runloop.c:1529),
+        # one step after config_load_override merged the overrides (:5003). So
+        # the override below really does keep RetroArch out of the game .opt.
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                FLYCAST_CORE_OVERRIDE: 'game_specific_options = "false"\n',
+                FLYCAST_GAME_OPT: 'reicast_per_content_vmus = "VMU A1"\n',
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+            }
+        )
+        assert p.granularity is not None
+        assert p.granularity.option_value == "disabled"
+        assert p.granularity.options_file == OPTIONS_CFG
+
+    def test_a_dropped_game_specific_options_line_leaves_the_game_opt_on(self):
+        # The line sets nothing, so the default (true) stands and the game .opt
+        # governs after all — stated, because nothing else in the answer shows it.
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                FLYCAST_CORE_OVERRIDE: 'game_specific_options="false"\n',
+                FLYCAST_GAME_OPT: 'reicast_per_content_vmus = "VMU A1"\n',
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+                SAVES_KEEP: "",
+            }
+        )
+        assert p.granularity is not None
+        assert p.granularity.option_value == "VMU A1"
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED] == [
+            {"key": "game_specific_options", "line": 'game_specific_options="false"'}
+        ]
 
     def test_ordinary_core_has_no_granularity(self):
         rd = _retrodeck(

@@ -668,6 +668,136 @@ class TestCfgFidelity:
         ]
 
 
+class TestOverrideChainSemantics:
+    """What an override can and cannot change, read the way RetroArch reads it.
+
+    The overrides are merged into the global cfg and re-read in one pass
+    (configuration.c:7161-7243), so a value the merged config refuses leaves the
+    global cfg's own value standing — not the platform default, and not a layer
+    in between.
+    """
+
+    PLATFORM_DEFAULT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
+    GLOBAL_CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+        'libretro_directory = "/app/cores"\n'
+    )
+
+    def _psp_query(self, cfg_lines, files=None):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: cfg_lines,
+                "/mnt/sd/retrodeck/saves/.keep": "",
+                "/mnt/sd/retrodeck/roms/psp/Game.iso": "",
+                **(files or {}),
+            },
+            cores={f"{RD_DEPLOY_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
+        )
+        return rd.save_location(
+            content_path="/mnt/sd/retrodeck/roms/psp/Game.iso", core_so="ppsspp_libretro.so"
+        )
+
+    def test_unusable_override_root_keeps_the_global_root(self):
+        # The per-core override points at an unmounted card. path_is_directory
+        # fails, so that read sets nothing and the global cfg's root — which the
+        # boot load already accepted — is where RetroArch writes.
+        p = self._psp_query(
+            self.GLOBAL_CFG,
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'savefile_directory = "/run/media/gone/saves"'
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY] == [
+            {
+                "layer": "core override config/PPSSPP/PPSSPP.cfg",
+                "configured": "/run/media/gone/saves",
+                "effective": "/mnt/sd/retrodeck/saves",
+            }
+        ]
+
+    def test_unusable_global_root_still_falls_to_the_platform_default(self):
+        # The single-layer case is unchanged: nothing stood before the boot load
+        # but the platform default under the config tree.
+        p = self._psp_query(
+            'savefile_directory = "/run/media/gone/saves"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+            'libretro_directory = "/app/cores"\n'
+        )
+        assert p.dir == self.PLATFORM_DEFAULT
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY] == [
+            {
+                "layer": "retroarch.cfg",
+                "configured": "/run/media/gone/saves",
+                "effective": self.PLATFORM_DEFAULT,
+            }
+        ]
+
+    def test_a_usable_override_root_still_wins(self):
+        p = self._psp_query(
+            self.GLOBAL_CFG,
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'savefile_directory = "/mnt/sd/elsewhere"',
+                "/mnt/sd/elsewhere/.keep": "",
+            },
+        )
+        assert p.dir == "/mnt/sd/elsewhere"
+        assert not [c for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY]
+
+    def test_an_override_cannot_switch_overrides_off(self):
+        # auto_overrides_enable is copied into a local BEFORE config_load_override
+        # runs (runloop.c:4941 vs :5002-5003), so a file that only exists because
+        # overrides are on cannot turn them off — the sort flip below still lands.
+        p = self._psp_query(
+            self.GLOBAL_CFG,
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": (
+                    'auto_overrides_enable = "false"\nsort_savefiles_by_content_enable = "true"\n'
+                ),
+                "/mnt/sd/retrodeck/saves/psp/.keep": "",
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves/psp"
+
+    def test_dropped_rgui_line_moves_the_override_tree_and_is_stated(self):
+        # The line sets nothing, so the override tree stays at the platform
+        # default and the override below is never read — invisible in the answer
+        # without the caveat.
+        p = self._psp_query(
+            self.GLOBAL_CFG + 'rgui_config_directory="/mnt/sd/retrodeck/rgui"\n',
+            files={
+                "/mnt/sd/retrodeck/rgui/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "true"',
+                "/mnt/sd/retrodeck/saves/psp/.keep": "",
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED] == [
+            {
+                "key": "rgui_config_directory",
+                "line": 'rgui_config_directory="/mnt/sd/retrodeck/rgui"',
+            }
+        ]
+
+    def test_dropped_auto_overrides_line_leaves_overrides_on_and_is_stated(self):
+        p = self._psp_query(
+            self.GLOBAL_CFG + 'auto_overrides_enable="false"\n',
+            files={
+                f"{RETRODECK_OVERRIDES}/PPSSPP/PPSSPP.cfg": 'sort_savefiles_by_content_enable = "true"',
+                "/mnt/sd/retrodeck/saves/psp/.keep": "",
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves/psp"  # the overrides did apply
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED] == [
+            {"key": "auto_overrides_enable", "line": 'auto_overrides_enable="false"'}
+        ]
+
+    def test_a_dropped_line_for_an_ungoverning_key_is_still_silent(self):
+        p = self._psp_query(self.GLOBAL_CFG + 'video_driver="gl"\n')
+        assert not [c for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED]
+
+
 class TestOstreeHomeIsHostSide:
     """Fedora Silverblue and Bazzite — both ship RetroDECK — make ``/home`` a
     symlink to ``/var/home``, so real home directories live under ``/var``.
