@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import os
 from glob import escape as _glob_escape
-from typing import Any, Callable, Mapping, Protocol, runtime_checkable
+from typing import Any, Callable, Mapping, Protocol, Sequence, runtime_checkable
 
 from dataclasses import dataclass, replace as _dc_replace
 
@@ -65,8 +65,11 @@ from atlas.machine import (
 )
 from atlas.oddities import CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
 from atlas.placement import (
+    CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
     CAVEAT_CARD_GENERATION_MISMATCH,
     CAVEAT_CARD_MODE_UNCONFIRMED,
+    CAVEAT_CFG_LINE_DROPPED,
+    CAVEAT_CFG_VALUE_REJECTED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_SORTED_DIR_UNCREATABLE,
     CAVEAT_CORE_MULTI_OPTION,
@@ -96,10 +99,15 @@ from atlas.placement import (
     build_save_placement,
 )
 from atlas.retroarch_cfg import (
+    IGNORED_LINE_DROPPED,
+    IGNORED_VALUE_REJECTED,
     UPSTREAM_DEFAULTS,
+    IgnoredSetting,
     LayoutDefaults,
     RetroArchCfg,
+    cfg_bool,
     expand_home,
+    is_app_relative,
     parse_cfg_text,
     resolve_save_layout,
 )
@@ -212,25 +220,48 @@ _SANDBOX_ONLY_PREFIXES: tuple[str, ...] = ("/var/", "/run/user/")
 _OSTREE_HOME = "/var/home/"
 
 
+def _app_relative_caveat(key: str, configured: str) -> Caveat:
+    """A path value RetroArch resolves against its own executable's directory.
+
+    ``fill_pathname_expand_special`` expands a leading ``:`` against
+    ``fill_pathname_application_dir`` (file_path.c:1066-1101), which on Linux
+    is the directory of the running RetroArch binary, read from
+    ``/proc/<pid>/exe`` (file_path.c:1421-1455). That is a property of the
+    process that will run, not of anything on this disk, so atlas states the
+    value as configured instead of inventing an expansion for it.
+    """
+    return Caveat(
+        CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
+        f'{key} = "{configured}" is relative to the RetroArch application directory (the ":" '
+        "prefix, file_path.c:1066-1101) — that directory is the running executable's own, which "
+        "atlas cannot read off this machine, so the value stays unexpanded and unverified",
+        {"key": key, "path": configured},
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class _CfgPath:
     """A cfg path value as the host can read it, and what the translation did.
 
-    ``path`` is ``None`` when the value names a location that exists only inside
-    the Flatpak sandbox: atlas cannot read there, and says so rather than
-    resolving against a host path that means something else.
+    ``path`` is ``None`` when the value names no location atlas can read: one
+    that exists only inside the Flatpak sandbox, or one RetroArch resolves
+    against its own application directory (``app_relative``). Either way atlas
+    says so rather than resolving against a host path that means something else.
     """
 
     key: str
     configured: str
     path: str | None
     translated: bool = False
+    app_relative: bool = False
 
     @property
     def caveats(self) -> tuple[Caveat, ...]:
-        """The degradation, when the sandbox spelling has no host location."""
+        """The degradation, when the configured spelling has no host location."""
         if self.path is not None:
             return ()
+        if self.app_relative:
+            return (_app_relative_caveat(self.key, self.configured),)
         return (
             Caveat(
                 CAVEAT_SANDBOX_PATH_UNTRANSLATED,
@@ -323,9 +354,16 @@ class _Sandbox:
         """One cfg key resolved to a host path — ``None`` when the key is unset.
 
         Blank and the literal ``"default"`` are RetroArch's "unset" spellings
-        (:func:`expand_home`), and unset is the caller's own question.
+        (:func:`expand_home`), and unset is the caller's own question. An
+        application-relative value is set but unreadable from here, which is a
+        third answer: the value comes back with no host path and the caveat
+        that says why.
         """
-        expanded = expand_home(raw, home=self.home) if raw is not None else None
+        if raw is None:
+            return None
+        if is_app_relative(raw):
+            return _CfgPath(key, raw, None, app_relative=True)
+        expanded = expand_home(raw, home=self.home)
         return self.host(key, expanded) if expanded is not None else None
 
 
@@ -339,12 +377,9 @@ def _core_directory_in(sandbox: _Sandbox, global_text: str) -> str | None:
     return resolved.path if resolved is not None else None
 
 
-def _cfg_bool(raw: str | None, default: bool) -> bool:
-    """Interpret a raw cfg value as RetroArch's config_get_bool does."""
-    if raw is None:
-        return default
-    stripped = raw.strip()
-    return stripped == "1" or stripped.lower() == "true"
+# One file of the override chain as it is read: its provenance label and its
+# text, in load order (global cfg first, game override last).
+_CfgLayer = tuple[str, str]
 
 
 _MAX_LINK_HOPS = 40
@@ -416,18 +451,67 @@ def _link_view(machine: Machine, directory: str) -> tuple[str | None, tuple[Cave
     return (resolved if resolved != directory else None), ()
 
 
-def _resolve_chain_key(layer_texts: list[str], key: str) -> str | None:
-    """Resolve one raw cfg key across the layer texts — later layers win."""
+def _resolve_chain_key(layers: Sequence[_CfgLayer], key: str) -> str | None:
+    """Resolve one raw cfg key across the chain — later layers win."""
     value: str | None = None
-    for text in layer_texts:
+    for _, text in layers:
         parsed = parse_cfg_text(text)
         if key in parsed:
             value = parsed[key]
     return value
 
 
+def _resolve_chain_bool(
+    layers: Sequence[_CfgLayer], key: str, *, default: bool
+) -> tuple[bool, tuple[IgnoredSetting, ...]]:
+    """One boolean cfg key across the chain, with RetroArch's per-layer semantics.
+
+    A value outside the boolean vocabulary is a no-op at its layer — the loop
+    that applies boolean settings writes nothing (``configuration.c:6412-6417``)
+    — so the previous layer's value, or the default, stands. The rejected
+    spellings come back with it: they change nothing here, but a caller reading
+    the file would expect them to.
+    """
+    value = default
+    ignored: list[IgnoredSetting] = []
+    for label, text in layers:
+        raw = parse_cfg_text(text).get(key)
+        if raw is None:
+            continue
+        decoded = cfg_bool(raw)
+        if decoded is None:
+            ignored.append(IgnoredSetting(IGNORED_VALUE_REJECTED, label, key, raw))
+            continue
+        value = decoded
+    return value, tuple(ignored)
+
+
+def _ignored_caveats(ignored: Sequence[IgnoredSetting]) -> tuple[Caveat, ...]:
+    """State the settings the configs make and RetroArch does not apply."""
+    return tuple(map(_ignored_caveat, ignored))
+
+
+def _ignored_caveat(setting: IgnoredSetting) -> Caveat:
+    """One ignored setting as a caveat — the file says it, the emulator does not do it."""
+    if setting.kind == IGNORED_LINE_DROPPED:
+        return Caveat(
+            CAVEAT_CFG_LINE_DROPPED,
+            f"{setting.layer}: the line {setting.text!r} sets nothing — a key must be followed by "
+            "'=' after optional whitespace, and '=' is itself a key character, so RetroArch's "
+            f"parser drops the line (config_file.c:596-623) and {setting.key} stays unset by it",
+            {"key": setting.key, "line": setting.text},
+        )
+    return Caveat(
+        CAVEAT_CFG_VALUE_REJECTED,
+        f'{setting.layer}: {setting.key} = "{setting.text}" is not a value RetroArch accepts — a '
+        "boolean is exactly 1, true, 0 or false, case-sensitively (config_file.c:1227-1262) — so "
+        "the setting keeps the value it had before this file; it does not become false",
+        {"key": setting.key, "value": setting.text},
+    )
+
+
 def _global_options_file(
-    layer_texts: list[str], *, sandbox: _Sandbox, retroarch_config_dir: str
+    layers: Sequence[_CfgLayer], *, sandbox: _Sandbox, retroarch_config_dir: str
 ) -> tuple[str, tuple[Caveat, ...]]:
     """The global core-options file: ``core_options_path``, else the default name.
 
@@ -436,7 +520,7 @@ def _global_options_file(
     read misses and the caveat says why instead of the answer claiming the
     default file governed.
     """
-    configured = sandbox.cfg_path("core_options_path", _resolve_chain_key(layer_texts, "core_options_path"))
+    configured = sandbox.cfg_path("core_options_path", _resolve_chain_key(layers, "core_options_path"))
     if configured is None:
         return os.path.join(retroarch_config_dir, "retroarch-core-options.cfg"), ()
     return (
@@ -446,7 +530,6 @@ def _global_options_file(
 
 
 def _option_file_candidates(
-    layer_texts: list[str],
     *,
     override_config_dir: str,
     global_file: str,
@@ -454,6 +537,7 @@ def _option_file_candidates(
     content_dir_name: str | None,
     rom_stem: str | None,
     game_specific_options: bool,
+    per_core_options: bool,
 ) -> tuple[list[str], bool]:
     """The options files that could govern an option, in RetroArch's priority order.
 
@@ -471,9 +555,6 @@ def _option_file_candidates(
             candidates.append(os.path.join(override_config_dir, library_name, f"{rom_stem}.opt"))
         if content_dir_name:
             candidates.append(os.path.join(override_config_dir, library_name, f"{content_dir_name}.opt"))
-    global_flag = _resolve_chain_key(layer_texts, "global_core_options")
-    # Upstream default is false (config.def.h DEFAULT_GLOBAL_CORE_OPTIONS).
-    per_core_options = not _cfg_bool(global_flag, False)
     unconfirmed = library_name is None and (game_specific_options or per_core_options)
     if library_name and per_core_options:
         candidates.append(os.path.join(override_config_dir, library_name, f"{library_name}.opt"))
@@ -483,7 +564,6 @@ def _option_file_candidates(
 
 def _core_options_value(
     machine: Machine,
-    layer_texts: list[str],
     *,
     override_config_dir: str,
     global_file: str,
@@ -493,6 +573,7 @@ def _core_options_value(
     option_key: str,
     option_default: str,
     game_specific_options: bool,
+    per_core_options: bool,
 ) -> tuple[str, str, str, bool]:
     """Read a core option the way RetroArch does — first existing file is THE source.
 
@@ -508,13 +589,13 @@ def _core_options_value(
     unqueryable) — the returned value may then not be the effective one.
     """
     candidates, unconfirmed = _option_file_candidates(
-        layer_texts,
         override_config_dir=override_config_dir,
         global_file=global_file,
         library_name=library_name,
         content_dir_name=content_dir_name,
         rom_stem=rom_stem,
         game_specific_options=game_specific_options,
+        per_core_options=per_core_options,
     )
 
     for path in candidates:
@@ -653,31 +734,80 @@ class _OverrideGates:
 
 
 def _override_gates(
-    global_text: str | None, *, sandbox: _Sandbox, override_config_dir: str
+    global_text: str | None,
+    *,
+    sandbox: _Sandbox,
+    cfg_label: str,
+    override_config_dir: str,
+    config_file_dir: str,
 ) -> _OverrideGates:
     """The gates, read from the global cfg — an override cannot enable itself.
 
     ``auto_overrides_enable`` and ``game_specific_options`` both default true
-    (config.def.h); ``rgui_config_directory`` relocates the application config
-    dir used for override ``.cfg`` and option ``.opt`` files, and a Flatpak's
-    cfg spells it sandbox-side, so it is translated to where the host reads it.
-    An untranslatable spelling keeps the configured value: the reads below then
-    miss, which is the truth (atlas cannot see those files), while falling back
-    to the default directory would apply overrides that do not govern.
+    (config.def.h) and take only RetroArch's boolean vocabulary; anything else
+    leaves the default in place and is stated. Where the override files are
+    read from is :func:`_override_directory`'s question.
     """
-    global_layer = [global_text] if global_text is not None else []
-    auto_overrides = _cfg_bool(_resolve_chain_key(global_layer, "auto_overrides_enable"), True)
-    game_specific_options = _cfg_bool(_resolve_chain_key(global_layer, "game_specific_options"), True)
-    rgui_dir_raw = _resolve_chain_key(global_layer, "rgui_config_directory")
-    rgui_dir = sandbox.cfg_path("rgui_config_directory", rgui_dir_raw)
-    if rgui_dir is None:
-        return _OverrideGates(auto_overrides, game_specific_options, override_config_dir)
+    layers: list[_CfgLayer] = [(cfg_label, global_text)] if global_text is not None else []
+    auto_overrides, auto_ignored = _resolve_chain_bool(layers, "auto_overrides_enable", default=True)
+    game_specific_options, game_ignored = _resolve_chain_bool(
+        layers, "game_specific_options", default=True
+    )
+    caveats = _ignored_caveats((*auto_ignored, *game_ignored))
+    directory, dir_sources, dir_caveats = _override_directory(
+        layers,
+        sandbox=sandbox,
+        cfg_label=cfg_label,
+        override_config_dir=override_config_dir,
+        config_file_dir=config_file_dir,
+    )
     return _OverrideGates(
-        auto_overrides,
-        game_specific_options,
-        rgui_dir.path if rgui_dir.path is not None else rgui_dir.configured,
-        (f'retroarch.cfg: rgui_config_directory = "{rgui_dir_raw}"{rgui_dir.note}',),
-        rgui_dir.caveats,
+        auto_overrides, game_specific_options, directory, dir_sources, (*caveats, *dir_caveats)
+    )
+
+
+def _override_directory(
+    layers: Sequence[_CfgLayer],
+    *,
+    sandbox: _Sandbox,
+    cfg_label: str,
+    override_config_dir: str,
+    config_file_dir: str,
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """Where RetroArch looks for override ``.cfg`` and option ``.opt`` files.
+
+    ``fill_pathname_application_special`` takes ``rgui_config_directory`` when
+    it holds a value and otherwise falls back to the directory of the loaded
+    ``retroarch.cfg`` (file_path_special.c:196-207) — one level above the
+    platform default ``config`` subdirectory. So an *absent* key means the
+    platform default, while a key set to blank or the literal ``default``
+    clears the setting (configuration.c:6825-6826) and moves the whole override
+    tree up into the config directory itself.
+
+    A Flatpak's cfg spells the directory sandbox-side, so it is translated to
+    where the host reads it; an untranslatable spelling keeps the configured
+    value, so the reads miss, which is the truth (atlas cannot see those
+    files) — falling back to the default directory would apply overrides that
+    do not govern.
+    """
+    raw = _resolve_chain_key(layers, "rgui_config_directory")
+    if raw is None:
+        return override_config_dir, (), ()
+    configured = sandbox.cfg_path("rgui_config_directory", raw)
+    if configured is None:
+        return (
+            config_file_dir,
+            (
+                f'{cfg_label}: rgui_config_directory = "{raw}" — the setting is cleared, so '
+                f"overrides live beside retroarch.cfg in {config_file_dir} "
+                "(configuration.c:6825, file_path_special.c:196-207)",
+            ),
+            (),
+        )
+    return (
+        configured.path if configured.path is not None else configured.configured,
+        (f'{cfg_label}: rgui_config_directory = "{raw}"{configured.note}',),
+        configured.caveats,
     )
 
 
@@ -747,11 +877,17 @@ def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
     An untranslatable spelling stays as configured: it is where the emulator
     writes, in the only namespace that names it, and the caveat states that
     atlas cannot follow it there. Substituting a host directory would answer
-    with a location this RetroArch never touches.
+    with a location this RetroArch never touches. An application-relative value
+    is the same kind of answer — the value as configured, unreachable from here
+    — except that not even the emulator-side spelling is a path yet.
     """
     configured = layout.savefile_directory
     if configured is None:
         return _SaveRoot(layout)
+    if is_app_relative(configured):
+        return _SaveRoot(
+            layout, reachable=False, caveats=(_app_relative_caveat("savefile_directory", configured),)
+        )
     resolved = sandbox.host("savefile_directory", configured)
     if resolved.path == configured:
         return _SaveRoot(layout)
@@ -1049,7 +1185,7 @@ def _apply_card(
     card: CoreCard,
     live_option: CoreOption | None,
     library_name: str | None,
-    layer_texts: list[str],
+    layers: Sequence[_CfgLayer],
     content: _Content,
     gates: _OverrideGates,
 ) -> _CardApplication:
@@ -1086,11 +1222,16 @@ def _apply_card(
     if live_option is not None and live_option.default is not None:
         effective_default = live_option.default
     global_file, options_file_caveats = _global_options_file(
-        layer_texts, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir
+        layers, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir
+    )
+    # Upstream default is false (config.def.h DEFAULT_GLOBAL_CORE_OPTIONS), and
+    # RetroArch reads it from the merged config, so the override chain decides
+    # whether a per-core .opt file is consulted at all.
+    global_core_options, global_ignored = _resolve_chain_bool(
+        layers, "global_core_options", default=False
     )
     opt_value, opt_source, options_file, opt_unconfirmed = _core_options_value(
         machine,
-        layer_texts,
         override_config_dir=gates.override_config_dir,
         global_file=global_file,
         library_name=library_name,
@@ -1099,8 +1240,9 @@ def _apply_card(
         option_key=card.option_key or "",
         option_default=effective_default or "",
         game_specific_options=gates.game_specific_options,
+        per_core_options=not global_core_options,
     )
-    caveats: list[Caveat] = [*options_file_caveats]
+    caveats: list[Caveat] = [*options_file_caveats, *_ignored_caveats(global_ignored)]
     applied: CoreCard | None = card
     mode = card.modes.get(opt_value)
     if mode is None:
@@ -1176,7 +1318,7 @@ def _system_directory_placement(
     card: CoreCard,
     mode: SaveMode,
     granularity: Granularity | None,
-    layer_texts: list[str],
+    layers: Sequence[_CfgLayer],
     rom_stem: str | None,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
@@ -1189,7 +1331,7 @@ def _system_directory_placement(
     """
     card_sources = list(sources)
     all_caveats = list(caveats)
-    raw_system = _resolve_chain_key(layer_texts, "system_directory")
+    raw_system = _resolve_chain_key(layers, "system_directory")
     resolved = sandbox.cfg_path("system_directory", raw_system)
     needs: tuple[str, ...] = ()
     if resolved is None or resolved.path is None:
@@ -1481,8 +1623,13 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
     caveats = [*query.extra_caveats, *core.caveats]
     sources_extra = [*query.extra_sources, *core.sources]
 
+    retroarch_config_dir = os.path.dirname(query.global_cfg_path)
     gates = _override_gates(
-        query.global_text, sandbox=query.sandbox, override_config_dir=query.override_config_dir
+        query.global_text,
+        sandbox=query.sandbox,
+        cfg_label=query.cfg_label,
+        override_config_dir=query.override_config_dir,
+        config_file_dir=retroarch_config_dir,
     )
     sources_extra.extend(gates.sources)
     caveats.extend(gates.caveats)
@@ -1498,7 +1645,12 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
         defaults=query.defaults,
         overrides=overrides,
     )
-    layer_texts = [t for t in (query.global_text, *(text for _, text in overrides)) if t is not None]
+    caveats.extend(_ignored_caveats(layout.ignored))
+    layers: list[_CfgLayer] = [
+        (label, text)
+        for label, text in ((query.cfg_label, query.global_text), *overrides)
+        if text is not None
+    ]
     saves_root = _host_save_dir(query.sandbox, layout)
     layout = saves_root.layout
     sources_extra.extend(saves_root.sources)
@@ -1507,7 +1659,7 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
     # The RetroArch platform default saves dir — 'saves' under the config tree
     # (platform_unix.c:2133-2134) — is the effective root whenever the key is unset,
     # reset, or points at anything that is not an existing directory.
-    platform_default_dir = os.path.join(os.path.dirname(query.global_cfg_path), "saves")
+    platform_default_dir = os.path.join(retroarch_config_dir, "saves")
     if saves_root.reachable:
         layout, invalid_dir_caveats = _reject_unusable_save_dir(
             machine, layout, platform_default_dir=platform_default_dir
@@ -1541,11 +1693,11 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
         applied = _apply_card(
             machine,
             sandbox=query.sandbox,
-            retroarch_config_dir=os.path.dirname(query.global_cfg_path),
+            retroarch_config_dir=retroarch_config_dir,
             card=card,
             live_option=choice.live_option,
             library_name=core.library_name,
-            layer_texts=layer_texts,
+            layers=layers,
             content=content,
             gates=gates,
         )
@@ -1560,7 +1712,7 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
             card=card,
             mode=card_mode,
             granularity=granularity,
-            layer_texts=layer_texts,
+            layers=layers,
             rom_stem=content.rom_stem,
             sources=tuple(sources_extra),
             caveats=tuple(caveats),

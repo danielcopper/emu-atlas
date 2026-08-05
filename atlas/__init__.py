@@ -124,6 +124,9 @@ from atlas.oddities import (
     lookup_card,
 )
 from atlas.placement import (
+    CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
+    CAVEAT_CFG_LINE_DROPPED,
+    CAVEAT_CFG_VALUE_REJECTED,
     CAVEAT_CORE_UNQUERYABLE,
     CAVEAT_FILENAMES_UNVERIFIED,
     CAVEAT_HEALTH,
@@ -157,8 +160,11 @@ from atlas.placement import (
 )
 from atlas.retroarch_cfg import (
     EMUDECK_DEFAULTS,
+    IGNORED_LINE_DROPPED,
+    IGNORED_VALUE_REJECTED,
     RETRODECK_DEFAULTS,
     UPSTREAM_DEFAULTS,
+    IgnoredSetting,
     LayoutDefaults,
     RetroArchCfg,
     interpret_cfg,
@@ -178,6 +184,9 @@ __all__ = [
     "GamelistSelections",
     "CoreCard",
     "AuditEntry",
+    "CAVEAT_APP_RELATIVE_PATH_UNEXPANDED",
+    "CAVEAT_CFG_LINE_DROPPED",
+    "CAVEAT_CFG_VALUE_REJECTED",
     "CAVEAT_DEAD_SYMLINK",
     "CAVEAT_INVALID_SAVE_DIRECTORY",
     "CAVEAT_CORE_UNAUDITED",
@@ -271,6 +280,9 @@ __all__ = [
     "Installation",
     "KIND_LIBRETRO",
     "KIND_STANDALONE",
+    "IGNORED_LINE_DROPPED",
+    "IGNORED_VALUE_REJECTED",
+    "IgnoredSetting",
     "LayoutDefaults",
     "Machine",
     "SYMLINK_HOPS",

@@ -2344,6 +2344,257 @@
           ]
         }
       }
+    },
+    {
+      "name": "cfg-line-without-space-before-equals-is-dropped",
+      "rationale": "A hand-edited cfg writes savefile_directory=\"…\" with no space before the '='. RetroArch's key scan reads a run of isgraph characters, and '=' is one of them, so the key becomes the whole text and the line is refused (config_file.c:596-623): the saves root is NOT set, and the platform default under the config tree governs. Reading that line would attest a directory this RetroArch never writes to.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory=\"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "cfg-line-dropped",
+              "data": {
+                "key": "savefile_directory",
+                "line": "savefile_directory=\"/mnt/sd/retrodeck/saves\""
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "override-with-unknown-boolean-value-is-a-no-op",
+      "rationale": "The core override spells sort_savefiles_by_content_enable = \"yes\". config_get_bool accepts exactly 1/true/0/false case-sensitively (config_file.c:1227-1262) and the bool loop writes nothing when it refuses (configuration.c:6412-6417), so the global layer's \"true\" still governs — the override does not turn the setting off. The rejected spelling is stated: nothing in the answer shows it otherwise.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"yes\""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/psp"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psp",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "cfg-value-rejected",
+              "data": {
+                "key": "sort_savefiles_by_content_enable",
+                "value": "yes"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "cleared-rgui-config-directory-moves-overrides-one-level-up",
+      "rationale": "rgui_config_directory = \"default\" clears the setting (configuration.c:6825-6826), and fill_pathname_application_special then falls back to the directory of the loaded retroarch.cfg (file_path_special.c:196-207) — one level above the platform default 'config' subdirectory. The override that governs is therefore <config dir>/PPSSPP/PPSSPP.cfg; the file in config/PPSSPP/ is the decoy that a wrong fallback would read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory = \"default\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "savefile_directory = \"/mnt/sd/wrong\""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "app-relative-save-directory-is-stated-unexpanded",
+      "rationale": "RetroArch's own config save writes ':' paths on some platforms: fill_pathname_expand_special resolves the prefix against the directory of the running RetroArch executable (file_path.c:1066-1101 → /proc/<pid>/exe, file_path.c:1421-1455). That directory is a property of the process, not of this disk, so atlas keeps the value as configured, states it, and does not run the existing-directory test on a path it would have had to invent.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \":/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": ":/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "app-relative-path-unexpanded",
+              "data": {
+                "key": "savefile_directory",
+                "path": ":/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
