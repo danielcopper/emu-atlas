@@ -31,11 +31,13 @@ ROM = "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi"
 class TestCardLookup:
     def test_by_so_basename(self):
         card = lookup_card(so_basename="flycast_libretro.so", library_name=None)
-        assert card is not None and card.key == "flycast"
+        assert card is not None
+        assert card.key == "flycast"
 
     def test_by_library_name(self):
         card = lookup_card(so_basename=None, library_name="Flycast")
-        assert card is not None and card.key == "flycast"
+        assert card is not None
+        assert card.key == "flycast"
 
     def test_no_card_for_ordinary_core(self):
         assert lookup_card(so_basename="mgba_libretro.so", library_name="mGBA") is None
@@ -154,7 +156,8 @@ class TestFlycastResolution:
             }
         )
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
-        assert p.granularity is not None and p.granularity.value == "shared-card"
+        assert p.granularity is not None
+        assert p.granularity.value == "shared-card"
         assert any(c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE and c.data["value"] == "something new" for c in p.caveats)
 
     def test_ordinary_core_has_no_granularity(self):
@@ -174,8 +177,10 @@ class TestLRPS2Card:
     def test_lookup_by_so_and_library_name(self):
         by_so = lookup_card(so_basename="pcsx2_libretro.so", library_name=None)
         by_name = lookup_card(so_basename=None, library_name="LRPS2")
-        assert by_so is not None and by_so.key == "pcsx2"
-        assert by_name is not None and by_name.key == "pcsx2"
+        assert by_so is not None
+        assert by_so.key == "pcsx2"
+        assert by_name is not None
+        assert by_name.key == "pcsx2"
 
     def test_default_shared_memcards_in_system_directory(self):
         # pcsx2_shared_memory_cards defaults to "enabled" (libretro_core_options.h:169)
@@ -193,7 +198,8 @@ class TestLRPS2Card:
         assert p.file_set.state == "declared"
         assert p.file_set.files == ("Mcd001.ps2", "Mcd002.ps2")
         g = p.granularity
-        assert g is not None and g.value == "shared-card"
+        assert g is not None
+        assert g.value == "shared-card"
         assert g.option_key == "pcsx2_shared_memory_cards"
         assert g.option_value == "enabled"
         assert ("disabled", "per-game-file") in g.alternatives
@@ -218,7 +224,8 @@ class TestLRPS2Card:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.file_set.state == "declared"
         assert p.file_set.files == ("Gran Turismo 4 (USA).ps2",)
-        assert p.granularity is not None and p.granularity.value == "per-game-file"
+        assert p.granularity is not None
+        assert p.granularity.value == "per-game-file"
 
     def test_existing_memcard_is_observed(self):
         rd = _retrodeck(
@@ -289,7 +296,8 @@ class TestFeatureDetection:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY  # standard frame
         assert p.granularity is None
         mismatch = [c for c in p.caveats if c.code == atlas.CAVEAT_CARD_GENERATION_MISMATCH]
-        assert mismatch and mismatch[0].data["card"] == "flycast"
+        assert mismatch
+        assert mismatch[0].data["card"] == "flycast"
 
     def test_uncaptured_options_fall_back_to_version_comparison(self):
         p = self._flycast({"library_name": "Flycast"})
@@ -365,13 +373,15 @@ class TestOperaCard:
         p = self._query({})
         assert p.dir == "/mnt/sd/retrodeck/saves/opera/per_game"
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
-        assert p.granularity is not None and p.granularity.value == "per-game-file"
+        assert p.granularity is not None
+        assert p.granularity.value == "per-game-file"
         assert ("shared", "shared-card") in p.granularity.alternatives
 
     def test_shared_mode_switches_subdir(self):
         p = self._query({OPTIONS_CFG: 'opera_nvram_storage = "shared"\n'})
         assert p.dir == "/mnt/sd/retrodeck/saves/opera/shared"
-        assert p.granularity is not None and p.granularity.value == "shared-card"
+        assert p.granularity is not None
+        assert p.granularity.value == "shared-card"
 
     def test_subdir_follows_the_sorted_directory(self):
         # GET_SAVE_DIRECTORY hands the core the redirected (sorted) dir
@@ -417,7 +427,8 @@ class TestAuditVerdictCaveats:
         )
         assert p.granularity is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MULTI_OPTION]
-        assert stated and stated[0].data["core"] == "swanstation"
+        assert stated
+        assert stated[0].data["core"] == "swanstation"
         assert stated[0].data["options"].split(", ") == [
             "swanstation_MemoryCards_Card1Type",
             "swanstation_MemoryCards_Card2Type",
@@ -691,7 +702,8 @@ class TestVerificationMatrix:
         )
         p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
-        assert stale and stale[0].data["arrangement_live"] == "0.11.0"
+        assert stale
+        assert stale[0].data["arrangement_live"] == "0.11.0"
         assert stale[0].data["arrangement_verified"] == "0.10.9b"
 
     def test_core_version_drift_fires_caveat(self):
@@ -705,7 +717,8 @@ class TestVerificationMatrix:
         )
         p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
-        assert stale and stale[0].data["core_live"] == "fffffff"
+        assert stale
+        assert stale[0].data["core_live"] == "fffffff"
 
     def test_unknown_live_versions_fail_closed(self):
         # The card is pinned to retrodeck 0.10.9b + core 1dac369, but this
@@ -721,7 +734,8 @@ class TestVerificationMatrix:
         )
         p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
-        assert stale and stale[0].data["verification"] == "runtime-version-unknown"
+        assert stale
+        assert stale[0].data["verification"] == "runtime-version-unknown"
         assert "arrangement_version" in stale[0].data["missing"]
         assert "core_library_version" in stale[0].data["missing"]
 
@@ -755,4 +769,5 @@ class TestVerificationMatrix:
         ed = atlas.EmuDeck(HOME, machine)
         p = ed.save_location(content_path=f"{HOME}/Emulation/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
-        assert stale and stale[0].data["arrangement"] == "emudeck"
+        assert stale
+        assert stale[0].data["arrangement"] == "emudeck"

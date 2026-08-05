@@ -158,7 +158,8 @@ class TestEntrySaveLocation:
         assert p.dir == "/mnt/sd/retrodeck/bios/dc"
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert not any(c.code == atlas.CAVEAT_NO_CORE for c in p.caveats)
-        assert p.granularity is not None and p.granularity.value == "shared-card"
+        assert p.granularity is not None
+        assert p.granularity.value == "shared-card"
 
     def test_standalone_entry_is_a_domain_outcome(self):
         # Outside the resolver's coverage is an answer, not an exception (M8).
@@ -280,4 +281,5 @@ class TestPerGameAltemulator:
         p = parallel.save_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
         assert isinstance(p, atlas.SavePlacement)
         override = [c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
-        assert override and override[0].data["label"] == "Mupen64Plus-Next"
+        assert override
+        assert override[0].data["label"] == "Mupen64Plus-Next"

@@ -226,12 +226,14 @@ class TestHashTable:
     def test_for_path_matches_the_declared_path_first(self):
         hashes = load_hashes(TABLE)
         identity = hashes.for_path("dc/dc_boot.bin")
-        assert identity is not None and identity.md5 == "cc" * 16
+        assert identity is not None
+        assert identity.md5 == "cc" * 16
 
     def test_for_path_falls_back_to_the_base_name(self):
         # A core declaring "subdir/scph5501.bin" still names the same dump.
         identity = load_hashes(TABLE).for_path("psx/scph5501.bin")
-        assert identity is not None and identity.size == 8
+        assert identity is not None
+        assert identity.size == 8
 
     def test_an_uncovered_name_is_a_normal_none(self):
         assert load_hashes(TABLE).for_path("neogeo.zip") is None
@@ -243,7 +245,8 @@ class TestHashTable:
 
     def test_for_content_matches_by_bytes_not_by_name(self):
         identity = load_hashes(TABLE).for_content(md5="EE" * 16)
-        assert identity is not None and identity.known_as == ("dmg_boot.bin", "gb_bios.bin")
+        assert identity is not None
+        assert identity.known_as == ("dmg_boot.bin", "gb_bios.bin")
 
     def test_for_content_requires_every_supplied_field_to_agree(self):
         hashes = load_hashes(TABLE)
@@ -252,8 +255,9 @@ class TestHashTable:
         assert hashes.for_content(md5="ee" * 16, sha1="00" * 20) is None
 
     def test_size_alone_is_not_an_identity(self):
+        hashes = load_hashes(TABLE)
         with pytest.raises(ValueError):
-            load_hashes(TABLE).for_content(size=5)
+            hashes.for_content(size=5)
 
     def test_the_packaged_table_loads_and_is_not_empty(self):
         packaged = load_hashes()
@@ -372,7 +376,8 @@ class TestPerCoreAnswer:
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
         core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
         required = next(r for r in core.requirements if r.need == NEED_REQUIRED)
-        assert required.found == "file" and required.checked == "unchecked"
+        assert required.found == "file"
+        assert required.checked == "unchecked"
         assert required.satisfied is None
         assert core.unmet == ()
         assert [r.file_name for r in core.undetermined] == ["scph5501.bin"]
@@ -384,7 +389,8 @@ class TestPerCoreAnswer:
         machine = _machine({f"{BIOS_DIR}/psxonpsp660.bin": _blob(b"unknown to the table")})
         answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
         uncovered = next(r for r in answer.requirements if r.file_name == "psxonpsp660.bin")
-        assert uncovered.identity is None and uncovered.checked == CHECKED_UNKNOWN
+        assert uncovered.identity is None
+        assert uncovered.checked == CHECKED_UNKNOWN
         assert uncovered.satisfied is True
 
     def test_a_missing_required_file_is_unmet(self):
@@ -1190,7 +1196,8 @@ class TestPartialReaderIsNotMisled:
             machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
         ).cores[0]
         wrong = next(r for r in core.requirements if r.file_name == "scph5501.bin")
-        assert wrong.found == "file" and wrong.checked == CHECKED_MISMATCH
+        assert wrong.found == "file"
+        assert wrong.checked == CHECKED_MISMATCH
         assert wrong.satisfied is False
         assert [r.file_name for r in core.unmet] == ["scph5501.bin"]
         assert core.requirements_met is False
@@ -1201,7 +1208,8 @@ class TestPartialReaderIsNotMisled:
             machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
         ).cores[0]
         undecided = next(r for r in core.requirements if r.file_name == "scph5501.bin")
-        assert undecided.found == "file" and undecided.checked == CHECKED_UNKNOWN
+        assert undecided.found == "file"
+        assert undecided.checked == CHECKED_UNKNOWN
         assert undecided.satisfied is None
         assert core.unmet == ()
         assert [r.file_name for r in core.undetermined] == ["scph5501.bin"]
