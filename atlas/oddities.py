@@ -24,7 +24,7 @@ from typing import Mapping
 # malformed entries raise instead of coercing — a broken build must fail
 # loudly, never resolve wrongly (REVIEW M3, M10).
 ODDITIES_SCHEMA = 1
-AUDIT_SCHEMA = 2
+AUDIT_SCHEMA = 3
 
 _KNOWN_VERDICTS = {"card", "standard", "standard-dir", "multi-option", "suspect", "unaudited"}
 _KNOWN_MODE_ROOTS = {"savefile_directory", "system_directory", "content_directory"}
@@ -180,13 +180,23 @@ class VerifiedOn:
 
 @dataclass(frozen=True, slots=True)
 class AuditEntry:
-    """One core's audit verdict, capability summary, and verification record."""
+    """One core's audit verdict, capability summary, and verification record.
+
+    ``save_options`` names the core options the audit found governing the save
+    file set — world knowledge with the same provenance as ``note``, not a live
+    read. It belongs to the ``multi-option`` verdict and only to it: that
+    verdict *means* "the granularity depends on several interacting options the
+    card schema cannot express", so an entry that cannot name them has not
+    earned it, and any other verdict naming them would be stating a dependency
+    it just denied.
+    """
 
     key: str
     verdict: str
     per_game_capable: bool | None
     note: str
     verified: Mapping[str, VerifiedOn | None]
+    save_options: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "verified", MappingProxyType(dict(self.verified)))
@@ -212,6 +222,14 @@ def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
             raise ValueError(f"{where}: missing required field 'per_game_capable'")
         per_game_capable = _expect_opt_bool(entry["per_game_capable"], f"{where}: per_game_capable")
         note = _expect_str(entry.get("note"), f"{where}: note")
+        save_options = _expect_str_list(entry.get("save_options", []), f"{where}: save_options")
+        if verdict == "multi-option" and not save_options:
+            raise ValueError(
+                f"{where}: a 'multi-option' verdict must list the governing options in 'save_options' — "
+                "the verdict states the granularity depends on them"
+            )
+        if verdict != "multi-option" and save_options:
+            raise ValueError(f"{where}: 'save_options' belongs to a 'multi-option' verdict, got {verdict!r}")
         verified: dict[str, VerifiedOn | None] = {}
         for arrangement, rec in entry.get("verified", {}).items():
             rec_where = f"{where}: verified[{arrangement!r}]"
@@ -232,6 +250,7 @@ def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
             per_game_capable=per_game_capable,
             note=note,
             verified=verified,
+            save_options=save_options,
         )
     return entries
 

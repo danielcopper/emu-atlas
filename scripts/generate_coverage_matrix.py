@@ -40,7 +40,7 @@ _RUNNER_RE = re.compile(r"%EMULATOR_([A-Z0-9_\-]+)%")
 
 ARRANGEMENTS = ("retrodeck", "emudeck", "bare")
 ARRANGEMENT_HEADERS = {"retrodeck": "RetroDECK", "emudeck": "EmuDeck", "bare": "RetroArch (bare)"}
-AUDIT_SCHEMA = 2
+AUDIT_SCHEMA = 3
 
 
 def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, set[str]]]:

@@ -60,6 +60,7 @@ from atlas.placement import (
     CAVEAT_CARD_MODE_UNCONFIRMED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_SORTED_DIR_UNCREATABLE,
+    CAVEAT_CORE_MULTI_OPTION,
     CAVEAT_CORE_SUSPECT,
     CAVEAT_CORE_UNAUDITED,
     CAVEAT_CORE_UNQUERYABLE,
@@ -526,6 +527,21 @@ def _retroarch_save_location(
                     f"core {short_name!r} is a documented deviation suspect — this standard answer "
                     "may miss an additional or different save stack (docs/research/core-audit.md)",
                     {"core": short_name, "verdict": verdict_entry.verdict},
+                )
+            )
+        elif verdict_entry.verdict == "multi-option":
+            # The directory is established; the granularity is not, and an
+            # empty `granularity` field alone reads as nothing-to-report
+            # (issue #23). The audit knows which options decide it, so the
+            # answer names them instead of leaving the caller with "unknown".
+            options = ", ".join(verdict_entry.save_options)
+            caveats.append(
+                Caveat(
+                    CAVEAT_CORE_MULTI_OPTION,
+                    f"core {short_name!r} places its saves in this directory, but its file set and "
+                    f"granularity depend on core options atlas does not interpret ({options}) — the "
+                    "granularity here is unstated, not standard (docs/research/core-audit.md)",
+                    {"core": short_name, "verdict": verdict_entry.verdict, "options": options},
                 )
             )
     if card is not None:

@@ -29,7 +29,7 @@ def test_matrix_renders_per_game_capability_and_notes(tmp_path, monkeypatch):
     audit_path.write_text(
         json.dumps(
             {
-                "schema": 2,
+                "schema": 3,
                 "cores": {
                     "yes": {
                         "verdict": "standard",

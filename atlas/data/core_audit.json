@@ -1,6 +1,6 @@
 {
-  "schema": 2,
-  "spec": "The verification matrix behind docs/research/core-audit.md. per_game_capable is a proven static capability: true = at least one per-game save mode is established by source, shipped binary, or observation; false = absence is established; null = unknown. It does not state the active mode of a running installation — SavePlacement.granularity does that where supported. note is the concise evidence and limitation summary. verified records, per arrangement (retrodeck / emudeck / bare), which versions the knowledge was verified against; null = never verified there. MAINTENANCE IS ENFORCED, not documented-and-hoped: strict loading requires the capability and note, a test asserts every rule card in core_oddities.json has an entry here, and the resolver attaches an 'unverified-version' caveat when a card is applied on an arrangement that is null here or whose live-read version differs from the verified one. core_library_version is the value the core's own retro_get_system_info reports (query_core), so staleness is checked against live reads on both sides.",
+  "schema": 3,
+  "spec": "The verification matrix behind docs/research/core-audit.md. per_game_capable is a proven static capability: true = at least one per-game save mode is established by source, shipped binary, or observation; false = absence is established; null = unknown. It does not state the active mode of a running installation — SavePlacement.granularity does that where supported. note is the concise evidence and limitation summary. save_options names the core options the audit found governing the file set and granularity; it is required for a multi-option verdict and rejected on every other one, because that verdict is exactly the claim that those options decide the answer — the resolver hands them to the caller in the 'core-multi-option' caveat so an unstated granularity says which options it depends on instead of reading as nothing-to-report. verified records, per arrangement (retrodeck / emudeck / bare), which versions the knowledge was verified against; null = never verified there. MAINTENANCE IS ENFORCED, not documented-and-hoped: strict loading requires the capability and note, a test asserts every rule card in core_oddities.json has an entry here, and the resolver attaches an 'unverified-version' caveat when a card is applied on an arrangement that is null here or whose live-read version differs from the verified one. core_library_version is the value the core's own retro_get_system_info reports (query_core), so staleness is checked against live reads on both sides.",
   "cores": {
     "azahar": {
       "verdict": "suspect",
@@ -43,6 +43,11 @@
       "verdict": "multi-option",
       "per_game_capable": true,
       "note": "[V-source/binary] libretro.c:1383-1500,3746-3765 proves frontend SRAM and per-game Sega CD BRAM modes; shipped strings match, but the upstream-to-binary binding is [D] and never live-observed.",
+      "save_options": [
+        "genesis_plus_gx_system_bram",
+        "genesis_plus_gx_cart_bram",
+        "genesis_plus_gx_cart_size"
+      ],
       "verified": {
         "retrodeck": null,
         "emudeck": null,
@@ -69,6 +74,11 @@
       "verdict": "multi-option",
       "per_game_capable": true,
       "note": "[V-source/config] Default frontend .srm and optional content-keyed .mcr modes are established; RetroDECK 0.10.9b selects libretro cards with sharing disabled.",
+      "save_options": [
+        "beetle_psx_use_mednafen_memcard0_method",
+        "beetle_psx_enable_memcard1",
+        "beetle_psx_shared_memory_cards"
+      ],
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -84,6 +94,11 @@
       "verdict": "multi-option",
       "per_game_capable": true,
       "note": "[V-source/config] Same frontend .srm and content-keyed .mcr implementation as Beetle PSX; RetroDECK 0.10.9b selects libretro cards with sharing disabled.",
+      "save_options": [
+        "beetle_psx_hw_use_mednafen_memcard0_method",
+        "beetle_psx_hw_enable_memcard1",
+        "beetle_psx_hw_shared_memory_cards"
+      ],
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -144,6 +159,9 @@
       "verdict": "multi-option",
       "per_game_capable": true,
       "note": "[V-source/binary] path.cpp:137-168 proves a per-content mode and libretro.cpp:214-215 exposes frontend save RAM; shipped strings match, but load precedence and live behavior remain [O].",
+      "save_options": [
+        "neocd_per_content_saves"
+      ],
       "verified": {
         "retrodeck": null,
         "emudeck": null,
@@ -181,6 +199,9 @@
       "verdict": "multi-option",
       "per_game_capable": true,
       "note": "[V-source/config] frontend/libretro.c:3715-3757 proves per-content slot 1 and identity-keyed modes; the live 0.10.9b slot-2 value shows version drift.",
+      "save_options": [
+        "pcsx_rearmed_memcard2"
+      ],
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -222,6 +243,11 @@
       "verdict": "multi-option",
       "per_game_capable": true,
       "note": "[V-source/config] Libretro .srm plus game-code/title modes are established; RetroDECK 0.10.9b currently selects Libretro card 1 and no card 2.",
+      "save_options": [
+        "swanstation_MemoryCards_Card1Type",
+        "swanstation_MemoryCards_Card2Type",
+        "swanstation_MemoryCards_UsePlaylistTitle"
+      ],
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",

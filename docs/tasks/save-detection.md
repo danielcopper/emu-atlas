@@ -45,7 +45,11 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
    structured error reporting for skipped catalogue layers (currently silent).
 
 6. **Save granularity field** (issue #12): per-game file / per-game folder / shared card on the placement, with the
-   config that selects the mode. Flycast, LRPS2, Dolphin-libretro are the first shared-card targets.
+   config that selects the mode. Flycast, LRPS2, Dolphin-libretro are the first shared-card targets. **Partially done:**
+   stated wherever a rule card exists; where it is deliberately unstated, the `core-multi-option` caveat says so and
+   names the governing options (issue #23) instead of leaving an empty field that reads as nothing-to-report. Still open
+   for the six `multi-option` cores: interpreting those options into a granularity value, which is what task 15's card
+   variants are for.
 
 7. **Savestates.** Only savefiles are resolved; the `sort_savestates_*` keys and `states_path` are unread. Same
    machinery, second instance.
