@@ -118,6 +118,7 @@ CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
 CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
 CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT = "firmware-path-escapes-root"
 CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
+CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE = "firmware-path-names-no-file"
 CAVEAT_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
@@ -1004,7 +1005,7 @@ class FirmwareAnswer:
     @property
     def requirements(self) -> tuple[FirmwareRequirement, ...]:
         """Every requirement in the answer, flattened and sorted by destination."""
-        return tuple(sorted((r for c in self.cores for r in c.requirements), key=lambda r: (r.path, r.core_so)))
+        return _requirements_of(self.cores)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1215,14 +1216,31 @@ def resolve_links(machine: Machine, path: str) -> str | None:
     return resolved
 
 
+def _stays_under(root: str, path: str) -> bool:
+    """Is *path* the firmware *root* itself, or something inside it?
+
+    Both arguments are **resolved** paths — the check is the last step of a
+    resolution, never a substitute for one. The root counts as inside on
+    purpose: RetroDECK links ``bios/pcsx2/bios`` back to the firmware root so
+    LRPS2 finds its folder, and that declaration resolves to the root exactly.
+
+    Every place atlas decides to read, hash, or report something is bounded by
+    this one predicate, so the bound cannot drift between the declaration side
+    and the scan side.
+    """
+    prefix = root if root.endswith("/") else f"{root}/"
+    return path == root or path.startswith(prefix)
+
+
 @dataclass(frozen=True, slots=True)
 class Destination:
     """Where a declared path actually lands — or why atlas would not follow it.
 
     Exactly one of ``path`` and ``refusal`` is set. ``refusal`` is a caveat
-    code, and there are two of them on purpose: "this leaves the firmware root"
-    and "this could not be resolved at all" are different facts, and a consumer
-    branching on a code it can trust must not be handed the wrong one.
+    code, and there are three of them on purpose: "this leaves the firmware
+    root", "this could not be resolved at all" and "this names no file" are
+    different facts, and a consumer branching on a code it can trust must not
+    be handed the wrong one.
     """
 
     path: str | None = None
@@ -1257,19 +1275,33 @@ def destination_under(machine: Machine, root: str, declared: str) -> Destination
     The answer is the resolved path. Two declarations that land on the same
     file then look like one place, which is what keeps a placing client from
     writing two copies: LRPS2's ``pcsx2/bios`` *is* the firmware root here.
+
+    A declaration whose last component is ``.`` or ``..`` is refused before any
+    of that: those name a directory step, not a file. They resolve to a
+    perfectly legal directory — for ``sub/..`` the firmware root itself — and
+    answering that as a destination would state a requirement for a file the
+    core never named, on a path nothing can ever be placed at.
     """
     if os.path.isabs(declared):
         return Destination(refusal=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT)
+    if os.path.basename(declared) in (".", ".."):
+        return Destination(refusal=CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE)
     resolved_root = resolve_links(machine, root)
     resolved = resolve_links(machine, os.path.join(root, declared))
     if resolved_root is None or resolved is None:
         return Destination(refusal=CAVEAT_FIRMWARE_PATH_UNRESOLVABLE)
-    resolved_prefix = resolved_root if resolved_root.endswith("/") else f"{resolved_root}/"
-    # The root itself is inside the tree, not outside it: RetroDECK links
-    # bios/pcsx2/bios back to the firmware root so LRPS2 finds its folder, and
-    # that resolves to the root exactly.
-    inside = resolved == resolved_root or resolved.startswith(resolved_prefix)
-    return Destination(path=resolved) if inside else Destination(refusal=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT)
+    if _stays_under(resolved_root, resolved):
+        return Destination(path=resolved)
+    return Destination(refusal=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT)
+
+
+def _why_refused(refusal: str, root: str) -> str:
+    """The prose behind one refusal code — one sentence fragment per fact."""
+    if refusal == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT:
+        return f"does not stay under the firmware root {root} once symlinks are resolved"
+    if refusal == CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE:
+        return "ends in a directory step ('.' or '..') and so names no file at all"
+    return "cannot be resolved at all — a symlink loop, or a chain longer than the kernel follows"
 
 
 def _requirements_for(
@@ -1299,11 +1331,7 @@ def _requirements_for(
             refused.append(
                 RefusedDeclaration(declared=declaration.path, need=declaration.need, reason=refusal)
             )
-            why = (
-                f"does not stay under the firmware root {root} once symlinks are resolved"
-                if refusal == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT
-                else "cannot be resolved at all — a symlink loop, or a chain longer than the kernel follows"
-            )
+            why = _why_refused(refusal, root)
             core_caveats.append(
                 Caveat(
                     refusal,
@@ -1345,6 +1373,15 @@ def _requirements_for(
         tuple(core_caveats),
         answer_caveats,
     )
+
+
+def _requirements_of(cores: tuple[CoreFirmware, ...]) -> tuple[FirmwareRequirement, ...]:
+    """Every requirement across *cores*, flattened and sorted by destination.
+
+    One ordering for every answer that hands requirements back, so an
+    identification and an inventory list the same files in the same order.
+    """
+    return tuple(sorted((r for c in cores for r in c.requirements), key=lambda r: (r.path, r.core_so)))
 
 
 def _empty_answer(context: FirmwareContext, extra: tuple[Caveat, ...] = ()) -> FirmwareAnswer:
@@ -1739,14 +1776,41 @@ def _unclaimed_in(
     *,
     verify: bool,
 ) -> tuple[list[UnclaimedFile], list[Caveat]]:
-    """The files in one directory that no installed core asks for."""
+    """The files in one directory that no installed core asks for.
+
+    An entry that cannot be looked at is stated, not dropped: whether it is a
+    file nobody declared is then unknown, and an unknown is the one thing this
+    list may not silently contain — it would arrive as an
+    :class:`UnclaimedFile` whose path is real and whose identity was invented.
+
+    Only for entries that survive the exclusions, though. Whether a path is
+    *this scan's* subject is settled before anything is said about it: a
+    declared destination that cannot be looked at is already stated by
+    :func:`_observe`, and saying it again here would put the same fact in the
+    answer twice; a save the rule cards claim is never this scan's business at
+    all, and a caveat calling an unreadable memory card a possibly-undeclared
+    firmware file is the category error the artifact exclusion exists to
+    prevent.
+    """
     found: list[UnclaimedFile] = []
     caveats: list[Caveat] = []
     for entry in machine.glob(os.path.join(_glob_escape(directory), "*")):
-        if machine.path_kind(entry) != KIND_FILE:
+        kind = machine.path_kind(entry)
+        if kind not in (KIND_FILE, KIND_INACCESSIBLE):
             continue
         resolved_entry = resolve_links(machine, entry) or entry
         if resolved_entry in claimed or resolved_entry in artifacts:
+            continue
+        if kind == KIND_INACCESSIBLE:
+            caveats.append(
+                Caveat(
+                    CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
+                    f"{entry} lies in the firmware tree, is claimed by no core, and cannot be looked at "
+                    "(permissions or an I/O failure) — so whether it is a file nobody declared is unknown; "
+                    "it is stated here instead of appearing below as a file atlas never saw",
+                    {"path": entry},
+                )
+            )
             continue
         identity, caveat = _unclaimed_identity(machine, context, entry, verify=verify)
         if caveat is not None:
@@ -1771,16 +1835,42 @@ def _unclaimed_files(
     needs no exclusion list and grows on its own as cores declare new paths.
     Save data the rule cards claim is excluded outright
     (:func:`save_artifact_paths`).
+
+    Every scanned directory is clamped to the root's subtree, and the root
+    itself is the only one that may equal it. A claimed path is resolved and
+    inside the root, but that is not enough: a folder declaration is allowed to
+    land on the root exactly (LRPS2's ``pcsx2/bios``, which RetroDECK links
+    back to it), and the *parent* of that landing is one level above the
+    firmware tree. Without the clamp a stock RetroDECK scans it, and whatever
+    sits there is reported — and with ``verify`` hashed — as unclaimed
+    firmware.
+
+    Names beginning with a dot never appear in this list, and that is a
+    decision rather than an oversight: a wildcard in the seam's glob does not
+    match a leading dot (:mod:`atlas.machine` states the rule normatively, and
+    a real ``glob`` behaves the same), and what sits under a dot in a firmware
+    tree is tooling residue — a file manager's ``.directory``, a sync tool's
+    bookkeeping — not firmware anyone placed there. It narrows *this list*
+    only: a declared path is resolved, never globbed, so a core that declares a
+    dotted file still gets its requirement answered.
     """
     root = context.root
     assert root is not None
     resolved_root = resolve_links(machine, root) or root
-    artifacts = {os.path.join(resolved_root, name) for name in save_artifact_paths()}
-    # Every claimed path is already resolved and known to be under the root, so
-    # the directories derived from them are too — a declaration that escaped or
-    # would not resolve never reaches this set, and therefore never widens where
-    # atlas looks or hashes.
-    directories = {resolved_root} | {os.path.dirname(p) for p in claimed}
+    # Resolved, because that is what the entries below are compared against:
+    # RetroDECK's dir_prep links whole firmware subdirectories elsewhere, and a
+    # VMU reached through ``dc -> dreamcast`` is the same save file under both
+    # spellings — matched on the unresolved name it would be reported as
+    # firmware nobody asked for.
+    artifacts = {
+        resolve_links(machine, path) or path
+        for path in (os.path.join(resolved_root, name) for name in save_artifact_paths())
+    }
+    directories = {resolved_root} | {
+        parent
+        for parent in (os.path.dirname(p) for p in claimed)
+        if _stays_under(resolved_root, parent)
+    }
     found: list[UnclaimedFile] = []
     caveats: list[Caveat] = []
     for directory in sorted(directories):
@@ -1880,10 +1970,15 @@ def identify_firmware(
         return FirmwareIdentification(
             identity=identity, requirements=(), sources=context.sources, caveats=tuple(caveats)
         )
-    inventory = firmware_inventory(machine, context, verify=False)
+    # What this answer is made of is the declarations plus what sits at each
+    # destination — the unclaimed scan answers a different question entirely
+    # (files nobody declared), and none of its result reaches here. Running it
+    # would glob and stat every directory a declaration references for a lookup
+    # the caller already has the bytes for.
+    cores, _observations = _resolve_cores(machine, context, context.cores, verify=False)
     wanted = tuple(
         r
-        for r in inventory.requirements
+        for r in _requirements_of(cores)
         if r.identity is not None and r.identity.md5.lower() == identity.md5.lower()
     )
     if not wanted:
@@ -1899,7 +1994,7 @@ def identify_firmware(
     # files it is about, and attaching it because some other file of the same
     # core was derived puts warnings about files that are not in this answer.
     derived_in_answer = {r.core_so for r in wanted if r.system_source != SOURCE_OVERRIDE}
-    for core in inventory.cores:
+    for core in cores:
         if core.core_so in derived_in_answer:
             caveats.extend(core.caveats)
     return FirmwareIdentification(
