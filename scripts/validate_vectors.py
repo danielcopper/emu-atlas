@@ -120,6 +120,7 @@ KNOWN_CAVEAT_CODES = {
     "core-multi-option",
     "card-mode-unconfirmed",
     "card-generation-mismatch",
+    "sandbox-path-untranslated",
     "no-firmware-declaration",
     "info-path-unresolved",
     "core-dir-unresolved",

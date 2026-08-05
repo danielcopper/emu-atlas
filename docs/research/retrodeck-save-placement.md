@@ -188,6 +188,65 @@ installation.
 **[V]** When overrides are found, RetroArch unsets the command-line save/state path flags before reloading
 (`configuration.c:7240`), so an override file can set `savefile_directory` even when `--save` was passed.
 
+### Flatpak sandbox spellings
+
+**[V]** RetroDECK's RetroArch runs inside the Flatpak, so the paths it writes into its own cfg are the paths it sees
+from in there. Three namespaces appear in five lines of the live cfg:
+
+```text
+libretro_directory    = "/app/retrodeck/components/retroarch/rd_extras/cores"
+libretro_info_path    = "/app/retrodeck/components/retroarch/rd_extras/cores"
+rgui_config_directory = "/var/config/retroarch/config"
+savefile_directory    = "/run/media/deck/Emulation/retrodeck/saves"
+system_directory      = "/run/media/deck/Emulation/retrodeck/bios"
+```
+
+`/app` is the deployment, `/var/config` the app's private config directory, `/run/media` the SD card exactly as the host
+sees it. 13 values in that cfg carry the `/var/config` spelling — including the override directory, which is the one
+that decides whether §6's chain is read at all.
+
+**[V]** Flatpak binds the app's per-app XDG directories into the sandbox under `/var`. Observed inside the RetroDECK
+0.10.9b sandbox via `flatpak run --command=sh net.retrodeck.retrodeck -c '…'`:
+
+```text
+XDG_CONFIG_HOME=/home/deck/.var/app/net.retrodeck.retrodeck/config
+XDG_DATA_HOME=/home/deck/.var/app/net.retrodeck.retrodeck/data
+
+66312:3671164  /var/config
+66312:3671164  /home/deck/.var/app/net.retrodeck.retrodeck/config
+66312:3544555  /var/data
+66312:3544555  /home/deck/.var/app/net.retrodeck.retrodeck/data
+66312:3544556  /var/cache
+66312:3544556  /home/deck/.var/app/net.retrodeck.retrodeck/cache
+```
+
+Same device and inode on both sides: one directory under two names, per app id. They are bind mounts, not symlinks —
+`readlink -f /var/config` answers `/var/config`, so nothing resolves them for a reader on the host.
+
+**[V]** The rest of `/var` inside the sandbox is the runtime's own filesystem, not the host's: device `239:21` against
+`66310:2` for the host `/var`, holding only `cache config data db mnt run tmp`. `/run/user/1000` differs as well
+(`71:3657` inside, `71:1` outside) — the sandbox gets its own runtime directory. `/run/media` is the same directory on
+both sides (`24:5255`), which is why the SD-card paths above need no translation at all.
+
+**[D]** A cfg-derived absolute path therefore falls into three classes, and the resolver treats them accordingly
+(`_Sandbox`, `atlas/installations.py`): `/app/...` and `/var/{config,data,cache}/...` translate to host locations;
+anything else under `/var/` or under `/run/user/` exists only inside the sandbox and is reported as
+`sandbox-path-untranslated` rather than resolved against a host path that means something else; everything else passes
+through untouched. Only a handle that carries an app id translates — a native install writes its cfg outside any
+sandbox, where `/var/config` is a real (if unusual) host path.
+
+**[V]** One exception sits inside `/var` and is not a sandbox path: on an **ostree host** — Fedora Silverblue and
+Bazzite, both of which ship RetroDECK — `/home` is a symlink to `/var/home`, so real home directories live under `/var`
+and are shared with the sandbox like any other home. A machine whose home is `/var/home/deck` would otherwise have its
+own configured save, BIOS and core directories read as sandbox-internal, losing the whole firmware answer. Home paths
+are therefore classified host-side before the sandbox-only prefixes, by the machine's own `home` and by the literal
+`/var/home/` (RetroArch resolves the symlink when it writes the cfg; the caller may still pass the `/home/...`
+spelling). atlas is not scoped to SteamOS — `home` is whatever the caller passes.
+
+**[O]** The standalone `org.libretro.RetroArch` Flatpak that EmuDeck configures is not installed on the reference
+machine, so its cfg has not been observed. The binds are a per-app-id Flatpak mechanism and apply unchanged, but the
+observation is owed.
+
 ## 7. Which files are written, and by whom
 
 **[V]** RetroArch itself writes exactly two files per content, core-independently (`save.c:710`):

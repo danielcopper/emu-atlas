@@ -134,6 +134,11 @@ class Machine(Protocol):
   the right name may still be the wrong dump. `file_size` is the free pre-filter that settles most mismatches before any
   bytes are hashed; `file_digest` is the paid answer, and the algorithm vocabulary is closed to `md5`/`sha1` so a port's
   conformance is provable.
+- The seam reads the host, but the configs it reads were written from inside a sandbox: a Flatpak'd emulator spells its
+  own paths `/app/...` and `/var/config/...` (the live RetroDECK cfg puts its override directory there). Every
+  cfg-derived path is therefore translated to its host location before it becomes a read, per app id; a sandbox-only
+  path with no host location is a `sandbox-path-untranslated` caveat, never a silently missing file. See
+  `docs/research/retrodeck-save-placement.md` §6.
 - In production the seam is the real filesystem plus a real core prober. In tests and conformance vectors it is a
   **fixture machine**: files (including unreadable and invalid-text ones), explicit empty directories, symlinks,
   inaccessible paths, and core answers as plain data describing a whole machine. One code path, two data sources; parity

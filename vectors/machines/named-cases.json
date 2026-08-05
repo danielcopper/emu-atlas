@@ -2040,6 +2040,263 @@
           "caveats": []
         }
       }
+    },
+    {
+      "name": "retrodeck-sandbox-override-dir-reaches-host",
+      "rationale": "RetroDECK's RetroArch runs inside the Flatpak and writes its own spelling into the cfg: rgui_config_directory = \"/var/config/retroarch/config\", which Flatpak binds to ~/.var/app/<app id>/config/retroarch/config on the host (same inode, verified live). Translated, the stock config/PPSSPP/PPSSPP.cfg override is found and flips the layout flat; untranslated the whole override chain reads a directory that does not exist on the host.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory = \"/var/config/retroarch/config\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-sandbox-options-path-governs-card",
+      "rationale": "core_options_path in the sandbox's spelling of the app config directory. The rule card's governing option is read from the file RetroArch would read, so the resolved granularity is shared-card; without the translation the file is invisible and the core default would stand in.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\ncore_options_path = \"/var/config/retroarch/opts.cfg\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg": "opera_nvram_storage = \"shared\"",
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
+            "library_name": "Opera"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd",
+          "core_so": "opera_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/opera/shared",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "opera_nvram_storage",
+            "option_value": "shared",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg",
+            "alternatives": [
+              [
+                "per game",
+                "per-game-file"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "card": "opera",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-unverified",
+              "data": {
+                "card": "opera",
+                "mode": "shared"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-untranslatable-sandbox-path-is-stated",
+      "rationale": "Same machine, but the override directory is configured under /var/db — inside the sandbox that is the runtime's own filesystem, which has no host location at all. The override cannot be read, so the sort-by-content layout stands, and the answer says why instead of presenting itself as complete.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory = \"/var/db/retroarch/config\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/psp"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psp",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "rgui_config_directory",
+                "path": "/var/db/retroarch/config"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "ostree-home-under-var-is-not-a-sandbox-path",
+      "rationale": "On an ostree host (Fedora Silverblue, Bazzite — both ship RetroDECK) /home is a symlink to /var/home, so real home directories live under /var. The machine's own configured directories must stay host paths there, while /var/config remains the sandbox bind of the app's config directory — which on this host resolves into that same /var/home. Both halves hold at once: the stock PPSSPP override is found through the sandbox spelling and flips the layout flat, and nothing is reported as untranslatable.",
+      "input": {
+        "home": "/var/home/deck",
+        "files": {
+          "/var/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/var/home/deck/retrodeck\", \"saves_path\": \"/var/home/deck/retrodeck/saves\"}}",
+          "/var/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/var/home/deck/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory = \"/var/config/retroarch/config\"\n",
+          "/var/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
+          "/var/home/deck/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/var/home/deck/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "query": {
+          "content_path": "/var/home/deck/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/var/home/deck/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/var/home/deck/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
