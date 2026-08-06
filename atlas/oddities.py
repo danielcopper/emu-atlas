@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from atlas.placement import TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID
+from atlas.placement import GRANULARITIES, ROOT_KINDS, TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID
 
 # Packaged-data schema versions. The loaders are strict: unknown schema or
 # malformed entries raise instead of coercing — a broken build must fail
@@ -29,7 +29,12 @@ ODDITIES_SCHEMA = 1
 AUDIT_SCHEMA = 3
 
 _KNOWN_VERDICTS = {"card", "standard", "standard-dir", "multi-option", "suspect", "unaudited"}
-_KNOWN_MODE_ROOTS = {"savefile_directory", "system_directory", "content_directory"}
+# The roots a mode may anchor at and the granularities it may select are the
+# placement's own vocabularies — imported, not respelled here, for the same
+# reason the file-name templates are: a card is data, and a value that only
+# looks right would be stated as fact.
+_KNOWN_MODE_ROOTS = set(ROOT_KINDS)
+_KNOWN_GRANULARITIES = set(GRANULARITIES)
 # A declared file name is a template in the placement's own hole grammar. Only
 # these tokens exist: one the resolver fills, one the caller does. A token
 # outside the set would travel into a stated filename and be read as literal
@@ -167,6 +172,13 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     root = _expect_str(mode.get("root"), f"{where}: root")
     if root not in _KNOWN_MODE_ROOTS:
         raise ValueError(f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
+    granularity = _expect_str(mode.get("granularity"), f"{where}: granularity")
+    if granularity not in _KNOWN_GRANULARITIES:
+        # It reaches the caller as the contractual Granularity.value, so a
+        # misspelling here would be stated as this machine's actual grouping.
+        raise ValueError(
+            f"{where}: granularity must be one of {sorted(_KNOWN_GRANULARITIES)}, got {granularity!r}"
+        )
     files = mode.get("files")
     observe = mode.get("observe")
     complete = mode.get("complete", False)
@@ -226,7 +238,7 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
         root=root,
         subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
         files=_expect_file_names(files, f"{where}: files") if files is not None else None,
-        granularity=_expect_str(mode.get("granularity"), f"{where}: granularity"),
+        granularity=granularity,
         observe=_expect_file_names(observe, f"{where}: observe") if observe is not None else None,
         complete=complete,
         files_without_save_id=alternative_names,

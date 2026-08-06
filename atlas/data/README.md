@@ -7,7 +7,20 @@ governs the core_ and what each of its values means; the value itself is always 
 behind every card lives in `core_audit.json`, and a test fails if a card has no entry there.
 
 A mode — one value of the governing option — states the root it anchors at, an optional `subdir`, its `granularity`, and
-the files the save consists of:
+the files the save consists of. Three of those fields are closed vocabularies — all three the placement's own, imported
+by the loader rather than respelled here, so a card cannot select a value the contract cannot carry — and one is a type
+rule:
+
+| field         | accepted values                                                   |
+| ------------- | ----------------------------------------------------------------- |
+| `root`        | `savefile_directory`, `system_directory`, `content_directory`     |
+| `also_under`  | the same three, and not the mode's own `root`                     |
+| `granularity` | `shared-card`, `per-game-file`, `per-game-files`                  |
+| `complete`    | a JSON boolean, `true` or `false` — never a string, never coerced |
+
+`granularity` reaches the caller as the contractual `Granularity.value`, so a misspelling would be stated as this
+machine's actual grouping; `complete` is a claim about the save, and `bool("false")` is `True` in Python, so a quoted
+boolean fails the load instead of silently asserting completeness.
 
 ```json
 "All VMUs": {

@@ -99,6 +99,12 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
     directory. The system_directory route does not observe once a name carries a hole. The two routes should treat a
     template the same way.
 
+    _Why the loader's strictness is not an internal matter_: the card file's own `spec` string states the template
+    guarantee — "the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact" — and
+    that string ships inside the package, next to `atlas/data/README.md`. It is a claim published to consumers, so a
+    loophole in the check is a false claim in a released artifact, not a missing internal invariant. Any change to the
+    vocabularies belongs in the same commit as the text that promises them.
+
 ## Context and docs
 
 11. **`home` guidance for callers.** Document who supplies `home` and why there is no default: the caller knows which

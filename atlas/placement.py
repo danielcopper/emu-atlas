@@ -51,8 +51,14 @@ ROOT_SAVEFILE_DIRECTORY: RootKind = "savefile_directory"
 ROOT_CONTENT_DIRECTORY: RootKind = "content_directory"
 ROOT_SYSTEM_DIRECTORY: RootKind = "system_directory"
 
-_ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory")
+ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory")
 _FILE_SET_STATES = ("observed", "declared", "unknown")
+
+# How a save is grouped — the values :attr:`Granularity.value` may take, and
+# therefore the values a rule card may select. Contractual: clients branch on
+# them and vectors assert them, so the packaged cards are validated against
+# this tuple at load rather than against a card author's spelling.
+GRANULARITIES = ("shared-card", "per-game-file", "per-game-files")
 
 
 def _freeze(mapping: Mapping[str, str]) -> Mapping[str, str]:
@@ -260,8 +266,8 @@ class SavePlacement:
     def __post_init__(self) -> None:
         if not self.dir:
             raise ValueError("SavePlacement: dir must be non-empty (an unanswerable placement is Unresolved)")
-        if self.root_kind not in _ROOT_KINDS:
-            raise ValueError(f"SavePlacement: root_kind must be one of {_ROOT_KINDS}, got {self.root_kind!r}")
+        if self.root_kind not in ROOT_KINDS:
+            raise ValueError(f"SavePlacement: root_kind must be one of {ROOT_KINDS}, got {self.root_kind!r}")
 
 
 # Unresolved outcome codes — stable identifiers like caveat codes.

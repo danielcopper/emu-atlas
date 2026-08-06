@@ -9,6 +9,7 @@ import pytest
 
 import atlas
 from atlas.oddities import load_audit, load_oddities, lookup_card
+from atlas.placement import GRANULARITIES, ROOT_KINDS
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -1038,6 +1039,26 @@ class TestStrictLoaders:
         )
         with pytest.raises(ValueError, match="without an id"):
             load_oddities(text)
+
+    def test_an_unknown_granularity_is_rejected(self):
+        # It reaches the caller as the contractual Granularity.value, so a
+        # misspelling would be stated as this machine's actual grouping.
+        text = self._mode_card({"granularity": "per-gaem-file", "files": ["<rom_stem>.srm"]})
+        with pytest.raises(ValueError, match="granularity"):
+            load_oddities(text)
+
+    def test_the_card_vocabularies_are_the_placement_s_own(self):
+        # One definition per vocabulary, imported rather than respelled: a
+        # second copy is how data and contract drift apart. Every value the
+        # placement can carry loads from a card — the tests above cover the
+        # other direction, that nothing else does.
+        for granularity in GRANULARITIES:
+            card = load_oddities(self._mode_card({"granularity": granularity, "files": ["a.srm"]}))[0]
+            assert card.modes["always"].granularity == granularity
+        for root in ROOT_KINDS:
+            mode = {"root": root, "granularity": "shared-card", "files": ["a.srm"]}
+            card = load_oddities(self._mode_card(mode))[0]
+            assert card.modes["always"].root == root
 
     def test_unknown_mode_root_is_rejected(self):
         text = json.dumps(

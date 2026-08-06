@@ -24,4 +24,4 @@ pythonpath = ["."]
 include = ["atlas*"]
 
 [tool.setuptools.package-data]
-atlas = ["data/*.json", "py.typed"]
+atlas = ["data/*.json", "data/*.md", "py.typed"]
