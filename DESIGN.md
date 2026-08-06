@@ -268,11 +268,20 @@ translation table as the real fix.
   only — it is a different vocabulary (`Sinclair - ZX 81` where `systemname` says `ZX81`), so assigning from it would
   mean maintaining a second table of the same size.
 - **An empty answer says which kind of empty it is.** `system-unknown` means nothing here covers that identifier — a
-  consumer that failed to translate its own vocabulary lands there. `no-firmware-declaration` means the subject is
-  covered but no declaration could be established. One code for both would read as "nothing needed" in the case where
-  the right instruction is "you asked in the wrong vocabulary". `system-unknown` is a claim about the machine, so it
-  requires that the enumeration was actually read: a failed catalogue read or an unresolvable `.info` directory may
-  never be turned into "no emulator here covers that".
+  consumer that failed to translate its own vocabulary lands there. Where the subject _is_ covered, an empty requirement
+  list has three further reasons and each carries its own code, because each is a different instruction:
+  `no-firmware-declaration` — every declaration source was read and none names a file, so the absence is established;
+  `no-firmware-requirement` — firmware is declared here and none of it became a requirement (refused, or outside the
+  enumeration its own core performs), so the per-emulator entries say which file went where; and
+  `firmware-declaration-unknown` — what is declared could not be established at all, because the enumeration did not
+  happen or nothing in it could be read. One code for several of these would read as the mildest of them: "nothing
+  needed" where the right instruction is "you asked in the wrong vocabulary", or worse, where the truth is that atlas
+  never got to look. That last one is the rule behind the split: a claim about the machine requires that the enumeration
+  was actually read, so a failed catalogue read, an unresolvable `.info` directory, or a core the catalogue names and
+  the installation does not ship may never be turned into "nothing here declares that". The answer-level line exists for
+  what the per-emulator entries cannot say: where every listed emulator was read and simply declares nothing, each entry
+  already answers that with `declaration="read"` and an empty list — exactly as the per-core route does — and the answer
+  adds nothing.
 - **`requirements_met` is the number a client renders, so atlas states it.** It is `true` only when every required file
   is there _and_ nothing established contradicts it — a present file with the wrong bytes makes it `false`, and one
   whose identity could not be established makes it `null`. `satisfied` per requirement and `requirements_met` per core

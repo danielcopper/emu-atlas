@@ -132,6 +132,8 @@ KNOWN_CAVEAT_CODES = {
     "content-dir-observation",
     "content-path-unnamed",
     "no-firmware-declaration",
+    "no-firmware-requirement",
+    "firmware-declaration-unknown",
     "info-path-unresolved",
     "core-dir-unresolved",
     "firmware-root-missing",
@@ -154,12 +156,27 @@ KNOWN_CAVEAT_CODES = {
     "firmware-root-unusable",
     "firmware-declaration-unread",
     "firmware-content-contradictory",
+    "firmware-content-unstated",
 }
 # The codes that may stand in for "nothing could be read here". Each says a
-# different thing to a client — nothing declares firmware, the identifier is
-# unknown here, the named core is absent — and none of them may be read as
-# "nothing needed".
-NOTHING_READ_CODES = {"no-firmware-declaration", "system-unknown", "core-not-installed"}
+# different thing to a client — nothing declares firmware, nothing declared
+# became a requirement, what is declared could not be established, the
+# identifier is unknown here, the named core is absent — and none of them may
+# be read as "nothing needed".
+NOTHING_READ_CODES = {
+    "no-firmware-declaration",
+    "firmware-declaration-unknown",
+    "system-unknown",
+    "core-not-installed",
+}
+# An identification without an identity says which kind of nothing it is: the
+# table does not know this content, the request contradicts itself, or it named
+# no content at all.
+UNIDENTIFIED_CODES = {
+    "firmware-content-unidentified",
+    "firmware-content-contradictory",
+    "firmware-content-unstated",
+}
 KNOWN_UNRESOLVED_CODES = {"standalone-unsupported"}
 
 
@@ -229,8 +246,8 @@ def _validate_identify_query(name: str, query: Any) -> None:
         fail(f"{name}: input.identify_query.size must be an integer")
     if "installation" in query and query["installation"] not in KNOWN_KINDS:
         fail(f"{name}: input.identify_query.installation must be one of {sorted(KNOWN_KINDS)}")
-    if "md5" not in query and "sha1" not in query:
-        fail(f"{name}: input.identify_query needs md5 or sha1 — size alone is not an identity")
+    if not ({"md5", "sha1", "size"} & set(query)):
+        fail(f"{name}: input.identify_query must state some content — md5, sha1, or size")
 
 
 def _validate_entry_query(name: str, query: Any) -> None:
@@ -716,8 +733,11 @@ def _validate_identified_content(name: str, identification: Any) -> None:
     if identity is None:
         if known_as or identification["requirements"]:
             fail(f"{name}: unrecognised content has no names and satisfies nothing")
-        if not any(c["code"] == "firmware-content-unidentified" for c in identification["caveats"]):
-            fail(f"{name}: unrecognised content must say so, or an empty answer reads as 'wanted nowhere'")
+        if not any(c["code"] in UNIDENTIFIED_CODES for c in identification["caveats"]):
+            fail(
+                f"{name}: content with no identity must say which kind of nothing it is "
+                f"({sorted(UNIDENTIFIED_CODES)}), or an empty answer reads as 'wanted nowhere'"
+            )
         return
     _validate_identity(name, identity, "the identification's identity")
     if not known_as:
@@ -738,10 +758,16 @@ def _validate_identified_requirements(name: str, identification: Any) -> None:
         )
 
 
-def _validate_identification(name: str, identification: Any) -> None:
+def _validate_identification(name: str, identification: Any, query: dict[str, Any]) -> None:
     _require_exact(name, identification, IDENTIFICATION_FIELDS, "identification")
     _validate_identified_content(name, identification)
     _validate_identified_requirements(name, identification)
+    # A size is not an identity, so a request carrying only one identifies
+    # nothing — and says that, instead of the caller meeting an exception.
+    if not ({"md5", "sha1"} & set(query)) and not any(
+        c["code"] == "firmware-content-unstated" for c in identification["caveats"]
+    ):
+        fail(f"{name}: a query with neither md5 nor sha1 names no content and must answer that it does not")
     _validate_caveats(name, identification["caveats"])
 
 
@@ -808,7 +834,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     if "firmware" in keys:
         _validate_firmware(name, expected["firmware"])
     if "identification" in keys:
-        _validate_identification(name, expected["identification"])
+        _validate_identification(name, expected["identification"], inp["identify_query"])
 
 
 def validate_machines_vector(vector: dict[str, Any]) -> None:

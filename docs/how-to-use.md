@@ -259,7 +259,24 @@ for req in ident.requirements:     # every destination on THIS machine that want
     place_file_at(req.path)
 ```
 
-Pass at least `md5` or `sha1` — with neither, the call raises `ValueError`.
+Pass at least `md5` or `sha1`: a size is not an identity, and a request carrying only one is answered with an empty
+identification plus `firmware-content-unstated` rather than an exception. Two more codes sit next to it when `identity`
+comes back `None`: `firmware-content-unidentified` (the packaged table does not cover this content — a normal answer)
+and `firmware-content-contradictory` (the table knows a digest you passed, and the entry it names disagrees with
+something else you passed — check your own values, not the table). Each caveat's `data` carries every field you stated,
+so you can see which one was rejected.
+
+An answer with no requirements says which kind of empty it is, and the code is the branch — never the message:
+
+| caveat                         | what it means                                          | what to do                                      |
+| ------------------------------ | ------------------------------------------------------ | ----------------------------------------------- |
+| `system-unknown`               | nothing here covers that identifier                    | check your vocabulary (RomM slug vs ES-DE name) |
+| `no-firmware-declaration`      | read, and nothing declares it — an established absence | nothing needed                                  |
+| `no-firmware-requirement`      | declared, but nothing became a requirement             | read `core.refused` and the core caveats        |
+| `firmware-declaration-unknown` | atlas could not establish what is declared             | treat as unknown; never as "nothing needed"     |
+
+A per-system or per-core answer whose emulators were all read and declare nothing carries no such caveat: each entry
+says it itself with `declaration="read"` and an empty requirement list, which is the honest "needs nothing".
 
 ## Answers as plain JSON
 

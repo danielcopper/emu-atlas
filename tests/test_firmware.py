@@ -23,9 +23,11 @@ from atlas.firmware import (
     CAVEAT_CATALOGUE_UNREADABLE,
     CAVEAT_CONTENT_CONTRADICTORY,
     CAVEAT_CONTENT_UNIDENTIFIED,
+    CAVEAT_CONTENT_UNSTATED,
     CAVEAT_CORE_INFO_UNREADABLE,
     CAVEAT_CORE_NOT_INSTALLED,
     CAVEAT_CORE_WITHOUT_SYSTEMNAME,
+    CAVEAT_FIRMWARE_DECLARATION_UNKNOWN,
     CAVEAT_FIRMWARE_DECLARATION_UNREAD,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
@@ -35,6 +37,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_ROOT_UNUSABLE,
     CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_NO_FIRMWARE_DECLARATION,
+    CAVEAT_NO_FIRMWARE_REQUIREMENT,
     CAVEAT_STANDALONE_EMULATOR,
     CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
     CAVEAT_SYSTEM_UNKNOWN,
@@ -49,6 +52,7 @@ from atlas.firmware import (
     CoreDeclarations,
     CoreFirmware,
     Destination,
+    FirmwareAnswer,
     FirmwareContext,
     FirmwareIdentity,
     FirmwareRequirement,
@@ -65,6 +69,7 @@ from atlas.firmware import (
     system_for,
 )
 from atlas.machine import CoreInfo, FixtureFileSpec, FixtureMachine, PathKind, ReadResult
+from atlas.placement import CAVEAT_SYSTEM_DIR_UNSET, Caveat
 
 INFO_DIR = "/cores"
 BIOS_DIR = "/bios"
@@ -270,9 +275,35 @@ class TestHashTable:
         assert hashes.for_content(md5="ee" * 16, sha1="00" * 20) is None
 
     def test_size_alone_is_not_an_identity(self):
+        # The table is a lookup, not an answer: asked for content it was never
+        # told, it refuses rather than returning the "no match" that would
+        # collapse "you named nothing" into "nothing matches". The public
+        # question route answers instead — see TestIdentification.
         hashes = load_hashes(TABLE)
         with pytest.raises(ValueError):
             hashes.for_content(size=5)
+
+    def test_a_known_digest_the_rest_disagrees_with_is_a_contradiction(self):
+        # The M22 case: the table knows this md5 perfectly and the caller's own
+        # size is what disagrees, so the request contradicts itself — reporting
+        # the content as unknown would send them to the table.
+        hashes = load_hashes(TABLE)
+        assert hashes.for_content(md5="ee" * 16, size=999) is None
+        assert hashes.contradicts_itself(md5="ee" * 16, size=999) is True
+        assert hashes.contradicts_itself(md5="ee" * 16, sha1="bb" * 20) is True
+        assert hashes.contradicts_itself(sha1="ff" * 20, size=999) is True
+
+    def test_unknown_digests_are_unknown_content_not_a_contradiction(self):
+        hashes = load_hashes(TABLE)
+        assert hashes.contradicts_itself(md5="99" * 16, sha1="99" * 20) is False
+        # A size the table happens to carry says nothing about an md5 it does
+        # not know: that is content it has never seen, not a bad request.
+        assert hashes.contradicts_itself(md5="99" * 16, size=5) is False
+
+    def test_one_field_alone_can_never_contradict_itself(self):
+        hashes = load_hashes(TABLE)
+        assert hashes.contradicts_itself(md5="ee" * 16) is False
+        assert hashes.contradicts_itself(size=5) is False
 
     def test_the_packaged_table_loads_and_is_not_empty(self):
         packaged = load_hashes()
@@ -1299,6 +1330,39 @@ class TestIdentification:
         assert CAVEAT_CONTENT_CONTRADICTORY in codes
         assert CAVEAT_CONTENT_UNIDENTIFIED not in codes
 
+    def test_a_known_digest_with_a_size_no_entry_carries_is_contradictory_too(self):
+        # The table recognises this md5 perfectly; the size is the caller's own
+        # and matches no entry. "Unidentified" would blame the table for the
+        # one field it got right.
+        machine = _gb_machine()
+        identified = identify_firmware(machine, _context(machine), md5="ee" * 16, size=999)
+        caveat = next(c for c in identified.caveats if c.code == CAVEAT_CONTENT_CONTRADICTORY)
+        assert CAVEAT_CONTENT_UNIDENTIFIED not in [c.code for c in identified.caveats]
+        # And the rejected value is in the answer: told only the md5, a caller
+        # cannot see which of its fields the table disagreed with.
+        assert caveat.data == {"md5": "ee" * 16, "size": "999"}
+
+    def test_an_unidentified_request_carries_every_field_it_stated(self):
+        machine = _gb_machine()
+        identified = identify_firmware(machine, _context(machine), md5="99" * 16, size=7)
+        caveat = next(c for c in identified.caveats if c.code == CAVEAT_CONTENT_UNIDENTIFIED)
+        assert caveat.data == {"md5": "99" * 16, "size": "7"}
+
+    def test_a_request_naming_no_content_is_answered_not_raised(self):
+        # A size is not an identity — but a public question is answered in the
+        # grammar of this module, not by an exception out of the table below it.
+        machine = _gb_machine()
+        identified = identify_firmware(machine, _context(machine), size=5)
+        assert identified.identity is None
+        assert identified.requirements == ()
+        caveat = next(c for c in identified.caveats if c.code == CAVEAT_CONTENT_UNSTATED)
+        assert caveat.data == {"size": "5"}
+
+    def test_a_request_naming_nothing_at_all_is_answered_too(self):
+        machine = _gb_machine()
+        identified = identify_firmware(machine, _context(machine))
+        assert [c.code for c in identified.caveats] == [CAVEAT_CONTENT_UNSTATED]
+
     def test_genuinely_unknown_content_still_blames_nobody(self):
         machine = _gb_machine()
         identified = identify_firmware(machine, _context(machine), md5="99" * 16, sha1="99" * 20)
@@ -1362,32 +1426,38 @@ class TestNoDeclarationIsNeverSatisfied:
 
     def test_a_known_system_whose_emulators_cannot_be_read_is_a_different_code(self):
         # The catalogue knows the system, so the identifier is right; what is
-        # missing is the cores. That is "no declaration to check against",
-        # never "this system needs nothing".
+        # missing is the cores. Nothing was read here, so the answer may not
+        # say the system declares nothing — only that it could not be
+        # established, which is never "this system needs nothing".
         machine = _machine()
         catalogue = Catalogue((CatalogueEntry(label="TGB Dual", kind="libretro", core_so="tgbdual_libretro.so"),))
         answer = firmware_for_system(machine, _context(machine), system="gb", catalogue=catalogue)
         codes = [c.code for c in answer.caveats]
-        assert CAVEAT_NO_FIRMWARE_DECLARATION in codes
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
         assert CAVEAT_SYSTEM_UNKNOWN not in codes
         assert [c.declaration for c in answer.cores] == [DECLARATION_ABSENT]
 
     def test_an_unresolvable_info_directory_yields_no_requirements(self):
+        # What production hands over when libretro_info_path does not resolve:
+        # no cores, and cores_read false to say the enumeration never ran.
         machine = FixtureMachine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
-        context = FirmwareContext(root=BIOS_DIR, cores=(), hashes=load_hashes(TABLE))
+        context = FirmwareContext(root=BIOS_DIR, cores=(), hashes=load_hashes(TABLE), cores_read=False)
         answer = firmware_inventory(machine, context)
         assert answer.requirements == ()
-        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in answer.caveats]
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in [c.code for c in answer.caveats]
 
     def test_a_system_query_that_could_not_enumerate_claims_nothing(self):
         # The cores were never read, so "no emulator covers gba" would be a
-        # statement about the machine derived from a read failure.
+        # statement about the machine derived from a read failure — and so
+        # would "nothing declares firmware for it".
         machine = FixtureMachine({})
         context = FirmwareContext(root=BIOS_DIR, cores=(), hashes=load_hashes(TABLE), cores_read=False)
         answer = firmware_for_system(machine, context, system="gba")
         codes = [c.code for c in answer.caveats]
         assert CAVEAT_SYSTEM_UNKNOWN not in codes
-        assert CAVEAT_NO_FIRMWARE_DECLARATION in codes
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
 
     def test_an_unreadable_catalogue_claims_nothing_either(self):
         machine = _machine()
@@ -1397,7 +1467,7 @@ class TestNoDeclarationIsNeverSatisfied:
         codes = [c.code for c in answer.caveats]
         assert CAVEAT_CATALOGUE_UNREADABLE in codes
         assert CAVEAT_SYSTEM_UNKNOWN not in codes
-        assert CAVEAT_NO_FIRMWARE_DECLARATION in codes
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
 
     def test_a_core_query_that_could_not_enumerate_claims_no_absence(self):
         machine = FixtureMachine({})
@@ -1405,7 +1475,187 @@ class TestNoDeclarationIsNeverSatisfied:
         answer = firmware_for_core(machine, context, core_so="mgba_libretro.so")
         codes = [c.code for c in answer.caveats]
         assert CAVEAT_CORE_NOT_INSTALLED not in codes
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
+
+    def test_an_answer_whose_declarations_were_all_refused_does_not_claim_none(self):
+        # M14's first route: the core declares a required file and every
+        # declaration was refused. Saying "nothing declares firmware" here
+        # contradicts the very same answer's refused list.
+        machine = FixtureMachine(
+            {
+                f"{INFO_DIR}/escape_libretro.info": (
+                    'systemname = "Sony - PlayStation"\n'
+                    "firmware_count = 1\n"
+                    'firmware0_path = "etclink/shadow"\n'
+                    'firmware0_opt = "false"\n'
+                ),
+                f"{INFO_DIR}/escape_libretro.so": {"status": "invalid-text"},
+                "/etc/shadow": "root:!:0:0:::",
+                f"{BIOS_DIR}/keep.bin": _blob(b"12345678"),
+            },
+            symlinks={f"{BIOS_DIR}/etclink": "/etc"},
+        )
+        answer = firmware_inventory(machine, _context(machine))
+        assert [r.declared for r in answer.cores[0].refused] == ["etclink/shadow"]
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_NO_FIRMWARE_REQUIREMENT in codes
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_an_answer_whose_declarations_are_all_unread_does_not_claim_none(self):
+        # M14's third route: the .info plainly declares two paths and its own
+        # firmware_count enumerates neither, so nothing is required — but
+        # "nothing is declared" is not what the file says.
+        machine = FixtureMachine(
+            {
+                f"{INFO_DIR}/nocount_libretro.info": (
+                    'systemname = "Sony - PlayStation"\n'
+                    'firmware0_path = "scph5501.bin"\n'
+                    'firmware0_opt = "false"\n'
+                ),
+                f"{INFO_DIR}/nocount_libretro.so": {"status": "invalid-text"},
+                f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678"),
+            }
+        )
+        answer = firmware_inventory(machine, _context(machine))
+        core = answer.cores[0]
+        assert core.requirements == ()
+        assert core.requirements_met is True, "RetroArch asks for nothing here, and that is honest"
+        assert CAVEAT_FIRMWARE_DECLARATION_UNREAD in [c.code for c in core.caveats]
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_NO_FIRMWARE_REQUIREMENT in codes
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_an_identity_whose_declaration_was_refused_is_not_wanted_nowhere(self):
+        # The same distinction on the identification route: a core asked for
+        # exactly these bytes and the declaration was refused, so "no installed
+        # core declares a file with this identity" would contradict the machine.
+        machine = FixtureMachine(
+            {
+                f"{INFO_DIR}/escape_libretro.info": (
+                    'systemname = "Sony - PlayStation"\n'
+                    "firmware_count = 1\n"
+                    'firmware0_path = "etclink/scph5501.bin"\n'
+                    'firmware0_opt = "false"\n'
+                ),
+                f"{INFO_DIR}/escape_libretro.so": {"status": "invalid-text"},
+                "/etc/scph5501.bin": _blob(b"12345678"),
+            },
+            symlinks={f"{BIOS_DIR}/etclink": "/etc"},
+        )
+        identified = identify_firmware(machine, _context(machine), md5="aa" * 16)
+        assert identified.requirements == ()
+        codes = [c.code for c in identified.caveats]
+        assert CAVEAT_NO_FIRMWARE_REQUIREMENT in codes
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_an_identity_nobody_declares_is_still_an_established_absence(self):
+        # The neighbour of the case above: everything was read, and no core
+        # asks for these bytes. That is an answer, not a hole.
+        machine = _machine()  # only the PSX core, which declares other files
+        identified = identify_firmware(machine, _context(machine), md5="ee" * 16)
+        codes = [c.code for c in identified.caveats]
         assert CAVEAT_NO_FIRMWARE_DECLARATION in codes
+        assert CAVEAT_NO_FIRMWARE_REQUIREMENT not in codes
+
+    def test_an_identity_is_not_absent_while_a_core_declares_what_nobody_reads(self):
+        # An unread declaration is known by the key it was declared under, not
+        # by the path it named, so it can never be tied to an identity — which
+        # is exactly why it may not be answered as an established absence. The
+        # inventory calls this machine "declared, nothing required"; the
+        # identification must not call it "nothing declares these bytes".
+        machine = _machine(
+            {
+                f"{INFO_DIR}/nocount_libretro.info": (
+                    'systemname = "Nintendo - Game Boy"\n'
+                    'firmware0_path = "gb_bios.bin"\n'
+                    'firmware0_opt = "true"\n'
+                ),
+                f"{INFO_DIR}/nocount_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        identified = identify_firmware(machine, _context(machine), md5="ee" * 16)
+        assert identified.requirements == ()
+        codes = [c.code for c in identified.caveats]
+        assert CAVEAT_NO_FIRMWARE_REQUIREMENT in codes
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_one_core_atlas_could_not_read_withdraws_the_whole_absence(self):
+        # An absence is a claim about EVERY emulator in the answer. One core
+        # whose .info could not be read leaves what it wants unknown, so the
+        # answer may not say "nothing declares this" over it — however many
+        # of its neighbours were read.
+        machine = FixtureMachine(
+            {
+                f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
+                f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"},
+                f"{INFO_DIR}/flycast_libretro.info": {"status": "unreadable"},
+                f"{INFO_DIR}/flycast_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        context = _context(machine)
+        for codes in (
+            [c.code for c in firmware_inventory(machine, context).caveats],
+            [c.code for c in identify_firmware(machine, context, md5="ee" * 16).caveats],
+        ):
+            assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
+            assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_a_system_whose_emulators_declare_nothing_states_it_per_emulator(self):
+        # The other side of the split, and the one that needs no answer-level
+        # line: every emulator listed was read and declares no firmware, which
+        # each entry says itself — the per-core route answers the same fact the
+        # same way. An answer-level caveat here would read as a degradation
+        # where there is none.
+        machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO})
+        answer = firmware_for_system(machine, _context(machine, core_dir=None), system="snes")
+        assert [(c.declaration, c.requirements) for c in answer.cores] == [(DECLARATION_READ, ())]
+        assert [c.code for c in answer.caveats] == [CAVEAT_CATALOGUE_UNAVAILABLE]
+
+    def test_a_standalone_beside_a_read_core_is_not_silence(self):
+        # The mixed shape, and the reason silence needs EVERY emulator read:
+        # the catalogue lists a standalone whose firmware rules are not
+        # resolvable at all, so "nothing here declares firmware for dc" would
+        # be an absence claimed over an emulator atlas cannot read. On the
+        # reference machine 28 systems have exactly this shape.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
+                f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        catalogue = Catalogue(
+            (
+                CatalogueEntry(label="Snes9x", kind="libretro", core_so="snes9x_libretro.so"),
+                CatalogueEntry(label="Flycast (Standalone)", kind="standalone", core_so=None),
+            )
+        )
+        answer = firmware_for_system(machine, _context(machine), system="snes", catalogue=catalogue)
+        assert [c.declaration for c in answer.cores] == [DECLARATION_READ, DECLARATION_ABSENT]
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNKNOWN]
+
+    def test_the_catalogue_route_states_the_declarations_nobody_reads(self):
+        # Both routes resolve the same core, so both must state the same facts
+        # about it: a declaration outside its own enumeration is stated whether
+        # the core was reached through the catalogue or through its systemname.
+        info = (
+            'systemname = "Sony - PlayStation"\n'
+            "firmware_count = 1\n"
+            'firmware0_path = "scph5501.bin"\n'
+            'firmware0_opt = "false"\n'
+            'firmware1_path = "psxonpsp660.bin"\n'
+            'firmware1_opt = "false"\n'
+        )
+        machine = _machine({f"{INFO_DIR}/mednafen_psx_libretro.info": info})
+        context = _context(machine)
+        catalogue = Catalogue(
+            (CatalogueEntry(label="Beetle PSX", kind="libretro", core_so="mednafen_psx_libretro.so"),)
+        )
+        through_catalogue = firmware_for_system(machine, context, system="psx", catalogue=catalogue)
+        through_systemname = firmware_for_system(machine, context, system="psx")
+        for answer in (through_catalogue, through_systemname):
+            core = answer.cores[0]
+            assert [r.declared for r in core.requirements] == ["scph5501.bin"]
+            assert CAVEAT_FIRMWARE_DECLARATION_UNREAD in [c.code for c in core.caveats]
 
     def test_without_a_root_there_is_nothing_to_resolve_against(self):
         machine = _machine()
@@ -1413,6 +1663,7 @@ class TestNoDeclarationIsNeverSatisfied:
             root=None,
             cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
             hashes=load_hashes(TABLE),
+            caveats=(Caveat(CAVEAT_SYSTEM_DIR_UNSET, "system_directory is unset in the configs"),),
         )
         for answer in (
             firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so"),
@@ -1422,6 +1673,19 @@ class TestNoDeclarationIsNeverSatisfied:
             assert answer.root is None
             assert answer.cores == ()
             assert answer.unclaimed == ()
+            # The reason there is no root IS the answer here: an empty answer
+            # that states nothing can only be read as "nothing needed".
+            assert [c.code for c in answer.caveats] == [CAVEAT_SYSTEM_DIR_UNSET]
+
+    def test_an_empty_answer_that_states_nothing_cannot_be_built(self):
+        # The invariant behind the loop above: production seeds the reason into
+        # the context, and an answer without one is refused rather than shipped.
+        machine = _machine()
+        context = FirmwareContext(root=None, cores=(), hashes=load_hashes(TABLE))
+        with pytest.raises(ValueError, match="must state why"):
+            firmware_inventory(machine, context)
+        with pytest.raises(ValueError, match="must state why"):
+            FirmwareAnswer(root=None, cores=(), unclaimed=(), hash_checked=False, sources=(), caveats=())
 
 
 class TestPartialReaderIsNotMisled:
