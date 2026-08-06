@@ -35,8 +35,8 @@ Four principles, fixed before any code:
 
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, standalone installs, any of
   them side by side — and every question is asked _of an installation_, never of a global "the system":
-  `installation.save_location(content_path=..., core_so=...)` on every handle, `installation.emulators_for(system)` on
-  the RetroDECK handle, the only one with a frontend catalogue today.
+  `installation.save_location(content_path=..., core_so=...)` and `installation.emulators_for(system)` on every handle —
+  the ones without a frontend catalogue answer with the reason rather than an empty list.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
   machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`, `file_size`, `file_digest`) whose every
   operation reports an explicit outcome — missing is not unreadable is not invalid text — because the emulators make
@@ -118,11 +118,14 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   report". A sorted directory that does not exist yet is a conditional answer with a structural `fallback_dir`; a
   placement reached through symlinks reports its `physical_dir`, and a dead `dir_prep` link is a stated caveat, not a
   silent path.
-- `installation.emulators_for(system, content_path=...)` — on the RetroDECK handle, the only one carrying a frontend
-  catalogue today — reads the ES-DE catalogue live (bundled + custom overlay) and resolves the effective default through
-  the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. Entries carry their
-  core, so placement answers on that path need no core argument; a standalone entry answers with a typed `Unresolved`
-  outcome instead of raising.
+- `installation.emulators_for(system, content_path=...)` — on every handle — answers which emulators can launch a
+  system. On RetroDECK it reads the ES-DE catalogue live (bundled + custom overlay) and resolves the effective default
+  through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. Entries carry
+  their core, so placement answers on that path need no core argument; a standalone entry answers with a typed
+  `Unresolved` outcome instead of raising. Where there are no entries the answer says which kind of none: a bare
+  RetroArch ships no catalogue at all, an EmuDeck arrangement has one atlas has not established the location of, and a
+  catalogue that could not be read is not an empty one — three codes, because a client must not read the last two as
+  "nothing here".
 - The audit trail: `docs/research/coverage-matrix.md` (generated, with full source identity) tracks every referenced
   emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
   verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer

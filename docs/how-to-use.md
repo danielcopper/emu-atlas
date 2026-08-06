@@ -239,17 +239,36 @@ extensions; `complete` is `false`, and deciding which of those files are yours t
 
 ## Which emulator would launch this? (the catalogue)
 
-**RetroDECK handles only, today.** EmuDeck's frontend variants and bare RetroArch (no catalogue at all) are roadmap work
-— on those handles you name the core yourself via `save_location(core_so=...)`.
+**Every handle answers this**, and the ones that cannot answer it from a catalogue say why — so you never have to narrow
+to a concrete handle to find out.
 
 ```python
-rd = next(i for i in installations if i.kind == "retrodeck")
-rd.systems()                       # every system the ES-DE catalogue declares
-entries = rd.emulators_for("n64", content_path=rom_path)
-entry = entries[0]                 # the effective default (per-game altemulator > per-system choice > declared order)
+answer = inst.emulators_for("n64", content_path=rom_path)
+answer.entries                     # the launch entries, in effective priority order
+answer.sources                     # provenance — what was read to say so (prose, for debugging)
+answer.caveats                     # why there are no entries, when there are none
+
+entry = answer.entries[0]          # the effective default (per-game altemulator > per-system choice > declared order)
 entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro'
 entry.core_so                      # 'mupen64plus_next_libretro.so' — or None for a standalone emulator
+
+inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
+
+An empty `entries` is four different facts, and the caveat is how you tell them apart. **No caveat** means the catalogue
+was read and declares no emulator for that system — an answer about the machine, and the only one of the four you may
+act on as "nothing here":
+
+| caveat code                        | what it means                                            | what to do                               |
+| ---------------------------------- | -------------------------------------------------------- | ---------------------------------------- |
+| _(none)_                           | read, and the frontend knows no emulator for this system | trust it                                 |
+| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all      | name the core: `save_location(core_so=)` |
+| `emulator-catalogue-unestablished` | it may have one; atlas has not established where         | same — but do not report "no emulators"  |
+| `emulator-catalogue-unreadable`    | it has one, and it could not be read                     | surface it; the machine may be broken    |
+
+The middle two both mean "ask the user or use your own mapping", but only the first is a statement about the machine.
+`unestablished` is a statement about atlas, and a client that renders it as an absence is telling its user something
+nobody checked.
 
 The per-game step matches on the path, so pass the ROM the way it lies under the system's ROM directory
 (`rd.roms_dir()` + system): gamelist entries are relative to that directory and are resolved against it, and a folder
@@ -387,8 +406,10 @@ if not inst.health().ok:
     return surface_health(inst.health())         # don't sync against a broken installation
 
 system = my_slug_map[rom.platform_slug]          # RomM slug → system id is YOUR table today (see "Boundaries")
-entries = inst.emulators_for(system, content_path=rom.file_path)
-entry = apply_user_overrides(entries, rom)       # your per-game/per-platform pins beat the frontend default
+catalogue = inst.emulators_for(system, content_path=rom.file_path)
+if not catalogue.entries:                        # no entries is four facts — the caveat says which
+    return needs_a_core_from_you(catalogue.caveats)
+entry = apply_user_overrides(catalogue.entries, rom)  # your per-game/per-platform pins beat the frontend default
 
 result = entry.save_location(content_path=rom.file_path)
 if isinstance(result, atlas.Unresolved):
