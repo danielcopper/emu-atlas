@@ -2921,6 +2921,530 @@
           ]
         }
       }
+    },
+    {
+      "name": "firmware-a-core-without-a-firmware-count-asks-for-nothing",
+      "rationale": "core_info_resolve_firmware reads firmware_count first and returns on the spot when it is not there (core_info.c:1581-1582), so this core is started without a single firmware read — the paths below it are never looked up. Answering them as requirements would state a need the emulator does not have, and dropping them silently would hide that the file says otherwise: the answer is 'nothing required' plus the caveat that names the declarations nobody reads. The declared file is present on purpose — its being there is not what decides this.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/nocount_libretro.info": "display_name = \"No Count\"\nsystemname = \"Sony - PlayStation\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_path = \"psxonpsp660.bin\"\n",
+          "/usr/lib/libretro/nocount_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "nocount_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "nocount_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unread",
+                  "data": {
+                    "core_so": "nocount_libretro.so",
+                    "declared": "firmware0_path, firmware1_path",
+                    "firmware_count": ""
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-a-declaration-past-the-count-is-never-asked-for",
+      "rationale": "The enumeration runs 0..firmware_count-1 (core_info.c:1592) and asks for nothing else, so a path declared at an index the count does not reach is invisible to RetroArch however well-formed it is. atlas answers the one file the emulator reads and states the one it does not, rather than presenting a two-file requirement list the emulator will never act on.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/overcount_libretro.info": "display_name = \"Over Count\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"false\"\n",
+          "/usr/lib/libretro/overcount_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "overcount_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "overcount_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "overcount_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unread",
+                  "data": {
+                    "core_so": "overcount_libretro.so",
+                    "declared": "firmware1_path",
+                    "firmware_count": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-a-repeated-declaration-is-read-as-the-first-one",
+      "rationale": "The shape a shipped .info really has (FreeIntvTSOverlay: a second firmware1_path typed as firmware0_path): config_file maps a key only when it is not mapped yet (config_file.c:670-676), so the FIRST value is the one every read sees and the second line sets nothing. Slot 1 then has a desc and no path, which is a slot RetroArch materialises and never resolves (core_info.c:1610-1614, :2378) — the count being larger than the declared paths costs nothing and states nothing, because no key was left unread.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/repeated_libretro.info": "display_name = \"Repeated\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware0_path = \"psxonpsp660.bin\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/repeated_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "repeated_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "repeated_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "repeated_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-an-absolute-declaration-lands-inside-the-firmware-root",
+      "rationale": "fill_pathname_join copies the system directory, adds one separator and appends the declared path verbatim (file_path.c:983-993) — there is no case for an absolute one, so '/etc/shadow' composes to '<root>//etc/shadow' and names a file inside the firmware tree. That composed name is what path_is_valid is asked about (core_info.c:2381-2383) and what the core is handed, so it is what atlas answers: a missing file under the root. Calling it an escape would claim something that cannot happen, and would refuse a destination a client can legitimately place. /etc/shadow is on this machine and is never looked at.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/absolute_libretro.info": "display_name = \"Absolute\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"an absolute declaration\"\nfirmware0_path = \"/etc/shadow\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/absolute_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/etc/shadow": "root:!:0:0:99999:7:::"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "absolute_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "absolute_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "absolute_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "shadow",
+                  "path": "/home/deck/.config/retroarch/system/etc/shadow",
+                  "declared": "/etc/shadow",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-an-opt-outside-retroarchs-booleans-is-required",
+      "rationale": "config_get_bool accepts exactly 1|true|0|false, case-sensitively, and reports failure otherwise (config_file.c:1227-1262); core_info_resolve_firmware only writes the flag when that succeeds (core_info.c:1603-1604), over a slot calloc left at false. So 'TRUE' does not mean optional — it means nothing, and the slot stays required. This is the direction that decides an answer: read as optional, requirements_met would go true over a file the core will not start without.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/shouting_libretro.info": "display_name = \"Shouting\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"TRUE\"\n",
+          "/usr/lib/libretro/shouting_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "shouting_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "shouting_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "shouting_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-a-declaration-ending-at-a-directory-names-no-file",
+      "rationale": "'dc/' resolves to a real directory inside the root, so neither the root bound nor the resolver objects — what is wrong is the declaration: a path whose last component is empty names no file, so there is nothing to place and nothing to read. Answered as a requirement it would report a directory sitting where a file belongs, which is a statement about the machine; refused, it is a statement about the core's .info, and the required file it asked for keeps requirements_met out of the green.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/trailing_libretro.info": "display_name = \"Trailing\"\nsystemname = \"Sega - Dreamcast\"\nfirmware_count = 2\nfirmware0_desc = \"the BIOS directory\"\nfirmware0_path = \"dc/\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"dc_boot.bin (Dreamcast BIOS)\"\nfirmware1_path = \"dc/dc_boot.bin\"\nfirmware1_opt = \"false\"\n",
+          "/usr/lib/libretro/trailing_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system/dc",
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "trailing_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "trailing_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "trailing_libretro.so",
+                  "system": "dc",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "dc_boot.bin",
+                  "path": "/home/deck/.config/retroarch/system/dc/dc_boot.bin",
+                  "declared": "dc/dc_boot.bin",
+                  "identity": {
+                    "md5": "e10c53c2f8b90bab96ead2d368858623",
+                    "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
+                    "size": 2097152
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [
+                {
+                  "declared": "dc/",
+                  "need": "required",
+                  "reason": "firmware-path-names-no-file"
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "core_so": "trailing_libretro.so",
+                    "declared": "dc/",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-a-relative-system-directory-bounds-nothing-so-it-answers-nothing",
+      "rationale": "system_directory = \"system\" is neither blank nor 'default', so it survives expand_home as written, and the sandbox translation only rewrites absolute spellings — the relative value arrives at the resolver unchanged. RetroArch resolves it against the working directory of the running process, which is not a fact on disk, so atlas has no destination to state. Answering one anyway would mean inventing an absolute root: every path here resolves from '/', so a relative root silently becomes /system and its containment check then passes on anything at all — a bound that bounds nothing. The declaration is refused instead, and the unusable root is stated once, on the answer, by firmware-root-missing. The declared file is present under the invented root on purpose: it must not be answered.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/relative_libretro.info": "display_name = \"Relative\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/relative_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "relative_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "relative_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [
+                {
+                  "declared": "scph5501.bin",
+                  "need": "required",
+                  "reason": "firmware-root-unusable"
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "firmware-root-unusable",
+                  "data": {
+                    "core_so": "relative_libretro.so",
+                    "declared": "scph5501.bin",
+                    "need": "required",
+                    "root": "system"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-root-missing",
+              "data": {
+                "path": "system"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
