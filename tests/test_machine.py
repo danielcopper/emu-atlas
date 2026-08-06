@@ -207,6 +207,12 @@ class TestFixturePathSpelling:
             ("/a/.", "directory"),
             ("/a/sub/..", "directory"),
             ("/link/", "directory"),
+            # The root: no ancestor walk ever reaches it, so nothing declares
+            # it, and a spelling that climbs far enough lands there.
+            ("/", "directory"),
+            ("/.", "directory"),
+            ("/..", "directory"),
+            ("/a/../..", "directory"),
         ],
     )
     def test_a_spelling_answers_what_the_kernel_answers(self, spelling, kind):
@@ -752,6 +758,18 @@ class TestFixtureRealParity:
         for rel in self.SPELLINGS:
             _assert_same_answers(fixture, real, f"{tmp_path}/{rel}")
 
+    def test_the_root_agrees(self, tmp_path):
+        """The one directory nothing declares, and every long enough climb reaches.
+
+        A fixture learns its directories from the paths it was given, and that
+        walk stops at ``/`` — so the root was the one place both machines were
+        certain about and only one of them could say so.
+        """
+        real = self._real(tmp_path)
+        fixture = self._fixture(tmp_path)
+        for spelling in ("/", "/.", "/..", "/../..", f"{tmp_path}/../.."):
+            _assert_same_answers(fixture, real, spelling)
+
     def test_globs_agree(self, tmp_path):
         import glob as glob_module
 
@@ -772,6 +790,7 @@ class TestFixtureRealParity:
             f"{base}/saves/*/",
             f"{base}/*/",
             f"{base}/saves/Game.srm/",
+            "/",
         ]
         for pattern in patterns:
             assert fixture.glob(pattern) == real.glob(pattern), pattern
@@ -818,13 +837,16 @@ class TestFixtureRealParity:
             locked.chmod(0o700)
 
     def test_one_file_described_two_ways_answers_the_same(self, tmp_path):
-        """The grammar admits two spellings for a sized non-text file — one state.
+        """Two ways to write one sized non-text file must not be two states.
 
         A blob states its identity and reads as ``invalid-text``; the same file
-        may say so outright and carry the size. Both are the machine's answer
-        for a file of non-UTF-8 bytes, so both must answer what the machine
-        does — otherwise what a vector proves depends on which spelling its
-        author happened to reach for.
+        may say so outright and carry the size. This machine accepts both,
+        because a hand-written unit fixture should not have to pick — but a
+        spelling the fixture accepts and answers *differently* would be a
+        second state hiding behind one file, so both are held to the machine's
+        own answer. (``scripts/validate_vectors.py`` is deliberately stricter
+        and admits only the blob: the conformance corpus keeps one canonical
+        spelling per state, so this is not an invitation to vector authors.)
         """
         content = b"\xff\xfe\x00binary"
         blob = tmp_path / "firmware.bin"

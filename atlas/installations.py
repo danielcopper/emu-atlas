@@ -394,6 +394,14 @@ def _resolve_symlink_chain(machine: Machine, path: str) -> tuple[str | None, lis
     handing it back named a directory nothing can ever open as if it were the
     physical one — silently, because it looks like an ordinary answer. The links
     traversed are returned either way, so the caller can name the chain.
+
+    One of three kernel walks in atlas, next to
+    :func:`atlas.firmware.resolve_links` (which answers the path alone) and
+    ``FixtureMachine._resolve`` (which additionally refuses to step through a
+    non-directory, because it answers for paths rather than resolving them).
+    This one exists for the links: a caveat has to name the chain it refused.
+    A fidelity finding about symlinks, ``..`` or the hop limit belongs in all
+    three; the limit itself is shared, never copied.
     """
     links: list[tuple[str, str]] = []
     current = path

@@ -281,6 +281,13 @@ def _validate_status_spec(name: str, path: str, spec: dict[str, Any]) -> None:
     # A read failure, optionally with the size the stat still answers: a
     # chmod-000 file is a file of a known size whose bytes cannot be read.
     # No digest may join it — that is the read this file does not survive.
+    #
+    # Stricter than FixtureMachine on purpose, and this is the one place the
+    # two are allowed to differ: the machine's grammar is convenience for
+    # hand-written unit fixtures, while the corpus is the normative artifact a
+    # port is checked against, so each state gets exactly ONE spelling here. A
+    # blob and {"status": "invalid-text", ...} describe the same file; a port
+    # author comparing two vectors must not have to work out that they agree.
     if spec["status"] not in KNOWN_FILE_STATUSES or not set(spec) <= {"status", "size"}:
         fail(
             f"{name}: input.files[{path!r}] status spec must be "

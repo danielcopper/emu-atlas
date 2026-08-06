@@ -553,6 +553,11 @@ class FixtureMachine:
             (*self._files, *self._symlinks, *self._cores, *tuple(self._dirs), *self._inaccessible)
         )
         self._dirs.discard("")
+        # The root is a directory on every machine, and no ancestor walk ever
+        # reaches it (they stop at "/"). Without it a fixture answers *missing*
+        # for "/" and for any spelling that climbs to it, and the walk below
+        # relies on it: standing at "/" has to be standing in a directory.
+        self._dirs.add("/")
 
     def _resolve(self, path: str) -> _Landing:
         """Walk *path* component by component from ``/``, the way the kernel does.
@@ -575,6 +580,16 @@ class FixtureMachine:
         being described, so a fixture has nowhere to start. (One reaches here —
         ``system_directory = "system"`` is checked for being a directory before
         it is refused for not being absolute.)
+
+        This walk exists three times, for three different jobs:
+        :func:`atlas.firmware.resolve_links` resolves a path *through* the seam
+        for a caller that then reads it, and
+        ``atlas.installations._resolve_symlink_chain`` also collects the links
+        it traversed so a caveat can name them. They deliberately differ — only
+        this one refuses to step through a non-directory, because only this one
+        answers for the paths themselves — but a fidelity finding about
+        symlinks, ``..`` or the hop limit belongs in all three, and they share
+        :data:`SYMLINK_HOPS` so the boundary cannot drift.
         """
         if not path.startswith("/"):
             return _NOT_A_DIRECTORY
@@ -582,7 +597,7 @@ class FixtureMachine:
         resolved = "/"
         hops = 0
         while parts:
-            if resolved != "/" and resolved not in self._dirs:
+            if resolved not in self._dirs:
                 return _NOT_A_DIRECTORY
             segment = parts.pop(0)
             if segment in ("", "."):
@@ -764,7 +779,9 @@ class FixtureMachine:
         """
         if rest:
             self._walk_glob(base, rest, results)
-        elif base and self.path_kind(base) == KIND_DIRECTORY:
+        elif self.path_kind(base or "/") == KIND_DIRECTORY:
+            # An empty base is the root itself — the pattern was nothing but
+            # separators — and `f"{base}/"` spells it the way it arrived.
             results.add(f"{base}/")
 
     def glob(self, pattern: str) -> list[str]:
