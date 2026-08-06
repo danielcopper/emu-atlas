@@ -48,25 +48,38 @@ even when that component is a symlink, and the kernel does the opposite.
 Glob semantics (normative, for ports): patterns support ``*``, ``?`` and
 ``[seq]`` within one path segment; a wildcard never crosses a ``/``; a wildcard
 segment never matches a name starting with ``.`` (only a segment that itself
-starts with ``.`` does); a pattern ending in ``/`` matches directories only and
-keeps that ``/``; matches are returned sorted, spelled the way the pattern
-reached them (a file matched through a symlinked directory keeps the link-side
-path, like a real filesystem's glob).
+starts with ``.`` does); a wildcard segment that is not the last one matches
+directories only, following symlinks to decide; a pattern ending in ``/``
+matches directories only and keeps that ``/``; a relative pattern matches
+nothing, because the working directory is not a fact about the machine; matches
+are returned sorted, spelled the way the pattern reached them (a file matched
+through a symlinked directory keeps the link-side path).
+
+``glob`` reports **how much of the walk it could read**, because "the directory
+is empty" and "the directory could not be listed" are the same empty list
+otherwise — and the second is the shape of a save directory on a card that
+dropped off the bus. A pattern can need several directories, so the answer is
+per-directory rather than all-or-nothing: ``matches`` carries what *was* found
+and ``unreadable`` names every place the walk could not look. Not every empty
+answer is a failure: a name that is not there, or a path component that is not
+a directory, is a truthful negative and keeps the answer ``complete`` — only a
+read that *failed* (permissions, a symlink loop, I/O) makes it ``incomplete``.
+This is the one operation whose payload is partial rather than absent, and it
+is why the two are separate fields instead of a status alone.
 """
 
 from __future__ import annotations
 
 import fnmatch
-import glob as _glob
 import hashlib
 import json
 import os
 import stat as _stat
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Iterable, Literal, Mapping, Protocol
+from typing import Callable, Iterable, Literal, Mapping, Protocol
 
 _CORE_PROBE_TIMEOUT_SECONDS = 15
 SYMLINK_HOPS = 40
@@ -92,6 +105,7 @@ _DIGEST_CHUNK_BYTES = 1 << 20
 
 ReadStatus = Literal["ok", "missing", "unreadable", "invalid-text"]
 PathKind = Literal["file", "directory", "missing", "inaccessible"]
+GlobStatus = Literal["complete", "incomplete"]
 
 READ_OK: ReadStatus = "ok"
 READ_MISSING: ReadStatus = "missing"
@@ -102,6 +116,9 @@ KIND_FILE: PathKind = "file"
 KIND_DIRECTORY: PathKind = "directory"
 KIND_MISSING: PathKind = "missing"
 KIND_INACCESSIBLE: PathKind = "inaccessible"
+
+GLOB_COMPLETE: GlobStatus = "complete"
+GLOB_INCOMPLETE: GlobStatus = "incomplete"
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +137,37 @@ class ReadResult:
     def __post_init__(self) -> None:
         if (self.text is None) == (self.status == READ_OK):
             raise ValueError(f"ReadResult: text must be set exactly when status is 'ok' (got {self.status!r})")
+
+
+@dataclass(frozen=True, slots=True)
+class GlobResult:
+    """One glob's explicit outcome — what matched, and what could not be read.
+
+    ``unreadable`` is non-empty exactly when ``status`` is ``incomplete``, the
+    same shape of invariant :class:`ReadResult` carries. The difference is that
+    a failed glob still has an answer worth having: a pattern spanning several
+    directories can read some and not others, so ``matches`` is what was found
+    *and* ``unreadable`` names where the walk stopped short. A caller that only
+    wants the files can read ``matches`` and be no worse off than with a bare
+    list; a caller that would otherwise say "there is nothing there" has to look
+    at the status first, which is the whole point of the type.
+
+    ``unreadable`` holds directories that could not be listed and entries that
+    could not be looked at — the places, not the reasons. Whether it was
+    permissions, a symlink loop, or a card that stopped answering is not a
+    distinction any caller here acts on, and the path is what a message needs.
+    """
+
+    status: GlobStatus
+    matches: tuple[str, ...] = ()
+    unreadable: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if bool(self.unreadable) != (self.status == GLOB_INCOMPLETE):
+            raise ValueError(
+                "GlobResult: unreadable must be non-empty exactly when status is 'incomplete' "
+                f"(got {self.status!r} with {len(self.unreadable)} unreadable paths)"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,12 +210,135 @@ class CoreInfo:
             object.__setattr__(self, "options", MappingProxyType(dict(self.options)))
 
 
+_GLOB_MAGIC = frozenset("*?[")
+
+
+def _has_magic(text: str) -> bool:
+    return bool(_GLOB_MAGIC & set(text))
+
+
+@dataclass(slots=True)
+class _GlobWalk:
+    """The glob algorithm itself, over three primitives each machine supplies.
+
+    One algorithm, two data sources — the same reason the seam exists at all.
+    Pattern decomposition and result *spelling* are subtle enough that two
+    independent implementations drifted apart on doubled separators alone, and
+    a fixture that spells a match differently from the machine makes the vector
+    built on it prove nothing. So the machines supply only what they alone can
+    answer, and share everything derived from it.
+
+    The decomposition is CPython's (``glob.py``: split off the last segment,
+    glob the rest, then read inside each result), because that is what decides
+    the spelling: ``os.path.split`` strips the separator run before the last
+    segment while runs deeper inside survive verbatim, so ``a//b//*`` answers
+    ``a//b/x``. A left-to-right walk cannot reproduce that, and the real
+    machine's own glob is the thing being modelled.
+
+    Each primitive answers ``None`` for *could not tell*, which is what the
+    stdlib throws away (``glob.py:173`` returns on any ``OSError``) and what
+    this exists to state. A truthful negative — the name is not there, the
+    component is not a directory — is ``False``/``[]``, never ``None``.
+    """
+
+    list_dir: Callable[[str], list[str] | None]
+    is_dir: Callable[[str], bool | None]
+    lexists: Callable[[str], bool | None]
+    unreadable: set[str] = field(default_factory=set)
+
+    def run(self, pattern: str) -> GlobResult:
+        if not pattern.startswith("/"):
+            # A relative pattern resolves against the process's working
+            # directory, which is not a fact about the machine being read.
+            return GlobResult(GLOB_COMPLETE)
+        matches = self._glob(pattern, dironly=False)
+        if not self.unreadable:
+            return GlobResult(GLOB_COMPLETE, tuple(sorted(matches)))
+        return GlobResult(GLOB_INCOMPLETE, tuple(sorted(matches)), tuple(sorted(self.unreadable)))
+
+    def _glob(self, pathname: str, *, dironly: bool) -> list[str]:
+        """Every path *pathname* matches, spelled the way the pattern reached it."""
+        dirname, basename = os.path.split(pathname)
+        if not _has_magic(pathname):
+            return [pathname] if self._literal_is_there(pathname, dirname, basename) else []
+        if _has_magic(dirname):
+            parents = self._glob(dirname, dironly=True)
+        else:
+            # No wildcard above: the directory is taken as spelled, and whether
+            # it is there at all is answered by reading inside it.
+            parents = [dirname]
+        return [
+            os.path.join(parent, name)
+            for parent in parents
+            for name in self._names_in(parent, basename, dironly=dironly)
+        ]
+
+    def _literal_is_there(self, pathname: str, dirname: str, basename: str) -> bool:
+        """A pattern with no wildcard at all: it matches itself, if it is there.
+
+        A trailing separator asks about the directory instead, and follows
+        links to decide — ``link-to-dir/`` is a directory, ``link-to-file/`` is
+        not, and a dead one is not either.
+        """
+        answer = self.lexists(pathname) if basename else self.is_dir(dirname)
+        if answer is None:
+            self.unreadable.add(pathname if basename else dirname)
+            return False
+        return answer
+
+    def _names_in(self, dirname: str, basename: str, *, dironly: bool) -> list[str]:
+        """The names inside *dirname* that *basename* selects."""
+        if not _has_magic(basename):
+            return self._literal_name_in(dirname, basename)
+        names = self.list_dir(dirname)
+        if names is None:
+            self.unreadable.add(dirname)
+            return []
+        if not basename.startswith("."):
+            # A wildcard never matches a leading dot; a segment that starts
+            # with one is how a pattern asks for hidden names.
+            names = [name for name in names if not name.startswith(".")]
+        matched = fnmatch.filter(names, basename)
+        return self._directories_among(dirname, matched) if dironly else matched
+
+    def _literal_name_in(self, dirname: str, basename: str) -> list[str]:
+        """A literal segment under a globbed parent — asked about, never listed.
+
+        Listing is not the same read: a directory may be searchable and not
+        readable, and then a name atlas already knows is answerable while the
+        listing is not. Asking is also what the stdlib does, so the two agree
+        wherever nothing fails.
+        """
+        target = os.path.join(dirname, basename) if basename else dirname
+        # An empty basename is a pattern's trailing separator: it asks whether
+        # the directory is one, not whether a name is there.
+        answer = self.lexists(target) if basename else self.is_dir(target)
+        if answer is None:
+            self.unreadable.add(target)
+            return []
+        return [basename] if answer else []
+
+    def _directories_among(self, dirname: str, names: list[str]) -> list[str]:
+        """Only the names a wildcard may descend through — directories, links followed."""
+        kept: list[str] = []
+        for name in names:
+            joined = os.path.join(dirname, name)
+            answer = self.is_dir(joined)
+            if answer is None:
+                self.unreadable.add(joined)
+            elif answer:
+                kept.append(name)
+        return kept
+
+
 class Machine(Protocol):
     """Narrow machine port: read a file, glob, classify a path, follow links, ask a core.
 
     Every operation reports an explicit outcome; the caller decides what a
     failure means — the seam never guesses. ``glob`` follows the normative
-    semantics in the module docstring. ``readlink`` returns the link target
+    semantics in the module docstring and says how much of its walk it could
+    read; a caller that would otherwise report "nothing is there" must look at
+    that before believing an empty ``matches``. ``readlink`` returns the link target
     when the path itself is a symlink, else ``None``. ``query_core`` returns
     the core's self-reported info, or ``None`` when the core cannot be loaded —
     the caller treats that as *unknown*, never as a guess. ``file_size`` and
@@ -178,7 +349,7 @@ class Machine(Protocol):
 
     def read_text(self, path: str) -> ReadResult: ...
 
-    def glob(self, pattern: str) -> list[str]: ...
+    def glob(self, pattern: str) -> GlobResult: ...
 
     def path_kind(self, path: str) -> PathKind: ...
 
@@ -230,8 +401,52 @@ class RealMachine:
             # Permissions, I/O failure: present but unreadable.
             return ReadResult(READ_UNREADABLE)
 
-    def glob(self, pattern: str) -> list[str]:
-        return sorted(_glob.glob(pattern))
+    def glob(self, pattern: str) -> GlobResult:
+        return _GlobWalk(self._list_dir, self._is_dir, self._lexists).run(pattern)
+
+    @staticmethod
+    def _list_dir(path: str) -> list[str] | None:
+        """The names in one directory, or ``None`` when it could not be read.
+
+        The split is the seam's usual one: a path that is not there and a
+        component that is not a directory are truthful negatives, everything
+        else is a read that failed. ``os.scandir`` was observed to raise
+        ``PermissionError`` on a mode-000 directory and ``OSError(ELOOP)`` on a
+        link cycle — the two states the stdlib's glob turns into an empty
+        listing indistinguishable from an empty directory.
+        """
+        try:
+            with os.scandir(path) as entries:
+                return [entry.name for entry in entries]
+        except (FileNotFoundError, NotADirectoryError):
+            return []
+        except OSError:
+            return None
+
+    @staticmethod
+    def _is_dir(path: str) -> bool | None:
+        # Follows links, like the stdlib's per-entry ``is_dir()``: a link to a
+        # directory may be descended through, a dead one may not, and a cycle
+        # cannot be decided at all.
+        try:
+            return _stat.S_ISDIR(os.stat(path).st_mode)
+        except (FileNotFoundError, NotADirectoryError):
+            return False
+        except OSError:
+            return None
+
+    @staticmethod
+    def _lexists(path: str) -> bool | None:
+        # lstat, not stat: a dead symlink is a name a listing shows, so a glob
+        # matches it (and the resolver has to see it — RetroDECK's dir_prep
+        # leaves them behind).
+        try:
+            os.lstat(path)
+        except (FileNotFoundError, NotADirectoryError):
+            return False
+        except OSError:
+            return None
+        return True
 
     def path_kind(self, path: str) -> PathKind:
         try:
@@ -397,8 +612,6 @@ def _parse_core_options(raw: object) -> dict[str, CoreOption] | None:
     return options
 
 
-_GLOB_MAGIC = frozenset("*?[")
-
 # Fixture file specs: a plain string is readable content; an object states a
 # non-ok read outcome ({"status": "unreadable"} or {"status": "invalid-text"})
 # or a binary blob's identity ({"md5": ..., "sha1": ..., "size": ...}).
@@ -495,6 +708,26 @@ _LOOPS = _Landing(loops=True)
 _NOT_A_DIRECTORY = _Landing()
 
 
+def _refuse_both_unreadable_lists(inaccessible: set[str], unlistable: set[str]) -> None:
+    """A path cannot both fail its ``stat`` and be a directory whose ``stat`` succeeded.
+
+    Refused rather than resolved, for the same reason a digest alongside
+    ``unreadable`` is: a precedence rule here would be a documented silent
+    degradation, and this contradiction has a tempting wrong reading — that
+    both lists together spell a mode-000 directory. They do not. Such a
+    directory answers *directory* about itself, so it belongs in ``unlistable``
+    alone, and any precedence would quietly hand back the machine the fixture
+    was not describing.
+    """
+    both = sorted(inaccessible & unlistable)
+    if both:
+        raise ValueError(
+            f"fixture paths {both} are in both 'inaccessible' and 'unlistable' — a path whose stat "
+            "fails cannot also be a directory whose stat succeeds. A mode-000 directory is "
+            "'unlistable'; name its children in 'inaccessible' if they matter."
+        )
+
+
 def _ancestor_dirs(paths: Iterable[str]) -> set[str]:
     """Every ancestor of the given paths — a known path's parents are directories."""
     dirs: set[str] = set()
@@ -522,8 +755,32 @@ class FixtureMachine:
     maps link paths to their targets (absolute, or relative to the link's
     directory). ``cores`` maps ``.so`` paths to core-answer objects
     (``{"library_name": ...}``); a path mapped to ``None`` is a core that is
-    present but unloadable. ``inaccessible`` lists paths whose state cannot be
-    determined at all (a failing ``stat``).
+    present but unloadable.
+
+    Two lists say what cannot be read, and which one applies is decided by one
+    question: does the ``stat`` succeed?
+
+    - ``unlistable`` — it does. The path *is* a directory and its contents
+      cannot be read, which is what **a mode-000 directory answers about
+      itself**: ``stat`` succeeds, so it is a directory, and the listing fails.
+      Mode 111 behaves the same from outside, and shows the shape plainly — a
+      wildcard finds nothing there while a name atlas already knows still
+      answers. This is the list the resolver's failure paths run through,
+      because reaching them means passing an "is it a directory?" check first.
+    - ``inaccessible`` — it does not, so nothing about the path can be told.
+      This is what the paths *below* a mode-000 directory answer, and what a
+      mount point answers once the card behind it stops responding (``EIO`` on
+      the stat). Declaring a directory declares its whole subtree, because the
+      failing ``stat`` is the one every path below it needs first.
+
+    So a mode-000 directory is ``unlistable``, and it is the wrong list that is
+    tempting: putting the directory in ``inaccessible`` makes the directory
+    itself unreachable, and a resolver then refuses it long before it would
+    have tried to read it. Naming a path in both is not a mode-000 shorthand
+    but a contradiction, and it fails construction rather than resolving to
+    either — a precedence rule would be a documented way to describe the wrong
+    machine quietly. Where a mode-000 directory's children matter, they are
+    named in ``inaccessible`` individually; the directory itself is not.
 
     Every operation resolves the path it is given the way the module docstring
     states the kernel does — symlink components, ``.``, ``..`` and separator
@@ -542,12 +799,18 @@ class FixtureMachine:
         cores: Mapping[str, Mapping[str, object] | None] | None = None,
         dirs: Iterable[str] | None = None,
         inaccessible: Iterable[str] | None = None,
+        unlistable: Iterable[str] | None = None,
     ) -> None:
         self._files, self._blobs = _index_fixture_files(files)
         self._symlinks = dict(symlinks or {})
         self._cores = dict(cores or {})
         self._inaccessible = set(inaccessible or ())
-        self._dirs: set[str] = set(dirs or ())
+        self._unlistable = set(unlistable or ())
+        _refuse_both_unreadable_lists(self._inaccessible, self._unlistable)
+        # A directory whose contents cannot be read is still a directory —
+        # that is the whole difference from an inaccessible one, and what lets
+        # a resolver walk up to it and then fail to look inside.
+        self._dirs: set[str] = set(dirs or ()) | self._unlistable
         # Every ancestor of a known path is a directory.
         self._dirs |= _ancestor_dirs(
             (*self._files, *self._symlinks, *self._cores, *tuple(self._dirs), *self._inaccessible)
@@ -667,13 +930,29 @@ class FixtureMachine:
         return KIND_MISSING
 
     def _is_inaccessible(self, path: str) -> bool:
-        if path in self._inaccessible:
+        if self._at_or_under_inaccessible(path):
             return True
         landing = self._resolve(path)
         # A chain that never settles is ELOOP: the real machine fails to stat
         # it, which every operation here reports as inaccessible. ENOTDIR is
         # not that — it is an absent path, and each operation says so itself.
-        return landing.loops or landing.path in self._inaccessible
+        return landing.loops or (
+            landing.path is not None and self._at_or_under_inaccessible(landing.path)
+        )
+
+    def _at_or_under_inaccessible(self, path: str) -> bool:
+        """Is *path* a declared inaccessible entry, or anything below one?
+
+        Declaring a directory inaccessible declares its whole subtree: the
+        ``stat`` that fails on it is the one every path below it needs first,
+        and a mode-000 directory was observed to answer *inaccessible* for its
+        children and its grandchildren alike. Stating each descendant instead
+        would mean listing what a broken card contains in order to say it
+        cannot be read.
+        """
+        return any(
+            path == entry or path.startswith(entry.rstrip("/") + "/") for entry in self._inaccessible
+        )
 
     def readlink(self, path: str) -> str | None:
         parent = self._resolve_parent(path)
@@ -722,71 +1001,41 @@ class FixtureMachine:
             options=_parse_core_options(spec.get("options")),
         )
 
-    def _children(self, spelled_dir: str) -> set[str]:
-        """Entry names directly under *spelled_dir* (resolved like the kernel would)."""
-        real = self._resolve(spelled_dir).path if spelled_dir else ""
-        if real is None:
-            return set()
-        prefix = real.rstrip("/") + "/"
-        names: set[str] = set()
-        for known in (*self._files, *self._symlinks, *self._cores, *self._dirs, *self._inaccessible):
-            if known.startswith(prefix):
-                names.add(known[len(prefix) :].split("/", 1)[0])
-        names.discard("")
-        return names
+    def glob(self, pattern: str) -> GlobResult:
+        return _GlobWalk(self._list_dir, self._is_dir, self._lexists).run(pattern)
 
-    def _present_for_glob(self, spelled: str) -> bool:
-        # A symlink is listed by glob even when dead — like a real iterdir.
-        if self._resolve_parent(spelled) in self._symlinks:
-            return True
-        return self.path_kind(spelled) != KIND_MISSING
+    def _list_dir(self, path: str) -> list[str] | None:
+        """The names directly under *path*, or ``None`` when it cannot be listed.
 
-    def _matching_children(self, base: str, segment: str) -> list[str]:
-        """Entry names under *base* that the wildcard *segment* matches.
-
-        A wildcard never matches a leading dot — the same hidden-file rule a
-        real glob applies, so a dotfile is invisible to both.
+        A directory the fixture calls inaccessible is one whose ``stat`` fails,
+        and nothing whose ``stat`` fails can be listed either — so the two
+        answers come from the one declaration.
         """
-        hidden_ok = segment.startswith(".")
-        return [
-            child
-            for child in self._children(base)
-            if (hidden_ok or not child.startswith(".")) and fnmatch.fnmatchcase(child, segment)
-        ]
-
-    def _walk_glob(self, base: str, segments: list[str], results: set[str]) -> None:
-        """Match *segments* against the tree below *base*, collecting hits in *results*."""
-        if not segments:
-            if base and self._present_for_glob(base):
-                results.add(base)
-            return
-        segment, rest = segments[0], segments[1:]
-        if not segment:
-            self._walk_glob_separator(base, rest, results)
-        elif not _GLOB_MAGIC & set(segment):
-            self._walk_glob(f"{base}/{segment}", rest, results)
-        else:
-            for child in self._matching_children(base, segment):
-                self._walk_glob(f"{base}/{child}", rest, results)
-
-    def _walk_glob_separator(self, base: str, rest: list[str], results: set[str]) -> None:
-        """An empty segment: a repeated separator inside, or the pattern's own trailing ``/``.
-
-        A trailing one is not decoration — it makes the pattern match
-        directories only and travels into the match: ``<dir>/*/`` was observed
-        to answer the subdirectory alone, spelled with the slash, while
-        ``<dir>/f.txt/`` answers nothing at all.
-        """
-        if rest:
-            self._walk_glob(base, rest, results)
-        elif self.path_kind(base or "/") == KIND_DIRECTORY:
-            # An empty base is the root itself — the pattern was nothing but
-            # separators — and `f"{base}/"` spells it the way it arrived.
-            results.add(f"{base}/")
-
-    def glob(self, pattern: str) -> list[str]:
-        if not pattern.startswith("/"):
+        if self._is_inaccessible(path):
+            return None
+        landing = self._resolve(path)
+        if landing.path is None or landing.path not in self._dirs:
+            # Not there, or not a directory: a truthful empty listing.
             return []
-        results: set[str] = set()
-        self._walk_glob("", pattern.split("/")[1:], results)
-        return sorted(results)
+        if landing.path in self._unlistable:
+            return None
+        prefix = landing.path.rstrip("/") + "/"
+        names = {
+            known[len(prefix) :].split("/", 1)[0]
+            for known in (*self._files, *self._symlinks, *self._cores, *self._dirs, *self._inaccessible)
+            if known.startswith(prefix)
+        }
+        names.discard("")
+        return sorted(names)
+
+    def _is_dir(self, path: str) -> bool | None:
+        kind = self.path_kind(path)
+        return None if kind == KIND_INACCESSIBLE else kind == KIND_DIRECTORY
+
+    def _lexists(self, path: str) -> bool | None:
+        # lstat semantics: a dead symlink is a name that exists.
+        if self._is_inaccessible(path):
+            return None
+        if self.readlink(path) is not None:
+            return True
+        return self.path_kind(path) != KIND_MISSING

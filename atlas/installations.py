@@ -39,6 +39,7 @@ from atlas.esde import (
 )
 from atlas.firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
+    CAVEAT_CORE_ENUMERATION_INCOMPLETE,
     CAVEAT_FIRMWARE_ROOT_MISSING,
     CAVEAT_INFO_PATH_UNRESOLVED,
     Catalogue,
@@ -90,6 +91,7 @@ from atlas.placement import (
     CAVEAT_HEALTH,
     CAVEAT_NO_CORE,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+    CAVEAT_SAVE_DIR_UNLISTABLE,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
     CAVEAT_SYSTEM_DIR_UNSET,
@@ -1759,7 +1761,7 @@ def _observed_file_set(
     content_path: str | None,
     card: CoreCard | None,
     mode: SaveMode | None,
-) -> FileSet:
+) -> tuple[FileSet, tuple[Caveat, ...]]:
     """The save files actually lying in *directory* for this ROM, or what is declared.
 
     Literal observation: ROM names routinely carry glob metacharacters
@@ -1769,17 +1771,53 @@ def _observed_file_set(
     file_path_special.h:83) is not save data. The content file itself is
     filtered by the name it has on disk — for content inside an archive that is
     the archive, which shares the stem whenever it is named after its entry.
+
+    A directory that could not be listed is the case this exists to keep out of
+    the answer: the save data may be sitting right there, on a card that
+    stopped answering mid-session. The set is *unknown* then, with a caveat
+    naming the directory — never "no files present at …", which is the same
+    sentence a genuinely empty directory earns and would send a caller off to
+    restore a save it already has.
     """
     content_file = content_file_name(content_path) if content_path else None
     pattern = os.path.join(_glob_escape(directory), _glob_escape(rom_stem) + ".*")
     companions = {f"{rom_stem}.ldci"}
+    listing = machine.glob(pattern)
     matches = [
         m
-        for m in machine.glob(pattern)
+        for m in listing.matches
         # In content-dir mode the ROM shares the save's directory and
         # stem — the content file itself is never part of the save set.
         if os.path.basename(m) != content_file and os.path.basename(m) not in companions
     ]
+    caveats = tuple(_unlistable_caveat(path) for path in listing.unreadable)
+    if listing.unreadable:
+        # Not "unless something matched": this pattern names one directory, so
+        # a failed listing means zero matches anyway — and if that ever stopped
+        # holding, the matches would be a partly-read directory presented as an
+        # observed set, which a `complete` rule card could then close over.
+        return UNKNOWN_FILE_SET, caveats
+    return _file_set_of(matches, directory=directory, rom_stem=rom_stem, card=card, mode=mode), caveats
+
+
+def _unlistable_caveat(path: str) -> Caveat:
+    return Caveat(
+        CAVEAT_SAVE_DIR_UNLISTABLE,
+        f"{path} could not be listed (permissions or an I/O failure), so whether this content has "
+        "saves there is unknown — an empty file set would be a claim about a directory atlas never read",
+        {"path": path},
+    )
+
+
+def _file_set_of(
+    matches: list[str],
+    *,
+    directory: str,
+    rom_stem: str,
+    card: CoreCard | None,
+    mode: SaveMode | None,
+) -> FileSet:
+    """What was found, else what the card declares, else nothing stated."""
     declared = None
     if card is not None and mode is not None and mode.files is not None:
         declared = _card_files(mode.files, rom_stem)
@@ -1877,7 +1915,7 @@ def _observed_at(
     file_set = UNKNOWN_FILE_SET
     caveats: tuple[Caveat, ...] = ()
     if content.rom_stem is not None:
-        file_set = _observed_file_set(
+        file_set, caveats = _observed_file_set(
             machine,
             directory=directory,
             rom_stem=content.rom_stem,
@@ -1886,7 +1924,7 @@ def _observed_at(
             mode=mode,
         )
         if file_set.state == "observed" and _is_content_dir(directory, content):
-            caveats = (_content_dir_caveat(directory),)
+            caveats = (*caveats, _content_dir_caveat(directory))
     physical_dir, link_caveats = _link_view(machine, directory)
     return file_set, physical_dir, (*caveats, *link_caveats)
 
@@ -2205,6 +2243,7 @@ def _retroarch_firmware_context(
     core_dir, core_dir_caveats = _cfg_directory(sandbox, parsed, "libretro_directory")
     caveats.extend((*info_caveats, *core_dir_caveats))
     cores: tuple[CoreDeclarations, ...] = ()
+    cores_listed = False
     if info_dir is None:
         caveats.append(
             Caveat(
@@ -2226,20 +2265,31 @@ def _retroarch_firmware_context(
             )
         else:
             sources.append(f"declarations limited to cores installed in {core_dir}")
-        cores = read_core_declarations(machine, info_dir, core_dir=core_dir)
+        enumeration = read_core_declarations(machine, info_dir, core_dir=core_dir)
+        cores = enumeration.cores
+        cores_listed = enumeration.listed
+        caveats.extend(
+            Caveat(
+                CAVEAT_CORE_ENUMERATION_INCOMPLETE,
+                f"{unreadable} could not be listed (permissions or an I/O failure), so which cores are "
+                "installed is unknown — the cores below are the ones atlas could see, not the set this "
+                "installation ships",
+                {"path": unreadable},
+            )
+            for unreadable in enumeration.unreadable
+        )
 
     return FirmwareContext(
         root=root,
         cores=cores,
         hashes=load_hashes(),
-        # An empty core list means "this installation ships none" only if the
-        # enumeration actually produced something. A directory that resolves but
-        # cannot be listed — an I/O error on the SD card the whole RetroDECK
-        # tree lives on, a mode change — comes back from glob as an empty list,
-        # indistinguishable from a genuinely empty directory. Refusing to claim
-        # absence in that case costs a weaker caveat on a core-less install and
-        # buys never turning a read failure into "that core is not here".
-        cores_read=info_dir is not None and bool(cores),
+        # Whether the enumeration happened is now the seam's answer, not a
+        # guess from the list being empty. That guess was wrong in the safe
+        # direction — a genuinely empty core directory read as "nobody looked",
+        # so an installation that ships no cores could never say so — and the
+        # case it protected against, a directory that resolves but cannot be
+        # listed, is stated above by its own caveat.
+        cores_read=info_dir is not None and cores_listed,
         sources=tuple(sources),
         caveats=tuple(caveats),
     )

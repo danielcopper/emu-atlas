@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 2,
+  "schema": 3,
   "spec": "DESIGN.md — installations, the machine seam, save locations",
   "description": "Whole fixture machines (files, dirs, symlinks, core answers) in; the canonical contract serializations (atlas/contract.py) out, asserted with exact equality: installations (kind, kinds, root, health issue codes) and — per query — the full SavePlacement (dir, root_kind, needs, fallback_dir, physical_dir, file_set incl. completeness, granularity incl. option identity and alternatives, caveat codes + data), catalogue entries, and entry-route outcomes incl. Unresolved. Prose (sources, messages) is non-contractual. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h and the shipped RetroDECK/EmuDeck configs; see docs/research/retrodeck-save-placement.md.",
   "vectors": [
@@ -4154,6 +4154,66 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "name": "retrodeck-a-save-directory-that-cannot-be-listed-is-not-an-empty-one",
+      "rationale": "The card is still mounted enough to be a directory and its contents cannot be read — the state a save directory reaches when the SD card starts failing. An empty file set here would be the same answer a genuinely empty directory earns, and a client acting on it would report the save as gone and offer to restore over it. The set is unknown, and the caveat names the directory that could not be read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_info_path = \"/app/cores\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Game (USA).gba": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "unlistable": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Game (USA).gba",
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "save-dir-unlistable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/saves"
+              }
+            }
+          ]
+        }
       }
     }
   ]

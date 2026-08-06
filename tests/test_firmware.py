@@ -68,7 +68,14 @@ from atlas.firmware import (
     system_decision,
     system_for,
 )
-from atlas.machine import CoreInfo, FixtureFileSpec, FixtureMachine, PathKind, ReadResult
+from atlas.machine import (
+    CoreInfo,
+    FixtureFileSpec,
+    FixtureMachine,
+    GlobResult,
+    PathKind,
+    ReadResult,
+)
 from atlas.placement import CAVEAT_SYSTEM_DIR_UNSET, Caveat
 
 INFO_DIR = "/cores"
@@ -235,7 +242,7 @@ def _machine(files: Mapping[str, FixtureFileSpec] | None = None, **kwargs: objec
 def _context(machine: FixtureMachine, *, root: str | None = BIOS_DIR, core_dir: str | None = INFO_DIR):
     return FirmwareContext(
         root=root,
-        cores=read_core_declarations(machine, INFO_DIR, core_dir=core_dir),
+        cores=read_core_declarations(machine, INFO_DIR, core_dir=core_dir).cores,
         hashes=load_hashes(TABLE),
     )
 
@@ -333,29 +340,29 @@ class TestReadDeclarations:
     def test_a_core_without_firmware_is_still_read(self):
         machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
                             f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"}})
-        cores = {c.core_so: c for c in read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR)}
+        cores = {c.core_so: c for c in read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores}
         assert cores["snes9x_libretro.so"].firmware == ()
         assert cores["snes9x_libretro.so"].system == "snes"
 
     def test_a_core_without_its_so_is_not_installed(self):
         machine = _machine({f"{INFO_DIR}/flycast_libretro.info": DC_INFO})
-        cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR)
+        cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores
         assert [c.core_so for c in cores] == ["mednafen_psx_libretro.so"]
 
     def test_without_a_core_dir_nothing_is_filtered(self):
         machine = _machine({f"{INFO_DIR}/flycast_libretro.info": DC_INFO})
-        cores = read_core_declarations(machine, INFO_DIR)
+        cores = read_core_declarations(machine, INFO_DIR).cores
         assert {c.core_so for c in cores} == {"mednafen_psx_libretro.so", "flycast_libretro.so"}
 
     def test_the_template_info_files_are_dropped(self):
         machine = _machine({f"{INFO_DIR}/00_example_libretro.info": TEMPLATE_INFO,
                             f"{INFO_DIR}/00_example_libretro.so": {"status": "invalid-text"}})
-        cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR)
+        cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores
         assert all("filename.ext" not in d.path for c in cores for d in c.firmware)
 
     def test_a_missing_opt_flag_means_required(self):
         machine = _machine()
-        core = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR)[0]
+        core = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores[0]
         needs = {d.file_name: d.need for d in core.firmware}
         assert needs == {"scph5501.bin": "required", "psxonpsp660.bin": "optional"}
 
@@ -381,7 +388,7 @@ class TestTheCountIsTheEnumeration:
         )
 
     def _core(self, info: str) -> CoreDeclarations:
-        cores = read_core_declarations(self._machine_for(info), INFO_DIR, core_dir=INFO_DIR)
+        cores = read_core_declarations(self._machine_for(info), INFO_DIR, core_dir=INFO_DIR).cores
         return next(c for c in cores if c.stem == self.STEM)
 
     def _answered(self, info: str) -> CoreFirmware:
@@ -475,7 +482,7 @@ class TestPerCoreAnswer:
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(content)})
         context = FirmwareContext(
             root=BIOS_DIR,
-            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores,
             hashes=load_hashes(table),
         )
         core = firmware_for_core(
@@ -550,7 +557,7 @@ class TestCheckedAxis:
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(content)})
         context = FirmwareContext(
             root=BIOS_DIR,
-            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores,
             hashes=load_hashes(table),
         )
         answer = firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so", verify=True)
@@ -1104,7 +1111,7 @@ class TestSystemAssignmentIsVisible:
     def test_the_database_field_is_read_as_a_signal_not_as_a_name(self):
         machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
                             f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
-        core = next(c for c in read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR) if c.stem == "mgba_libretro")
+        core = next(c for c in read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores if c.stem == "mgba_libretro")
         assert core.database == ("Nintendo - Game Boy", "Nintendo - Game Boy Advance")
         # The core's own system still comes from systemname, never from
         # database — the two disagree here, and systemname wins.
@@ -1170,7 +1177,7 @@ class TestInventory:
         machine = _machine({f"{BIOS_DIR}/mystery-name.bin": _blob(content)})
         context = FirmwareContext(
             root=BIOS_DIR,
-            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores,
             hashes=load_hashes(table),
         )
         unclaimed = firmware_inventory(machine, context, verify=True).unclaimed
@@ -1661,7 +1668,7 @@ class TestNoDeclarationIsNeverSatisfied:
         machine = _machine()
         context = FirmwareContext(
             root=None,
-            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR),
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores,
             hashes=load_hashes(TABLE),
             caveats=(Caveat(CAVEAT_SYSTEM_DIR_UNSET, "system_directory is unset in the configs"),),
         )
@@ -1835,7 +1842,7 @@ class _CountingMachine:
         self._count("read_text")
         return self._inner.read_text(path)
 
-    def glob(self, pattern: str) -> list[str]:
+    def glob(self, pattern: str) -> GlobResult:
         self._count("glob")
         return self._inner.glob(pattern)
 

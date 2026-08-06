@@ -110,7 +110,7 @@ reports an **explicit outcome** — failure modes are never collapsed:
 ```python
 class Machine(Protocol):
     def read_text(self, path: str) -> ReadResult: ...     # status ok | missing | unreadable | invalid-text, plus text
-    def glob(self, pattern: str) -> list[str]: ...        # *, ?, [seq] within one segment; never crosses '/'
+    def glob(self, pattern: str) -> GlobResult: ...       # matches + the directories it could not read
     def path_kind(self, path: str) -> PathKind: ...       # file | directory | missing | inaccessible
     def readlink(self, path: str) -> str | None: ...      # symlink target, or None if not a link
     def query_core(self, so_path: str) -> CoreInfo | None: ...  # retro_get_system_info, or None if unloadable
@@ -121,6 +121,13 @@ class Machine(Protocol):
 - The outcomes exist because the emulators branch on them — RetroArch applies a configured directory only when
   `path_is_directory()` succeeds — and because health must distinguish _missing_ from _unreadable_ from _invalid_:
   collapsing them turns a present-but-broken installation into an absent or healthy one.
+- `glob` is the one whose payload is _partial_ rather than absent, because a pattern can need several directories and a
+  real filesystem reads some and not others. So it answers the matches it found **and** the places it could not look: an
+  empty directory and a directory on a card that stopped answering are otherwise the same empty list, and a client told
+  the second is the first will report a save as gone. Not every empty answer is a failure — a name that is not there, or
+  a component that is not a directory, is a truthful negative. The production implementation walks this itself rather
+  than calling the stdlib's `glob`, which returns silently on any `OSError` from `scandir` and so cannot tell the two
+  apart at all.
 - `readlink` exists because RetroDECK's whole standalone save architecture is symlinks (`dir_prep`): the emulator-side
   path and the real path are two truthful answers to different questions, and a dead link (`path_kind` → missing, link
   present) is a real state the resolver must be able to see.

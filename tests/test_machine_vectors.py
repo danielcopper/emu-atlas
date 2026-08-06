@@ -1,7 +1,7 @@
 """Run every 'machines' vector through the real detect() + resolver routes.
 
 The vectors are the artifact; this is atlas's conformance run for the machines
-family (schema 2). Each vector is a whole fixture machine — files, dirs,
+family (schema 3). Each vector is a whole fixture machine — files, dirs,
 symlinks, core answers — and detect() must find exactly the expected
 installations. Expectations are the canonical contract serializations
 (atlas.contract) asserted with EXACT equality: every stable field, including
@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 import atlas
+from scripts import validate_vectors
 from atlas.contract import (
     emulator_contract,
     firmware_contract,
@@ -38,7 +39,7 @@ def _load_vectors():
     for path in files:
         data = json.loads(path.read_text())
         assert data["family"] == "machines"
-        assert data["schema"] == 2, f"{path}: runner speaks vector schema 2"
+        assert data["schema"] == 3, f"{path}: runner speaks vector schema 3"
         for vector in data["vectors"]:
             yield pytest.param(vector, id=f"{path.stem}:{vector['name']}")
 
@@ -50,6 +51,7 @@ def _machine(inp) -> atlas.FixtureMachine:
         cores=inp.get("cores"),
         dirs=inp.get("dirs"),
         inaccessible=inp.get("inaccessible"),
+        unlistable=inp.get("unlistable"),
     )
 
 
@@ -134,3 +136,33 @@ def test_machine_vector(vector):
         else:
             got = placement_contract(outcome)
         assert got == expected["entry_save_location"], rationale
+
+
+class TestTheGrammarRefusesContradictions:
+    """A rule nothing else can catch: no vector contradicts itself today.
+
+    The validator running clean over the corpus proves the corpus is clean, not
+    that the rule is still there — delete the check and the gate stays green.
+    So the refusal is asserted directly, through the same per-vector entry
+    point the gate drives.
+    """
+
+    def _vector(self, **paths):
+        return {
+            "name": "synthetic",
+            "input": {"home": "/home/deck", "files": {"/home/deck/x": ""}, **paths},
+            "expected": {"installations": []},
+        }
+
+    def test_a_path_in_both_unreadable_lists_is_refused(self):
+        # The tempting wrong reading is that both together spell mode 000. They
+        # do not: such a directory answers *directory* about itself, so it is
+        # 'unlistable', and 'inaccessible' would have the resolver refuse it a
+        # step earlier than the machine does.
+        vector = self._vector(inaccessible=["/saves"], unlistable=["/saves"])
+        with pytest.raises(validate_vectors.VectorError, match="both"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_the_two_lists_are_fine_apart(self):
+        vector = self._vector(inaccessible=["/mnt/card"], unlistable=["/saves"])
+        validate_vectors.validate_machines_vector(vector)

@@ -1,4 +1,4 @@
-"""Validate the shape of every vector file under vectors/ (schema 2). Stdlib only.
+"""Validate the shape of every vector file under vectors/ (schema 3). Stdlib only.
 
 Catches malformed vectors independently of the runner: a vector file must
 parse, carry the family header and schema matching its directory, and every
@@ -19,7 +19,12 @@ from typing import Any, NoReturn
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-SCHEMA = 2
+# Schema 3 asks more of a port than 2 did: `glob` answers how much of the walk
+# it could read, and a fixture can state a directory that exists and cannot be
+# listed. A port built to 2 would answer a bare list and model no such
+# directory, so the corpus is not the same contract — the number says so
+# instead of leaving it to be discovered one failing vector at a time.
+SCHEMA = 3
 
 INPUT_FIELDS_REQUIRED = {"home", "files"}
 INPUT_FIELDS_OPTIONAL = {
@@ -27,6 +32,7 @@ INPUT_FIELDS_OPTIONAL = {
     "cores",
     "dirs",
     "inaccessible",
+    "unlistable",
     "query",
     "catalogue_query",
     "entry_query",
@@ -161,6 +167,9 @@ KNOWN_CAVEAT_CODES = {
     "firmware-declaration-unread",
     "firmware-content-contradictory",
     "firmware-content-unstated",
+    "firmware-scan-incomplete",
+    "core-enumeration-incomplete",
+    "save-dir-unlistable",
 }
 # The codes that may stand in for "nothing could be read here". Each says a
 # different thing to a client — nothing declares firmware, nothing declared
@@ -320,10 +329,24 @@ def _validate_input_files(name: str, files: Any) -> None:
 
 def _validate_input_paths(name: str, inp: Any) -> None:
     """The directories, unreadable paths, and links a fixture machine declares."""
-    for list_key in ("dirs", "inaccessible"):
+    for list_key in ("dirs", "inaccessible", "unlistable"):
         entries = inp.get(list_key, [])
         if not isinstance(entries, list) or not all(isinstance(e, str) and e for e in entries):
             fail(f"{name}: input.{list_key} must be a list of non-empty path strings")
+    # The two unreadable lists answer opposite things about the same question —
+    # does the stat succeed? — so a path in both describes no machine. It is
+    # worth refusing rather than resolving, because the tempting reading is
+    # that both together spell a mode-000 directory: they do not. Such a
+    # directory answers *directory* for itself and belongs in 'unlistable'
+    # alone; 'inaccessible' would make the resolver refuse it a step earlier
+    # than the real machine does, and the vector would prove the wrong path.
+    contradictory = sorted(set(inp.get("inaccessible", [])) & set(inp.get("unlistable", [])))
+    if contradictory:
+        fail(
+            f"{name}: {contradictory} are in both input.inaccessible and input.unlistable — a path "
+            "whose stat fails cannot also be a directory whose stat succeeds. A mode-000 directory "
+            "is 'unlistable'; name its children in 'inaccessible' if they matter."
+        )
     symlinks = inp.get("symlinks", {})
     if not isinstance(symlinks, dict) or not all(
         isinstance(k, str) and isinstance(v, str) for k, v in symlinks.items()
