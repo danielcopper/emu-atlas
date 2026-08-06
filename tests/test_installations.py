@@ -725,6 +725,13 @@ class TestSystemDirectoryRoot:
         assert p.dir == "/mnt/sd/retrodeck/roms/dreamcast/dc"
         assert p.root_kind == atlas.ROOT_CONTENT_DIRECTORY
 
+    def test_a_cleared_key_without_content_leaves_the_content_hole_too(self):
+        # Upstream's own no-content fallback (runloop.c:1986-1987) hands back the
+        # empty value — nothing a save can be placed in. The template is.
+        p = self._placement('system_directory = ""\n', content=None)
+        assert p.dir == "<content_dir>/dc"
+        assert p.needs == ("content_dir",)
+
     def test_the_literal_default_clears_it_the_same_way(self):
         p = self._placement(
             'system_directory = "default"\n', {f"/mnt/sd/retrodeck/roms/dreamcast/dc/{self.VMU}": "v"}
