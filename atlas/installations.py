@@ -83,7 +83,9 @@ from atlas.placement import (
     CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+    CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
     CAVEAT_FILENAMES_UNVERIFIED,
+    CAVEAT_FILE_SET_SPANS_ROOTS,
     CAVEAT_HEALTH,
     CAVEAT_NO_CORE,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
@@ -1370,6 +1372,58 @@ def _card_file_set(
     )
 
 
+def _file_set_caveats(
+    card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None
+) -> tuple[Caveat, ...]:
+    """What one declared file list cannot say about this mode's save.
+
+    Three states the card keeps apart, each stated rather than left to an
+    empty-looking answer: a mode whose save reaches beyond its own root (a
+    list would offer a part as the whole), a mode whose names depend on a fact
+    atlas does not read (both spellings are handed over, the caller picks),
+    and a mode whose names are not established yet.
+    """
+    if mode.also_under is not None:
+        return (
+            Caveat(
+                CAVEAT_FILE_SET_SPANS_ROOTS,
+                f"rule card '{card.key}': in mode {mode_value!r} only part of the save moves here — "
+                f"the rest keeps using {mode.also_under}. A card states one root per mode, so the "
+                "file set is left unstated instead of presenting the visible part as the whole save",
+                {"card": card.key, "mode": mode_value, "also_under": mode.also_under},
+            ),
+        )
+    if mode.files is None:
+        return (
+            Caveat(
+                CAVEAT_FILENAMES_UNVERIFIED,
+                f"rule card '{card.key}': mode {mode_value!r} places per-game files under the "
+                "standard directory, but the filename scheme is unverified — file names not stated",
+                {"card": card.key, "mode": mode_value},
+            ),
+        )
+    if mode.files_without_save_id is not None:
+        stated = _card_files(mode.files, rom_stem) or mode.files
+        alternative = _card_files(mode.files_without_save_id, rom_stem) or mode.files_without_save_id
+        return (
+            Caveat(
+                CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+                f"rule card '{card.key}': in mode {mode_value!r} the names depend on whether this "
+                "content carries a platform-native id. The stated set is the id-keyed one; content "
+                "without an id — arcade, or a disc whose header states none — is named after the "
+                "ROM instead. Both spellings are in this caveat's data; whoever fills 'save_id' "
+                "knows which applies",
+                {
+                    "card": card.key,
+                    "mode": mode_value,
+                    "files": ", ".join(stated),
+                    "files_without_save_id": ", ".join(alternative),
+                },
+            ),
+        )
+    return ()
+
+
 def _system_directory_placement(
     machine: Machine,
     *,
@@ -1415,6 +1469,10 @@ def _system_directory_placement(
         card_sources.append(f'{cfg_label} chain: system_directory = "{raw_system}"{resolved.note}')
     directory = os.path.join(base, mode.subdir) if mode.subdir else base
     card_sources.append(f"rule card '{card.key}': core keeps saves under system_directory — {card.provenance}")
+    if granularity is not None:
+        all_caveats.extend(
+            _file_set_caveats(card, mode, mode_value=granularity.option_value or "", rom_stem=rom_stem)
+        )
     file_set = _card_file_set(
         machine, card=card, mode=mode, directory=directory, rom_stem=rom_stem, needs=needs
     )
@@ -1648,13 +1706,10 @@ def _standard_placement(
     ``fallback_dir`` stays empty rather than claiming a fallback nobody takes.
     """
     all_caveats = list(caveats)
-    if card is not None and mode is not None and granularity is not None and mode.files is None:
-        all_caveats.append(
-            Caveat(
-                CAVEAT_FILENAMES_UNVERIFIED,
-                f"rule card '{card.key}': mode {granularity.option_value!r} places per-game files under the "
-                "standard directory, but the filename scheme is unverified — file names not stated",
-                {"card": card.key, "mode": granularity.option_value or ""},
+    if card is not None and mode is not None and granularity is not None:
+        all_caveats.extend(
+            _file_set_caveats(
+                card, mode, mode_value=granularity.option_value or "", rom_stem=content.rom_stem
             )
         )
 

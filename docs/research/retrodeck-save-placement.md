@@ -421,12 +421,20 @@ Every port a mode does not cover keeps using the shared card, which in `VMU A1` 
 alone becomes per-content (`oslib.cpp:40-41`). A per-game answer is therefore partial by construction; atlas states it
 with `complete: false`.
 
-**[O]** Arcade content through the same core. `getVmuPath` takes the id branch only for `settings.platform.isConsole()`
-with a non-empty id; otherwise the name is `<content name>.<port>.bin` (`oslib.cpp:62`), the ROM's own stem. That branch
-is reachable: `maple_cfg.cpp:246-253` connects VMUs on ports B1/C1 for Naomi games that need neither keyboard nor RFID
-reader, and RetroDECK offers Flycast for seven arcade systems next to `dreamcast`. In `VMU A1` mode those ports are not
-covered at all, so the root itself differs. The rule card has no content-platform dimension and states the console case;
-closing this needs a live Naomi run and a card model that can express the split.
+**[V-source]** The id branch is conditional, and the condition is not a config: `getVmuPath` takes it only for
+`settings.platform.isConsole()` **and** a non-empty id; otherwise the name is `<content name>.<port>.bin`
+(`oslib.cpp:62`), the ROM's own stem. Both conjuncts fail in practice — `maple_cfg.cpp:246-253` connects VMUs on ports
+B1/C1 for Naomi games that need neither keyboard nor RFID reader, RetroDECK offers Flycast for seven arcade systems next
+to `dreamcast`, and a disc whose header carries no product number falls to the same branch. atlas cannot decide it: it
+reads no disc headers, by design. So the answer states the id-keyed set and hands the ROM-named alternative to the
+caller in `filenames-content-conditional` — whoever can supply `save_id` is the same party that knows whether an id
+exists at all, and when none does, the alternative is a set atlas has already filled.
+
+**[O]** Which ports a per-content mode covers is itself content-dependent. `VMU A1` moves port A1 only, and Naomi's VMUs
+are B1 and C1 — so for arcade content in that mode nothing moves at all, while for Dreamcast content three of four ports
+stay shared. atlas states no file set there (`file-set-spans-roots`), which is honest but coarse: the card model
+describes one root per mode and cannot say "these ports here, those there". Closing it needs a live Naomi run and a card
+that can express a per-root, per-port split.
 
 ## 9. Does RetroDECK overwrite user settings?
 

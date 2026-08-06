@@ -870,7 +870,7 @@
     },
     {
       "name": "flycast-per-game-vmu-mode",
-      "rationale": "The same core with reicast_per_content_vmus = 'VMU A1' switches to per-game VMUs rooted in the standard savefile_directory — granularity and root flip on one live-read option. Only port A1 goes per-content in this mode (oslib.cpp:40), and its name is a template: the file is named after the disc's id, which atlas does not read, so 'save_id' stays a hole.",
+      "rationale": "The same core with reicast_per_content_vmus = 'VMU A1' switches to per-game VMUs rooted in the standard savefile_directory — granularity and root flip on one live-read option. Per-content applies to port A1 alone (oslib.cpp:40-41), so B1..D1 and the console flash keep using the shared card under system_directory: the save lies under two roots, which a card describing one cannot state. The file set therefore stays unknown and 'file-set-spans-roots' says why, instead of offering the single visible file as the whole save.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -905,16 +905,12 @@
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/dreamcast",
           "root_kind": "savefile_directory",
-          "needs": [
-            "save_id"
-          ],
+          "needs": [],
           "fallback_dir": "/mnt/sd/retrodeck/saves",
           "physical_dir": null,
           "file_set": {
-            "state": "declared",
-            "files": [
-              "<save_id>.A1.bin"
-            ],
+            "state": "unknown",
+            "files": [],
             "complete": false
           },
           "granularity": {
@@ -935,6 +931,14 @@
           },
           "caveats": [
             {
+              "code": "file-set-spans-roots",
+              "data": {
+                "card": "flycast",
+                "mode": "VMU A1",
+                "also_under": "system_directory"
+              }
+            },
+            {
               "code": "sorted-dir-missing",
               "data": {
                 "dir": "/mnt/sd/retrodeck/saves/dreamcast",
@@ -947,7 +951,7 @@
     },
     {
       "name": "flycast-per-content-vmus-are-named-after-the-disc-id",
-      "rationale": "reicast_per_content_vmus = 'All VMUs' writes one VMU per connected port into the save directory the frontend hands the core — the content-sorted one, no subdirectory of the core's own — named after the disc's product id (flycast@1dac369 oslib.cpp:38-67, libretro.cpp:2142-2148; live-verified on RetroDECK 0.10.9b). The id is written in the disc header, which atlas does not read: the file set is stated as the template it is and 'save_id' joins needs. A per-game VMU already lying in that directory is deliberately NOT attributed to this content — a content-sorted directory holds every game of one ROM directory, so reading a name back as this save would be a guess.",
+      "rationale": "reicast_per_content_vmus = 'All VMUs' writes one VMU per connected port into the save directory the frontend hands the core — the content-sorted one, no subdirectory of the core's own — named after the disc's product id (flycast@1dac369 oslib.cpp:38-67, libretro.cpp:2142-2148; live-verified on RetroDECK 0.10.9b). The id is written in the disc header, which atlas does not read: the file set is stated as the template it is and 'save_id' joins needs. Content without such an id — arcade, or a disc header stating none — is named after the ROM by the same function (oslib.cpp:62); atlas cannot decide which case it has, so 'filenames-content-conditional' carries both spellings, the alternative filled from the content path. A per-game VMU already lying in that directory is deliberately NOT attributed to this content — a content-sorted directory holds every game of one ROM directory, so reading a name back as this save would be a guess.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1014,7 +1018,17 @@
               ]
             ]
           },
-          "caveats": []
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "card": "flycast",
+                "mode": "All VMUs",
+                "files": "<save_id>.A1.bin, <save_id>.B1.bin, <save_id>.C1.bin, <save_id>.D1.bin",
+                "files_without_save_id": "Multi Disc Game (Europe).A1.bin, Multi Disc Game (Europe).B1.bin, Multi Disc Game (Europe).C1.bin, Multi Disc Game (Europe).D1.bin"
+              }
+            }
+          ]
         }
       }
     },

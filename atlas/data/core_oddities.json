@@ -43,9 +43,8 @@
           "VMU A1": {
             "root": "savefile_directory",
             "subdir": null,
-            "files": [
-              "<save_id>.A1.bin"
-            ],
+            "files": null,
+            "also_under": "system_directory",
             "granularity": "per-game-file"
           },
           "All VMUs": {
@@ -57,18 +56,24 @@
               "<save_id>.C1.bin",
               "<save_id>.D1.bin"
             ],
+            "files_without_save_id": [
+              "<rom_stem>.A1.bin",
+              "<rom_stem>.B1.bin",
+              "<rom_stem>.C1.bin",
+              "<rom_stem>.D1.bin"
+            ],
             "granularity": "per-game-files"
           }
         }
       },
       "provenance": {
-        "source": "flycast_libretro.so option strings ('Per-Game VMUs', mode descriptions); live observation on RetroDECK 0.10.9b — <system_directory>/dc holds vmu_save_{A1,B1,C1,D1}.bin + dc_nvmem.bin, and a per-content run wrote <save_id>.<port>.bin for the four connected ports into the save directory the frontend handed the core. Names follow hostfs::getVmuPath (flycast@1dac369 shell/libretro/oslib.cpp:38-67): save_id is settings.content.gameId, the disc's product number read from its header (core/emulator.cpp:838-841), with each of ' /\\:*?|<>' replaced by '_'; the directory is RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY as the frontend redirected it (shell/libretro/libretro.cpp:2142-2148), so the mode nests no subdirectory of its own. Switching modes moves the save, it does not duplicate it: the shared cards stay behind untouched, while dc_nvmem.bin and every port a mode does not cover keep using <system_directory>/dc. Slot-2 VMUs (A2..D2) exist only when a port's slot 2 is configured as VMU. The card describes console (Dreamcast) content: arcade content takes the other branch of the same function (oslib.cpp:62) and is named after the ROM instead.",
+        "source": "flycast_libretro.so option strings ('Per-Game VMUs', mode descriptions); live observation on RetroDECK 0.10.9b — <system_directory>/dc holds vmu_save_{A1,B1,C1,D1}.bin + dc_nvmem.bin, and a per-content run wrote <save_id>.<port>.bin for the four connected ports into the save directory the frontend handed the core. Names follow hostfs::getVmuPath (flycast@1dac369 shell/libretro/oslib.cpp:38-67): with settings.platform.isConsole() and a non-empty settings.content.gameId the name is that id — the disc's product number read from its header (core/emulator.cpp:838-841), trailing blanks trimmed, each of ' /\\:*?|<>' replaced by '_' — and without one (arcade content, or a disc header stating none) the ROM's own name (oslib.cpp:62); a legacy ROM-named file is still read when no id-named one exists (oslib.cpp:55-60). The directory is RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY as the frontend redirected it (shell/libretro/libretro.cpp:2142-2148), so the mode nests no subdirectory of its own. Switching modes moves the save, it does not duplicate it: the shared cards stay behind untouched. Per-content applies per port — with 'VMU A1' only port A1 moves and B1..D1 keep using the shared card (oslib.cpp:40-41), which is why that mode states no file set. dc_nvmem.bin is the console's own flash, shared by every game in every mode, and stays under <system_directory>/dc throughout. Slot-2 VMUs (A2..D2) exist only when a port's slot 2 is configured as VMU; on Naomi the connected VMUs are B1 and C1 (core/hw/maple/maple_cfg.cpp:246-253).",
         "verified_against": "Flycast as shipped in RetroDECK 0.10.9b",
         "date": "2026-08-05",
         "status": {
           "disabled": "[V-live] 2026-07-23 — observed under <system_directory>/dc, A1 written by play",
-          "VMU A1": "[D] 2026-08-05 — derived from the same code path as 'All VMUs' (oslib.cpp:40: per-content applies to port A1 only, the other ports keep the shared card); not exercised live",
-          "All VMUs": "[V-live] 2026-08-05 — a played and saved 4-disc title wrote four <save_id>.<port>.bin of 131072 bytes each into the content-sorted save directory; the shared card was byte-identical before and after"
+          "VMU A1": "[D] 2026-08-05 — derived from the same code path as 'All VMUs' (oslib.cpp:40-41); not exercised live. The save spans two roots in this mode, so no file set is stated",
+          "All VMUs": "[V-live] 2026-08-05 — a played and saved 4-disc title wrote four <save_id>.<port>.bin of 131072 bytes each into the content-sorted save directory; the shared card was byte-identical before and after. The id-less spelling is [V-source] (oslib.cpp:62), not observed"
         }
       }
     },

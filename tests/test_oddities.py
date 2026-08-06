@@ -53,15 +53,23 @@ class TestCardLookup:
         assert card.option_default == "disabled"
         assert set(card.modes) == {"disabled", "VMU A1", "All VMUs"}
         assert card.modes["disabled"].files is not None
-        # The per-game modes name their files through the content's own id —
-        # a template, kept as one: atlas states the shape, never the id.
-        assert card.modes["VMU A1"].files == ("<save_id>.A1.bin",)
+        # 'All VMUs' names its files through the content's own id — a template,
+        # kept as one: atlas states the shape, never the id. 'VMU A1' moves one
+        # port and leaves the rest on the shared card, which one root cannot say.
         assert card.modes["All VMUs"].files == (
             "<save_id>.A1.bin",
             "<save_id>.B1.bin",
             "<save_id>.C1.bin",
             "<save_id>.D1.bin",
         )
+        assert card.modes["All VMUs"].files_without_save_id == (
+            "<rom_stem>.A1.bin",
+            "<rom_stem>.B1.bin",
+            "<rom_stem>.C1.bin",
+            "<rom_stem>.D1.bin",
+        )
+        assert card.modes["VMU A1"].files is None
+        assert card.modes["VMU A1"].also_under == "system_directory"
 
 
 def _retrodeck(files, **kwargs):
@@ -139,11 +147,16 @@ class TestFlycastResolution:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.granularity is not None
         assert p.granularity.value == "per-game-file"
-        # Only port A1 goes per-content in this mode (oslib.cpp:40).
-        assert p.file_set.state == "declared"
-        assert p.file_set.files == ("<save_id>.A1.bin",)
-        assert p.needs == ("save_id",)
+        # Only port A1 goes per-content here (oslib.cpp:40-41) — B1..D1 and the
+        # console flash keep using the shared card, so the save lies under two
+        # roots and the card, which states one, states no file set at all.
+        assert p.file_set.state == "unknown"
+        assert p.needs == ()
         assert not any(c.code == atlas.CAVEAT_FILENAMES_UNVERIFIED for c in p.caveats)
+        spans = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS]
+        assert [dict(c.data) for c in spans] == [
+            {"card": "flycast", "mode": "VMU A1", "also_under": "system_directory"}
+        ]
 
     def test_all_vmus_declares_one_file_per_connected_port(self):
         p = _flycast_query(
@@ -166,9 +179,51 @@ class TestFlycastResolution:
             "<save_id>.D1.bin",
         )
         # A template names the shape, never the whole save: the console flash
-        # and every port this mode does not cover stay in system_directory.
+        # stays in system_directory, and slot-2 VMUs appear when configured.
         assert p.file_set.complete is False
         assert p.needs == ("save_id",)
+
+    def test_all_vmus_hands_over_both_spellings_of_the_names(self):
+        # The id branch applies only to console content with a readable header
+        # (oslib.cpp:44); everything else is named after the ROM (:62). atlas
+        # cannot decide that — it states the id-keyed set and carries the
+        # alternative, filled as far as it can fill it, in the caveat's data.
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "All VMUs"\n',
+                SAVES_KEEP: "",
+                "/mnt/sd/retrodeck/saves/dreamcast/.keep": "",
+            }
+        )
+        conditional = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
+        assert len(conditional) == 1
+        data = dict(conditional[0].data)
+        assert data["card"] == "flycast"
+        assert data["mode"] == "All VMUs"
+        assert data["files"].split(", ") == list(p.file_set.files)
+        assert data["files_without_save_id"].split(", ") == [
+            "Shenmue (Europe).A1.bin",
+            "Shenmue (Europe).B1.bin",
+            "Shenmue (Europe).C1.bin",
+            "Shenmue (Europe).D1.bin",
+        ]
+
+    def test_the_alternative_stays_a_template_without_a_content_path(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "All VMUs"\n',
+                SAVES_KEEP: "",
+            },
+            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},
+        )
+        p = rd.save_location(core_so="flycast_libretro.so")
+        conditional = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
+        assert conditional
+        assert conditional[0].data["files_without_save_id"].startswith("<rom_stem>.A1.bin")
 
     def test_the_card_provenance_rides_along_on_the_standard_route(self):
         # A mode switch MOVES the save — the shared cards stay behind stale —
@@ -848,6 +903,58 @@ class TestStrictLoaders:
             }
         )
         assert load_oddities(text)[0].modes["always"].files == ("<save_id>.A1.bin", "<rom_stem>.srm")
+
+    def _mode_card(self, mode):
+        return json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "saves": {"modes": {"always": {"root": "savefile_directory", **mode}}},
+                    }
+                },
+            }
+        )
+
+    def test_a_mode_that_spans_roots_cannot_declare_files(self):
+        # The field exists because one list cannot describe a two-root save.
+        text = self._mode_card(
+            {
+                "granularity": "per-game-file",
+                "files": ["<save_id>.A1.bin"],
+                "also_under": "system_directory",
+            }
+        )
+        with pytest.raises(ValueError, match="also_under"):
+            load_oddities(text)
+
+    def test_an_unknown_second_root_is_rejected(self):
+        text = self._mode_card({"granularity": "per-game-file", "also_under": "somewhere_else"})
+        with pytest.raises(ValueError, match="also_under"):
+            load_oddities(text)
+
+    def test_the_id_less_alternative_needs_an_id_keyed_set_to_be_the_alternative_to(self):
+        text = self._mode_card(
+            {
+                "granularity": "per-game-file",
+                "files": ["<rom_stem>.srm"],
+                "files_without_save_id": ["<rom_stem>.A1.bin"],
+            }
+        )
+        with pytest.raises(ValueError, match="files_without_save_id"):
+            load_oddities(text)
+
+    def test_the_id_less_alternative_cannot_name_an_id(self):
+        text = self._mode_card(
+            {
+                "granularity": "per-game-file",
+                "files": ["<save_id>.A1.bin"],
+                "files_without_save_id": ["<save_id>.A1.bin"],
+            }
+        )
+        with pytest.raises(ValueError, match="without an id"):
+            load_oddities(text)
 
     def test_unknown_mode_root_is_rejected(self):
         text = json.dumps(

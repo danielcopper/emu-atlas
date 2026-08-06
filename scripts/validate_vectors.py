@@ -114,6 +114,8 @@ KNOWN_CAVEAT_CODES = {
     "dead-symlink",
     "health",
     "filenames-unverified",
+    "filenames-content-conditional",
+    "file-set-spans-roots",
     "unknown-option-value",
     "system-directory-unset",
     "per-game-overrides-present",

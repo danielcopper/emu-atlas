@@ -166,6 +166,27 @@ neither imports it nor assumes it, and it does not cover Dreamcast today, so thi
 space included — replaced by `_`). Where no supplier knows the id, an unfilled template still tells you the shape, the
 count and the directory — enough to recognize the files once they exist.
 
+**When there is no id, the names change — and atlas says so.** The emulator uses the id only if the content carries one:
+Flycast reads it from a Dreamcast disc header, and arcade content (or a disc that states none) is named after the ROM
+instead. atlas cannot tell those apart — reading a ROM's header is identification, not location — so it states the
+id-keyed set and puts the alternative in a `filenames-content-conditional` caveat, machine-readably and already filled
+as far as atlas can fill it:
+
+```python
+c = next(c for c in placement.caveats if c.code == "filenames-content-conditional")
+c.data["files"]                   # '<save_id>.A1.bin, <save_id>.B1.bin, …'  — the stated set
+c.data["files_without_save_id"]   # 'Game.A1.bin, Game.B1.bin, …'            — if the content has no id
+```
+
+The branch rule is the same question as filling the hole: ask your id supplier: an id → the first set with `save_id`
+substituted; no id for this content → the second set, which needs nothing from you.
+
+**A save can lie under two roots.** Where a mode moves only part of the save — Flycast's `VMU A1` moves the first
+controller's VMU and leaves the other three plus the console flash on the shared card — atlas states no file set at all
+and says why with `file-set-spans-roots`, whose `data["also_under"]` names the other root. `dir` still answers where the
+moved part goes. A card describes one root per mode, so the alternative would be to present a fragment as the whole
+save; treat this answer as "directory yes, file set no".
+
 **The layering trap.** An id from such a supplier describes the platform's own structure, which is not automatically a
 structure on the host. sigil's PS2 `save_id` (`BASLUS-…`) names a directory _inside_ a memory card image; whether
 anything of that is visible as a file at all is decided by the emulator's mode — which is what atlas's `granularity`
@@ -182,6 +203,8 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                        |
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified     |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it) |
+| `filenames-content-conditional`             | the stated names hold for content with a platform id; `data` carries the id-less set too      |
+| `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated      |
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain          |
 | `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below  |
 | `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                        |

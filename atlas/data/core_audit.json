@@ -27,7 +27,7 @@
     "flycast": {
       "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary/live] flycast@1dac369 libretro.cpp:790-807 maps the option; oslib.cpp:38-67 builds the VMU path. Both placements observed live: shared vmu_save_*.bin under <system_directory>/dc, and 'All VMUs' writing <save_id>.<port>.bin into the redirected save directory (libretro.cpp:2142-2148), save_id being the disc's product number (emulator.cpp:838-841). 'VMU A1' is derived from the same path, not exercised. [O] arcade content: the same function names the files after the ROM instead (oslib.cpp:62), and in 'VMU A1' Naomi's B1/C1 VMUs keep the shared card — a content-platform split the card schema cannot express.",
+      "note": "[V-source/binary/live] flycast@1dac369 libretro.cpp:790-807 maps the option; oslib.cpp:38-67 builds the VMU path. Both placements observed live: shared vmu_save_*.bin under <system_directory>/dc, and 'All VMUs' writing <save_id>.<port>.bin into the redirected save directory (libretro.cpp:2142-2148), save_id being the disc's product number (emulator.cpp:838-841). [V-source] content without such an id — arcade, or a disc header stating none — is named after the ROM by the same function (oslib.cpp:62); the card carries both spellings and the answer states the condition. 'VMU A1' is [D] from the same path and covers port A1 alone, so its save spans two roots and states no file set. [O] which ports a per-content mode covers depends on the content platform (Naomi connects B1/C1, maple_cfg.cpp:246-253) — a dimension the card schema does not have.",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",

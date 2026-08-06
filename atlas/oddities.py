@@ -89,6 +89,20 @@ class SaveMode:
     controller port's slot 2 is configured as a VMU). ``complete`` asserts
     that the mode's candidate universe is closed — no other file can belong
     to the save; a card may claim it only with source-verified provenance.
+
+    Two fields state what a single file list cannot:
+
+    - ``files_without_save_id`` is the same set as the emulator names it when
+      the content carries no platform-native id — Flycast falls back to the
+      ROM's own name for arcade content and for a disc whose header states no
+      id (``oslib.cpp:44`` vs ``:62``). The set is genuinely conditional on a
+      fact atlas does not read, so the resolver states the id-keyed set and
+      hands the alternative to the caller in a caveat instead of picking one.
+    - ``also_under`` names a *second* root this mode's save data lives under.
+      A card describes one root per mode, so a mode that spans two cannot
+      state its file set at all: it declares ``files: None`` plus this field,
+      and the resolver says so rather than presenting the half it can see as
+      the whole save.
     """
 
     root: str
@@ -97,6 +111,8 @@ class SaveMode:
     granularity: str
     observe: tuple[str, ...] | None = None
     complete: bool = False
+    files_without_save_id: tuple[str, ...] | None = None
+    also_under: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +147,32 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     if not isinstance(complete, bool):
         # bool("false") is True in Python — never coerce this claim.
         raise ValueError(f"{where}: 'complete' must be a JSON boolean")
+    alternative = mode.get("files_without_save_id")
+    also_under = _expect_opt_str(mode.get("also_under"), f"{where}: also_under")
+    if also_under is not None and also_under not in _KNOWN_MODE_ROOTS:
+        raise ValueError(
+            f"{where}: also_under must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {also_under!r}"
+        )
+    if also_under is not None and files is not None:
+        # The field exists because one file list cannot describe a save that
+        # lies under two roots — a card that states both contradicts itself.
+        raise ValueError(
+            f"{where}: a mode with 'also_under' cannot declare 'files' — its save data reaches "
+            "beyond this root, so the set is not statable here"
+        )
+    alternative_names: tuple[str, ...] | None = None
+    if alternative is not None:
+        if files is None or not any(TEMPLATE_SAVE_ID in name for name in files):
+            raise ValueError(
+                f"{where}: 'files_without_save_id' is the set for content that carries no id, so "
+                f"'files' must declare the {TEMPLATE_SAVE_ID} case it is the alternative to"
+            )
+        alternative_names = _expect_file_names(alternative, f"{where}: files_without_save_id")
+        if any(TEMPLATE_SAVE_ID in name for name in alternative_names):
+            raise ValueError(
+                f"{where}: 'files_without_save_id' describes content without an id — it cannot "
+                f"name one with {TEMPLATE_SAVE_ID}"
+            )
     return SaveMode(
         root=root,
         subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
@@ -138,6 +180,8 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
         granularity=_expect_str(mode.get("granularity"), f"{where}: granularity"),
         observe=_expect_file_names(observe, f"{where}: observe") if observe is not None else None,
         complete=complete,
+        files_without_save_id=alternative_names,
+        also_under=also_under,
     )
 
 

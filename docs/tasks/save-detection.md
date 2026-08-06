@@ -10,10 +10,11 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
 > resolves to `system_directory/dc` with observed VMUs, granularity (shared vs. per-game) is read live from the
 > governing core option, and the answer names the options file to switch it. The per-game VMU filename scheme is settled
 > too (live run 2026-08-05): `<save_id>.<port>.bin` in the content-sorted save directory, `save_id` being the disc's
-> product number — stated as the template it is, with `save_id` in `needs` (research doc §8). Remaining inside task 1:
-> arcade content through Flycast, which the same code path names after the ROM ([O]), and cards for further
-> system-directory cores as they are found. Task 6 is now partially covered — granularity is stated wherever a rule card
-> exists, `None` elsewhere.
+> product number — stated as the template it is, with `save_id` in `needs`, and the ROM-named branch for content
+> carrying no id handed over in `filenames-content-conditional` (research doc §8). Remaining inside task 1: which ports
+> a per-content mode covers is content-dependent ([O], needs a live Naomi run), `VMU A1` therefore states no file set at
+> all (`file-set-spans-roots`), and cards for further system-directory cores as they are found. Task 6 is now partially
+> covered — granularity is stated wherever a rule card exists, `None` elsewhere.
 
 1. **Flycast / system-directory cores** (§8, issue #12). The resolver returns the RetroArch default directory for
    Dreamcast content with no warning, while the real saves are shared VMUs under `system_directory`
@@ -80,6 +81,14 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
     the option definitions from `retro_set_environment` — which also turns option defaults into live reads. One vector
     per generation, kept forever. Design in `docs/research/core-audit.md`.
 
+16. **A card mode that spans two roots.** Flycast's `VMU A1` moves port A1 and leaves B1..D1 plus the console flash on
+    the shared card under `system_directory`; the schema states one root per mode, so the mode declares `also_under` and
+    the answer reports `file-set-spans-roots` instead of a file set. What the model would need to state it properly: a
+    mode whose file set is a list of `(root, subdir, files)` groups rather than one root plus one list — each group with
+    its own evidence status, and a `granularity` able to say "per-game for these files, shared for those". Which ports a
+    group covers is content-dependent (task 14), so this wants the same design pass as task 15's card variants: both are
+    the card schema growing a dimension.
+
 ## Context and docs
 
 11. **`home` guidance for callers.** Document who supplies `home` and why there is no default: the caller knows which
@@ -94,8 +103,8 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
     building.
 
 14. **Research follow-ups.** Paper Mario stage 2 (FlashRAM region location, §12); ParaLLEl N64 same-game comparison;
-    arcade content through Flycast (§8 [O]) — the per-game VMU path names arcade saves after the ROM and leaves Naomi's
-    ports on the shared card in `VMU A1` mode, which needs a live Naomi run and a card model with a content dimension.
+    arcade content through Flycast (§8 [O]) — the names are settled for both branches, but which ports a per-content
+    mode covers is not: Naomi connects B1/C1, so `VMU A1` moves nothing there. Needs a live Naomi run.
 
 Every task lands with vectors; expectation values are adjudicated against emulator source or live observation, never
 invention.
