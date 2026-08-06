@@ -123,5 +123,6 @@ The four firmware entry points ship: live `.info` declarations from the installe
 
 ## Open research (needs the user's machine)
 
-Paper Mario stage 2 (FlashRAM region), ParaLLEl N64 same-game comparison, per-game VMU filename scheme, one live run per
-suspect core.
+Paper Mario stage 2 (FlashRAM region), ParaLLEl N64 same-game comparison, one live run per suspect core. The per-game
+VMU filename scheme is settled (2026-08-05 live run, `docs/research/retrodeck-save-placement.md` §8); what the same run
+opened is arcade content through Flycast, where the identical code path names the files after the ROM instead.

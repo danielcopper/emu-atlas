@@ -14,8 +14,11 @@ keep the save for this content?". Its shape follows the research findings
   gone: ``.srm`` is only what RetroArch itself writes, and cores like Beetle
   Saturn write ``.bcr``/``.bkr``/``.smpc`` on their own.
 - **A hole is not an unknown.** ``needs`` lists holes the caller fills from the
-  content at hand (``content_dir``, ``library_name``); *unknown* means atlas
-  cannot state the value and refuses to guess. Distinct states, kept distinct.
+  content at hand (``content_dir``, ``library_name``, ``save_id``); *unknown*
+  means atlas cannot state the value and refuses to guess. Distinct states,
+  kept distinct. A hole is not confined to the directory: where a rule card
+  names the save's files through the content's platform-native id, the file
+  set is a template too and the same hole vocabulary carries it.
 - **The root varies** — ``savefile_directory`` (explicit, or the RetroArch
   platform default when unset/reset), ``system_directory`` (Flycast VMUs), or
   the ROM's own directory (``savefiles_in_content_dir``). Sorting stages apply
@@ -34,7 +37,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Literal, Mapping
+from typing import Iterable, Literal, Mapping
 
 from atlas.retroarch_cfg import RetroArchCfg
 
@@ -107,6 +110,18 @@ class Caveat:
 
 _HOLE_CONTENT_DIR = "content_dir"
 _HOLE_LIBRARY_NAME = "library_name"
+_HOLE_SAVE_ID = "save_id"
+
+# The template tokens a rule card's declared file names may carry, and the hole
+# each leaves behind. ``<rom_stem>`` the resolver fills itself from the content
+# path; ``<save_id>`` it never can — a core that names the save after the
+# content's platform-native id (Flycast's per-game VMUs are the disc's product
+# number, ``oslib.cpp:44-52`` at flycast@1dac369) reads that id out of the ROM
+# itself, which atlas does not do: identifying content is not locating a save.
+# So the id stays a hole for whoever knows it, exactly like ``content_dir``.
+TEMPLATE_ROM_STEM = "<rom_stem>"
+TEMPLATE_SAVE_ID = "<save_id>"
+_FILE_NAME_HOLES: Mapping[str, str] = MappingProxyType({TEMPLATE_SAVE_ID: _HOLE_SAVE_ID})
 
 
 def _holes(named: list[str]) -> tuple[str, ...]:
@@ -122,6 +137,22 @@ def _holes(named: list[str]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(named))
 
 
+def file_set_holes(files: Iterable[str]) -> tuple[str, ...]:
+    """The holes a declared file-set template still carries, in template order.
+
+    A card may name a save's files through a fact only the content carries.
+    Those names are stated as they are — the template is the answer — and the
+    hole travels to ``needs`` so a caller sees what is left to fill instead of
+    reading a literal ``<save_id>`` off a resolved-looking name.
+    """
+    return _holes([hole for name in files for token, hole in _FILE_NAME_HOLES.items() if token in name])
+
+
+def needs_with_file_set(needs: Iterable[str], files: Iterable[str]) -> tuple[str, ...]:
+    """Every hole of an answer: the directory template's, then the file names'."""
+    return _holes([*needs, *file_set_holes(files)])
+
+
 @dataclass(frozen=True, slots=True)
 class FileSet:
     """The files a save consists of — observed, declared, or unknown.
@@ -130,6 +161,12 @@ class FileSet:
     ``"declared"`` (``files`` come from a verified rule card — world knowledge
     with cited provenance, not a guess), or ``"unknown"`` (``files`` is empty;
     atlas refuses to guess). ``source`` says how the state was reached.
+
+    A declared set can itself be a template: where the card names the files
+    through the content's own id, the names keep their ``<save_id>`` hole and
+    :data:`SavePlacement.needs` lists it. Stating the shape in full is not the
+    same as claiming the resolved name — it is the directory grammar applied to
+    file names.
 
     *Observed* means a snapshot of matching files currently seen — it never
     implies the whole save. ``complete`` is the explicit completeness claim:
@@ -183,7 +220,9 @@ class SavePlacement:
     """A resolved save location with provenance and stated degradations.
 
     ``dir`` is concrete when the caller supplied the content path; otherwise it
-    is a template whose remaining holes are listed in ``needs``. ``root_kind``
+    is a template whose remaining holes are listed in ``needs`` — as are the
+    holes a declared file-set template keeps, so ``needs`` is the answer's
+    holes, not the directory's alone. ``root_kind``
     names the anchor (:data:`ROOT_SAVEFILE_DIRECTORY`,
     :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`).
     ``file_set`` is observed or unknown, never guessed. ``sources`` is the

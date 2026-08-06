@@ -27,12 +27,12 @@
     "flycast": {
       "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary/live] flycast@1dac369 libretro.cpp:790-807 and oslib.cpp:38-65 prove reachable per-game VMU paths; shared VMUs were observed, while exact per-game identities remain [O].",
+      "note": "[V-source/binary/live] flycast@1dac369 libretro.cpp:790-807 maps the option; oslib.cpp:38-67 builds the VMU path. Both placements observed live: shared vmu_save_*.bin under <system_directory>/dc, and 'All VMUs' writing <save_id>.<port>.bin into the redirected save directory (libretro.cpp:2142-2148), save_id being the disc's product number (emulator.cpp:838-841). 'VMU A1' is derived from the same path, not exercised. [O] arcade content: the same function names the files after the ROM instead (oslib.cpp:62), and in 'VMU A1' Naomi's B1/C1 VMUs keep the shared card — a content-platform split the card schema cannot express.",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
           "core_library_version": "1dac369",
-          "date": "2026-07-23"
+          "date": "2026-08-05"
         },
         "emudeck": null,
         "bare": null

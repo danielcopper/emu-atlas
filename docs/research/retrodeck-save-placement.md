@@ -405,7 +405,28 @@ values are the core's own defaults, written on first run. The behaviour is inher
 tooling treat as static and replaceable. A backup that skips `bios/` loses Dreamcast saves; a "reset BIOS" destroys
 them. This is a candidate for an atlas warning with a recommended configuration, not an upstream bug report.
 
-**[O]** The exact filename scheme of the per-game VMU files is not in the binary's strings and remains unestablished.
+**[V-live]** The per-game filename scheme, settled by a live run on RetroDECK 0.10.9b (2026-08-05, `All VMUs`, a played
+and saved four-disc title): the four connected ports produced `<game id>.<port>.bin` of 131072 bytes each — observed
+form `MK-5105950.A1.bin` … `.D1.bin` — in the **content-sorted save directory**, not in a subdirectory of the core's
+own. The name is not the ROM's. It is `settings.content.gameId`, which for console content is the product number read
+from the disc header (`core/emulator.cpp:838-841` at flycast@1dac369), with every character of `" /\:*?|<>"` replaced by
+`_`; `hostfs::getVmuPath` composes it as `<vmu_dir>/<id>.<port>.bin` (`shell/libretro/oslib.cpp:38-67`). A legacy
+`<content name>.<port>.bin` is read when it exists and the id-named file does not (`oslib.cpp:55-60`) — it did not
+engage here. The directory is whatever `RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY` returned (`libretro.cpp:2142-2148`), i.e.
+the redirected one, so the sorting stages apply before the core ever sees it.
+
+**[V-live]** The switch is a **move, not an addition**: `<system_directory>/dc/vmu_save_A1.bin` was byte-identical
+before and after the run, and `dc_nvmem.bin` — the console's own flash, which no mode moves — was written in place.
+Every port a mode does not cover keeps using the shared card, which in `VMU A1` mode means B1…D1 stay shared while A1
+alone becomes per-content (`oslib.cpp:40-41`). A per-game answer is therefore partial by construction; atlas states it
+with `complete: false`.
+
+**[O]** Arcade content through the same core. `getVmuPath` takes the id branch only for `settings.platform.isConsole()`
+with a non-empty id; otherwise the name is `<content name>.<port>.bin` (`oslib.cpp:62`), the ROM's own stem. That branch
+is reachable: `maple_cfg.cpp:246-253` connects VMUs on ports B1/C1 for Naomi games that need neither keyboard nor RFID
+reader, and RetroDECK offers Flycast for seven arcade systems next to `dreamcast`. In `VMU A1` mode those ports are not
+covered at all, so the root itself differs. The rule card has no content-platform dimension and states the console case;
+closing this needs a live Naomi run and a card model that can express the split.
 
 ## 9. Does RetroDECK overwrite user settings?
 

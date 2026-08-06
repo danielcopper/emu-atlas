@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.resources
 import json
 
 import pytest
@@ -52,7 +53,15 @@ class TestCardLookup:
         assert card.option_default == "disabled"
         assert set(card.modes) == {"disabled", "VMU A1", "All VMUs"}
         assert card.modes["disabled"].files is not None
-        assert card.modes["VMU A1"].files is None  # unverified, never guessed
+        # The per-game modes name their files through the content's own id —
+        # a template, kept as one: atlas states the shape, never the id.
+        assert card.modes["VMU A1"].files == ("<save_id>.A1.bin",)
+        assert card.modes["All VMUs"].files == (
+            "<save_id>.A1.bin",
+            "<save_id>.B1.bin",
+            "<save_id>.C1.bin",
+            "<save_id>.D1.bin",
+        )
 
 
 def _retrodeck(files, **kwargs):
@@ -130,8 +139,52 @@ class TestFlycastResolution:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.granularity is not None
         assert p.granularity.value == "per-game-file"
-        assert p.file_set.state == "unknown"
-        assert any(c.code == atlas.CAVEAT_FILENAMES_UNVERIFIED for c in p.caveats)
+        # Only port A1 goes per-content in this mode (oslib.cpp:40).
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ("<save_id>.A1.bin",)
+        assert p.needs == ("save_id",)
+        assert not any(c.code == atlas.CAVEAT_FILENAMES_UNVERIFIED for c in p.caveats)
+
+    def test_all_vmus_declares_one_file_per_connected_port(self):
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "All VMUs"\n',
+                SAVES_KEEP: "",
+                "/mnt/sd/retrodeck/saves/dreamcast/.keep": "",
+            }
+        )
+        assert p.dir == "/mnt/sd/retrodeck/saves/dreamcast"
+        assert p.granularity is not None
+        assert p.granularity.value == "per-game-files"
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == (
+            "<save_id>.A1.bin",
+            "<save_id>.B1.bin",
+            "<save_id>.C1.bin",
+            "<save_id>.D1.bin",
+        )
+        # A template names the shape, never the whole save: the console flash
+        # and every port this mode does not cover stay in system_directory.
+        assert p.file_set.complete is False
+        assert p.needs == ("save_id",)
+
+    def test_the_save_id_hole_is_never_filled_from_the_content_name(self):
+        # The id lives in the disc header, which atlas does not read — a file
+        # lying there under the ROM's name is not this save (REVIEW 13b).
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "All VMUs"\n',
+                SAVES_KEEP: "",
+                "/mnt/sd/retrodeck/saves/dreamcast/MK-5105950.A1.bin": "v",
+            }
+        )
+        assert p.file_set.state == "declared"
+        assert "MK-5105950.A1.bin" not in p.file_set.files
+        assert p.needs == ("save_id",)
 
     def test_game_opt_file_wins_over_global(self):
         # runloop.c validate_per_core_options: the game .opt is THE source.
@@ -732,6 +785,55 @@ class TestStrictLoaders:
         with pytest.raises(ValueError, match="complete"):
             load_oddities(text)
 
+    @pytest.mark.parametrize("field", ["files", "observe"])
+    def test_unknown_file_template_is_rejected(self, field):
+        # A token nobody fills would be stated as literal text in a filename —
+        # the card language is the placement's hole vocabulary, nothing else.
+        text = json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "saves": {
+                            "modes": {
+                                "always": {
+                                    "root": "savefile_directory",
+                                    "granularity": "per-game-file",
+                                    "files": ["<save_id>.bin"],
+                                    field: ["<game_id>.bin"],
+                                }
+                            }
+                        },
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="unknown template"):
+            load_oddities(text)
+
+    def test_known_file_templates_are_kept_verbatim(self):
+        text = json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "saves": {
+                            "modes": {
+                                "always": {
+                                    "root": "savefile_directory",
+                                    "granularity": "per-game-file",
+                                    "files": ["<save_id>.A1.bin", "<rom_stem>.srm"],
+                                }
+                            }
+                        },
+                    }
+                },
+            }
+        )
+        assert load_oddities(text)[0].modes["always"].files == ("<save_id>.A1.bin", "<rom_stem>.srm")
+
     def test_unknown_mode_root_is_rejected(self):
         text = json.dumps(
             {
@@ -746,6 +848,35 @@ class TestStrictLoaders:
         )
         with pytest.raises(ValueError, match="root"):
             load_oddities(text)
+
+
+class TestCardEvidence:
+    """What each mode of a card rests on — stated per mode, never flattened."""
+
+    def _raw_cards(self):
+        text = (
+            importlib.resources.files("atlas")
+            .joinpath("data", "core_oddities.json")
+            .read_text(encoding="utf-8")
+        )
+        return json.loads(text)["cores"]
+
+    def test_every_mode_carries_its_own_provenance_status(self):
+        for key, entry in self._raw_cards().items():
+            modes = set(entry["saves"]["modes"])
+            stated = set(entry["provenance"]["status"])
+            assert stated == modes, (
+                f"card {key!r}: provenance.status covers {sorted(stated)} but the card has "
+                f"modes {sorted(modes)} — every mode says what its placement rests on"
+            )
+
+    def test_the_derived_flycast_mode_is_not_stated_as_observed(self):
+        # 'All VMUs' was run on a real machine; 'VMU A1' follows from the same
+        # code path and was never exercised. One status per mode is what keeps
+        # a derivation from being laundered into an observation.
+        status = self._raw_cards()["flycast"]["provenance"]["status"]
+        assert status["All VMUs"].startswith("[V-live]")
+        assert status["VMU A1"].startswith("[D]")
 
 
 class TestVerificationMatrix:

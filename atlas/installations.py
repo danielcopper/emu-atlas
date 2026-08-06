@@ -92,6 +92,7 @@ from atlas.placement import (
     CAVEAT_UNKNOWN_OPTION_VALUE,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
+    TEMPLATE_ROM_STEM,
     UNKNOWN_FILE_SET,
     UNRESOLVED_STANDALONE,
     Caveat,
@@ -100,6 +101,8 @@ from atlas.placement import (
     SavePlacement,
     Unresolved,
     build_save_placement,
+    file_set_holes,
+    needs_with_file_set,
 )
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
@@ -1344,13 +1347,13 @@ def _card_file_set(
     """What the card says lies in its own directory — declared, or observed there.
 
     A template file that cannot be filled leaves the set honestly unknown; with
-    a hole in the directory itself there is nowhere to look, so the declaration
-    stands unobserved.
+    a hole in the directory itself there is nowhere to look, and with one in the
+    names there is nothing to look for, so the declaration stands unobserved.
     """
     declared = _card_files(mode.files, rom_stem) if mode.files is not None else None
     if declared is None:
         return UNKNOWN_FILE_SET
-    if needs:
+    if needs or file_set_holes(declared):
         return FileSet("declared", declared, f"declared by rule card '{card.key}'", complete=mode.complete)
     # Observation candidates may be wider than the declared defaults —
     # e.g. Flycast's slot-2 VMUs exist only when configured (REVIEW M2).
@@ -1422,7 +1425,7 @@ def _system_directory_placement(
     return SavePlacement(
         dir=directory,
         root_kind=ROOT_SYSTEM_DIRECTORY,
-        needs=needs,
+        needs=needs_with_file_set(needs, file_set.files),
         file_set=file_set,
         sources=tuple(card_sources),
         caveats=tuple(all_caveats),
@@ -1698,7 +1701,7 @@ def _standard_placement(
     return SavePlacement(
         dir=final_dir,
         root_kind=placement.root_kind,
-        needs=placement.needs,
+        needs=needs_with_file_set(placement.needs, file_set.files),
         file_set=file_set,
         sources=tuple(final_sources),
         caveats=tuple(all_caveats),
@@ -1991,14 +1994,16 @@ def _card_files(files: tuple[str, ...], rom_stem: str | None) -> tuple[str, ...]
     """Substitute the ``<rom_stem>`` hole in a card's declared file list.
 
     Returns ``None`` when a template file cannot be filled (no content given) —
-    the file set is then honestly unknown rather than a template guess.
+    the file set is then honestly unknown rather than a template guess. Holes
+    the resolver is not the one to fill (``<save_id>``) stay in the name and
+    reach the caller through ``needs``.
     """
     resolved: list[str] = []
     for name in files:
-        if "<rom_stem>" in name:
+        if TEMPLATE_ROM_STEM in name:
             if rom_stem is None:
                 return None
-            name = name.replace("<rom_stem>", rom_stem)
+            name = name.replace(TEMPLATE_ROM_STEM, rom_stem)
         resolved.append(name)
     return tuple(resolved)
 

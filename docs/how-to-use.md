@@ -40,8 +40,10 @@ Rules that hold for every answer:
   parse it). An answer without caveats is as good as atlas can make it; an answer with caveats is still an answer, just
   with stated limits.
 - **A hole is not an unknown.** `needs` lists holes _you_ fill: `content_dir` from the content at hand, `library_name`
-  when the core would not load, and — on the rule-card route — `system_directory` when the configs state none. An
-  unknown is something atlas refuses to state — it never guesses to keep a field non-empty.
+  when the core would not load, `save_id` when the core names the save after the content's own id, and — on the
+  rule-card route — `system_directory` when the configs state none. Holes are not confined to the directory: a declared
+  file set can be a template too. An unknown is something atlas refuses to state — it never guesses to keep a field
+  non-empty.
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
 
@@ -126,17 +128,49 @@ Pass the path the way RetroArch gets it, and atlas names the content the way Ret
 
 - `"observed"` — `files` are real basenames currently on disk. A snapshot, **not** the complete save: `complete` says
   whether a verified rule card closes the universe.
-- `"declared"` — `files` come from a source-verified rule card (e.g. Flycast's VMU set).
+- `"declared"` — `files` come from a source-verified rule card (e.g. Flycast's VMU set). A declared name may still be a
+  **template** — see below.
 - `"unknown"` — atlas refuses to guess; `files` is empty. Fall back to your own knowledge, and treat that fallback as
   yours, not as atlas's answer.
 
 ```python
 fs = placement.file_set
-if fs.state in ("observed", "declared"):
+if fs.state in ("observed", "declared") and not placement.needs:
     paths = [os.path.join(placement.dir, name) for name in fs.files]
 else:
     paths = my_own_fallback(system)   # atlas said "unknown" — your table, your risk
 ```
+
+### A file set can carry a hole
+
+`needs` is the answer's holes, not the directory's alone. Some cores name a save after the content's own platform-native
+id rather than its file name — Flycast in its `All VMUs` mode writes `<save_id>.A1.bin` … `.D1.bin` (one per connected
+port; `VMU A1` mode moves port A1 alone), where `save_id` is the disc's product number read from the ROM's header. atlas
+states that set in full, keeps the `<save_id>` token in the names, and lists `save_id` in `needs`:
+
+```python
+placement.dir        # '/…/saves/dreamcast'      — resolved, nothing left to do
+placement.needs      # ('save_id',)              — one fact still missing, and it is a file-name fact
+placement.file_set   # declared: ('<save_id>.A1.bin', '<save_id>.B1.bin', '<save_id>.C1.bin', '<save_id>.D1.bin')
+```
+
+So check `needs` before joining names onto `dir`, exactly as you already do before using `dir` itself. A template is the
+whole answer atlas can give: identifying content is not locating a save, so atlas never opens a ROM to read an id out of
+it.
+
+**Composing the two.** Fill `save_id` from whatever supplier knows the platform's id scheme — for example
+[argosy-sigil](https://github.com/rommforge/argosy-sigil), which derives platform-native ids from ROM binaries and
+deliberately leaves the emulator-side prefix and suffix to its consumer. It is _one_ supplier, not a dependency: atlas
+neither imports it nor assumes it, and it does not cover Dreamcast today, so this particular hole stays yours to fill
+(the id is the 10-byte product number in the disc header, with each of `/\:*?|<>` replaced by `_`). Where no supplier
+knows the id, an unfilled template still tells you the shape, the count and the directory — enough to recognize the
+files once they exist.
+
+**The layering trap.** An id from such a supplier describes the platform's own structure, which is not automatically a
+structure on the host. sigil's PS2 `save_id` (`BASLUS-…`) names a directory _inside_ a memory card image; whether
+anything of that is visible as a file at all is decided by the emulator's mode — which is what atlas's `granularity`
+answers (`shared-card` for LRPS2's default: one `Mcd001.ps2` for every game, no per-game path anywhere). Ask atlas
+first, then decide whether the identifier is relevant to a filesystem operation at all.
 
 ### Placement caveats worth branching on
 
@@ -314,10 +348,10 @@ if result.root_kind == atlas.ROOT_CONTENT_DIRECTORY:
     return skip("saves live next to the ROM — sync policy decision")
 
 save_dir = result.physical_dir or result.dir     # sync the real backing files behind RetroDECK's symlinks
-if result.file_set.state in ("observed", "declared"):
+if result.file_set.state in ("observed", "declared") and not result.needs:
     names = result.file_set.files
 else:
-    names = my_extension_fallback(system)        # atlas answered "unknown" — refuse or fall back, but knowingly
+    names = my_extension_fallback(system)        # unknown, or a template hole only you can fill (see needs)
 
 upload(stat_and_hash(os.path.join(save_dir, n)) for n in names)   # mtime/size/hash are yours to gather
 ```
@@ -340,7 +374,9 @@ else:
 
 For a save that does not exist locally yet, atlas can only name the files where a rule card declares them
 (`file_set.state == "declared"`); otherwise the expected filename is your call (decky derives
-`<rom_stem>.<server extension>`).
+`<rom_stem>.<server extension>`). A declared set with `save_id` in `needs` is the in-between case: the names are stated
+but one of them is yours to complete, so a download that writes `<rom_stem>.…` there would land beside the save the
+emulator reads, not on it.
 
 ### Flow 3 — "Render the BIOS page for a platform"
 

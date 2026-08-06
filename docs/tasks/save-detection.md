@@ -8,9 +8,12 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
 
 > **Done:** tasks 1 and 2 shipped as rule cards (`atlas/data/core_oddities.json` + `atlas/oddities.py`): Flycast
 > resolves to `system_directory/dc` with observed VMUs, granularity (shared vs. per-game) is read live from the
-> governing core option, and the answer names the options file to switch it. Remaining inside task 1: the per-game VMU
-> filename scheme ([O]) and cards for further system-directory cores as they are found. Task 6 is now partially covered
-> — granularity is stated wherever a rule card exists, `None` elsewhere.
+> governing core option, and the answer names the options file to switch it. The per-game VMU filename scheme is settled
+> too (live run 2026-08-05): `<save_id>.<port>.bin` in the content-sorted save directory, `save_id` being the disc's
+> product number — stated as the template it is, with `save_id` in `needs` (research doc §8). Remaining inside task 1:
+> arcade content through Flycast, which the same code path names after the ROM ([O]), and cards for further
+> system-directory cores as they are found. Task 6 is now partially covered — granularity is stated wherever a rule card
+> exists, `None` elsewhere.
 
 1. **Flycast / system-directory cores** (§8, issue #12). The resolver returns the RetroArch default directory for
    Dreamcast content with no warning, while the real saves are shared VMUs under `system_directory`
@@ -91,7 +94,8 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
     building.
 
 14. **Research follow-ups.** Paper Mario stage 2 (FlashRAM region location, §12); ParaLLEl N64 same-game comparison;
-    per-game VMU filename scheme (§8 [O]).
+    arcade content through Flycast (§8 [O]) — the per-game VMU path names arcade saves after the ROM and leaves Naomi's
+    ports on the shared card in `VMU A1` mode, which needs a live Naomi run and a card model with a content dimension.
 
 Every task lands with vectors; expectation values are adjudicated against emulator source or live observation, never
 invention.

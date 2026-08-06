@@ -157,9 +157,12 @@ findings:
   filtered on source citation). _Observed_ is a snapshot of matching files, never a completeness claim; `complete` is a
   separate assertion only a source-verified rule card can make.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
-  `library_name` when the core would not load, and — on the rule-card route — `system_directory` when the configs state
-  none. _Unknown_ means atlas cannot state the value and refuses to guess. These are distinct states and the type keeps
-  them distinct — and an empty field is never one of them: where atlas deliberately does not state a value
+  `library_name` when the core would not load, `save_id` where a core names the save after the content's own
+  platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is
+  not locating a save), and — on the rule-card route — `system_directory` when the configs state none. A hole is not
+  confined to the directory: a declared file set can be a template too, and then the file names carry the hole and
+  `needs` names it. _Unknown_ means atlas cannot state the value and refuses to guess. These are distinct states and the
+  type keeps them distinct — and an empty field is never one of them: where atlas deliberately does not state a value
   (`granularity` for a core whose file set depends on options it does not interpret), a caveat says so and names what it
   depends on, because nothing separates a blank field from nothing-to-report.
 - **The root varies.** `savefile_directory`, `system_directory` (Flycast VMUs), or the ROM's own directory

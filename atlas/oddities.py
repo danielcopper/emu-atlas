@@ -16,9 +16,12 @@ from __future__ import annotations
 
 import importlib.resources
 import json
+import re
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
+
+from atlas.placement import TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID
 
 # Packaged-data schema versions. The loaders are strict: unknown schema or
 # malformed entries raise instead of coercing — a broken build must fail
@@ -28,6 +31,12 @@ AUDIT_SCHEMA = 3
 
 _KNOWN_VERDICTS = {"card", "standard", "standard-dir", "multi-option", "suspect", "unaudited"}
 _KNOWN_MODE_ROOTS = {"savefile_directory", "system_directory", "content_directory"}
+# A declared file name is a template in the placement's own hole grammar. Only
+# these tokens exist: one the resolver fills, one the caller does. A token
+# outside the set would travel into a stated filename and be read as literal
+# text, so it fails the load instead.
+_KNOWN_FILE_TEMPLATES = (TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID)
+_TEMPLATE_TOKEN = re.compile(r"<[^<>]*>")
 
 
 def _expect_str(value: object, where: str) -> str:
@@ -54,12 +63,27 @@ def _expect_str_list(value: object, where: str) -> tuple[str, ...]:
     return tuple(value)
 
 
+def _expect_file_names(value: object, where: str) -> tuple[str, ...]:
+    """A card's file names — templates only in the vocabulary the resolver knows."""
+    names = _expect_str_list(value, where)
+    for name in names:
+        unknown = [t for t in _TEMPLATE_TOKEN.findall(name) if t not in _KNOWN_FILE_TEMPLATES]
+        if unknown:
+            raise ValueError(
+                f"{where}: file name {name!r} carries unknown template {unknown[0]!r} — "
+                f"only {list(_KNOWN_FILE_TEMPLATES)} are filled or carried as holes"
+            )
+    return names
+
+
 @dataclass(frozen=True, slots=True)
 class SaveMode:
     """One value of the governing option and the behaviour it selects.
 
     ``files`` is the declared file set for this mode, or ``None`` when the
     card marks it unverified — the resolver then refuses to state filenames.
+    A name may be a template: ``<rom_stem>`` the resolver fills from the
+    content path, ``<save_id>`` it carries through as a hole for the caller.
     ``observe`` optionally widens the *observation* candidates beyond the
     declared defaults (e.g. Flycast's slot-2 VMUs, which exist only when a
     controller port's slot 2 is configured as a VMU). ``complete`` asserts
@@ -110,9 +134,9 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     return SaveMode(
         root=root,
         subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
-        files=_expect_str_list(files, f"{where}: files") if files is not None else None,
+        files=_expect_file_names(files, f"{where}: files") if files is not None else None,
         granularity=_expect_str(mode.get("granularity"), f"{where}: granularity"),
-        observe=_expect_str_list(observe, f"{where}: observe") if observe is not None else None,
+        observe=_expect_file_names(observe, f"{where}: observe") if observe is not None else None,
         complete=complete,
     )
 

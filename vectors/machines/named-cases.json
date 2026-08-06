@@ -870,7 +870,7 @@
     },
     {
       "name": "flycast-per-game-vmu-mode",
-      "rationale": "The same core with reicast_per_content_vmus = 'VMU A1' switches to per-game VMUs rooted in the standard savefile_directory — granularity and root flip on one live-read option. The per-game filename scheme is unverified, so the file set stays honestly unknown.",
+      "rationale": "The same core with reicast_per_content_vmus = 'VMU A1' switches to per-game VMUs rooted in the standard savefile_directory — granularity and root flip on one live-read option. Only port A1 goes per-content in this mode (oslib.cpp:40), and its name is a template: the file is named after the disc's id, which atlas does not read, so 'save_id' stays a hole.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -905,12 +905,16 @@
         "save_location": {
           "dir": "/mnt/sd/retrodeck/saves/dreamcast",
           "root_kind": "savefile_directory",
-          "needs": [],
+          "needs": [
+            "save_id"
+          ],
           "fallback_dir": "/mnt/sd/retrodeck/saves",
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "<save_id>.A1.bin"
+            ],
             "complete": false
           },
           "granularity": {
@@ -931,13 +935,6 @@
           },
           "caveats": [
             {
-              "code": "filenames-unverified",
-              "data": {
-                "card": "flycast",
-                "mode": "VMU A1"
-              }
-            },
-            {
               "code": "sorted-dir-missing",
               "data": {
                 "dir": "/mnt/sd/retrodeck/saves/dreamcast",
@@ -945,6 +942,79 @@
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "flycast-per-content-vmus-are-named-after-the-disc-id",
+      "rationale": "reicast_per_content_vmus = 'All VMUs' writes one VMU per connected port into the save directory the frontend hands the core — the content-sorted one, no subdirectory of the core's own — named after the disc's product id (flycast@1dac369 oslib.cpp:38-67, libretro.cpp:2142-2148; live-verified on RetroDECK 0.10.9b). The id is written in the disc header, which atlas does not read: the file set is stated as the template it is and 'save_id' joins needs. A per-game VMU already lying in that directory is deliberately NOT attributed to this content — a content-sorted directory holds every game of one ROM directory, so reading a name back as this save would be a guess.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"All VMUs\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Multi Disc Game (Europe).m3u/Multi Disc Game (Europe).m3u": "disc1.cue\ndisc2.cue\n",
+          "/mnt/sd/retrodeck/saves/Multi Disc Game (Europe).m3u/MK-5105950.A1.bin": "vmu",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Multi Disc Game (Europe).m3u/Multi Disc Game (Europe).m3u",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/Multi Disc Game (Europe).m3u",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>.A1.bin",
+              "<save_id>.B1.bin",
+              "<save_id>.C1.bin",
+              "<save_id>.D1.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "All VMUs",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "shared-card"
+              ],
+              [
+                "VMU A1",
+                "per-game-file"
+              ]
+            ]
+          },
+          "caveats": []
         }
       }
     },
