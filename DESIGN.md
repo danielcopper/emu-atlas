@@ -106,9 +106,10 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   only RetroDECK answers from a catalogue, and the others say why in a caveat rather than leaving the caller to
   `isinstance`-narrow and guess. The reasons are three distinct codes because they are three distinct claims: a bare
   RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement), an EmuDeck arrangement
-  has one whose location atlas has not established (`emulator-catalogue-unestablished`, a statement about atlas — never
-  to be read as an absence), and a catalogue that exists and could not be read says nothing at all
-  (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware route already states.
+  may have one whose location atlas has not established (`emulator-catalogue-unestablished`, a statement about atlas —
+  never to be read as an absence), and a catalogue atlas could not read — missing, unreadable, or empty — says nothing
+  at all (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware route already
+  states.
 
 ## The machine seam
 

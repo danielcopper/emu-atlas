@@ -123,9 +123,9 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. Entries carry
   their core, so placement answers on that path need no core argument; a standalone entry answers with a typed
   `Unresolved` outcome instead of raising. Where there are no entries the answer says which kind of none: a bare
-  RetroArch ships no catalogue at all, an EmuDeck arrangement has one atlas has not established the location of, and a
-  catalogue that could not be read is not an empty one — three codes, because a client must not read the last two as
-  "nothing here".
+  RetroArch ships no catalogue at all, an EmuDeck arrangement may have one atlas has not established the location of,
+  and a catalogue atlas could not read — missing, unreadable, or empty — is not an empty one; three codes, because a
+  client must not read the last two as "nothing here".
 - The audit trail: `docs/research/coverage-matrix.md` (generated, with full source identity) tracks every referenced
   emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
   verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer

@@ -259,22 +259,22 @@ An empty `entries` is four different facts, and the caveat is how you tell them 
 was read and declares no emulator for that system — an answer about the machine, and the only one of the four you may
 act on as "nothing here":
 
-| caveat code                        | what it means                                            | what to do                               |
-| ---------------------------------- | -------------------------------------------------------- | ---------------------------------------- |
-| _(none)_                           | read, and the frontend knows no emulator for this system | trust it                                 |
-| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all      | name the core: `save_location(core_so=)` |
-| `emulator-catalogue-unestablished` | it may have one; atlas has not established where         | same — but do not report "no emulators"  |
-| `emulator-catalogue-unreadable`    | it has one, and it could not be read                     | surface it; the machine may be broken    |
+| caveat code                        | what it means                                                         | what to do                               |
+| ---------------------------------- | --------------------------------------------------------------------- | ---------------------------------------- |
+| _(none)_                           | read, and the frontend knows no emulator for this system              | trust it                                 |
+| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                   | name the core: `save_location(core_so=)` |
+| `emulator-catalogue-unestablished` | it may have one; atlas has not established where                      | same — but do not report "no emulators"  |
+| `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty | surface it; the machine may be broken    |
 
 The middle two both mean "ask the user or use your own mapping", but only the first is a statement about the machine.
 `unestablished` is a statement about atlas, and a client that renders it as an absence is telling its user something
 nobody checked.
 
-The per-game step matches on the path, so pass the ROM the way it lies under the system's ROM directory
-(`rd.roms_dir()` + system): gamelist entries are relative to that directory and are resolved against it, and a folder
-entry covers the files directly inside it. A path somewhere else — a copy, a staging directory — matches no game, and
-the answer is then the per-system one. Two files of the same name at different depths are two different games, and only
-the one the gamelist names carries the override.
+The per-game step is ES-DE's, so it happens on the RetroDECK handle only, and it matches on the path: pass the ROM the
+way it lies under the system's ROM directory (`roms_dir()` on that handle, plus the system name). Gamelist entries are
+relative to that directory and are resolved against it, and a folder entry covers the files directly inside it. A path
+somewhere else — a copy, a staging directory — matches no game, and the answer is then the per-system one. Two files of
+the same name at different depths are two different games, and only the one the gamelist names carries the override.
 
 That comparison is **lexical** — `.`, `..` and repeated slashes are folded, symlinks are not followed. RetroDECK's tree
 uses symlinks liberally, so a ROM spelled through one (or through any other route to the same file) will not match its
@@ -401,7 +401,7 @@ decky-romm-sync's flows.
 
 ```python
 installations = atlas.detect(home=user_home)
-inst = pick_installation(installations)          # your policy — the catalogue step below needs a retrodeck handle
+inst = pick_installation(installations)          # your policy — every handle answers the catalogue step below
 if not inst.health().ok:
     return surface_health(inst.health())         # don't sync against a broken installation
 
