@@ -236,6 +236,14 @@ answer.unclaimed                   # files in the firmware tree that no installe
 tooling residue like `.directory` stays out of the answer by design (a core that _declares_ a dotted path still gets its
 requirement: declarations are resolved, never globbed).
 
+A core's requirement list is what its `.info`'s own `firmware_count` enumerates — RetroArch reads `firmware0_…` up to
+`firmware<count-1>_…` and nothing else, so a `.info` without a readable count declares no firmware at all however many
+paths it lists, and a path past the count is never asked for. Where the file and that enumeration disagree the core
+carries a `firmware-declaration-unread` caveat naming the keys nobody reads. A declared path is composed with the
+firmware root the way RetroArch composes it, which has no special case for an absolute one:
+`firmware0_path =
+"/etc/passwd"` lands at `<root>/etc/passwd`. Read `req.path`, never re-join `req.declared` yourself.
+
 The two axes never merge: `need` is what the emulator asks for, `checked` is what the machine says. `"unchecked"` means
 _we did not look_ (you passed `verify=False`); `"unknown"` means _we looked and cannot tell_ (no packaged identity for
 this file). Render `requirements_met` as your traffic light: `True` only when everything required is there and nothing

@@ -26,11 +26,13 @@ from atlas.firmware import (
     CAVEAT_CORE_INFO_UNREADABLE,
     CAVEAT_CORE_NOT_INSTALLED,
     CAVEAT_CORE_WITHOUT_SYSTEMNAME,
+    CAVEAT_FIRMWARE_DECLARATION_UNREAD,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
     CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
     CAVEAT_FIRMWARE_PATH_OBSTRUCTED,
     CAVEAT_FIRMWARE_PATH_UNRESOLVABLE,
+    CAVEAT_FIRMWARE_ROOT_UNUSABLE,
     CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_NO_FIRMWARE_DECLARATION,
     CAVEAT_STANDALONE_EMULATOR,
@@ -44,6 +46,8 @@ from atlas.firmware import (
     NEED_REQUIRED,
     Catalogue,
     CatalogueEntry,
+    CoreDeclarations,
+    CoreFirmware,
     Destination,
     FirmwareContext,
     FirmwareIdentity,
@@ -325,6 +329,79 @@ class TestReadDeclarations:
         assert needs == {"scph5501.bin": "required", "psxonpsp660.bin": "optional"}
 
 
+class TestTheCountIsTheEnumeration:
+    """``firmware_count`` bounds what a core asks for — it is not a cross-check.
+
+    ``core_info_resolve_firmware`` returns before reading anything when the
+    count is missing and otherwise fills slots ``0 .. count-1`` only
+    (core_info.c:1572-1629), so a path outside that is a file RetroArch never
+    asks for. What atlas adds is that it says so.
+    """
+
+    STEM = "counted_libretro"
+    HEAD = 'display_name = "Counted"\nsystemname = "Nintendo - Game Boy"\n'
+
+    def _machine_for(self, info: str) -> FixtureMachine:
+        return _machine(
+            {
+                f"{INFO_DIR}/{self.STEM}.info": self.HEAD + info,
+                f"{INFO_DIR}/{self.STEM}.so": {"status": "invalid-text"},
+            }
+        )
+
+    def _core(self, info: str) -> CoreDeclarations:
+        cores = read_core_declarations(self._machine_for(info), INFO_DIR, core_dir=INFO_DIR)
+        return next(c for c in cores if c.stem == self.STEM)
+
+    def _answered(self, info: str) -> CoreFirmware:
+        machine = self._machine_for(info)
+        answer = firmware_for_core(machine, _context(machine), core_so=f"{self.STEM}.so")
+        return answer.cores[0]
+
+    def test_without_a_count_the_core_asks_for_nothing(self):
+        core = self._core('firmware0_path = "a.bin"\nfirmware1_path = "b.bin"\n')
+        assert core.firmware == ()
+        assert core.unread == ("firmware0_path", "firmware1_path")
+
+    def test_a_declaration_past_the_count_is_not_a_requirement(self):
+        core = self._core("firmware_count = 1\n" + 'firmware0_path = "a.bin"\nfirmware1_path = "b.bin"\n')
+        assert [d.path for d in core.firmware] == ["a.bin"]
+        assert core.unread == ("firmware1_path",)
+
+    def test_a_slot_the_count_covers_but_the_file_skips_declares_nothing(self):
+        core = self._core('firmware_count = 2\nfirmware0_path = "a.bin"\n')
+        assert [d.path for d in core.firmware] == ["a.bin"]
+        assert core.unread == ()
+
+    def test_a_repeated_declaration_is_read_as_the_first_one(self):
+        core = self._core('firmware_count = 2\nfirmware0_path = "exec.bin"\nfirmware0_path = "grom.bin"\n')
+        assert [d.path for d in core.firmware] == ["exec.bin"]
+
+    def test_an_opt_outside_the_boolean_vocabulary_is_required(self):
+        core = self._core('firmware_count = 1\nfirmware0_path = "a.bin"\nfirmware0_opt = "TRUE"\n')
+        assert [d.need for d in core.firmware] == ["required"]
+
+    def test_the_answer_states_what_the_enumeration_left_out(self):
+        core = self._answered("firmware_count = 1\n" + 'firmware0_path = "a.bin"\nfirmware1_path = "b.bin"\n')
+        assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
+        assert core.caveats[0].data == {
+            "core_so": f"{self.STEM}.so",
+            "declared": "firmware1_path",
+            "firmware_count": "1",
+        }
+
+    def test_a_core_whose_whole_list_is_unread_is_not_silently_satisfied(self):
+        core = self._answered('firmware0_path = "a.bin"\n')
+        assert core.requirements == ()
+        assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
+        assert core.caveats[0].data["firmware_count"] == ""
+
+    def test_a_core_that_declares_nothing_states_nothing(self):
+        core = self._answered("firmware_count = 0\n")
+        assert core.requirements == ()
+        assert core.caveats == ()
+
+
 class TestPerCoreAnswer:
     """Criterion 1: does this core need firmware, and where does each file go?"""
 
@@ -557,7 +634,7 @@ class TestWhatTheMachineWouldNotSay:
         cores = {c.core_so: c for c in firmware_inventory(machine, _context(machine)).cores}
         assert cores["flycast_libretro.so"].declaration == DECLARATION_UNREADABLE
 
-    @pytest.mark.parametrize("declared", ["/etc/shadow", "../../etc/shadow", "dc/../../etc/shadow"])
+    @pytest.mark.parametrize("declared", ["../../etc/shadow", "dc/../../etc/shadow"])
     def test_a_declaration_never_reaches_outside_the_firmware_root(self, declared: str):
         info = f'systemname = "Escape"\nfirmware_count = 1\nfirmware0_path = "{declared}"\n'
         machine = _machine(
@@ -593,21 +670,121 @@ class TestWhatTheMachineWouldNotSay:
         m = _machine()
         assert destination_under(m, "/bios", "dc/dc_boot.bin").path == "/bios/dc/dc_boot.bin"
         assert destination_under(m, "/bios", "./scph5501.bin").path == "/bios/scph5501.bin"
-        for declared in ("/etc/shadow", "../etc/shadow", "dc/../../etc/shadow", "../bios-backup/x.bin"):
+        for declared in ("../etc/shadow", "dc/../../etc/shadow", "../bios-backup/x.bin"):
             outcome = destination_under(m, "/bios", declared)
             assert outcome.path is None, declared
             assert outcome.refusal == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT, declared
 
+    @pytest.mark.parametrize(
+        "declared",
+        [
+            "/etc/shadow",
+            "//etc/shadow",
+            "///etc/shadow",
+            "/./etc/shadow",
+            "/etc//shadow",
+            "/etc/./shadow",
+            "/../etc/shadow",
+            "//../etc/shadow",
+            "/etc/../../etc/shadow",
+            "/bios/../etc/shadow",
+            "/bios/../../etc/shadow",
+            "/../../../../../../etc/shadow",
+            "/./../etc/shadow",
+            "/proc/self/environ",
+            "/",
+            "//",
+            "/etc/",
+            "/..",
+            "/etc/..",
+            "C:\\Windows\\x.bin",
+            "C:/Windows/x.bin",
+            "\\etc\\shadow",
+            "/ /etc/shadow",
+            "/etc/shadow ",
+        ],
+    )
+    def test_an_absolute_declaration_never_reaches_outside_the_root(self, declared: str):
+        """An absolute declaration is no longer refused — it is *composed* under the root.
+
+        This is the property the old refusal was there to guard, and it has to
+        survive the change under its own name: whatever the spelling, either
+        the destination lies inside the firmware root or there is none at all.
+        Every read atlas does afterwards — presence, size, digest, the scan —
+        is derived from that path, so nothing here may resolve outside it.
+        """
+        outcome = destination_under(_machine(), "/bios", declared)
+        if outcome.path is None:
+            assert outcome.refusal in (
+                CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
+                CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
+            ), declared
+        else:
+            assert outcome.path.startswith("/bios/"), declared
+
+    def test_destination_under_composes_an_absolute_declaration_inside_the_root(self):
+        # fill_pathname_join concatenates with one separator and has no case for
+        # an absolute path (file_path.c:983-993), so RetroArch looks for this
+        # file under the system directory and atlas answers where it looks.
+        m = _machine()
+        assert destination_under(m, "/bios", "/etc/shadow").path == "/bios/etc/shadow"
+        assert destination_under(m, "/bios", "//etc/shadow").path == "/bios/etc/shadow"
+        assert destination_under(m, "/bios/", "/dc/dc_boot.bin").path == "/bios/dc/dc_boot.bin"
+        # Composed first, so a climb that reads like it leaves the root only
+        # cancels the component the composition put in front of it.
+        assert destination_under(m, "/bios", "/bios/../etc/shadow").path == "/bios/etc/shadow"
+
+    def test_an_absolute_declaration_is_answered_where_retroarch_looks(self):
+        info = 'systemname = "Escape"\nfirmware_count = 1\nfirmware0_path = "/etc/shadow"\n'
+        machine = _machine(
+            {
+                f"{INFO_DIR}/escape_libretro.info": info,
+                f"{INFO_DIR}/escape_libretro.so": {"status": "invalid-text"},
+                "/etc/shadow": "root:!:0:0:::",
+            }
+        )
+        answer = firmware_for_core(machine, _context(machine), core_so="escape_libretro.so", verify=True)
+        core = answer.cores[0]
+        # The answer never reaches outside the root: the destination is under
+        # it, so the real /etc/shadow — which exists on this fixture machine —
+        # is neither read nor reported, and the file the core will not find is
+        # stated as missing where RetroArch will look for it.
+        assert [r.path for r in core.requirements] == [f"{BIOS_DIR}/etc/shadow"]
+        assert core.requirements[0].path.startswith(f"{BIOS_DIR}/")
+        assert core.requirements[0].found == "missing"
+        assert core.refused == ()
+        assert core.caveats == ()
+
+    @pytest.mark.parametrize("declared", ["dc/dc_boot.bin", "/etc/shadow"])
+    @pytest.mark.parametrize("root", ["", "bios", "./bios", "~/bios"])
+    def test_destination_under_refuses_a_root_that_is_not_an_absolute_path(
+        self, root: str, declared: str
+    ):
+        """A root that is not one cannot bound anything, so it yields no destination.
+
+        The resolver builds every path from ``/``, so an empty root resolves to
+        ``/`` and the containment check then passes on ``/etc/shadow`` — a
+        guard that accepts everything. A cfg reaches this with a relative
+        ``system_directory`` (vector: firmware-a-relative-system-directory-…),
+        which survives ``expand_home`` and the sandbox translation as written;
+        the empty spelling reads as unset instead, and only this public entry
+        point can be handed it directly.
+        """
+        outcome = destination_under(_machine(), root, declared)
+        assert outcome.path is None, (root, declared)
+        assert outcome.refusal == CAVEAT_FIRMWARE_ROOT_UNUSABLE, (root, declared)
+
     def test_destination_under_refuses_a_declaration_that_names_no_file(self):
         # Each of these resolves to a perfectly legal directory — "dc/.." to the
-        # firmware root itself — so nothing here is caught by the root bound.
+        # firmware root itself, "dc/" to the subdirectory — so nothing here is
+        # caught by the root bound.
         m = _machine()
-        for declared in (".", "dc/..", "dc/.", ".."):
+        for declared in (".", "dc/..", "dc/.", "..", "dc/", "/"):
             outcome = destination_under(m, "/bios", declared)
             assert outcome.path is None, declared
             assert outcome.refusal == CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE, declared
 
-    @pytest.mark.parametrize("declared", [".", "dc/.."])
+    @pytest.mark.parametrize("declared", [".", "dc/..", "dc/"])
     def test_a_declaration_that_names_no_file_is_refused_not_answered(self, declared: str):
         """A directory step is not a firmware file, however well it resolves.
 

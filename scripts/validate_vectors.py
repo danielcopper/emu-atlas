@@ -64,6 +64,7 @@ KNOWN_REFUSAL_REASONS = {
     "firmware-path-escapes-root",
     "firmware-path-unresolvable",
     "firmware-path-names-no-file",
+    "firmware-root-unusable",
 }
 KNOWN_PATH_KINDS = {"file", "directory", "missing", "inaccessible"}
 FIRMWARE_REQUIREMENT_FIELDS = {
@@ -150,6 +151,8 @@ KNOWN_CAVEAT_CODES = {
     "firmware-path-escapes-root",
     "firmware-path-unresolvable",
     "firmware-path-names-no-file",
+    "firmware-root-unusable",
+    "firmware-declaration-unread",
     "firmware-content-contradictory",
 }
 # The codes that may stand in for "nothing could be read here". Each says a
@@ -475,8 +478,11 @@ def _validate_requirement_path(name: str, entry: Any, root: str) -> None:
         fail(f"{name}: a requirement's path must be normalized — no '..' segment may survive into an answer")
     if os.path.basename(entry["declared"]) != entry["file_name"]:
         fail(f"{name}: a requirement's file_name must be the name the core spelled at the end of 'declared'")
-    if os.path.isabs(entry["declared"]):
-        fail(f"{name}: a declared firmware path is relative to the root; an absolute one is never answered")
+    # 'declared' is not required to be relative. RetroArch composes it with the
+    # system directory whatever it looks like (fill_pathname_join,
+    # file_path.c:983-993), so an absolute declaration lands under the root like
+    # any other one. The containment rule is the path check above, not the
+    # spelling of 'declared'.
 
 
 def _validate_requirement_presence(name: str, entry: Any) -> None:

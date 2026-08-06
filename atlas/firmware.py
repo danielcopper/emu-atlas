@@ -65,7 +65,7 @@ from dataclasses import dataclass
 from glob import escape as _glob_escape
 from typing import Any, Literal, Mapping
 
-from atlas.core_info import parse_core_info
+from atlas.core_info import FirmwareSlot, enumerate_firmware, parse_core_info
 from atlas.esde import KIND_LIBRETRO
 from atlas.machine import (
     DIGEST_MD5,
@@ -81,6 +81,7 @@ from atlas.machine import (
 )
 from atlas.oddities import SaveMode, load_oddities
 from atlas.placement import ROOT_SYSTEM_DIRECTORY, Caveat
+from atlas.retroarch_cfg import cfg_uint
 
 FirmwareNeed = Literal["required", "optional"]
 
@@ -119,6 +120,11 @@ CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
 CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT = "firmware-path-escapes-root"
 CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
 CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE = "firmware-path-names-no-file"
+# Distinct from CAVEAT_FIRMWARE_ROOT_MISSING, which says the root is not there:
+# this one says the configured value cannot name a place at all, so no
+# declaration can be resolved against it however well the file exists.
+CAVEAT_FIRMWARE_ROOT_UNUSABLE = "firmware-root-unusable"
+CAVEAT_FIRMWARE_DECLARATION_UNREAD = "firmware-declaration-unread"
 CAVEAT_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
@@ -540,10 +546,14 @@ def system_for(file_name: str, systemname: str) -> str:
 class FirmwareDeclaration:
     """One firmware path, as one installed core's ``.info`` file declares it.
 
-    ``path`` is verbatim from ``firmwareN_path`` — relative to the emulator's
-    system directory and possibly carrying subdirectories (``dc/dc_boot.bin``).
-    ``need`` is ``firmwareN_opt`` inverted: libretro treats a missing ``_opt``
-    as *not optional*, so an absent flag means required.
+    ``path`` is verbatim from ``firmwareN_path`` — by convention relative to the
+    emulator's system directory and possibly carrying subdirectories
+    (``dc/dc_boot.bin``); an absolute one is composed with that directory just
+    the same (:func:`_join_under`).
+    ``need`` is ``firmwareN_opt`` inverted: RetroArch only ever writes that
+    flag when it reads as one of its four booleans, over a slot that starts out
+    ``false``, so an absent *and* an unreadable flag both mean required
+    (:func:`atlas.core_info.enumerate_firmware`).
     """
 
     path: str
@@ -575,6 +585,11 @@ class CoreDeclarations:
     ``.so`` is on disk but whose ``.info`` is missing, unreadable, or not UTF-8
     is still *here* — atlas simply does not know what it wants, which is a state
     of its own and never a silent deletion from the inventory.
+
+    ``firmware_count`` is that field as the ``.info`` spells it and ``unread``
+    the ``firmwareN_path`` keys its enumeration left out — together the reason
+    ``firmware`` can be shorter than the file looks
+    (:func:`atlas.core_info.enumerate_firmware`).
     """
 
     core_so: str
@@ -584,6 +599,8 @@ class CoreDeclarations:
     firmware: tuple[FirmwareDeclaration, ...]
     database: tuple[str, ...] = ()
     info_status: str = READ_OK
+    firmware_count: str = ""
+    unread: tuple[str, ...] = ()
 
     @property
     def serves_several_systems(self) -> bool:
@@ -618,35 +635,48 @@ class CoreDeclarations:
         return False
 
 
-def _declarations_in(text: str) -> tuple[str, tuple[str, ...], tuple[FirmwareDeclaration, ...]]:
-    """Parse one ``.info`` file into ``systemname``, ``database`` and firmware."""
+@dataclass(frozen=True, slots=True)
+class _Info:
+    """One ``.info`` as far as firmware is concerned — the parse, before the machine."""
+
+    systemname: str
+    database: tuple[str, ...]
+    firmware: tuple[FirmwareDeclaration, ...]
+    firmware_count: str
+    unread: tuple[str, ...]
+
+
+# What a core whose ``.info`` could not be read declares: nothing, and not
+# because it wants nothing — ``info_status`` carries that difference.
+_UNREADABLE_INFO = _Info("", (), (), "", ())
+
+
+def _declaration_of(slot: FirmwareSlot, systemname: str) -> FirmwareDeclaration:
+    """One enumerated slot as atlas files it — by the file its path names."""
+    file_name = os.path.basename(slot.path)
+    system, source = system_decision(file_name, systemname)
+    return FirmwareDeclaration(
+        path=slot.path,
+        file_name=file_name,
+        description=slot.description,
+        need=NEED_OPTIONAL if slot.optional else NEED_REQUIRED,
+        system=system,
+        system_source=source,
+    )
+
+
+def _declarations_in(text: str) -> _Info:
+    """Read one ``.info``: its ``systemname``, its ``database``, and its firmware."""
     fields = parse_core_info(text)
     systemname = fields.get("systemname", "")
-    database = tuple(entry for entry in fields.get("database", "").split("|") if entry)
-    declarations: list[FirmwareDeclaration] = []
-    for key, path in fields.items():
-        if not key.startswith("firmware") or not key.endswith("_path") or not path:
-            continue
-        index = key[len("firmware") : -len("_path")]
-        if not index.isdigit():
-            continue
-        file_name = os.path.basename(path)
-        if not file_name:
-            continue
-        # A missing _opt means required (libretro's own reading).
-        optional = fields.get(f"firmware{index}_opt", "false").strip().lower() == "true"
-        system, source = system_decision(file_name, systemname)
-        declarations.append(
-            FirmwareDeclaration(
-                path=path,
-                file_name=file_name,
-                description=fields.get(f"firmware{index}_desc", ""),
-                need=NEED_OPTIONAL if optional else NEED_REQUIRED,
-                system=system,
-                system_source=source,
-            )
-        )
-    return systemname, database, tuple(declarations)
+    enumeration = enumerate_firmware(fields)
+    return _Info(
+        systemname=systemname,
+        database=tuple(entry for entry in fields.get("database", "").split("|") if entry),
+        firmware=tuple(_declaration_of(slot, systemname) for slot in enumeration.slots),
+        firmware_count=enumeration.count,
+        unread=enumeration.unread,
+    )
 
 
 def read_core_declarations(
@@ -686,18 +716,18 @@ def read_core_declarations(
         if stem in TEMPLATE_INFO_STEMS:
             continue
         result = machine.read_text(os.path.join(info_dir, f"{stem}.info"))
-        systemname, database, declarations = ("", (), ())
-        if result.text is not None:
-            systemname, database, declarations = _declarations_in(result.text)
+        info = _UNREADABLE_INFO if result.text is None else _declarations_in(result.text)
         cores.append(
             CoreDeclarations(
                 core_so=f"{stem}.so",
                 stem=stem,
-                systemname=systemname,
-                system=system_for("", systemname),
-                firmware=declarations,
-                database=database,
+                systemname=info.systemname,
+                system=system_for("", info.systemname),
+                firmware=info.firmware,
+                database=info.database,
                 info_status=result.status,
+                firmware_count=info.firmware_count,
+                unread=info.unread,
             )
         )
     return tuple(sorted(cores, key=lambda c: c.core_so))
@@ -724,10 +754,14 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
 
     A core whose declarations are all override-assigned states nothing — there
     is nothing uncertain to state. Neither does a core that declares no
-    firmware.
+    firmware, nor one whose only derived declaration names no file at all
+    (``dc/``): that is refused before it is a requirement, and naming the empty
+    string here would put a gap in the middle of a list of files.
     """
     caveats: list[Caveat] = []
-    derived = tuple(d.file_name for d in core.firmware if d.system_source != SOURCE_OVERRIDE)
+    derived = tuple(
+        d.file_name for d in core.firmware if d.system_source != SOURCE_OVERRIDE and d.file_name
+    )
     if derived:
         files = ", ".join(sorted(set(derived)))
         if not core.systemname:
@@ -1237,10 +1271,13 @@ class Destination:
     """Where a declared path actually lands — or why atlas would not follow it.
 
     Exactly one of ``path`` and ``refusal`` is set. ``refusal`` is a caveat
-    code, and there are three of them on purpose: "this leaves the firmware
-    root", "this could not be resolved at all" and "this names no file" are
-    different facts, and a consumer branching on a code it can trust must not
-    be handed the wrong one.
+    code, and there are four of them on purpose: "this leaves the firmware
+    root", "this could not be resolved at all", "this names no file" and
+    "there is no root to resolve against" are different facts, and a consumer
+    branching on a code it can trust must not be handed the wrong one. The
+    last one is also of a different *scope*: the first three are about the
+    declaration in hand, while an unusable root refuses every declaration of
+    every core alike.
     """
 
     path: str | None = None
@@ -1254,14 +1291,32 @@ class Destination:
             )
 
 
+def _join_under(root: str, declared: str) -> str:
+    """``fill_pathname_join`` — the composition RetroArch performs.
+
+    Directory, exactly one separator, then the declared path **verbatim**
+    (``file_path.c:983-993`` with ``fill_pathname_slash``, ``:395-410``). There
+    is no special case for an absolute declaration, which is the whole point:
+    ``/etc/passwd`` composes to ``<root>//etc/passwd`` and names a file inside
+    the system directory, not the one it reads like. That composed name is what
+    ``path_is_valid`` is asked about (``core_info.c:2381-2383``) and what the
+    core is handed, so it is what atlas answers.
+    """
+    if not root:
+        return declared
+    return f"{root}{declared}" if root.endswith("/") else f"{root}/{declared}"
+
+
 def destination_under(machine: Machine, root: str, declared: str) -> Destination:
     """Where a declared path lands under *root* — resolved, in the kernel's order.
 
-    ``firmwareN_path`` is a relative path by contract, but it is read from a
-    config file a user (or anything writing that file) can edit, and every read
+    ``firmwareN_path`` is a relative path by contract, and it is read from a
+    config file a user (or anything writing that file) can edit, so every read
     atlas then does — presence, size, digest, and the directories the unclaimed
-    scan walks — is derived from it. An absolute path discards the root, so it
-    is refused outright.
+    scan walks — is bounded by the root. An absolute declaration is not the way
+    out of that bound it looks like: RetroArch composes it with the system
+    directory like any other (:func:`_join_under`), and so does atlas. What
+    still leaves the root is a climb (``../``), and that is refused.
 
     Everything else is decided on **resolved** paths, and nothing is normalized
     first. Collapsing ``..`` lexically before resolving would eat the component
@@ -1276,18 +1331,34 @@ def destination_under(machine: Machine, root: str, declared: str) -> Destination
     file then look like one place, which is what keeps a placing client from
     writing two copies: LRPS2's ``pcsx2/bios`` *is* the firmware root here.
 
-    A declaration whose last component is ``.`` or ``..`` is refused before any
-    of that: those name a directory step, not a file. They resolve to a
-    perfectly legal directory — for ``sub/..`` the firmware root itself — and
-    answering that as a destination would state a requirement for a file the
-    core never named, on a path nothing can ever be placed at.
+    A declaration whose last component is ``.``, ``..`` or empty is refused
+    before any of that: those name a directory step, not a file. They resolve
+    to a perfectly legal directory — for ``sub/..`` the firmware root itself,
+    for ``dc/`` the subdirectory — and answering that as a destination would
+    state a requirement for a file the core never named, on a path nothing can
+    ever be placed at.
+
+    A *root* that is not an absolute path is refused first of all, because it
+    is not a bound: the resolver builds every path from ``/``, so a relative
+    root resolves to one that contains everything below it and the containment
+    check then passes on anything, including a declaration that names a file
+    nowhere near the firmware tree.
+
+    A cfg reaches this: ``system_directory = "system"`` is not blank and not
+    ``default``, so it survives ``expand_home`` as written, and the sandbox
+    translation only rewrites absolute spellings — the relative value arrives
+    here unchanged. RetroArch resolves such a root against the working
+    directory of the running process, which is not a fact on disk, so atlas
+    has no destination to state and says so instead of promoting the value to
+    an absolute path it invented. That the root itself is unusable is stated
+    separately, by ``firmware-root-missing``.
     """
-    if os.path.isabs(declared):
-        return Destination(refusal=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT)
-    if os.path.basename(declared) in (".", ".."):
+    if not os.path.isabs(root):
+        return Destination(refusal=CAVEAT_FIRMWARE_ROOT_UNUSABLE)
+    if os.path.basename(declared) in ("", ".", ".."):
         return Destination(refusal=CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE)
     resolved_root = resolve_links(machine, root)
-    resolved = resolve_links(machine, os.path.join(root, declared))
+    resolved = resolve_links(machine, _join_under(root, declared))
     if resolved_root is None or resolved is None:
         return Destination(refusal=CAVEAT_FIRMWARE_PATH_UNRESOLVABLE)
     if _stays_under(resolved_root, resolved):
@@ -1300,8 +1371,41 @@ def _why_refused(refusal: str, root: str) -> str:
     if refusal == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT:
         return f"does not stay under the firmware root {root} once symlinks are resolved"
     if refusal == CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE:
-        return "ends in a directory step ('.' or '..') and so names no file at all"
+        return "ends in a directory step ('.', '..', or nothing at all) and so names no file"
     return "cannot be resolved at all — a symlink loop, or a chain longer than the kernel follows"
+
+
+def _refusal_caveat(core: CoreDeclarations, declaration: FirmwareDeclaration, refusal: str, root: str) -> Caveat:
+    """The caveat behind one refused declaration — with the right subject.
+
+    Three of the four refusals are about the declaration, so the core and the
+    path it spelled lead the sentence. An unusable root is not: it holds for
+    every declaration of every core alike, and saying "this core declares X,
+    which cannot be resolved" would blame a file that is perfectly well
+    formed. The data is the same either way — a consumer branches on the code.
+    """
+    if refusal == CAVEAT_FIRMWARE_ROOT_UNUSABLE:
+        message = (
+            f"the firmware root {root!r} is not an absolute path, so nothing resolves against it and no "
+            f"destination exists to answer — {core.core_so}'s {declaration.need} declaration "
+            f"{declaration.path!r} is refused for that reason, not for anything about the file"
+        )
+    else:
+        message = (
+            f"{core.core_so} declares {declaration.path!r}, which {_why_refused(refusal, root)} — atlas "
+            f"will not read or place a file it cannot vouch for, so this {declaration.need} file is "
+            "refused rather than answered"
+        )
+    return Caveat(
+        refusal,
+        message,
+        {
+            "core_so": core.core_so,
+            "declared": declaration.path,
+            "need": declaration.need,
+            "root": root,
+        },
+    )
 
 
 def _requirements_for(
@@ -1331,21 +1435,7 @@ def _requirements_for(
             refused.append(
                 RefusedDeclaration(declared=declaration.path, need=declaration.need, reason=refusal)
             )
-            why = _why_refused(refusal, root)
-            core_caveats.append(
-                Caveat(
-                    refusal,
-                    f"{core.core_so} declares {declaration.path!r}, which {why} — atlas will not read or "
-                    f"place a file it cannot vouch for, so this {declaration.need} file is refused rather "
-                    "than answered",
-                    {
-                        "core_so": core.core_so,
-                        "declared": declaration.path,
-                        "need": declaration.need,
-                        "root": root,
-                    },
-                )
-            )
+            core_caveats.append(_refusal_caveat(core, declaration, refusal, root))
             continue
         path = destination.path
         identity = context.hashes.for_path(declaration.path)
@@ -1404,6 +1494,47 @@ def _no_declaration(subject: str, data: dict[str, str]) -> Caveat:
     )
 
 
+def _why_unread(raw_count: str) -> str:
+    """Why an enumeration left declared paths out — what its ``firmware_count`` said."""
+    bound = cfg_uint(raw_count)
+    if not raw_count:
+        return "its .info states no firmware_count, and without one it enumerates no firmware at all"
+    if bound is None:
+        return (
+            f"its firmware_count is {raw_count!r}, which RetroArch does not read as a number, "
+            "so it enumerates no firmware at all"
+        )
+    if bound == 0:
+        return "its firmware_count is 0, so it enumerates no firmware"
+    return f"its firmware_count is {bound}, so it reads firmware0_ up to firmware{bound - 1}_ and no further"
+
+
+def _unread_declaration_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
+    """State the firmware a core's ``.info`` declares outside its own enumeration.
+
+    RetroArch reads firmware through ``firmware_count`` slots and nothing else
+    (:func:`atlas.core_info.enumerate_firmware`), so a path declared without a
+    count, or past it, is a file it never asks for. atlas answers what the
+    emulator reads — and says so here, because the answer on its own looks
+    exactly like a core that simply wants less than its file lists.
+    """
+    if not core.unread:
+        return ()
+    keys = ", ".join(core.unread)
+    return (
+        Caveat(
+            CAVEAT_FIRMWARE_DECLARATION_UNREAD,
+            f"{core.core_so} declares {keys}, which RetroArch never reads: {_why_unread(core.firmware_count)} "
+            "— those files are not requirements here because the emulator will not ask for them",
+            {
+                "core_so": core.core_so,
+                "declared": keys,
+                "firmware_count": core.firmware_count,
+            },
+        ),
+    )
+
+
 def _resolve_cores(
     machine: Machine,
     context: FirmwareContext,
@@ -1429,7 +1560,11 @@ def _resolve_cores(
                 label=label,
                 declaration=DECLARATION_READ,
                 requirements=requirements,
-                caveats=(*core_caveats, *system_assignment_caveats(core)),
+                caveats=(
+                    *core_caveats,
+                    *_unread_declaration_caveats(core),
+                    *system_assignment_caveats(core),
+                ),
                 refused=refused,
             )
         )

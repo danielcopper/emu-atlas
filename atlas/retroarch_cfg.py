@@ -315,6 +315,79 @@ def cfg_bool(raw: str) -> bool | None:
     return None
 
 
+# ``strtoul``'s world: C's own whitespace, C's own digits, and the two limits
+# the caller checks the result against on a 64-bit desktop build.
+_C_WHITESPACE = " \t\n\v\f\r"
+_ULONG_MAX = 0xFFFF_FFFF_FFFF_FFFF
+_UINT_MAX = 0xFFFF_FFFF
+_NOT_A_DIGIT = 36
+
+
+def _digit_value(char: str) -> int:
+    """The value of one ASCII alphanumeric as a digit — 36 when it is not one.
+
+    ``strtoul`` reads digits in the C locale, so only ASCII counts: an
+    Arabic-Indic ``٢`` ends the run rather than being a two.
+    """
+    if "0" <= char <= "9":
+        return ord(char) - ord("0")
+    if "a" <= char <= "z":
+        return ord(char) - ord("a") + 10
+    if "A" <= char <= "Z":
+        return ord(char) - ord("A") + 10
+    return _NOT_A_DIGIT
+
+
+def _literal_base(text: str, start: int) -> tuple[int, int]:
+    """Base 0's reading of a literal: where its digits begin, and in which base.
+
+    C's own spelling rules — ``0x``/``0X`` before a hex digit is hexadecimal, a
+    leading ``0`` is octal (and is itself the first digit, so ``0`` alone reads
+    as zero), everything else decimal.
+    """
+    if text[start : start + 1] != "0":
+        return start, 10
+    if text[start + 1 : start + 2] in ("x", "X") and _digit_value(text[start + 2 : start + 3]) < 16:
+        return start + 2, 16
+    return start, 8
+
+
+def _digit_run(text: str, start: int, base: int) -> int:
+    """One past the last digit of *base* from *start* — how far the scan reads."""
+    index = start
+    while index < len(text) and _digit_value(text[index]) < base:
+        index += 1
+    return index
+
+
+def cfg_uint(raw: str) -> int | None:
+    """RetroArch's unsigned reading of a value — ``None`` when it is not one.
+
+    ``config_get_uint`` hands the value to ``strtoul(value, &end, 0)`` and
+    takes the result only when digits were found, nothing overflowed, the
+    **whole** value was consumed (``*end == '\\0'``) and it fits an ``unsigned``
+    (``config_file.c:1081-1103``). So ``2 files`` and a trailing space set
+    nothing at all, while base 0 accepts C's other spellings of the same
+    number: ``0x2`` and ``02`` are both two. Leading whitespace and a sign are
+    skipped by ``strtoul`` itself, and a quoted value is where they can survive
+    the parser (``config_file.c:222-240``).
+    """
+    start = len(raw) - len(raw.lstrip(_C_WHITESPACE))
+    negative = raw[start : start + 1] == "-"
+    if raw[start : start + 1] in ("+", "-"):
+        start += 1
+    digits_at, base = _literal_base(raw, start)
+    end = _digit_run(raw, digits_at, base)
+    if end == digits_at or end != len(raw):
+        return None
+    magnitude = int(raw[digits_at:end], base)
+    if magnitude > _ULONG_MAX:
+        return None
+    # An unsigned negation wraps rather than failing, exactly as the C does.
+    value = -magnitude % (_ULONG_MAX + 1) if negative else magnitude
+    return value if value <= _UINT_MAX else None
+
+
 _APP_DIR_PREFIX = ":"
 _UNSET_VALUE = "default"
 

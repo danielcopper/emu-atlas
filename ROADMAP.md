@@ -101,11 +101,11 @@ The four firmware entry points ship: live `.info` declarations from the installe
   data (blueMSX machine ROMs, PPSSPP assets, Dolphin `Sys`). Save artifacts are already excluded via the rule cards;
   runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save
   side.
-- **Malformed declarations are dropped silently** (own issue). `_declarations_in` skips a `firmwareN_path` that is
-  empty, whose basename is empty, or whose index is not numeric — no requirement, no refusal, no caveat, and
-  `requirements_met` stays `true`. That is the same class as the hole `refused` closed, one layer earlier.
-  `firmware_count` is present in every `.info` on the reference machine and is never read; comparing it against the
-  number of parsed declarations is the free cross-check.
+- **A repeated key states nothing.** `.info` files go through RetroArch's parser, where the first of a repeated key wins
+  and the later line sets nothing — silently, on both sides. One shipped `.info` on the reference machine does this
+  (`FreeIntvTSOverlay`, a `firmware1_path` typed as a second `firmware0_path`), so the file names a file the answer
+  never mentions. Stating it means carrying duplicates out of `parse_cfg`, which is the same plumbing a dropped line in
+  an `.info` would need.
 - **TOCTOU between resolving and reading.** The root bound is checked on resolved paths, but the read that follows is a
   second syscall against the same name, so a path swapped in between is not covered. Closing it fully needs
   `openat2(RESOLVE_BENEATH)` — a syscall the seam does not expose today — so what exists is a bound, not a sandbox.
