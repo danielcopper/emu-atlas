@@ -86,7 +86,7 @@ def test_machine_vector(vector):
         assert catalogue_contract(answer) == expected["catalogue"], rationale
 
     if "systems" in expected:
-        install = _select(installs, inp.get("systems_query", {}).get("installation"), vector["name"])
+        install = _select(installs, inp["systems_query"].get("installation"), vector["name"])
         assert systems_contract(install.systems()) == expected["systems"], rationale
 
     if "save_location" in expected:
