@@ -1252,6 +1252,13 @@ def resolve_links(machine: Machine, path: str) -> str | None:
     whole point: the kernel resolves a component and then walks up from where
     it landed, so ``link/..`` leaves the link's target directory, not the
     directory the link sits in.
+
+    One of three kernel walks in atlas, next to ``FixtureMachine._resolve``
+    (which additionally refuses to step through a non-directory, because it
+    answers for paths rather than resolving them) and
+    ``atlas.installations._resolve_symlink_chain`` (which also collects the
+    links traversed). A fidelity finding about symlinks, ``..`` or the hop
+    limit belongs in all three; the limit itself is shared, never copied.
     """
     parts = [p for p in path.split("/") if p and p != "."]
     resolved = "/"

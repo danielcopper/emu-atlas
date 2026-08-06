@@ -29,6 +29,10 @@ ODDITIES_SCHEMA = 1
 AUDIT_SCHEMA = 3
 
 _KNOWN_VERDICTS = {"card", "standard", "standard-dir", "multi-option", "suspect", "unaudited"}
+# The mode a card without a governing option selects. Named here because the
+# loader validates against the same spelling the resolver looks up — two
+# literals would let a card pass the load and select nothing.
+MODE_ALWAYS = "always"
 # The roots a mode may anchor at and the granularities it may select are the
 # placement's own vocabularies — imported, not respelled here, for the same
 # reason the file-name templates are: a card is data, and a value that only
@@ -248,6 +252,25 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     )
 
 
+def _expect_selectable_modes(where: str, *, option_key: str | None, modes: Mapping[str, SaveMode]) -> None:
+    """A card without a governing option states exactly the ``always`` mode.
+
+    Nothing selects between modes when no option governs the card, so the
+    resolver takes ``always`` and only ``always``. A card that names its one
+    mode anything else, or names several, therefore describes behaviour that
+    can never be applied: the answer comes back with no rule card behind it and
+    no caveat either, because from the resolver's side nothing went wrong. The
+    card is shipped with the code, so that is a build mistake, not a state of
+    the machine — it fails the load.
+    """
+    if option_key is not None or set(modes) == {MODE_ALWAYS}:
+        return
+    raise ValueError(
+        f"{where}: a card with no governing_option.key selects nothing, so it must declare exactly "
+        f"the {MODE_ALWAYS!r} mode — got {sorted(modes) or 'no modes at all'}"
+    )
+
+
 def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
     """Load the packaged rule cards (or *text* when supplied, for tests).
 
@@ -275,6 +298,8 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
             for value, mode in saves.get("modes", {}).items()
         }
         provenance = entry.get("provenance", {})
+        option_key = _expect_opt_str(governing.get("key"), f"{where}: governing_option.key")
+        _expect_selectable_modes(where, option_key=option_key, modes=modes)
         cards.append(
             CoreCard(
                 key=key,
@@ -282,7 +307,7 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
                 library_names=_expect_str_list(
                     identifiers.get("library_name", []), f"{where}: identifiers.library_name"
                 ),
-                option_key=_expect_opt_str(governing.get("key"), f"{where}: governing_option.key"),
+                option_key=option_key,
                 option_default=_expect_opt_str(governing.get("default"), f"{where}: governing_option.default"),
                 modes=modes,
                 provenance=provenance.get("source", "unstated"),
@@ -339,11 +364,20 @@ class AuditEntry:
 
 
 def _verified_on(rec: Any, where: str) -> VerifiedOn | None:
-    """One arrangement's verification record — ``None`` stays *never verified*."""
+    """One arrangement's verification record — ``None`` stays *never verified*.
+
+    A record that is present must pin the arrangement ``version``. That is the
+    field the drift check hangs on: with it null, no machine can ever disagree
+    with the record, so the entry would read as verified everywhere and forever
+    while pinning nothing at all — the one shape that is worse than *never
+    verified*, because it claims the opposite. The core's version may stay null;
+    plenty of cores report none, and the arrangement version still bounds what
+    was checked.
+    """
     if rec is None:
         return None
     return VerifiedOn(
-        version=_expect_opt_str(rec.get("version"), f"{where}.version"),
+        version=_expect_str(rec.get("version"), f"{where}.version"),
         core_library_version=_expect_opt_str(rec.get("core_library_version"), f"{where}.core_library_version"),
         date=_expect_opt_str(rec.get("date"), f"{where}.date"),
     )

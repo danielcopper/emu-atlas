@@ -1075,6 +1075,103 @@ class TestStrictLoaders:
         with pytest.raises(ValueError, match="root"):
             load_oddities(text)
 
+    @pytest.mark.parametrize(
+        "modes",
+        [
+            {},
+            {"enabled": {"root": "savefile_directory", "granularity": "shared-card"}},
+            {
+                "always": {"root": "savefile_directory", "granularity": "shared-card"},
+                "legacy": {"root": "savefile_directory", "granularity": "per-game-file"},
+            },
+        ],
+    )
+    def test_a_card_that_governs_nothing_must_state_the_one_mode_it_applies(self, modes):
+        """Nothing selects between modes when no option governs the card.
+
+        The resolver takes ``always`` and only ``always`` there, so any other
+        shape describes behaviour that can never be applied — and the answer
+        came back with no rule card behind it and no caveat either, because
+        from the resolver's side nothing had gone wrong. A card ships with the
+        code, so that is a build mistake and it fails the load.
+        """
+        text = json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "saves": {"modes": modes},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="governing_option"):
+            load_oddities(text)
+
+    def test_the_same_modes_load_once_an_option_governs_them(self):
+        # The refusal is about what can be selected, not about the modes.
+        text = json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "saves": {
+                            "governing_option": {"key": "x_storage", "default": "enabled"},
+                            "modes": {"enabled": {"root": "savefile_directory", "granularity": "shared-card"}},
+                        },
+                    }
+                },
+            }
+        )
+        assert load_oddities(text)[0].option_key == "x_storage"
+
+    @pytest.mark.parametrize("record", [{}, {"core_library_version": "1dac369", "date": "2026-08-05"}])
+    def test_a_verification_record_that_pins_no_arrangement_version_is_rejected(self, record):
+        """A record with no ``version`` can never drift, so it verifies forever.
+
+        The drift check hangs on that field: with it null, no machine can
+        disagree with the record, and the entry reads as *verified here* on
+        every machine while pinning nothing at all — worse than never verified,
+        because it claims the opposite.
+        """
+        text = json.dumps(
+            {
+                "schema": 3,
+                "cores": {
+                    "x": {
+                        "verdict": "card",
+                        "per_game_capable": True,
+                        "note": "source-verified",
+                        "verified": {"retrodeck": record},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="version"):
+            load_audit(text)
+
+    def test_a_record_may_still_leave_the_core_version_unstated(self):
+        # Plenty of cores report none, and the arrangement version already
+        # bounds what was checked — this shape ships today.
+        text = json.dumps(
+            {
+                "schema": 3,
+                "cores": {
+                    "x": {
+                        "verdict": "card",
+                        "per_game_capable": True,
+                        "note": "source-verified",
+                        "verified": {"retrodeck": {"version": "0.10.9b", "core_library_version": None}},
+                    }
+                },
+            }
+        )
+        record = load_audit(text)["x"].verified["retrodeck"]
+        assert record is not None
+        assert record.core_library_version is None
+
 
 class TestCardEvidence:
     """What each mode of a card rests on — stated per mode, never flattened."""

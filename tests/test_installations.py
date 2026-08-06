@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 from collections import Counter
 
+import pytest
+
 import atlas
+from atlas.machine import SYMLINK_HOPS
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -638,6 +641,54 @@ class TestLinkView:
         codes = [c.code for c in p.caveats]
         assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY in codes
         assert atlas.CAVEAT_DEAD_SYMLINK in codes
+
+    def test_rejected_save_root_through_a_symlink_loop_says_why(self):
+        """A chain that never settles is stated, not half-followed.
+
+        The kernel answers ELOOP for the whole resolution — there is no path it
+        got partway to. A resolver that handed back where it stopped would name
+        a directory nothing can open as the physical one, and say nothing about
+        it: the caller would read an ordinary answer. It is its own code because
+        a dead link points at a name somebody can create, while a loop is a
+        cycle somebody has to break.
+        """
+        machine = atlas.FixtureMachine(
+            {
+                f"{HOME}/.config/retroarch/retroarch.cfg": self.FLAT_CFG,
+                f"{HOME}/roms/gba/Game.zip": "",
+            },
+            symlinks={f"{HOME}/links/saves": "/data/a", "/data/a": "/data/b", "/data/b": "/data/a"},
+        )
+        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        assert p.dir == f"{HOME}/.config/retroarch/saves"
+        looping = [c for c in p.caveats if c.code == atlas.CAVEAT_SYMLINK_LOOP]
+        assert looping
+        assert looping[0].data["link"] == f"{HOME}/links/saves"
+        assert atlas.CAVEAT_DEAD_SYMLINK not in [c.code for c in p.caveats]
+
+    @pytest.mark.parametrize("length, settles", [(SYMLINK_HOPS, True), (SYMLINK_HOPS + 1, False)])
+    def test_the_link_view_gives_up_on_the_hop_the_kernel_does(self, length, settles):
+        """The resolver behind ``physical_dir`` stops where the seam's does.
+
+        A chain of exactly ``SYMLINK_HOPS`` links resolves on a real filesystem
+        and one link more answers ELOOP, so this reads the same constant the
+        seam does rather than a second copy of the number — a chain that
+        resolved in the seam and not here would report *no physical directory*
+        for a place the emulator writes to perfectly well.
+        """
+        chain = {f"{HOME}/links/saves": "/c/l1", f"/c/l{length - 1}": "/data/real-saves"}
+        chain.update({f"/c/l{i}": f"/c/l{i + 1}" for i in range(1, length - 1)})
+        machine = atlas.FixtureMachine(
+            {
+                f"{HOME}/.config/retroarch/retroarch.cfg": self.FLAT_CFG,
+                "/data/real-saves/Game.srm": "s",
+                f"{HOME}/roms/gba/Game.zip": "",
+            },
+            symlinks=chain,
+        )
+        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        assert (p.physical_dir == "/data/real-saves") is settles
+        assert (atlas.CAVEAT_SYMLINK_LOOP in [c.code for c in p.caveats]) is not settles
 
 
 class TestSystemDirectoryRoot:
@@ -1631,6 +1682,43 @@ class TestOneReadPerSourcePerQuery:
         rd = atlas.RetroDeck(HOME, machine)
         answer = rd.firmware_for_system(system="n64")
         assert [c.core_so for c in answer.cores] == [e.core_so for e in rd.emulators_for("n64")]
+
+
+class TestCfgDirectorySpelling:
+    """A cfg names its directories however whoever wrote the line spelled them.
+
+    ``some/dir`` and ``some/dir/`` are one directory to the machine, and the
+    keys travel straight from the cfg into ``path_kind`` (``_cfg_directory``),
+    so an answer that depended on the trailing slash would report an unresolved
+    core catalogue for an installation that is entirely fine.
+    """
+
+    INFO = f"{RD_DEPLOY_CORES}/pcsx2_libretro.info"
+
+    def _machine(self, slash):
+        return atlas.FixtureMachine(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    f'system_directory = "/mnt/sd/retrodeck/bios{slash}"\n'
+                    f'libretro_info_path = "/app/cores{slash}"\n'
+                    f'libretro_directory = "/app/cores{slash}"\n'
+                    f'savefile_directory = "/mnt/sd/retrodeck/saves{slash}"\n'
+                ),
+                self.INFO: 'display_name = "LRPS2"\nfirmware_count = "1"\nfirmware0_path = "ps2/bios/rom1.bin"\n',
+                "/mnt/sd/retrodeck/bios/ps2/bios/rom1.bin": "rom",
+                "/mnt/sd/retrodeck/saves/.keep": "",
+            },
+            cores={f"{RD_DEPLOY_CORES}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
+        )
+
+    def test_a_trailing_slash_on_a_cfg_directory_changes_no_answer(self):
+        plain = atlas.RetroDeck(HOME, self._machine("")).firmware_inventory()
+        slashed = atlas.RetroDeck(HOME, self._machine("/")).firmware_inventory()
+        assert [c.core_so for c in slashed.cores] == [c.core_so for c in plain.cores]
+        assert [c.core_so for c in plain.cores] == ["pcsx2_libretro.so"]
+        assert [c.code for c in slashed.caveats] == [c.code for c in plain.caveats]
+        assert [r.found for c in slashed.cores for r in c.requirements] == ["file"]
 
 
 class TestBareRetroArch:

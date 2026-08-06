@@ -2115,6 +2115,84 @@
       }
     },
     {
+      "name": "lrps2-memcard-link-cycle-is-stated",
+      "rationale": "The other way a dir_prep link ends nowhere: the chain closes on itself, so the kernel answers ELOOP for the whole resolution rather than reaching any path at all. It is its own code next to dead-symlink because the two need different repairs — a dead link points at a name somebody can create, a cycle is one somebody has to break — and a consumer that branches only on dead-symlink to find an unwritable directory must miss this one. physical_dir stays null: there is no backing path, not even a half-resolved one to name.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/run/media/loop/retrodeck/memcards",
+          "/run/media/loop/retrodeck/memcards": "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso",
+          "core_so": "pcsx2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "pcsx2_shared_memory_cards",
+            "option_value": "enabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "per-game-file"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "symlink-loop",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "link": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "target": "/run/media/loop/retrodeck/memcards"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "emudeck-stale-marker-companion-missing",
       "rationale": "settings.sh survives while the claimed org.libretro.RetroArch Flatpak is gone: the EmuDeck handle stays (it claims the standalone identity), and its health exposes the missing companion config instead of silently suppressing a bare handle.",
       "input": {

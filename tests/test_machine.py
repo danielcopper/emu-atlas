@@ -18,7 +18,34 @@ from types import SimpleNamespace
 import pytest
 
 import atlas.machine
-from atlas.machine import SYMLINK_HOPS, CoreInfo, FixtureMachine, ReadResult, RealMachine
+from atlas.machine import (
+    DIGEST_ALGORITHMS,
+    SYMLINK_HOPS,
+    CoreInfo,
+    FixtureMachine,
+    ReadResult,
+    RealMachine,
+)
+
+
+def _assert_same_answers(fixture: FixtureMachine, real: RealMachine, path: str) -> None:
+    """Every seam operation answers the same on both machines, for one path."""
+    assert fixture.path_kind(path) == real.path_kind(path), path
+    assert fixture.read_text(path) == real.read_text(path), path
+    assert fixture.file_size(path) == real.file_size(path), path
+    assert fixture.readlink(path) == real.readlink(path), path
+    for algorithm in DIGEST_ALGORITHMS:
+        assert fixture.file_digest(path, algorithm) == real.file_digest(path, algorithm), path
+
+
+def _real_link_chain(tmp_path, length: int) -> str:
+    """A chain of *length* real symlinks ending on a file — the head's path."""
+    base = tmp_path / f"n{length}"
+    base.mkdir()
+    (base / f"l{length}").write_text("end")
+    for i in reversed(range(length)):
+        os.symlink(base / f"l{i + 1}", base / f"l{i}")
+    return str(base / "l0")
 
 
 class TestReadResult:
@@ -42,6 +69,22 @@ class TestFixtureFiles:
         assert m.read_text("/a/secret.cfg") == ReadResult("unreadable")
         assert m.read_text("/a/blob.bin") == ReadResult("invalid-text")
         assert m.path_kind("/a/secret.cfg") == "file"
+
+    def test_an_unreadable_file_may_state_the_size_its_stat_answered(self):
+        # The chmod-000 case: the stat succeeds, the bytes do not. Without the
+        # size a fixture would answer None for a value the machine states.
+        m = FixtureMachine({"/bios/locked.bin": {"status": "unreadable", "size": 4096}})
+        assert m.path_kind("/bios/locked.bin") == "file"
+        assert m.read_text("/bios/locked.bin") == ReadResult("unreadable")
+        assert m.file_size("/bios/locked.bin") == 4096
+        assert m.file_digest("/bios/locked.bin", "md5") is None
+
+    @pytest.mark.parametrize("algorithm", ["md5", "sha1"])
+    def test_an_unreadable_file_may_not_state_a_digest(self, algorithm):
+        # Its bytes are exactly what cannot be read, so a real one answers
+        # None — a declared digest would assert a verdict off an unread file.
+        with pytest.raises(ValueError, match="unreadable file states no digest"):
+            FixtureMachine({"/bios/locked.bin": {"status": "unreadable", algorithm: "abc"}})
 
     def test_unknown_file_status_is_rejected(self):
         with pytest.raises(ValueError):
@@ -128,6 +171,105 @@ class TestFixtureIdentity:
         assert m.file_digest("/a/f.txt", "sha256") is None
 
 
+class TestFixturePathSpelling:
+    """One path per file in the store, every spelling of it from the machine.
+
+    A fixture is keyed by literal strings while a filesystem answers for
+    whatever spelling reaches it, so ``.``, ``..``, repeated separators and a
+    trailing slash have to resolve here too — a trailing one reaches production
+    straight from a cfg value. The kernel's answers were observed in a scratch
+    directory and :class:`TestFixtureRealParity` runs the same spellings against
+    a real tree; these tests localize a break to the fixture.
+    """
+
+    def _machine(self) -> FixtureMachine:
+        # /link points *into* the tree, so '..' through it lands somewhere a
+        # lexical reading never would.
+        return FixtureMachine({"/a/f.txt": "hello"}, dirs=["/a/sub"], symlinks={"/link": "/a/sub"})
+
+    @pytest.mark.parametrize(
+        "spelling, kind",
+        [
+            ("/a/f.txt", "file"),
+            ("/a//f.txt", "file"),
+            ("/a/./f.txt", "file"),
+            ("/a/sub/../f.txt", "file"),
+            ("/link/../f.txt", "file"),
+            # ENOTDIR: the walk may only step through directories. Observed as
+            # *missing*, because os.stat raises NotADirectoryError.
+            ("/a/f.txt/", "missing"),
+            ("/a/f.txt/.", "missing"),
+            ("/a/f.txt/../f.txt", "missing"),
+            ("/a/gone/../f.txt", "missing"),
+            ("/a", "directory"),
+            ("/a/", "directory"),
+            ("/a///", "directory"),
+            ("/a/.", "directory"),
+            ("/a/sub/..", "directory"),
+            ("/link/", "directory"),
+            # The root: no ancestor walk ever reaches it, so nothing declares
+            # it, and a spelling that climbs far enough lands there.
+            ("/", "directory"),
+            ("/.", "directory"),
+            ("/..", "directory"),
+            ("/a/../..", "directory"),
+        ],
+    )
+    def test_a_spelling_answers_what_the_kernel_answers(self, spelling, kind):
+        assert self._machine().path_kind(spelling) == kind
+
+    def test_a_relative_path_names_nothing_a_fixture_can_answer_for(self):
+        """A real machine resolves it against the working directory of the process.
+
+        That is not a fact about the machine being described, so a fixture has
+        nowhere to start — and a cfg does reach here: a relative
+        ``system_directory`` is checked for being a directory before it is
+        refused for not being an absolute root.
+        """
+        assert self._machine().path_kind("a/f.txt") == "missing"
+
+    def test_dotdot_is_resolution_and_not_lexical_normalization(self):
+        """The two readings disagree exactly where a symlink sits in front of ``..``.
+
+        ``normpath`` collapses the spelling and drops ``/link``; the kernel
+        resolves ``/link`` first and climbs from where it landed. The machine
+        opens the file the kernel names, so that is the one the fixture answers
+        — and a fixture that normalized would hand over the other file, which
+        also exists here.
+        """
+        machine = FixtureMachine(
+            {"/a/f.txt": "hello", "/f.txt": "the file a lexical reading would reach"},
+            dirs=["/a/sub"],
+            symlinks={"/link": "/a/sub"},
+        )
+        assert machine.read_text("/link/../f.txt") == ReadResult("ok", "hello")
+        assert os.path.normpath("/link/../f.txt") == "/f.txt"
+
+    @pytest.mark.parametrize("spelling", ["/link/", "/link/.", "/link/.."])
+    def test_a_last_component_the_kernel_follows_is_not_a_link(self, spelling):
+        # Observed on both machines: a link to a directory answers its target
+        # spelled bare, and None the moment the spelling forces it to be
+        # followed rather than named.
+        assert self._machine().readlink(spelling) is None
+
+    @pytest.mark.parametrize("spelling", ["/link", "/a/../link"])
+    def test_readlink_names_the_link_that_is_the_last_component(self, spelling):
+        assert self._machine().readlink(spelling) == "/a/sub"
+
+    def test_a_pattern_ending_in_a_slash_matches_directories_only(self):
+        # Observed: '<dir>/*/' answers the subdirectory alone, spelled with the
+        # slash, and a pattern naming a regular file that way answers nothing.
+        machine = FixtureMachine({"/s/f.srm": ""}, dirs=["/s/sub"])
+        assert machine.glob("/s/*/") == ["/s/sub/"]
+        assert machine.glob("/s/*") == ["/s/f.srm", "/s/sub"]
+        assert machine.glob("/s/f.srm/") == []
+
+    def test_a_match_keeps_the_spelling_the_pattern_reached_it_through(self):
+        machine = FixtureMachine({"/s/f.srm": ""}, dirs=["/s/sub"])
+        assert machine.glob("/s/./*.srm") == ["/s/./f.srm"]
+        assert machine.glob("/s/sub/../*.srm") == ["/s/sub/../f.srm"]
+
+
 class TestFixtureSymlinks:
     def test_read_through_link(self):
         m = FixtureMachine({"/real/f.txt": "x"}, symlinks={"/link": "/real"})
@@ -180,32 +322,34 @@ class TestFixtureSymlinks:
             assert machine.file_size(path) is None, machine
             assert machine.file_digest(path, "md5") is None, machine
 
-    def test_the_hop_limit_matches_the_kernel_on_both_machines(self, tmp_path):
+    @pytest.mark.parametrize(
+        "length, resolves",
+        [(SYMLINK_HOPS - 1, True), (SYMLINK_HOPS, True), (SYMLINK_HOPS + 1, False)],
+    )
+    def test_the_hop_limit_matches_the_kernel_on_both_machines(self, tmp_path, length, resolves):
         """A chain the kernel follows must resolve in a fixture, and vice versa.
 
-        Anything else leaves a window where the two disagree — and the fixture
-        would be the one claiming the safe answer.
+        The boundary itself is the case, and it is why this runs at exactly
+        ``SYMLINK_HOPS``: chains of 38, 39 and 40 links built in a scratch
+        directory all stat and open fine, and 41 answers ELOOP — so *this many*
+        hops resolve. A fixture that gave up one hop early answered
+        *inaccessible* for a file the machine hands over, and every resolver had
+        to agree with the kernel in a window one hop wide, which is exactly
+        where a test that probes 39 and 41 does not look.
         """
         from atlas.firmware import resolve_links
 
-        def chain(length: int, root: str) -> dict[str, str]:
-            links = {f"{root}/l{i}": f"{root}/l{i + 1}" for i in range(length)}
-            return links
-
-        for length, resolves in ((SYMLINK_HOPS - 1, True), (SYMLINK_HOPS + 1, False)):
-            links = chain(length, "/c")
-            fixture = FixtureMachine({f"/c/l{length}": "end"}, symlinks=links)
-            assert (resolve_links(fixture, "/c/l0") is not None) is resolves, length
-            assert (fixture.path_kind("/c/l0") != "inaccessible") is resolves, length
-
-            base = tmp_path / f"n{length}"
-            base.mkdir()
-            (base / f"l{length}").write_text("end")
-            for i in reversed(range(length)):
-                os.symlink(base / f"l{i + 1}", base / f"l{i}")
-            real = RealMachine()
-            assert (real.path_kind(str(base / "l0")) != "inaccessible") is resolves, length
-            assert (resolve_links(real, str(base / "l0")) is not None) is resolves, length
+        fixture = FixtureMachine(
+            {f"/c/l{length}": "end"},
+            symlinks={f"/c/l{i}": f"/c/l{i + 1}" for i in range(length)},
+        )
+        head = _real_link_chain(tmp_path, length)
+        real = RealMachine()
+        assert (real.path_kind(head) != "inaccessible") is resolves
+        assert (fixture.path_kind("/c/l0") != "inaccessible") is resolves
+        assert (resolve_links(real, head) is not None) is resolves
+        assert (resolve_links(fixture, "/c/l0") is not None) is resolves
+        assert fixture.read_text("/c/l0") == real.read_text(head)
 
     def test_glob_through_link_keeps_link_spelling(self):
         # A real filesystem's glob returns the pattern-side spelling, not the target.
@@ -571,34 +715,67 @@ class TestFixtureRealParity:
             symlinks={f"{base}/{rel}": f"{base}/{target}" for rel, target in self.SYMLINKS.items()},
         )
 
+    PROBE_PATHS = [
+        "cfg/retroarch.cfg",
+        "cfg",
+        "saves/empty",
+        "saves/missing.srm",
+        "links/saves",
+        "links/saves/Game.srm",
+        "links/dead",
+        "links/dead/below",
+    ]
+    # The same files under every spelling a config, a link target or a caller
+    # can hand over — a fixture is keyed by one string per file, a filesystem
+    # is not, and a trailing slash arrives from a cfg value in production.
+    SPELLINGS = [
+        "saves//Game.srm",
+        "saves/./Game.srm",
+        "saves/deep/../Game.srm",
+        "saves/Game.srm/",
+        "saves/Game.srm/.",
+        "saves/Game.srm/../Game.rtc",
+        "saves/gone/../Game.srm",
+        "saves/",
+        "saves///",
+        "saves/.",
+        "saves/deep/..",
+        "links/saves/",
+        "links/saves/../saves/Game.srm",
+        "links/dead/",
+        "links/dead/../saves",
+    ]
+
     def test_operations_agree(self, tmp_path):
+        real = self._real(tmp_path)
+        fixture = self._fixture(tmp_path)
+        for rel in self.PROBE_PATHS:
+            _assert_same_answers(fixture, real, f"{tmp_path}/{rel}")
+
+    def test_path_spellings_agree(self, tmp_path):
+        real = self._real(tmp_path)
+        fixture = self._fixture(tmp_path)
+        for rel in self.SPELLINGS:
+            _assert_same_answers(fixture, real, f"{tmp_path}/{rel}")
+
+    def test_the_root_agrees(self, tmp_path):
+        """The one directory nothing declares, and every long enough climb reaches.
+
+        A fixture learns its directories from the paths it was given, and that
+        walk stops at ``/`` — so the root was the one place both machines were
+        certain about and only one of them could say so.
+        """
+        real = self._real(tmp_path)
+        fixture = self._fixture(tmp_path)
+        for spelling in ("/", "/.", "/..", "/../..", f"{tmp_path}/../.."):
+            _assert_same_answers(fixture, real, spelling)
+
+    def test_globs_agree(self, tmp_path):
         import glob as glob_module
 
         real = self._real(tmp_path)
         fixture = self._fixture(tmp_path)
         base = str(tmp_path)
-
-        probe_paths = [
-            f"{base}/cfg/retroarch.cfg",
-            f"{base}/cfg",
-            f"{base}/saves/empty",
-            f"{base}/saves/missing.srm",
-            f"{base}/links/saves",
-            f"{base}/links/saves/Game.srm",
-            f"{base}/links/dead",
-            f"{base}/links/dead/below",
-        ]
-        for path in probe_paths:
-            assert fixture.path_kind(path) == real.path_kind(path), path
-            assert fixture.read_text(path) == real.read_text(path), path
-            assert fixture.file_size(path) == real.file_size(path), path
-            for algorithm in ("md5", "sha1"):
-                assert fixture.file_digest(path, algorithm) == real.file_digest(path, algorithm), path
-
-        for path in probe_paths:
-            # Fixture links carry absolute targets, so compare resolved-ness only.
-            assert (fixture.readlink(path) is None) == (real.readlink(path) is None), path
-
         patterns = [
             f"{base}/saves/Game.*",
             f"{base}/saves/*",
@@ -607,6 +784,78 @@ class TestFixtureRealParity:
             glob_module.escape(f"{base}/saves/Game [USA]") + ".*",
             f"{base}/saves/missing*",
             f"{base}/saves/.*",
+            f"{base}/saves/./*.srm",
+            f"{base}/saves/deep/../*.srm",
+            f"{base}/links/saves/../saves/*.srm",
+            f"{base}/saves/*/",
+            f"{base}/*/",
+            f"{base}/saves/Game.srm/",
+            "/",
         ]
         for pattern in patterns:
             assert fixture.glob(pattern) == real.glob(pattern), pattern
+
+    def test_a_file_whose_bytes_cannot_be_read_agrees(self, tmp_path):
+        """A chmod-000 file: the stat succeeds and the read does not.
+
+        Observed: kind ``file``, read ``unreadable``, the real size, and no
+        digest — the size comes from the stat and the digest from bytes nobody
+        can get at. ``{"status": "unreadable"}`` alone answers *no size*, which
+        is a different machine (a FIFO, a device node), and a firmware vector
+        written that way would take the unknown branch where the real machine
+        settles the file on its size alone.
+        """
+        locked = tmp_path / "locked.bin"
+        locked.write_bytes(b"\x00" * 4096)
+        locked.chmod(0)
+        fixture = FixtureMachine({str(locked): {"status": "unreadable", "size": 4096}})
+        try:
+            _assert_same_answers(fixture, RealMachine(), str(locked))
+        finally:
+            locked.chmod(0o600)
+
+    def test_inaccessible_paths_agree(self, tmp_path):
+        """A chmod-000 directory is two states, not one.
+
+        Observed: the directory itself still stats — it is a directory that
+        cannot be listed, read ``unreadable`` — while every path below it fails
+        the stat outright and is *inaccessible*. A fixture states the paths
+        below explicitly, which is what ``inaccessible`` is for.
+        """
+        locked = tmp_path / "locked"
+        (locked / "inside").mkdir(parents=True)
+        (locked / "inside" / "x.txt").write_text("x")
+        locked.chmod(0)
+        base = str(tmp_path)
+        below = [f"{base}/locked/inside", f"{base}/locked/inside/x.txt"]
+        fixture = FixtureMachine({}, dirs=[f"{base}/locked"], inaccessible=below)
+        try:
+            real = RealMachine()
+            for path in (f"{base}/locked", *below):
+                _assert_same_answers(fixture, real, path)
+        finally:
+            locked.chmod(0o700)
+
+    def test_one_file_described_two_ways_answers_the_same(self, tmp_path):
+        """Two ways to write one sized non-text file must not be two states.
+
+        A blob states its identity and reads as ``invalid-text``; the same file
+        may say so outright and carry the size. This machine accepts both,
+        because a hand-written unit fixture should not have to pick — but a
+        spelling the fixture accepts and answers *differently* would be a
+        second state hiding behind one file, so both are held to the machine's
+        own answer. (``scripts/validate_vectors.py`` is deliberately stricter
+        and admits only the blob: the conformance corpus keeps one canonical
+        spelling per state, so this is not an invitation to vector authors.)
+        """
+        content = b"\xff\xfe\x00binary"
+        blob = tmp_path / "firmware.bin"
+        blob.write_bytes(content)
+        identity: dict[str, str | int] = {
+            "size": len(content),
+            "md5": hashlib.md5(content).hexdigest(),
+            "sha1": hashlib.sha1(content).hexdigest(),
+        }
+        real = RealMachine()
+        for spec in (identity, {"status": "invalid-text", **identity}):
+            _assert_same_answers(FixtureMachine({str(blob): spec}), real, str(blob))

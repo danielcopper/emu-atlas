@@ -33,12 +33,25 @@ most mismatches before any bytes are hashed; ``file_digest`` is the paid
 answer. Both return ``None`` for *cannot tell* — never a sentinel that a caller
 could mistake for a real value.
 
+Path resolution (normative, for ports): a path is walked component by component
+from ``/``, the way ``path_resolution(7)`` describes and the kernel was observed
+to behave. ``.`` and repeated separators are transparent; ``..`` is applied to
+where the walk *landed*, so ``link/..`` leaves the link's target directory, not
+the directory the link sits in; a symlink component is replaced by its target
+and the walk continues. Every component the walk steps *through* must be a
+directory, which is what makes the failure spellings answer as they do: a
+trailing ``/`` on a regular file is ``ENOTDIR``, reported as *missing*, while
+the same spelling on a directory is transparent. Lexical normalization
+(``os.path.normpath``) is not this: it eats the component in front of a ``..``
+even when that component is a symlink, and the kernel does the opposite.
+
 Glob semantics (normative, for ports): patterns support ``*``, ``?`` and
 ``[seq]`` within one path segment; a wildcard never crosses a ``/``; a wildcard
 segment never matches a name starting with ``.`` (only a segment that itself
-starts with ``.`` does); matches are returned sorted, spelled the way the
-pattern reached them (a file matched through a symlinked directory keeps the
-link-side path, like a real filesystem's glob).
+starts with ``.`` does); a pattern ending in ``/`` matches directories only and
+keeps that ``/``; matches are returned sorted, spelled the way the pattern
+reached them (a file matched through a symlinked directory keeps the link-side
+path, like a real filesystem's glob).
 """
 
 from __future__ import annotations
@@ -59,10 +72,13 @@ _CORE_PROBE_TIMEOUT_SECONDS = 15
 SYMLINK_HOPS = 40
 """How many symlink hops a path may take before it counts as unresolvable.
 
-Linux answers ``ELOOP`` after 40 (``SYMLOOP_MAX``), and both machines use this
-one number so a chain that resolves on the real filesystem resolves in a
-fixture and one that does not fails in both. A fixture that disagreed inside
-some window would make every vector built on it prove nothing.
+The number is the kernel's, observed rather than assumed: chains of 38, 39 and
+40 links built in a scratch directory all ``stat`` and ``open`` fine, and 41
+answers ``ELOOP`` (Linux 6.16, ``SYMLOOP_MAX``). So *this many* hops resolve and
+the next one does not, and every resolver in atlas uses this one number — the
+two machines and :func:`atlas.firmware.resolve_links` alike. A resolver that
+disagreed inside some window would make every vector built on it prove nothing,
+and the window would be exactly one hop wide, which is where nobody looks.
 """
 
 # Digest algorithms the seam answers for. Closed on purpose: these are the two
@@ -393,15 +409,40 @@ _GLOB_MAGIC = frozenset("*?[")
 # to a real dump's md5. A string-content file needs no declaration: its size
 # and digests are computed from the content, so fixture and real machine agree
 # by construction.
+#
+# The two are independent axes because the machine answers them from two
+# different reads: ``size`` comes from the ``stat``, the digests from the bytes.
+# A chmod-000 file was observed to answer file (``stat`` succeeded), unreadable,
+# its real size, and no digest — so ``{"status": "unreadable", "size": N}`` is a
+# state a fixture must be able to spell, and the size-less spelling keeps its
+# own meaning: present, unreadable, and no size either, which is what a FIFO or
+# a device node answers (``file_size`` holds for regular files only).
 FixtureFileSpec = str | Mapping[str, str | int]
 
 _BLOB_KEYS = ("size", *DIGEST_ALGORITHMS)
 
 
+def _file_identity(path: str, spec: Mapping[str, str | int]) -> dict[str, str | int]:
+    """The identity fields of one object spec — size from the stat, digests from the bytes.
+
+    A digest alongside ``unreadable`` is refused rather than ignored: the bytes
+    are precisely what cannot be read there, a real one answers ``None`` for
+    ``file_digest``, and a fixture stating one would make a vector assert a
+    ``checked`` verdict the machine it models never reaches.
+    """
+    identity = {key: spec[key] for key in _BLOB_KEYS if key in spec}
+    if spec.get("status") == READ_UNREADABLE and any(key in identity for key in DIGEST_ALGORITHMS):
+        raise ValueError(
+            f"fixture file {path!r}: an unreadable file states no digest — its bytes are what cannot "
+            "be read, so a real one answers None; only 'size' survives, because it comes from the stat"
+        )
+    return identity
+
+
 def _index_fixture_files(
     files: Mapping[str, FixtureFileSpec],
 ) -> tuple[dict[str, tuple[ReadStatus, str | None]], dict[str, dict[str, str | int]]]:
-    """Split the declared file specs into read outcomes and blob identities.
+    """Split the declared file specs into read outcomes and declared identities.
 
     A malformed spec raises rather than being coerced: a fixture that cannot be
     read as written would otherwise prove something about a machine nobody
@@ -414,8 +455,9 @@ def _index_fixture_files(
             read[path] = (READ_OK, spec)
             continue
         status = spec.get("status")
+        identity = _file_identity(path, spec)
         if status is None:
-            if not any(key in spec for key in _BLOB_KEYS):
+            if not identity:
                 raise ValueError(
                     f"fixture file {path!r}: an object spec must carry a 'status' or at least one "
                     f"of {list(_BLOB_KEYS)}"
@@ -423,12 +465,34 @@ def _index_fixture_files(
             # A blob exists and is not text — the same answer a real
             # firmware file gives read_text.
             read[path] = (READ_INVALID_TEXT, None)
-            blobs[path] = dict(spec)
-            continue
-        if status not in (READ_UNREADABLE, READ_INVALID_TEXT):
+        elif status in (READ_UNREADABLE, READ_INVALID_TEXT):
+            read[path] = (status, None)
+        else:
             raise ValueError(f"fixture file {path!r}: status must be 'unreadable' or 'invalid-text'")
-        read[path] = (status, None)
+        if identity:
+            blobs[path] = identity
     return read, blobs
+
+
+@dataclass(frozen=True, slots=True)
+class _Landing:
+    """Where a spelled path lands, or which refusal the kernel answers instead.
+
+    ``path`` is set exactly when the walk completed. The two refusals are held
+    apart because the seam answers them differently: a chain that never settles
+    is ``ELOOP``, a *failing stat*, which every operation reports as
+    inaccessible; a component the walk must step through that is not a
+    directory is ``ENOTDIR``, which ``os.stat`` raises as ``NotADirectoryError``
+    and :class:`RealMachine` reports as missing (observed: a regular file
+    spelled with a trailing slash answers missing, not inaccessible).
+    """
+
+    path: str | None = None
+    loops: bool = False
+
+
+_LOOPS = _Landing(loops=True)
+_NOT_A_DIRECTORY = _Landing()
 
 
 def _ancestor_dirs(paths: Iterable[str]) -> set[str]:
@@ -449,17 +513,26 @@ class FixtureMachine:
     ``{"status": "unreadable"}`` / ``{"status": "invalid-text"}`` is a file
     that exists but yields that read outcome; ``{"md5": ..., "sha1": ...,
     "size": ...}`` is a binary blob that exists, reads as ``invalid-text``, and
-    answers those values for ``file_digest`` / ``file_size``. ``dirs`` lists directories that
-    exist explicitly (parents of every known path are directories implicitly —
-    the list is how *empty* directories are stated). ``symlinks`` maps link
-    paths to their targets (absolute, or relative to the link's directory);
-    path lookups resolve symlink components the way the kernel does, left to
-    right, with a hop limit against cycles — so a link to a target that is not
-    in the fixture is a *dead* link: ``readlink`` shows it, ``path_kind`` says
-    missing, exactly like the real thing. ``cores`` maps ``.so`` paths to
-    core-answer objects (``{"library_name": ...}``); a path mapped to ``None``
-    is a core that is present but unloadable. ``inaccessible`` lists paths
-    whose state cannot be determined at all (a failing ``stat``).
+    answers those values for ``file_digest`` / ``file_size``. A ``size`` may
+    join a ``status``, because the two come from different reads on a real
+    machine: ``{"status": "unreadable", "size": N}`` is the chmod-000 file,
+    whose ``stat`` succeeds while its bytes do not. ``dirs`` lists directories
+    that exist explicitly (parents of every known path are directories
+    implicitly — the list is how *empty* directories are stated). ``symlinks``
+    maps link paths to their targets (absolute, or relative to the link's
+    directory). ``cores`` maps ``.so`` paths to core-answer objects
+    (``{"library_name": ...}``); a path mapped to ``None`` is a core that is
+    present but unloadable. ``inaccessible`` lists paths whose state cannot be
+    determined at all (a failing ``stat``).
+
+    Every operation resolves the path it is given the way the module docstring
+    states the kernel does — symlink components, ``.``, ``..`` and separator
+    spellings alike — because the store is keyed by one path per file while a
+    machine answers for every spelling that reaches it. So a link to a target
+    that is not in the fixture is a *dead* link (``readlink`` shows it,
+    ``path_kind`` says missing, exactly like the real thing), and a fixture
+    cannot answer *missing* for a file the real machine hands over under a
+    ``.``, a ``..``, a doubled separator or a trailing slash.
     """
 
     def __init__(
@@ -480,57 +553,98 @@ class FixtureMachine:
             (*self._files, *self._symlinks, *self._cores, *tuple(self._dirs), *self._inaccessible)
         )
         self._dirs.discard("")
+        # The root is a directory on every machine, and no ancestor walk ever
+        # reaches it (they stop at "/"). Without it a fixture answers *missing*
+        # for "/" and for any spelling that climbs to it, and the walk below
+        # relies on it: standing at "/" has to be standing in a directory.
+        self._dirs.add("/")
 
-    def _resolve(self, path: str) -> str | None:
-        """Resolve symlink components in *path* (final one included).
+    def _resolve(self, path: str) -> _Landing:
+        """Walk *path* component by component from ``/``, the way the kernel does.
 
-        ``None`` when the chain does not settle within :data:`SYMLINK_HOPS`
-        hops — a loop, or a chain longer than the kernel would follow. Returning
-        the half-resolved path instead would make ``ELOOP`` unrepresentable in a
-        fixture, and every caller below would then answer something the real
-        machine never answers.
+        The one rule the failure spellings fall out of: before the walk steps
+        *through* a place, that place must be a directory. So ``f.txt/`` and
+        ``f.txt/../g`` are ``ENOTDIR`` while ``dir/`` and ``dir/./`` are the
+        directory, and a ``..`` climbs from where the walk landed rather than
+        from the spelling — ``link/..`` is the link target's parent.
+
+        This is a resolution, not a normalization: collapsing the spelling
+        first (``os.path.normpath``) would eat the component in front of a
+        ``..`` even when that component is a symlink, and the kernel does the
+        opposite. Nothing here consults the *final* component's kind; that is
+        the caller's question, and a dangling final component is a dead link,
+        not a refusal.
+
+        A relative path names nothing: the real machine resolves it against the
+        working directory of the process, which is not a fact about the machine
+        being described, so a fixture has nowhere to start. (One reaches here —
+        ``system_directory = "system"`` is checked for being a directory before
+        it is refused for not being absolute.)
+
+        This walk exists three times, for three different jobs:
+        :func:`atlas.firmware.resolve_links` resolves a path *through* the seam
+        for a caller that then reads it, and
+        ``atlas.installations._resolve_symlink_chain`` also collects the links
+        it traversed so a caveat can name them. They deliberately differ — only
+        this one refuses to step through a non-directory, because only this one
+        answers for the paths themselves — but a fidelity finding about
+        symlinks, ``..`` or the hop limit belongs in all three, and they share
+        :data:`SYMLINK_HOPS` so the boundary cannot drift.
         """
-        for _ in range(SYMLINK_HOPS):
-            spliced = self._splice_first_symlink(path)
-            if spliced is None:
-                return path
-            path = spliced
-        return None
-
-    def _splice_first_symlink(self, path: str) -> str | None:
-        """*path* with its leftmost symlink component replaced by that link's target.
-
-        ``None`` when no component is a link — the path is then fully resolved.
-        A relative target is spliced against the directory holding the link, the
-        way the kernel reads it.
-        """
-        parts = path.split("/")
-        for i in range(2, len(parts) + 1):
-            prefix = "/".join(parts[:i])
-            if prefix not in self._symlinks:
+        if not path.startswith("/"):
+            return _NOT_A_DIRECTORY
+        parts = path.split("/")[1:]
+        resolved = "/"
+        hops = 0
+        while parts:
+            if resolved not in self._dirs:
+                return _NOT_A_DIRECTORY
+            segment = parts.pop(0)
+            if segment in ("", "."):
                 continue
-            target = self._symlinks[prefix]
-            if not target.startswith("/"):
-                target = os.path.normpath(os.path.join(os.path.dirname(prefix), target))
-            rest = "/".join(parts[i:])
-            return target + ("/" + rest if rest else "")
-        return None
+            if segment == "..":
+                resolved = os.path.dirname(resolved) or "/"
+                continue
+            candidate = os.path.join(resolved, segment)
+            target = self._symlinks.get(candidate)
+            if target is None:
+                resolved = candidate
+                continue
+            hops += 1
+            if hops > SYMLINK_HOPS:
+                return _LOOPS
+            if target.startswith("/"):
+                resolved = "/"
+            # A relative target is relative to the directory holding the link,
+            # which is exactly where `resolved` already stands.
+            parts = [p for p in target.split("/") if p and p != "."] + parts
+        return _Landing(resolved)
 
     def _resolve_parent(self, path: str) -> str | None:
-        """Resolve symlinks in the parent components only — the final one stays."""
+        """Resolve symlinks in the parent components only — the final one stays.
+
+        ``None`` when the spelling names no final component to report on: a
+        trailing ``/``, ``.`` or ``..`` all make the kernel follow the last
+        component instead of naming it, which is why a link to a directory
+        answers its target when spelled bare and ``None`` when spelled with a
+        trailing slash (observed on both).
+        """
         parent, name = os.path.dirname(path), os.path.basename(path)
-        if not name or parent in ("", "/"):
+        if name in ("", ".", ".."):
+            return None
+        if parent in ("", "/"):
             return path
-        resolved_parent = self._resolve(parent)
-        return None if resolved_parent is None else os.path.join(resolved_parent, name)
+        landing = self._resolve(parent)
+        return None if landing.path is None else os.path.join(landing.path, name)
 
     def read_text(self, path: str) -> ReadResult:
         if self._is_inaccessible(path):
             return ReadResult(READ_UNREADABLE)
-        resolved = self._resolve(path)
+        resolved = self._resolve(path).path
         if resolved is None:
-            # ELOOP: os.stat fails, so the real machine cannot read it either.
-            return ReadResult(READ_UNREADABLE)
+            # ENOTDIR — the loop case was already answered above. The real
+            # machine raises NotADirectoryError here, which it reports missing.
+            return ReadResult(READ_MISSING)
         if resolved in self._files:
             status, text = self._files[resolved]
             return ReadResult(status, text)
@@ -543,11 +657,9 @@ class FixtureMachine:
     def path_kind(self, path: str) -> PathKind:
         if self._is_inaccessible(path):
             return KIND_INACCESSIBLE
-        resolved = self._resolve(path)
+        resolved = self._resolve(path).path
         if resolved is None:
-            # ELOOP: os.stat raises OSError, which the real machine reports as
-            # inaccessible — never as an absent file.
-            return KIND_INACCESSIBLE
+            return KIND_MISSING  # ENOTDIR, as above
         if resolved in self._files or resolved in self._cores:
             return KIND_FILE
         if resolved in self._dirs:
@@ -557,10 +669,11 @@ class FixtureMachine:
     def _is_inaccessible(self, path: str) -> bool:
         if path in self._inaccessible:
             return True
-        resolved = self._resolve(path)
+        landing = self._resolve(path)
         # A chain that never settles is ELOOP: the real machine fails to stat
-        # it, which every operation here reports as inaccessible.
-        return resolved is None or resolved in self._inaccessible
+        # it, which every operation here reports as inaccessible. ENOTDIR is
+        # not that — it is an absent path, and each operation says so itself.
+        return landing.loops or landing.path in self._inaccessible
 
     def readlink(self, path: str) -> str | None:
         parent = self._resolve_parent(path)
@@ -569,7 +682,7 @@ class FixtureMachine:
     def file_size(self, path: str) -> int | None:
         if self._is_inaccessible(path):
             return None
-        resolved = self._resolve(path)
+        resolved = self._resolve(path).path
         if resolved is None:
             return None
         declared = self._blobs.get(resolved, {}).get("size")
@@ -581,7 +694,7 @@ class FixtureMachine:
     def file_digest(self, path: str, algorithm: str) -> str | None:
         if algorithm not in DIGEST_ALGORITHMS or self._is_inaccessible(path):
             return None
-        resolved = self._resolve(path)
+        resolved = self._resolve(path).path
         if resolved is None:
             return None
         declared = self._blobs.get(resolved, {}).get(algorithm)
@@ -593,7 +706,7 @@ class FixtureMachine:
         return hashlib.new(algorithm, text.encode("utf-8")).hexdigest()
 
     def query_core(self, so_path: str) -> CoreInfo | None:
-        resolved = self._resolve(so_path)
+        resolved = self._resolve(so_path).path
         spec = self._cores.get(resolved) if resolved is not None else None
         if not spec:
             return None
@@ -611,7 +724,7 @@ class FixtureMachine:
 
     def _children(self, spelled_dir: str) -> set[str]:
         """Entry names directly under *spelled_dir* (resolved like the kernel would)."""
-        real = self._resolve(spelled_dir) if spelled_dir else ""
+        real = self._resolve(spelled_dir).path if spelled_dir else ""
         if real is None:
             return set()
         prefix = real.rstrip("/") + "/"
@@ -649,12 +762,27 @@ class FixtureMachine:
             return
         segment, rest = segments[0], segments[1:]
         if not segment:
-            self._walk_glob(base, rest, results)
+            self._walk_glob_separator(base, rest, results)
         elif not _GLOB_MAGIC & set(segment):
             self._walk_glob(f"{base}/{segment}", rest, results)
         else:
             for child in self._matching_children(base, segment):
                 self._walk_glob(f"{base}/{child}", rest, results)
+
+    def _walk_glob_separator(self, base: str, rest: list[str], results: set[str]) -> None:
+        """An empty segment: a repeated separator inside, or the pattern's own trailing ``/``.
+
+        A trailing one is not decoration — it makes the pattern match
+        directories only and travels into the match: ``<dir>/*/`` was observed
+        to answer the subdirectory alone, spelled with the slash, while
+        ``<dir>/f.txt/`` answers nothing at all.
+        """
+        if rest:
+            self._walk_glob(base, rest, results)
+        elif self.path_kind(base or "/") == KIND_DIRECTORY:
+            # An empty base is the root itself — the pattern was nothing but
+            # separators — and `f"{base}/"` spells it the way it arrived.
+            results.add(f"{base}/")
 
     def glob(self, pattern: str) -> list[str]:
         if not pattern.startswith("/"):

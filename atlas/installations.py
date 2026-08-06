@@ -60,11 +60,12 @@ from atlas.machine import (
     KIND_MISSING,
     READ_MISSING,
     READ_OK,
+    SYMLINK_HOPS,
     CoreInfo,
     CoreOption,
     Machine,
 )
-from atlas.oddities import CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
+from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
 from atlas.placement import (
     CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
     CAVEAT_CARD_GENERATION_MISMATCH,
@@ -90,6 +91,7 @@ from atlas.placement import (
     CAVEAT_NO_CORE,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
     CAVEAT_SORTED_DIR_MISSING,
+    CAVEAT_SYMLINK_LOOP,
     CAVEAT_SYSTEM_DIR_UNSET,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     HOLE_CONTENT_DIR,
@@ -377,26 +379,40 @@ def _core_directory_in(sandbox: _Sandbox, global_text: str) -> str | None:
 _CfgLayer = tuple[str, str]
 
 
-_MAX_LINK_HOPS = 40
-
-
-def _resolve_symlink_chain(machine: Machine, path: str) -> tuple[str, list[tuple[str, str]]]:
+def _resolve_symlink_chain(machine: Machine, path: str) -> tuple[str | None, list[tuple[str, str]]]:
     """Resolve symlink components in *path* through the seam, kernel-style.
 
     Walks components left to right via ``readlink``, splicing targets in
-    (relative targets against the link's directory), with a hop limit against
-    cycles. Returns the fully resolved path and every ``(link, target)``
-    traversed — an empty list means no symlink was involved.
+    (relative targets against the link's directory). Returns the fully resolved
+    path and every ``(link, target)`` traversed — an empty list means no symlink
+    was involved.
+
+    ``None`` when the chain does not settle within
+    :data:`~atlas.machine.SYMLINK_HOPS` hops. The kernel refuses the whole
+    resolution there (``ELOOP``) rather than stopping partway, and so does this:
+    the path the walk had reached after the last hop is still a link, and
+    handing it back named a directory nothing can ever open as if it were the
+    physical one — silently, because it looks like an ordinary answer. The links
+    traversed are returned either way, so the caller can name the chain.
+
+    One of three kernel walks in atlas, next to
+    :func:`atlas.firmware.resolve_links` (which answers the path alone) and
+    ``FixtureMachine._resolve`` (which additionally refuses to step through a
+    non-directory, because it answers for paths rather than resolving them).
+    This one exists for the links: a caveat has to name the chain it refused.
+    A fidelity finding about symlinks, ``..`` or the hop limit belongs in all
+    three; the limit itself is shared, never copied.
     """
     links: list[tuple[str, str]] = []
     current = path
-    for _ in range(_MAX_LINK_HOPS):
+    while True:
         step = _splice_first_link(machine, current)
         if step is None:
-            break
+            return current, links
+        if len(links) == SYMLINK_HOPS:
+            return None, links
         current, link = step
         links.append(link)
-    return current, links
 
 
 def _splice_first_link(machine: Machine, path: str) -> tuple[str, tuple[str, str]] | None:
@@ -429,10 +445,25 @@ def _link_view(machine: Machine, directory: str) -> tuple[str | None, tuple[Cave
     physical path two truthful answers to different questions. A traversal
     that ends nowhere yields a ``dead-symlink`` caveat instead: the
     emulator-side directory is dead, and writing there will fail.
+
+    A chain that never settles is the other way to end nowhere, and it is its
+    own code: a dead link points at a name that could be created, while a loop
+    is a cycle somebody has to break, and the two are not one fact.
     """
     resolved, links = _resolve_symlink_chain(machine, directory)
     if not links:
         return None, ()
+    if resolved is None:
+        link, target = links[0]
+        return None, (
+            Caveat(
+                CAVEAT_SYMLINK_LOOP,
+                f"{directory} enters the symlink {link} -> {target} and never settles — the chain is "
+                f"longer than the {SYMLINK_HOPS} hops the kernel follows, so it answers ELOOP and "
+                "nothing can be read or written through this directory",
+                {"path": directory, "link": link, "target": target},
+            ),
+        )
     if machine.path_kind(resolved) == KIND_MISSING:
         link, target = links[-1]
         return None, (
@@ -1266,9 +1297,9 @@ def _apply_card(
     that would have looked there.
     """
     if card.option_key is None:
-        mode = card.modes.get("always")
-        if mode is None:
-            return _CardApplication(card=card)
+        # The load refuses any other shape (_expect_selectable_modes), so the
+        # mode is there — a card that governs nothing states exactly this one.
+        mode = card.modes[MODE_ALWAYS]
         return _CardApplication(
             card=card,
             mode=mode,
