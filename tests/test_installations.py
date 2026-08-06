@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from collections import Counter
+
 import atlas
 
 HOME = "/home/deck"
@@ -30,6 +33,101 @@ class TestRetroDeckPaths:
         rd = _retrodeck({RETRODECK_JSON: "{}"})
         assert rd.root() == f"{HOME}/retrodeck"
         assert rd.bios_dir() == f"{HOME}/retrodeck/bios"
+
+
+class TestMarkerPathValuesMustBeStrings:
+    """A marker with a non-string path is present and broken, not usable.
+
+    ``retrodeck.json`` is editable and drives every read that follows. Handing
+    a non-string on unchecked made ``health()`` raise ``AttributeError`` on the
+    fixture seam and ``TypeError`` from ``os.stat`` on the real one — and
+    ``os.stat(123)`` reads an *int* as a file descriptor, so it can even answer
+    for something that is not a path at all.
+    """
+
+    FALLBACK_DIRS = [f"{HOME}/retrodeck", f"{HOME}/retrodeck/saves"]
+
+    def test_non_string_path_value_makes_the_marker_invalid(self):
+        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": 123}}'}, dirs=self.FALLBACK_DIRS)
+        assert rd.health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,)
+
+    def test_the_offending_key_is_named(self):
+        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/rd", "saves_path": {"a": 1}}}'})
+        issue = rd.health().issues[0]
+        assert issue.code == atlas.HEALTH_ISSUE_MARKER_INVALID
+        assert issue.data["key"] == "paths.saves_path"
+
+    def test_health_does_not_raise_and_roots_stay_strings(self):
+        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": 123, "saves_path": {"a": 1}}}'})
+        assert rd.health().codes[0] == atlas.HEALTH_ISSUE_MARKER_INVALID
+        for value in (rd.root(), rd.saves_root(), rd.bios_dir(), rd.roms_dir()):
+            assert isinstance(value, str)
+        assert rd.root() == f"{HOME}/retrodeck"
+
+    def test_a_paths_section_of_the_wrong_type_is_invalid_too(self):
+        rd = _retrodeck({RETRODECK_JSON: '{"paths": ["/mnt/sd/retrodeck"]}'})
+        issue = rd.health().issues[0]
+        assert issue.code == atlas.HEALTH_ISSUE_MARKER_INVALID
+        assert issue.data["key"] == "paths"
+
+    def test_a_null_path_value_is_invalid(self):
+        # JSON null is not "unset" here: RetroDECK writes the key or omits it.
+        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"saves_path": null}}'}, dirs=self.FALLBACK_DIRS)
+        assert rd.health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,)
+
+    def test_a_marker_without_a_paths_section_is_not_invalid(self):
+        rd = _retrodeck({RETRODECK_JSON: '{"version": "0.10.9b"}'}, dirs=[f"{HOME}/retrodeck"])
+        assert rd.health().codes == (atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,)
+
+    def test_a_null_paths_section_is_invalid_not_absent(self):
+        # Omitting the section and writing null in it are different states: the
+        # second is a section no key can be read from, and null is not an object.
+        rd = _retrodeck({RETRODECK_JSON: '{"paths": null}'}, dirs=self.FALLBACK_DIRS)
+        issue = rd.health().issues[0]
+        assert issue.code == atlas.HEALTH_ISSUE_MARKER_INVALID
+        assert issue.data["key"] == "paths"
+
+    def test_every_path_key_atlas_reads_is_checked(self):
+        # Keeps the checked set honest against the read set: root(), saves_root(),
+        # bios_dir() and roms_dir() are the four reads, so all four are validated.
+        for key in ("rd_home_path", "saves_path", "bios_path", "roms_path"):
+            rd = _retrodeck({RETRODECK_JSON: json.dumps({"paths": {key: 5}})}, dirs=self.FALLBACK_DIRS)
+            assert rd.health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,), key
+
+    def test_a_key_atlas_does_not_read_is_none_of_its_business(self):
+        # atlas reports on what it reads. A value under a key no read touches
+        # says nothing about this installation, and calling the marker broken
+        # over it would be a claim about who wrote the file — the day RetroDECK
+        # nests something new under paths, a healthy install must stay healthy.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: (
+                    '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+                    '"saves_path": "/mnt/sd/retrodeck/saves", "videos_path": {"nested": 1}}}'
+                )
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        assert rd.health() == atlas.Health()
+        assert rd.root() == "/mnt/sd/retrodeck"
+
+    def test_placement_carries_the_marker_issue_instead_of_crashing(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: '{"paths": {"saves_path": 7}}',
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/saves/.keep": "",
+            },
+            dirs=self.FALLBACK_DIRS,
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        assert p.dir == "/mnt/sd/retrodeck/saves"
+        assert [c.data["issue"] for c in p.caveats if c.code == atlas.CAVEAT_HEALTH] == [
+            atlas.HEALTH_ISSUE_MARKER_INVALID
+        ]
 
 
 class TestRetroDeckSaveLocation:
@@ -649,6 +747,28 @@ class TestFlatpakSandboxPaths:
         assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED in codes
         assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY not in codes
 
+    def test_rejected_sandbox_save_directory_names_where_atlas_looked(self):
+        # The cfg line to edit is the sandbox spelling, but the directory atlas
+        # found missing is the host one — the message states both, so "missing"
+        # can be checked where the check was made (carried over from item 9).
+        p = self._psp_query(
+            'savefile_directory = "/var/data/gone"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+        )
+        rejected = [c for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY]
+        assert rejected
+        assert rejected[0].data["configured"] == "/var/data/gone"
+        assert f"{HOME}/.var/app/net.retrodeck.retrodeck/data/gone" in rejected[0].message
+
+    def test_a_host_side_rejection_does_not_repeat_the_same_path(self):
+        p = self._psp_query(
+            'savefile_directory = "/mnt/sd/gone"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+        )
+        rejected = [c for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY]
+        assert rejected
+        assert "host spelling" not in rejected[0].message
+
     def test_host_shared_paths_pass_through_untranslated(self):
         # /run/media is the same directory inside and outside the sandbox.
         p = self._psp_query(
@@ -1162,6 +1282,184 @@ class TestSandboxPathsInFirmware:
         assert [c.data for c in answer.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED] == [
             {"key": "system_directory", "path": "/var/db/bios"}
         ]
+
+
+class _CountingMachine:
+    """A machine that records every ``read_text``, so a query's reads can be counted.
+
+    Only ``read_text`` is counted: it is the operation that turns a file's
+    *content* into an answer, so it is what "every governing source is read
+    exactly once" (DESIGN, consistency model) is about. ``path_kind`` and
+    ``glob`` are repeatable probes that carry no revision of a file with them.
+
+    Reads are keyed on the **file**, not on the spelling that reached it:
+    ``atlas.resolve_links`` follows the seam's own ``readlink`` the way the
+    resolver does. Two spellings of one file are one source — the deployed
+    ``es_systems.xml`` really is reached through ``current/active``, a symlink
+    — so a counter keyed on the spelling would guard "one spelling per source"
+    and let a second read through a second spelling walk past it.
+    """
+
+    def __init__(self, files, **kwargs):
+        self._inner = atlas.FixtureMachine(files, **kwargs)
+        self.reads: Counter[str] = Counter()
+
+    def read_text(self, path):
+        # An unresolvable chain (ELOOP) has no file to key on; the spelling is
+        # then the most specific thing there is.
+        self.reads[atlas.resolve_links(self._inner, path) or path] += 1
+        return self._inner.read_text(path)
+
+    def glob(self, pattern):
+        return self._inner.glob(pattern)
+
+    def path_kind(self, path):
+        return self._inner.path_kind(path)
+
+    def readlink(self, path):
+        return self._inner.readlink(path)
+
+    def query_core(self, so_path):
+        return self._inner.query_core(so_path)
+
+    def file_size(self, path):
+        return self._inner.file_size(path)
+
+    def file_digest(self, path, algorithm):
+        return self._inner.file_digest(path, algorithm)
+
+    def repeats(self) -> dict[str, int]:
+        return {path: count for path, count in self.reads.items() if count > 1}
+
+
+class TestOneReadPerSourcePerQuery:
+    """DESIGN's consistency model, enforced: one read per source per query.
+
+    A source read twice inside one answer can be edited between the two reads,
+    and the answer then mixes two revisions of the machine — the whole reason
+    the handles hold no state. ``firmware_for_system`` did exactly that: it
+    read ``retrodeck.json`` and both ``es_systems.xml`` layers, then called
+    ``emulators_for``, which read all three again.
+    """
+
+    DEPLOY_ESDE = (
+        "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
+        "/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+    )
+    ES_SYSTEMS = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>\n'
+        '    <command label="Mupen64Plus-Next">retroarch -L '
+        "/app/cores/mupen64plus_next_libretro.so %ROM%</command>\n"
+        '    <command label="ParaLLEl N64">retroarch -L '
+        "/app/cores/parallel_n64_libretro.so %ROM%</command>\n"
+        "  </system>\n</systemList>\n"
+    )
+    GAMELIST = (
+        '<?xml version="1.0"?>\n<gameList>\n\t<game>\n\t\t<path>./Game.z64</path>\n'
+        "\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n"
+    )
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: (
+            'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'system_directory = "/mnt/sd/retrodeck/bios"\n'
+            'libretro_info_path = "/app/cores"\nlibretro_directory = "/app/cores"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+        ),
+        DEPLOY_ESDE: ES_SYSTEMS,
+        "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": '<?xml version="1.0"?>\n<systemList />\n',
+        "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": GAMELIST,
+        f"{RD_DEPLOY_CORES}/mupen64plus_next_libretro.info": (
+            'display_name = "Mupen64Plus-Next"\nsystemname = "Nintendo 64"\n'
+        ),
+        f"{RD_DEPLOY_CORES}/parallel_n64_libretro.info": (
+            'display_name = "ParaLLEl N64"\nsystemname = "Nintendo 64"\n'
+            'firmware_count = "1"\nfirmware0_path = "pifdata.bin"\n'
+        ),
+        "/mnt/sd/retrodeck/bios/pifdata.bin": "rom",
+        "/mnt/sd/retrodeck/saves/.keep": "",
+        "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+    }
+    CORES = {
+        f"{RD_DEPLOY_CORES}/mupen64plus_next_libretro.so": {"library_name": "Mupen64Plus-Next"},
+        f"{RD_DEPLOY_CORES}/parallel_n64_libretro.so": {"library_name": "ParaLLEl N64"},
+    }
+    CONTENT = "/mnt/sd/retrodeck/roms/n64/Game.z64"
+
+    INFO = f"{RD_DEPLOY_CORES}/parallel_n64_libretro.info"
+
+    def _query(self, ask):
+        machine = _CountingMachine(self.FILES, cores=self.CORES)
+        ask(atlas.RetroDeck(HOME, machine))
+        # An empty read log would make every assertion below vacuously true.
+        assert machine.reads
+        return machine
+
+    def test_save_location_reads_each_source_once(self):
+        machine = self._query(
+            lambda rd: rd.save_location(content_path=self.CONTENT, core_so="parallel_n64_libretro.so")
+        )
+        assert machine.repeats() == {}
+
+    def test_emulators_for_reads_each_source_once(self):
+        machine = self._query(lambda rd: rd.emulators_for("n64", content_path=self.CONTENT))
+        assert machine.repeats() == {}
+
+    def test_entry_save_location_reads_each_source_once(self):
+        # The catalogue ask that produced the entry is its own query; the
+        # invariant is per query, so only the entry's own reads are counted.
+        machine = _CountingMachine(self.FILES, cores=self.CORES)
+        entry = atlas.RetroDeck(HOME, machine).emulators_for("n64")[0]
+        machine.reads.clear()
+        entry.save_location(content_path=self.CONTENT)
+        assert machine.repeats() == {}
+
+    def test_firmware_for_core_reads_each_source_once(self):
+        machine = self._query(lambda rd: rd.firmware_for_core(core_so="parallel_n64_libretro.so"))
+        assert machine.repeats() == {}
+        assert self.INFO in machine.reads  # the declarations were really read
+
+    def test_firmware_for_system_reads_each_source_once(self):
+        machine = self._query(lambda rd: rd.firmware_for_system(system="n64"))
+        assert machine.repeats() == {}
+        # The sources the two halves of this query share, actually read.
+        assert RETRODECK_JSON in machine.reads
+        assert self.DEPLOY_ESDE in machine.reads
+
+    def test_firmware_inventory_reads_each_source_once(self):
+        machine = self._query(lambda rd: rd.firmware_inventory())
+        assert machine.repeats() == {}
+        assert self.INFO in machine.reads
+
+    def test_identify_firmware_reads_each_source_once(self):
+        machine = self._query(lambda rd: rd.identify_firmware(md5="0" * 32))
+        assert machine.repeats() == {}
+        assert self.INFO in machine.reads
+
+    def test_the_counter_would_see_a_repeat(self):
+        # The guard above proves nothing unless a second read is visible.
+        machine = self._query(lambda rd: (rd.root(), rd.saves_root()))
+        assert machine.repeats() == {RETRODECK_JSON: 2}
+
+    def test_the_counter_sees_one_file_under_two_spellings(self):
+        # …and nothing unless it counts the file rather than the spelling: the
+        # deployed catalogue is reached through `current/active`, a symlink, so
+        # a second read spelled the other way must not read as a first read.
+        deployed = "/var/lib/flatpak/app/x/1.0/files/es_systems.xml"
+        machine = _CountingMachine(
+            {deployed: "<systemList />"},
+            symlinks={"/var/lib/flatpak/app/x/current": "/var/lib/flatpak/app/x/1.0"},
+        )
+        machine.read_text(deployed)
+        machine.read_text("/var/lib/flatpak/app/x/current/files/es_systems.xml")
+        assert machine.repeats() == {deployed: 2}
+
+    def test_firmware_for_system_answers_what_the_catalogue_answers(self):
+        # Threading the snapshot must not change the enumeration it produces.
+        machine = atlas.FixtureMachine(self.FILES, cores=self.CORES)
+        rd = atlas.RetroDeck(HOME, machine)
+        answer = rd.firmware_for_system(system="n64")
+        assert [c.core_so for c in answer.cores] == [e.core_so for e in rd.emulators_for("n64")]
 
 
 class TestBareRetroArch:

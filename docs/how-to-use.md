@@ -176,6 +176,18 @@ entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro'
 entry.core_so                      # 'mupen64plus_next_libretro.so' — or None for a standalone emulator
 ```
 
+The per-game step matches on the path, so pass the ROM the way it lies under the system's ROM directory
+(`rd.roms_dir()` + system): gamelist entries are relative to that directory and are resolved against it, and a folder
+entry covers the files directly inside it. A path somewhere else — a copy, a staging directory — matches no game, and
+the answer is then the per-system one. Two files of the same name at different depths are two different games, and only
+the one the gamelist names carries the override.
+
+That comparison is **lexical** — `.`, `..` and repeated slashes are folded, symlinks are not followed. RetroDECK's tree
+uses symlinks liberally, so a ROM spelled through one (or through any other route to the same file) will not match its
+per-game entry, and you get the per-system answer instead. Resolving links would cost a read per gamelist entry per
+query, which is the one thing atlas's one-read-per-source rule exists to avoid; spelling the path the way it lies under
+`roms_dir()` costs you nothing.
+
 The entry answers the save question itself, so the core never round-trips through your code:
 
 ```python

@@ -941,6 +941,11 @@ def _rejected_dir_caveats(
     The message says whichever it was; claiming the wrong one would teach a
     reader a causality RetroArch does not have. The layer is named either way,
     because that is what tells a caller which file to fix.
+
+    ``configured`` stays the cfg's own spelling — that is the line to edit —
+    but inside a Flatpak that spelling is not where atlas looked. Where the two
+    differ, the message names the host path too, so "not an existing directory"
+    can be checked against the place the check was actually made.
     """
     caveats: list[Caveat] = []
     for entry in rejected:
@@ -949,16 +954,22 @@ def _rejected_dir_caveats(
             if entry.superseded
             else f"keeps {effective!r}, the root that stood before this file"
         )
+        host = sandbox.host("savefile_directory", entry.value).path
+        looked_at = (
+            f" (atlas looked at its host spelling {host!r})"
+            if host is not None and host != entry.value
+            else ""
+        )
         caveats.append(
             Caveat(
                 CAVEAT_INVALID_SAVE_DIRECTORY,
-                f"{entry.layer}: savefile_directory {entry.value!r} is not an existing directory "
-                f"— RetroArch refuses it and {stands} (configuration.c:6920-6932)",
+                f"{entry.layer}: savefile_directory {entry.value!r} is not an existing "
+                f"directory{looked_at} — RetroArch refuses it and {stands} "
+                "(configuration.c:6920-6932)",
                 {"layer": entry.layer, "configured": entry.value, "effective": effective},
             )
         )
         # When the rejection is a dead symlink, say why (REVIEW M7).
-        host = sandbox.host("savefile_directory", entry.value).path
         if host is not None:
             caveats.extend(_link_view(machine, host)[1])
     return tuple(caveats)
@@ -1992,23 +2003,107 @@ def _card_files(files: tuple[str, ...], rom_stem: str | None) -> tuple[str, ...]
     return tuple(resolved)
 
 
-def _match_per_game(selections: GamelistSelections, content_path: str) -> str | None:
-    """Match a content path against per-game ``altemulator`` entries, path-aware.
+_JSON_TYPE_NAMES: Mapping[type, str] = {
+    bool: "a boolean",
+    int: "a number",
+    float: "a number",
+    list: "a list",
+    dict: "an object",
+    type(None): "null",
+}
 
-    Gamelist paths are relative to the system's ROM directory (``./Name.ext``,
-    or ``./Folder`` for multi-disc directory entries) and may contain
-    subdirectories — ``./USA/Game.iso`` and ``./Japan/Game.iso`` are distinct
-    games. A gamelist path matches when the content path (or, for directory
-    entries, the content's parent directory) ends with it as a whole path
-    suffix.
+
+def _json_type_name(value: object) -> str:
+    """What a JSON value is, for a message that says why the marker is refused."""
+    return _JSON_TYPE_NAMES.get(type(value), type(value).__name__)
+
+
+# The ``retrodeck.json`` path keys atlas reads — the ones :meth:`RetroDeck._config_path`
+# is asked for. A key read through it belongs here, because this is the list the
+# type check below is scoped to.
+_MARKER_PATH_KEYS = ("rd_home_path", "saves_path", "bios_path", "roms_path")
+
+
+def _malformed_marker_paths(config: Mapping[str, Any]) -> tuple[str, str] | None:
+    """A ``paths`` value atlas reads that is not a path string — ``(key, complaint)``.
+
+    ``retrodeck.json`` is editable and its ``paths`` section drives every read
+    that follows, so the type is checked here, at the one place the marker is
+    read, rather than at each use: a non-string leaking out of
+    :meth:`RetroDeck.root` reaches ``os.stat``, which reads an ``int`` as a
+    *file descriptor* and so can answer for something that is not even a path.
+
+    Scoped to :data:`_MARKER_PATH_KEYS`, because atlas reports on what it reads.
+    A value under some other key says nothing about the reads atlas performs,
+    and calling the marker broken over it would be a claim about who wrote the
+    file rather than a reading of the machine — a future RetroDECK that nests
+    something new under ``paths`` would take a healthy installation down to its
+    fallback roots. A ``paths`` that is not an object at all is different: no
+    key can be read from it, so every read is affected.
     """
-    content = content_path.replace("\\", "/")
-    parent = os.path.dirname(content)
-    for rel_path, label in selections.per_game.items():
-        suffix = "/" + rel_path
-        if content.endswith(suffix) or parent.endswith(suffix):
-            return label
+    if "paths" not in config:
+        return None
+    # Absent and null are different states: a marker that omits the section
+    # says nothing and the fallbacks answer, while one that writes ``null``
+    # there has written a section no key can be read from.
+    paths: object = config["paths"]
+    if not isinstance(paths, dict):
+        return "paths", f"is {_json_type_name(paths)}, not an object of path strings"
+    for key in _MARKER_PATH_KEYS:
+        if key not in paths:
+            continue
+        value: object = paths[key]
+        if not isinstance(value, str):
+            return f"paths.{key}", f"is {_json_type_name(value)}, not a path string"
     return None
+
+
+def _normalized_path(path: str) -> str:
+    """One spelling for two paths that name the same place, for comparison only.
+
+    Lexical: separators, ``.``, ``..`` and repeated slashes are folded, links
+    are not followed. Nothing here touches the machine.
+    """
+    return os.path.normpath(path.replace("\\", "/"))
+
+
+def _match_per_game(
+    selections: GamelistSelections, content_path: str, *, system_roms_dir: str
+) -> str | None:
+    """Match a content path against per-game ``altemulator`` entries, anchored.
+
+    Gamelist paths are relative to the system's own ROM directory
+    (``./Name.ext``, or ``./Folder`` for multi-disc directory entries) and may
+    contain subdirectories — ``./USA/Game.iso`` and ``./Japan/Game.iso`` are
+    distinct games. So each entry is resolved against *system_roms_dir* and
+    compared as a whole path: an unanchored suffix match hands one game's
+    selection to every same-named file at any depth below, and the live psx
+    gamelist has exactly that shape — a root-level ``./<name>.m3u`` carrying the
+    override next to a folder of the same name holding a second ``<name>.m3u``
+    that carries none.
+
+    A directory entry matches the files inside it, which is what makes the
+    multi-disc convention work; an entry naming the content file itself is the
+    more specific statement and wins over a directory entry that also covers it.
+
+    **The comparison is lexical** (:func:`_normalized_path`): a content path
+    spelled through a symlink — and RetroDECK's own tree uses symlinks liberally
+    — names the same file for the kernel but not for this match, so the answer
+    falls back to the per-system selection. Resolving would cost a read per
+    entry per query, which is exactly what the one-read-per-source rule exists
+    to prevent, so the limit is stated (here and in the developer guide) rather
+    than paid for: name the content the way it lies under the ROM directory.
+    """
+    content = _normalized_path(content_path)
+    parent = os.path.dirname(content)
+    directory_label: str | None = None
+    for rel_path, label in selections.per_game.items():
+        entry = _normalized_path(os.path.join(system_roms_dir, rel_path))
+        if content == entry:
+            return label
+        if directory_label is None and parent == entry:
+            directory_label = label
+    return directory_label
 
 
 class EmulatorEntry:
@@ -2134,6 +2229,17 @@ class RetroDeck(_FirmwareQueries):
             return {}, (
                 Caveat(HEALTH_ISSUE_MARKER_INVALID, f"marker {path} is not a JSON object", {"path": path}),
             )
+        malformed = _malformed_marker_paths(data)
+        if malformed is not None:
+            key, complaint = malformed
+            return {}, (
+                Caveat(
+                    HEALTH_ISSUE_MARKER_INVALID,
+                    f"marker {path}: {key} {complaint} — atlas reads it to resolve RetroDECK's "
+                    "roots, so those roots fall back to their defaults instead",
+                    {"path": path, "key": key},
+                ),
+            )
         return data, ()
 
     def _config_path(self, config: dict[str, Any], key: str, fallback_subdir: str) -> tuple[str, str]:
@@ -2143,11 +2249,15 @@ class RetroDeck(_FirmwareQueries):
         (``rd_home_path`` or its own ``~/retrodeck`` fallback) — RetroDECK
         lays its tree out under the home it was pointed at, so the honest
         default follows the configured root, not a hard-coded one.
+
+        Only a string is a path: :meth:`_read_marker` refuses a marker whose
+        ``paths`` hold anything else, so the check here is what makes that
+        guarantee local — nothing but a path ever leaves this method.
         """
         paths = config.get("paths")
         if isinstance(paths, dict):
-            value = paths.get(key, "")
-            if value:
+            value: object = paths.get(key, "")
+            if isinstance(value, str) and value:
                 return value, f"retrodeck.json: paths.{key}"
         if not fallback_subdir:
             fallback = os.path.join(self._home, "retrodeck")
@@ -2267,6 +2377,10 @@ class RetroDeck(_FirmwareQueries):
         config, _ = self._read_marker()
         return self._gamelist_selections_at(self._config_path(config, "rd_home_path", "")[0], system)
 
+    def _system_roms_dir(self, config: dict[str, Any], system: str) -> str:
+        """Where this system's ROMs live — the anchor gamelist paths are relative to."""
+        return os.path.join(self._config_path(config, "roms_path", "roms")[0], system)
+
     def emulators_for(self, system: str, *, content_path: str | None = None) -> tuple[EmulatorEntry, ...]:
         """The emulators that can launch *system*, in launch-priority order.
 
@@ -2282,12 +2396,31 @@ class RetroDeck(_FirmwareQueries):
         """
         config, _ = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]
-        specs = self._catalogue(root).get(system, ())
-        selections = self._gamelist_selections_at(root, system)
+        return self._entries_from(
+            self._catalogue(root).get(system, ()),
+            self._gamelist_selections_at(root, system),
+            system_roms_dir=self._system_roms_dir(config, system),
+            content_path=content_path,
+        )
+
+    def _entries_from(
+        self,
+        specs: tuple[EmulatorSpec, ...],
+        selections: GamelistSelections,
+        *,
+        system_roms_dir: str,
+        content_path: str | None,
+    ) -> tuple[EmulatorEntry, ...]:
+        """Apply ES-DE's selection hierarchy to one already-read catalogue snapshot.
+
+        Split out from :meth:`emulators_for` so the firmware route can ask the
+        same question of the sources it has already read, instead of reading
+        the marker and both catalogue layers a second time.
+        """
         chosen_label: str | None = None
         chosen_source: str | None = None
         if content_path is not None:
-            per_game = _match_per_game(selections, content_path)
+            per_game = _match_per_game(selections, content_path, system_roms_dir=system_roms_dir)
             if per_game is not None:
                 chosen_label = per_game
                 chosen_source = f'gamelist.xml: altemulator = "{per_game}" (per-game)'
@@ -2372,14 +2505,24 @@ class RetroDeck(_FirmwareQueries):
         dropped. Whether that catalogue could be read travels with it: an
         unreadable ``es_systems.xml`` must never come out as "this machine has
         no emulator for that system".
+
+        The catalogue is the one :meth:`emulators_for` answers from, assembled
+        from this query's own snapshot: marker and both catalogue layers are
+        read once here and handed on, never re-read.
         """
         config, _ = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]
-        _, read = self._read_catalogue(root)
+        by_system, read = self._read_catalogue(root)
+        entries = self._entries_from(
+            by_system.get(system, ()),
+            self._gamelist_selections_at(root, system),
+            system_roms_dir=self._system_roms_dir(config, system),
+            content_path=None,
+        )
         catalogue = Catalogue(
             entries=tuple(
                 CatalogueEntry(label=entry.label, kind=entry.kind, core_so=entry.core_so)
-                for entry in self.emulators_for(system)
+                for entry in entries
             ),
             read=read,
         )
@@ -2411,7 +2554,9 @@ class RetroDeck(_FirmwareQueries):
         if content_path is not None:
             root = self._config_path(config, "rd_home_path", "")[0]
             selections = self._gamelist_selections_at(root, spec.system)
-            override_label = _match_per_game(selections, content_path)
+            override_label = _match_per_game(
+                selections, content_path, system_roms_dir=self._system_roms_dir(config, spec.system)
+            )
             if override_label is not None and override_label != spec.label:
                 placement = _dc_replace(
                     placement,
