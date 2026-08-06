@@ -1,5 +1,68 @@
 # Packaged data
 
+## `core_oddities.json` — the rule cards
+
+One card per libretro core whose save behaviour deviates from RetroArch's standard rule. A card says _which live config
+governs the core_ and what each of its values means; the value itself is always read off the machine. The audit verdict
+behind every card lives in `core_audit.json`, and a test fails if a card has no entry there.
+
+A mode — one value of the governing option — states the root it anchors at, an optional `subdir`, its `granularity`, and
+the files the save consists of:
+
+```json
+"All VMUs": {
+  "root": "savefile_directory",
+  "subdir": null,
+  "files": ["<save_id>.A1.bin", "<save_id>.B1.bin"],
+  "files_without_save_id": ["<rom_stem>.A1.bin", "<rom_stem>.B1.bin"],
+  "granularity": "per-game-files"
+}
+```
+
+### File names are templates in the placement's own hole vocabulary
+
+A declared name may carry exactly two tokens, and they are not local to this file: they are the holes
+`SavePlacement.needs` speaks (`atlas/placement.py`, which the loader imports — one definition, not a second spelling
+here).
+
+- `<rom_stem>` — the resolver fills it from the content path. Not a hole in an answer: either it is substituted or the
+  file set is honestly unknown.
+- `<save_id>` — the content's platform-native id (Flycast names a per-game VMU after the disc's product number). atlas
+  never fills it, because reading an id out of a ROM is identification, not location. It stays in the stated name and
+  `save_id` joins `needs`, so a caller sees a template rather than a resolved-looking name.
+
+The loader rejects any other `<token>` in a declared name. That is the point of keeping one vocabulary: a card is data,
+and without the check a typo (`<game_id>`) would travel silently into a filename atlas states as fact — the failure mode
+the "never guess" rule exists to prevent. A card that needs a new hole adds it to the placement vocabulary first.
+
+### Two fields for what one file list cannot say
+
+- `files_without_save_id` — the same set as the emulator names it when the content carries **no** id. Flycast's
+  `getVmuPath` takes the id branch only for console content with a readable disc header and falls back to the ROM's name
+  otherwise, so the set is conditional on a fact atlas does not read. The resolver states the id-keyed set and hands
+  this one to the caller in `filenames-content-conditional`, filled as far as it can fill it. Only meaningful next to a
+  `<save_id>` set, and it may not name an id itself; the loader enforces both.
+- `also_under` — a second root this mode's save data lives under (Flycast's `VMU A1` moves one controller's VMU and
+  leaves the rest on the shared card). A card states one root per mode, so such a mode declares **no** `files` at all —
+  the loader refuses both together — and the answer carries `file-set-spans-roots` instead of offering the visible part
+  as the whole save. What the schema would need to state it properly is task 16 in `docs/tasks/save-detection.md`.
+
+`complete` is the explicit claim that the mode's candidate universe is closed. A template can in principle carry it —
+the hole is in the name, not in the membership — but only source-verified provenance earns it.
+
+### Provenance
+
+`provenance.source` is the evidence prose the answer carries in its `sources`, `verified_against` and `date` pin what it
+was established on, and `provenance.status` states it **per mode**: every mode has an entry, and the flycast card opens
+each with the project's evidence marker (`[V-live]`, `[D]`, `[O]`) so an observed mode and a derived one cannot be read
+as the same claim. Tests enforce the per-mode coverage and that marker split.
+
+## `core_audit.json`
+
+The machine-readable core of `docs/research/core-audit.md`: per core, the verdict, the evidence `note`, whether per-game
+saves are a proven capability, and — per arrangement — the versions the knowledge was verified against. The file's own
+`spec` field carries the rules; the research doc carries the method.
+
 ## `firmware_hashes.json`
 
 What a correct firmware file's bytes are: the `md5` / `sha1` / `size` triple that identifies it. This is world knowledge

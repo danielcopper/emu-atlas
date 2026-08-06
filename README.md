@@ -147,8 +147,9 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   different things to a client.
 - `atlas/contract.py` is the canonical JSON-shaped serialization of every answer — the same code the conformance run
   asserts with exact equality, available to consumers.
-- 403 tests, 68 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
-  blobs, and read-failure states), zero runtime dependencies, CI-verified wheel/sdist.
+- The conformance vectors (`vectors/`, schema 2) are whole fixture machines — files, directories, symlinks, core
+  answers, firmware blobs and read-failure states — each replayed against the canonical serialization and asserted with
+  exact equality, alongside the unit suite on every push. Zero runtime dependencies, CI-verified wheel/sdist.
 
 What is not covered yet, and in which order it comes: `ROADMAP.md`. The systematic core-by-core state:
 `docs/research/coverage-matrix.md`.
