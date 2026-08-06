@@ -127,6 +127,12 @@ CAVEAT_CORE_WITHOUT_SYSTEMNAME = "core-without-systemname"
 CAVEAT_ASSIGNMENT_MAY_HIDE_CORES = "system-assignment-may-hide-cores"
 CAVEAT_CORE_INFO_UNREADABLE = "core-info-unreadable"
 CAVEAT_CATALOGUE_UNREADABLE = "emulator-catalogue-unreadable"
+# Three ways to answer no catalogue entries, and they are three different
+# claims: the arrangement has none (unavailable), it has one that could not be
+# read (unreadable), and atlas has not established where this arrangement keeps
+# one (unestablished). Only the first two say anything about the machine; the
+# third is about atlas, and a client must not read it as an absence.
+CAVEAT_CATALOGUE_UNESTABLISHED = "emulator-catalogue-unestablished"
 CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
 CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
 CAVEAT_FIRMWARE_SCAN_INCOMPLETE = "firmware-scan-incomplete"

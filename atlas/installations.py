@@ -38,6 +38,9 @@ from atlas.esde import (
     parse_gamelist,
 )
 from atlas.firmware import (
+    CAVEAT_CATALOGUE_UNAVAILABLE,
+    CAVEAT_CATALOGUE_UNESTABLISHED,
+    CAVEAT_CATALOGUE_UNREADABLE,
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
     CAVEAT_FIRMWARE_ROOT_MISSING,
@@ -2450,6 +2453,56 @@ def _match_per_game(
     return directory_label
 
 
+@runtime_checkable
+class _CatalogueHost(Protocol):
+    """What an entry needs back from the installation that produced it.
+
+    Narrow on purpose: an entry asks its installation exactly one thing, so the
+    type it is bound to is that one method rather than a concrete handle. It
+    used to be ``RetroDeck``, which made every entry — and so the catalogue
+    answer itself — RetroDECK's to hand out.
+    """
+
+    def entry_save_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> SavePlacement | Unresolved: ...
+
+
+@dataclass(frozen=True, slots=True)
+class CatalogueAnswer:
+    """Which emulators a frontend catalogue declares for one system.
+
+    An answer object rather than a bare tuple for the reason every other answer
+    here is one: empty is not self-explaining. The catalogue may declare no
+    emulator for this system, or the arrangement may have no catalogue, or its
+    catalogue may not have been readable — three different facts that a tuple
+    spells the same way. ``caveats`` carries which, ``sources`` says what was
+    read to find out.
+    """
+
+    entries: tuple[EmulatorEntry, ...] = ()
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class SystemsAnswer:
+    """Every system a frontend catalogue declares, and what was read to say so.
+
+    The same empty-is-ambiguous problem as :class:`CatalogueAnswer`, one level
+    up: a catalogue that could not be read lists no systems, and so does one
+    that genuinely declares none.
+    """
+
+    systems: tuple[str, ...] = ()
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
 class EmulatorEntry:
     """One catalogue entry — an emulator that can launch one system, as configured.
 
@@ -2459,7 +2512,7 @@ class EmulatorEntry:
     """
 
     def __init__(
-        self, installation: "RetroDeck", spec: EmulatorSpec, caveats: tuple[Caveat, ...] = ()
+        self, installation: "_CatalogueHost", spec: EmulatorSpec, caveats: tuple[Caveat, ...] = ()
     ) -> None:
         self._installation = installation
         self._spec = spec
@@ -2526,7 +2579,35 @@ class EmulatorEntry:
         )
 
 
-class RetroDeck(_FirmwareQueries):
+class _CatalogueQueries:
+    """The catalogue entry points, answered by every handle — including with a refusal.
+
+    "Which emulator would launch this?" is a question about an arrangement, not
+    a RetroDECK feature, so every handle answers it. Only RetroDECK answers it
+    *from a catalogue*; the others state why they cannot, and those reasons are
+    different claims that must not collapse into one empty tuple:
+
+    - a bare RetroArch has no frontend catalogue at all — a fact about the
+      arrangement, and a settled one;
+    - an EmuDeck arrangement may well have one (it can be driven by ES-DE,
+      Pegasus or Steam ROM Manager), and atlas has not established where. That
+      is a statement about atlas, not about the machine, and a client that read
+      it as "no emulators" would be told something nobody checked.
+    """
+
+    def _catalogue_absence(self) -> Caveat:
+        raise NotImplementedError  # pragma: no cover - every handle supplies one
+
+    def systems(self) -> SystemsAnswer:
+        """Every system the frontend catalogue declares, sorted."""
+        return SystemsAnswer(caveats=(self._catalogue_absence(),))
+
+    def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
+        """The emulators that can launch *system*, in launch-priority order."""
+        return CatalogueAnswer(caveats=(self._catalogue_absence(),))
+
+
+class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     """A RetroDECK installation — cfg is the truth, ``retrodeck.json`` is context.
 
     The handle is *live*: it stores only its identity (home) and the machine
@@ -2705,10 +2786,32 @@ class RetroDeck(_FirmwareQueries):
     def _catalogue(self, root: str) -> dict[str, tuple[EmulatorSpec, ...]]:
         return self._read_catalogue(root)[0]
 
-    def systems(self) -> tuple[str, ...]:
+    def _catalogue_unread_caveat(self, system: str | None = None) -> tuple[Caveat, ...]:
+        """The caveat for a catalogue that could not be read — the same fact as the firmware route's.
+
+        One fact, one code: ``firmware_for_system`` already states this exact
+        thing when its catalogue comes back unread, and an answer that is empty
+        because nobody could look is the same answer whichever door it left by.
+        """
+        return (
+            Caveat(
+                CAVEAT_CATALOGUE_UNREADABLE,
+                "the frontend's emulator catalogue could not be read, so which emulators this "
+                "installation knows is unknown — this answer is empty because atlas could not look, "
+                "not because nothing is there",
+                {"system": system} if system is not None else {},
+            ),
+        )
+
+    _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, bundled + custom_systems overlay)"
+
+    def systems(self) -> SystemsAnswer:
         """Every system the catalogue declares, sorted."""
         config, _ = self._read_marker()
-        return tuple(sorted(self._catalogue(self._config_path(config, "rd_home_path", "")[0])))
+        by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
+        if not read:
+            return SystemsAnswer(caveats=self._catalogue_unread_caveat())
+        return SystemsAnswer(tuple(sorted(by_system)), (self._CATALOGUE_SOURCE,))
 
     def _gamelist_selections_at(self, root: str, system: str) -> GamelistSelections:
         gamelist_path = os.path.join(root, "ES-DE", "gamelists", system, "gamelist.xml")
@@ -2725,7 +2828,7 @@ class RetroDeck(_FirmwareQueries):
         """Where this system's ROMs live — the anchor gamelist paths are relative to."""
         return os.path.join(self._config_path(config, "roms_path", "roms")[0], system)
 
-    def emulators_for(self, system: str, *, content_path: str | None = None) -> tuple[EmulatorEntry, ...]:
+    def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
         """The emulators that can launch *system*, in launch-priority order.
 
         First entry = the effective default, resolved live through ES-DE's
@@ -2737,14 +2840,24 @@ class RetroDeck(_FirmwareQueries):
         When *content_path* is omitted and the gamelist carries per-game
         overrides, every returned entry states that as a catalogue caveat: the
         system-level answer may be wrong for exactly those games.
+
+        No entries and a catalogue that was read is an answer about the machine:
+        the frontend knows no emulator for this system. No entries because the
+        catalogue could not be read is not, and says so.
         """
         config, _ = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]
-        return self._entries_from(
-            self._catalogue(root).get(system, ()),
-            self._gamelist_selections_at(root, system),
-            system_roms_dir=self._system_roms_dir(config, system),
-            content_path=content_path,
+        by_system, read = self._read_catalogue(root)
+        if not read:
+            return CatalogueAnswer(caveats=self._catalogue_unread_caveat(system))
+        return CatalogueAnswer(
+            self._entries_from(
+                by_system.get(system, ()),
+                self._gamelist_selections_at(root, system),
+                system_roms_dir=self._system_roms_dir(config, system),
+                content_path=content_path,
+            ),
+            (self._CATALOGUE_SOURCE,),
         )
 
     def _entries_from(
@@ -2941,7 +3054,7 @@ def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
     return result
 
 
-class EmuDeck(_FirmwareQueries):
+class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     """An EmuDeck arrangement — ``settings.sh`` is its truth, the standalone
     ``org.libretro.RetroArch`` Flatpak is its RetroArch.
 
@@ -2956,6 +3069,19 @@ class EmuDeck(_FirmwareQueries):
     kind = "emudeck"
     kinds = ("emudeck", "standalone_retroarch_flatpak")
     _RA_APP_ID = RETROARCH_FLATPAK_APP_ID
+
+    def _catalogue_absence(self) -> Caveat:
+        # Not "there is none": EmuDeck installs a frontend, and which one — and
+        # where it keeps its catalogue — is what atlas has not established. The
+        # honest answer is about atlas, so the code says unestablished and the
+        # message does not describe the machine.
+        return Caveat(
+            CAVEAT_CATALOGUE_UNESTABLISHED,
+            "atlas has not established where an EmuDeck arrangement keeps its frontend catalogue — "
+            "EmuDeck can be driven by ES-DE, Pegasus or Steam ROM Manager — so which emulators run a "
+            "system is unknown here; name the core yourself with save_location(core_so=...)",
+            {"arrangement": "emudeck"},
+        )
 
     def __init__(self, home: str, machine: Machine) -> None:
         self._home = home
@@ -3089,7 +3215,7 @@ class EmuDeck(_FirmwareQueries):
         )
 
 
-class _RetroArchInstall(_FirmwareQueries):
+class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
     """Shared behavior for a bare RetroArch install (standalone Flatpak or native).
 
     The saves root comes from the cfg's ``savefile_directory``; when unset, the
@@ -3103,6 +3229,17 @@ class _RetroArchInstall(_FirmwareQueries):
 
     kinds: tuple[str, ...] = ()
     _app_id: str | None = None
+
+    def _catalogue_absence(self) -> Caveat:
+        # A settled fact about the arrangement, not a gap in atlas: RetroArch
+        # has no frontend catalogue. The same code the firmware route already
+        # uses to say so.
+        return Caveat(
+            CAVEAT_CATALOGUE_UNAVAILABLE,
+            "a bare RetroArch install ships no frontend catalogue, so there is no launch entry to "
+            "answer with — name the core yourself with save_location(core_so=...)",
+            {"arrangement": "retroarch"},
+        )
 
     def __init__(self, home: str, machine: Machine, cfg_suffix: str) -> None:
         self._home = home
@@ -3208,13 +3345,15 @@ class NativeRetroArch(_RetroArchInstall):
 
 @runtime_checkable
 class Installation(Protocol):
-    """The surface every installation handle offers — identity, health, placement.
+    """The surface every installation handle offers — identity, health, placement, catalogue.
 
     A common protocol instead of a closed union (REVIEW M8): detection returns
-    these, and consumers program against the surface. Capabilities beyond it —
-    the ES-DE catalogue (``systems``/``emulators_for``), RetroDECK's tree
-    roots — live on the concrete handles; narrow with ``isinstance`` when a
-    capability is needed.
+    these, and consumers program against the surface. The catalogue question is
+    on it because it is a question about an arrangement, not a RetroDECK
+    feature: a handle that cannot answer it from a catalogue says *why* in a
+    caveat, which is an answer, where an ``isinstance`` narrow left the caller
+    to guess. Capabilities that are genuinely one arrangement's — RetroDECK's
+    tree roots, its gamelist selections — still live on the concrete handles.
     """
 
     @property
@@ -3230,6 +3369,10 @@ class Installation(Protocol):
     def save_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavePlacement: ...
+
+    def systems(self) -> SystemsAnswer: ...
+
+    def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer: ...
 
     def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer: ...
 

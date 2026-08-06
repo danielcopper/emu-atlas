@@ -20,7 +20,9 @@ Two entry points, per DESIGN.md:
 from __future__ import annotations
 
 from atlas.contract import (
+    catalogue_contract,
     emulator_contract,
+    systems_contract,
     firmware_contract,
     identification_contract,
     installation_contract,
@@ -31,6 +33,7 @@ from atlas.core_info import parse_core_info
 from atlas.firmware import (
     CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
     CAVEAT_CATALOGUE_UNAVAILABLE,
+    CAVEAT_CATALOGUE_UNESTABLISHED,
     CAVEAT_CATALOGUE_UNREADABLE,
     CAVEAT_CONTENT_CONTRADICTORY,
     CAVEAT_CONTENT_UNIDENTIFIED,
@@ -113,7 +116,9 @@ from atlas.installations import (
     HEALTH_ISSUE_ROOT_MISSING,
     HEALTH_ISSUE_SAVES_ROOT_MISSING,
     EmuDeck,
+    CatalogueAnswer,
     EmulatorEntry,
+    SystemsAnswer,
     Health,
     Installation,
     NativeRetroArch,
@@ -346,6 +351,11 @@ __all__ = [
     "build_save_placement",
     "detect",
     "emulator_contract",
+    "catalogue_contract",
+    "systems_contract",
+    "CatalogueAnswer",
+    "SystemsAnswer",
+    "CAVEAT_CATALOGUE_UNESTABLISHED",
     "firmware_contract",
     "identification_contract",
     "installation_contract",
