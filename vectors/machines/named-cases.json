@@ -1035,6 +1035,444 @@
       }
     },
     {
+      "name": "flycast-system-files-in-the-content-dir-move-the-shared-vmus",
+      "rationale": "RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY hands the core the CONTENT directory when systemfiles_in_content_dir is set (runloop.c:1963-1985), so a card rooted in the system directory resolves under the ROM's own directory and states content_directory as its root kind — the configured system_directory is not where this core writes.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsystemfiles_in_content_dir = \"true\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/roms/dreamcast/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/roms/dreamcast/dc/dc_nvmem.bin": "n",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "stale"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "query": {
+          "core_so": "flycast_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin",
+              "dc_nvmem.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "flycast-system-files-in-the-content-dir-without-content-names-the-hole",
+      "rationale": "Same machine, no content named: the root is the content's own directory, so what is left is the content_dir hole the CALLER fills — not a configured value nobody can supply. The file set stands declared because there is nowhere to look yet.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsystemfiles_in_content_dir = \"true\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "stale"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "query": {
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "<content_dir>/dc",
+          "root_kind": "content_directory",
+          "needs": [
+            "content_dir"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "vmu_save_A1.bin",
+              "vmu_save_B1.bin",
+              "vmu_save_C1.bin",
+              "vmu_save_D1.bin",
+              "dc_nvmem.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "flycast-a-cleared-system-directory-hands-the-core-the-content-dir",
+      "rationale": "A blank system_directory clears the setting — the key passes handle_setting=true, so the generic path loop writes the empty value through (configuration.c:1691, :6532-6538, config_file.c:1202-1216) — and an empty system directory sends the core to the content's directory. The opposite of savefile_directory, where a blank value keeps the standing root.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/roms/dreamcast/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/roms/dreamcast/dc/dc_nvmem.bin": "n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "query": {
+          "core_so": "flycast_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin",
+              "dc_nvmem.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "flycast-no-system-directory-resolves-retroarchs-platform-default",
+      "rationale": "No layer states system_directory, so what stands is the platform default config_set_defaults wrote before the cfg was read: 'system' under the config tree (configuration.c:5746-5749, platform_unix.c:2142-2143). A configured value nobody stated is resolvable, not a hole.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc/vmu_save_A1.bin": "v",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc/dc_nvmem.bin": "n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "query": {
+          "core_so": "flycast_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin",
+              "dc_nvmem.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "flycast-a-sandbox-only-system-directory-is-stated-not-a-hole",
+      "rationale": "The configured directory exists only inside the Flatpak sandbox: atlas answers the spelling the emulator writes to, states sandbox-path-untranslated, and performs no observation there — the same shape an unreachable saves root gets. A hole would ask the caller for a value no caller has.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/var/db/bios\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "query": {
+          "core_so": "flycast_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/var/db/bios/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "vmu_save_A1.bin",
+              "vmu_save_B1.bin",
+              "vmu_save_C1.bin",
+              "vmu_save_D1.bin",
+              "dc_nvmem.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "system_directory",
+                "path": "/var/db/bios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "flycast-a-spanning-modes-second-root-is-resolved-not-the-cards-spelling",
+      "rationale": "In 'VMU A1' only port A1 moves to the save directory; the rest keeps using the shared card, which the card calls the system directory. With systemfiles_in_content_dir set, that shared card is under the CONTENT directory (runloop.c:1963-1985), so file-set-spans-roots reports also_under: content_directory — the same reading root_kind performs, because a consumer following the card's own spelling back to the cfg key would look where this core never writes.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsystemfiles_in_content_dir = \"true\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"VMU A1\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "shared"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "VMU A1",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "shared-card"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "card": "flycast",
+                "mode": "VMU A1",
+                "also_under": "content_directory"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "catalogue-declared-order-and-classification",
       "rationale": "The catalogue is read live from the bundled es_systems.xml in the Flatpak deployment: entries in declared order (first = ES-DE default), libretro entries carry their extracted core .so, standalone entries carry none.",
       "input": {

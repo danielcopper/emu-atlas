@@ -158,6 +158,32 @@ def split_content_path(content_path: str) -> tuple[str, str, str]:
     return dir_path, _parent_dir_name(basename), os.path.basename(basename)
 
 
+def content_system_dir(content_path: str) -> str:
+    """The directory a core is handed as its *system* directory for this content.
+
+    ``RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY`` answers with the content's own
+    directory whenever ``systemfiles_in_content_dir`` is set or no
+    ``system_directory`` is left standing, and it composes that directory here:
+    ``fill_pathname_basedir`` of the **raw** content path (``runloop.c:1977``,
+    ``file_path.c:475-480`` → :func:`_path_basedir`), then the trailing slash
+    removed unless the result is the root directory — upstream tests that by
+    counting slashes, so ``/rom.bin`` keeps its ``/`` and ``rom.bin`` keeps its
+    ``./`` (``runloop.c:1979-1981``).
+
+    Deliberately *not* :func:`split_content_path`'s directory: that one is the
+    basedir of ``runtime_content_path_basename``, which the archive delimiter
+    and the extension truncation have already been through. The two differ for
+    content inside an archive subdirectory (``pack.zip#sub/rom.n64``, whose
+    entry keeps its archive spelling here) and for a path written with a
+    trailing slash. Each is the directory its own upstream caller computes, and
+    a core asking for the system directory is answered by this one.
+    """
+    based = _path_basedir(content_path)
+    if based.count("/") > 1 and based.endswith("/"):
+        return based[:-1]
+    return based
+
+
 def content_file_name(content_path: str) -> str:
     """The name of the file the content path names *on disk*.
 

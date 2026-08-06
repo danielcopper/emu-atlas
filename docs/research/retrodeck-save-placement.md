@@ -436,6 +436,47 @@ stay shared. atlas states no file set there (`file-set-spans-roots`), which is h
 describes one root per mode and cannot say "these ports here, those there". Closing it needs a live Naomi run and a card
 that can express a per-root, per-port split.
 
+### Which directory "the system directory" is
+
+**[V]** A core rooted there never reads `system_directory`; it asks `RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY` and is
+answered by `runloop.c:1958-1999`, which returns three different things:
+
+| Situation                                             | What the core receives                                            |
+| ----------------------------------------------------- | ----------------------------------------------------------------- |
+| `systemfiles_in_content_dir` set, or nothing standing | the **content's** directory (`:1963-1985`)                        |
+| …and no content path loaded                           | the standing value, whatever it is — the fallback at `:1986-1987` |
+| otherwise                                             | `settings->paths.directory_system` (`:1992-1997`)                 |
+
+The fallback row is not "the empty string": it hands back `dir_system` unchanged, which is empty only when it was
+_nothing standing_ that led into the branch. With a configured directory **and** the flag set, a contentless run
+receives that configured directory. Either way the row is not an answer about a save — a save presupposes content — so
+atlas answers a contentless query with the content template instead.
+
+The content directory is `fill_pathname_basedir` of the **raw** content path (`:1977`, `file_path.c:475-480`) with the
+trailing slash removed unless the result is the root (`:1979-1981`) — not the basedir of
+`runtime_content_path_basename`, so for content inside an archive subdirectory the two spellings differ. On the launch
+shape RetroDECK/ES-DE uses, `RARCH_PATH_CONTENT` is set from argv before the core exists (`retroarch.c:8159` →
+`runloop_path_set_basename`, `runloop.c:8678`), so a core querying at `retro_init` already sees it.
+
+**[V]** "Nothing standing" is not the same as "the key is absent", and the difference is the opposite of
+`savefile_directory`'s:
+
+- **Absent** → the platform default is already in place from `config_set_defaults` (`configuration.c:5746-5749`), i.e.
+  `system` under the config tree on desktop Linux (`platform_unix.c:2137-2143` — the same block that seeds the saves
+  default, `:2133-2134`). An unset key therefore _resolves_.
+- **Blank, or the literal `default`** → the setting is cleared. `system_directory` passes `handle_setting = true`
+  (`configuration.c:1691`), so the generic path loop writes whatever the merged config holds without a directory test
+  (`:6532-6538`), `config_get_path` copies an empty value straight through (`config_file.c:1202-1216`), and `default` is
+  emptied at `:6834-6835`. Where a blank `savefile_directory` keeps the standing root, a blank `system_directory` hands
+  the core the content directory instead.
+- **`LIBRETRO_SYSTEM_DIRECTORY`** in the environment overrides the config value outright (`configuration.c:6580-6584`).
+  That is a property of the launching process, not of anything on disk, so no config read can see it.
+
+**[V]** RetroArch's own "is the firmware there?" check follows the same flag but not the same fallback: it substitutes
+the content directory only when `systemfiles_in_content_dir` is set **and** content is inited, and never for an empty
+`system_directory` (`menu/menu_displaylist.c:854-878`). So with the flag on, a core looks for its BIOS next to the
+content while the menu's check looks wherever content-inited-ness decides.
+
 ## 9. Does RetroDECK overwrite user settings?
 
 **[V]** No, except on an explicit reset.
