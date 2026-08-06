@@ -170,6 +170,21 @@ class TestFlycastResolution:
         assert p.file_set.complete is False
         assert p.needs == ("save_id",)
 
+    def test_the_card_provenance_rides_along_on_the_standard_route(self):
+        # A mode switch MOVES the save — the shared cards stay behind stale —
+        # and no field of the placement can say that. The card's provenance is
+        # where it is written, so it reaches this route too, not only the
+        # system_directory one.
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "All VMUs"\n',
+                SAVES_KEEP: "",
+            }
+        )
+        assert any(s.startswith("rule card 'flycast' governs this placement") for s in p.sources)
+
     def test_the_save_id_hole_is_never_filled_from_the_content_name(self):
         # The id lives in the disc header, which atlas does not read — a file
         # lying there under the ROM's name is not this save (REVIEW 13b).

@@ -1550,8 +1550,7 @@ def _nest_card_subdir(
     sources: tuple[str, ...] = ()
     if card is not None:
         sources = (
-            f"rule card '{card.key}': core nests its saves under '{mode.subdir}/' in the "
-            f"save directory — {card.provenance}",
+            f"rule card '{card.key}': core nests its saves under '{mode.subdir}/' in the save directory",
         )
     nested_fallback = os.path.join(fallback_dir, mode.subdir) if fallback_dir is not None else None
     return os.path.join(directory, mode.subdir), nested_fallback, sources
@@ -1673,6 +1672,12 @@ def _standard_placement(
     fallback_dir: str | None = None
     physical_dir: str | None = None
     final_sources = list(placement.sources)
+    # Which world knowledge produced this answer — said once per answer, on
+    # this route as much as on the system_directory one. It carries what the
+    # placement's own fields cannot: that a mode *moves* the save rather than
+    # adding to it, so the files the previous mode wrote are left behind stale.
+    if card is not None and mode is not None:
+        final_sources.append(f"rule card '{card.key}' governs this placement — {card.provenance}")
     if not placement.needs:
         if reachable:
             if placement.root_kind == ROOT_CONTENT_DIRECTORY:
