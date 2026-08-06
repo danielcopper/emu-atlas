@@ -775,7 +775,7 @@
     },
     {
       "name": "retrodeck-firmware-system-known-but-no-emulator-readable",
-      "rationale": "The other half of the split. ES-DE knows this system and names an emulator for it, so the identifier is right — what is missing is the core, and 'no-firmware-declaration' says there is no declaration to check against. A client must not read this as 'gb needs nothing': TGB Dual may declare plenty, it is simply not installed.",
+      "rationale": "The other half of the split. ES-DE knows this system and names an emulator for it, so the identifier is right — what is missing is the core, and no declaration for it was ever read. That is 'firmware-declaration-unknown', not 'no-firmware-declaration': nothing here established that gb is undeclared, so a client must not read this as 'gb needs nothing'. TGB Dual may declare plenty, it is simply not installed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -832,7 +832,7 @@
           "unclaimed": [],
           "caveats": [
             {
-              "code": "no-firmware-declaration",
+              "code": "firmware-declaration-unknown",
               "data": {
                 "system": "gb"
               }
@@ -1827,7 +1827,7 @@
     },
     {
       "name": "retrodeck-firmware-an-unreadable-catalogue-claims-nothing",
-      "rationale": "system-unknown is a statement about the machine, so it needs the enumeration to have actually happened. Here ES-DE's es_systems.xml cannot be read: the answer is empty, but it says the catalogue could not be read and that no declaration was established — never 'no emulator here covers gb', which would turn a read failure into a fact.",
+      "rationale": "system-unknown is a statement about the machine, so it needs the enumeration to have actually happened. Here ES-DE's es_systems.xml cannot be read: the answer is empty, but it says the catalogue could not be read and that what gb declares could not be established — never 'no emulator here covers gb' and never 'nothing declares firmware for gb', both of which would turn a read failure into a fact.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1874,7 +1874,7 @@
               }
             },
             {
-              "code": "no-firmware-declaration",
+              "code": "firmware-declaration-unknown",
               "data": {
                 "system": "gb"
               }
@@ -1885,7 +1885,7 @@
     },
     {
       "name": "firmware-a-symlinked-declaration-does-not-escape-the-root",
-      "rationale": "A lexical check is not a boundary. 'etclink/hostname' stays under the firmware root on paper while etclink is a symlink to /etc, so the declared path and the root are both resolved through the seam before they are compared. The declaration is refused, it stays visible on the core as a refusal rather than vanishing, requirements_met is null because a required file was never looked at, and the unclaimed scan never gains /etc as a directory: only ps1.bin, a real file in the root, comes back.",
+      "rationale": "A lexical check is not a boundary. 'etclink/hostname' stays under the firmware root on paper while etclink is a symlink to /etc, so the declared path and the root are both resolved through the seam before they are compared. The declaration is refused, it stays visible on the core as a refusal rather than vanishing, requirements_met is null because a required file was never looked at, and the unclaimed scan never gains /etc as a directory: only ps1.bin, a real file in the root, comes back. The answer-level caveat is the one this machine earns: firmware IS declared here and none of it became a requirement, which 'no-firmware-declaration' would have contradicted on the very same answer.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1960,7 +1960,7 @@
           ],
           "caveats": [
             {
-              "code": "no-firmware-declaration",
+              "code": "no-firmware-requirement",
               "data": {}
             }
           ]
@@ -2131,7 +2131,7 @@
     },
     {
       "name": "retrodeck-firmware-a-broken-catalogue-file-claims-nothing",
-      "rationale": "The read succeeded and the parse did not. Malformed XML yields zero systems, which must not be mistaken for 'the frontend knows no emulator for this system' — and RetroDECK ships its custom overlay fully commented out, so the overlay can never stand in as evidence that the catalogue was read. flycast is installed and declares; the answer says the catalogue could not be read.",
+      "rationale": "The read succeeded and the parse did not. Malformed XML yields zero systems, which must not be mistaken for 'the frontend knows no emulator for this system' — and RetroDECK ships its custom overlay fully commented out, so the overlay can never stand in as evidence that the catalogue was read. flycast is installed and declares; the answer says the catalogue could not be read, and that what dreamcast declares could therefore not be established.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2177,7 +2177,7 @@
               }
             },
             {
-              "code": "no-firmware-declaration",
+              "code": "firmware-declaration-unknown",
               "data": {
                 "system": "dreamcast"
               }
@@ -3443,6 +3443,408 @@
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-inventory-whose-declarations-were-all-refused-declares-something",
+      "rationale": "M14's first route, and the one main answered with a self-contradiction: the same answer says 'no installed core declares any firmware' while carrying a core whose required declaration it refused. A relative system_directory bounds nothing, so every declaration of every core is refused under firmware-root-unusable — the machine declares plenty and none of it could become a requirement, which is a third state and gets a third code. The core-query sibling of this fixture never showed the defect because only the aggregate routes state an answer-level emptiness.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/relative_libretro.info": "display_name = \"Relative\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/relative_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "relative_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [
+                {
+                  "declared": "scph5501.bin",
+                  "need": "required",
+                  "reason": "firmware-root-unusable"
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "firmware-root-unusable",
+                  "data": {
+                    "core_so": "relative_libretro.so",
+                    "declared": "scph5501.bin",
+                    "need": "required",
+                    "root": "system"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-root-missing",
+              "data": {
+                "path": "system"
+              }
+            },
+            {
+              "code": "no-firmware-requirement",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-inventory-that-could-not-enumerate-its-cores-claims-nothing",
+      "rationale": "L1(fw): libretro_info_path does not resolve, so no .info was ever read and cores_read is false. 'Nothing declares firmware here' would be a claim about the machine derived from a read that did not happen — the same rule that keeps system-unknown off an unreadable catalogue. The unclaimed scan still answers what it can see, which is exactly why the empty core list must say why it is empty: the file lying in the firmware root may well be declared by a core atlas never got to read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [],
+          "unclaimed": [
+            {
+              "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+              "identity": {
+                "md5": "490f666e1afb15b7362b406ed1cea246",
+                "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                "size": 524288
+              },
+              "known_as": [
+                "scph5501.bin",
+                "scph7003.bin"
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-inventory-of-declarations-nobody-reads-is-not-an-empty-machine",
+      "rationale": "M14's third route. The .info plainly declares two firmware paths and states no firmware_count, so RetroArch's enumeration reads none of them (core_info.c:1581-1582) and requirements_met is honestly true — the emulator asks for nothing. But the machine is not one where nothing is declared, and an answer saying so contradicts the firmware-declaration-unread caveat on the very core below it. The declared file sits in the root and comes back as unclaimed, which is what that state really looks like: a file placed for a demand the emulator never makes.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/nocount_libretro.info": "display_name = \"No Count\"\nsystemname = \"Sony - PlayStation\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_path = \"psxonpsp660.bin\"\n",
+          "/usr/lib/libretro/nocount_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "nocount_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unread",
+                  "data": {
+                    "core_so": "nocount_libretro.so",
+                    "declared": "firmware0_path, firmware1_path",
+                    "firmware_count": ""
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [
+            {
+              "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+              "identity": {
+                "md5": "490f666e1afb15b7362b406ed1cea246",
+                "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                "size": 524288
+              },
+              "known_as": [
+                "scph5501.bin",
+                "scph7003.bin"
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "no-firmware-requirement",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-known-digest-with-a-foreign-size-contradicts-itself",
+      "rationale": "M22: the packaged table knows this md5 (gb_bios.bin) perfectly and the size is the caller's own, matching no entry at all. Answering 'the table does not recognise this content' sends the caller to look for a gap in the table when the disagreement is inside their own request. The caveat carries every field they stated, size included, because a caller told only its md5 cannot see which of its values was rejected.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 1\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/gambatte_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "identify_query": {
+          "md5": "32fbbd84168d3482956eb3c5051637f5",
+          "size": 999
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "identification": {
+          "identity": null,
+          "known_as": [],
+          "requirements": [],
+          "caveats": [
+            {
+              "code": "firmware-content-contradictory",
+              "data": {
+                "md5": "32fbbd84168d3482956eb3c5051637f5",
+                "size": "999"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-size-alone-names-no-content-and-is-answered",
+      "rationale": "L9(fw): a size is not an identity — two files of one size are not one file — so a request carrying nothing else names no content. That is a state of this domain, answered like every other: an empty identification with firmware-content-unstated, not a ValueError out of a public entry point. The size the caller did state travels in the caveat data.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 1\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/gambatte_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "identify_query": {
+          "size": 256
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "identification": {
+          "identity": null,
+          "known_as": [],
+          "requirements": [],
+          "caveats": [
+            {
+              "code": "firmware-content-unstated",
+              "data": {
+                "size": "256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-a-catalogue-entry-states-the-declarations-nobody-reads",
+      "rationale": "Two routes resolve a read declaration — the one keyed on the cores' own systemname and the one keyed on the frontend catalogue — and they must state the same facts about the same core, or what a consumer learns depends on which question it asked. Gambatte's .info declares firmware1_path while its own firmware_count reads only slot 0, so the file is not a requirement here (core_info.c:1592) and the core says so. Reached through the catalogue that statement used to be dropped: the answer listed one requirement and looked complete, while the same core queried by system name carried the caveat. The requirement is present and verified on purpose — the unread declaration is the subject, not the emptiness of the list.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 1\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/gb_bios.bin": {
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+            "size": 256
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "gb",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "gambatte_libretro.so",
+              "label": "Gambatte",
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "gambatte_libretro.so",
+                  "system": "gb",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "gb_bios.bin",
+                  "path": "/mnt/sd/retrodeck/bios/gb_bios.bin",
+                  "declared": "gb_bios.bin",
+                  "identity": {
+                    "md5": "32fbbd84168d3482956eb3c5051637f5",
+                    "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+                    "size": 256
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unread",
+                  "data": {
+                    "core_so": "gambatte_libretro.so",
+                    "declared": "firmware1_path",
+                    "firmware_count": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
         }
       }
     }

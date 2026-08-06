@@ -49,10 +49,15 @@ happen, leaves nothing to check.
 
 *Unknown* is deliberately not a ``need``. Having no declaration to check
 against is a property of the answer, not of a file, so it is a
-:class:`~atlas.placement.Caveat` (:data:`CAVEAT_NO_FIRMWARE_DECLARATION`)
-attached to an answer whose requirement list is **empty**. A caller that
-ignores caveats then gets an empty list rather than a satisfied one: empty is
-honest, "nothing missing" would be a lie.
+:class:`~atlas.placement.Caveat` attached to an answer whose requirement list
+is **empty**. A caller that ignores caveats then gets an empty list rather than
+a satisfied one: empty is honest, "nothing missing" would be a lie. Which
+caveat says *which kind* of empty this is, and there are three
+(:func:`_empty_answer_caveat`): :data:`CAVEAT_NO_FIRMWARE_DECLARATION` —
+nothing declares it and that was read; :data:`CAVEAT_NO_FIRMWARE_REQUIREMENT` —
+declarations exist and none became a requirement;
+:data:`CAVEAT_FIRMWARE_DECLARATION_UNKNOWN` — what is declared could not be
+established at all.
 """
 
 from __future__ import annotations
@@ -100,7 +105,14 @@ CHECKED_UNKNOWN: FirmwareChecked = "unknown"
 FIRMWARE_CHECKED = ("verified", "mismatch", "unchecked", "unknown")
 
 # Caveat codes — stable identifiers, like the placement ones.
+# The three below are the answer-level vocabulary for an empty requirement
+# list, and they are three because an empty answer has three reasons: nothing
+# is declared, something is declared that never became a requirement, or atlas
+# could not establish what is declared at all. One code for all three would let
+# a read that did not happen read as "nothing needed" (:func:`_empty_answer_caveat`).
 CAVEAT_NO_FIRMWARE_DECLARATION = "no-firmware-declaration"
+CAVEAT_NO_FIRMWARE_REQUIREMENT = "no-firmware-requirement"
+CAVEAT_FIRMWARE_DECLARATION_UNKNOWN = "firmware-declaration-unknown"
 CAVEAT_INFO_PATH_UNRESOLVED = "info-path-unresolved"
 CAVEAT_CORE_DIR_UNRESOLVED = "core-dir-unresolved"
 CAVEAT_FIRMWARE_ROOT_MISSING = "firmware-root-missing"
@@ -126,6 +138,10 @@ CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE = "firmware-path-names-no-file"
 CAVEAT_FIRMWARE_ROOT_UNUSABLE = "firmware-root-unusable"
 CAVEAT_FIRMWARE_DECLARATION_UNREAD = "firmware-declaration-unread"
 CAVEAT_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
+# The third member of the identification family: the table does not know this
+# content (unidentified), the fields describe no single file (contradictory),
+# or — this one — the request never named content at all.
+CAVEAT_CONTENT_UNSTATED = "firmware-content-unstated"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
 # both declare firmware0_path = "filename.ext" with opt = "true/false". The
@@ -240,26 +256,27 @@ class FirmwareHashes:
 
         A caller passing an md5 and a sha1 from two different files gets no
         match — and reporting that as "unknown content" points them at the
-        table when the problem is the request. True when the table knows every
-        supplied field on its own but no single entry carries them together.
+        table when the problem is the request.
+
+        The question is asked of the **digests**, because they alone identify:
+        when the table knows a supplied md5 or sha1 and the full request still
+        matches nothing, the entry that digest names carries a different value
+        for something else the caller supplied. That is the caller's request
+        disagreeing with itself, whether the field that disagrees is the other
+        digest or the size — a size the table pairs with no entry at all is
+        exactly the case, and asking "does any entry have this size" instead
+        answered ``False`` there and blamed the table for an md5 it knows
+        perfectly.
+
+        Unknown digests are not a contradiction: content the table does not
+        cover is a normal answer, and a size that happens to match some entry
+        says nothing about it.
         """
-        given = [
-            ("md5", md5),
-            ("sha1", sha1),
-            ("size", size),
-        ]
-        supplied = [(field, value) for field, value in given if value is not None]
-        if len(supplied) < 2:
+        if sum(value is not None for value in (md5, sha1, size)) < 2:
             return False
-        for field, value in supplied:
-            probe = {field: value}
-            if field == "size":
-                # size alone is not an identity; ask whether any entry has it.
-                if not any(entry_size == value for _, _, entry_size in self._contents):
-                    return False
-            elif self.for_content(**probe) is None:  # type: ignore[arg-type]
-                return False
-        return True
+        if md5 is not None and self.for_content(md5=md5) is not None:
+            return True
+        return sha1 is not None and self.for_content(sha1=sha1) is not None
 
 
 def _content_key(md5: str, sha1: str, size: int) -> tuple[str, str, int]:
@@ -1025,6 +1042,9 @@ class FirmwareAnswer:
     ``root`` is the resolved system directory — the directory RetroArch hands
     its cores — or ``None`` when the configs do not state one; then there is
     nothing to resolve against and ``cores`` is empty with a caveat saying so.
+    That caveat is an invariant, not a habit: an answer with no root and no
+    caveat is the one shape this whole module exists to prevent — an empty
+    list that says nothing, which a caller can only read as "nothing needed".
     ``hash_checked`` records whether identity verification ran at all, so a
     list of present files can never be mistaken for a list of verified ones.
     """
@@ -1035,6 +1055,13 @@ class FirmwareAnswer:
     hash_checked: bool
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
+
+    def __post_init__(self) -> None:
+        if self.root is None and not self.caveats:
+            raise ValueError(
+                "FirmwareAnswer: an answer with no root must state why there is none — without it the "
+                "empty answer reads as 'this machine needs no firmware'"
+            )
 
     @property
     def requirements(self) -> tuple[FirmwareRequirement, ...]:
@@ -1486,12 +1513,85 @@ def _empty_answer(context: FirmwareContext, extra: tuple[Caveat, ...] = ()) -> F
 
 
 def _no_declaration(subject: str, data: dict[str, str]) -> Caveat:
+    """Nothing declares it, and that was established — the empty list is the answer."""
     return Caveat(
         CAVEAT_NO_FIRMWARE_DECLARATION,
-        f"no installed core declares {subject} — there is no declaration to check against, so nothing "
-        "here is a required-and-satisfied file; an empty list means unknown, not complete",
+        f"no installed core declares {subject} — every emulator in this answer was read and none names "
+        "one, so there is nothing here to check against; this is an absence that was established, not a gap",
         data,
     )
+
+
+def _no_requirement(subject: str, data: dict[str, str]) -> Caveat:
+    """Declared, and still not a requirement — refused, or never enumerated by its core."""
+    return Caveat(
+        CAVEAT_NO_FIRMWARE_REQUIREMENT,
+        f"nothing that declares {subject} produced a requirement: every declaration was either refused "
+        "(it names no place inside the firmware root) or sits outside the enumeration its own core "
+        "performs — the emulators below say which, one file at a time; an empty list means unresolved, "
+        "not complete",
+        data,
+    )
+
+
+def _declaration_unknown(subject: str, data: dict[str, str]) -> Caveat:
+    """A read that did not happen — the one thing that may never become a claim."""
+    return Caveat(
+        CAVEAT_FIRMWARE_DECLARATION_UNKNOWN,
+        f"whether anything here declares {subject} could not be established — the enumeration this "
+        "answer would derive it from did not happen, or nothing in it could be read; the empty list "
+        "below is a look that failed, never 'nothing needed'",
+        data,
+    )
+
+
+def _states_unread(core: CoreFirmware) -> bool:
+    """Does this core carry declarations its own enumeration never reaches?"""
+    return any(caveat.code == CAVEAT_FIRMWARE_DECLARATION_UNREAD for caveat in core.caveats)
+
+
+def _declared_without_requiring(cores: tuple[CoreFirmware, ...]) -> bool:
+    """Was firmware declared here that never became a requirement?"""
+    return any(core.refused or _states_unread(core) for core in cores)
+
+
+def _empty_answer_caveat(
+    cores: tuple[CoreFirmware, ...],
+    *,
+    enumerated: bool,
+    declared: bool,
+    subject: str,
+    data: dict[str, str],
+) -> Caveat:
+    """Which kind of empty this answer is — one code per kind, never one for three.
+
+    An answer with no requirement is empty for one of three reasons, and they
+    are different instructions to a client: nothing is declared (read, and the
+    absence is the answer), something is declared that never became a
+    requirement (the machine says what it wants and atlas would not follow it),
+    or what is declared could not be established at all (a read that did not
+    happen). A single code covering all three reads as the mildest of them,
+    which is how a failed enumeration becomes "this machine needs nothing" —
+    so each kind carries its own code and a consumer branches on that alone.
+
+    *enumerated* is whether the enumeration this answer rests on happened;
+    *declared* whether the subject was declared without becoming a requirement.
+    Order matters: a subject where something could not be read may not be
+    reported as "declared but unresolved", because that claims atlas saw the
+    declarations.
+
+    "Nothing is declared" needs **every** emulator in the answer to have been
+    read, not merely one: an absence is a claim about all of them, and one
+    readable core alongside five unreadable ones establishes nothing about
+    what those five want. The reference machine reads 206 of its 211 cores,
+    so the weaker reading would answer "nothing needed" over five unknowns on
+    every query it touches.
+    """
+    if not enumerated or not all(core.declaration == DECLARATION_READ for core in cores):
+        return _declaration_unknown(subject, data)
+    if declared:
+        return _no_requirement(subject, data)
+    return _no_declaration(subject, data)
 
 
 def _why_unread(raw_count: str) -> str:
@@ -1535,6 +1635,17 @@ def _unread_declaration_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
     )
 
 
+def _core_caveats(core: CoreDeclarations, refusals: tuple[Caveat, ...]) -> tuple[Caveat, ...]:
+    """Everything one resolved core states — the same set on every route.
+
+    The two routes that resolve a read declaration (the inventory/system-by-
+    systemname one and the catalogue one) must state the same facts about the
+    same core, or the answer a consumer gets depends on which question it
+    asked.
+    """
+    return (*refusals, *_unread_declaration_caveats(core), *system_assignment_caveats(core))
+
+
 def _resolve_cores(
     machine: Machine,
     context: FirmwareContext,
@@ -1560,11 +1671,7 @@ def _resolve_cores(
                 label=label,
                 declaration=DECLARATION_READ,
                 requirements=requirements,
-                caveats=(
-                    *core_caveats,
-                    *_unread_declaration_caveats(core),
-                    *system_assignment_caveats(core),
-                ),
+                caveats=_core_caveats(core, core_caveats),
                 refused=refused,
             )
         )
@@ -1649,10 +1756,7 @@ def firmware_for_core(
                 {"core_so": f"{stem}.so"},
             )
             if context.cores_read
-            else _no_declaration(
-                f"anything for {stem}.so, because the installed cores could not be enumerated at all",
-                {"core_so": f"{stem}.so"},
-            )
+            else _declaration_unknown(f"firmware for {stem}.so", {"core_so": f"{stem}.so"})
         )
         return FirmwareAnswer(
             root=context.root,
@@ -1771,9 +1875,8 @@ def _catalogue_entry_core(
                 {"core_so": entry.core_so, "label": entry.label},
             )
             if context.cores_read
-            else _no_declaration(
-                f"anything for {entry.core_so}, because the installed cores could not be enumerated",
-                {"core_so": entry.core_so, "label": entry.label},
+            else _declaration_unknown(
+                f"firmware for {entry.core_so}", {"core_so": entry.core_so, "label": entry.label}
             )
         )
         return (
@@ -1795,7 +1898,7 @@ def _catalogue_entry_core(
             label=entry.label,
             declaration=DECLARATION_READ,
             requirements=requirements,
-            caveats=(*core_caveats, *system_assignment_caveats(core)),
+            caveats=_core_caveats(core, core_caveats),
             refused=refused,
         ),
         observed,
@@ -1868,8 +1971,23 @@ def firmware_for_system(
                 {"system": system},
             )
         )
-    elif not any(c.declaration == DECLARATION_READ for c in resolved):
-        caveats.append(_no_declaration(f"firmware for system {system!r}", {"system": system}))
+    elif not any(c.requirements for c in resolved):
+        cores = tuple(resolved)
+        empty = _empty_answer_caveat(
+            cores,
+            enumerated=enumerated,
+            declared=_declared_without_requiring(cores),
+            subject=f"firmware for system {system!r}",
+            data={"system": system},
+        )
+        # A system whose emulators were read and declare nothing says so per
+        # emulator — ``declaration="read"`` with an empty list is the answer,
+        # exactly as the per-core route gives it, and an answer-level line
+        # would add nothing while reading as a degradation. What the entries
+        # cannot say is the other two: that firmware was declared here and
+        # never became a requirement, or that nothing could be read at all.
+        if empty.code != CAVEAT_NO_FIRMWARE_DECLARATION:
+            caveats.append(empty)
 
     return FirmwareAnswer(
         root=context.root,
@@ -2040,7 +2158,15 @@ def firmware_inventory(machine: Machine, context: FirmwareContext, *, verify: bo
     unclaimed, unclaimed_caveats = _unclaimed_files(machine, context, claimed, verify=verify)
     caveats.extend(unclaimed_caveats)
     if not claimed:
-        caveats.append(_no_declaration("any firmware", {}))
+        caveats.append(
+            _empty_answer_caveat(
+                cores,
+                enumerated=context.cores_read,
+                declared=_declared_without_requiring(cores),
+                subject="any firmware",
+                data={},
+            )
+        )
     return FirmwareAnswer(
         root=context.root,
         cores=cores,
@@ -2049,6 +2175,49 @@ def firmware_inventory(machine: Machine, context: FirmwareContext, *, verify: bo
         sources=context.sources,
         caveats=(*context.caveats, *caveats),
     )
+
+
+def _stated_content(md5: str | None, sha1: str | None, size: int | None) -> dict[str, str]:
+    """What the caller stated about the content — every field, so none is dropped.
+
+    A caveat about a request that matched nothing has to carry the whole
+    request: told only the digests, a caller whose *size* is the field the
+    table disagrees with cannot see which of its values was rejected.
+    """
+    stated: dict[str, str] = {}
+    if md5 is not None:
+        stated["md5"] = md5
+    if sha1 is not None:
+        stated["sha1"] = sha1
+    if size is not None:
+        stated["size"] = str(size)
+    return stated
+
+
+def _declared_beyond_requirements(
+    cores: tuple[CoreFirmware, ...], hashes: FirmwareHashes, identity: FirmwareIdentity
+) -> bool:
+    """Could a declaration this answer never resolved have been about *this* content?
+
+    Two kinds of declaration never become a requirement and so can never be
+    matched by content. A **refused** one still names the path it wanted, so it
+    is answered precisely: the packaged table says what belongs there. An
+    **unread** one is only known by the key it was declared under
+    (``firmware3_path``) and not by the path it named
+    (:class:`CoreDeclarations`), so it cannot be tied to an identity at all —
+    and it is counted anyway, because the alternative is to answer that an
+    absence was established while a core's ``.info`` may name exactly this
+    file. Over-reporting "unresolved" costs a caller one look at the core
+    entries; the other direction is the claim this module exists to refuse.
+    """
+    for core in cores:
+        if _states_unread(core):
+            return True
+        for refusal in core.refused:
+            expected = hashes.for_path(refusal.declared)
+            if expected is not None and expected.md5.lower() == identity.md5.lower():
+                return True
+    return False
 
 
 def identify_firmware(
@@ -2072,20 +2241,37 @@ def identify_firmware(
     happens to carry. A requirement whose file name the packaged table does not
     cover can never be matched: atlas will not claim that unknown bytes belong
     somewhere.
+
+    A request that names no content at all — a bare ``size``, which two
+    different files routinely share — is answered, not raised: it is a state of
+    this domain like any other, and it comes back as an empty identification
+    carrying :data:`CAVEAT_CONTENT_UNSTATED`.
     """
-    identity = context.hashes.for_content(md5=md5, sha1=sha1, size=size)
     caveats: list[Caveat] = list(context.caveats)
+    stated = _stated_content(md5, sha1, size)
+    if md5 is None and sha1 is None:
+        caveats.append(
+            Caveat(
+                CAVEAT_CONTENT_UNSTATED,
+                "this request names no content: a size alone is not an identity — files of one size are "
+                "not one file — so there is nothing to look up and nothing this answer could be about",
+                stated,
+            )
+        )
+        return FirmwareIdentification(
+            identity=None, requirements=(), sources=context.sources, caveats=tuple(caveats)
+        )
+    identity = context.hashes.for_content(md5=md5, sha1=sha1, size=size)
     if identity is None:
-        stated = {k: v for k, v in (("md5", md5), ("sha1", sha1)) if v is not None}
         if context.hashes.contradicts_itself(md5=md5, sha1=sha1, size=size):
             # The table knows these fields, just not together. Blaming the table
             # would send the caller looking in the wrong place.
             caveats.append(
                 Caveat(
                     CAVEAT_CONTENT_CONTRADICTORY,
-                    "the fields given describe no single file: the table knows them, but not as one entry — "
-                    "no file has all of them at once, so the request contradicts itself rather than the "
-                    "content being unknown",
+                    "the fields given describe no single file: the table knows a digest among them, and the "
+                    "entry it names carries a different value for something else stated here — so the "
+                    "request contradicts itself rather than the content being unknown",
                     stated,
                 )
             )
@@ -2118,9 +2304,12 @@ def identify_firmware(
     )
     if not wanted:
         caveats.append(
-            _no_declaration(
-                f"a file with this identity (known as {', '.join(identity.known_as)})",
-                {"md5": identity.md5},
+            _empty_answer_caveat(
+                cores,
+                enumerated=context.cores_read,
+                declared=_declared_beyond_requirements(cores, context.hashes, identity),
+                subject=f"a file with this identity (known as {', '.join(identity.known_as)})",
+                data={"md5": identity.md5},
             )
         )
     # An identification hands back requirements without their emulator, so a
