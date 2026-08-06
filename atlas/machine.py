@@ -708,6 +708,26 @@ _LOOPS = _Landing(loops=True)
 _NOT_A_DIRECTORY = _Landing()
 
 
+def _refuse_both_unreadable_lists(inaccessible: set[str], unlistable: set[str]) -> None:
+    """A path cannot both fail its ``stat`` and be a directory whose ``stat`` succeeded.
+
+    Refused rather than resolved, for the same reason a digest alongside
+    ``unreadable`` is: a precedence rule here would be a documented silent
+    degradation, and this contradiction has a tempting wrong reading — that
+    both lists together spell a mode-000 directory. They do not. Such a
+    directory answers *directory* about itself, so it belongs in ``unlistable``
+    alone, and any precedence would quietly hand back the machine the fixture
+    was not describing.
+    """
+    both = sorted(inaccessible & unlistable)
+    if both:
+        raise ValueError(
+            f"fixture paths {both} are in both 'inaccessible' and 'unlistable' — a path whose stat "
+            "fails cannot also be a directory whose stat succeeds. A mode-000 directory is "
+            "'unlistable'; name its children in 'inaccessible' if they matter."
+        )
+
+
 def _ancestor_dirs(paths: Iterable[str]) -> set[str]:
     """Every ancestor of the given paths — a known path's parents are directories."""
     dirs: set[str] = set()
@@ -756,11 +776,11 @@ class FixtureMachine:
     So a mode-000 directory is ``unlistable``, and it is the wrong list that is
     tempting: putting the directory in ``inaccessible`` makes the directory
     itself unreachable, and a resolver then refuses it long before it would
-    have tried to read it. Naming a path in both is a contradiction rather than
-    a mode-000 shorthand — ``inaccessible`` wins, and the fixture stops
-    describing the machine it was written for. Where a mode-000 directory's
-    children matter, they are named in ``inaccessible`` individually; the
-    directory itself is not.
+    have tried to read it. Naming a path in both is not a mode-000 shorthand
+    but a contradiction, and it fails construction rather than resolving to
+    either — a precedence rule would be a documented way to describe the wrong
+    machine quietly. Where a mode-000 directory's children matter, they are
+    named in ``inaccessible`` individually; the directory itself is not.
 
     Every operation resolves the path it is given the way the module docstring
     states the kernel does — symlink components, ``.``, ``..`` and separator
@@ -786,6 +806,7 @@ class FixtureMachine:
         self._cores = dict(cores or {})
         self._inaccessible = set(inaccessible or ())
         self._unlistable = set(unlistable or ())
+        _refuse_both_unreadable_lists(self._inaccessible, self._unlistable)
         # A directory whose contents cannot be read is still a directory —
         # that is the whole difference from an inaccessible one, and what lets
         # a resolver walk up to it and then fail to look inside.

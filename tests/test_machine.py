@@ -231,6 +231,23 @@ class TestGlobOutcome:
         m = FixtureMachine({}, unlistable=["/s"])
         assert m.glob("/s/*") == GlobResult(GLOB_INCOMPLETE, (), ("/s",))
 
+    def test_a_path_cannot_be_in_both_unreadable_lists(self):
+        """The two answer opposite things about one question — does the stat succeed?
+
+        The machine refuses it for the same reason the validator does, and the
+        reason the file grammar refuses a digest on an unreadable file: the
+        tempting reading is that both together spell mode 000, and resolving it
+        by precedence would be a documented way to describe a machine nobody
+        wrote down.
+        """
+        with pytest.raises(ValueError, match="both 'inaccessible' and 'unlistable'"):
+            FixtureMachine({}, inaccessible=["/saves"], unlistable=["/saves"])
+
+    def test_the_two_unreadable_lists_are_fine_apart(self):
+        machine = FixtureMachine({}, dirs=["/mnt"], inaccessible=["/mnt/card"], unlistable=["/saves"])
+        assert machine.path_kind("/mnt/card") == "inaccessible"
+        assert machine.path_kind("/saves") == "directory"
+
     def test_an_inaccessible_directory_is_named(self):
         m = FixtureMachine({}, dirs=["/mnt"], inaccessible=["/mnt/card"])
         assert m.glob("/mnt/card/*") == GlobResult(GLOB_INCOMPLETE, (), ("/mnt/card",))
