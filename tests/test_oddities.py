@@ -14,7 +14,7 @@ HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
 RETRODECK_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
 OPTIONS_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
-FLYCAST_GAME_OPT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Shenmue (Europe).opt"
+FLYCAST_GAME_OPT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Dreamcast Game (Europe).opt"
 FLYCAST_CORE_OVERRIDE = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Flycast.cfg"
 FLYCAST_CORE_OPT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Flycast.opt"
 
@@ -29,7 +29,8 @@ CFG = (
 )
 CFG_WITHOUT_GLOBAL_OPTS = CFG.replace('global_core_options = "true"\n', "")
 DEPLOY = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
-ROM = "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi"
+ROM_STEM = "Dreamcast Game (Europe)"
+ROM = f"/mnt/sd/retrodeck/roms/dreamcast/{ROM_STEM}.gdi"
 
 
 class TestCardLookup:
@@ -204,11 +205,30 @@ class TestFlycastResolution:
         assert data["mode"] == "All VMUs"
         assert data["files"].split(", ") == list(p.file_set.files)
         assert data["files_without_save_id"].split(", ") == [
-            "Shenmue (Europe).A1.bin",
-            "Shenmue (Europe).B1.bin",
-            "Shenmue (Europe).C1.bin",
-            "Shenmue (Europe).D1.bin",
+            f"{ROM_STEM}.A1.bin",
+            f"{ROM_STEM}.B1.bin",
+            f"{ROM_STEM}.C1.bin",
+            f"{ROM_STEM}.D1.bin",
         ]
+
+    def test_all_vmus_marks_the_port_set_as_the_console_one(self):
+        # Not every content difference is a spelling: a Naomi board connects
+        # VMUs on B1/C1 only (maple_cfg.cpp:246-253), so two of the four names
+        # can never exist there. The scope is data, not prose.
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "All VMUs"\n',
+                SAVES_KEEP: "",
+                "/mnt/sd/retrodeck/saves/dreamcast/.keep": "",
+            }
+        )
+        data = dict(
+            next(c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL).data
+        )
+        assert data["files_established_for"] == "console"
+        assert "maple_cfg.cpp:246-253" in data["citation"]
 
     def test_the_alternative_stays_a_template_without_a_content_path(self):
         rd = _retrodeck(
@@ -268,7 +288,7 @@ class TestFlycastResolution:
         )
         assert p.granularity is not None
         assert p.granularity.option_value == "VMU A1"
-        assert "Shenmue (Europe).opt" in p.granularity.option_source
+        assert "Dreamcast Game (Europe).opt" in p.granularity.option_source
 
     def test_unknown_option_value_applies_core_default_mode(self):
         # RetroArch's option manager keeps the core default on an invalid
@@ -853,6 +873,69 @@ class TestStrictLoaders:
             }
         )
         with pytest.raises(ValueError, match="complete"):
+            load_oddities(text)
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "<game_id>.bin",  # well-formed, unknown
+            "<rom_stem.A1.bin",  # never closes — a token scan would pass this
+            "<<rom_stem>>.A1.bin",  # nested
+            "rom_stem>.A1.bin",  # never opens
+        ],
+    )
+    def test_a_malformed_or_unknown_template_is_rejected(self, name):
+        # The guarantee the card format documents: a typo cannot travel into a
+        # filename atlas states as fact. Only removal of the known tokens can
+        # decide that — matching well-formed <…> would let three of these pass.
+        text = self._mode_card({"granularity": "per-game-file", "files": [name]})
+        with pytest.raises(ValueError, match="unknown template"):
+            load_oddities(text)
+
+    @pytest.mark.parametrize("field", ["files", "observe", "files_without_save_id"])
+    def test_an_empty_file_list_is_rejected(self, field):
+        # A declared set with no files is shape-identical to 'unknown' but
+        # labelled 'declared' — and an empty alternative is an empty promise.
+        mode = {"granularity": "per-game-file", "files": ["<save_id>.A1.bin"], field: []}
+        with pytest.raises(ValueError, match="empty list"):
+            load_oddities(self._mode_card(mode))
+
+    def test_an_empty_file_name_is_rejected(self):
+        text = self._mode_card({"granularity": "per-game-file", "files": [""]})
+        with pytest.raises(ValueError, match="not a file name"):
+            load_oddities(text)
+
+    def test_a_second_root_equal_to_the_first_is_rejected(self):
+        text = self._mode_card({"granularity": "per-game-file", "also_under": "savefile_directory"})
+        with pytest.raises(ValueError, match="own root"):
+            load_oddities(text)
+
+    def test_a_scope_without_a_declared_set_is_rejected(self):
+        text = self._mode_card({"granularity": "per-game-file", "files_established_for": "console"})
+        with pytest.raises(ValueError, match="files_established_for"):
+            load_oddities(text)
+
+    @pytest.mark.parametrize("field", ["files_established_for", "files_citation"])
+    def test_an_empty_scope_or_citation_is_rejected(self, field):
+        # Both reach the caller as caveat data; an empty one states nothing.
+        mode = {
+            "granularity": "per-game-file",
+            "files": ["<save_id>.A1.bin"],
+            "files_established_for": "console",
+            field: "",
+        }
+        with pytest.raises(ValueError, match=field):
+            load_oddities(self._mode_card(mode))
+
+    def test_a_citation_without_a_scope_is_rejected(self):
+        text = self._mode_card(
+            {
+                "granularity": "per-game-file",
+                "files": ["<save_id>.A1.bin"],
+                "files_citation": "somewhere.cpp:1",
+            }
+        )
+        with pytest.raises(ValueError, match="files_citation"):
             load_oddities(text)
 
     @pytest.mark.parametrize("field", ["files", "observe"])

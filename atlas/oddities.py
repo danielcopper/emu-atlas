@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import importlib.resources
 import json
-import re
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
@@ -36,7 +35,6 @@ _KNOWN_MODE_ROOTS = {"savefile_directory", "system_directory", "content_director
 # outside the set would travel into a stated filename and be read as literal
 # text, so it fails the load instead.
 _KNOWN_FILE_TEMPLATES = (TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID)
-_TEMPLATE_TOKEN = re.compile(r"<[^<>]*>")
 
 
 def _expect_str(value: object, where: str) -> str:
@@ -64,14 +62,33 @@ def _expect_str_list(value: object, where: str) -> tuple[str, ...]:
 
 
 def _expect_file_names(value: object, where: str) -> tuple[str, ...]:
-    """A card's file names — templates only in the vocabulary the resolver knows."""
+    """A card's file names — templates only in the vocabulary the resolver knows.
+
+    The check is subtractive, not a token scan: the known templates are removed
+    and *any* remaining angle bracket fails the load. A scan for well-formed
+    ``<…>`` would pass a name whose bracket never closes (``<rom_stem.A1.bin``)
+    or nests (``<<rom_stem>>``), and such a name is stated verbatim — the very
+    "a typo cannot become a stated filename" guarantee this exists for. A real
+    file name with a literal angle bracket would be refused too; none is known,
+    and refusing one is the safe direction.
+    """
     names = _expect_str_list(value, where)
+    if not names:
+        raise ValueError(
+            f"{where}: an empty list declares nothing — omit the field (or use null) to state that "
+            "the file set is not established, which is a different answer than a set with no files"
+        )
     for name in names:
-        unknown = [t for t in _TEMPLATE_TOKEN.findall(name) if t not in _KNOWN_FILE_TEMPLATES]
-        if unknown:
+        if not name:
+            raise ValueError(f"{where}: an empty string is not a file name")
+        remainder = name
+        for token in _KNOWN_FILE_TEMPLATES:
+            remainder = remainder.replace(token, "")
+        if "<" in remainder or ">" in remainder:
             raise ValueError(
-                f"{where}: file name {name!r} carries unknown template {unknown[0]!r} — "
-                f"only {list(_KNOWN_FILE_TEMPLATES)} are filled or carried as holes"
+                f"{where}: file name {name!r} carries an unknown template — only "
+                f"{list(_KNOWN_FILE_TEMPLATES)} are filled or carried as holes, and everything else "
+                "is stated verbatim as part of the name"
             )
     return names
 
@@ -98,6 +115,13 @@ class SaveMode:
       id (``oslib.cpp:44`` vs ``:62``). The set is genuinely conditional on a
       fact atlas does not read, so the resolver states the id-keyed set and
       hands the alternative to the caller in a caveat instead of picking one.
+    - ``files_established_for`` names the class of content the list itself was
+      established for, and ``files_citation`` cites that. Not every difference
+      between content classes is a spelling: Flycast connects four VMUs on a
+      Dreamcast and two on a Naomi board, so for arcade content two of the
+      four declared names can never exist. The scope travels into the same
+      caveat, machine-readably, so the list is never read as established for
+      content it was not.
     - ``also_under`` names a *second* root this mode's save data lives under.
       A card describes one root per mode, so a mode that spans two cannot
       state its file set at all: it declares ``files: None`` plus this field,
@@ -112,6 +136,8 @@ class SaveMode:
     observe: tuple[str, ...] | None = None
     complete: bool = False
     files_without_save_id: tuple[str, ...] | None = None
+    files_established_for: str | None = None
+    files_citation: str | None = None
     also_under: str | None = None
 
 
@@ -153,6 +179,11 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
         raise ValueError(
             f"{where}: also_under must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {also_under!r}"
         )
+    if also_under == root:
+        raise ValueError(
+            f"{where}: also_under names this mode's own root ({root!r}) — it exists to name the "
+            "*second* root the save reaches, and a root does not span itself"
+        )
     if also_under is not None and files is not None:
         # The field exists because one file list cannot describe a save that
         # lies under two roots — a card that states both contradicts itself.
@@ -173,6 +204,24 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
                 f"{where}: 'files_without_save_id' describes content without an id — it cannot "
                 f"name one with {TEMPLATE_SAVE_ID}"
             )
+    # Both are answer content, not flags: an empty one would reach the caller as
+    # an empty scope or an empty citation, which says nothing at all.
+    raw_scope = mode.get("files_established_for")
+    established_for = (
+        _expect_str(raw_scope, f"{where}: files_established_for") if raw_scope is not None else None
+    )
+    raw_citation = mode.get("files_citation")
+    citation = _expect_str(raw_citation, f"{where}: files_citation") if raw_citation is not None else None
+    if established_for is not None and files is None:
+        raise ValueError(
+            f"{where}: 'files_established_for' scopes a declared set — a mode that states no 'files' "
+            "has nothing to scope"
+        )
+    if citation is not None and established_for is None:
+        raise ValueError(
+            f"{where}: 'files_citation' cites the scope in 'files_established_for', which this mode "
+            "does not state"
+        )
     return SaveMode(
         root=root,
         subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
@@ -181,6 +230,8 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
         observe=_expect_file_names(observe, f"{where}: observe") if observe is not None else None,
         complete=complete,
         files_without_save_id=alternative_names,
+        files_established_for=established_for,
+        files_citation=citation,
         also_under=also_under,
     )
 
