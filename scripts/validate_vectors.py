@@ -104,6 +104,7 @@ KNOWN_HEALTH_ISSUES = {
     "config-unreadable",
 }
 KNOWN_ROOT_KINDS = {"savefile_directory", "content_directory", "system_directory"}
+KNOWN_GRANULARITIES = {"shared-card", "per-game-file", "per-game-files"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone"}
 KNOWN_CAVEAT_CODES = {
@@ -114,6 +115,8 @@ KNOWN_CAVEAT_CODES = {
     "dead-symlink",
     "health",
     "filenames-unverified",
+    "filenames-content-conditional",
+    "file-set-spans-roots",
     "unknown-option-value",
     "system-directory-unset",
     "per-game-overrides-present",
@@ -425,13 +428,15 @@ def _validate_file_set(name: str, file_set: Any) -> None:
 
 def _validate_granularity(name: str, granularity: Any) -> None:
     _require_exact(name, granularity, GRANULARITY_FIELDS, "granularity")
-    if not isinstance(granularity["value"], str) or not granularity["value"]:
-        fail(f"{name}: granularity.value must be a non-empty string")
+    if granularity["value"] not in KNOWN_GRANULARITIES:
+        fail(f"{name}: granularity.value must be one of {sorted(KNOWN_GRANULARITIES)}")
     alternatives = granularity["alternatives"]
     if not isinstance(alternatives, list) or not all(
         isinstance(a, list) and len(a) == 2 and all(isinstance(x, str) for x in a) for a in alternatives
     ):
         fail(f"{name}: granularity.alternatives must be a list of [value, granularity] string pairs")
+    if any(pair[1] not in KNOWN_GRANULARITIES for pair in alternatives):
+        fail(f"{name}: every alternative's granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
 
 
 def _validate_placement(name: str, placement: Any) -> None:

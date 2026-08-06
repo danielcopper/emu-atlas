@@ -83,7 +83,9 @@ from atlas.placement import (
     CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+    CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
     CAVEAT_FILENAMES_UNVERIFIED,
+    CAVEAT_FILE_SET_SPANS_ROOTS,
     CAVEAT_HEALTH,
     CAVEAT_NO_CORE,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
@@ -92,6 +94,7 @@ from atlas.placement import (
     CAVEAT_UNKNOWN_OPTION_VALUE,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
+    TEMPLATE_ROM_STEM,
     UNKNOWN_FILE_SET,
     UNRESOLVED_STANDALONE,
     Caveat,
@@ -100,6 +103,8 @@ from atlas.placement import (
     SavePlacement,
     Unresolved,
     build_save_placement,
+    file_set_holes,
+    needs_with_file_set,
 )
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
@@ -1344,13 +1349,13 @@ def _card_file_set(
     """What the card says lies in its own directory — declared, or observed there.
 
     A template file that cannot be filled leaves the set honestly unknown; with
-    a hole in the directory itself there is nowhere to look, so the declaration
-    stands unobserved.
+    a hole in the directory itself there is nowhere to look, and with one in the
+    names there is nothing to look for, so the declaration stands unobserved.
     """
     declared = _card_files(mode.files, rom_stem) if mode.files is not None else None
     if declared is None:
         return UNKNOWN_FILE_SET
-    if needs:
+    if needs or file_set_holes(declared):
         return FileSet("declared", declared, f"declared by rule card '{card.key}'", complete=mode.complete)
     # Observation candidates may be wider than the declared defaults —
     # e.g. Flycast's slot-2 VMUs exist only when configured (REVIEW M2).
@@ -1365,6 +1370,69 @@ def _card_file_set(
         f"declared by rule card '{card.key}' (none present yet)",
         complete=mode.complete,
     )
+
+
+def _file_set_caveats(
+    card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None
+) -> tuple[Caveat, ...]:
+    """What one declared file list cannot say about this mode's save.
+
+    Three states the card keeps apart, each stated rather than left to an
+    empty-looking answer: a mode whose save reaches beyond its own root (a
+    list would offer a part as the whole), a mode whose names depend on a fact
+    atlas does not read (both spellings are handed over, the caller picks),
+    and a mode whose names are not established yet.
+    """
+    if mode.also_under is not None:
+        return (
+            Caveat(
+                CAVEAT_FILE_SET_SPANS_ROOTS,
+                f"rule card '{card.key}': in mode {mode_value!r} only part of the save moves here — "
+                f"the rest keeps using {mode.also_under}. A card states one root per mode, so the "
+                "file set is left unstated instead of presenting the visible part as the whole save",
+                {"card": card.key, "mode": mode_value, "also_under": mode.also_under},
+            ),
+        )
+    if mode.files is None:
+        return (
+            Caveat(
+                CAVEAT_FILENAMES_UNVERIFIED,
+                f"rule card '{card.key}': mode {mode_value!r} places per-game files under the "
+                "standard directory, but the filename scheme is unverified — file names not stated",
+                {"card": card.key, "mode": mode_value},
+            ),
+        )
+    if mode.files_without_save_id is not None or mode.files_established_for is not None:
+        stated = _card_files(mode.files, rom_stem) or mode.files
+        data = {"card": card.key, "mode": mode_value, "files": ", ".join(stated)}
+        spelling = ""
+        scope = ""
+        if mode.files_without_save_id is not None:
+            alternative = _card_files(mode.files_without_save_id, rom_stem) or mode.files_without_save_id
+            data["files_without_save_id"] = ", ".join(alternative)
+            spelling = (
+                " The names hold for content that carries a platform-native id; content without one "
+                "is named after the ROM instead, and that spelling is in this caveat's data — "
+                "whoever fills 'save_id' knows which applies."
+            )
+        if mode.files_established_for is not None:
+            data["files_established_for"] = mode.files_established_for
+            scope = (
+                f" Which files exist at all was established for {mode.files_established_for} content "
+                "only: another content class connects a different set of devices, so a name stated "
+                "here may never appear for it, and one that does may be missing."
+            )
+        if mode.files_citation is not None:
+            data["citation"] = mode.files_citation
+        return (
+            Caveat(
+                CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+                f"rule card '{card.key}': in mode {mode_value!r} the file set depends on the content, "
+                f"which atlas does not identify.{spelling}{scope}",
+                data,
+            ),
+        )
+    return ()
 
 
 def _system_directory_placement(
@@ -1412,6 +1480,10 @@ def _system_directory_placement(
         card_sources.append(f'{cfg_label} chain: system_directory = "{raw_system}"{resolved.note}')
     directory = os.path.join(base, mode.subdir) if mode.subdir else base
     card_sources.append(f"rule card '{card.key}': core keeps saves under system_directory — {card.provenance}")
+    if granularity is not None:
+        all_caveats.extend(
+            _file_set_caveats(card, mode, mode_value=granularity.option_value or "", rom_stem=rom_stem)
+        )
     file_set = _card_file_set(
         machine, card=card, mode=mode, directory=directory, rom_stem=rom_stem, needs=needs
     )
@@ -1422,7 +1494,7 @@ def _system_directory_placement(
     return SavePlacement(
         dir=directory,
         root_kind=ROOT_SYSTEM_DIRECTORY,
-        needs=needs,
+        needs=needs_with_file_set(needs, file_set.files),
         file_set=file_set,
         sources=tuple(card_sources),
         caveats=tuple(all_caveats),
@@ -1547,8 +1619,7 @@ def _nest_card_subdir(
     sources: tuple[str, ...] = ()
     if card is not None:
         sources = (
-            f"rule card '{card.key}': core nests its saves under '{mode.subdir}/' in the "
-            f"save directory — {card.provenance}",
+            f"rule card '{card.key}': core nests its saves under '{mode.subdir}/' in the save directory",
         )
     nested_fallback = os.path.join(fallback_dir, mode.subdir) if fallback_dir is not None else None
     return os.path.join(directory, mode.subdir), nested_fallback, sources
@@ -1646,13 +1717,10 @@ def _standard_placement(
     ``fallback_dir`` stays empty rather than claiming a fallback nobody takes.
     """
     all_caveats = list(caveats)
-    if card is not None and mode is not None and granularity is not None and mode.files is None:
-        all_caveats.append(
-            Caveat(
-                CAVEAT_FILENAMES_UNVERIFIED,
-                f"rule card '{card.key}': mode {granularity.option_value!r} places per-game files under the "
-                "standard directory, but the filename scheme is unverified — file names not stated",
-                {"card": card.key, "mode": granularity.option_value or ""},
+    if card is not None and mode is not None and granularity is not None:
+        all_caveats.extend(
+            _file_set_caveats(
+                card, mode, mode_value=granularity.option_value or "", rom_stem=content.rom_stem
             )
         )
 
@@ -1670,6 +1738,12 @@ def _standard_placement(
     fallback_dir: str | None = None
     physical_dir: str | None = None
     final_sources = list(placement.sources)
+    # Which world knowledge produced this answer — said once per answer, on
+    # this route as much as on the system_directory one. It carries what the
+    # placement's own fields cannot: that a mode *moves* the save rather than
+    # adding to it, so the files the previous mode wrote are left behind stale.
+    if card is not None and mode is not None:
+        final_sources.append(f"rule card '{card.key}' governs this placement — {card.provenance}")
     if not placement.needs:
         if reachable:
             if placement.root_kind == ROOT_CONTENT_DIRECTORY:
@@ -1698,7 +1772,7 @@ def _standard_placement(
     return SavePlacement(
         dir=final_dir,
         root_kind=placement.root_kind,
-        needs=placement.needs,
+        needs=needs_with_file_set(placement.needs, file_set.files),
         file_set=file_set,
         sources=tuple(final_sources),
         caveats=tuple(all_caveats),
@@ -1991,14 +2065,16 @@ def _card_files(files: tuple[str, ...], rom_stem: str | None) -> tuple[str, ...]
     """Substitute the ``<rom_stem>`` hole in a card's declared file list.
 
     Returns ``None`` when a template file cannot be filled (no content given) —
-    the file set is then honestly unknown rather than a template guess.
+    the file set is then honestly unknown rather than a template guess. Holes
+    the resolver is not the one to fill (``<save_id>``) stay in the name and
+    reach the caller through ``needs``.
     """
     resolved: list[str] = []
     for name in files:
-        if "<rom_stem>" in name:
+        if TEMPLATE_ROM_STEM in name:
             if rom_stem is None:
                 return None
-            name = name.replace("<rom_stem>", rom_stem)
+            name = name.replace(TEMPLATE_ROM_STEM, rom_stem)
         resolved.append(name)
     return tuple(resolved)
 

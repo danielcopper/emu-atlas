@@ -45,8 +45,10 @@ Four principles, fixed before any code:
   detection, config parsing, and override chains are all provable from data, failure states included.
 - **Placements are templates, not paths.** Where a concrete path cannot be known from configs alone, the answer carries
   named holes: `<content_dir>` when the layout keys on the ROM's own folder and no ROM was named, `<library_name>` when
-  the core would not load. Whoever can fill a hole fills it — the planned `<save_id>` hole, for emulators that key saves
-  off a serial or title id, has [sigil](https://github.com/rommforge/argosy-sigil) as one supplier, not as a dependency.
+  the core would not load, `<save_id>` where the emulator keys the save off a serial or title id it reads from the ROM
+  itself (Flycast's per-game VMUs) — that one holds in the file names, not the directory, because a file set is a
+  template too. Whoever can fill a hole fills it; [sigil](https://github.com/rommforge/argosy-sigil) is one supplier of
+  `save_id`, not a dependency.
 - **Every answer carries provenance.** Which config file said so, which default applied. Debugging a user's broken setup
   is the daily reality of every consumer; explainability is a feature, not a log line.
 
@@ -145,8 +147,9 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   different things to a client.
 - `atlas/contract.py` is the canonical JSON-shaped serialization of every answer — the same code the conformance run
   asserts with exact equality, available to consumers.
-- 403 tests, 68 conformance vectors (schema 2: whole fixture machines with files, dirs, symlinks, core answers, firmware
-  blobs, and read-failure states), zero runtime dependencies, CI-verified wheel/sdist.
+- The conformance vectors (`vectors/`, schema 2) are whole fixture machines — files, directories, symlinks, core
+  answers, firmware blobs and read-failure states — each replayed against the canonical serialization and asserted with
+  exact equality, alongside the unit suite on every push. Zero runtime dependencies, CI-verified wheel/sdist.
 
 What is not covered yet, and in which order it comes: `ROADMAP.md`. The systematic core-by-core state:
 `docs/research/coverage-matrix.md`.

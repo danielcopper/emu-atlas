@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
 
+from atlas.placement import GRANULARITIES, ROOT_KINDS, TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID
+
 # Packaged-data schema versions. The loaders are strict: unknown schema or
 # malformed entries raise instead of coercing — a broken build must fail
 # loudly, never resolve wrongly (REVIEW M3, M10).
@@ -27,7 +29,17 @@ ODDITIES_SCHEMA = 1
 AUDIT_SCHEMA = 3
 
 _KNOWN_VERDICTS = {"card", "standard", "standard-dir", "multi-option", "suspect", "unaudited"}
-_KNOWN_MODE_ROOTS = {"savefile_directory", "system_directory", "content_directory"}
+# The roots a mode may anchor at and the granularities it may select are the
+# placement's own vocabularies — imported, not respelled here, for the same
+# reason the file-name templates are: a card is data, and a value that only
+# looks right would be stated as fact.
+_KNOWN_MODE_ROOTS = set(ROOT_KINDS)
+_KNOWN_GRANULARITIES = set(GRANULARITIES)
+# A declared file name is a template in the placement's own hole grammar. Only
+# these tokens exist: one the resolver fills, one the caller does. A token
+# outside the set would travel into a stated filename and be read as literal
+# text, so it fails the load instead.
+_KNOWN_FILE_TEMPLATES = (TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID)
 
 
 def _expect_str(value: object, where: str) -> str:
@@ -54,17 +66,72 @@ def _expect_str_list(value: object, where: str) -> tuple[str, ...]:
     return tuple(value)
 
 
+def _expect_file_names(value: object, where: str) -> tuple[str, ...]:
+    """A card's file names — templates only in the vocabulary the resolver knows.
+
+    The check is subtractive, not a token scan: the known templates are removed
+    and *any* remaining angle bracket fails the load. A scan for well-formed
+    ``<…>`` would pass a name whose bracket never closes (``<rom_stem.A1.bin``)
+    or nests (``<<rom_stem>>``), and such a name is stated verbatim — the very
+    "a typo cannot become a stated filename" guarantee this exists for. A real
+    file name with a literal angle bracket would be refused too; none is known,
+    and refusing one is the safe direction.
+    """
+    names = _expect_str_list(value, where)
+    if not names:
+        raise ValueError(
+            f"{where}: an empty list declares nothing — omit the field (or use null) to state that "
+            "the file set is not established, which is a different answer than a set with no files"
+        )
+    for name in names:
+        if not name:
+            raise ValueError(f"{where}: an empty string is not a file name")
+        remainder = name
+        for token in _KNOWN_FILE_TEMPLATES:
+            remainder = remainder.replace(token, "")
+        if "<" in remainder or ">" in remainder:
+            raise ValueError(
+                f"{where}: file name {name!r} carries an unknown template — only "
+                f"{list(_KNOWN_FILE_TEMPLATES)} are filled or carried as holes, and everything else "
+                "is stated verbatim as part of the name"
+            )
+    return names
+
+
 @dataclass(frozen=True, slots=True)
 class SaveMode:
     """One value of the governing option and the behaviour it selects.
 
     ``files`` is the declared file set for this mode, or ``None`` when the
     card marks it unverified — the resolver then refuses to state filenames.
+    A name may be a template: ``<rom_stem>`` the resolver fills from the
+    content path, ``<save_id>`` it carries through as a hole for the caller.
     ``observe`` optionally widens the *observation* candidates beyond the
     declared defaults (e.g. Flycast's slot-2 VMUs, which exist only when a
     controller port's slot 2 is configured as a VMU). ``complete`` asserts
     that the mode's candidate universe is closed — no other file can belong
     to the save; a card may claim it only with source-verified provenance.
+
+    Two fields state what a single file list cannot:
+
+    - ``files_without_save_id`` is the same set as the emulator names it when
+      the content carries no platform-native id — Flycast falls back to the
+      ROM's own name for arcade content and for a disc whose header states no
+      id (``oslib.cpp:44`` vs ``:62``). The set is genuinely conditional on a
+      fact atlas does not read, so the resolver states the id-keyed set and
+      hands the alternative to the caller in a caveat instead of picking one.
+    - ``files_established_for`` names the class of content the list itself was
+      established for, and ``files_citation`` cites that. Not every difference
+      between content classes is a spelling: Flycast connects four VMUs on a
+      Dreamcast and two on a Naomi board, so for arcade content two of the
+      four declared names can never exist. The scope travels into the same
+      caveat, machine-readably, so the list is never read as established for
+      content it was not.
+    - ``also_under`` names a *second* root this mode's save data lives under.
+      A card describes one root per mode, so a mode that spans two cannot
+      state its file set at all: it declares ``files: None`` plus this field,
+      and the resolver says so rather than presenting the half it can see as
+      the whole save.
     """
 
     root: str
@@ -73,6 +140,10 @@ class SaveMode:
     granularity: str
     observe: tuple[str, ...] | None = None
     complete: bool = False
+    files_without_save_id: tuple[str, ...] | None = None
+    files_established_for: str | None = None
+    files_citation: str | None = None
+    also_under: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,19 +172,79 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     root = _expect_str(mode.get("root"), f"{where}: root")
     if root not in _KNOWN_MODE_ROOTS:
         raise ValueError(f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
+    granularity = _expect_str(mode.get("granularity"), f"{where}: granularity")
+    if granularity not in _KNOWN_GRANULARITIES:
+        # It reaches the caller as the contractual Granularity.value, so a
+        # misspelling here would be stated as this machine's actual grouping.
+        raise ValueError(
+            f"{where}: granularity must be one of {sorted(_KNOWN_GRANULARITIES)}, got {granularity!r}"
+        )
     files = mode.get("files")
     observe = mode.get("observe")
     complete = mode.get("complete", False)
     if not isinstance(complete, bool):
         # bool("false") is True in Python — never coerce this claim.
         raise ValueError(f"{where}: 'complete' must be a JSON boolean")
+    alternative = mode.get("files_without_save_id")
+    also_under = _expect_opt_str(mode.get("also_under"), f"{where}: also_under")
+    if also_under is not None and also_under not in _KNOWN_MODE_ROOTS:
+        raise ValueError(
+            f"{where}: also_under must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {also_under!r}"
+        )
+    if also_under == root:
+        raise ValueError(
+            f"{where}: also_under names this mode's own root ({root!r}) — it exists to name the "
+            "*second* root the save reaches, and a root does not span itself"
+        )
+    if also_under is not None and files is not None:
+        # The field exists because one file list cannot describe a save that
+        # lies under two roots — a card that states both contradicts itself.
+        raise ValueError(
+            f"{where}: a mode with 'also_under' cannot declare 'files' — its save data reaches "
+            "beyond this root, so the set is not statable here"
+        )
+    alternative_names: tuple[str, ...] | None = None
+    if alternative is not None:
+        if files is None or not any(TEMPLATE_SAVE_ID in name for name in files):
+            raise ValueError(
+                f"{where}: 'files_without_save_id' is the set for content that carries no id, so "
+                f"'files' must declare the {TEMPLATE_SAVE_ID} case it is the alternative to"
+            )
+        alternative_names = _expect_file_names(alternative, f"{where}: files_without_save_id")
+        if any(TEMPLATE_SAVE_ID in name for name in alternative_names):
+            raise ValueError(
+                f"{where}: 'files_without_save_id' describes content without an id — it cannot "
+                f"name one with {TEMPLATE_SAVE_ID}"
+            )
+    # Both are answer content, not flags: an empty one would reach the caller as
+    # an empty scope or an empty citation, which says nothing at all.
+    raw_scope = mode.get("files_established_for")
+    established_for = (
+        _expect_str(raw_scope, f"{where}: files_established_for") if raw_scope is not None else None
+    )
+    raw_citation = mode.get("files_citation")
+    citation = _expect_str(raw_citation, f"{where}: files_citation") if raw_citation is not None else None
+    if established_for is not None and files is None:
+        raise ValueError(
+            f"{where}: 'files_established_for' scopes a declared set — a mode that states no 'files' "
+            "has nothing to scope"
+        )
+    if citation is not None and established_for is None:
+        raise ValueError(
+            f"{where}: 'files_citation' cites the scope in 'files_established_for', which this mode "
+            "does not state"
+        )
     return SaveMode(
         root=root,
         subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
-        files=_expect_str_list(files, f"{where}: files") if files is not None else None,
-        granularity=_expect_str(mode.get("granularity"), f"{where}: granularity"),
-        observe=_expect_str_list(observe, f"{where}: observe") if observe is not None else None,
+        files=_expect_file_names(files, f"{where}: files") if files is not None else None,
+        granularity=granularity,
+        observe=_expect_file_names(observe, f"{where}: observe") if observe is not None else None,
         complete=complete,
+        files_without_save_id=alternative_names,
+        files_established_for=established_for,
+        files_citation=citation,
+        also_under=also_under,
     )
 
 

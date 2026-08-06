@@ -145,13 +145,13 @@ class TestEntrySaveLocation:
                     'libretro_directory = "/app/cores"\n'
                 ),
                 OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
-                "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+                "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
                 "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
             },
             cores={f"{DEPLOY}/cores/flycast_libretro.so": {"library_name": "Flycast"}},
         )
         entry = rd.emulators_for("dreamcast")[0]
-        p = entry.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi")
+        p = entry.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi")
         assert isinstance(p, atlas.SavePlacement)
         assert p.dir == "/mnt/sd/retrodeck/bios/dc"
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY

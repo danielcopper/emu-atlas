@@ -8,13 +8,17 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
 
 > **Done:** tasks 1 and 2 shipped as rule cards (`atlas/data/core_oddities.json` + `atlas/oddities.py`): Flycast
 > resolves to `system_directory/dc` with observed VMUs, granularity (shared vs. per-game) is read live from the
-> governing core option, and the answer names the options file to switch it. Remaining inside task 1: the per-game VMU
-> filename scheme ([O]) and cards for further system-directory cores as they are found. Task 6 is now partially covered
-> — granularity is stated wherever a rule card exists, `None` elsewhere.
+> governing core option, and the answer names the options file to switch it. The per-game VMU filename scheme is settled
+> too (live run 2026-08-05): `<save_id>.<port>.bin` in the content-sorted save directory, `save_id` being the disc's
+> product number — stated as the template it is, with `save_id` in `needs`, and the ROM-named branch for content
+> carrying no id handed over in `filenames-content-conditional` (research doc §8). Remaining inside task 1: which ports
+> a per-content mode covers is content-dependent ([O], needs a live Naomi run), `VMU A1` therefore states no file set at
+> all (`file-set-spans-roots`), and cards for further system-directory cores as they are found. Task 6 is now partially
+> covered — granularity is stated wherever a rule card exists, `None` elsewhere.
 
 1. **Flycast / system-directory cores** (§8, issue #12). The resolver returns the RetroArch default directory for
    Dreamcast content with no warning, while the real saves are shared VMUs under `system_directory`
-   (`bios/dc/vmu_save_*.bin` + `dc_nvmem.bin`) — verified live with Shenmue. Steps:
+   (`bios/dc/vmu_save_*.bin` + `dc_nvmem.bin`) — verified live on a Dreamcast title. Steps:
    - interim: caveat on known system-directory cores ("answer incomplete — core does not root at `savefile_directory`")
    - full: oddity rule producing `root_kind=system_directory`, the VMU file set, and granularity _shared card_
    - read `reicast_per_content_vmus` from the core-options file — the option flips both granularity (per-game) and root
@@ -77,6 +81,30 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
     the option definitions from `retro_set_environment` — which also turns option defaults into live reads. One vector
     per generation, kept forever. Design in `docs/research/core-audit.md`.
 
+16. **A card mode that spans two roots, and a file set scoped to a content class.** Flycast's `VMU A1` moves port A1 and
+    leaves B1..D1 plus the console flash on the shared card under `system_directory`; the schema states one root per
+    mode, so the mode declares `also_under` and the answer reports `file-set-spans-roots` instead of a file set. The
+    same dimension shows in `All VMUs`, whose four names are the console port set: a Naomi board connects two, so the
+    list is stated with `files_established_for` + `files_citation` and the caveat carries the scope — honest, but a
+    scope is not the same as an answer. The shared `disabled` mode declares the same console-shaped list and has no
+    scope on it (unchanged from before this work; its set is normally observed rather than declared). What the model
+    would need: a mode whose file set is a list of `(root, subdir, files)` groups rather than one root plus one list,
+    each group with its own evidence status and content scope, and a `granularity` able to say "per-game for these
+    files, shared for those". Same design pass as task 15's card variants — both are the card schema growing a
+    dimension.
+
+    _Surfaced with it_ (pre-existing, deliberately not fixed here): on the standard route an observation wins over the
+    declaration, so a file matching `<rom_stem>.*` in the save directory replaces the template and drops `save_id` from
+    `needs` — for a card whose names are id-keyed, the observed file may belong to another game in a content-sorted
+    directory. The system_directory route does not observe once a name carries a hole. The two routes should treat a
+    template the same way.
+
+    _Why the loader's strictness is not an internal matter_: the card file's own `spec` string states the template
+    guarantee — "the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact" — and
+    that string ships inside the package, next to `atlas/data/README.md`. It is a claim published to consumers, so a
+    loophole in the check is a false claim in a released artifact, not a missing internal invariant. Any change to the
+    vocabularies belongs in the same commit as the text that promises them.
+
 ## Context and docs
 
 11. **`home` guidance for callers.** Document who supplies `home` and why there is no default: the caller knows which
@@ -91,7 +119,8 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
     building.
 
 14. **Research follow-ups.** Paper Mario stage 2 (FlashRAM region location, §12); ParaLLEl N64 same-game comparison;
-    per-game VMU filename scheme (§8 [O]).
+    arcade content through Flycast (§8 [O]) — the names are settled for both branches, but which ports a per-content
+    mode covers is not: Naomi connects B1/C1, so `VMU A1` moves nothing there. Needs a live Naomi run.
 
 Every task lands with vectors; expectation values are adjudicated against emulator source or live observation, never
 invention.

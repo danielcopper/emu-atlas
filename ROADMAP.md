@@ -123,5 +123,8 @@ The four firmware entry points ship: live `.info` declarations from the installe
 
 ## Open research (needs the user's machine)
 
-Paper Mario stage 2 (FlashRAM region), ParaLLEl N64 same-game comparison, per-game VMU filename scheme, one live run per
-suspect core.
+Paper Mario stage 2 (FlashRAM region), ParaLLEl N64 same-game comparison, one live run per suspect core. The per-game
+VMU filename scheme is settled (2026-08-05 live run, `docs/research/retrodeck-save-placement.md` §8), including the
+ROM-named branch for content without a disc id, which the answer now states as a condition. Still open there: a live
+Naomi run, because which ports a per-content mode covers is content-dependent — and a card model that can express a mode
+split across roots, which is what `file-set-spans-roots` currently reports instead of a file set.

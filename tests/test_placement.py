@@ -12,6 +12,8 @@ from atlas.placement import (
     FileSet,
     SavePlacement,
     build_save_placement,
+    file_set_holes,
+    needs_with_file_set,
 )
 from atlas.retroarch_cfg import RETRODECK_DEFAULTS, resolve_save_layout
 
@@ -180,6 +182,25 @@ class TestHoles:
         )
         assert p.dir == "<content_dir>/<content_dir>/<library_name>"
         assert p.needs == ("content_dir", "library_name")
+
+
+class TestFileSetHoles:
+    """A file-set template leaves holes too, and they join the directory's."""
+
+    def test_a_resolved_file_set_leaves_no_hole(self):
+        assert file_set_holes(("vmu_save_A1.bin", "dc_nvmem.bin")) == ()
+
+    def test_the_save_id_token_is_a_hole(self):
+        assert file_set_holes(("<save_id>.A1.bin", "<save_id>.B1.bin")) == ("save_id",)
+
+    def test_the_rom_stem_token_is_not_a_hole(self):
+        # The resolver fills it from the content path — by the time a file set
+        # exists it is either substituted or the set is unknown.
+        assert file_set_holes(("<rom_stem>.ps2",)) == ()
+
+    def test_directory_holes_come_first_and_repeat_once(self):
+        assert needs_with_file_set(("content_dir",), ("<save_id>.A1.bin",)) == ("content_dir", "save_id")
+        assert needs_with_file_set(("save_id",), ("<save_id>.A1.bin",)) == ("save_id",)
 
 
 class TestFileSetAndProvenance:
