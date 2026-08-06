@@ -2783,9 +2783,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             custom = parse_es_systems(custom_text, source="es_systems.xml (custom_systems overlay)")
         return merge_layers(bundled, custom), read
 
-    def _catalogue(self, root: str) -> dict[str, tuple[EmulatorSpec, ...]]:
-        return self._read_catalogue(root)[0]
-
     def _catalogue_unread_caveat(self, system: str | None = None) -> tuple[Caveat, ...]:
         """The caveat for a catalogue that could not be read — the same fact as the firmware route's.
 
