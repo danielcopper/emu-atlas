@@ -217,6 +217,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`   |
 | `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                          |
 | `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes      |
+| `save-dir-unlistable`                       | the directory could not be listed, so `file_set` is _unknown_ — not "no saves"; do not delete |
 | `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                        |
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified     |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it) |
@@ -351,6 +352,15 @@ An answer with no requirements says which kind of empty it is, and the code is t
 
 A per-system or per-core answer whose emulators were all read and declare nothing carries no such caveat: each entry
 says it itself with `declaration="read"` and an empty requirement list, which is the honest "needs nothing".
+
+Two more say a directory could not be read, and both mean the answer is narrower than the machine:
+
+| caveat                        | what it means                                    | what to do                                             |
+| ----------------------------- | ------------------------------------------------ | ------------------------------------------------------ |
+| `core-enumeration-incomplete` | the core directory could not be listed           | the core list is what was visible, not what is shipped |
+| `firmware-scan-incomplete`    | a scanned firmware directory could not be listed | `unclaimed` is partial; do not read it as a clean tree |
+
+Both carry `data["path"]` — the directory that could not be read.
 
 ## Answers as plain JSON
 

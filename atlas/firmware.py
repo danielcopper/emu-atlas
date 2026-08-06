@@ -129,6 +129,8 @@ CAVEAT_CORE_INFO_UNREADABLE = "core-info-unreadable"
 CAVEAT_CATALOGUE_UNREADABLE = "emulator-catalogue-unreadable"
 CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
 CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
+CAVEAT_FIRMWARE_SCAN_INCOMPLETE = "firmware-scan-incomplete"
+CAVEAT_CORE_ENUMERATION_INCOMPLETE = "core-enumeration-incomplete"
 CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT = "firmware-path-escapes-root"
 CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
 CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE = "firmware-path-names-no-file"
@@ -696,9 +698,30 @@ def _declarations_in(text: str) -> _Info:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class CoreEnumeration:
+    """The installed cores, and the directory that names them if it could not be read.
+
+    Two fields because an empty ``cores`` is ambiguous on its own: an
+    installation that ships none, and one whose core directory could not be
+    listed, are opposite facts about the machine and only the first licenses
+    saying anything about it. ``unreadable`` is empty exactly when the
+    enumeration is trustworthy — the same shape as
+    :class:`~atlas.machine.GlobResult`, which is where it comes from.
+    """
+
+    cores: tuple[CoreDeclarations, ...] = ()
+    unreadable: tuple[str, ...] = ()
+
+    @property
+    def listed(self) -> bool:
+        """Did the enumeration actually happen?"""
+        return not self.unreadable
+
+
 def read_core_declarations(
     machine: Machine, info_dir: str, *, core_dir: str | None = None
-) -> tuple[CoreDeclarations, ...]:
+) -> CoreEnumeration:
     """Read what every *installed* core declares, live, from its ``.info`` file.
 
     When *core_dir* is given the **cores** are the enumeration: every ``.so``
@@ -717,17 +740,19 @@ def read_core_declarations(
 
     libretro's two template ``.info`` files are dropped by name: they declare
     the literal placeholder ``filename.ext``.
+
+    The answer carries whether the directory that *names* the cores could be
+    read, because an empty list means two opposite things: this installation
+    ships no cores, or the place they would be named could not be listed. Only
+    the first licenses a statement about the machine, and the caller cannot
+    tell them apart from the list alone — which is what the old "empty means
+    nobody looked" reading got wrong in the other direction, treating a
+    genuinely empty directory as a failure.
     """
-    if core_dir is None:
-        stems = [
-            os.path.basename(path)[: -len(".info")]
-            for path in machine.glob(os.path.join(_glob_escape(info_dir), "*.info"))
-        ]
-    else:
-        stems = [
-            os.path.basename(path)[: -len(".so")]
-            for path in machine.glob(os.path.join(_glob_escape(core_dir), "*.so"))
-        ]
+    directory = info_dir if core_dir is None else core_dir
+    suffix = ".info" if core_dir is None else ".so"
+    listing = machine.glob(os.path.join(_glob_escape(directory), f"*{suffix}"))
+    stems = [os.path.basename(path)[: -len(suffix)] for path in listing.matches]
     cores: list[CoreDeclarations] = []
     for stem in stems:
         if stem in TEMPLATE_INFO_STEMS:
@@ -747,7 +772,7 @@ def read_core_declarations(
                 unread=info.unread,
             )
         )
-    return tuple(sorted(cores, key=lambda c: c.core_so))
+    return CoreEnumeration(tuple(sorted(cores, key=lambda c: c.core_so)), listing.unreadable)
 
 
 def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
@@ -2051,10 +2076,26 @@ def _unclaimed_in(
     all, and a caveat calling an unreadable memory card a possibly-undeclared
     firmware file is the category error the artifact exclusion exists to
     prevent.
+
+    A directory the scan could not list at all is the same fact one level up,
+    and it is stated the same way: once, naming the directory. Without it an
+    unreadable firmware tree reports as a tree with nothing unclaimed in it,
+    which is the reassuring answer and the wrong one.
     """
     found: list[UnclaimedFile] = []
     caveats: list[Caveat] = []
-    for entry in machine.glob(os.path.join(_glob_escape(directory), "*")):
+    listing = machine.glob(os.path.join(_glob_escape(directory), "*"))
+    caveats.extend(
+        Caveat(
+            CAVEAT_FIRMWARE_SCAN_INCOMPLETE,
+            f"{unreadable} lies in the firmware tree and could not be listed (permissions or an I/O "
+            "failure) — whether anything undeclared sits in it is unknown, so the list below is what "
+            "atlas could see and not the whole tree",
+            {"path": unreadable},
+        )
+        for unreadable in listing.unreadable
+    )
+    for entry in listing.matches:
         kind = machine.path_kind(entry)
         if kind not in (KIND_FILE, KIND_INACCESSIBLE):
             continue
