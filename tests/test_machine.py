@@ -7,8 +7,11 @@ whole-machine model if both agree on every operation outcome.
 
 from __future__ import annotations
 
+import contextlib
+import glob as glob_module
 import hashlib
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -20,12 +23,28 @@ import pytest
 import atlas.machine
 from atlas.machine import (
     DIGEST_ALGORITHMS,
+    GLOB_COMPLETE,
+    GLOB_INCOMPLETE,
     SYMLINK_HOPS,
+    GlobResult,
     CoreInfo,
     FixtureMachine,
     ReadResult,
     RealMachine,
 )
+
+
+def _matches(machine: FixtureMachine | RealMachine, pattern: str) -> list[str]:
+    """The names a pattern selected, from a walk that read everything it needed.
+
+    The status is asserted here instead of in every caller: a test about which
+    names a pattern selects has to fail loudly when the walk could not read
+    something, rather than quietly comparing against a shorter list — that is
+    the confusion the outcome exists to end.
+    """
+    result = machine.glob(pattern)
+    assert result.status == GLOB_COMPLETE, result
+    return list(result.matches)
 
 
 def _assert_same_answers(fixture: FixtureMachine, real: RealMachine, path: str) -> None:
@@ -36,6 +55,20 @@ def _assert_same_answers(fixture: FixtureMachine, real: RealMachine, path: str) 
     assert fixture.readlink(path) == real.readlink(path), path
     for algorithm in DIGEST_ALGORITHMS:
         assert fixture.file_digest(path, algorithm) == real.file_digest(path, algorithm), path
+
+
+@contextlib.contextmanager
+def _mode(path, bits: int):
+    """Hold *path* at *bits* for the block, then give it back.
+
+    A directory left at mode 000 makes the tmp_path teardown fail, and the
+    failure lands on whichever test runs next.
+    """
+    path.chmod(bits)
+    try:
+        yield path
+    finally:
+        path.chmod(0o700)
 
 
 def _real_link_chain(tmp_path, length: int) -> str:
@@ -105,7 +138,7 @@ class TestFixtureFiles:
         m = FixtureMachine({}, dirs=["/saves/empty"])
         assert m.path_kind("/saves/empty") == "directory"
         assert m.path_kind("/saves") == "directory"
-        assert m.glob("/saves/empty/*") == []
+        assert _matches(m, "/saves/empty/*") == []
 
     def test_reading_a_directory_is_unreadable(self):
         m = FixtureMachine({"/a/b/c.txt": ""})
@@ -118,24 +151,24 @@ class TestFixtureFiles:
 
     def test_glob_is_sorted_and_deterministic(self):
         m = FixtureMachine({"/s/b.srm": "", "/s/a.srm": "", "/s/a.rtc": ""})
-        assert m.glob("/s/a.*") == ["/s/a.rtc", "/s/a.srm"]
+        assert _matches(m, "/s/a.*") == ["/s/a.rtc", "/s/a.srm"]
 
     def test_glob_star_does_not_cross_separators(self):
         m = FixtureMachine({"/s/a.srm": "", "/s/deep/a.srm": ""})
-        assert m.glob("/s/a.*") == ["/s/a.srm"]
-        assert m.glob("/s/*") == ["/s/a.srm", "/s/deep"]
+        assert _matches(m, "/s/a.*") == ["/s/a.srm"]
+        assert _matches(m, "/s/*") == ["/s/a.srm", "/s/deep"]
 
     def test_glob_wildcard_skips_hidden_names(self):
         m = FixtureMachine({"/s/a.srm": "", "/s/.hidden": ""})
-        assert m.glob("/s/*") == ["/s/a.srm"]
-        assert m.glob("/s/.*") == ["/s/.hidden"]
+        assert _matches(m, "/s/*") == ["/s/a.srm"]
+        assert _matches(m, "/s/.*") == ["/s/.hidden"]
 
     def test_glob_escaped_metacharacters_match_literally(self):
         import glob as glob_module
 
         m = FixtureMachine({"/s/Game [USA].srm": "", "/s/Game U.srm": ""})
         pattern = glob_module.escape("/s/Game [USA]") + ".*"
-        assert m.glob(pattern) == ["/s/Game [USA].srm"]
+        assert _matches(m, pattern) == ["/s/Game [USA].srm"]
 
 
 class TestFixtureIdentity:
@@ -169,6 +202,63 @@ class TestFixtureIdentity:
     def test_unknown_algorithm_is_none_not_an_error(self):
         m = FixtureMachine({"/a/f.txt": "hello"})
         assert m.file_digest("/a/f.txt", "sha256") is None
+
+
+class TestGlobOutcome:
+    """"Nothing there" and "could not look" stop being the same empty list.
+
+    The distinction is the point of the type: a save directory on a card that
+    stopped answering globs to nothing, and so does an empty one, and a caller
+    that cannot tell them apart will report a save as gone.
+    """
+
+    def test_the_invariant_holds_both_ways(self):
+        with pytest.raises(ValueError):
+            GlobResult(GLOB_COMPLETE, (), ("/s",))
+        with pytest.raises(ValueError):
+            GlobResult(GLOB_INCOMPLETE, ("/s/a.srm",))
+
+    def test_an_empty_directory_is_complete(self):
+        m = FixtureMachine({}, dirs=["/s"])
+        assert m.glob("/s/*") == GlobResult(GLOB_COMPLETE)
+
+    @pytest.mark.parametrize("pattern", ["/gone/*", "/s/f.srm/*", "/s/dead/*"])
+    def test_a_truthful_negative_is_complete(self, pattern):
+        # Not there, not a directory, and a dead link are answers, not
+        # failures — the walk read everything it needed to say so.
+        m = FixtureMachine({"/s/f.srm": "x"}, symlinks={"/s/dead": "/nowhere"})
+        assert m.glob(pattern) == GlobResult(GLOB_COMPLETE)
+
+    def test_a_directory_that_cannot_be_listed_is_named(self):
+        m = FixtureMachine({}, unlistable=["/s"])
+        assert m.glob("/s/*") == GlobResult(GLOB_INCOMPLETE, (), ("/s",))
+
+    def test_an_inaccessible_directory_is_named(self):
+        m = FixtureMachine({}, dirs=["/mnt"], inaccessible=["/mnt/card"])
+        assert m.glob("/mnt/card/*") == GlobResult(GLOB_INCOMPLETE, (), ("/mnt/card",))
+
+    def test_a_link_cycle_is_named(self):
+        m = FixtureMachine({}, symlinks={"/a": "/b", "/b": "/a"})
+        assert m.glob("/a/*") == GlobResult(GLOB_INCOMPLETE, (), ("/a",))
+
+    def test_a_partly_readable_walk_keeps_what_it_found(self):
+        """The answer is not all-or-nothing, because the machine's is not.
+
+        One pattern can need several directories. Dropping the matches because
+        one of them failed would throw away a true answer; dropping the failure
+        because there were matches would state a partial list as the whole.
+        """
+        m = FixtureMachine(
+            {"/s/open/a.srm": "x", "/s/shut/b.srm": "x"},
+            unlistable=["/s/shut"],
+        )
+        assert m.glob("/s/*/*.srm") == GlobResult(
+            GLOB_INCOMPLETE, ("/s/open/a.srm",), ("/s/shut",)
+        )
+
+    def test_a_relative_pattern_matches_nothing(self):
+        # The working directory is not a fact about the machine being read.
+        assert FixtureMachine({"/s/a.srm": "x"}).glob("s/*.srm") == GlobResult(GLOB_COMPLETE)
 
 
 class TestFixturePathSpelling:
@@ -260,14 +350,14 @@ class TestFixturePathSpelling:
         # Observed: '<dir>/*/' answers the subdirectory alone, spelled with the
         # slash, and a pattern naming a regular file that way answers nothing.
         machine = FixtureMachine({"/s/f.srm": ""}, dirs=["/s/sub"])
-        assert machine.glob("/s/*/") == ["/s/sub/"]
-        assert machine.glob("/s/*") == ["/s/f.srm", "/s/sub"]
-        assert machine.glob("/s/f.srm/") == []
+        assert _matches(machine, "/s/*/") == ["/s/sub/"]
+        assert _matches(machine, "/s/*") == ["/s/f.srm", "/s/sub"]
+        assert _matches(machine, "/s/f.srm/") == []
 
     def test_a_match_keeps_the_spelling_the_pattern_reached_it_through(self):
         machine = FixtureMachine({"/s/f.srm": ""}, dirs=["/s/sub"])
-        assert machine.glob("/s/./*.srm") == ["/s/./f.srm"]
-        assert machine.glob("/s/sub/../*.srm") == ["/s/sub/../f.srm"]
+        assert _matches(machine, "/s/./*.srm") == ["/s/./f.srm"]
+        assert _matches(machine, "/s/sub/../*.srm") == ["/s/sub/../f.srm"]
 
 
 class TestFixtureSymlinks:
@@ -354,11 +444,138 @@ class TestFixtureSymlinks:
     def test_glob_through_link_keeps_link_spelling(self):
         # A real filesystem's glob returns the pattern-side spelling, not the target.
         m = FixtureMachine({"/data/real-saves/Tetris.srm": "s"}, symlinks={"/links/saves": "/data/real-saves"})
-        assert m.glob("/links/saves/Tetris.*") == ["/links/saves/Tetris.srm"]
+        assert _matches(m, "/links/saves/Tetris.*") == ["/links/saves/Tetris.srm"]
 
     def test_glob_lists_dead_links(self):
         m = FixtureMachine({}, symlinks={"/s/dead.srm": "/gone/away.srm"})
-        assert m.glob("/s/*.srm") == ["/s/dead.srm"]
+        assert _matches(m, "/s/*.srm") == ["/s/dead.srm"]
+
+
+_FUZZ_NAMES = ["a", "ab", "b.txt", "a.srm", ".hidden", "Game [USA].srm", "c-d", "x"]
+_FUZZ_DIRS = ["a", "sub", "deep", ".dotdir"]
+_FUZZ_SEGMENTS = ["*", "a*", "*.txt", "?", "[ab]*", "a", "sub", ".", "..", ".*", "deep", "linkdir", "*.srm"]
+
+
+def _fuzz_tree(root, rng):
+    """One random tree, built on disk and described as fixture data.
+
+    Nested a level below *root*'s parent so a pattern climbing with ``..``
+    still lands inside what the fixture was told about — otherwise the two
+    machines are describing different trees and the comparison proves nothing.
+    """
+    files: dict[str, str] = {}
+    dirs = [str(root.parent), str(root)]
+    links: dict[str, str] = {}
+    made = [""]
+    for name in _FUZZ_DIRS:
+        if rng.random() < 0.8:
+            rel = f"{rng.choice(made)}/{name}".lstrip("/")
+            (root / rel).mkdir(parents=True, exist_ok=True)
+            made.append(rel)
+            dirs.append(str(root / rel))
+    for name in _FUZZ_NAMES:
+        if rng.random() < 0.85:
+            rel = f"{rng.choice(made)}/{name}".lstrip("/")
+            if (root / rel).is_dir():
+                continue
+            (root / rel).write_text(name)
+            files[str(root / rel)] = name
+    if len(made) > 1:
+        target = rng.choice(made[1:])
+        os.symlink(root / target, root / "linkdir")
+        links[str(root / "linkdir")] = str(root / target)
+    os.symlink(root / "nowhere", root / "deadlink")
+    links[str(root / "deadlink")] = str(root / "nowhere")
+    return FixtureMachine(files, dirs=dirs, symlinks=links)
+
+
+def _fuzz_patterns(root, rng) -> list[str]:
+    out = []
+    for depth in (1, 2, 3):
+        for _ in range(12):
+            parts = [rng.choice(_FUZZ_SEGMENTS) for _ in range(depth)]
+            separator = rng.choice(["/", "/", "/", "//"])
+            trailing = rng.choice(["", "", "", "/"])
+            out.append(f"{root}/{separator.join(parts)}{trailing}")
+    return [*out, str(root), f"{root}/", f"{root}//", f"{root}/*", f"{root}/*/", f"{root}/*/*"]
+
+
+class TestGlobAgainstTheStandardLibrary:
+    """The stdlib defines these semantics, so on a healthy tree both machines match it.
+
+    ``RealMachine`` no longer calls ``glob.glob``: it cannot, because the
+    stdlib swallows exactly the errors the outcome exists to report
+    (``glob.py:173`` returns on any ``OSError`` from ``scandir``). Hand-rolling
+    the walk means the semantics — including which separator survives in a
+    match's spelling — are now atlas's to get right, and this is what says it
+    did. Where something *does* fail, the two must part company, which is the
+    second test class below.
+    """
+
+    @pytest.mark.parametrize("seed", range(12))
+    def test_both_machines_answer_what_the_stdlib_answers(self, tmp_path, seed):
+        rng = random.Random(seed)
+        root = tmp_path / "only" / "root"
+        root.mkdir(parents=True)
+        fixture = _fuzz_tree(root, rng)
+        real = RealMachine()
+        for pattern in _fuzz_patterns(root, rng):
+            expected = sorted(glob_module.glob(pattern))
+            assert _matches(real, pattern) == expected, pattern
+            assert _matches(fixture, pattern) == expected, pattern
+
+
+class TestGlobStatesWhatTheStandardLibraryHides:
+    """On a tree with something unreadable in it, the stdlib's answer is a lie by omission.
+
+    Every case here was observed on a real tree first: a mode-000 directory
+    globs to ``[]``, a link cycle globs to ``[]``, and so does a directory that
+    genuinely holds nothing — three states, one answer, and the resolver has to
+    tell them apart to avoid reporting a save as gone when the card is simply
+    unreadable.
+    """
+
+    def _tree(self, tmp_path):
+        (tmp_path / "open").mkdir()
+        (tmp_path / "open" / "a.srm").write_text("s")
+        (tmp_path / "shut").mkdir()
+        (tmp_path / "shut" / "b.srm").write_text("s")
+        (tmp_path / "empty").mkdir()
+        os.symlink(tmp_path / "loop2", tmp_path / "loop1")
+        os.symlink(tmp_path / "loop1", tmp_path / "loop2")
+        return RealMachine()
+
+    def test_an_unreadable_directory_is_not_an_empty_one(self, tmp_path):
+        real = self._tree(tmp_path)
+        with _mode(tmp_path / "shut", 0):
+            shut = real.glob(f"{tmp_path}/shut/*")
+            stdlib = glob_module.glob(f"{tmp_path}/shut/*")
+        assert stdlib == []
+        assert shut == GlobResult(GLOB_INCOMPLETE, (), (f"{tmp_path}/shut",))
+        assert real.glob(f"{tmp_path}/empty/*") == GlobResult(GLOB_COMPLETE)
+
+    def test_a_link_cycle_is_not_an_empty_one(self, tmp_path):
+        real = self._tree(tmp_path)
+        assert glob_module.glob(f"{tmp_path}/loop1/*") == []
+        assert real.glob(f"{tmp_path}/loop1/*") == GlobResult(
+            GLOB_INCOMPLETE, (), (f"{tmp_path}/loop1",)
+        )
+
+    def test_a_partly_readable_walk_states_both_halves(self, tmp_path):
+        real = self._tree(tmp_path)
+        with _mode(tmp_path / "shut", 0):
+            answer = real.glob(f"{tmp_path}/*/*.srm")
+            stdlib = glob_module.glob(f"{tmp_path}/*/*.srm")
+        assert stdlib == [f"{tmp_path}/open/a.srm"]
+        assert answer.matches == (f"{tmp_path}/open/a.srm",)
+        # The unreadable directory, and both halves of the cycle: a wildcard in
+        # the middle of a pattern has to decide whether each name is a
+        # directory it may descend, and a link that loops cannot be decided.
+        assert answer.unreadable == (
+            f"{tmp_path}/loop1",
+            f"{tmp_path}/loop2",
+            f"{tmp_path}/shut",
+        )
 
 
 class TestFixtureCores:
@@ -835,6 +1052,50 @@ class TestFixtureRealParity:
                 _assert_same_answers(fixture, real, path)
         finally:
             locked.chmod(0o700)
+
+    def test_an_inaccessible_subtree_agrees_down_to_the_leaves(self, tmp_path):
+        """One declaration, every consequence — the card that stopped answering.
+
+        A path whose ``stat`` fails is what ``inaccessible`` means, and below a
+        mode-000 parent that is true of the whole subtree: each descendant
+        answers *inaccessible*, and a glob that needed to list any of them says
+        so instead of returning an empty list. Naming every descendant in the
+        fixture instead would mean listing what an unreadable card contains in
+        order to say it cannot be read.
+        """
+        (tmp_path / "mount" / "card" / "saves" / "deep").mkdir(parents=True)
+        (tmp_path / "mount" / "card" / "saves" / "Game.srm").write_text("s")
+        base = str(tmp_path)
+        fixture = FixtureMachine(
+            {}, dirs=[f"{base}/mount"], inaccessible=[f"{base}/mount/card"]
+        )
+        with _mode(tmp_path / "mount", 0):
+            real = RealMachine()
+            for rel in ("mount/card", "mount/card/saves", "mount/card/saves/Game.srm"):
+                _assert_same_answers(fixture, real, f"{base}/{rel}")
+            for rel in ("mount/card/*", "mount/card/saves/*", "mount/card/saves/*.srm"):
+                assert fixture.glob(f"{base}/{rel}") == real.glob(f"{base}/{rel}"), rel
+
+    def test_a_directory_that_is_there_and_cannot_be_listed_agrees(self, tmp_path):
+        """The other unreadable state, and the reason it needs its own list.
+
+        A mode-111 directory was observed to be a directory whose ``stat``
+        succeeds, whose listing fails, and inside which a name atlas already
+        knows still answers — so a wildcard finds nothing there while the
+        literal path finds the file. A resolver only reaches this state by
+        passing an "is it a directory?" check first, which an inaccessible path
+        fails, so the two cannot be one declaration.
+        """
+        (tmp_path / "saves").mkdir()
+        (tmp_path / "saves" / "Game.srm").write_text("s")
+        base = str(tmp_path)
+        fixture = FixtureMachine({f"{base}/saves/Game.srm": "s"}, unlistable=[f"{base}/saves"])
+        with _mode(tmp_path / "saves", 0o111):
+            real = RealMachine()
+            _assert_same_answers(fixture, real, f"{base}/saves")
+            _assert_same_answers(fixture, real, f"{base}/saves/Game.srm")
+            for rel in ("saves/*", "saves/*.srm", "saves/Game.srm"):
+                assert fixture.glob(f"{base}/{rel}") == real.glob(f"{base}/{rel}"), rel
 
     def test_one_file_described_two_ways_answers_the_same(self, tmp_path):
         """Two ways to write one sized non-text file must not be two states.
