@@ -807,7 +807,7 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
-          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
           "/mnt/sd/retrodeck/bios/dc/dc_nvmem.bin": "n",
           "/mnt/sd/retrodeck/saves/.keep": ""
@@ -819,7 +819,7 @@
           }
         },
         "query": {
-          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
           "core_so": "flycast_libretro.so"
         }
       },
@@ -877,7 +877,7 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"VMU A1\"\n",
-          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "cores": {
@@ -887,7 +887,7 @@
           }
         },
         "query": {
-          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
           "core_so": "flycast_libretro.so"
         }
       },
@@ -1025,7 +1025,9 @@
                 "card": "flycast",
                 "mode": "All VMUs",
                 "files": "<save_id>.A1.bin, <save_id>.B1.bin, <save_id>.C1.bin, <save_id>.D1.bin",
-                "files_without_save_id": "Multi Disc Game (Europe).A1.bin, Multi Disc Game (Europe).B1.bin, Multi Disc Game (Europe).C1.bin, Multi Disc Game (Europe).D1.bin"
+                "files_without_save_id": "Multi Disc Game (Europe).A1.bin, Multi Disc Game (Europe).B1.bin, Multi Disc Game (Europe).C1.bin, Multi Disc Game (Europe).D1.bin",
+                "files_established_for": "console",
+                "citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)"
               }
             }
           ]
@@ -1867,7 +1869,7 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.11.0\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
-          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v"
         },
         "dirs": [
@@ -1890,7 +1892,7 @@
           }
         },
         "query": {
-          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
           "core_so": "flycast_libretro.so"
         }
       },
@@ -1946,7 +1948,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
-          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": ""
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": ""
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves"
@@ -1967,7 +1969,7 @@
           }
         },
         "query": {
-          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
           "core_so": "flycast_libretro.so"
         }
       },
@@ -2758,9 +2760,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Flycast.cfg": "game_specific_options = \"false\"\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Shenmue (Europe).opt": "reicast_per_content_vmus = \"VMU A1\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Flycast/Dreamcast Game (Europe).opt": "reicast_per_content_vmus = \"VMU A1\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
-          "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi": "",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v"
         },
@@ -2770,7 +2772,7 @@
           }
         },
         "query": {
-          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Shenmue (Europe).gdi",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
           "core_so": "flycast_libretro.so"
         }
       },

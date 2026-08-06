@@ -1402,23 +1402,34 @@ def _file_set_caveats(
                 {"card": card.key, "mode": mode_value},
             ),
         )
-    if mode.files_without_save_id is not None:
+    if mode.files_without_save_id is not None or mode.files_established_for is not None:
         stated = _card_files(mode.files, rom_stem) or mode.files
-        alternative = _card_files(mode.files_without_save_id, rom_stem) or mode.files_without_save_id
+        data = {"card": card.key, "mode": mode_value, "files": ", ".join(stated)}
+        spelling = ""
+        scope = ""
+        if mode.files_without_save_id is not None:
+            alternative = _card_files(mode.files_without_save_id, rom_stem) or mode.files_without_save_id
+            data["files_without_save_id"] = ", ".join(alternative)
+            spelling = (
+                " The names hold for content that carries a platform-native id; content without one "
+                "is named after the ROM instead, and that spelling is in this caveat's data — "
+                "whoever fills 'save_id' knows which applies."
+            )
+        if mode.files_established_for is not None:
+            data["files_established_for"] = mode.files_established_for
+            scope = (
+                f" Which files exist at all was established for {mode.files_established_for} content "
+                "only: another content class connects a different set of devices, so a name stated "
+                "here may never appear for it, and one that does may be missing."
+            )
+        if mode.files_citation is not None:
+            data["citation"] = mode.files_citation
         return (
             Caveat(
                 CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
-                f"rule card '{card.key}': in mode {mode_value!r} the names depend on whether this "
-                "content carries a platform-native id. The stated set is the id-keyed one; content "
-                "without an id — arcade, or a disc whose header states none — is named after the "
-                "ROM instead. Both spellings are in this caveat's data; whoever fills 'save_id' "
-                "knows which applies",
-                {
-                    "card": card.key,
-                    "mode": mode_value,
-                    "files": ", ".join(stated),
-                    "files_without_save_id": ", ".join(alternative),
-                },
+                f"rule card '{card.key}': in mode {mode_value!r} the file set depends on the content, "
+                f"which atlas does not identify.{spelling}{scope}",
+                data,
             ),
         )
     return ()

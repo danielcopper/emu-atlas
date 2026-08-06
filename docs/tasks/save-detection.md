@@ -18,7 +18,7 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
 
 1. **Flycast / system-directory cores** (§8, issue #12). The resolver returns the RetroArch default directory for
    Dreamcast content with no warning, while the real saves are shared VMUs under `system_directory`
-   (`bios/dc/vmu_save_*.bin` + `dc_nvmem.bin`) — verified live with Shenmue. Steps:
+   (`bios/dc/vmu_save_*.bin` + `dc_nvmem.bin`) — verified live on a Dreamcast title. Steps:
    - interim: caveat on known system-directory cores ("answer incomplete — core does not root at `savefile_directory`")
    - full: oddity rule producing `root_kind=system_directory`, the VMU file set, and granularity _shared card_
    - read `reicast_per_content_vmus` from the core-options file — the option flips both granularity (per-game) and root
@@ -81,13 +81,23 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
     the option definitions from `retro_set_environment` — which also turns option defaults into live reads. One vector
     per generation, kept forever. Design in `docs/research/core-audit.md`.
 
-16. **A card mode that spans two roots.** Flycast's `VMU A1` moves port A1 and leaves B1..D1 plus the console flash on
-    the shared card under `system_directory`; the schema states one root per mode, so the mode declares `also_under` and
-    the answer reports `file-set-spans-roots` instead of a file set. What the model would need to state it properly: a
-    mode whose file set is a list of `(root, subdir, files)` groups rather than one root plus one list — each group with
-    its own evidence status, and a `granularity` able to say "per-game for these files, shared for those". Which ports a
-    group covers is content-dependent (task 14), so this wants the same design pass as task 15's card variants: both are
-    the card schema growing a dimension.
+16. **A card mode that spans two roots, and a file set scoped to a content class.** Flycast's `VMU A1` moves port A1 and
+    leaves B1..D1 plus the console flash on the shared card under `system_directory`; the schema states one root per
+    mode, so the mode declares `also_under` and the answer reports `file-set-spans-roots` instead of a file set. The
+    same dimension shows in `All VMUs`, whose four names are the console port set: a Naomi board connects two, so the
+    list is stated with `files_established_for` + `files_citation` and the caveat carries the scope — honest, but a
+    scope is not the same as an answer. The shared `disabled` mode declares the same console-shaped list and has no
+    scope on it (unchanged from before this work; its set is normally observed rather than declared). What the model
+    would need: a mode whose file set is a list of `(root, subdir, files)` groups rather than one root plus one list,
+    each group with its own evidence status and content scope, and a `granularity` able to say "per-game for these
+    files, shared for those". Same design pass as task 15's card variants — both are the card schema growing a
+    dimension.
+
+    _Surfaced with it_ (pre-existing, deliberately not fixed here): on the standard route an observation wins over the
+    declaration, so a file matching `<rom_stem>.*` in the save directory replaces the template and drops `save_id` from
+    `needs` — for a card whose names are id-keyed, the observed file may belong to another game in a content-sorted
+    directory. The system_directory route does not observe once a name carries a hole. The two routes should treat a
+    template the same way.
 
 ## Context and docs
 

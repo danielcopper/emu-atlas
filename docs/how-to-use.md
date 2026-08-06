@@ -176,10 +176,17 @@ as far as atlas can fill it:
 c = next(c for c in placement.caveats if c.code == "filenames-content-conditional")
 c.data["files"]                   # '<save_id>.A1.bin, <save_id>.B1.bin, …'  — the stated set
 c.data["files_without_save_id"]   # 'Game.A1.bin, Game.B1.bin, …'            — if the content has no id
+c.data["files_established_for"]   # 'console'  — which content class the set itself was established for
+c.data["citation"]                # the source behind both, for when you need to check
 ```
 
 The branch rule is the same question as filling the hole: ask your id supplier: an id → the first set with `save_id`
 substituted; no id for this content → the second set, which needs nothing from you.
+
+`files_established_for` is the second half, and it is about _which files exist_, not how they are spelled: Flycast
+connects four VMUs on a Dreamcast and two on a Naomi board, so for arcade content two of the four stated names never
+appear. When the key is present, treat the list as established for that content class only — outside it, the set is a
+shape, not an inventory.
 
 **A save can lie under two roots.** Where a mode moves only part of the save — Flycast's `VMU A1` moves the first
 controller's VMU and leaves the other three plus the console flash on the shared card — atlas states no file set at all
@@ -203,7 +210,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                        |
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified     |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it) |
-| `filenames-content-conditional`             | the stated names hold for content with a platform id; `data` carries the id-less set too      |
+| `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope        |
 | `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated      |
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain          |
 | `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below  |

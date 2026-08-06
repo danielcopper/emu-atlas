@@ -62,6 +62,8 @@
               "<rom_stem>.C1.bin",
               "<rom_stem>.D1.bin"
             ],
+            "files_established_for": "console",
+            "files_citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)",
             "granularity": "per-game-files"
           }
         }

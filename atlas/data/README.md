@@ -31,9 +31,12 @@ here).
   never fills it, because reading an id out of a ROM is identification, not location. It stays in the stated name and
   `save_id` joins `needs`, so a caller sees a template rather than a resolved-looking name.
 
-The loader rejects any other `<token>` in a declared name. That is the point of keeping one vocabulary: a card is data,
-and without the check a typo (`<game_id>`) would travel silently into a filename atlas states as fact — the failure mode
-the "never guess" rule exists to prevent. A card that needs a new hole adds it to the placement vocabulary first.
+The loader rejects any other token in a declared name, and the check is **subtractive**: it removes the known templates
+and refuses whatever still contains `<` or `>`. Scanning for well-formed `<…>` would pass `<rom_stem.A1.bin` (bracket
+never closed) and `<<rom_stem>>.A1.bin` (nested) — both of which atlas would then state verbatim as a filename. That is
+the point of keeping one vocabulary: a card is data, and without the check a typo travels silently into a name atlas
+states as fact — the failure mode the "never guess" rule exists to prevent. A card that needs a new hole adds it to the
+placement vocabulary first. An empty list, an empty name and a literal angle bracket are refused for the same reason.
 
 ### Two fields for what one file list cannot say
 
@@ -42,6 +45,11 @@ the "never guess" rule exists to prevent. A card that needs a new hole adds it t
   otherwise, so the set is conditional on a fact atlas does not read. The resolver states the id-keyed set and hands
   this one to the caller in `filenames-content-conditional`, filled as far as it can fill it. Only meaningful next to a
   `<save_id>` set, and it may not name an id itself; the loader enforces both.
+- `files_established_for` + `files_citation` — the class of content the list was established for, and the source that
+  says so. Not every difference between content classes is a spelling: Flycast connects four VMUs on a Dreamcast and two
+  on a Naomi board, so for arcade content two of the four declared names can never exist. Both travel into the same
+  caveat as data, so a client can tell "this list is scoped" from "this list is universal" without reading prose. The
+  scope needs a declared `files` to scope, and the citation needs a scope to cite; the loader enforces both.
 - `also_under` — a second root this mode's save data lives under (Flycast's `VMU A1` moves one controller's VMU and
   leaves the rest on the shared card). A card states one root per mode, so such a mode declares **no** `files` at all —
   the loader refuses both together — and the answer carries `file-set-spans-roots` instead of offering the visible part
