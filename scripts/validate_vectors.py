@@ -113,6 +113,7 @@ KNOWN_CAVEAT_CODES = {
     "sorted-dir-missing",
     "sorted-dir-uncreatable",
     "dead-symlink",
+    "symlink-loop",
     "health",
     "filenames-unverified",
     "filenames-content-conditional",
@@ -276,6 +277,19 @@ def _validate_blob_spec(name: str, path: str, spec: Any) -> None:
         fail(f"{name}: input.files[{path!r}].size must be a non-negative integer")
 
 
+def _validate_status_spec(name: str, path: str, spec: dict[str, Any]) -> None:
+    # A read failure, optionally with the size the stat still answers: a
+    # chmod-000 file is a file of a known size whose bytes cannot be read.
+    # No digest may join it — that is the read this file does not survive.
+    if spec["status"] not in KNOWN_FILE_STATUSES or not set(spec) <= {"status", "size"}:
+        fail(
+            f"{name}: input.files[{path!r}] status spec must be "
+            f"{{'status': one of {sorted(KNOWN_FILE_STATUSES)}}}, optionally with 'size'"
+        )
+    if "size" in spec and (not isinstance(spec["size"], int) or spec["size"] < 0):
+        fail(f"{name}: input.files[{path!r}].size must be a non-negative integer")
+
+
 def _validate_file_spec(name: str, path: str, spec: Any) -> None:
     """One input.files entry: string content, a read failure, or a blob."""
     if isinstance(spec, str):
@@ -283,11 +297,7 @@ def _validate_file_spec(name: str, path: str, spec: Any) -> None:
     if not isinstance(spec, dict):
         fail(f"{name}: input.files[{path!r}] must be string content or an object spec")
     if "status" in spec:
-        if set(spec) != {"status"} or spec["status"] not in KNOWN_FILE_STATUSES:
-            fail(
-                f"{name}: input.files[{path!r}] status spec must be exactly "
-                f"{{'status': one of {sorted(KNOWN_FILE_STATUSES)}}}"
-            )
+        _validate_status_spec(name, path, spec)
         return
     _validate_blob_spec(name, path, spec)
 

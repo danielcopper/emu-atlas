@@ -139,11 +139,19 @@ class Machine(Protocol):
   cfg-derived path is therefore translated to its host location before it becomes a read, per app id; a sandbox-only
   path with no host location is a `sandbox-path-untranslated` caveat, never a silently missing file. See
   `docs/research/retrodeck-save-placement.md` §6.
+- Every operation resolves the path it is handed the way the kernel does — component by component from `/`, symlinks
+  spliced in, `..` applied to where the walk _landed_ rather than to the spelling, and a component the walk steps
+  through required to be a directory (so a trailing `/` on a regular file is `ENOTDIR`, reported as _missing_). Lexical
+  normalization is not this: `normpath` eats the component in front of a `..` even when that component is a symlink, and
+  the kernel does the opposite. The hop limit is the kernel's own: exactly 40 symlinks resolve, the 41st is `ELOOP`, and
+  every resolver in atlas reads that one constant.
 - In production the seam is the real filesystem plus a real core prober. In tests and conformance vectors it is a
   **fixture machine**: files (including unreadable and invalid-text ones), explicit empty directories, symlinks,
-  inaccessible paths, and core answers as plain data describing a whole machine. One code path, two data sources; parity
-  tests run the same cases against the fixture and a real filesystem tree, so everything the resolver does is
-  vector-testable — the failure states included.
+  inaccessible paths, and core answers as plain data describing a whole machine. A file's read outcome and its identity
+  are independent, because on a real machine they come from two different reads — `{"status": "unreadable", "size": N}`
+  is the chmod-000 file, whose `stat` succeeds while its bytes do not. One code path, two data sources; parity tests run
+  the same cases against the fixture and a real filesystem tree, so everything the resolver does is vector-testable —
+  the failure states included.
 
 ## Placements
 
