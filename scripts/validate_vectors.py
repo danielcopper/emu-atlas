@@ -41,6 +41,10 @@ INPUT_FIELDS_OPTIONAL = {
     "identify_query",
 }
 QUERY_FIELDS = {"content_path", "core_so", "installation"}
+CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
+# The systems question takes no arguments — only which handle answers it.
+SYSTEMS_QUERY_FIELDS = {"installation"}
+ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
 FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify"}
 KNOWN_FIRMWARE_QUERY_KINDS = {"core", "system", "inventory"}
 IDENTIFY_QUERY_FIELDS = {"installation", "md5", "sha1", "size"}
@@ -216,6 +220,16 @@ def _require_exact(name: str, obj: Any, fields: set[str], what: str) -> None:
         fail(f"{name}: {what} must be exactly the fields {sorted(fields)}, got {obj!r}")
 
 
+def _validate_handle_selector(name: str, family: str, query: Any) -> None:
+    """The optional 'which handle answers this' key every query family shares.
+
+    One spelling of the rule: the runner selects by ``kind``, so a selector
+    naming something that is not a kind can never match a detected handle.
+    """
+    if "installation" in query and query["installation"] not in KNOWN_KINDS:
+        fail(f"{name}: input.{family}.installation must be one of {sorted(KNOWN_KINDS)}")
+
+
 def _validate_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.query must be an object")
@@ -225,8 +239,7 @@ def _validate_query(name: str, query: Any) -> None:
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.query.{key} must be a non-empty string")
-    if "installation" in query and query["installation"] not in KNOWN_KINDS:
-        fail(f"{name}: input.query.installation must be one of {sorted(KNOWN_KINDS)}")
+    _validate_handle_selector(name, "query", query)
 
 
 def _validate_firmware_query_fields(name: str, query: Any) -> None:
@@ -235,8 +248,7 @@ def _validate_firmware_query_fields(name: str, query: Any) -> None:
             fail(f"{name}: input.firmware_query.{key} must be a non-empty string")
     if "verify" in query and not isinstance(query["verify"], bool):
         fail(f"{name}: input.firmware_query.verify must be a boolean")
-    if "installation" in query and query["installation"] not in KNOWN_KINDS:
-        fail(f"{name}: input.firmware_query.installation must be one of {sorted(KNOWN_KINDS)}")
+    _validate_handle_selector(name, "firmware_query", query)
 
 
 def _validate_firmware_query_kind(name: str, query: Any) -> None:
@@ -267,8 +279,7 @@ def _validate_identify_query(name: str, query: Any) -> None:
             fail(f"{name}: input.identify_query.{key} must be a non-empty string")
     if "size" in query and not isinstance(query["size"], int):
         fail(f"{name}: input.identify_query.size must be an integer")
-    if "installation" in query and query["installation"] not in KNOWN_KINDS:
-        fail(f"{name}: input.identify_query.installation must be one of {sorted(KNOWN_KINDS)}")
+    _validate_handle_selector(name, "identify_query", query)
     if not ({"md5", "sha1", "size"} & set(query)):
         fail(f"{name}: input.identify_query must state some content — md5, sha1, or size")
 
@@ -277,11 +288,36 @@ def _validate_entry_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.entry_query must be an object")
     keys = set(query)
-    if "system" not in keys or not keys <= {"system", "label", "content_path"}:
-        fail(f"{name}: input.entry_query must carry 'system' plus optional 'label'/'content_path'")
+    if "system" not in keys or not keys <= ENTRY_QUERY_FIELDS:
+        fail(
+            f"{name}: input.entry_query must carry 'system' plus optional "
+            "'label'/'content_path'/'installation'"
+        )
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.entry_query.{key} must be a non-empty string")
+    _validate_handle_selector(name, "entry_query", query)
+
+
+def _validate_catalogue_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict):
+        fail(f"{name}: input.catalogue_query must be an object")
+    keys = set(query)
+    if "system" not in keys or not keys <= CATALOGUE_QUERY_FIELDS:
+        fail(
+            f"{name}: input.catalogue_query must carry 'system' plus optional "
+            "'content_path'/'installation'"
+        )
+    for key in keys:
+        if not isinstance(query[key], str) or not query[key]:
+            fail(f"{name}: input.catalogue_query.{key} must be a non-empty string")
+    _validate_handle_selector(name, "catalogue_query", query)
+
+
+def _validate_systems_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict) or not set(query) <= SYSTEMS_QUERY_FIELDS:
+        fail(f"{name}: input.systems_query keys must be a subset of {sorted(SYSTEMS_QUERY_FIELDS)}")
+    _validate_handle_selector(name, "systems_query", query)
 
 
 def _validate_blob_spec(name: str, path: str, spec: Any) -> None:
@@ -400,14 +436,9 @@ def _validate_input_queries(name: str, inp: Any) -> None:
     if "query" in inp:
         _validate_query(name, inp["query"])
     if "catalogue_query" in inp:
-        cq = inp["catalogue_query"]
-        if (
-            not isinstance(cq, dict)
-            or "system" not in cq
-            or not set(cq) <= {"system", "content_path"}
-            or not all(isinstance(v, str) and v for v in cq.values())
-        ):
-            fail(f"{name}: input.catalogue_query must carry 'system' plus optional 'content_path'")
+        _validate_catalogue_query(name, inp["catalogue_query"])
+    if "systems_query" in inp:
+        _validate_systems_query(name, inp["systems_query"])
     if "entry_query" in inp:
         _validate_entry_query(name, inp["entry_query"])
     if "firmware_query" in inp:
@@ -844,6 +875,16 @@ def _validate_emulator(name: str, entry: Any) -> None:
         fail(f"{name}: emulator caveats must be a list of known caveat codes")
 
 
+def _no_catalogue_codes_in(caveats: list[Any]) -> list[str]:
+    """The stated reasons, if any, that no catalogue was read.
+
+    An answer that names anything has, by definition, read a catalogue; these
+    codes say the opposite, and a vector asserting both would lock in an answer
+    no arrangement can produce.
+    """
+    return sorted({c["code"] for c in caveats} & NO_CATALOGUE_CODES)
+
+
 def _validate_catalogue(name: str, catalogue: Any) -> None:
     """A catalogue answer: the entries, and why there are none when there are none."""
     if not isinstance(catalogue, dict) or set(catalogue) != {"entries", "caveats"}:
@@ -853,15 +894,13 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
     for entry in catalogue["entries"]:
         _validate_emulator(name, entry)
     _validate_caveats(name, catalogue["caveats"])
-    # An answer that names entries has, by definition, read a catalogue; the
-    # three no-catalogue codes say the opposite, and a vector asserting both
-    # would lock in an answer no arrangement can produce.
-    codes = {c["code"] for c in catalogue["caveats"]}
-    if catalogue["entries"] and codes & NO_CATALOGUE_CODES:
-        fail(f"{name}: expected.catalogue states entries and {sorted(codes & NO_CATALOGUE_CODES)}")
+    unread = _no_catalogue_codes_in(catalogue["caveats"])
+    if catalogue["entries"] and unread:
+        fail(f"{name}: expected.catalogue states entries and {unread}")
 
 
 def _validate_systems(name: str, answer: Any) -> None:
+    """A systems answer: what the catalogue declares, and why nothing when nothing."""
     if not isinstance(answer, dict) or set(answer) != {"systems", "caveats"}:
         fail(f"{name}: expected.systems must be {{'systems': [...], 'caveats': [...]}}")
     if not isinstance(answer["systems"], list) or not all(
@@ -869,6 +908,9 @@ def _validate_systems(name: str, answer: Any) -> None:
     ):
         fail(f"{name}: expected.systems.systems must be a list of non-empty strings")
     _validate_caveats(name, answer["caveats"])
+    unread = _no_catalogue_codes_in(answer["caveats"])
+    if answer["systems"] and unread:
+        fail(f"{name}: expected.systems states systems and {unread}")
 
 
 def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
@@ -888,6 +930,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: expected keys must be 'installations' plus optional {sorted(allowed - {'installations'})}")
     if ("catalogue" in keys) != ("catalogue_query" in inp):
         fail(f"{name}: catalogue_query and catalogue expectation must appear together")
+    if ("systems" in keys) != ("systems_query" in inp):
+        fail(f"{name}: systems_query and systems expectation must appear together")
     if ("save_location" in keys) != ("query" in inp):
         fail(f"{name}: a query and a save_location expectation must appear together")
     if ("entry_save_location" in keys) != ("entry_query" in inp):

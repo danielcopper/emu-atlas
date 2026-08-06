@@ -4363,6 +4363,110 @@
           ]
         }
       }
+    },
+    {
+      "name": "catalogue-an-overlay-alone-does-not-make-an-unread-catalogue-read",
+      "rationale": "The custom_systems overlay reads fine and declares n64; the shipped es_systems.xml does not read at all. Only the bundled layer decides whether a catalogue was read, so both answers refuse and the entry the overlay declared is not handed out. The overlay is genuinely optional — RetroDECK ships it fully commented out, so it parses to zero systems by design and can never stand in for the shipped file; an answer built from it alone would look like a whole catalogue with the frontend's own systems silently missing. The firmware route decides the same way.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": {
+            "status": "unreadable"
+          },
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        },
+        "systems_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {
+                "system": "n64"
+              }
+            }
+          ]
+        },
+        "systems": {
+          "systems": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "catalogue-the-named-handle-answers-not-the-first-one",
+      "rationale": "Coexisting installations: the catalogue query names the native handle, and the native handle answers — its own settled 'this arrangement ships no catalogue', not the RetroDECK handle's 'could not read one'. The two refusals carry different codes, so an answer taken from the first detected installation instead of the named one fails this vector.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/ra-saves/.keep": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64",
+          "installation": "native_retroarch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          },
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "arrangement": "retroarch"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

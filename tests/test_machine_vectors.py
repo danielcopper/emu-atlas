@@ -66,12 +66,6 @@ def _select(installs, selector: str | None, context: str):
     raise AssertionError(f"{context}: no detected installation of kind {selector!r}")
 
 
-def _retrodeck(installs, context: str) -> atlas.RetroDeck:
-    install = _select(installs, "retrodeck", context)
-    assert isinstance(install, atlas.RetroDeck)
-    return install
-
-
 @pytest.mark.parametrize("vector", list(_load_vectors()))
 def test_machine_vector(vector):
     inp = vector["input"]
@@ -153,11 +147,19 @@ class TestTheGrammarRefusesContradictions:
     point the gate drives.
     """
 
-    def _vector(self, **paths):
+    _INSTALLATION = {
+        "kind": "retrodeck",
+        "kinds": ["retrodeck"],
+        "root": "/mnt/sd/retrodeck",
+        "health": [],
+    }
+    _UNREAD = [{"code": "emulator-catalogue-unreadable", "data": {}}]
+
+    def _vector(self, expected=None, **input_keys):
         return {
             "name": "synthetic",
-            "input": {"home": "/home/deck", "files": {"/home/deck/x": ""}, **paths},
-            "expected": {"installations": []},
+            "input": {"home": "/home/deck", "files": {"/home/deck/x": ""}, **input_keys},
+            "expected": {"installations": []} if expected is None else expected,
         }
 
     def test_a_path_in_both_unreadable_lists_is_refused(self):
@@ -172,3 +174,61 @@ class TestTheGrammarRefusesContradictions:
     def test_the_two_lists_are_fine_apart(self):
         vector = self._vector(inaccessible=["/mnt/card"], unlistable=["/saves"])
         validate_vectors.validate_machines_vector(vector)
+
+    def test_a_systems_query_the_runner_cannot_read_is_refused(self):
+        # Not an object is not a query: the runner asks it for a handle
+        # selector, so a bare string reaches the resolver as an AttributeError
+        # instead of a stated defect in the vector.
+        vector = self._vector(systems_query="nonsense")
+        with pytest.raises(validate_vectors.VectorError, match="systems_query keys"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_systems_query_without_an_expectation_is_refused(self):
+        # A question with nothing to compare against is never asked, and a
+        # vector that silently asks nothing proves nothing.
+        vector = self._vector(systems_query={})
+        with pytest.raises(validate_vectors.VectorError, match="systems_query and systems"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_systems_expectation_without_a_query_is_refused(self):
+        vector = self._vector(
+            expected={"installations": [], "systems": {"systems": [], "caveats": []}}
+        )
+        with pytest.raises(validate_vectors.VectorError, match="systems_query and systems"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_systems_stated_beside_a_no_catalogue_code_are_refused(self):
+        vector = self._vector(
+            systems_query={},
+            expected={
+                "installations": [self._INSTALLATION],
+                "systems": {"systems": ["n64"], "caveats": self._UNREAD},
+            },
+        )
+        with pytest.raises(validate_vectors.VectorError, match="states systems"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_entries_stated_beside_a_no_catalogue_code_are_refused(self):
+        # The same contradiction one level down: a catalogue nobody read
+        # declares no entry, so naming one alongside the code that says it was
+        # never read locks in an answer no arrangement can produce.
+        vector = self._vector(
+            catalogue_query={"system": "n64"},
+            expected={
+                "installations": [self._INSTALLATION],
+                "catalogue": {
+                    "entries": [
+                        {
+                            "label": "ParaLLEl N64",
+                            "kind": "libretro",
+                            "core_so": "parallel_n64_libretro.so",
+                            "selection": None,
+                            "caveats": [],
+                        }
+                    ],
+                    "caveats": self._UNREAD,
+                },
+            },
+        )
+        with pytest.raises(validate_vectors.VectorError, match="states entries"):
+            validate_vectors.validate_machines_vector(vector)
