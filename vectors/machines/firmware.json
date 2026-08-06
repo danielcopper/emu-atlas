@@ -3849,6 +3849,55 @@
       }
     },
     {
+      "name": "firmware-an-empty-core-directory-that-was-read-is-an-established-absence",
+      "rationale": "The other half of the distinction, and the one only this direction can lock in. The core directory lists fine and holds nothing, so nothing declares firmware here and atlas may say so — the established 'no-firmware-declaration'. It used to answer the weaker 'firmware-declaration-unknown', because whether anybody looked was inferred from the list being empty, which made a genuinely empty installation indistinguishable from a read that never happened. The seam answers that question now, so an installation shipping no cores can finally state it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_info_path = \"/app/cores\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/bios/stray.bin": "x"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
+        ],
+        "firmware_query": {
+          "kind": "inventory"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [
+            {
+              "path": "/mnt/sd/retrodeck/bios/stray.bin",
+              "identity": null,
+              "known_as": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "no-firmware-declaration",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "firmware-a-core-directory-that-cannot-be-listed-is-not-an-empty-one",
       "rationale": "The core directory resolves and is a directory, and listing it fails. An empty core list would say this installation ships nothing, which is a claim about the machine derived from a read that did not happen. The enumeration says it did not happen, so the answer keeps the weaker 'what is declared is unknown' rather than the established 'nothing declares firmware'.",
       "input": {

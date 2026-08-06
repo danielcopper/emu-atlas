@@ -333,6 +333,20 @@ def _validate_input_paths(name: str, inp: Any) -> None:
         entries = inp.get(list_key, [])
         if not isinstance(entries, list) or not all(isinstance(e, str) and e for e in entries):
             fail(f"{name}: input.{list_key} must be a list of non-empty path strings")
+    # The two unreadable lists answer opposite things about the same question —
+    # does the stat succeed? — so a path in both describes no machine. It is
+    # worth refusing rather than resolving, because the tempting reading is
+    # that both together spell a mode-000 directory: they do not. Such a
+    # directory answers *directory* for itself and belongs in 'unlistable'
+    # alone; 'inaccessible' would make the resolver refuse it a step earlier
+    # than the real machine does, and the vector would prove the wrong path.
+    contradictory = sorted(set(inp.get("inaccessible", [])) & set(inp.get("unlistable", [])))
+    if contradictory:
+        fail(
+            f"{name}: {contradictory} are in both input.inaccessible and input.unlistable — a path "
+            "whose stat fails cannot also be a directory whose stat succeeds. A mode-000 directory "
+            "is 'unlistable'; name its children in 'inaccessible' if they matter."
+        )
     symlinks = inp.get("symlinks", {})
     if not isinstance(symlinks, dict) or not all(
         isinstance(k, str) and isinstance(v, str) for k, v in symlinks.items()

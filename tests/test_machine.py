@@ -164,8 +164,6 @@ class TestFixtureFiles:
         assert _matches(m, "/s/.*") == ["/s/.hidden"]
 
     def test_glob_escaped_metacharacters_match_literally(self):
-        import glob as glob_module
-
         m = FixtureMachine({"/s/Game [USA].srm": "", "/s/Game U.srm": ""})
         pattern = glob_module.escape("/s/Game [USA]") + ".*"
         assert _matches(m, pattern) == ["/s/Game [USA].srm"]
@@ -490,6 +488,16 @@ def _fuzz_tree(root, rng):
 
 
 def _fuzz_patterns(root, rng) -> list[str]:
+    """Random patterns over one tree, capped at three segments deep.
+
+    The cap is load-bearing, not a budget. ``..`` is one of the segments and
+    *root* sits two levels below ``tmp_path``, so with three segments a
+    wildcard can follow at most two climbs — landing on ``tmp_path``, whose
+    contents the fixture was told about. A fourth segment allows three climbs
+    before a wildcard, which reaches pytest's shared basetemp: measured there,
+    the real machine lists every other test's directory and the fixture lists
+    one, and the comparison would flake on whatever ran alongside it.
+    """
     out = []
     for depth in (1, 2, 3):
         for _ in range(12):
@@ -988,8 +996,6 @@ class TestFixtureRealParity:
             _assert_same_answers(fixture, real, spelling)
 
     def test_globs_agree(self, tmp_path):
-        import glob as glob_module
-
         real = self._real(tmp_path)
         fixture = self._fixture(tmp_path)
         base = str(tmp_path)

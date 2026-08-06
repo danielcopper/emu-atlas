@@ -1791,7 +1791,11 @@ def _observed_file_set(
         if os.path.basename(m) != content_file and os.path.basename(m) not in companions
     ]
     caveats = tuple(_unlistable_caveat(path) for path in listing.unreadable)
-    if listing.unreadable and not matches:
+    if listing.unreadable:
+        # Not "unless something matched": this pattern names one directory, so
+        # a failed listing means zero matches anyway — and if that ever stopped
+        # holding, the matches would be a partly-read directory presented as an
+        # observed set, which a `complete` rule card could then close over.
         return UNKNOWN_FILE_SET, caveats
     return _file_set_of(matches, directory=directory, rom_stem=rom_stem, card=card, mode=mode), caveats
 

@@ -217,7 +217,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`   |
 | `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                          |
 | `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes      |
-| `save-dir-unlistable`                       | the directory could not be listed, so `file_set` is _unknown_ — not "no saves"; do not delete |
+| `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"   |
 | `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                        |
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified     |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it) |

@@ -737,20 +737,30 @@ class FixtureMachine:
     (``{"library_name": ...}``); a path mapped to ``None`` is a core that is
     present but unloadable.
 
-    Two lists say what cannot be read, and they are different failures a real
-    machine makes separately:
+    Two lists say what cannot be read, and which one applies is decided by one
+    question: does the ``stat`` succeed?
 
-    - ``inaccessible`` — the ``stat`` itself fails, so nothing about the path
-      can be told. Declaring a directory declares its whole subtree, because
-      the failing ``stat`` is the one every path below it needs first. This is
-      the card that stopped answering: ``EIO`` on the mount point and on
-      everything under it.
-    - ``unlistable`` — the path *is* a directory and its contents cannot be
-      read. A mode-111 directory was observed to behave exactly so: a wildcard
-      finds nothing there while a name atlas already knows still answers. It is
-      a separate list because a resolver reaches this state only by passing the
-      "is it a directory?" check first, and an inaccessible path fails that.
-      A directory that is both (mode 000) says so by appearing in both.
+    - ``unlistable`` — it does. The path *is* a directory and its contents
+      cannot be read, which is what **a mode-000 directory answers about
+      itself**: ``stat`` succeeds, so it is a directory, and the listing fails.
+      Mode 111 behaves the same from outside, and shows the shape plainly — a
+      wildcard finds nothing there while a name atlas already knows still
+      answers. This is the list the resolver's failure paths run through,
+      because reaching them means passing an "is it a directory?" check first.
+    - ``inaccessible`` — it does not, so nothing about the path can be told.
+      This is what the paths *below* a mode-000 directory answer, and what a
+      mount point answers once the card behind it stops responding (``EIO`` on
+      the stat). Declaring a directory declares its whole subtree, because the
+      failing ``stat`` is the one every path below it needs first.
+
+    So a mode-000 directory is ``unlistable``, and it is the wrong list that is
+    tempting: putting the directory in ``inaccessible`` makes the directory
+    itself unreachable, and a resolver then refuses it long before it would
+    have tried to read it. Naming a path in both is a contradiction rather than
+    a mode-000 shorthand — ``inaccessible`` wins, and the fixture stops
+    describing the machine it was written for. Where a mode-000 directory's
+    children matter, they are named in ``inaccessible`` individually; the
+    directory itself is not.
 
     Every operation resolves the path it is given the way the module docstring
     states the kernel does — symlink components, ``.``, ``..`` and separator
