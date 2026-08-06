@@ -1,7 +1,7 @@
 """Run every 'machines' vector through the real detect() + resolver routes.
 
 The vectors are the artifact; this is atlas's conformance run for the machines
-family (schema 2). Each vector is a whole fixture machine — files, dirs,
+family (schema 3). Each vector is a whole fixture machine — files, dirs,
 symlinks, core answers — and detect() must find exactly the expected
 installations. Expectations are the canonical contract serializations
 (atlas.contract) asserted with EXACT equality: every stable field, including
@@ -38,7 +38,7 @@ def _load_vectors():
     for path in files:
         data = json.loads(path.read_text())
         assert data["family"] == "machines"
-        assert data["schema"] == 2, f"{path}: runner speaks vector schema 2"
+        assert data["schema"] == 3, f"{path}: runner speaks vector schema 3"
         for vector in data["vectors"]:
             yield pytest.param(vector, id=f"{path.stem}:{vector['name']}")
 
@@ -50,6 +50,7 @@ def _machine(inp) -> atlas.FixtureMachine:
         cores=inp.get("cores"),
         dirs=inp.get("dirs"),
         inaccessible=inp.get("inaccessible"),
+        unlistable=inp.get("unlistable"),
     )
 
 

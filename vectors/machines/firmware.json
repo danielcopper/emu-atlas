@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 2,
+  "schema": 3,
   "spec": "DESIGN.md — firmware: an emulator-centric answer, live declarations against packaged identities",
   "description": "Whole fixture machines in; the canonical firmware serializations (atlas/contract.py firmware_contract, identification_contract) out, asserted with exact equality. A firmware answer is about EMULATORS: each installed core states what it wants, where each file goes as an absolute path, and what is actually lying there. Two axes stay apart — need (required/optional) is what an emulator asks for, checked (verified/mismatch/unchecked/unknown) is what the machine answers, and 'we did not look' never collapses into 'we looked and cannot tell'. The load-bearing pair is firmware-core-that-declares-nothing-answers-nothing-needed against firmware-core-not-installed-is-unknown-not-nothing: the same empty list, opposite meanings, and only the installed flag plus a caveat tells them apart. Firmware blobs are stated as {md5, sha1, size} because firmware is not text and its identity is exactly what a real file would answer with.",
   "vectors": [
@@ -3845,6 +3845,144 @@
           ],
           "unclaimed": [],
           "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-a-core-directory-that-cannot-be-listed-is-not-an-empty-one",
+      "rationale": "The core directory resolves and is a directory, and listing it fails. An empty core list would say this installation ships nothing, which is a claim about the machine derived from a read that did not happen. The enumeration says it did not happen, so the answer keeps the weaker 'what is declared is unknown' rather than the established 'nothing declares firmware'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_info_path = \"/app/cores\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/bios/gba_bios.bin": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "unlistable": [
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
+        ],
+        "firmware_query": {
+          "kind": "inventory"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [
+            {
+              "path": "/mnt/sd/retrodeck/bios/gba_bios.bin",
+              "identity": null,
+              "known_as": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "core-enumeration-incomplete",
+              "data": {
+                "path": "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
+              }
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-scan-directory-that-cannot-be-listed-is-stated",
+      "rationale": "The unclaimed scan's own version of the same distinction. The firmware root is a directory and cannot be listed, so whether anything undeclared sits in it is unknown — stated once, naming the directory, instead of an empty unclaimed list that reads as a tidy firmware tree.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_info_path = \"/app/cores\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.info": "display_name = \"mGBA\"\nsystemname = \"Nintendo - Game Boy Advance\"\nfirmware_count = \"1\"\nfirmware0_path = \"gba_bios.bin\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "unlistable": [
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "firmware_query": {
+          "kind": "inventory"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mgba_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "mgba_libretro.so",
+                  "system": "gba",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "gba_bios.bin",
+                  "path": "/mnt/sd/retrodeck/bios/gba_bios.bin",
+                  "declared": "gba_bios.bin",
+                  "identity": {
+                    "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+                    "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+                    "size": 16384
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-scan-incomplete",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios"
+              }
+            }
+          ]
         }
       }
     }
