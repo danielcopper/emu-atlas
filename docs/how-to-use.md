@@ -138,7 +138,7 @@ fs = placement.file_set
 if fs.state in ("observed", "declared") and not placement.needs:
     paths = [os.path.join(placement.dir, name) for name in fs.files]
 else:
-    paths = my_own_fallback(system)   # atlas said "unknown" — your table, your risk
+    paths = my_own_fallback(system)   # "unknown", or a name only you can complete — your table, your risk
 ```
 
 ### A file set can carry a hole
@@ -162,9 +162,9 @@ it.
 [argosy-sigil](https://github.com/rommforge/argosy-sigil), which derives platform-native ids from ROM binaries and
 deliberately leaves the emulator-side prefix and suffix to its consumer. It is _one_ supplier, not a dependency: atlas
 neither imports it nor assumes it, and it does not cover Dreamcast today, so this particular hole stays yours to fill
-(the id is the 10-byte product number in the disc header, with each of `/\:*?|<>` replaced by `_`). Where no supplier
-knows the id, an unfilled template still tells you the shape, the count and the directory — enough to recognize the
-files once they exist.
+(the id is the 10-byte product number in the disc header, trailing blanks trimmed, with each of `/\:*?|<>` — the leading
+space included — replaced by `_`). Where no supplier knows the id, an unfilled template still tells you the shape, the
+count and the directory — enough to recognize the files once they exist.
 
 **The layering trap.** An id from such a supplier describes the platform's own structure, which is not automatically a
 structure on the host. sigil's PS2 `save_id` (`BASLUS-…`) names a directory _inside_ a memory card image; whether
