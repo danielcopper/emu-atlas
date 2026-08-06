@@ -28,7 +28,7 @@ from typing import Any, Callable, Mapping, Protocol, Sequence, runtime_checkable
 
 from dataclasses import dataclass, replace as _dc_replace
 
-from atlas.content_path import content_file_name, split_content_path
+from atlas.content_path import content_file_name, content_system_dir, split_content_path
 from atlas.esde import (
     KIND_LIBRETRO,
     EmulatorSpec,
@@ -92,6 +92,7 @@ from atlas.placement import (
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYSTEM_DIR_UNSET,
     CAVEAT_UNKNOWN_OPTION_VALUE,
+    HOLE_CONTENT_DIR,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     TEMPLATE_ROM_STEM,
@@ -100,6 +101,7 @@ from atlas.placement import (
     Caveat,
     FileSet,
     Granularity,
+    RootKind,
     SavePlacement,
     Unresolved,
     build_save_placement,
@@ -614,16 +616,23 @@ class _SaveQuery:
 class _Content:
     """The ROM's coordinates — every value a placement fills in from the content.
 
-    All three stay ``None`` when no content was named: the holes then remain
+    All of them stay ``None`` when no content was named: the holes then remain
     holes (``needs``), and nothing about the ROM is guessed. ``rom_stem`` is
     ``None`` for a named content path too when RetroArch's path math derives no
     name from it — the directory still resolves, but nothing is named after a
     name that does not exist.
+
+    ``dir_path`` and ``system_dir`` are the content's directory computed by two
+    different pieces of upstream path math, and they are not always the same
+    string: the save side reads it off ``runtime_content_path_basename``, the
+    system side off the raw content path (:func:`content_system_dir`). Each
+    route answers with the one its own caller in RetroArch computes.
     """
 
     dir_path: str | None = None
     dir_name: str | None = None
     rom_stem: str | None = None
+    system_dir: str | None = None
 
 
 def _content_coordinates(content_path: str | None) -> _Content:
@@ -638,7 +647,7 @@ def _content_coordinates(content_path: str | None) -> _Content:
     if not content_path:
         return _Content()
     dir_path, dir_name, rom_stem = split_content_path(content_path)
-    return _Content(dir_path, dir_name, rom_stem or None)
+    return _Content(dir_path, dir_name, rom_stem or None, content_system_dir(content_path))
 
 
 def _unnamed_content_caveat(content_path: str) -> Caveat:
@@ -1344,18 +1353,19 @@ def _card_file_set(
     mode: SaveMode,
     directory: str,
     rom_stem: str | None,
-    needs: tuple[str, ...],
+    observable: bool,
 ) -> FileSet:
     """What the card says lies in its own directory — declared, or observed there.
 
     A template file that cannot be filled leaves the set honestly unknown; with
-    a hole in the directory itself there is nowhere to look, and with one in the
-    names there is nothing to look for, so the declaration stands unobserved.
+    a hole in the names there is nothing to look for, and where the directory
+    itself is a hole or a path this host cannot reach there is nowhere to look
+    (*observable* false), so the declaration stands unobserved.
     """
     declared = _card_files(mode.files, rom_stem) if mode.files is not None else None
     if declared is None:
         return UNKNOWN_FILE_SET
-    if needs or file_set_holes(declared):
+    if not observable or file_set_holes(declared):
         return FileSet("declared", declared, f"declared by rule card '{card.key}'", complete=mode.complete)
     # Observation candidates may be wider than the declared defaults —
     # e.g. Flycast's slot-2 VMUs exist only when configured (REVIEW M2).
@@ -1435,6 +1445,129 @@ def _file_set_caveats(
     return ()
 
 
+@dataclass(frozen=True, slots=True)
+class _SystemRoot:
+    """The directory RetroArch hands a core that asks for the system directory.
+
+    ``base`` is that directory, or the ``<content_dir>`` template when the
+    content's own directory is the root and the caller named no content.
+    ``root_kind`` says which of the two anchors it is: the key's value is not
+    always where the core is sent, so a card rooted in the system directory can
+    legitimately answer ``content_directory``. ``reachable`` is false for a
+    configured spelling with no host location — the emulator writes there, but
+    nothing below it can be looked at from here.
+    """
+
+    base: str
+    root_kind: RootKind
+    needs: tuple[str, ...] = ()
+    reachable: bool = True
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+def _content_system_root(content: _Content, *, source: str) -> _SystemRoot:
+    """The content's own directory as the system root — resolved, or left as a hole.
+
+    Upstream falls back to the (empty) ``system_directory`` when no content is
+    loaded at all (``runloop.c:1986-1987``); that branch is not an answer about
+    a save, because a save presupposes content. A caller who names none is
+    answered with the template instead, exactly as ``savefiles_in_content_dir``
+    is answered on the standard route — and ``content_dir`` is a hole the
+    caller can actually fill.
+    """
+    if content.system_dir is not None:
+        return _SystemRoot(content.system_dir, ROOT_CONTENT_DIRECTORY, sources=(source,))
+    return _SystemRoot(
+        "<content_dir>", ROOT_CONTENT_DIRECTORY, needs=(HOLE_CONTENT_DIR,), sources=(source,)
+    )
+
+
+def _core_system_root(
+    *,
+    sandbox: _Sandbox,
+    cfg_label: str,
+    layers: Sequence[_CfgLayer],
+    content: _Content,
+    retroarch_config_dir: str,
+) -> _SystemRoot:
+    """Resolve the system directory the way the core receives it (``runloop.c:1958-1999``).
+
+    ``RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY`` is not a read of
+    ``system_directory``: the core is handed the **content's** directory
+    whenever ``systemfiles_in_content_dir`` is set, and whenever no value is
+    left standing at all (``runloop.c:1963-1964``). Only otherwise does it get
+    the configured directory (``:1992-1997``).
+
+    What "left standing" means is decided before the environment call, and the
+    two spellings that clear it are not the same as the key being absent:
+
+    - **Absent** — ``config_set_defaults`` has already put the platform default
+      there (``configuration.c:5746-5749``), which on desktop Linux is
+      ``system`` under the config tree (``platform_unix.c:2137-2143``, the same
+      block that seeds the saves default this resolver answers with). So an
+      unset key resolves; it is not a hole and never was one.
+    - **Blank or the literal ``default``** — ``system_directory`` passes
+      ``handle_setting = true`` (``configuration.c:1691``), so the generic path
+      loop writes whatever the merged config holds, with no directory test
+      (``:6532-6538``); ``config_get_path`` copies an empty value through
+      (``config_file.c:1202-1216``) and ``default`` is cleared outright
+      (``:6834-6835``). Either way the setting is empty and the content
+      directory wins — the opposite of ``savefile_directory``, where a blank
+      value keeps the standing root.
+
+    A dropped line is stated here for the first time: while an unset key
+    surfaced as a hole, the fact spoke for itself; now it resolves silently to
+    the platform default, so the line RetroArch refused has to be said out loud
+    (the widened ``cfg-line-dropped`` scope of REVIEW M2/M4).
+    """
+    in_content_dir, flag_ignored = chain_bool(layers, "systemfiles_in_content_dir", default=False)
+    raw_system, dropped = chain_value(layers, "system_directory")
+    caveats = list(_ignored_caveats((*flag_ignored, *dropped)))
+    configured = sandbox.cfg_path("system_directory", raw_system) if raw_system is not None else None
+
+    if in_content_dir:
+        root = _content_system_root(
+            content,
+            source=f'{cfg_label} chain: systemfiles_in_content_dir = "true" — the core is handed the '
+            "content's own directory as its system directory (runloop.c:1963-1985)",
+        )
+    elif raw_system is None:
+        root = _SystemRoot(
+            os.path.join(retroarch_config_dir, "system"),
+            ROOT_SYSTEM_DIRECTORY,
+            sources=(
+                "default: system_directory unset — RetroArch platform default applies "
+                "('system' under the config tree, platform_unix.c:2142-2143)",
+            ),
+        )
+    elif configured is None:
+        root = _content_system_root(
+            content,
+            source=f'{cfg_label} chain: system_directory = "{raw_system}" leaves the setting empty — '
+            "the core is handed the content's own directory instead (runloop.c:1963-1985)",
+        )
+    elif configured.path is None:
+        # The value as configured: it is where the emulator writes, in the only
+        # namespace that names it, and the caveat states that atlas cannot
+        # follow it there — the same answer _host_save_dir gives for a saves
+        # root it cannot reach.
+        root = _SystemRoot(
+            raw_system,
+            ROOT_SYSTEM_DIRECTORY,
+            reachable=False,
+            sources=(f'{cfg_label} chain: system_directory = "{raw_system}"',),
+            caveats=configured.caveats,
+        )
+    else:
+        root = _SystemRoot(
+            configured.path,
+            ROOT_SYSTEM_DIRECTORY,
+            sources=(f'{cfg_label} chain: system_directory = "{raw_system}"{configured.note}',),
+        )
+    return _dc_replace(root, caveats=(*caveats, *root.caveats))
+
+
 def _system_directory_placement(
     machine: Machine,
     *,
@@ -1444,57 +1577,51 @@ def _system_directory_placement(
     mode: SaveMode,
     granularity: Granularity | None,
     layers: Sequence[_CfgLayer],
-    rom_stem: str | None,
+    content: _Content,
+    retroarch_config_dir: str,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
 ) -> SavePlacement:
-    """The placement for a card whose core keeps its saves under ``system_directory``.
+    """The placement for a card whose core roots its saves in the system directory.
 
-    A configured value that only exists inside the sandbox leaves the same hole
-    an unset one does — the caller has to supply the host location — but says
-    which of the two it is: the key is set, atlas just cannot reach it.
+    The card states which directory the core *asks* for; which directory that
+    is on this machine is RetroArch's answer, not the cfg key's value
+    (:func:`_core_system_root`) — so this route's ``root_kind`` follows the root
+    the core is actually handed.
     """
-    card_sources = list(sources)
-    all_caveats = list(caveats)
-    # A line dropped here needs no caveat of its own: the key then reads as
-    # unset, which this route already states as a `system_directory` hole plus
-    # `system-directory-unset` — the same fact, said once.
-    raw_system, _ = chain_value(layers, "system_directory")
-    resolved = sandbox.cfg_path("system_directory", raw_system)
-    needs: tuple[str, ...] = ()
-    if resolved is None or resolved.path is None:
-        base = "<system_directory>"
-        needs = ("system_directory",)
-        all_caveats.extend(
-            resolved.caveats
-            if resolved is not None
-            else (
-                Caveat(
-                    CAVEAT_SYSTEM_DIR_UNSET,
-                    "system_directory is unset in the configs — its RetroArch default is not resolved yet",
-                ),
-            )
-        )
-    else:
-        base = resolved.path
-        card_sources.append(f'{cfg_label} chain: system_directory = "{raw_system}"{resolved.note}')
-    directory = os.path.join(base, mode.subdir) if mode.subdir else base
-    card_sources.append(f"rule card '{card.key}': core keeps saves under system_directory — {card.provenance}")
+    root = _core_system_root(
+        sandbox=sandbox,
+        cfg_label=cfg_label,
+        layers=layers,
+        content=content,
+        retroarch_config_dir=retroarch_config_dir,
+    )
+    directory = os.path.join(root.base, mode.subdir) if mode.subdir else root.base
+    card_sources = [
+        *sources,
+        *root.sources,
+        f"rule card '{card.key}': core keeps saves under the directory RetroArch hands it as the "
+        f"system directory — {card.provenance}",
+    ]
+    all_caveats = [*caveats, *root.caveats]
     if granularity is not None:
         all_caveats.extend(
-            _file_set_caveats(card, mode, mode_value=granularity.option_value or "", rom_stem=rom_stem)
+            _file_set_caveats(
+                card, mode, mode_value=granularity.option_value or "", rom_stem=content.rom_stem
+            )
         )
+    observable = root.reachable and not root.needs
     file_set = _card_file_set(
-        machine, card=card, mode=mode, directory=directory, rom_stem=rom_stem, needs=needs
+        machine, card=card, mode=mode, directory=directory, rom_stem=content.rom_stem, observable=observable
     )
     physical_dir = None
-    if not needs:
+    if observable:
         physical_dir, link_caveats = _link_view(machine, directory)
         all_caveats.extend(link_caveats)
     return SavePlacement(
         dir=directory,
-        root_kind=ROOT_SYSTEM_DIRECTORY,
-        needs=needs_with_file_set(needs, file_set.files),
+        root_kind=root.root_kind,
+        needs=needs_with_file_set(root.needs, file_set.files),
         file_set=file_set,
         sources=tuple(card_sources),
         caveats=tuple(all_caveats),
@@ -1894,7 +2021,8 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
             mode=card_mode,
             granularity=granularity,
             layers=layers,
-            rom_stem=content.rom_stem,
+            content=content,
+            retroarch_config_dir=retroarch_config_dir,
             sources=tuple(sources_extra),
             caveats=tuple(caveats),
         )

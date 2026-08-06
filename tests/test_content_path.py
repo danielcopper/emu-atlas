@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from atlas.content_path import archive_delimiter, content_file_name, split_content_path
+from atlas.content_path import (
+    archive_delimiter,
+    content_file_name,
+    content_system_dir,
+    split_content_path,
+)
 
 
 class TestSplitContentPath:
@@ -101,6 +106,45 @@ class TestArchiveDelimiter:
         for suffix in (".7z", ".zip", ".zst", ".apk"):
             path = f"/roms/gb/Pack{suffix}#Game.gb"
             assert archive_delimiter(path) == path.index("#"), suffix
+
+
+class TestContentSystemDir:
+    """M6: the directory GET_SYSTEM_DIRECTORY composes from the content path."""
+
+    def test_the_content_directory_loses_its_trailing_slash(self):
+        assert content_system_dir("/roms/dc/Game.gdi") == "/roms/dc"
+
+    def test_content_at_the_root_keeps_the_root_slash(self):
+        # runloop.c:1979-1981 strips the slash only when the result holds more
+        # than one — '/' is the directory, not the empty string.
+        assert content_system_dir("/Game.gdi") == "/"
+
+    def test_a_relative_name_answers_the_current_directory(self):
+        # path_basedir writes './' (file_path.c:636-638), whose single slash
+        # the strip rule leaves alone.
+        assert content_system_dir("Game.gdi") == "./"
+
+    def test_a_one_byte_path_is_left_alone(self):
+        # path_basedir's s[1] == '\0' early return (file_path.c:628-629).
+        assert content_system_dir("a") == "a"
+
+    def test_an_archive_entry_stays_in_the_archive_s_directory(self):
+        assert content_system_dir("/roms/dc/Pack.zip#Game.gdi") == "/roms/dc"
+
+    def test_a_folder_inside_the_archive_keeps_the_archive_spelling(self):
+        # The system side runs path_basedir on the RAW path (runloop.c:1977),
+        # which knows nothing about the archive delimiter — where the save side
+        # answers '/roms/dc/disc', this one names the archive itself.
+        assert content_system_dir("/roms/dc/Pack.zip#disc/Game.gdi") == "/roms/dc/Pack.zip#disc"
+        assert split_content_path("/roms/dc/Pack.zip#disc/Game.gdi")[0] == "/roms/dc/disc"
+
+    def test_a_trailing_slash_makes_the_content_its_own_directory(self):
+        # The save side treats '<dir>/Game.cue/' as the file '<dir>/Game.cue';
+        # this math has no such step, and the emulator sends the core inside.
+        assert content_system_dir("/roms/psx/Game.cue/") == "/roms/psx/Game.cue"
+
+    def test_a_multi_disc_folder_is_the_directory_it_names(self):
+        assert content_system_dir("/roms/psx/Title.m3u/Title.m3u") == "/roms/psx/Title.m3u"
 
 
 class TestContentFileName:

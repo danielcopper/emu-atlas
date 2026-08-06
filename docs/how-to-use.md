@@ -40,10 +40,10 @@ Rules that hold for every answer:
   parse it). An answer without caveats is as good as atlas can make it; an answer with caveats is still an answer, just
   with stated limits.
 - **A hole is not an unknown.** `needs` lists holes _you_ fill: `content_dir` from the content at hand, `library_name`
-  when the core would not load, `save_id` when the core names the save after the content's own id, and — on the
-  rule-card route — `system_directory` when the configs state none. Holes are not confined to the directory: a declared
-  file set can be a template too. An unknown is something atlas refuses to state — it never guesses to keep a field
-  non-empty.
+  when the core would not load, and `save_id` when the core names the save after the content's own id. Every hole is
+  filled from the content — a value the configs state is never one, because you could not supply it either; atlas
+  resolves those itself or states a caveat. Holes are not confined to the directory: a declared file set can be a
+  template too. An unknown is something atlas refuses to state — it never guesses to keep a field non-empty.
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
 
@@ -193,6 +193,13 @@ controller's VMU and leaves the other three plus the console flash on the shared
 and says why with `file-set-spans-roots`, whose `data["also_under"]` names the other root. `dir` still answers where the
 moved part goes. A card describes one root per mode, so the alternative would be to present a fragment as the whole
 save; treat this answer as "directory yes, file set no".
+
+**`root_kind` says which anchor won, and a card does not decide it alone.** A core whose card roots its saves in the
+system directory (Flycast's shared VMUs) is not automatically anchored at `system_directory`: RetroArch hands such a
+core the _content's_ own directory when `systemfiles_in_content_dir` is set or the key is cleared to nothing, and atlas
+answers `content_directory` there — with `content_dir` in `needs` when you named no content. Where no config states the
+key at all, the answer is RetroArch's platform default (`system` under the config tree), not a hole: a configured value
+is never something you are asked to fill.
 
 **The layering trap.** An id from such a supplier describes the platform's own structure, which is not automatically a
 structure on the host. sigil's PS2 `save_id` (`BASLUS-…`) names a directory _inside_ a memory card image; whether

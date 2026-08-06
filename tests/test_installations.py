@@ -640,6 +640,148 @@ class TestLinkView:
         assert atlas.CAVEAT_DEAD_SYMLINK in codes
 
 
+class TestSystemDirectoryRoot:
+    """M6: a card rooted in the system directory answers the root the core is handed.
+
+    ``RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY`` (runloop.c:1958-1999) is not a
+    read of ``system_directory``: the flag, and an emptied key, send the core to
+    the content's own directory, and an absent key resolves to RetroArch's
+    platform default. None of those is a hole — ``needs`` only ever carries what
+    the caller fills from the content.
+    """
+
+    CONTENT = "/mnt/sd/retrodeck/roms/dreamcast/Game (Europe).gdi"
+    SYSTEM_DIR_CFG = 'system_directory = "/mnt/sd/retrodeck/bios"\n'
+    BASE_CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+        'global_core_options = "true"\nlibretro_directory = "/app/cores"\n'
+    )
+    VMU = "vmu_save_A1.bin"
+
+    def _flycast(self, cfg, files=None, **kwargs):
+        return _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: self.BASE_CFG + cfg,
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": (
+                    'reicast_per_content_vmus = "disabled"\n'
+                ),
+                self.CONTENT: "",
+                "/mnt/sd/retrodeck/saves/.keep": "",
+                **(files or {}),
+            },
+            cores={f"{RD_DEPLOY_CORES}/flycast_libretro.so": {"library_name": "Flycast"}},
+            **kwargs,
+        )
+
+    def _placement(self, cfg, files=None, content: str | None = CONTENT, **kwargs):
+        return self._flycast(cfg, files, **kwargs).save_location(
+            content_path=content, core_so="flycast_libretro.so"
+        )
+
+    def test_the_configured_directory_is_the_root_when_nothing_moves_it(self):
+        p = self._placement(self.SYSTEM_DIR_CFG, {f"/mnt/sd/retrodeck/bios/dc/{self.VMU}": "v"})
+        assert p.dir == "/mnt/sd/retrodeck/bios/dc"
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
+        assert p.file_set.files == (self.VMU,)
+
+    def test_system_files_in_the_content_dir_move_the_root_to_the_content(self):
+        p = self._placement(
+            self.SYSTEM_DIR_CFG + 'systemfiles_in_content_dir = "true"\n',
+            {f"/mnt/sd/retrodeck/roms/dreamcast/dc/{self.VMU}": "v"},
+        )
+        assert p.dir == "/mnt/sd/retrodeck/roms/dreamcast/dc"
+        assert p.root_kind == atlas.ROOT_CONTENT_DIRECTORY
+        assert p.file_set.state == "observed"
+
+    def test_without_content_the_content_root_is_a_hole_the_caller_can_fill(self):
+        p = self._placement(
+            self.SYSTEM_DIR_CFG + 'systemfiles_in_content_dir = "true"\n', content=None
+        )
+        assert p.dir == "<content_dir>/dc"
+        assert p.needs == ("content_dir",)
+        assert p.file_set.state == "declared"
+
+    def test_an_override_can_set_the_flag_too(self):
+        # The flag is read through the merged config like every other key —
+        # not from the global cfg alone.
+        p = self._placement(
+            self.SYSTEM_DIR_CFG,
+            {
+                f"{RETRODECK_OVERRIDES}/Flycast/Flycast.cfg": 'systemfiles_in_content_dir = "true"\n',
+                f"/mnt/sd/retrodeck/roms/dreamcast/dc/{self.VMU}": "v",
+            },
+        )
+        assert p.dir == "/mnt/sd/retrodeck/roms/dreamcast/dc"
+
+    def test_a_blank_system_directory_hands_the_core_the_content_dir(self):
+        # config_get_path copies an empty value through (config_file.c:1202-1216)
+        # because system_directory passes handle_setting=true — the opposite of
+        # savefile_directory, where blank keeps the standing root.
+        p = self._placement(
+            'system_directory = ""\n', {f"/mnt/sd/retrodeck/roms/dreamcast/dc/{self.VMU}": "v"}
+        )
+        assert p.dir == "/mnt/sd/retrodeck/roms/dreamcast/dc"
+        assert p.root_kind == atlas.ROOT_CONTENT_DIRECTORY
+
+    def test_the_literal_default_clears_it_the_same_way(self):
+        p = self._placement(
+            'system_directory = "default"\n', {f"/mnt/sd/retrodeck/roms/dreamcast/dc/{self.VMU}": "v"}
+        )
+        assert p.dir == "/mnt/sd/retrodeck/roms/dreamcast/dc"
+
+    def test_an_unset_key_resolves_to_the_platform_default(self):
+        # config_set_defaults put 'system' under the config tree there before
+        # any cfg was read (configuration.c:5746-5749, platform_unix.c:2142-2143).
+        config_tree = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch"
+        p = self._placement("", {f"{config_tree}/system/dc/{self.VMU}": "v"})
+        assert p.dir == f"{config_tree}/system/dc"
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
+        assert p.file_set.state == "observed"
+        assert p.needs == ()
+        assert atlas.CAVEAT_SYSTEM_DIR_UNSET not in [c.code for c in p.caveats]
+
+    def test_a_dropped_system_directory_line_is_stated(self):
+        # The line sets nothing, so the platform default stands — silently,
+        # unless the answer says the file tried to say otherwise.
+        p = self._placement('system_directory "/mnt/sd/retrodeck/bios"\n')
+        dropped = next(c for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED)
+        assert dropped.data["key"] == "system_directory"
+        assert p.dir.endswith("/config/retroarch/system/dc")
+
+    def test_a_rejected_flag_value_is_stated_and_changes_nothing(self):
+        p = self._placement(
+            self.SYSTEM_DIR_CFG + 'systemfiles_in_content_dir = "yes"\n',
+            {f"/mnt/sd/retrodeck/bios/dc/{self.VMU}": "v"},
+        )
+        assert p.dir == "/mnt/sd/retrodeck/bios/dc"
+        rejected = next(c for c in p.caveats if c.code == atlas.CAVEAT_CFG_VALUE_REJECTED)
+        assert rejected.data["key"] == "systemfiles_in_content_dir"
+
+    def test_a_sandbox_only_directory_is_stated_as_configured_and_not_observed(self):
+        # The emulator writes there; atlas cannot look. Naming the spelling the
+        # emulator uses is the answer — a hole would ask the caller for a value
+        # no caller has.
+        p = self._placement('system_directory = "/var/db/bios"\n')
+        assert p.dir == "/var/db/bios/dc"
+        assert p.needs == ()
+        assert p.file_set.state == "declared"
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED)
+        assert caveat.data == {"key": "system_directory", "path": "/var/db/bios"}
+
+    def test_an_application_relative_directory_is_stated_unexpanded(self):
+        p = self._placement('system_directory = ":/system"\n')
+        assert p.dir == ":/system/dc"
+        assert p.needs == ()
+        assert any(c.code == atlas.CAVEAT_APP_RELATIVE_PATH_UNEXPANDED for c in p.caveats)
+
+    def test_no_configured_directory_is_ever_a_hole(self):
+        for cfg in ("", 'system_directory = ""\n', 'system_directory = "/var/db/bios"\n'):
+            p = self._placement(cfg)
+            assert "system_directory" not in p.needs, cfg
+
+
 class TestEmuDeck:
     def test_settings_parse_and_roots(self):
         machine = atlas.FixtureMachine(

@@ -20,10 +20,14 @@ keep the save for this content?". Its shape follows the research findings
   names the save's files through the content's platform-native id, the file
   set is a template too and the same hole vocabulary carries it.
 - **The root varies** — ``savefile_directory`` (explicit, or the RetroArch
-  platform default when unset/reset), ``system_directory`` (Flycast VMUs), or
+  platform default when unset/reset), the system directory (Flycast VMUs), or
   the ROM's own directory (``savefiles_in_content_dir``). Sorting stages apply
   after root selection regardless of which root was chosen
-  (``runloop.c:8785-8841``).
+  (``runloop.c:8785-8841``). The system directory is the one *the core is
+  handed*, not the cfg key's value: ``systemfiles_in_content_dir`` — or a key
+  cleared to nothing — sends the core to the content's own directory
+  (``runloop.c:1958-1999``), so a card rooted there answers
+  ``content_directory`` on those machines.
 - **Filesystem state is part of the answer** — RetroArch silently reverts to the
   unsorted root when a sorted directory cannot be created (``runloop.c:8844``);
   ``caveats`` carries that and every other stated degradation.
@@ -116,9 +120,14 @@ class Caveat:
             raise ValueError("Caveat: code must be a non-empty stable identifier")
         object.__setattr__(self, "data", _freeze(self.data))
 
-_HOLE_CONTENT_DIR = "content_dir"
-_HOLE_LIBRARY_NAME = "library_name"
-_HOLE_SAVE_ID = "save_id"
+# The holes a ``needs`` list may carry, each one a value the CALLER fills from
+# the content at hand. Contractual: clients read them, vectors assert them.
+# Nothing a config states belongs here — a configured value no caller can
+# supply is atlas's own to resolve or to state as a degradation, never a
+# template handed over as if it were fillable.
+HOLE_CONTENT_DIR = "content_dir"
+HOLE_LIBRARY_NAME = "library_name"
+HOLE_SAVE_ID = "save_id"
 
 # The template tokens a rule card's declared file names may carry, and the hole
 # each leaves behind. ``<rom_stem>`` the resolver fills itself from the content
@@ -129,7 +138,7 @@ _HOLE_SAVE_ID = "save_id"
 # So the id stays a hole for whoever knows it, exactly like ``content_dir``.
 TEMPLATE_ROM_STEM = "<rom_stem>"
 TEMPLATE_SAVE_ID = "<save_id>"
-_FILE_NAME_HOLES: Mapping[str, str] = MappingProxyType({TEMPLATE_SAVE_ID: _HOLE_SAVE_ID})
+_FILE_NAME_HOLES: Mapping[str, str] = MappingProxyType({TEMPLATE_SAVE_ID: HOLE_SAVE_ID})
 
 
 def _holes(named: list[str]) -> tuple[str, ...]:
@@ -331,7 +340,7 @@ def build_save_placement(
             parts = [content_dir_path]
         else:
             parts = ["<content_dir>"]
-            needs.append(_HOLE_CONTENT_DIR)
+            needs.append(HOLE_CONTENT_DIR)
     elif layout.savefile_directory is None:
         root_kind = ROOT_SAVEFILE_DIRECTORY
         parts = [platform_default_dir]
@@ -344,13 +353,13 @@ def build_save_placement(
             parts.append(content_dir_name)
         else:
             parts.append("<content_dir>")
-            needs.append(_HOLE_CONTENT_DIR)
+            needs.append(HOLE_CONTENT_DIR)
     if layout.sort_by_core:
         if library_name is not None:
             parts.append(library_name)
         else:
             parts.append("<library_name>")
-            needs.append(_HOLE_LIBRARY_NAME)
+            needs.append(HOLE_LIBRARY_NAME)
     directory = os.path.join(*parts)
 
     return SavePlacement(

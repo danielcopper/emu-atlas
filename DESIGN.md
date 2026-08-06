@@ -157,16 +157,20 @@ findings:
   filtered on source citation). _Observed_ is a snapshot of matching files, never a completeness claim; `complete` is a
   separate assertion only a source-verified rule card can make.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
-  `library_name` when the core would not load, `save_id` where a core names the save after the content's own
+  `library_name` when the core would not load, and `save_id` where a core names the save after the content's own
   platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is
-  not locating a save), and — on the rule-card route — `system_directory` when the configs state none. A hole is not
-  confined to the directory: a declared file set can be a template too, and then the file names carry the hole and
-  `needs` names it. _Unknown_ means atlas cannot state the value and refuses to guess. These are distinct states and the
-  type keeps them distinct — and an empty field is never one of them: where atlas deliberately does not state a value
-  (`granularity` for a core whose file set depends on options it does not interpret), a caveat says so and names what it
-  depends on, because nothing separates a blank field from nothing-to-report.
-- **The root varies.** `savefile_directory`, `system_directory` (Flycast VMUs), or the ROM's own directory
-  (`savefiles_in_content_dir`, or an unset save dir — RetroArch resolves that itself, it is not a hole).
+  not locating a save). Every hole is filled from the **content**; a value the configs state is never one, because no
+  caller could supply it — atlas resolves it the way the emulator does, or states the degradation that stopped it. A
+  hole is not confined to the directory: a declared file set can be a template too, and then the file names carry the
+  hole and `needs` names it. _Unknown_ means atlas cannot state the value and refuses to guess. These are distinct
+  states and the type keeps them distinct — and an empty field is never one of them: where atlas deliberately does not
+  state a value (`granularity` for a core whose file set depends on options it does not interpret), a caveat says so and
+  names what it depends on, because nothing separates a blank field from nothing-to-report.
+- **The root varies.** `savefile_directory`, the system directory (Flycast VMUs), or the ROM's own directory
+  (`savefiles_in_content_dir`, or an unset save dir — RetroArch resolves that itself, it is not a hole). The system
+  directory is resolved as the core receives it, which is not the same as reading the cfg key: with
+  `systemfiles_in_content_dir` set, or the key cleared to nothing, the core is handed the content's own directory, and a
+  key no config states is RetroArch's platform default (`system` under the config tree).
 - **Filesystem state is part of the answer.** A sorted directory that does not exist yet is a _conditional_ result:
   RetroArch creates it on first save and silently reverts to the unsorted root when creation fails — the placement
   carries that root structurally (`fallback_dir`), and when a file blocks the creation the fallback _is_ the answer. A
