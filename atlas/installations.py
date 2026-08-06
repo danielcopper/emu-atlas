@@ -1383,7 +1383,7 @@ def _card_file_set(
 
 
 def _file_set_caveats(
-    card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None
+    card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None, also_under: str | None
 ) -> tuple[Caveat, ...]:
     """What one declared file list cannot say about this mode's save.
 
@@ -1392,15 +1392,21 @@ def _file_set_caveats(
     list would offer a part as the whole), a mode whose names depend on a fact
     atlas does not read (both spellings are handed over, the caller picks),
     and a mode whose names are not established yet.
+
+    *also_under* is the mode's second root **as this machine resolves it**, not
+    the card's own spelling of it: the card names the root its core asks for,
+    and where that is is the resolver's question — the same one
+    :func:`_core_system_root` answers for the root the placement itself uses
+    (:func:`_also_under_root`).
     """
-    if mode.also_under is not None:
+    if also_under is not None:
         return (
             Caveat(
                 CAVEAT_FILE_SET_SPANS_ROOTS,
                 f"rule card '{card.key}': in mode {mode_value!r} only part of the save moves here — "
-                f"the rest keeps using {mode.also_under}. A card states one root per mode, so the "
+                f"the rest keeps using the {also_under} root. A card states one root per mode, so the "
                 "file set is left unstated instead of presenting the visible part as the whole save",
-                {"card": card.key, "mode": mode_value, "also_under": mode.also_under},
+                {"card": card.key, "mode": mode_value, "also_under": also_under},
             ),
         )
     if mode.files is None:
@@ -1469,12 +1475,13 @@ class _SystemRoot:
 def _content_system_root(content: _Content, *, source: str) -> _SystemRoot:
     """The content's own directory as the system root — resolved, or left as a hole.
 
-    Upstream falls back to the (empty) ``system_directory`` when no content is
-    loaded at all (``runloop.c:1986-1987``); that branch is not an answer about
-    a save, because a save presupposes content. A caller who names none is
-    answered with the template instead, exactly as ``savefiles_in_content_dir``
-    is answered on the standard route — and ``content_dir`` is a hole the
-    caller can actually fill.
+    With no content loaded at all, upstream hands back the standing
+    ``system_directory`` (``runloop.c:1986-1987``) — empty where an emptied key
+    led into this branch, the configured directory where the flag alone did.
+    Neither is an answer about a save, because a save presupposes content, so a
+    caller who names none is answered with the template instead, exactly as
+    ``savefiles_in_content_dir`` is answered on the standard route — and
+    ``content_dir`` is a hole the caller can actually fill.
     """
     if content.system_dir is not None:
         return _SystemRoot(content.system_dir, ROOT_CONTENT_DIRECTORY, sources=(source,))
@@ -1568,6 +1575,38 @@ def _core_system_root(
     return _dc_replace(root, caveats=(*caveats, *root.caveats))
 
 
+def _also_under_root(
+    mode: SaveMode | None,
+    *,
+    sandbox: _Sandbox,
+    cfg_label: str,
+    layers: Sequence[_CfgLayer],
+    content: _Content,
+    retroarch_config_dir: str,
+) -> str | None:
+    """A spanning mode's second root, resolved the way its own root is resolved.
+
+    ``also_under`` is a root *kind*, and ``system_directory`` is the one kind
+    that does not say where it is: the core is handed the content's directory
+    instead wherever ``systemfiles_in_content_dir`` — or an emptied key — sends
+    it (:func:`_core_system_root`). A consumer following ``also_under`` back to
+    the cfg key would look in a directory the core never touches, and the
+    answer's own ``root_kind`` stopped reading it that way, so this reads it the
+    same. Only that kind needs resolving; the others name themselves.
+    """
+    if mode is None or mode.also_under is None:
+        return None
+    if mode.also_under != ROOT_SYSTEM_DIRECTORY:
+        return mode.also_under
+    return _core_system_root(
+        sandbox=sandbox,
+        cfg_label=cfg_label,
+        layers=layers,
+        content=content,
+        retroarch_config_dir=retroarch_config_dir,
+    ).root_kind
+
+
 def _system_directory_placement(
     machine: Machine,
     *,
@@ -1605,9 +1644,16 @@ def _system_directory_placement(
     ]
     all_caveats = [*caveats, *root.caveats]
     if granularity is not None:
+        # A mode routed here is rooted in the system directory itself, and a
+        # second root naming that same one is refused when the card is loaded —
+        # so nothing here needs the resolution _also_under_root performs.
         all_caveats.extend(
             _file_set_caveats(
-                card, mode, mode_value=granularity.option_value or "", rom_stem=content.rom_stem
+                card,
+                mode,
+                mode_value=granularity.option_value or "",
+                rom_stem=content.rom_stem,
+                also_under=mode.also_under,
             )
         )
     observable = root.reachable and not root.needs
@@ -1825,6 +1871,7 @@ def _standard_placement(
     card: CoreCard | None,
     mode: SaveMode | None,
     granularity: Granularity | None,
+    also_under: str | None,
     reachable: bool,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
@@ -1847,7 +1894,11 @@ def _standard_placement(
     if card is not None and mode is not None and granularity is not None:
         all_caveats.extend(
             _file_set_caveats(
-                card, mode, mode_value=granularity.option_value or "", rom_stem=content.rom_stem
+                card,
+                mode,
+                mode_value=granularity.option_value or "",
+                rom_stem=content.rom_stem,
+                also_under=also_under,
             )
         )
 
@@ -2037,6 +2088,14 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
         card=card,
         mode=card_mode,
         granularity=granularity,
+        also_under=_also_under_root(
+            card_mode,
+            sandbox=query.sandbox,
+            cfg_label=query.cfg_label,
+            layers=layers,
+            content=content,
+            retroarch_config_dir=retroarch_config_dir,
+        ),
         reachable=saves_root.reachable,
         sources=tuple(sources_extra),
         caveats=tuple(caveats),

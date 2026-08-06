@@ -190,9 +190,11 @@ shape, not an inventory.
 
 **A save can lie under two roots.** Where a mode moves only part of the save — Flycast's `VMU A1` moves the first
 controller's VMU and leaves the other three plus the console flash on the shared card — atlas states no file set at all
-and says why with `file-set-spans-roots`, whose `data["also_under"]` names the other root. `dir` still answers where the
-moved part goes. A card describes one root per mode, so the alternative would be to present a fragment as the whole
-save; treat this answer as "directory yes, file set no".
+and says why with `file-set-spans-roots`, whose `data["also_under"]` names the other root — as a `root_kind` value, and
+resolved the same way `root_kind` itself is, so a mode that leaves the rest "in the system directory" reports
+`content_directory` on a machine whose flag moved that directory. `dir` still answers where the moved part goes. A card
+describes one root per mode, so the alternative would be to present a fragment as the whole save; treat this answer as
+"directory yes, file set no".
 
 **`root_kind` says which anchor won, and a card does not decide it alone.** A core whose card roots its saves in the
 system directory (Flycast's shared VMUs) is not automatically anchored at `system_directory`: RetroArch hands such a

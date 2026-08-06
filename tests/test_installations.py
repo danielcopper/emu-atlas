@@ -783,6 +783,28 @@ class TestSystemDirectoryRoot:
         assert p.needs == ()
         assert any(c.code == atlas.CAVEAT_APP_RELATIVE_PATH_UNEXPANDED for c in p.caveats)
 
+    def test_the_second_root_of_a_spanning_mode_is_resolved_too(self):
+        # 'VMU A1' moves port A1 to the save directory and leaves the rest on
+        # the shared card — which the flag has just moved to the content's own
+        # directory. A consumer following also_under back to the cfg key would
+        # look where this core no longer writes.
+        def spanning(flag):
+            rd = self._flycast(
+                self.SYSTEM_DIR_CFG + flag,
+                {
+                    f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/"
+                    "retroarch-core-options.cfg": 'reicast_per_content_vmus = "VMU A1"\n'
+                },
+            )
+            p = rd.save_location(content_path=self.CONTENT, core_so="flycast_libretro.so")
+            return next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS)
+
+        assert spanning("").data["also_under"] == atlas.ROOT_SYSTEM_DIRECTORY
+        assert (
+            spanning('systemfiles_in_content_dir = "true"\n').data["also_under"]
+            == atlas.ROOT_CONTENT_DIRECTORY
+        )
+
     def test_no_configured_directory_is_ever_a_hole(self):
         for cfg in ("", 'system_directory = ""\n', 'system_directory = "/var/db/bios"\n'):
             p = self._placement(cfg)

@@ -441,11 +441,16 @@ that can express a per-root, per-port split.
 **[V]** A core rooted there never reads `system_directory`; it asks `RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY` and is
 answered by `runloop.c:1958-1999`, which returns three different things:
 
-| Situation                                             | What the core receives                                    |
-| ----------------------------------------------------- | --------------------------------------------------------- |
-| `systemfiles_in_content_dir` set, or nothing standing | the **content's** directory (`:1963-1985`)                |
-| …and no content path loaded                           | the (empty) standing value — the fallback at `:1986-1987` |
-| otherwise                                             | `settings->paths.directory_system` (`:1992-1997`)         |
+| Situation                                             | What the core receives                                            |
+| ----------------------------------------------------- | ----------------------------------------------------------------- |
+| `systemfiles_in_content_dir` set, or nothing standing | the **content's** directory (`:1963-1985`)                        |
+| …and no content path loaded                           | the standing value, whatever it is — the fallback at `:1986-1987` |
+| otherwise                                             | `settings->paths.directory_system` (`:1992-1997`)                 |
+
+The fallback row is not "the empty string": it hands back `dir_system` unchanged, which is empty only when it was
+_nothing standing_ that led into the branch. With a configured directory **and** the flag set, a contentless run
+receives that configured directory. Either way the row is not an answer about a save — a save presupposes content — so
+atlas answers a contentless query with the content template instead.
 
 The content directory is `fill_pathname_basedir` of the **raw** content path (`:1977`, `file_path.c:475-480`) with the
 trailing slash removed unless the result is the root (`:1979-1981`) — not the basedir of
