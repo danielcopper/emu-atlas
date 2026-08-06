@@ -21,7 +21,8 @@ import pytest
 import atlas
 from scripts import validate_vectors
 from atlas.contract import (
-    emulator_contract,
+    catalogue_contract,
+    systems_contract,
     firmware_contract,
     identification_contract,
     installation_contract,
@@ -81,13 +82,18 @@ def test_machine_vector(vector):
     installs = atlas.detect(inp["home"], machine)
     assert [installation_contract(i) for i in installs] == expected["installations"], rationale
 
-    if "emulators" in expected:
-        catalogue = _retrodeck(installs, vector["name"])
-        entries = catalogue.emulators_for(
-            inp["catalogue_query"]["system"],
-            content_path=inp["catalogue_query"].get("content_path"),
-        )
-        assert [emulator_contract(e) for e in entries] == expected["emulators"], rationale
+    if "catalogue" in expected:
+        query = inp["catalogue_query"]
+        # Any handle, selected the way every other query selects one: the
+        # catalogue question is on the protocol now, so a vector can ask it of
+        # an arrangement that answers with a refusal.
+        install = _select(installs, query.get("installation"), vector["name"])
+        answer = install.emulators_for(query["system"], content_path=query.get("content_path"))
+        assert catalogue_contract(answer) == expected["catalogue"], rationale
+
+    if "systems" in expected:
+        install = _select(installs, inp.get("systems_query", {}).get("installation"), vector["name"])
+        assert systems_contract(install.systems()) == expected["systems"], rationale
 
     if "save_location" in expected:
         query = inp["query"]
@@ -122,10 +128,10 @@ def test_machine_vector(vector):
 
     if "entry_save_location" in expected:
         entry_query = inp["entry_query"]
-        catalogue = _retrodeck(installs, vector["name"])
-        entries = catalogue.emulators_for(
+        install = _select(installs, entry_query.get("installation"), vector["name"])
+        entries = install.emulators_for(
             entry_query["system"], content_path=entry_query.get("content_path")
-        )
+        ).entries
         if "label" in entry_query:
             entry = next(e for e in entries if e.label == entry_query["label"])
         else:

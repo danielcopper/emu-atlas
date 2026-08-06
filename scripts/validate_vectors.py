@@ -35,6 +35,7 @@ INPUT_FIELDS_OPTIONAL = {
     "unlistable",
     "query",
     "catalogue_query",
+    "systems_query",
     "entry_query",
     "firmware_query",
     "identify_query",
@@ -97,6 +98,14 @@ KNOWN_FIRMWARE_CHECKED = {"verified", "mismatch", "unchecked", "unknown"}
 GRANULARITY_FIELDS = {"value", "option_key", "option_value", "options_file", "alternatives"}
 CAVEAT_FIELDS = {"code", "data"}
 EMULATOR_FIELDS = {"label", "kind", "core_so", "selection", "caveats"}
+# The three ways a catalogue answer carries no entries, each a different claim:
+# the arrangement has none, its one could not be read, or atlas has not
+# established where it keeps one. None of them can accompany actual entries.
+NO_CATALOGUE_CODES = {
+    "emulator-catalogue-unavailable",
+    "emulator-catalogue-unreadable",
+    "emulator-catalogue-unestablished",
+}
 KNOWN_KINDS = {"retrodeck", "emudeck", "standalone_retroarch_flatpak", "native_retroarch"}
 KNOWN_FILE_STATUSES = {"unreadable", "invalid-text"}
 BLOB_FIELDS = {"md5", "sha1", "size"}
@@ -158,6 +167,7 @@ KNOWN_CAVEAT_CODES = {
     "system-assignment-may-hide-cores",
     "core-info-unreadable",
     "emulator-catalogue-unreadable",
+    "emulator-catalogue-unestablished",
     "firmware-path-obstructed",
     "firmware-path-inaccessible",
     "firmware-path-escapes-root",
@@ -834,11 +844,31 @@ def _validate_emulator(name: str, entry: Any) -> None:
         fail(f"{name}: emulator caveats must be a list of known caveat codes")
 
 
-def _validate_emulators(name: str, emulators: Any) -> None:
-    if not isinstance(emulators, list):
-        fail(f"{name}: expected.emulators must be a list")
-    for entry in emulators:
+def _validate_catalogue(name: str, catalogue: Any) -> None:
+    """A catalogue answer: the entries, and why there are none when there are none."""
+    if not isinstance(catalogue, dict) or set(catalogue) != {"entries", "caveats"}:
+        fail(f"{name}: expected.catalogue must be {{'entries': [...], 'caveats': [...]}}")
+    if not isinstance(catalogue["entries"], list):
+        fail(f"{name}: expected.catalogue.entries must be a list")
+    for entry in catalogue["entries"]:
         _validate_emulator(name, entry)
+    _validate_caveats(name, catalogue["caveats"])
+    # An answer that names entries has, by definition, read a catalogue; the
+    # three no-catalogue codes say the opposite, and a vector asserting both
+    # would lock in an answer no arrangement can produce.
+    codes = {c["code"] for c in catalogue["caveats"]}
+    if catalogue["entries"] and codes & NO_CATALOGUE_CODES:
+        fail(f"{name}: expected.catalogue states entries and {sorted(codes & NO_CATALOGUE_CODES)}")
+
+
+def _validate_systems(name: str, answer: Any) -> None:
+    if not isinstance(answer, dict) or set(answer) != {"systems", "caveats"}:
+        fail(f"{name}: expected.systems must be {{'systems': [...], 'caveats': [...]}}")
+    if not isinstance(answer["systems"], list) or not all(
+        isinstance(s, str) and s for s in answer["systems"]
+    ):
+        fail(f"{name}: expected.systems.systems must be a list of non-empty strings")
+    _validate_caveats(name, answer["caveats"])
 
 
 def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
@@ -848,15 +878,16 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     allowed = {
         "installations",
         "save_location",
-        "emulators",
+        "catalogue",
+        "systems",
         "entry_save_location",
         "firmware",
         "identification",
     }
     if "installations" not in keys or not keys <= allowed:
         fail(f"{name}: expected keys must be 'installations' plus optional {sorted(allowed - {'installations'})}")
-    if ("emulators" in keys) != ("catalogue_query" in inp):
-        fail(f"{name}: catalogue_query and emulators expectation must appear together")
+    if ("catalogue" in keys) != ("catalogue_query" in inp):
+        fail(f"{name}: catalogue_query and catalogue expectation must appear together")
     if ("save_location" in keys) != ("query" in inp):
         fail(f"{name}: a query and a save_location expectation must appear together")
     if ("entry_save_location" in keys) != ("entry_query" in inp):
@@ -867,13 +898,15 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: identify_query and identification expectation must appear together")
     _validate_installations(name, expected["installations"])
     if (
-        keys & {"save_location", "entry_save_location", "emulators", "firmware", "identification"}
+        keys & {"save_location", "entry_save_location", "catalogue", "systems", "firmware", "identification"}
     ) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
     if "save_location" in keys:
         _validate_placement(name, expected["save_location"])
-    if "emulators" in keys:
-        _validate_emulators(name, expected["emulators"])
+    if "catalogue" in keys:
+        _validate_catalogue(name, expected["catalogue"])
+    if "systems" in keys:
+        _validate_systems(name, expected["systems"])
     if "entry_save_location" in keys:
         _validate_entry_outcome(name, expected["entry_save_location"])
     if "firmware" in keys:
