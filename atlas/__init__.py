@@ -15,6 +15,11 @@ Two entry points, per DESIGN.md:
   ``installation.firmware_for_system(system=...)``,
   ``installation.firmware_inventory()``,
   ``installation.identify_firmware(md5=...)``.
+
+Choosing a handle is optional: :func:`atlas.every_installation` puts the same
+questions to every detected installation at once and answers each labelled with
+the handle it came from, so a machine carrying two arrangements gives two true
+answers instead of a silently chosen winner.
 """
 
 from __future__ import annotations
@@ -24,12 +29,14 @@ from atlas.contract import (
     emulator_contract,
     firmware_contract,
     identification_contract,
+    installation_answers_contract,
     installation_contract,
     placement_contract,
     systems_contract,
     unresolved_contract,
 )
 from atlas.core_info import parse_core_info
+from atlas.every_installation import EveryInstallation, InstallationAnswer, every_installation
 from atlas.firmware import (
     CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
     CAVEAT_CATALOGUE_UNAVAILABLE,
@@ -316,6 +323,7 @@ __all__ = [
     "EmuDeck",
     "EmulatorEntry",
     "EmulatorSpec",
+    "EveryInstallation",
     "FileSet",
     "FixtureMachine",
     "HEALTH_ISSUE_COMPANION_CONFIG_MISSING",
@@ -327,6 +335,7 @@ __all__ = [
     "HEALTH_ISSUE_SAVES_ROOT_MISSING",
     "Health",
     "Installation",
+    "InstallationAnswer",
     "KIND_LIBRETRO",
     "KIND_STANDALONE",
     "IGNORED_LINE_DROPPED",
@@ -355,8 +364,10 @@ __all__ = [
     "catalogue_contract",
     "detect",
     "emulator_contract",
+    "every_installation",
     "firmware_contract",
     "identification_contract",
+    "installation_answers_contract",
     "installation_contract",
     "placement_contract",
     "systems_contract",

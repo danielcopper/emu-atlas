@@ -18,8 +18,9 @@ the reference does.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable, Sequence, TypeVar
 
+from atlas.every_installation import InstallationAnswer
 from atlas.firmware import (
     FirmwareAnswer,
     FirmwareIdentification,
@@ -28,6 +29,8 @@ from atlas.firmware import (
 )
 from atlas.installations import CatalogueAnswer, EmulatorEntry, Installation, SystemsAnswer
 from atlas.placement import SavePlacement, Unresolved
+
+AnswerT = TypeVar("AnswerT")
 
 
 def placement_contract(placement: SavePlacement) -> dict[str, Any]:
@@ -193,3 +196,30 @@ def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
         "systems": list(answer.systems),
         "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
     }
+
+
+def installation_answers_contract(
+    answers: Sequence[InstallationAnswer[AnswerT]],
+    serialize: Callable[[AnswerT], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """The stable form of an aggregate answer — every installation's answer, labelled.
+
+    Composed rather than defined: the label is :func:`installation_contract`,
+    the payload is whatever serializer the question already has, passed in by
+    the caller who asked it (``placement_contract`` for ``save_location``,
+    ``catalogue_contract`` for ``emulators_for``, …). The aggregate adds no
+    fields of its own, so it may not add serialization of its own either — an
+    aggregate answer that differed from the handle-route answer in any way
+    would be a resolver rule hiding in the fan-out.
+
+    The list is ordered, and the order is contractual: it is detection order,
+    the same order :func:`~atlas.detect.detect` states. An empty list is the
+    empty machine, and stays a truthful answer rather than an error.
+    """
+    return [
+        {
+            "installation": installation_contract(answered.installation),
+            "answer": serialize(answered.answer),
+        }
+        for answered in answers
+    ]
