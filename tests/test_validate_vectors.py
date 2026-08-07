@@ -253,7 +253,11 @@ class TestTheBaseShapesAreValid:
 
 
 def case(vector: Vector, message: str, *, id: str) -> object:
-    """One deliberately invalid vector and the rule it must trip."""
+    """One deliberately invalid vector and the rule it must trip.
+
+    The parameter is called ``id`` because that is what it becomes — pytest's
+    test id, which is how a failure names itself in the run output.
+    """
     return pytest.param(vector, message, id=id)
 
 
