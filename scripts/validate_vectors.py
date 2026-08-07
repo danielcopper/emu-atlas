@@ -118,7 +118,7 @@ KNOWN_FIRMWARE_NEEDS = {"required", "optional"}
 KNOWN_FIRMWARE_CHECKED = {"verified", "mismatch", "unchecked", "unknown"}
 GRANULARITY_FIELDS = {"value", "option_key", "option_value", "options_file", "alternatives"}
 CAVEAT_FIELDS = {"code", "data"}
-EMULATOR_FIELDS = {"label", "kind", "core_so", "selection", "caveats"}
+EMULATOR_FIELDS = {"system", "label", "kind", "core_so", "selection", "caveats"}
 # The three ways a catalogue answer carries no entries, each a different claim:
 # the arrangement has none, its one could not be read, or atlas has not
 # established where it keeps one. None of them can accompany actual entries.
@@ -945,10 +945,9 @@ def _validate_emulator(name: str, entry: Any) -> None:
     selection = entry["selection"]
     if selection is not None and not isinstance(selection, str):
         fail(f"{name}: emulator selection must be null or a string")
-    if not isinstance(entry["caveats"], list) or not all(
-        c in KNOWN_CAVEAT_CODES for c in entry["caveats"]
-    ):
-        fail(f"{name}: emulator caveats must be a list of known caveat codes")
+    if not isinstance(entry["system"], str) or not entry["system"]:
+        fail(f"{name}: emulator system must be a non-empty string")
+    _validate_caveats(name, entry["caveats"])
 
 
 def _no_catalogue_codes_in(caveats: list[Any]) -> list[str]:

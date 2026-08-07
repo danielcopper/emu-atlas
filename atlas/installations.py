@@ -39,11 +39,11 @@ from atlas.esde import (
 )
 from atlas.evidence import arrangement_caveats
 from atlas.firmware import (
-    CAVEAT_CATALOGUE_UNAVAILABLE,
-    CAVEAT_CATALOGUE_UNESTABLISHED,
-    CAVEAT_CATALOGUE_UNREADABLE,
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
+    CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
+    CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
+    CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
     CAVEAT_FIRMWARE_ROOT_MISSING,
     CAVEAT_INFO_PATH_UNRESOLVED,
     Catalogue,
@@ -69,6 +69,7 @@ from atlas.machine import (
     CoreInfo,
     CoreOption,
     Machine,
+    ReadStatus,
 )
 from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
 from atlas.placement import (
@@ -97,7 +98,7 @@ from atlas.placement import (
     CAVEAT_SAVE_DIR_UNLISTABLE,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
-    CAVEAT_SYSTEM_DIR_CLEARED,
+    CAVEAT_SYSTEM_DIRECTORY_CLEARED,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     HOLE_CONTENT_DIR,
     ROOT_CONTENT_DIRECTORY,
@@ -1319,7 +1320,7 @@ def _apply_card(
                 value=mode.granularity,
                 option_key=None,
                 option_value=None,
-                option_source=f"rule card '{card.key}': fixed behaviour (no governing option)",
+                option_provenance=f"rule card '{card.key}': fixed behaviour (no governing option)",
                 options_file=None,
                 alternatives=(),
             ),
@@ -1380,7 +1381,7 @@ def _apply_card(
             value=mode.granularity,
             option_key=card.option_key,
             option_value=opt_value,
-            option_source=opt_source,
+            option_provenance=opt_source,
             options_file=options_file,
             alternatives=tuple(
                 (value, other.granularity) for value, other in card.modes.items() if value != opt_value
@@ -1515,7 +1516,7 @@ class _SystemRoot:
     caveats: tuple[Caveat, ...] = ()
 
 
-def _content_system_root(content: _Content, *, source: str) -> _SystemRoot:
+def _content_system_root(content: _Content, *, provenance: str) -> _SystemRoot:
     """The content's own directory as the system root — resolved, or left as a hole.
 
     With no content loaded at all, upstream hands back the standing
@@ -1527,9 +1528,9 @@ def _content_system_root(content: _Content, *, source: str) -> _SystemRoot:
     ``content_dir`` is a hole the caller can actually fill.
     """
     if content.system_dir is not None:
-        return _SystemRoot(content.system_dir, ROOT_CONTENT_DIRECTORY, sources=(source,))
+        return _SystemRoot(content.system_dir, ROOT_CONTENT_DIRECTORY, sources=(provenance,))
     return _SystemRoot(
-        "<content_dir>", ROOT_CONTENT_DIRECTORY, needs=(HOLE_CONTENT_DIR,), sources=(source,)
+        "<content_dir>", ROOT_CONTENT_DIRECTORY, needs=(HOLE_CONTENT_DIR,), sources=(provenance,)
     )
 
 
@@ -1607,7 +1608,7 @@ def _core_system_root(
     if in_content_dir:
         root = _content_system_root(
             content,
-            source=f'{cfg_label} chain: systemfiles_in_content_dir = "true" — the core is handed the '
+            provenance=f'{cfg_label} chain: systemfiles_in_content_dir = "true" — the core is handed the '
             "content's own directory as its system directory (runloop.c:1963-1985)",
         )
     elif raw_system is None:
@@ -1619,7 +1620,7 @@ def _core_system_root(
     elif configured is None:
         root = _content_system_root(
             content,
-            source=f'{cfg_label} chain: system_directory = "{raw_system}" leaves the setting empty — '
+            provenance=f'{cfg_label} chain: system_directory = "{raw_system}" leaves the setting empty — '
             "the core is handed the content's own directory instead (runloop.c:1963-1985)",
         )
     elif configured.path is None:
@@ -1864,20 +1865,20 @@ def _file_set_of(
         return FileSet(
             state="observed",
             files=observed,
-            source=f"observed on the machine: {directory}",
+            provenance=f"observed on the machine: {directory}",
             complete=complete,
         )
     if declared is not None and card is not None:
         return FileSet(
             state="declared",
             files=declared,
-            source=f"declared by rule card '{card.key}' (none present yet)",
+            provenance=f"declared by rule card '{card.key}' (none present yet)",
             complete=mode.complete if mode is not None else False,
         )
     return FileSet(
         state="unknown",
         files=(),
-        source=f"no files present at {directory} — file set not stated (never guessed)",
+        provenance=f"no files present at {directory} — file set not stated (never guessed)",
     )
 
 
@@ -2296,7 +2297,7 @@ def _retroarch_firmware_context(
         # the core is handed then depends on the run, not on the config.
         caveats.append(
             Caveat(
-                CAVEAT_SYSTEM_DIR_CLEARED,
+                CAVEAT_SYSTEM_DIRECTORY_CLEARED,
                 f'system_directory = "{raw_system}" clears the setting, so what a core is handed as '
                 "its system directory is decided per run: with content loaded RetroArch passes the "
                 "content's own directory (runloop.c:1958-1997), and no content is named here — so "
@@ -2397,11 +2398,11 @@ class _FirmwareQueries:
         """The handle's live read, stated — the context all four questions answer from."""
         return self._stated(self._read_firmware_context())
 
-    def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer:
+    def firmware_for_core(self, core_so: str, *, verify: bool = False) -> FirmwareAnswer:
         """Does *core_so* need firmware, where does each file go, and is it there?"""
         return _resolve_for_core(self._machine, self._firmware_context(), core_so=core_so, verify=verify)
 
-    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer:
+    def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
         """Which emulators can run *system*, and what does each of them want?"""
         return _resolve_for_system(self._machine, self._firmware_context(), system=system, verify=verify)
 
@@ -2625,8 +2626,9 @@ class EmulatorEntry:
         return self._spec.command
 
     @property
-    def source(self) -> str:
-        return self._spec.source
+    def provenance(self) -> str:
+        """Which catalogue layer declared this entry — prose, for debugging."""
+        return self._spec.provenance
 
     @property
     def selection(self) -> str | None:
@@ -2902,7 +2904,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if bundled_path is not None:
             text = self._machine.read_text(bundled_path).text
             if text is not None:
-                bundled = parse_es_systems(text, source="es_systems.xml (bundled)")
+                bundled = parse_es_systems(text, provenance="es_systems.xml (bundled)")
                 # Read AND parsed: parse_es_systems answers {} for malformed
                 # XML, and an enumeration that came back empty because the file
                 # is broken is not an enumeration. RetroDECK ships the custom
@@ -2913,7 +2915,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         custom_path = os.path.join(root, "ES-DE", "custom_systems", "es_systems.xml")
         custom_text = self._machine.read_text(custom_path).text
         if custom_text is not None:
-            custom = parse_es_systems(custom_text, source="es_systems.xml (custom_systems overlay)")
+            custom = parse_es_systems(custom_text, provenance="es_systems.xml (custom_systems overlay)")
         return merge_layers(bundled, custom), read
 
     def _catalogue_unread_caveat(self, system: str | None = None) -> tuple[Caveat, ...]:
@@ -2925,7 +2927,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return (
             Caveat(
-                CAVEAT_CATALOGUE_UNREADABLE,
+                CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
                 "the frontend's emulator catalogue could not be read, so which emulators this "
                 "installation knows is unknown — this answer is empty because atlas could not look, "
                 "not because nothing is there",
@@ -3098,7 +3100,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     def _read_firmware_context(self) -> FirmwareContext:
         return self._firmware_context_from(*self._read_marker())
 
-    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer:
+    def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
         """Which emulators RetroDECK offers for *system*, and what each of them wants.
 
         *system* is the ES-DE system name (``"gb"``, ``"dreamcast"``), the same
@@ -3225,7 +3227,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         # honest answer is about atlas, so the code says unestablished and the
         # message does not describe the machine.
         return Caveat(
-            CAVEAT_CATALOGUE_UNESTABLISHED,
+            CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
             "atlas has not established where an EmuDeck arrangement keeps its frontend catalogue — "
             "EmuDeck can be driven by ES-DE, Pegasus or Steam ROM Manager — so which emulators run a "
             "system is unknown here; name the core yourself with save_location(core_so=...)",
@@ -3281,7 +3283,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         self,
         settings: dict[str, str],
         marker_issues: tuple[Caveat, ...],
-        companion_status: str,
+        companion_status: ReadStatus,
     ) -> Health:
         issues = list(marker_issues)
         root = os.path.dirname(self._setting_path(settings, "romsPath", "roms")[0])
@@ -3393,7 +3395,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         # has no frontend catalogue. The same code the firmware route already
         # uses to say so.
         return Caveat(
-            CAVEAT_CATALOGUE_UNAVAILABLE,
+            CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
             "a bare RetroArch install ships no frontend catalogue, so there is no launch entry to "
             "answer with — name the core yourself with save_location(core_so=...)",
             {"arrangement": "retroarch"},
@@ -3411,7 +3413,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         """The RetroArch config directory (the folder holding ``retroarch.cfg``)."""
         return os.path.dirname(self._cfg_path())
 
-    def _health_from(self, cfg_status: str) -> Health:
+    def _health_from(self, cfg_status: ReadStatus) -> Health:
         path = self._cfg_path()
         if cfg_status == READ_OK:
             return Health()
@@ -3537,9 +3539,9 @@ class Installation(Protocol):
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer: ...
 
-    def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer: ...
+    def firmware_for_core(self, core_so: str, *, verify: bool = False) -> FirmwareAnswer: ...
 
-    def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer: ...
+    def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer: ...
 
     def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer: ...
 

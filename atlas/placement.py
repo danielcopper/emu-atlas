@@ -86,7 +86,7 @@ CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
 # key resolves to RetroArch's platform default on every route — and the
 # distinction is the whole reason this code is spelled 'cleared': the setting
 # is present and empty, and what a core is handed then depends on the run.
-CAVEAT_SYSTEM_DIR_CLEARED = "system-directory-cleared"
+CAVEAT_SYSTEM_DIRECTORY_CLEARED = "system-directory-cleared"
 CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
 CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
 CAVEAT_UNVERIFIED_VERSION = "unverified-version"
@@ -186,7 +186,7 @@ class FileSet:
     ``state`` is ``"observed"`` (``files`` are real basenames found on disk),
     ``"declared"`` (``files`` come from a verified rule card — world knowledge
     with cited provenance, not a guess), or ``"unknown"`` (``files`` is empty;
-    atlas refuses to guess). ``source`` says how the state was reached.
+    atlas refuses to guess). ``provenance`` says how the state was reached.
 
     A declared set can itself be a template: where the card names the files
     through the content's own id, the names keep their ``<save_id>`` hole and
@@ -202,7 +202,7 @@ class FileSet:
 
     state: FileSetState
     files: tuple[str, ...]
-    source: str
+    provenance: str
     complete: bool = False
 
     def __post_init__(self) -> None:
@@ -218,7 +218,7 @@ class Granularity:
 
     ``value`` is the current granularity (``"shared-card"``,
     ``"per-game-file"``, …), selected by the live-read ``option_value`` of
-    ``option_key``; ``option_source`` is its provenance (which file, or the
+    ``option_key``; ``option_provenance`` is where that value came from (which file, or the
     core default). ``options_file`` is where a caller would change the option —
     change it, ask again, and the new answer confirms the switch.
     ``alternatives`` lists the other selectable ``(option_value, granularity)``
@@ -229,7 +229,7 @@ class Granularity:
     value: str
     option_key: str | None
     option_value: str | None
-    option_source: str
+    option_provenance: str
     options_file: str | None
     alternatives: tuple[tuple[str, str], ...]
 
@@ -237,7 +237,7 @@ class Granularity:
 UNKNOWN_FILE_SET = FileSet(
     state="unknown",
     files=(),
-    source="file set not stated — no observation available (never guessed)",
+    provenance="file set not stated — no observation available (never guessed)",
 )
 
 

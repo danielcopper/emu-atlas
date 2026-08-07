@@ -50,6 +50,11 @@ Rules that hold for every answer:
   template too. An unknown is something atlas refuses to state — it never guesses to keep a field non-empty.
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
+- **Arguments follow one rule: the question's subject may be positional, everything else is keyword-only.** The subject
+  is what the question is _about_ — the system in `emulators_for("n64")` and `firmware_for_system("gba")`, the core in
+  `firmware_for_core("mgba_libretro.so")`. Modifiers never are: `verify=`, `content_path=`, `core_so=` on
+  `save_location`, and the digests on `identify_firmware` all read as noise at a call site without their names. Passing
+  a subject by keyword keeps working — the rule permits positional, it does not demand it.
 
 ## Finding installations
 
@@ -358,12 +363,16 @@ to a concrete handle to find out.
 ```python
 answer = inst.emulators_for("n64", content_path=rom_path)
 answer.entries                     # the launch entries, in effective priority order
-answer.sources                     # provenance — what was read to say so (prose, for debugging)
+answer.sources                     # what was read to say so (prose, for debugging)
 answer.caveats                     # why there are no entries, when there are none
 
 entry = answer.entries[0]          # the effective default (per-game altemulator > per-system choice > declared order)
 entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro'
 entry.core_so                      # 'mupen64plus_next_libretro.so' — or None for a standalone emulator
+entry.system                       # 'n64' — an entry says what it launches, wherever it travels
+entry.selection                    # why it is first, when a user promoted it — None for declared order
+entry.caveats                      # this entry's own degradations, e.g. per-game overrides nobody checked
+entry.provenance                   # which catalogue layer declared it (prose, for debugging)
 
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
@@ -432,8 +441,8 @@ Four questions, verification strictly opt-in. The first three share one answer s
 `identify_firmware` answers off content, so it has its own (`FirmwareIdentification`):
 
 ```python
-inst.firmware_for_core(core_so="mgba_libretro.so")          # what does this core want, and where?
-inst.firmware_for_system(system="gba")                      # which cores run this system, what does each want?
+inst.firmware_for_core("mgba_libretro.so")                  # what does this core want, and where?
+inst.firmware_for_system("gba")                             # which cores run this system, what does each want?
 inst.firmware_inventory(verify=True)                        # everything — declared, present, and unclaimed
 inst.identify_firmware(md5="32fbbd84…")                     # this content: what is it, where does it go?
 ```
@@ -441,7 +450,7 @@ inst.identify_firmware(md5="32fbbd84…")                     # this content: wh
 Reading a `FirmwareAnswer`:
 
 ```python
-answer = inst.firmware_for_core(core_so="pcsx_rearmed_libretro.so", verify=True)
+answer = inst.firmware_for_core("pcsx_rearmed_libretro.so", verify=True)
 answer.root                        # the live system_directory (None + caveat only when the key is cleared)
 for core in answer.cores:
     core.declaration               # 'read' | 'absent' (not installed) | 'unreadable' | 'unsupported' — four empties
@@ -537,6 +546,34 @@ Structured fields in these dicts are contractual; prose (`sources`, caveat messa
 aggregate answer has no serializer of its own — `installation_answers_contract` composes the label with whichever of
 these you asked for, so a labelled answer and a handle-route answer serialize identically.
 
+### Which answers have a summary field, and which never will
+
+Three subjects carry one, each because the first thing a client asks is exactly what the field states:
+
+| subject                | field              | shape                 | why                                                        |
+| ---------------------- | ------------------ | --------------------- | ---------------------------------------------------------- |
+| `health()`             | `ok`               | `True` / `False`      | always answerable — ok is the absence of findings          |
+| a firmware core        | `requirements_met` | `True`/`False`/`None` | `None` where it cannot be established; never read as green |
+| a firmware requirement | `satisfied`        | `True`/`False`/`None` | present _and_ nothing contradicts it; `None` when unjudged |
+
+The shape rule is the difference between them: a plain boolean only where the fact can always be established, and the
+third state wherever "cannot tell" is reachable.
+
+A summary combines fields — `satisfied` reads `found`, `checked`, `identity` and `need` together. The other booleans on
+these answers do something else, and none of them answers "is this good?":
+
+- **what the run did**: `hash_checked` (you passed `verify`), `answer.cores` being listed at all;
+- **what one field contains**: `file_set.complete` says the list is closed, not that the placement is usable;
+- **a shorthand for one richer field**: `req.present` is `req.found` collapsed to a boolean, and `found` stays the
+  authoritative one — a directory sitting at the destination is not a missing file, and only `found` can say so.
+
+Read the shorthand when it answers your question, and the field behind it when the distinction matters.
+
+No other answer gets one, and that is deliberate rather than pending. A placement's summary would restate `dir`, a
+catalogue's would restate `entries` plus the refusal codes, an identification's would restate `identity` — a second
+spelling of the same fact, to be kept in step through every future change, and the day the two disagree you would
+believe the summary. Read the field that _is_ the answer.
+
 ## Chained flows
 
 The composite questions a sync plugin actually asks, each as a chain of the queries above. The shapes follow
@@ -597,7 +634,7 @@ emulator reads, not on it.
 ### Flow 3 — "Render the BIOS page for a platform"
 
 ```python
-answer = inst.firmware_for_system(system=system)          # verify=False: fast, presence-only
+answer = inst.firmware_for_system(system)                 # verify=False: fast, presence-only
 for core in answer.cores:
     row = render_core(core.label, light=core.requirements_met)   # True/False/None → green/red/grey
     for req in core.requirements:

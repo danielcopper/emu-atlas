@@ -321,6 +321,7 @@ class TestTheGrammarRefusesContradictions:
                 "catalogue": {
                     "entries": [
                         {
+                            "system": "n64",
                             "label": "ParaLLEl N64",
                             "kind": "libretro",
                             "core_so": "parallel_n64_libretro.so",

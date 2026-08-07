@@ -819,7 +819,7 @@ class TestSystemDirectoryRoot:
         assert p.needs == ()
         # Nothing to refuse: an absent key resolves, so neither route states a
         # refusal for it — the cleared key is the one that still does.
-        assert atlas.CAVEAT_SYSTEM_DIR_CLEARED not in [c.code for c in p.caveats]
+        assert atlas.CAVEAT_SYSTEM_DIRECTORY_CLEARED not in [c.code for c in p.caveats]
 
     def test_a_dropped_system_directory_line_is_stated(self):
         # The line sets nothing, so the platform default stands — silently,
@@ -1823,7 +1823,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         answer = self._only(self.RA_FILES).emulators_for("n64")
         assert answer.entries == ()
         assert [c.code for c in answer.caveats] == [
-            atlas.CAVEAT_CATALOGUE_UNAVAILABLE,
+            atlas.CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
             atlas.CAVEAT_ARRANGEMENT_UNVERIFIED,
         ]
 
@@ -1834,7 +1834,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         answer = self._only(self.EMUDECK_FILES, dirs=[f"{HOME}/Emulation/saves"]).emulators_for("n64")
         assert answer.entries == ()
         assert [c.code for c in answer.caveats] == [
-            atlas.CAVEAT_CATALOGUE_UNESTABLISHED,
+            atlas.CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
             atlas.CAVEAT_ARRANGEMENT_UNVERIFIED,
         ]
 
@@ -1849,7 +1849,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         answer = self._only(self.RA_FILES).systems()
         assert answer.systems == ()
         assert [c.code for c in answer.caveats] == [
-            atlas.CAVEAT_CATALOGUE_UNAVAILABLE,
+            atlas.CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
             atlas.CAVEAT_ARRANGEMENT_UNVERIFIED,
         ]
 
@@ -1867,7 +1867,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         )
         rd = atlas.RetroDeck(HOME, machine)
         for answer in (rd.emulators_for("n64"), rd.systems()):
-            assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNREADABLE]
+            assert [c.code for c in answer.caveats] == [atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE]
         assert rd.emulators_for("n64").entries == ()
         assert rd.systems().systems == ()
 
@@ -2022,7 +2022,7 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
 
     def test_an_absent_key_refuses_nothing(self):
         answer = self._inventory(self.DIRS, dirs=[f"{self.CONFIG_TREE}/system"])
-        assert atlas.CAVEAT_SYSTEM_DIR_CLEARED not in [c.code for c in answer.caveats]
+        assert atlas.CAVEAT_SYSTEM_DIRECTORY_CLEARED not in [c.code for c in answer.caveats]
 
     def test_a_resolved_default_that_is_not_there_is_stated_like_any_root(self):
         # Resolving is not asserting: the default directory may not exist, and
@@ -2033,11 +2033,11 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
     def test_a_cleared_key_refuses_with_its_own_code(self):
         answer = self._inventory(f'system_directory = ""\n{self.DIRS}')
         assert answer.root is None
-        assert atlas.CAVEAT_SYSTEM_DIR_CLEARED in [c.code for c in answer.caveats]
+        assert atlas.CAVEAT_SYSTEM_DIRECTORY_CLEARED in [c.code for c in answer.caveats]
 
     def test_the_cleared_refusal_carries_the_value(self):
         answer = self._inventory(f'system_directory = "default"\n{self.DIRS}')
-        cleared = next(c for c in answer.caveats if c.code == atlas.CAVEAT_SYSTEM_DIR_CLEARED)
+        cleared = next(c for c in answer.caveats if c.code == atlas.CAVEAT_SYSTEM_DIRECTORY_CLEARED)
         assert cleared.data == {"value": "default"}
 
     def test_a_configured_key_is_unchanged(self):
@@ -2045,7 +2045,7 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
             f'system_directory = "/bios"\n{self.DIRS}', dirs=["/bios"]
         )
         assert answer.root == "/bios"
-        assert atlas.CAVEAT_SYSTEM_DIR_CLEARED not in [c.code for c in answer.caveats]
+        assert atlas.CAVEAT_SYSTEM_DIRECTORY_CLEARED not in [c.code for c in answer.caveats]
 
     def test_both_routes_resolve_an_absent_key_to_the_same_directory(self):
         # The point of sharing the helper: one directory, two routes.

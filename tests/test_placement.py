@@ -211,7 +211,7 @@ class TestFileSetAndProvenance:
         assert p.file_set.files == ()
 
     def test_observed_file_set_carried_through(self):
-        fs = FileSet(state="observed", files=("a.srm",), source="observed on the machine: /saves")
+        fs = FileSet(state="observed", files=("a.srm",), provenance="observed on the machine: /saves")
         p = _build('savefile_directory = "/saves"\n', file_set=fs)
         assert p.file_set == fs
 

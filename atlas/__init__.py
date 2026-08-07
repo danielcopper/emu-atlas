@@ -11,10 +11,13 @@ Two entry points, per DESIGN.md:
 - :func:`atlas.detect` finds what is installed and returns installation handles;
 - every question is asked of a handle —
   ``installation.save_location(content_path=..., core_so=...)``,
-  ``installation.firmware_for_core(core_so=...)``,
-  ``installation.firmware_for_system(system=...)``,
+  ``installation.firmware_for_core("mgba_libretro.so")``,
+  ``installation.firmware_for_system("gba")``,
   ``installation.firmware_inventory()``,
   ``installation.identify_firmware(md5=...)``.
+
+The question's subject may be positional — the core, the system — while every
+modifier stays keyword-only.
 
 Choosing a handle is optional: :func:`atlas.every_installation` puts the same
 questions to every detected installation at once and answers each labelled with
@@ -39,13 +42,13 @@ from atlas.contract import (
 from atlas.core_info import parse_core_info
 from atlas.every_installation import EveryInstallation, InstallationAnswer, every_installation
 from atlas.firmware import (
-    CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
-    CAVEAT_CATALOGUE_UNAVAILABLE,
-    CAVEAT_CATALOGUE_UNESTABLISHED,
-    CAVEAT_CATALOGUE_UNREADABLE,
-    CAVEAT_CONTENT_CONTRADICTORY,
-    CAVEAT_CONTENT_UNIDENTIFIED,
-    CAVEAT_CONTENT_UNSTATED,
+    CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
+    CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
+    CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
+    CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
+    CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY,
+    CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED,
+    CAVEAT_FIRMWARE_CONTENT_UNSTATED,
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
     CAVEAT_CORE_INFO_UNREADABLE,
@@ -178,7 +181,7 @@ from atlas.placement import (
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
-    CAVEAT_SYSTEM_DIR_CLEARED,
+    CAVEAT_SYSTEM_DIRECTORY_CLEARED,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_CARD_GENERATION_MISMATCH,
@@ -258,20 +261,20 @@ __all__ = [
     "CAVEAT_SORTED_DIR_MISSING",
     "CAVEAT_PER_GAME_OVERRIDE",
     "CAVEAT_PER_GAME_OVERRIDES_PRESENT",
-    "CAVEAT_SYSTEM_DIR_CLEARED",
+    "CAVEAT_SYSTEM_DIRECTORY_CLEARED",
     "CAVEAT_UNKNOWN_OPTION_VALUE",
     "CAVEAT_UNVERIFIED_VERSION",
-    "CAVEAT_CATALOGUE_UNAVAILABLE",
-    "CAVEAT_CONTENT_UNIDENTIFIED",
-    "CAVEAT_CONTENT_UNSTATED",
+    "CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE",
+    "CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED",
+    "CAVEAT_FIRMWARE_CONTENT_UNSTATED",
     "CAVEAT_CORE_DIR_UNRESOLVED",
     "CAVEAT_CORE_ENUMERATION_INCOMPLETE",
     "CAVEAT_FIRMWARE_SCAN_INCOMPLETE",
     "CAVEAT_SAVE_DIR_UNLISTABLE",
-    "CAVEAT_ASSIGNMENT_MAY_HIDE_CORES",
-    "CAVEAT_CATALOGUE_UNESTABLISHED",
-    "CAVEAT_CATALOGUE_UNREADABLE",
-    "CAVEAT_CONTENT_CONTRADICTORY",
+    "CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES",
+    "CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED",
+    "CAVEAT_EMULATOR_CATALOGUE_UNREADABLE",
+    "CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY",
     "CAVEAT_CORE_INFO_UNREADABLE",
     "CAVEAT_CORE_NOT_INSTALLED",
     "CAVEAT_CORE_WITHOUT_SYSTEMNAME",

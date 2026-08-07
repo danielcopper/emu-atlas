@@ -51,7 +51,7 @@ class EmulatorSpec:
     """One launch entry of one system, as declared in ``es_systems.xml``.
 
     ``core_so`` is the extracted ``.so`` basename for libretro entries, ``None``
-    for standalone ones. ``source`` names the file layer that defined the
+    for standalone ones. ``provenance`` names the file layer that defined the
     system (bundled or custom overlay).
     """
 
@@ -60,11 +60,11 @@ class EmulatorSpec:
     kind: str
     core_so: str | None
     command: str
-    source: str
+    provenance: str
     selection: str | None = None
 
 
-def _launch_entries(system_el: ET.Element, *, system: str, source: str) -> tuple[EmulatorSpec, ...]:
+def _launch_entries(system_el: ET.Element, *, system: str, provenance: str) -> tuple[EmulatorSpec, ...]:
     """The launch entries one ``<system>`` declares, in declared order.
 
     A command naming a ``*_libretro.so`` is a libretro entry (the basename is
@@ -83,13 +83,13 @@ def _launch_entries(system_el: ET.Element, *, system: str, source: str) -> tuple
                 kind=KIND_LIBRETRO if match else KIND_STANDALONE,
                 core_so=match.group(1) if match else None,
                 command=command,
-                source=source,
+                provenance=provenance,
             )
         )
     return tuple(entries)
 
 
-def parse_es_systems(text: str, *, source: str) -> dict[str, tuple[EmulatorSpec, ...]]:
+def parse_es_systems(text: str, *, provenance: str) -> dict[str, tuple[EmulatorSpec, ...]]:
     """Parse one ``es_systems.xml`` layer into ``{system: entries-in-order}``.
 
     Malformed XML yields ``{}`` — the layer is skipped, never guessed at.
@@ -103,7 +103,7 @@ def parse_es_systems(text: str, *, source: str) -> dict[str, tuple[EmulatorSpec,
         name = (system_el.findtext("name") or "").strip()
         if not name:
             continue
-        result[name] = _launch_entries(system_el, system=name, source=source)
+        result[name] = _launch_entries(system_el, system=name, provenance=provenance)
     return result
 
 
