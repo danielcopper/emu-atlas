@@ -10,7 +10,13 @@ import pytest
 import atlas
 from atlas.machine import FixtureMachine
 from atlas.oddities import load_audit, load_oddities, lookup_card
-from atlas.placement import GRANULARITIES, ROOT_KINDS
+from atlas.placement import (
+    GRANULARITIES,
+    GRANULARITY_PER_GAME_FILE,
+    GRANULARITY_PER_GAME_FILES,
+    GRANULARITY_SHARED_CARD,
+    ROOT_KINDS,
+)
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -100,8 +106,8 @@ class TestFlycastResolution:
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("vmu_save_A1.bin",)
         assert p.granularity is not None
-        assert p.granularity.value == "shared-card"
-        assert ("VMU A1", "per-game-file") in p.granularity.alternatives
+        assert p.granularity.value == GRANULARITY_SHARED_CARD
+        assert ("VMU A1", GRANULARITY_PER_GAME_FILE) in p.granularity.alternatives
         assert p.granularity.options_file == OPTIONS_CFG
 
     def test_option_absent_uses_core_default(self):
@@ -149,7 +155,7 @@ class TestFlycastResolution:
         assert p.dir == "/mnt/sd/retrodeck/saves/dreamcast"
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.granularity is not None
-        assert p.granularity.value == "per-game-file"
+        assert p.granularity.value == GRANULARITY_PER_GAME_FILE
         # Only port A1 goes per-content here (oslib.cpp:40-41) — B1..D1 and the
         # console flash keep using the shared card, so the save lies under two
         # roots and the card, which states one, states no file set at all.
@@ -173,7 +179,7 @@ class TestFlycastResolution:
         )
         assert p.dir == "/mnt/sd/retrodeck/saves/dreamcast"
         assert p.granularity is not None
-        assert p.granularity.value == "per-game-files"
+        assert p.granularity.value == GRANULARITY_PER_GAME_FILES
         assert p.file_set.state == "declared"
         assert p.file_set.files == (
             "<save_id>.A1.bin",
@@ -305,7 +311,7 @@ class TestFlycastResolution:
         )
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert p.granularity is not None
-        assert p.granularity.value == "shared-card"
+        assert p.granularity.value == GRANULARITY_SHARED_CARD
         assert any(c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE and c.data["value"] == "something new" for c in p.caveats)
 
     def test_override_can_switch_the_game_opt_layer_off(self):
@@ -423,10 +429,10 @@ class TestLRPS2Card:
         assert p.file_set.files == ("Mcd001.ps2", "Mcd002.ps2")
         g = p.granularity
         assert g is not None
-        assert g.value == "shared-card"
+        assert g.value == GRANULARITY_SHARED_CARD
         assert g.option_key == "pcsx2_shared_memory_cards"
         assert g.option_value == "enabled"
-        assert ("disabled", "per-game-file") in g.alternatives
+        assert ("disabled", GRANULARITY_PER_GAME_FILE) in g.alternatives
 
     def test_per_content_mode_names_card_after_rom_stem(self):
         # main.cpp:2154-2166 + Pcsx2Config.cpp:995-997 — slot 1 = <rom_stem>.ps2
@@ -449,7 +455,7 @@ class TestLRPS2Card:
         assert p.file_set.state == "declared"
         assert p.file_set.files == ("Gran Turismo 4 (USA).ps2",)
         assert p.granularity is not None
-        assert p.granularity.value == "per-game-file"
+        assert p.granularity.value == GRANULARITY_PER_GAME_FILE
 
     def test_existing_memcard_is_observed(self):
         rd = _retrodeck(
@@ -598,14 +604,14 @@ class TestOperaCard:
         assert p.dir == "/mnt/sd/retrodeck/saves/opera/per_game"
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.granularity is not None
-        assert p.granularity.value == "per-game-file"
-        assert ("shared", "shared-card") in p.granularity.alternatives
+        assert p.granularity.value == GRANULARITY_PER_GAME_FILE
+        assert ("shared", GRANULARITY_SHARED_CARD) in p.granularity.alternatives
 
     def test_shared_mode_switches_subdir(self):
         p = self._query({OPTIONS_CFG: 'opera_nvram_storage = "shared"\n'})
         assert p.dir == "/mnt/sd/retrodeck/saves/opera/shared"
         assert p.granularity is not None
-        assert p.granularity.value == "shared-card"
+        assert p.granularity.value == GRANULARITY_SHARED_CARD
 
     def test_subdir_follows_the_sorted_directory(self):
         # GET_SAVE_DIRECTORY hands the core the redirected (sorted) dir
@@ -1201,6 +1207,27 @@ class TestCardEvidence:
         status = self._raw_cards()["flycast"]["provenance"]["status"]
         assert status["All VMUs"].startswith("[V-live]")
         assert status["VMU A1"].startswith("[D]")
+
+    def test_no_shipped_mode_claims_a_complete_file_set(self):
+        """The premise three documents state — pinned so it cannot rot silently.
+
+        ``FileSet.complete`` is documented as reserved: no card can yet
+        establish which files a core writes *at all* for the active mode, so
+        every answer carries ``False``. The day a card's evidence earns the
+        claim, this test is what says so — and what to do about it. Deleting
+        this test is then part of the work, not a nuisance.
+        """
+        claiming = sorted(
+            f"{key}.{value}"
+            for key, entry in self._raw_cards().items()
+            for value, mode in entry["saves"]["modes"].items()
+            if mode.get("complete")
+        )
+        assert claiming == [], (
+            f"{claiming} now claims a complete file set, which retires the 'reserved' wording in "
+            "atlas/placement.py (FileSet), docs/how-to-use.md ('Reading the file set') and "
+            "vectors/README.md — update all three, then delete this test"
+        )
 
 
 class TestVerificationMatrix:

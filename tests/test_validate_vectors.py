@@ -25,7 +25,9 @@ runner's file where a port author meets them. The sweep lives here.
 
 from __future__ import annotations
 
+import importlib
 import json
+import pkgutil
 import re
 from typing import Any
 
@@ -64,11 +66,11 @@ def _vector(expected=None, *, installed=False, **input_keys) -> Vector:
     machine would actually answer. That is what keeps every case below one
     mutation wide.
     """
-    installations = [dict(INSTALLATION)] if installed else []
+    detected = [dict(INSTALLATION)] if installed else []
     return {
         "name": "synthetic",
         "input": {"home": HOME, "files": {f"{HOME}/marker": ""}, **input_keys},
-        "expected": {"installations": installations, **(expected or {})},
+        "expected": {"installations": detected, **(expected or {})},
     }
 
 
@@ -960,6 +962,11 @@ class TestTheVocabularyIsOneVocabulary:
     judges the lists; it checks that the two are the same list.
     """
 
+    # Every family a code can belong to. `UNRESOLVED_` is not a caveat
+    # vocabulary — it is the Unresolved namespace — but it is a code the same
+    # way, so the package-wide walk below covers all three.
+    FAMILIES = ("CAVEAT_", "HEALTH_ISSUE_", "UNRESOLVED_")
+
     def _exported(self, prefix: str) -> set[str]:
         return {
             value
@@ -971,6 +978,36 @@ class TestTheVocabularyIsOneVocabulary:
         # Health findings ride in answer caveats under their own codes, so the
         # caveat vocabulary contains the health one by construction.
         return self._exported("CAVEAT_") | self._exported("HEALTH_ISSUE_")
+
+    def _caveat_and_unresolved_codes(self) -> set[str]:
+        return self._caveat_codes() | self._exported("UNRESOLVED_")
+
+    def _codes_defined_anywhere_in_the_package(self) -> set[str]:
+        """Every code constant in any atlas submodule, exported or not.
+
+        The other guards all derive their "what codes exist" side from
+        ``atlas.__all__``, so a constant a submodule defines and the export list
+        forgets is invisible to every one of them at once — it would be a code
+        the resolver can emit that no vector must cover and no validator must
+        know. This is the one derivation that does not start from ``__all__``.
+        """
+        found: set[str] = set()
+        for info in pkgutil.iter_modules(atlas.__path__):
+            module = importlib.import_module(f"{atlas.__name__}.{info.name}")
+            found |= {
+                value
+                for name, value in vars(module).items()
+                if name.startswith(self.FAMILIES) and isinstance(value, str)
+            }
+        return found
+
+    def test_no_code_is_defined_in_a_submodule_and_left_unexported(self):
+        assert sorted(self._codes_defined_anywhere_in_the_package() - self._caveat_and_unresolved_codes()) == []
+
+    def test_no_exported_code_is_missing_from_the_package(self):
+        # The other direction is a typo guard: a code in `__all__` that no
+        # module defines could only come from the export list itself.
+        assert sorted(self._caveat_and_unresolved_codes() - self._codes_defined_anywhere_in_the_package()) == []
 
     def test_the_validator_knows_every_code_atlas_can_emit(self):
         assert sorted(self._caveat_codes() - validate_vectors.KNOWN_CAVEAT_CODES) == []
@@ -995,6 +1032,11 @@ class TestTheVocabularyIsOneVocabulary:
     def test_the_granularity_vocabularies_match(self):
         assert validate_vectors.KNOWN_GRANULARITIES == set(atlas.GRANULARITIES)
 
+    def test_the_granularity_constants_are_the_granularity_tuple(self):
+        # Every other closed set here ships per-value names beside the tuple;
+        # this is what keeps the two from drifting once both exist.
+        assert self._exported("GRANULARITY_") == set(atlas.GRANULARITIES)
+
     def test_the_root_kind_vocabularies_match(self):
         assert validate_vectors.KNOWN_ROOT_KINDS == set(atlas.ROOT_KINDS)
 
@@ -1003,11 +1045,46 @@ class TestTheVocabularyIsOneVocabulary:
         # `needs`, `granularity.value` and `root_kind`, so their vocabularies
         # are consumer surface. Reading them from a submodule instead would let
         # one drop out of the export list without a test noticing.
-        promoted = {"HOLE_CONTENT_DIR", "HOLE_LIBRARY_NAME", "HOLE_SAVE_ID", "GRANULARITIES", "ROOT_KINDS"}
+        promoted = {
+            "HOLE_CONTENT_DIR",
+            "HOLE_LIBRARY_NAME",
+            "HOLE_SAVE_ID",
+            "GRANULARITIES",
+            "GRANULARITY_SHARED_CARD",
+            "GRANULARITY_PER_GAME_FILE",
+            "GRANULARITY_PER_GAME_FILES",
+            "ROOT_KINDS",
+        }
         assert sorted(promoted - set(atlas.__all__)) == []
 
     def test_the_emulator_kind_vocabularies_match(self):
         assert validate_vectors.KNOWN_EMULATOR_KINDS == {atlas.KIND_LIBRETRO, atlas.KIND_STANDALONE}
+
+    def test_the_path_kind_vocabularies_match(self):
+        path_kinds = {atlas.KIND_FILE, atlas.KIND_DIRECTORY, atlas.KIND_MISSING, atlas.KIND_INACCESSIBLE}
+        assert validate_vectors.KNOWN_PATH_KINDS == path_kinds
+
+    def test_the_two_kind_families_account_for_every_exported_kind(self):
+        # `KIND_` is the one prefix two vocabularies share, so neither of the
+        # tests above can be a prefix walk — and without this, a third KIND_
+        # constant could appear and belong to neither set unnoticed.
+        both = validate_vectors.KNOWN_PATH_KINDS | validate_vectors.KNOWN_EMULATOR_KINDS
+        assert self._exported("KIND_") == both
+
+    def test_the_file_set_state_vocabularies_match(self):
+        assert validate_vectors.KNOWN_FILE_SET_STATES == self._exported("FILE_SET_")
+
+    def test_the_system_source_vocabularies_match(self):
+        assert validate_vectors.KNOWN_SYSTEM_SOURCES == self._exported("SOURCE_")
+
+    def test_the_declaration_state_vocabularies_match(self):
+        assert validate_vectors.KNOWN_DECLARATION_STATES == self._exported("DECLARATION_")
+
+    def test_the_firmware_need_vocabularies_match(self):
+        assert validate_vectors.KNOWN_FIRMWARE_NEEDS == self._exported("NEED_")
+
+    def test_the_firmware_checked_vocabularies_match(self):
+        assert validate_vectors.KNOWN_FIRMWARE_CHECKED == self._exported("CHECKED_")
 
     def test_the_installation_kind_vocabularies_match(self):
         kinds = {
