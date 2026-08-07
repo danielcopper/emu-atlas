@@ -123,6 +123,33 @@ atlas.installation_answers_contract(everywhere.save_location(content_path=rom_pa
 The handle route underneath is unchanged: a consumer that has chosen — decky mostly asks RetroDECK directly — keeps
 using it.
 
+## What atlas has actually seen — `arrangement-unverified`
+
+Every answer from an arrangement atlas has never observed on a live installation carries one caveat,
+`arrangement-unverified`, with the installation kind in `data["kind"]`. Today that is every EmuDeck arrangement and
+every bare RetroArch (standalone Flatpak and native); RetroDECK was verified against a running 0.10.9b installation and
+its answers say nothing.
+
+```python
+for c in answer.caveats:
+    if c.code == "arrangement-unverified":
+        mark_as_derived(c.data["kind"])      # 'emudeck' | 'standalone_retroarch_flatpak' | 'native_retroarch'
+```
+
+What it means: **no machine running this arrangement has confirmed the wiring end to end.** What it does _not_ mean:
+
+- **Not** that atlas guessed. The config chain is read the same way for every arrangement, source-verified against
+  pinned upstream RetroArch — the caveat is about the missing observation, not about the reading.
+- **Not** that the installation is broken. That question is `health()`, which deliberately stays free of this: an
+  evidence note is not a machine defect, and an installation with no health issues is still `ok` here.
+- **Not** a reason to refuse the answer. It is the same answer, with its evidence level attached — treat it the way you
+  treat any derived fact.
+
+It rides on every answer that carries caveats: `save_location()`, `systems()`, `emulators_for()`, the three firmware
+calls and `identify_firmware()` — through the aggregate too, since that delegates. The status is packaged data
+(`atlas/data/arrangement_evidence.json`), so the day an arrangement is verified on a reference machine, the record
+changes and the caveat stops appearing; no client change is needed either way.
+
 ## Where does this save live?
 
 The direct route — you name the core:
@@ -275,6 +302,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                        |
 | `health`                                    | the installation itself has issues; `data["issue"]` carries the health code                   |
 | `unverified-version`                        | the rule card was never verified against this emulator version                                |
+| `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)             |
 | `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read   |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.

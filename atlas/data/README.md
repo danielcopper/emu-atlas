@@ -84,6 +84,31 @@ The machine-readable core of `docs/research/core-audit.md`: per core, the verdic
 saves are a proven capability, and — per arrangement — the versions the knowledge was verified against. The file's own
 `spec` field carries the rules; the research doc carries the method.
 
+## `arrangement_evidence.json` — which arrangements have been seen alive
+
+One record per installation kind, saying whether a live installation of that arrangement has ever confirmed atlas's
+answers end to end. Read by `atlas.evidence`; an arrangement whose record has no `verified` block attaches
+`arrangement-unverified` to every answer it gives.
+
+```json
+"emudeck": {
+  "label": "an EmuDeck arrangement",
+  "verified": null,
+  "note": "[D] Read from EmuDeck's shipped configuration upstream …; no EmuDeck machine has been observed."
+}
+```
+
+- `label` — how the arrangement is named in the caveat's prose.
+- `note` — the evidence level (`[V]`/`[D]`/`[O]`, as in `docs/research/`) and what it rests on.
+- `verified` — `null`, or `{version, date, reference}`: the arrangement version observed, when, and which installation.
+  `version` and `reference` are required in a present record, because a record that pins nothing would read as verified
+  everywhere and forever while establishing nothing.
+
+Two rules make this file the whole mechanism. **A missing record counts as unverified** — omission is never evidence —
+though a handle kind with no record at all fails the test suite, because a fact nobody wrote down should not ship.
+**Verifying an arrangement retires its caveat here, not in a resolver**: add the `verified` block, and the answers stop
+carrying it. No code names an arrangement's evidence state.
+
 ## `firmware_hashes.json`
 
 What a correct firmware file's bytes are: the `md5` / `sha1` / `size` triple that identifies it. This is world knowledge
