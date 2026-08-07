@@ -727,13 +727,13 @@
             {
               "core_so": null,
               "label": "SameBoy (Standalone)",
-              "declaration": "absent",
+              "declaration": "unsupported",
               "requirements_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
                 {
-                  "code": "standalone-emulator",
+                  "code": "standalone-unsupported",
                   "data": {
                     "label": "SameBoy (Standalone)"
                   }

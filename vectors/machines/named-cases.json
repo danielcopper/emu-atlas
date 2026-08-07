@@ -5282,6 +5282,216 @@
           ]
         }
       }
+    },
+    {
+      "name": "a-standalone-emulator-reads-the-same-on-both-routes",
+      "rationale": "One machine, one standalone emulator, both questions: the placement route answers the typed Unresolved outcome 'standalone-unsupported', and the firmware route answers declaration 'unsupported' with the caveat code 'standalone-unsupported'. Same word for the same fact — the emulator is installed and atlas has no source for its rules — so a client that learned it on one route reads the other. It is not the evidence axis: nothing here was read and left unconfirmed, there was nothing to read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>ps3</name>\n  <path>%ROMPATH%/ps3</path>\n  <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/roms/ps3/Game.iso": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_query": {
+          "system": "ps3"
+        },
+        "firmware_query": {
+          "kind": "system",
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "RPCS3 (Standalone)",
+              "declaration": "unsupported",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "standalone-unsupported",
+                  "data": {
+                    "label": "RPCS3 (Standalone)"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "ps3"
+              }
+            }
+          ]
+        },
+        "entry_save_location": {
+          "unresolved": {
+            "code": "standalone-unsupported",
+            "data": {
+              "label": "RPCS3 (Standalone)",
+              "system": "ps3"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "firmware-an-absent-system-directory-resolves-to-the-platform-default",
+      "rationale": "An absent system_directory is not a gap: RetroArch seeds 'system' under the config tree before it reads any config (configuration.c:5746-5749, platform_unix.c:2137-2143), so the firmware route resolves it and answers fully — the root, the core's declaration, and the BIOS found at that resolved path. It used to refuse this machine outright, which told a client 'no root to check against' about a directory RetroArch had already chosen. The card route has resolved it since item 14; this is the same fact answered the same way.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "libretro_info_path = \"~/.config/retroarch/cores\"\nlibretro_directory = \"~/.config/retroarch/cores\"\n",
+          "/home/deck/.config/retroarch/cores/pcsx_rearmed_libretro.info": "display_name = \"PCSX-ReARMed\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_path = \"scph5501.bin\"\nfirmware0_desc = \"PS1 US BIOS\"\nfirmware0_opt = \"false\"\n",
+          "/home/deck/.config/retroarch/system/scph5501.bin": "bios bytes"
+        },
+        "cores": {
+          "/home/deck/.config/retroarch/cores/pcsx_rearmed_libretro.so": {
+            "library_name": "PCSX-ReARMed"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx_rearmed_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "pcsx_rearmed_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "pcsx_rearmed_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "native_retroarch"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-cleared-system-directory-keeps-a-precise-refusal",
+      "rationale": "The other half of the split: the key is present and cleared, which is not the same as absent. RetroArch then hands a core the content's own directory when content is loaded (runloop.c:1958-1997), so what the firmware root is depends on the run and no question here names content — the answer refuses, and 'system-directory-cleared' says precisely that rather than spelling it the way an absent key used to be spelled.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"\"\nlibretro_info_path = \"~/.config/retroarch/cores\"\nlibretro_directory = \"~/.config/retroarch/cores\"\n",
+          "/home/deck/.config/retroarch/cores/pcsx_rearmed_libretro.info": "display_name = \"PCSX-ReARMed\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_path = \"scph5501.bin\"\nfirmware0_desc = \"PS1 US BIOS\"\nfirmware0_opt = \"false\"\n",
+          "/home/deck/.config/retroarch/system/scph5501.bin": "bios bytes"
+        },
+        "cores": {
+          "/home/deck/.config/retroarch/cores/pcsx_rearmed_libretro.so": {
+            "library_name": "PCSX-ReARMed"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx_rearmed_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": null,
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "system-directory-cleared",
+              "data": {
+                "value": ""
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "native_retroarch"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
