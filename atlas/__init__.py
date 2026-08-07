@@ -20,17 +20,20 @@ Two entry points, per DESIGN.md:
 from __future__ import annotations
 
 from atlas.contract import (
+    catalogue_contract,
     emulator_contract,
     firmware_contract,
     identification_contract,
     installation_contract,
     placement_contract,
+    systems_contract,
     unresolved_contract,
 )
 from atlas.core_info import parse_core_info
 from atlas.firmware import (
     CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
     CAVEAT_CATALOGUE_UNAVAILABLE,
+    CAVEAT_CATALOGUE_UNESTABLISHED,
     CAVEAT_CATALOGUE_UNREADABLE,
     CAVEAT_CONTENT_CONTRADICTORY,
     CAVEAT_CONTENT_UNIDENTIFIED,
@@ -112,6 +115,7 @@ from atlas.installations import (
     HEALTH_ISSUE_MARKER_UNREADABLE,
     HEALTH_ISSUE_ROOT_MISSING,
     HEALTH_ISSUE_SAVES_ROOT_MISSING,
+    CatalogueAnswer,
     EmuDeck,
     EmulatorEntry,
     Health,
@@ -119,6 +123,7 @@ from atlas.installations import (
     NativeRetroArch,
     RetroDeck,
     StandaloneRetroArchFlatpak,
+    SystemsAnswer,
 )
 from atlas.machine import (
     GLOB_COMPLETE,
@@ -244,6 +249,7 @@ __all__ = [
     "CAVEAT_FIRMWARE_SCAN_INCOMPLETE",
     "CAVEAT_SAVE_DIR_UNLISTABLE",
     "CAVEAT_ASSIGNMENT_MAY_HIDE_CORES",
+    "CAVEAT_CATALOGUE_UNESTABLISHED",
     "CAVEAT_CATALOGUE_UNREADABLE",
     "CAVEAT_CONTENT_CONTRADICTORY",
     "CAVEAT_CORE_INFO_UNREADABLE",
@@ -305,6 +311,7 @@ __all__ = [
     "FirmwareRequirement",
     "SystemSource",
     "UnclaimedFile",
+    "CatalogueAnswer",
     "EMUDECK_DEFAULTS",
     "EmuDeck",
     "EmulatorEntry",
@@ -339,17 +346,20 @@ __all__ = [
     "RetroDeck",
     "SavePlacement",
     "StandaloneRetroArchFlatpak",
+    "SystemsAnswer",
     "UNKNOWN_FILE_SET",
     "UNRESOLVED_STANDALONE",
     "Unresolved",
     "UPSTREAM_DEFAULTS",
     "build_save_placement",
+    "catalogue_contract",
     "detect",
     "emulator_contract",
     "firmware_contract",
     "identification_contract",
     "installation_contract",
     "placement_contract",
+    "systems_contract",
     "unresolved_contract",
     "interpret_cfg",
     "load_hashes",

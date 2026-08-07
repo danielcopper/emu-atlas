@@ -1500,22 +1500,25 @@
             "health": []
           }
         ],
-        "emulators": [
-          {
-            "label": "Mupen64Plus-Next",
-            "kind": "libretro",
-            "core_so": "mupen64plus_next_libretro.so",
-            "selection": null,
-            "caveats": []
-          },
-          {
-            "label": "ParaLLEl N64",
-            "kind": "libretro",
-            "core_so": "parallel_n64_libretro.so",
-            "selection": null,
-            "caveats": []
-          }
-        ]
+        "catalogue": {
+          "entries": [
+            {
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            },
+            {
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
       }
     },
     {
@@ -1546,15 +1549,18 @@
             "health": []
           }
         ],
-        "emulators": [
-          {
-            "label": "ParaLLEl N64",
-            "kind": "libretro",
-            "core_so": "parallel_n64_libretro.so",
-            "selection": null,
-            "caveats": []
-          }
-        ]
+        "catalogue": {
+          "entries": [
+            {
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
       }
     },
     {
@@ -1586,22 +1592,25 @@
             "health": []
           }
         ],
-        "emulators": [
-          {
-            "label": "ParaLLEl N64",
-            "kind": "libretro",
-            "core_so": "parallel_n64_libretro.so",
-            "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
-            "caveats": []
-          },
-          {
-            "label": "Mupen64Plus-Next",
-            "kind": "libretro",
-            "core_so": "mupen64plus_next_libretro.so",
-            "selection": null,
-            "caveats": []
-          }
-        ]
+        "catalogue": {
+          "entries": [
+            {
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
+              "caveats": []
+            },
+            {
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
       }
     },
     {
@@ -1633,22 +1642,25 @@
             "health": []
           }
         ],
-        "emulators": [
-          {
-            "label": "ParaLLEl N64",
-            "kind": "libretro",
-            "core_so": "parallel_n64_libretro.so",
-            "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
-            "caveats": []
-          },
-          {
-            "label": "Mupen64Plus-Next",
-            "kind": "libretro",
-            "core_so": "mupen64plus_next_libretro.so",
-            "selection": null,
-            "caveats": []
-          }
-        ]
+        "catalogue": {
+          "entries": [
+            {
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
+              "caveats": []
+            },
+            {
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
       }
     },
     {
@@ -4011,22 +4023,25 @@
             "health": []
           }
         ],
-        "emulators": [
-          {
-            "label": "Mupen64Plus-Next",
-            "kind": "libretro",
-            "core_so": "mupen64plus_next_libretro.so",
-            "selection": null,
-            "caveats": []
-          },
-          {
-            "label": "ParaLLEl N64",
-            "kind": "libretro",
-            "core_so": "parallel_n64_libretro.so",
-            "selection": null,
-            "caveats": []
-          }
-        ],
+        "catalogue": {
+          "entries": [
+            {
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            },
+            {
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        },
         "entry_save_location": {
           "dir": "/mnt/sd/retrodeck/saves",
           "root_kind": "savefile_directory",
@@ -4088,22 +4103,25 @@
             "health": []
           }
         ],
-        "emulators": [
-          {
-            "label": "ParaLLEl N64",
-            "kind": "libretro",
-            "core_so": "parallel_n64_libretro.so",
-            "selection": "gamelist.xml: altemulator = \"ParaLLEl N64\" (per-game)",
-            "caveats": []
-          },
-          {
-            "label": "Mupen64Plus-Next",
-            "kind": "libretro",
-            "core_so": "mupen64plus_next_libretro.so",
-            "selection": null,
-            "caveats": []
-          }
-        ],
+        "catalogue": {
+          "entries": [
+            {
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "selection": "gamelist.xml: altemulator = \"ParaLLEl N64\" (per-game)",
+              "caveats": []
+            },
+            {
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        },
         "entry_save_location": {
           "dir": "/mnt/sd/retrodeck/saves",
           "root_kind": "savefile_directory",
@@ -4210,6 +4228,240 @@
               "code": "save-dir-unlistable",
               "data": {
                 "path": "/mnt/sd/retrodeck/saves"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "catalogue-that-could-not-be-read-is-not-an-empty-one",
+      "rationale": "The shipped es_systems.xml cannot be read, so which emulators RetroDECK knows is unknown. The old answer was a bare empty tuple, indistinguishable from a catalogue that was read and declares nothing for this system — the same silent-empty failure the firmware route already refused. Both the per-system answer and the systems list carry the caveat, because the read that failed is the same one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        },
+        "systems_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {
+                "system": "n64"
+              }
+            }
+          ]
+        },
+        "systems": {
+          "systems": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "catalogue-a-bare-retroarch-has-none-and-says-so",
+      "rationale": "An established fact about the arrangement: RetroArch ships no frontend catalogue, so there is no launch entry to answer with and never will be. Every handle answers the catalogue question now, and answering it with a reason is what makes the protocol honest — a consumer no longer has to isinstance-narrow to RetroDECK and guess what the others would have said.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\n",
+          "/home/deck/saves/.keep": ""
+        },
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "arrangement": "retroarch"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "catalogue-an-emudeck-arrangement-is-not-established",
+      "rationale": "The other kind of no-entries, and the distinction the two codes exist for. EmuDeck installs a frontend — ES-DE, Pegasus or Steam ROM Manager — so it may well have a catalogue; atlas has not established where. That is a statement about atlas, not about the machine, and a client reading it as \"no emulators\" would be told something nobody checked. Distinct code, never the arrangement-has-none one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/Emulation/saves\"\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "standalone_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unestablished",
+              "data": {
+                "arrangement": "emudeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "catalogue-an-overlay-alone-does-not-make-an-unread-catalogue-read",
+      "rationale": "The custom_systems overlay reads fine and declares n64; the shipped es_systems.xml does not read at all. Only the bundled layer decides whether a catalogue was read, so both answers refuse and the entry the overlay declared is not handed out. The overlay is genuinely optional — RetroDECK ships it fully commented out, so it parses to zero systems by design and can never stand in for the shipped file; an answer built from it alone would look like a whole catalogue with the frontend's own systems silently missing. The firmware route decides the same way.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": {
+            "status": "unreadable"
+          },
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        },
+        "systems_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {
+                "system": "n64"
+              }
+            }
+          ]
+        },
+        "systems": {
+          "systems": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "catalogue-the-named-handle-answers-not-the-first-one",
+      "rationale": "Coexisting installations: the catalogue query names the native handle, and the native handle answers — its own settled 'this arrangement ships no catalogue', not the RetroDECK handle's 'could not read one'. The two refusals carry different codes, so an answer taken from the first detected installation instead of the named one fails this vector.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/ra-saves/.keep": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64",
+          "installation": "native_retroarch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          },
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "arrangement": "retroarch"
               }
             }
           ]

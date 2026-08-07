@@ -26,7 +26,7 @@ from atlas.firmware import (
     FirmwareIdentity,
     FirmwareRequirement,
 )
-from atlas.installations import EmulatorEntry, Installation
+from atlas.installations import CatalogueAnswer, EmulatorEntry, Installation, SystemsAnswer
 from atlas.placement import SavePlacement, Unresolved
 
 
@@ -171,4 +171,25 @@ def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
         "core_so": entry.core_so,
         "selection": entry.selection,
         "caveats": [c.code for c in entry.caveats],
+    }
+
+
+def catalogue_contract(answer: CatalogueAnswer) -> dict[str, Any]:
+    """The stable form of a catalogue answer — entries, and why there are none.
+
+    ``caveats`` carries the whole caveat here, not just its code as the entries
+    do: which arrangement could not answer, and whether that is a fact about
+    the machine or about atlas, lives in the data.
+    """
+    return {
+        "entries": [emulator_contract(e) for e in answer.entries],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+    }
+
+
+def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
+    """The stable form of a systems answer — what the catalogue declares, or why nothing."""
+    return {
+        "systems": list(answer.systems),
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
     }

@@ -54,8 +54,9 @@ inst.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
 # -> the primary route: the caller names the core. It is the only save route on the handles
 #    with no frontend catalogue — EmuDeck, the standalone Flatpak, the native install.
 
-entries = inst.emulators_for("n64")  # the catalogue: launch entries in effective priority order
-emu = entries[0]                     # RetroDECK handles only today — one emulator, as configured right now
+answer = inst.emulators_for("n64")   # on EVERY handle: a CatalogueAnswer (entries, sources, caveats)
+emu = answer.entries[0]              # launch entries in effective priority order, as configured right now
+                                     # no entries? the caveat says which kind of none — see below
 emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64")   # the entry carries its own core
 
 # -> SavePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir),
@@ -101,6 +102,14 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   entries, first = default), _capability_ (core `.info` `systemid` — which cores can run a platform), _fact_ (RetroArch
   playlists — which core actually launched a ROM). When no catalogue exists, the caller names the core; atlas does not
   invent a default.
+- **Absent is not one answer, so the question is on the protocol.** Every handle answers `emulators_for` / `systems`;
+  only RetroDECK answers from a catalogue, and the others say why in a caveat rather than leaving the caller to
+  `isinstance`-narrow and guess. The reasons are three distinct codes because they are three distinct claims: a bare
+  RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement), an EmuDeck arrangement
+  may have one whose location atlas has not established (`emulator-catalogue-unestablished`, a statement about atlas —
+  never to be read as an absence), and a catalogue atlas could not read — missing, unreadable, or empty — says nothing
+  at all (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware route already
+  states.
 
 ## The machine seam
 

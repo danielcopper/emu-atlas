@@ -1631,7 +1631,7 @@ class TestOneReadPerSourcePerQuery:
         # The catalogue ask that produced the entry is its own query; the
         # invariant is per query, so only the entry's own reads are counted.
         machine = _CountingMachine(self.FILES, cores=self.CORES)
-        entry = atlas.RetroDeck(HOME, machine).emulators_for("n64")[0]
+        entry = atlas.RetroDeck(HOME, machine).emulators_for("n64").entries[0]
         machine.reads.clear()
         entry.save_location(content_path=self.CONTENT)
         assert machine.repeats() == {}
@@ -1681,7 +1681,9 @@ class TestOneReadPerSourcePerQuery:
         machine = atlas.FixtureMachine(self.FILES, cores=self.CORES)
         rd = atlas.RetroDeck(HOME, machine)
         answer = rd.firmware_for_system(system="n64")
-        assert [c.core_so for c in answer.cores] == [e.core_so for e in rd.emulators_for("n64")]
+        assert [c.core_so for c in answer.cores] == [
+            e.core_so for e in rd.emulators_for("n64").entries
+        ]
 
 
 class TestCfgDirectorySpelling:
@@ -1735,3 +1737,92 @@ class TestBareRetroArch:
         p = inst.save_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/saves/<library_name>"
         assert p.needs == ("library_name",)
+
+
+class TestEveryHandleAnswersTheCatalogueQuestion:
+    """The question is about an arrangement, so no handle may decline to answer it.
+
+    Before, only RetroDECK had the method and a consumer had to narrow with
+    ``isinstance`` — which meant deciding, without help, what the other
+    arrangements would have said. They say it themselves now, and the two
+    reasons for having nothing to say are different claims that must not
+    collapse: one is a fact about the machine, the other is about atlas.
+    """
+
+    RA_FILES = {
+        f"{HOME}/.config/retroarch/retroarch.cfg": 'savefile_directory = "~/saves"\n',
+        f"{HOME}/saves/.keep": "",
+    }
+    EMUDECK_FILES = {
+        EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+        STANDALONE_CFG: 'savefile_directory = "~/Emulation/saves"\n',
+    }
+    DEPLOY_ESDE = (
+        "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
+        "/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+    )
+
+    def _only(self, files, **kwargs):
+        return atlas.detect(HOME, atlas.FixtureMachine(files, **kwargs))[0]
+
+    def test_a_bare_retroarch_states_the_arrangement_has_none(self):
+        # A settled fact: RetroArch ships no frontend catalogue, and no
+        # evidence work would change that.
+        answer = self._only(self.RA_FILES).emulators_for("n64")
+        assert answer.entries == ()
+        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNAVAILABLE]
+
+    def test_an_emudeck_arrangement_states_that_atlas_has_not_established_it(self):
+        # EmuDeck installs a frontend; which one, and where it keeps its
+        # catalogue, is what nobody has established. Saying "none" here would
+        # be atlas reporting its own gap as a property of the machine.
+        answer = self._only(self.EMUDECK_FILES, dirs=[f"{HOME}/Emulation/saves"]).emulators_for("n64")
+        assert answer.entries == ()
+        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNESTABLISHED]
+
+    def test_the_two_refusals_are_different_codes(self):
+        # The whole point of two: a client rendering "no emulators" may act on
+        # the first and must not act on the second.
+        bare = self._only(self.RA_FILES).emulators_for("n64")
+        emudeck = self._only(self.EMUDECK_FILES, dirs=[f"{HOME}/Emulation/saves"]).emulators_for("n64")
+        assert bare.caveats[0].code != emudeck.caveats[0].code
+
+    def test_the_systems_question_answers_the_same_way(self):
+        answer = self._only(self.RA_FILES).systems()
+        assert answer.systems == ()
+        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNAVAILABLE]
+
+    def test_an_unreadable_retrodeck_catalogue_is_not_an_empty_one(self):
+        """The defect this answer object exists for, on the handle that has a catalogue.
+
+        The read flag was computed and thrown away, so an ``es_systems.xml``
+        that could not be read produced the same empty tuple as a catalogue
+        that was read and declares nothing — and the caller could not tell that
+        atlas had never looked.
+        """
+        machine = atlas.FixtureMachine(
+            {RETRODECK_JSON: RD_JSON, self.DEPLOY_ESDE: {"status": "unreadable"}},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        rd = atlas.RetroDeck(HOME, machine)
+        for answer in (rd.emulators_for("n64"), rd.systems()):
+            assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNREADABLE]
+        assert rd.emulators_for("n64").entries == ()
+        assert rd.systems().systems == ()
+
+    def test_a_read_catalogue_that_knows_no_emulator_carries_no_caveat(self):
+        # The one empty answer a client may act on: read, and the frontend
+        # genuinely knows nothing for this system.
+        machine = atlas.FixtureMachine(
+            {
+                RETRODECK_JSON: RD_JSON,
+                self.DEPLOY_ESDE: '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>'
+                '<path>%ROMPATH%/n64</path>\n    <command label="Mupen64Plus-Next">'
+                "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%"
+                "</command>\n  </system>\n</systemList>\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = atlas.RetroDeck(HOME, machine).emulators_for("dreamcast")
+        assert answer.entries == ()
+        assert answer.caveats == ()
