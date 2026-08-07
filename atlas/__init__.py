@@ -3,7 +3,7 @@
 A resolver, not a lookup: for any emulator installation on a machine, atlas
 answers which configs govern it and where saves and BIOS actually live — by
 reading the running machine the way the emulator does. Phase 1 covers RetroArch
-across the RetroDECK, EmuDeck, standalone-Flatpak, and native install flavors,
+across the RetroDECK, EmuDeck and bare (Flatpak or native) arrangements,
 plus firmware.
 
 Two entry points, per DESIGN.md:
@@ -183,6 +183,9 @@ from atlas.placement import (
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     CAVEAT_UNVERIFIED_VERSION,
+    FILE_SET_DECLARED,
+    FILE_SET_OBSERVED,
+    FILE_SET_UNKNOWN,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
@@ -256,6 +259,9 @@ __all__ = [
     "ROOT_SAVEFILE_DIRECTORY",
     "ROOT_CONTENT_DIRECTORY",
     "ROOT_SYSTEM_DIRECTORY",
+    "FILE_SET_OBSERVED",
+    "FILE_SET_DECLARED",
+    "FILE_SET_UNKNOWN",
     "NEED_REQUIRED",
     "NEED_OPTIONAL",
     "CHECKED_VERIFIED",

@@ -4,42 +4,25 @@ from __future__ import annotations
 
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
-    LayoutDefaults,
     IGNORED_VALUE_REJECTED,
     UPSTREAM_DEFAULTS,
     cfg_bool,
     chain_bool,
     chain_value,
-    interpret_cfg,
     is_app_relative,
     parse_cfg,
     parse_cfg_text,
     resolve_save_layout,
 )
+from tests.shipped_layouts import EMUDECK_SHIPPED, RETRODECK_SHIPPED
 
-# The shipped layouts these tests exercise — fixture knowledge, not atlas's:
-# production reads every layout key off the machine and falls back to
-# RetroArch's own upstream defaults, so a table of what RetroDECK and EmuDeck
-# put in their configs would be a list that can only drift (M11).
-RETRODECK_SHIPPED = LayoutDefaults(
-    savefiles_in_content_dir=False,
-    sort_by_content=True,
-    sort_by_core=False,
-    label="RetroDECK shipped default",
-)
-EMUDECK_SHIPPED = LayoutDefaults(
-    savefiles_in_content_dir=False,
-    sort_by_content=False,
-    sort_by_core=False,
-    label="EmuDeck shipped default",
-)
 
 
 HOME = "/home/deck"
 
 
 def _cfg(text):
-    return interpret_cfg(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED)
+    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED)
 
 
 def _chain(global_text, *overrides, is_directory=None):
@@ -80,12 +63,12 @@ class TestDefaults:
 
     def test_upstream_defaults_sort_by_core(self):
         # RetroArch's compile-time default sorts by core (config.def.h:982).
-        cfg = interpret_cfg(None, home=HOME, cfg_label="retroarch.cfg", defaults=UPSTREAM_DEFAULTS)
+        cfg = resolve_save_layout(None, home=HOME, cfg_label="retroarch.cfg", defaults=UPSTREAM_DEFAULTS)
         assert cfg.sort_by_core is True
         assert cfg.sort_by_content is False
 
     def test_emudeck_defaults_flat(self):
-        cfg = interpret_cfg(None, home=HOME, cfg_label="retroarch.cfg", defaults=EMUDECK_SHIPPED)
+        cfg = resolve_save_layout(None, home=HOME, cfg_label="retroarch.cfg", defaults=EMUDECK_SHIPPED)
         assert cfg.sort_by_core is False
         assert cfg.sort_by_content is False
 
@@ -560,7 +543,7 @@ class TestBooleanVocabulary:
         assert cfg.sort_by_content is True
 
     def test_uppercase_true_is_not_true(self):
-        cfg = interpret_cfg(
+        cfg = resolve_save_layout(
             'sort_savefiles_enable = "TRUE"\n',
             home=HOME,
             cfg_label="retroarch.cfg",

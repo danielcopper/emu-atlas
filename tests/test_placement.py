@@ -15,16 +15,9 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
-from atlas.retroarch_cfg import LayoutDefaults, resolve_save_layout
+from atlas.retroarch_cfg import resolve_save_layout
+from tests.shipped_layouts import RETRODECK_SHIPPED
 
-# Fixture knowledge, not atlas's: the shipped RetroDECK layout this file
-# exercises. Production reads the keys and falls back to upstream defaults.
-RETRODECK_SHIPPED = LayoutDefaults(
-    savefiles_in_content_dir=False,
-    sort_by_content=True,
-    sort_by_core=False,
-    label="RetroDECK shipped default",
-)
 
 
 class TestInvariants:

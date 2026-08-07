@@ -104,6 +104,9 @@ from atlas.placement import (
     ROOT_CONTENT_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     TEMPLATE_ROM_STEM,
+    FILE_SET_DECLARED,
+    FILE_SET_OBSERVED,
+    FILE_SET_UNKNOWN,
     UNKNOWN_FILE_SET,
     UNRESOLVED_STANDALONE,
     Caveat,
@@ -1863,20 +1866,20 @@ def _file_set_of(
             mode is not None and mode.complete and declared is not None and set(observed) <= set(declared)
         )
         return FileSet(
-            state="observed",
+            state=FILE_SET_OBSERVED,
             files=observed,
             provenance=f"observed on the machine: {directory}",
             complete=complete,
         )
     if declared is not None and card is not None:
         return FileSet(
-            state="declared",
+            state=FILE_SET_DECLARED,
             files=declared,
             provenance=f"declared by rule card '{card.key}' (none present yet)",
             complete=mode.complete if mode is not None else False,
         )
     return FileSet(
-        state="unknown",
+        state=FILE_SET_UNKNOWN,
         files=(),
         provenance=f"no files present at {directory} — file set not stated (never guessed)",
     )

@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import atlas
-from atlas.esde import parse_gamelist_alternative
 from atlas.installations import parse_gamelist
 from atlas.machine import FixtureMachine
-from atlas.esde import merge_layers, parse_es_systems
+from atlas.esde import merge_layers, parse_es_systems, parse_gamelist_alternative
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"

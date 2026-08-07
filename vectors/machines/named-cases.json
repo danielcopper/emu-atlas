@@ -426,7 +426,7 @@
     },
     {
       "name": "emudeck-flat-layout",
-      "rationale": "EmuDeck: settings.sh is the truth, the standalone org.libretro.RetroArch Flatpak is its RetroArch, the shipped layout is flat (sort keys false). One handle for both descriptions — no separate standalone installation.",
+      "rationale": "EmuDeck: settings.sh is the truth, the bare org.libretro.RetroArch Flatpak is its RetroArch, the shipped layout is flat (sort keys false). One handle for both descriptions — no separate bare installation.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2270,7 +2270,7 @@
     },
     {
       "name": "emudeck-stale-marker-companion-missing",
-      "rationale": "settings.sh survives while the claimed org.libretro.RetroArch Flatpak is gone: the EmuDeck handle stays (it claims the standalone identity), and its health exposes the missing companion config instead of silently suppressing a bare handle.",
+      "rationale": "settings.sh survives while the claimed org.libretro.RetroArch Flatpak is gone: the EmuDeck handle stays (it claims the bare identity), and its health exposes the missing companion config instead of silently suppressing a bare handle.",
       "input": {
         "home": "/home/deck",
         "files": {

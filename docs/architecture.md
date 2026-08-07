@@ -1,8 +1,8 @@
 # Architecture — the map
 
-**Stand: `dd7468a` (item 18, export tiers + the arrangement rename).** This document is maintained, not chiselled: it
-describes the surface as it is today and is expected to change when the surface does. The spec is `DESIGN.md` — that one
-says why. This one says what is where.
+**Stand: 2026-08-07** — the export tiers and the arrangement rename. This document is updated with the surface: it
+describes what is there today, and a change to the API is expected to change it. The spec is `DESIGN.md` — that one says
+why. This one says what is where.
 
 ## The layers
 
@@ -83,7 +83,7 @@ classDiagram
     class BareRetroArchNative
     class EveryInstallation {
         +installations: tuple
-        +mirrors every question above
+        +mirrors every question above except root()
     }
     class InstallationAnswer {
         +installation: Installation

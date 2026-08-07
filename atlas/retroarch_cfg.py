@@ -687,10 +687,3 @@ def resolve_save_layout(
         ignored=(*_dropped_governing_lines(layers), *i1, *i2, *i3),
         rejected_directories=rejected,
     )
-
-
-def interpret_cfg(
-    text: str | None, *, home: str, cfg_label: str, defaults: LayoutDefaults
-) -> RetroArchCfg:
-    """Interpret a single ``retroarch.cfg`` text (no overrides) — see :func:`resolve_save_layout`."""
-    return resolve_save_layout(text, home=home, cfg_label=cfg_label, defaults=defaults)

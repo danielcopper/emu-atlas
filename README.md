@@ -33,8 +33,8 @@ library reads them the way the emulator does: probe order, override chains, defa
 
 Four principles, fixed before any code:
 
-- **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, standalone installs, any of
-  them side by side — and every question is asked _of an installation_, never of a global "the system":
+- **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, bare RetroArch installs, any
+  of them side by side — and every question is asked _of an installation_, never of a global "the system":
   `installation.save_location(content_path=..., core_so=...)` and `installation.emulators_for(system)` on every handle —
   the ones without a frontend catalogue answer with the reason rather than an empty list. Choosing one of them is
   optional: `every_installation(home)` asks them all and labels each answer with the handle it came from, because two
@@ -71,7 +71,7 @@ Map of the surface — layers, handles, answer types, and what to import from wh
    versioned, source-cited table (388 identities); its generator and data provenance
    (`scripts/generate_firmware_hashes.py`, `atlas/data/README.md`) live with the data.
 3. **ES-DE knowledge** — `es_systems.xml` / `es_find_rules.xml` parsing and launch-command classification, generalized
-   across the frontends that ship ES-DE (RetroDECK, EmuDeck, standalone).
+   across the frontends that ship ES-DE (RetroDECK, EmuDeck, and a bare ES-DE install).
 4. **Standalone emulators** — per-emulator config parsing and save/BIOS placement rules (Dolphin, PPSSPP, RPCS3, …), as
    multi-emulator support becomes concrete.
 5. **A canonical system vocabulary** — atlas ids plus translation tables for the naming dialects (RomM slugs, ES-DE
@@ -107,11 +107,11 @@ Places this knowledge could plug in — options, not commitments:
 
 The resolver core is built and verified live against a real RetroDECK 0.10.9b installation. What exists now:
 
-- `atlas.detect(home, machine=...)` finds RetroDECK, EmuDeck, the standalone `org.libretro.RetroArch` Flatpak, and a
-  native install — handles implementing one `Installation` protocol, with structured health (a list of finding caveats
-  with stable codes: unreadable or invalid markers, missing roots, a stale EmuDeck whose claimed RetroArch config is
-  gone), ordered markers (EmuDeck claims the Flatpak it configures), and never a silently chosen winner. Handles are
-  live: every query re-reads its governing sources, each exactly once.
+- `atlas.detect(home, machine=...)` finds RetroDECK, EmuDeck, the bare `org.libretro.RetroArch` Flatpak, and a native
+  install — handles implementing one `Installation` protocol, with structured health (a list of finding caveats with
+  stable codes: unreadable or invalid markers, missing roots, a stale EmuDeck whose claimed RetroArch config is gone),
+  ordered markers (EmuDeck claims the Flatpak it configures), and never a silently chosen winner. Handles are live:
+  every query re-reads its governing sources, each exactly once.
 - `atlas.every_installation(home, machine=...)` puts the protocol's questions to every detected installation at once and
   answers each labelled with the handle that produced it, in detection order — fan-out only: it merges nothing, prefers
   nothing, and resolves nothing that a handle does not resolve. A machine with one installation answers once; a machine

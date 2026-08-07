@@ -104,7 +104,7 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   answer is not guessing; picking a winner would be, and a one-installation machine yields a one-entry result the caller
   never chose. Nothing detected is an empty result, which is the same truthful empty `detect` answers with.
 - **Detection labels markers, it does not partition.** EmuDeck _is_ a configured `org.libretro.RetroArch` — both
-  descriptions of the same RetroArch are true at once, so marker checks are ordered (EmuDeck before "bare standalone")
+  descriptions of the same RetroArch are true at once, so marker checks are ordered (EmuDeck before "a bare RetroArch")
   and a handle may carry more than one description.
 - **Detection reports health, structurally.** Detection triggers on marker _existence_; health separates marker read
   status, parse status, root state, and required-companion state into individual finding caveats with stable codes — a
@@ -166,9 +166,9 @@ class Machine(Protocol):
   a component that is not a directory, is a truthful negative. The production implementation walks this itself rather
   than calling the stdlib's `glob`, which returns silently on any `OSError` from `scandir` and so cannot tell the two
   apart at all.
-- `readlink` exists because RetroDECK's whole standalone save architecture is symlinks (`dir_prep`): the emulator-side
-  path and the real path are two truthful answers to different questions, and a dead link (`path_kind` → missing, link
-  present) is a real state the resolver must be able to see.
+- `readlink` exists because RetroDECK's whole standalone-emulator save architecture is symlinks (`dir_prep`): the
+  emulator-side path and the real path are two truthful answers to different questions, and a dead link (`path_kind` →
+  missing, link present) is a real state the resolver must be able to see.
 - `query_core` exists because `library_name` — the value that names sort-by-core directories _and_ the override
   directory — lives only in the core binary. Loading the core and asking it is the same read RetroArch performs; it is a
   live read, not a table. The production implementation is process-isolated (a crashing core costs one answer, not the

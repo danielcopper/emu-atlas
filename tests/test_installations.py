@@ -9,8 +9,7 @@ import pytest
 
 import atlas
 from atlas.firmware import resolve_links
-from atlas.machine import FixtureMachine
-from atlas.machine import SYMLINK_HOPS
+from atlas.machine import SYMLINK_HOPS, FixtureMachine
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
