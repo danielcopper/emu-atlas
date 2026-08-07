@@ -1767,10 +1767,15 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
 
     def test_a_bare_retroarch_states_the_arrangement_has_none(self):
         # A settled fact: RetroArch ships no frontend catalogue, and no
-        # evidence work would change that.
+        # evidence work would change that. The evidence caveat beside it is a
+        # different claim — no bare install has been observed live — and every
+        # answer from an unverified arrangement carries it (atlas.evidence).
         answer = self._only(self.RA_FILES).emulators_for("n64")
         assert answer.entries == ()
-        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNAVAILABLE]
+        assert [c.code for c in answer.caveats] == [
+            atlas.CAVEAT_CATALOGUE_UNAVAILABLE,
+            atlas.CAVEAT_ARRANGEMENT_UNVERIFIED,
+        ]
 
     def test_an_emudeck_arrangement_states_that_atlas_has_not_established_it(self):
         # EmuDeck installs a frontend; which one, and where it keeps its
@@ -1778,7 +1783,10 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         # be atlas reporting its own gap as a property of the machine.
         answer = self._only(self.EMUDECK_FILES, dirs=[f"{HOME}/Emulation/saves"]).emulators_for("n64")
         assert answer.entries == ()
-        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNESTABLISHED]
+        assert [c.code for c in answer.caveats] == [
+            atlas.CAVEAT_CATALOGUE_UNESTABLISHED,
+            atlas.CAVEAT_ARRANGEMENT_UNVERIFIED,
+        ]
 
     def test_the_two_refusals_are_different_codes(self):
         # The whole point of two: a client rendering "no emulators" may act on
@@ -1790,7 +1798,10 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
     def test_the_systems_question_answers_the_same_way(self):
         answer = self._only(self.RA_FILES).systems()
         assert answer.systems == ()
-        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNAVAILABLE]
+        assert [c.code for c in answer.caveats] == [
+            atlas.CAVEAT_CATALOGUE_UNAVAILABLE,
+            atlas.CAVEAT_ARRANGEMENT_UNVERIFIED,
+        ]
 
     def test_an_unreadable_retrodeck_catalogue_is_not_an_empty_one(self):
         """The defect this answer object exists for, on the handle that has a catalogue.

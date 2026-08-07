@@ -135,7 +135,11 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
 - The audit trail: `docs/research/coverage-matrix.md` (generated, with full source identity) tracks every referenced
   emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
   verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer
-  time.
+  time. The arrangement itself is held to the same standard: every answer from one no live installation has confirmed
+  carries `arrangement-unverified` (today EmuDeck and both bare-RetroArch handles; RetroDECK was verified against a
+  running 0.10.9b installation). The claim is about atlas's evidence, not about the machine — the config chain is
+  source-verified everywhere — and the status is packaged data, so verifying an arrangement retires the caveat without
+  touching a resolver.
 - Firmware, in four calls over one live read — `firmware_for_core(core_so=...)`, `firmware_for_system(system=...)`,
   `firmware_inventory()`, `identify_firmware(md5=...)`. Every installed core's declarations come from
   `libretro_info_path` (sandbox paths translated to the Flatpak deployment, limited to cores whose `.so` is actually

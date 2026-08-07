@@ -457,6 +457,12 @@
           "granularity": null,
           "caveats": [
             {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            },
+            {
               "code": "no-core",
               "data": {}
             }
@@ -505,6 +511,12 @@
           "granularity": null,
           "caveats": [
             {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "standalone_retroarch_flatpak"
+              }
+            },
+            {
               "code": "no-core",
               "data": {}
             }
@@ -551,6 +563,12 @@
           },
           "granularity": null,
           "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "standalone_retroarch_flatpak"
+              }
+            },
             {
               "code": "no-core",
               "data": {}
@@ -603,6 +621,12 @@
           },
           "granularity": null,
           "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "native_retroarch"
+              }
+            },
             {
               "code": "no-core",
               "data": {}
@@ -716,6 +740,12 @@
           },
           "granularity": null,
           "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "native_retroarch"
+              }
+            },
             {
               "code": "no-core",
               "data": {}
@@ -1931,6 +1961,12 @@
           },
           "granularity": null,
           "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "native_retroarch"
+              }
+            },
             {
               "code": "no-core",
               "data": {}
@@ -4318,6 +4354,12 @@
               "data": {
                 "arrangement": "retroarch"
               }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "native_retroarch"
+              }
             }
           ]
         }
@@ -4358,6 +4400,12 @@
               "code": "emulator-catalogue-unestablished",
               "data": {
                 "arrangement": "emudeck"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
               }
             }
           ]
@@ -4463,6 +4511,12 @@
               "data": {
                 "arrangement": "retroarch"
               }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "native_retroarch"
+              }
             }
           ]
         }
@@ -4563,6 +4617,12 @@
               "granularity": null,
               "caveats": [
                 {
+                  "code": "arrangement-unverified",
+                  "data": {
+                    "kind": "native_retroarch"
+                  }
+                },
+                {
                   "code": "no-core",
                   "data": {}
                 }
@@ -4650,6 +4710,12 @@
                   "data": {
                     "arrangement": "retroarch"
                   }
+                },
+                {
+                  "code": "arrangement-unverified",
+                  "data": {
+                    "kind": "native_retroarch"
+                  }
                 }
               ]
             }
@@ -4709,6 +4775,12 @@
               "granularity": null,
               "caveats": [
                 {
+                  "code": "arrangement-unverified",
+                  "data": {
+                    "kind": "native_retroarch"
+                  }
+                },
+                {
                   "code": "no-core",
                   "data": {}
                 }
@@ -4734,6 +4806,122 @@
       "expected": {
         "installations": [],
         "aggregate": []
+      }
+    },
+    {
+      "name": "evidence-a-verified-and-an-unverified-arrangement-on-one-machine",
+      "rationale": "The evidence caveat belongs to the arrangement, and one machine shows both sides at once: RetroDECK's placement was confirmed against a live installation and states nothing, while EmuDeck's is derived from upstream configuration alone and says so — same question, same machine, same detection order, two different evidence states. A caveat attached to the query rather than to the arrangement would appear on both answers; one attached to nothing would appear on neither.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/roms/gb/Tetris (World).zip": "",
+          "/mnt/sd/retrodeck/saves/Tetris (World).srm": "sram",
+          "/home/deck/Emulation/saves/retroarch/saves/Tetris (World).srm": "sram"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves"
+        ],
+        "aggregate_query": {
+          "question": "save_location",
+          "content_path": "/home/deck/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          },
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "standalone_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "aggregate": [
+          {
+            "installation": {
+              "kind": "retrodeck",
+              "kinds": [
+                "retrodeck"
+              ],
+              "root": "/mnt/sd/retrodeck",
+              "health": []
+            },
+            "answer": {
+              "dir": "/mnt/sd/retrodeck/saves",
+              "root_kind": "savefile_directory",
+              "needs": [],
+              "fallback_dir": null,
+              "physical_dir": null,
+              "file_set": {
+                "state": "observed",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "complete": false
+              },
+              "granularity": null,
+              "caveats": [
+                {
+                  "code": "no-core",
+                  "data": {}
+                }
+              ]
+            }
+          },
+          {
+            "installation": {
+              "kind": "emudeck",
+              "kinds": [
+                "emudeck",
+                "standalone_retroarch_flatpak"
+              ],
+              "root": "/home/deck/Emulation",
+              "health": []
+            },
+            "answer": {
+              "dir": "/home/deck/Emulation/saves/retroarch/saves",
+              "root_kind": "savefile_directory",
+              "needs": [],
+              "fallback_dir": null,
+              "physical_dir": null,
+              "file_set": {
+                "state": "observed",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "complete": false
+              },
+              "granularity": null,
+              "caveats": [
+                {
+                  "code": "arrangement-unverified",
+                  "data": {
+                    "kind": "emudeck"
+                  }
+                },
+                {
+                  "code": "no-core",
+                  "data": {}
+                }
+              ]
+            }
+          }
+        ]
       }
     }
   ]

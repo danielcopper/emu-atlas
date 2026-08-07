@@ -220,6 +220,15 @@ emulator versions its procedures were extracted from.** If RetroArch changes its
 that is the one drift a resolver cannot remove, only version-pin and cite. Provenance makes every answer checkable
 rather than merely asserted.
 
+Reading a config the way the emulator reads it and having watched a real machine of that arrangement do it are two
+different levels of evidence, so the answer states which one it has: every answer from an arrangement no live
+installation has confirmed carries `arrangement-unverified`, with the installation kind in its data. Today RetroDECK is
+the verified one; EmuDeck and both bare-RetroArch arrangements are read from source-verified procedures alone. The
+caveat is a claim about atlas's evidence, never about the machine — it does not say the reading was guessed, and it is
+deliberately kept out of `health()`, where it would report a working installation as defective. The status is packaged,
+versioned data (`atlas/data/arrangement_evidence.json`, the same boundary rule the rule cards follow), so verifying an
+arrangement on a reference machine retires its caveat by changing a record, never a resolver.
+
 ## Consumption
 
 | Consumer                           | Path                                                                    |
