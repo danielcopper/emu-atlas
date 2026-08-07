@@ -48,9 +48,9 @@ from atlas.every_installation import EveryInstallation, InstallationAnswer, ever
 from atlas.installations import (
     EmuDeck,
     Installation,
-    NativeRetroArch,
+    BareRetroArchNative,
     RetroDeck,
-    StandaloneRetroArchFlatpak,
+    BareRetroArchFlatpak,
 )
 
 # --- The answers ------------------------------------------------------------
@@ -202,8 +202,8 @@ __all__ = [
     "Installation",
     "RetroDeck",
     "EmuDeck",
-    "StandaloneRetroArchFlatpak",
-    "NativeRetroArch",
+    "BareRetroArchFlatpak",
+    "BareRetroArchNative",
     # Answers
     "SavePlacement",
     "Unresolved",

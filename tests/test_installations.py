@@ -619,7 +619,7 @@ class TestLinkView:
             },
             symlinks={f"{HOME}/links/saves": "/data/real-saves"},
         )
-        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/links/saves"
         assert p.physical_dir == "/data/real-saves"
 
@@ -657,7 +657,7 @@ class TestLinkView:
             },
             symlinks={f"{HOME}/links/saves": "/run/media/gone/saves"},
         )
-        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/.config/retroarch/saves"
         codes = [c.code for c in p.caveats]
         assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY in codes
@@ -680,7 +680,7 @@ class TestLinkView:
             },
             symlinks={f"{HOME}/links/saves": "/data/a", "/data/a": "/data/b", "/data/b": "/data/a"},
         )
-        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/.config/retroarch/saves"
         looping = [c for c in p.caveats if c.code == atlas.CAVEAT_SYMLINK_LOOP]
         assert looping
@@ -707,7 +707,7 @@ class TestLinkView:
             },
             symlinks=chain,
         )
-        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert (p.physical_dir == "/data/real-saves") is settles
         assert (atlas.CAVEAT_SYMLINK_LOOP in [c.code for c in p.caveats]) is not settles
 
@@ -1072,7 +1072,7 @@ class TestFlatpakSandboxPaths:
         assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED not in [c.code for c in p.caveats]
 
     def test_native_install_cfg_is_not_translated(self):
-        # NativeRetroArch writes its cfg outside any sandbox: /var/config there
+        # BareRetroArchNative writes its cfg outside any sandbox: /var/config there
         # is a real host path, and substituting one would answer with a
         # directory this RetroArch never touches.
         machine = FixtureMachine(
@@ -1085,7 +1085,7 @@ class TestFlatpakSandboxPaths:
                 f"{HOME}/roms/gba/Game.zip": "",
             }
         )
-        p = atlas.NativeRetroArch(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == "/var/config/saves"
 
 
@@ -1785,7 +1785,7 @@ class TestBareRetroArch:
                 f"{HOME}/roms/gba/Game.zip": "",
             }
         )
-        inst = atlas.NativeRetroArch(HOME, machine)
+        inst = atlas.BareRetroArchNative(HOME, machine)
         p = inst.save_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/saves/<library_name>"
         assert p.needs == ("library_name",)
@@ -2016,7 +2016,7 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
             },
             **kwargs,
         )
-        return atlas.NativeRetroArch(HOME, machine).firmware_inventory()
+        return atlas.BareRetroArchNative(HOME, machine).firmware_inventory()
 
     def test_an_absent_key_resolves_to_the_platform_default(self):
         answer = self._inventory(self.DIRS, dirs=[f"{self.CONFIG_TREE}/system"])
@@ -2055,7 +2055,7 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
             {self.CFG: self.DIRS, f"{self.CORES}/mgba_libretro.info": self.INFO},
             dirs=[f"{self.CONFIG_TREE}/system"],
         )
-        handle = atlas.NativeRetroArch(HOME, machine)
+        handle = atlas.BareRetroArchNative(HOME, machine)
         placement = handle.save_location(core_so="flycast_libretro.so")
         assert handle.firmware_inventory().root == f"{self.CONFIG_TREE}/system"
         assert placement.dir.startswith(f"{self.CONFIG_TREE}/system")

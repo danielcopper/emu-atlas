@@ -110,7 +110,7 @@ class TestWhatTheCaveatSays:
         assert [c.code for c in arrangement_caveats("emudeck")] == [CAVEAT_ARRANGEMENT_UNVERIFIED]
 
     def test_the_caveat_names_the_installation_kind(self):
-        assert arrangement_caveats("native_retroarch")[0].data == {"kind": "native_retroarch"}
+        assert arrangement_caveats("bare_retroarch_native")[0].data == {"kind": "bare_retroarch_native"}
 
     def test_an_arrangement_nobody_recorded_is_unverified(self):
         # A missing record is not evidence: the safe direction is to say so.
@@ -151,8 +151,8 @@ UNVERIFIED_MACHINES = {
         },
         {"dirs": [f"{HOME}/Emulation/saves"]},
     ),
-    "standalone_retroarch_flatpak": ({STANDALONE_CFG: ""}, {}),
-    "native_retroarch": ({NATIVE_CFG: ""}, {}),
+    "bare_retroarch_flatpak": ({STANDALONE_CFG: ""}, {}),
+    "bare_retroarch_native": ({NATIVE_CFG: ""}, {}),
 }
 
 RETRODECK_MACHINE = (
@@ -230,7 +230,7 @@ class TestEveryAnswerStatesItsEvidence:
 
     def test_the_aggregate_carries_it_too(self):
         # The aggregate delegates, so it should come for free — proven, not assumed.
-        files, kwargs = UNVERIFIED_MACHINES["native_retroarch"]
+        files, kwargs = UNVERIFIED_MACHINES["bare_retroarch_native"]
         every = atlas.every_installation(HOME, _machine(files, **kwargs))
         answered = every.save_location(core_so=CORE_SO)[0]
         assert CAVEAT_ARRANGEMENT_UNVERIFIED in [c.code for c in answered.answer.caveats]

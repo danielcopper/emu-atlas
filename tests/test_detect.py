@@ -27,11 +27,11 @@ class TestMarkers:
 
     def test_standalone_flatpak_by_cfg(self):
         installs = _detect({STANDALONE_CFG: ""})
-        assert [i.kind for i in installs] == ["standalone_retroarch_flatpak"]
+        assert [i.kind for i in installs] == ["bare_retroarch_flatpak"]
 
     def test_native_by_cfg(self):
         installs = _detect({NATIVE_CFG: ""})
-        assert [i.kind for i in installs] == ["native_retroarch"]
+        assert [i.kind for i in installs] == ["bare_retroarch_native"]
 
     def test_emudeck_by_settings(self):
         installs = _detect({EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\n'})
@@ -49,11 +49,11 @@ class TestIdentityOverlap:
             }
         )
         assert [i.kind for i in installs] == ["emudeck"]
-        assert installs[0].kinds == ("emudeck", "standalone_retroarch_flatpak")
+        assert installs[0].kinds == ("emudeck", "bare_retroarch_flatpak")
 
     def test_unclaimed_flatpak_is_its_own_installation(self):
         installs = _detect({STANDALONE_CFG: ""})
-        assert installs[0].kinds == ("standalone_retroarch_flatpak",)
+        assert installs[0].kinds == ("bare_retroarch_flatpak",)
 
 
 class TestCoexistence:
@@ -67,7 +67,7 @@ class TestCoexistence:
             }
         )
         # EmuDeck claims the flatpak; RetroDECK first, native last.
-        assert [i.kind for i in installs] == ["retrodeck", "emudeck", "native_retroarch"]
+        assert [i.kind for i in installs] == ["retrodeck", "emudeck", "bare_retroarch_native"]
 
     def test_retrodeck_and_native(self):
         installs = _detect(
@@ -76,7 +76,7 @@ class TestCoexistence:
                 NATIVE_CFG: "",
             }
         )
-        assert [i.kind for i in installs] == ["retrodeck", "native_retroarch"]
+        assert [i.kind for i in installs] == ["retrodeck", "bare_retroarch_native"]
 
 
 class TestHealth:
@@ -134,5 +134,5 @@ class TestHealth:
 
     def test_bare_flatpak_unreadable_cfg(self):
         installs = _detect({STANDALONE_CFG: {"status": "unreadable"}})
-        assert [i.kind for i in installs] == ["standalone_retroarch_flatpak"]
+        assert [i.kind for i in installs] == ["bare_retroarch_flatpak"]
         assert installs[0].health().codes == (atlas.HEALTH_ISSUE_CONFIG_UNREADABLE,)

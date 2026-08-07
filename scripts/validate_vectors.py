@@ -127,7 +127,7 @@ NO_CATALOGUE_CODES = {
     "emulator-catalogue-unreadable",
     "emulator-catalogue-unestablished",
 }
-KNOWN_KINDS = {"retrodeck", "emudeck", "standalone_retroarch_flatpak", "native_retroarch"}
+KNOWN_KINDS = {"retrodeck", "emudeck", "bare_retroarch_flatpak", "bare_retroarch_native"}
 KNOWN_FILE_STATUSES = {"unreadable", "invalid-text"}
 BLOB_FIELDS = {"md5", "sha1", "size"}
 KNOWN_HEALTH_ISSUES = {

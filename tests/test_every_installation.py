@@ -83,7 +83,7 @@ class TestTheFanOut:
 
     def test_the_answers_keep_detection_order(self):
         answers = _every(_coexistence()).save_location(content_path=ROM)
-        assert [a.installation.kind for a in answers] == ["retrodeck", "native_retroarch"]
+        assert [a.installation.kind for a in answers] == ["retrodeck", "bare_retroarch_native"]
 
     def test_each_answer_is_labelled_with_the_handle_that_gave_it(self):
         # Identity, not a copy: the label is the handle a caller drills down
@@ -97,7 +97,7 @@ class TestTheFanOut:
             {NATIVE_CFG: COEXISTENCE_FILES[NATIVE_CFG], ROM: ""}, dirs=[f"{HOME}/ra-saves"]
         )
         answers = _every(machine).save_location(content_path=ROM)
-        assert [a.installation.kind for a in answers] == ["native_retroarch"]
+        assert [a.installation.kind for a in answers] == ["bare_retroarch_native"]
 
     def test_the_two_answers_are_not_the_same_answer(self):
         # The point of the aggregate: two arrangements, two save roots, both
