@@ -104,10 +104,18 @@ answers end to end. Read by `atlas.evidence`; an arrangement whose record has no
   `version` and `reference` are required in a present record, because a record that pins nothing would read as verified
   everywhere and forever while establishing nothing.
 
+`version` is also live machinery, not only provenance: the resolver compares it against the version the machine states
+about itself (RetroDECK writes one into `retrodeck.json`) and attaches `arrangement-version-drifted` when the two
+differ. That one comparison guards everything pinned at once — parser grammar, path layout, shipped-build behaviour —
+and `docs/re-verification.md` is what retires it. The comparison needs both sides: a machine that states no version is
+not compared, and stays silent rather than claiming a comparison nobody made.
+
 Two rules make this file the whole mechanism. **A missing record counts as unverified** — omission is never evidence —
 though a handle kind with no record at all fails the test suite, because a fact nobody wrote down should not ship.
-**Verifying an arrangement retires its caveat here, not in a resolver**: add the `verified` block, and the answers stop
-carrying it. No code names an arrangement's evidence state.
+**Verifying an arrangement retires its caveat here, not in a resolver**: add or re-pin the `verified` block, and the
+answers stop carrying it. No code names an arrangement's evidence state. Re-pinning does move the vector corpus, though
+— every fixture stating the old version is a drifted machine afterwards, and the runner enforces it
+(`docs/re-verification.md`, step 5).
 
 ## `firmware_hashes.json`
 

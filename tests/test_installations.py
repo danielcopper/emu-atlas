@@ -135,6 +135,66 @@ class TestMarkerPathValuesMustBeStrings:
         assert issue.data["key"] == "paths.saves_path"
 
 
+class TestTheMarkerVersionIsAKeyAtlasReads:
+    """The marker's version drives a comparison, so its type is checked too.
+
+    Marker validation covers exactly the keys atlas reads, and the version is
+    one: it is what the arrangement's verified pin is compared against. What a
+    bad value must *not* do is take the snapshot down with it — the roots come
+    from ``paths`` and are readable whatever stands under ``version``, so the
+    defect costs the comparison and nothing else.
+    """
+
+    PATHS = {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}
+    DIRS = ["/mnt/sd/retrodeck", "/mnt/sd/retrodeck/saves"]
+    CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+    )
+
+    def _rd(self, marker: dict[str, object]):
+        files = {RETRODECK_JSON: json.dumps({"paths": self.PATHS, **marker}), RETRODECK_CFG: self.CFG}
+        return _retrodeck(files, dirs=self.DIRS)
+
+    def test_a_non_string_version_is_a_stated_finding(self):
+        issue = self._rd({"version": 11}).health().issues[0]
+        assert issue.code == atlas.HEALTH_ISSUE_MARKER_INVALID
+        assert issue.data["key"] == "version"
+
+    def test_a_null_version_is_a_finding_too(self):
+        # Absent and null are different states here for the same reason they
+        # are under paths: null is a value somebody wrote, and it is not one.
+        assert self._rd({"version": None}).health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,)
+
+    def test_the_roots_survive_it(self):
+        rd = self._rd({"version": 11})
+        assert rd.root() == "/mnt/sd/retrodeck"
+        assert rd.saves_root() == "/mnt/sd/retrodeck/saves"
+
+    def test_the_placement_states_the_finding_and_still_resolves(self):
+        placement = self._rd({"version": 11}).save_location(
+            content_path="/mnt/sd/retrodeck/roms/gba/Game.zip"
+        )
+        assert placement.dir == "/mnt/sd/retrodeck/saves"
+        assert atlas.HEALTH_ISSUE_MARKER_INVALID in [c.code for c in placement.caveats]
+
+    def test_no_drift_is_claimed_from_a_version_that_is_not_one(self):
+        # Nothing was compared, so nothing is stated — a value atlas refused to
+        # read must not come back out as the version this machine runs.
+        placement = self._rd({"version": 11}).save_location(
+            content_path="/mnt/sd/retrodeck/roms/gba/Game.zip"
+        )
+        assert atlas.CAVEAT_ARRANGEMENT_VERSION_DRIFTED not in [c.code for c in placement.caveats]
+
+    def test_a_marker_that_names_no_version_is_healthy(self):
+        assert self._rd({}).health() == atlas.Health()
+
+    def test_an_empty_version_is_not_a_defect(self):
+        # RetroDECK's shipped default config carries "version": "" and the
+        # first run fills it in, so a machine can genuinely present it.
+        assert self._rd({"version": ""}).health() == atlas.Health()
+
+
 class TestRetroDeckSaveLocation:
     def test_cfg_is_the_truth_not_json(self):
         # The cfg is what RetroArch reads; a user-edited cfg wins over retrodeck.json.

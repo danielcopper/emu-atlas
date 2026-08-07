@@ -2247,6 +2247,7 @@ def _retroarch_firmware_context(
     cfg_label: str,
     retroarch_config_dir: str,
     findings: tuple[Caveat, ...],
+    arrangement_version: str | None,
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
 
@@ -2368,6 +2369,7 @@ def _retroarch_firmware_context(
         cores_read=info_dir is not None and cores_listed,
         sources=tuple(sources),
         caveats=tuple(caveats),
+        arrangement_version=arrangement_version,
     )
 
 
@@ -2394,8 +2396,18 @@ class _FirmwareQueries:
         derives them from the very reads it built the context out of, because a
         second read for them could see a different revision of the same file
         than the answer did (REVIEW M4).
+
+        The version the evidence is weighed against comes off the context for
+        the same reason — it is what the handle's own read saw, not a fresh
+        one.
         """
-        return _dc_replace(context, caveats=(*context.caveats, *arrangement_caveats(self.kind)))
+        return _dc_replace(
+            context,
+            caveats=(
+                *context.caveats,
+                *arrangement_caveats(self.kind, observed_version=context.arrangement_version),
+            ),
+        )
 
     def _firmware_context(self) -> FirmwareContext:
         """The handle's live read, stated — the context all four questions answer from."""
@@ -2493,6 +2505,25 @@ def _malformed_marker_paths(config: Mapping[str, Any]) -> tuple[str, str] | None
         if not isinstance(value, str):
             return f"paths.{key}", f"is {_json_type_name(value)}, not a path string"
     return None
+
+
+def _marker_version(config: Mapping[str, Any]) -> str | None:
+    """The version a ``retrodeck.json`` states about itself — ``None`` for none.
+
+    One definition of "this marker names a version", used by both checks that
+    ask: the per-card version comparison and the arrangement-level one. Two
+    readings of the same key could disagree about whether a machine stated
+    anything, and then one caveat would report drift where the other reported
+    silence.
+
+    Empty is *unstated*, because that is RetroDECK's own spelling for it: the
+    shipped default config carries ``"version": ""`` and the first run fills it
+    in (``libexec/global.sh``, ``conf_write`` in ``libexec/other_functions.sh``,
+    RetroDECK 0.10.9b). A non-string is neither — :meth:`RetroDeck._read_marker`
+    states that as a health finding, and nothing is compared against it.
+    """
+    value: object = config.get("version")
+    return value if isinstance(value, str) and value else None
 
 
 def _normalized_path(path: str) -> str:
@@ -2693,8 +2724,11 @@ class _CatalogueQueries:
 
     def systems(self) -> SystemsAnswer:
         """Every system the frontend catalogue declares, sorted."""
-        answer = self._systems_answer()
-        return _dc_replace(answer, caveats=(*answer.caveats, *arrangement_caveats(self.kind)))
+        answer, version = self._systems_answer()
+        return _dc_replace(
+            answer,
+            caveats=(*answer.caveats, *arrangement_caveats(self.kind, observed_version=version)),
+        )
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
         """The emulators that can launch *system*, in launch-priority order.
@@ -2723,26 +2757,37 @@ class _CatalogueQueries:
         other, so an empty caveat list is not what "read, and it declares
         nothing" looks like there.
         """
-        answer = self._catalogue_answer(system, content_path=content_path)
-        return _dc_replace(answer, caveats=(*answer.caveats, *arrangement_caveats(self.kind)))
+        answer, version = self._catalogue_answer(system, content_path=content_path)
+        return _dc_replace(
+            answer,
+            caveats=(*answer.caveats, *arrangement_caveats(self.kind, observed_version=version)),
+        )
 
     # The two public questions above are the whole catalogue surface, and a
     # handle overrides the two below instead: what it *answers* is its own,
     # how the answer states its arrangement's evidence is not. Splitting them
     # is what makes "every answer says what atlas has established about this
     # arrangement" a property of the surface rather than of remembering.
+    #
+    # Which is why the version the arrangement states about itself travels back
+    # with the answer: the evidence above is weighed against it, and the handle
+    # already read it — asking for it here would read the marker a second time
+    # inside one query, and the two reads could disagree.
 
     def health(self) -> Health:
         raise NotImplementedError  # pragma: no cover - every handle answers it
 
-    def _systems_answer(self) -> SystemsAnswer:
+    def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
         # A handle with no catalogue reads nothing to refuse, so its health is
         # this query's own single read of the sources — no snapshot to reuse
-        # and none read twice.
-        return SystemsAnswer(caveats=(*self.health().issues, self._catalogue_absence()))
+        # and none read twice. It states no version either: an arrangement
+        # nobody verified has no pin to drift from.
+        return SystemsAnswer(caveats=(*self.health().issues, self._catalogue_absence())), None
 
-    def _catalogue_answer(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
-        return CatalogueAnswer(caveats=(*self.health().issues, self._catalogue_absence()))
+    def _catalogue_answer(
+        self, system: str, *, content_path: str | None = None
+    ) -> tuple[CatalogueAnswer, str | None]:
+        return CatalogueAnswer(caveats=(*self.health().issues, self._catalogue_absence())), None
 
 
 class RetroDeck(_FirmwareQueries, _CatalogueQueries):
@@ -2771,6 +2816,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         Missing, unreadable, and invalid are distinct states — a marker that
         exists but cannot be read or parsed is a *present, broken* RetroDECK,
         never an absent one (REVIEW H10).
+
+        A defect is scoped to what it actually costs. A ``paths`` value atlas
+        cannot read as a path takes the whole snapshot down, because every root
+        below is resolved from that section; a ``version`` that is not a string
+        costs the version comparison and nothing else, so the config survives
+        it and only the comparison falls away. Both are ``marker-invalid``: the
+        finding names the key, and the marker is editable either way.
         """
         path = self._marker_path()
         result = self._machine.read_text(path)
@@ -2801,6 +2853,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     f"marker {path}: {key} {complaint} — atlas reads it to resolve RetroDECK's "
                     "roots, so those roots fall back to their defaults instead",
                     {"path": path, "key": key},
+                ),
+            )
+        if "version" in data and not isinstance(data["version"], str):
+            return data, (
+                Caveat(
+                    HEALTH_ISSUE_MARKER_INVALID,
+                    f"marker {path}: version is {_json_type_name(data['version'])}, not a version "
+                    "string — atlas reads it to compare this installation against the version its "
+                    "knowledge was verified on, so that comparison is not made",
+                    {"path": path, "key": "version"},
                 ),
             )
         return data, ()
@@ -2940,18 +3002,20 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
     _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, bundled + custom_systems overlay)"
 
-    def _systems_answer(self) -> SystemsAnswer:
-        """Every system the catalogue declares, sorted.
+    def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
+        """Every system the catalogue declares, sorted — and the version that read stated.
 
         The findings come from the marker snapshot this query already read, so
-        the answer's health and its roots are one revision of the file.
+        the answer's health, its roots and the version its evidence is weighed
+        against are one revision of the file.
         """
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
         by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
+        version = _marker_version(config)
         if not read:
-            return SystemsAnswer(caveats=(*findings, *self._catalogue_unread_caveat()))
-        return SystemsAnswer(tuple(sorted(by_system)), (self._CATALOGUE_SOURCE,), findings)
+            return SystemsAnswer(caveats=(*findings, *self._catalogue_unread_caveat())), version
+        return SystemsAnswer(tuple(sorted(by_system)), (self._CATALOGUE_SOURCE,), findings), version
 
     def _gamelist_selections_at(self, root: str, system: str) -> GamelistSelections:
         gamelist_path = os.path.join(root, "ES-DE", "gamelists", system, "gamelist.xml")
@@ -2968,7 +3032,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """Where this system's ROMs live — the anchor gamelist paths are relative to."""
         return os.path.join(self._config_path(config, "roms_path", "roms")[0], system)
 
-    def _catalogue_answer(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
+    def _catalogue_answer(
+        self, system: str, *, content_path: str | None = None
+    ) -> tuple[CatalogueAnswer, str | None]:
         """RetroDECK's own catalogue answer — one snapshot of the ES-DE sources.
 
         The contract this fills in is on
@@ -2976,22 +3042,27 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         where the answer comes from: the marker, the bundled ``es_systems.xml``
         plus its ``custom_systems`` overlay, and the system's gamelist, each
         read once here and handed to the entry assembly together (REVIEW M4).
+        The marker's version travels back with the answer for the same reason.
         """
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read = self._read_catalogue(root)
+        version = _marker_version(config)
         if not read:
-            return CatalogueAnswer(caveats=(*findings, *self._catalogue_unread_caveat(system)))
-        return CatalogueAnswer(
-            self._entries_from(
-                by_system.get(system, ()),
-                self._gamelist_selections_at(root, system),
-                system_roms_dir=self._system_roms_dir(config, system),
-                content_path=content_path,
+            return CatalogueAnswer(caveats=(*findings, *self._catalogue_unread_caveat(system))), version
+        return (
+            CatalogueAnswer(
+                self._entries_from(
+                    by_system.get(system, ()),
+                    self._gamelist_selections_at(root, system),
+                    system_roms_dir=self._system_roms_dir(config, system),
+                    content_path=content_path,
+                ),
+                (self._CATALOGUE_SOURCE,),
+                findings,
             ),
-            (self._CATALOGUE_SOURCE,),
-            findings,
+            version,
         )
 
     def _entries_from(
@@ -3049,7 +3120,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         health = self._health_from(config, marker_issues)
         global_cfg_path = os.path.join(self._home, RETRODECK_CFG_SUFFIX)
         global_text = self._machine.read_text(global_cfg_path).text
-        version = config.get("version")
+        version = _marker_version(config)
         return _retroarch_save_location(
             self._machine,
             _SaveQuery(
@@ -3063,11 +3134,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 core_so=core_so,
                 core_path_resolver=lambda so: self._core_path_in(global_text, so),
                 arrangement="retrodeck",
-                arrangement_version=version if isinstance(version, str) else None,
+                arrangement_version=version,
                 extra_caveats=(
                     *extra_caveats,
                     *health.issues,
-                    *arrangement_caveats(self.kind),
+                    *arrangement_caveats(self.kind, observed_version=version),
                 ),
             ),
         )
@@ -3098,6 +3169,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self._retroarch_config_dir(),
             findings=self._health_from(config, marker_issues).issues,
+            arrangement_version=_marker_version(config),
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
@@ -3375,6 +3447,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self._retroarch_config_dir(),
             findings=self._health_from(settings, marker_issues, cfg.status).issues,
+            # ``settings.sh`` names no EmuDeck version, and an arrangement
+            # nobody verified has no pin a version could drift from.
+            arrangement_version=None,
         )
 
 
@@ -3487,6 +3562,9 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self.root(),
             findings=self._health_from(cfg.status).issues,
+            # A bare install states no version of anything but RetroArch, and
+            # this arrangement carries no verified pin to compare one against.
+            arrangement_version=None,
         )
 
 

@@ -84,7 +84,7 @@ from atlas.placement import Caveat, FileSet, Granularity, SavePlacement, Unresol
 # here because answers carry them — a requirement's `found` is a path kind, a
 # health finding's `status` is a read status.
 from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE
-from atlas.evidence import CAVEAT_ARRANGEMENT_UNVERIFIED
+from atlas.evidence import CAVEAT_ARRANGEMENT_UNVERIFIED, CAVEAT_ARRANGEMENT_VERSION_DRIFTED
 from atlas.firmware import (
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
@@ -289,6 +289,7 @@ __all__ = [
     # Caveat codes
     "CAVEAT_APP_RELATIVE_PATH_UNEXPANDED",
     "CAVEAT_ARRANGEMENT_UNVERIFIED",
+    "CAVEAT_ARRANGEMENT_VERSION_DRIFTED",
     "CAVEAT_CARD_GENERATION_MISMATCH",
     "CAVEAT_CARD_MODE_UNCONFIRMED",
     "CAVEAT_CFG_LINE_DROPPED",

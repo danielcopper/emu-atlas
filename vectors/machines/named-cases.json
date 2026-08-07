@@ -2460,7 +2460,7 @@
     },
     {
       "name": "feature-detection-confirms-card-over-version-drift",
-      "rationale": "The generation question decided by evidence, not version strings: the arrangement version drifted from the card's pin, but the probe shows the core REGISTERS the governing option with the card's value set — the card applies, no unverified-version alarm; the demotion is recorded in prose provenance (non-contractual).",
+      "rationale": "The generation question decided by evidence, not version strings: the arrangement version drifted from the card's pin, but the probe shows the core REGISTERS the governing option with the card's value set — the card applies, no unverified-version alarm; the demotion is recorded in prose provenance (non-contractual). The arrangement-level tripwire is a different claim and still fires: observing one core option says nothing about whether the rest of atlas's RetroDECK knowledge still holds on 0.11.0, so the answer states that re-verification is pending while the placement itself stands.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2534,7 +2534,16 @@
               ]
             ]
           },
-          "caveats": []
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.11.0"
+              }
+            }
+          ]
         }
       }
     },
@@ -4966,6 +4975,500 @@
             }
           }
         ]
+      }
+    },
+    {
+      "name": "evidence-a-drifted-arrangement-states-it-on-every-answer",
+      "rationale": "The version-drift tripwire, on the whole answer surface: RetroDECK's knowledge was verified against 0.10.9b and this machine states 0.11.0b, so every caveat-bearing answer of the arrangement carries arrangement-version-drifted exactly once — the placement, the catalogue, the systems listing, all three firmware routes, the entry route and the aggregate. What drifted is atlas's evidence, not the machine: the cfg is still read the same way, so the placement is the same concrete directory with the same observed save, and health stays empty because an evidence note is not a defect. The caveat names both sides (verified, observed) so a client can tell how far apart they are.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.11.0b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        },
+        "catalogue_query": {
+          "system": "n64"
+        },
+        "systems_query": {},
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mupen64plus_next_libretro.so"
+        },
+        "identify_query": {
+          "md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "entry_query": {
+          "system": "n64",
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64"
+        },
+        "aggregate_query": {
+          "question": "save_location",
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "n64",
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.11.0b"
+              }
+            }
+          ]
+        },
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.11.0b"
+              }
+            }
+          ]
+        },
+        "aggregate": [
+          {
+            "installation": {
+              "kind": "retrodeck",
+              "kinds": [
+                "retrodeck"
+              ],
+              "root": "/mnt/sd/retrodeck",
+              "health": []
+            },
+            "answer": {
+              "dir": "/mnt/sd/retrodeck/saves/n64",
+              "root_kind": "savefile_directory",
+              "needs": [],
+              "fallback_dir": null,
+              "physical_dir": null,
+              "file_set": {
+                "state": "observed",
+                "files": [
+                  "Paper Mario (USA).srm"
+                ],
+                "complete": false
+              },
+              "granularity": null,
+              "caveats": [
+                {
+                  "code": "arrangement-version-drifted",
+                  "data": {
+                    "kind": "retrodeck",
+                    "verified": "0.10.9b",
+                    "observed": "0.11.0b"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/n64",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Paper Mario (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.11.0b"
+              }
+            }
+          ]
+        },
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mupen64plus_next_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.11.0b"
+              }
+            }
+          ]
+        },
+        "identification": {
+          "identity": null,
+          "known_as": [],
+          "requirements": [],
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.11.0b"
+              }
+            },
+            {
+              "code": "firmware-content-unidentified",
+              "data": {
+                "md5": "d41d8cd98f00b204e9800998ecf8427e"
+              }
+            }
+          ]
+        },
+        "entry_save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/n64",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Paper Mario (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.11.0b"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "evidence-the-verified-version-states-nothing",
+      "rationale": "The other direction, and the one that makes the tripwire worth having: the same machine running the version the record pins says nothing at all. A caveat that fired either way would be noise a client learns to ignore, so silence here is the contract — proven, not assumed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        },
+        "systems_query": {},
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": []
+        },
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/n64",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Paper Mario (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": []
+        },
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mupen64plus_next_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "evidence-a-marker-that-names-no-version-establishes-no-drift",
+      "rationale": "A marker with no version key: the comparison needs both sides, and this machine states nothing to compare, so the answer is silent. The silence means no drift was ESTABLISHED, not that there is none — atlas refuses to claim a comparison it could not make, which is the same rule that keeps every other unknown out of an answer. Where a missing live version does decide something, the per-card unverified-version caveat states it at the point it matters.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        },
+        "systems_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": []
+        },
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/n64",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Paper Mario (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "evidence-an-empty-version-is-the-arrangements-own-spelling-for-unset",
+      "rationale": "The same state in the spelling the arrangement itself writes: RetroDECK's shipped default config carries \"version\": \"\" and the first run fills it in, so a machine can genuinely present an empty version. An empty string names no version, and reporting drift from 0.10.9b to nothing would be an alarm about a value nobody wrote.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        },
+        "systems_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": []
+        },
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/n64",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Paper Mario (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "evidence-a-version-that-is-not-a-string-costs-the-comparison-not-the-roots",
+      "rationale": "A defect scoped to what it actually costs. The marker's version is a key atlas reads, so a number there is a stated health finding (marker-invalid, key: version) rather than a crash or a silence — but unlike a malformed path it takes nothing else with it: the roots still resolve from the paths section (/mnt/sd/retrodeck, not the ~/retrodeck fallback), the save still lands where the cfg says, and only the version comparison falls away. Nothing claims drift against a value that is not a version.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": 11, \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "marker-invalid",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                  "key": "version"
+                }
+              }
+            ]
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/n64",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Paper Mario (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "marker-invalid",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "key": "version"
+              }
+            }
+          ]
+        }
       }
     },
     {

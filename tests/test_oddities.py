@@ -1273,6 +1273,26 @@ class TestVerificationMatrix:
         assert "arrangement_version" in stale[0].data["missing"]
         assert "core_library_version" in stale[0].data["missing"]
 
+    def test_an_empty_arrangement_version_is_unknown_not_drifted(self):
+        # RetroDECK's shipped default config carries "version": "" and the
+        # first run fills it in, so a machine can present one. It names no
+        # version, and reporting a drift from the pin to nothing would be an
+        # alarm about a value nobody wrote — the same reading of the key the
+        # arrangement-level comparison uses.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: '{"version": "", "paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}',
+                RETRODECK_CFG: CFG,
+                "/mnt/sd/retrodeck/roms/dreamcast/Game.gdi": "",
+            },
+            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
+        )
+        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
+        assert stale
+        assert stale[0].data["verification"] == "runtime-version-unknown"
+        assert stale[0].data["missing"] == "arrangement_version"
+
     def test_confirmed_verification_lands_in_provenance(self):
         rd = _retrodeck(
             {

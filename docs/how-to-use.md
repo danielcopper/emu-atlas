@@ -186,6 +186,29 @@ that delegates. The status is packaged data (`atlas/data/arrangement_evidence.js
 verified on a reference machine, the record changes and the caveat stops appearing; no client change is needed either
 way.
 
+## When the machine moved on — `arrangement-version-drifted`
+
+An arrangement is verified against _one version of itself_. The record pins that version, the machine states the one it
+runs, and when the two differ every answer carries `arrangement-version-drifted`:
+
+```python
+for c in answer.caveats:
+    if c.code == "arrangement-version-drifted":
+        show_pending_reverification(c.data["verified"], c.data["observed"])   # '0.10.9b', '0.11.0b'
+```
+
+What it means: **atlas's knowledge of this arrangement was confirmed against another version, and nobody has confirmed
+it against the one running here.** What it does _not_ mean: that the answer is wrong. The configs are read the way
+upstream reads them on either version; what is pending is the re-verification (`docs/re-verification.md`), not a
+correction. It is not a health finding either — the installation is fine, atlas's record of it is what aged — and it
+rides on the same answers as `arrangement-unverified`, once each.
+
+The absence of this caveat is worth reading precisely: it means **no drift was established**, which is not quite "no
+drift". The comparison runs only when both sides state a version, so an arrangement whose marker names none stays silent
+rather than claiming a comparison nobody made. (Where a missing live version does decide something — a rule card pinned
+to one — `unverified-version` says so at that point.) Nothing above applies to an arrangement that was never verified at
+all: with no pin there is nothing to drift from, and `arrangement-unverified` is already the more general statement.
+
 ## Where does this save live?
 
 The direct route — you name the core:
@@ -345,6 +368,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `companion-config-missing`                  | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                   |
 | `unverified-version`                        | the rule card was never verified against this emulator version                                |
 | `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)             |
+| `arrangement-version-drifted`               | it was observed, on another version than this machine runs — re-verification pending          |
 | `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read   |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
