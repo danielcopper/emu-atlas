@@ -183,6 +183,62 @@ def test_machine_vector(vector):
         assert ask(installs, inp[query_key], name) == expectation, rationale
 
 
+class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
+    """A code no vector produces is a promise no port is held to.
+
+    The vectors are what a port is checked against, so a caveat code that
+    appears in no expected block is a piece of the contract nobody has to
+    implement — and nobody would notice, because the suite would stay green.
+    The derivation is mechanical on both sides: the codes come off atlas's own
+    export list, the coverage off the corpus, so a code added tomorrow is
+    covered or named below, never silently neither.
+    """
+
+    # The one exception, and why it is one: detection triggers on the marker,
+    # so a machine without one has no installation for a vector to ask. It is
+    # covered by a direct-handle test instead
+    # (tests/test_installations.py::TestAMarkerThatIsGoneIsStatedNotDetected).
+    UNREACHABLE_BY_FIXTURE = {"marker-missing"}
+
+    def _exported_codes(self) -> set[str]:
+        families = ("CAVEAT_", "HEALTH_ISSUE_", "UNRESOLVED_")
+        return {
+            value
+            for name in atlas.__all__
+            if name.startswith(families) and isinstance(value := getattr(atlas, name), str)
+        }
+
+    def _codes_in_corpus(self) -> set[str]:
+        found: set[str] = set()
+
+        def walk(node):
+            if isinstance(node, dict):
+                if isinstance(code := node.get("code"), str):
+                    found.add(code)
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+
+        for path in sorted(_VECTOR_DIR.glob("*.json")):
+            for vector in json.loads(path.read_text())["vectors"]:
+                walk(vector["expected"])
+        return found
+
+    def test_every_code_appears_in_some_vector(self):
+        uncovered = sorted(self._exported_codes() - self._codes_in_corpus() - self.UNREACHABLE_BY_FIXTURE)
+        assert uncovered == []
+
+    def test_the_exception_list_carries_nothing_a_vector_now_covers(self):
+        # A code that gained a vector must lose its exemption, or the list
+        # becomes a place where coverage quietly goes to die.
+        assert sorted(self.UNREACHABLE_BY_FIXTURE & self._codes_in_corpus()) == []
+
+    def test_the_corpus_shows_no_code_atlas_cannot_emit(self):
+        assert sorted(self._codes_in_corpus() - self._exported_codes()) == []
+
+
 class TestTheRunnerAsksEverythingItIsGiven:
     """An expectation nobody asks is a guarantee nobody checks.
 

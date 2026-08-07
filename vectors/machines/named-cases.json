@@ -6158,6 +6158,371 @@
           "caveats": []
         }
       }
+    },
+    {
+      "name": "card-mode-unconfirmed-when-the-core-will-not-load",
+      "rationale": "The card applies, and says how far it can be trusted. The core is present but will not load, so no library_name — and the per-game/folder/per-core options files are keyed by exactly that name, so the layer that could override the mode cannot even be looked for. The mode still stands (it is the documented default), and card-mode-unconfirmed states that it may not be the effective one. Three different limits ride together here and none subsumes another: the core could not be queried, the card's pinned versions could not be confirmed live, and the options layer could not be checked.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": null
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/bios/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "flycast_libretro.so"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "card": "flycast",
+                "arrangement": "retrodeck",
+                "verification": "runtime-version-unknown",
+                "missing": "core_library_version"
+              }
+            },
+            {
+              "code": "card-mode-unconfirmed",
+              "data": {
+                "card": "flycast",
+                "option_key": "reicast_per_content_vmus",
+                "applied": "disabled"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an-option-value-no-card-knows-falls-back-and-says-so",
+      "rationale": "A value outside the card's vocabulary is not a reason to guess. The options file sets the governing option to something no mode of the card describes, so the answer falls back to the card's default mode and states unknown-option-value with the value it read — a client learns the layout may be wrong for this exact configuration, instead of being handed a mode nobody verified.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"Every VMU\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/bios/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin"
+            ],
+            "complete": false
+          },
+          "granularity": {
+            "value": "shared-card",
+            "option_key": "reicast_per_content_vmus",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "VMU A1",
+                "per-game-file"
+              ],
+              [
+                "All VMUs",
+                "per-game-files"
+              ]
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unknown-option-value",
+              "data": {
+                "card": "flycast",
+                "option_key": "reicast_per_content_vmus",
+                "value": "Every VMU"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-bare-retroarch-whose-config-cannot-be-read-says-so",
+      "rationale": "A cfg whose bytes cannot be read is a PRESENT, broken installation — not an absent one. Detection still finds the bare RetroArch (the marker exists), health states config-unreadable, and the answer carries that finding beside its own limits, so nothing about the machine is inferred from a file nobody could read. The placement falls back to RetroArch's own platform default, which is what it would do with no savefile_directory configured.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": {
+            "status": "unreadable"
+          },
+          "/home/deck/.config/retroarch/saves/.keep": ""
+        },
+        "query": {
+          "content_path": "/home/deck/roms/gb/Tetris (World).zip",
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": [
+              {
+                "code": "config-unreadable",
+                "data": {
+                  "path": "/home/deck/.config/retroarch/retroarch.cfg",
+                  "status": "unreadable"
+                }
+              }
+            ]
+          }
+        ],
+        "save_location": {
+          "dir": "/home/deck/.config/retroarch/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "config-unreadable",
+              "data": {
+                "path": "/home/deck/.config/retroarch/retroarch.cfg",
+                "status": "unreadable"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "mgba_libretro.so"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "catalogue-a-standalone-entry-carries-no-core",
+      "rationale": "The catalogue's two kinds, in one answer and in ES-DE's own declared order: the standalone entry carries no core_so, the libretro one does. Asking the standalone entry where the save lives is a domain outcome, not an error and not a guess — Unresolved with standalone-unsupported, naming the emulator and the system so a client can say which emulator it cannot answer for yet.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>psp</name>\n  <path>%ROMPATH%/psp</path>\n  <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP-SA% %ROM%</command>\n  <command label=\"PPSSPP\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/ppsspp_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "catalogue_query": {
+          "system": "psp"
+        },
+        "entry_query": {
+          "system": "psp"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "psp",
+              "label": "PPSSPP (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "selection": null,
+              "caveats": []
+            },
+            {
+              "system": "psp",
+              "label": "PPSSPP",
+              "kind": "libretro",
+              "core_so": "ppsspp_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        },
+        "entry_save_location": {
+          "unresolved": {
+            "code": "standalone-unsupported",
+            "data": {
+              "label": "PPSSPP (Standalone)",
+              "system": "psp"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "a-core-that-registers-no-options-is-not-a-core-nobody-asked",
+      "rationale": "Two different unknowns about a core's options, told apart by the fixture: a core answer with no 'options' key means the probe never captured them, and the card applies on its pinned evidence; an options map that IS captured and is empty is evidence — this core registers nothing, so it cannot be the generation whose governing option the card describes, and the card steps aside with card-generation-mismatch rather than answering for another core's behaviour.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369",
+            "options": {}
+          }
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": "/mnt/sd/retrodeck/saves",
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "card-generation-mismatch",
+              "data": {
+                "card": "flycast",
+                "option_key": "reicast_per_content_vmus"
+              }
+            },
+            {
+              "code": "sorted-dir-missing",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+                "fallback_dir": "/mnt/sd/retrodeck/saves"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
