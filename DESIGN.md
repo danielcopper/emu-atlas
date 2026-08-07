@@ -68,8 +68,8 @@ emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64")   # the en
 ```
 
 ```python
-inst.firmware_for_core(core_so="mgba_libretro.so")   # does this emulator need firmware, and where does it go?
-inst.firmware_for_system(system="gb")                # which emulators run this system, and what does each want?
+inst.firmware_for_core("mgba_libretro.so")           # does this emulator need firmware, and where does it go?
+inst.firmware_for_system("gb")                       # which emulators run this system, and what does each want?
 inst.firmware_inventory(verify=True)                 # everything installed, plus what nobody asks for
 inst.identify_firmware(md5="32fbbd84...")            # this content — where does it go, under what name?
 # -> the first three: FirmwareAnswer (root, cores, unclaimed, hash_checked, sources, caveats).
@@ -279,6 +279,15 @@ instead of translating. The canonical id set is itself still open (see Open ques
 translation table as the real fix.
 
 ## Settled decisions
+
+- **Summary fields are earned, not decorative.** An answer carries one only where the client's _first_ question is a
+  fact the answer itself establishes: "is this installation ok?" (`Health.ok`) and "is everything this core needs in
+  place?" (`FirmwareAnswer`'s per-core `requirements_met`). Its shape follows what the answer can establish — a plain
+  yes/no where the question is always answerable (health is ok exactly when there are no findings), yes/no/**unknown**
+  where it is not (an unreadable declaration makes "is everything present?" unanswerable, and `None` says so rather than
+  guessing green). Nothing gets a summary that merely restates the field which _is_ the answer: the placement's `dir`,
+  the catalogue's entries and refusal codes, an identification's `identity`. A second spelling of the same fact has to
+  be co-maintained through every grammar change, and the day the two disagree the client believes the summary.
 
 - **Resolver, not knowledge base.** "Static lists are the trap" applies to atlas's own data as much as to wiki path
   lists. The plan to ship extracted `library_name` tables as package data is rejected for the same reason it was
