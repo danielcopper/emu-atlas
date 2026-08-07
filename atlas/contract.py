@@ -9,9 +9,11 @@ data. The rule for what serializes:
   caveat codes and caveat data, installation identity, and health findings —
   which are caveats and serialize as caveats, code and data alike. Vectors
   assert them with exact equality; ports must reproduce them.
-- **Prose is not**: ``sources``, caveat ``message``, ``option_source``,
-  ``FileSet.source`` are human-readable explanations and may change freely —
-  they are deliberately absent here.
+- **Prose is not**: ``sources``, caveat ``message``, ``option_provenance``,
+  ``FileSet.provenance`` and ``EmulatorSpec.provenance`` are human-readable
+  explanations and may change freely — they are deliberately absent here. Two
+  words, two scopes: ``sources`` is what a whole answer was read from,
+  ``*provenance`` is where one field's own value came from.
 
 A port that reproduces these dicts for every vector reads the machine the way
 the reference does.
@@ -197,13 +199,25 @@ def identification_contract(identification: FirmwareIdentification) -> dict[str,
 
 
 def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
-    """The stable form of one catalogue entry."""
+    """The stable form of one catalogue entry.
+
+    ``system`` is here because an entry is only an answer *for* a system: the
+    catalogue question carries it in the call, but an entry that travels — into
+    a client's own list, into a serialized answer read later — otherwise names
+    the emulator without naming what it launches.
+
+    ``caveats`` serialize ``{code, data}`` like every other caveat in this
+    module. Bare codes were this serializer's own dialect and lost what the
+    data says (which game's override was not checked), which is exactly the
+    thing a client acts on.
+    """
     return {
+        "system": entry.system,
         "label": entry.label,
         "kind": entry.kind,
         "core_so": entry.core_so,
         "selection": entry.selection,
-        "caveats": [c.code for c in entry.caveats],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in entry.caveats],
     }
 
 

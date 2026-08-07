@@ -9,6 +9,7 @@ handle — and demand the two agree.
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 import atlas
@@ -171,6 +172,19 @@ class TestItDelegates:
         ]
 
 
+def _parameters(method) -> list[tuple[str, object, object]]:
+    """One question's arguments: name, kind and default — the callable part.
+
+    Return annotations differ by design (a handle answers one, the aggregate a
+    tuple of labelled ones), so they stay out of the comparison.
+    """
+    return [
+        (p.name, p.kind, p.default)
+        for p in inspect.signature(method).parameters.values()
+        if p.name != "self"
+    ]
+
+
 class TestTheSurfaceMirrorsTheProtocol:
     """The aggregate asks what a handle can be asked — checked, not asserted by hand.
 
@@ -195,6 +209,22 @@ class TestTheSurfaceMirrorsTheProtocol:
     def test_every_protocol_question_is_on_the_aggregate(self):
         missing = sorted(q for q in self._questions() if not hasattr(atlas.EveryInstallation, q))
         assert missing == []
+
+    def test_every_question_takes_what_the_protocol_takes(self):
+        # Names alone are not the mirror: a question whose arguments drifted —
+        # a subject that became keyword-only on one side, a modifier that went
+        # positional on the other — would still pass the check above while the
+        # aggregate silently refused calls the handle route accepts.
+        differing = {
+            question: (
+                str(inspect.signature(getattr(atlas.Installation, question))),
+                str(inspect.signature(getattr(atlas.EveryInstallation, question))),
+            )
+            for question in sorted(self._questions())
+            if _parameters(getattr(atlas.Installation, question))
+            != _parameters(getattr(atlas.EveryInstallation, question))
+        }
+        assert differing == {}
 
 
 class TestTheContract:

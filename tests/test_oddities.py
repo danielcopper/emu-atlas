@@ -108,7 +108,7 @@ class TestFlycastResolution:
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert p.granularity is not None
         assert p.granularity.option_value == "disabled"
-        assert "core default" in p.granularity.option_source
+        assert "core default" in p.granularity.option_provenance
 
     def test_no_vmus_present_is_declared_from_card(self):
         p = _flycast_query(
@@ -289,7 +289,7 @@ class TestFlycastResolution:
         )
         assert p.granularity is not None
         assert p.granularity.option_value == "VMU A1"
-        assert "Dreamcast Game (Europe).opt" in p.granularity.option_source
+        assert "Dreamcast Game (Europe).opt" in p.granularity.option_provenance
 
     def test_unknown_option_value_applies_core_default_mode(self):
         # RetroArch's option manager keeps the core default on an invalid

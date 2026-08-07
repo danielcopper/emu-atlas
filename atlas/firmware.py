@@ -83,6 +83,7 @@ from atlas.machine import (
     SYMLINK_HOPS,
     Machine,
     PathKind,
+    ReadStatus,
 )
 from atlas.oddities import SaveMode, load_oddities
 from atlas.placement import ROOT_SYSTEM_DIRECTORY, UNRESOLVED_STANDALONE, Caveat
@@ -121,21 +122,21 @@ CAVEAT_CORE_NOT_INSTALLED = "core-not-installed"
 # emulator with the typed Unresolved outcome, the firmware route with this
 # caveat, and a client that learned the word on one route reads the other.
 CAVEAT_STANDALONE_UNSUPPORTED = UNRESOLVED_STANDALONE
-CAVEAT_CATALOGUE_UNAVAILABLE = "emulator-catalogue-unavailable"
+CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE = "emulator-catalogue-unavailable"
 CAVEAT_FIRMWARE_UNREADABLE = "firmware-unreadable"
-CAVEAT_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
+CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
 CAVEAT_SYSTEM_UNKNOWN = "system-unknown"
 CAVEAT_SYSTEM_ASSIGNMENT_DERIVED = "system-assignment-derived"
 CAVEAT_CORE_WITHOUT_SYSTEMNAME = "core-without-systemname"
-CAVEAT_ASSIGNMENT_MAY_HIDE_CORES = "system-assignment-may-hide-cores"
+CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES = "system-assignment-may-hide-cores"
 CAVEAT_CORE_INFO_UNREADABLE = "core-info-unreadable"
-CAVEAT_CATALOGUE_UNREADABLE = "emulator-catalogue-unreadable"
+CAVEAT_EMULATOR_CATALOGUE_UNREADABLE = "emulator-catalogue-unreadable"
 # Three ways to answer no catalogue entries, and they are three different
 # claims: the arrangement has none (unavailable), it has one that could not be
 # read (unreadable), and atlas has not established where this arrangement keeps
 # one (unestablished). Only the first two say anything about the machine; the
 # third is about atlas, and a client must not read it as an absence.
-CAVEAT_CATALOGUE_UNESTABLISHED = "emulator-catalogue-unestablished"
+CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED = "emulator-catalogue-unestablished"
 CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
 CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
 CAVEAT_FIRMWARE_SCAN_INCOMPLETE = "firmware-scan-incomplete"
@@ -148,11 +149,11 @@ CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE = "firmware-path-names-no-file"
 # declaration can be resolved against it however well the file exists.
 CAVEAT_FIRMWARE_ROOT_UNUSABLE = "firmware-root-unusable"
 CAVEAT_FIRMWARE_DECLARATION_UNREAD = "firmware-declaration-unread"
-CAVEAT_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
+CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
 # The third member of the identification family: the table does not know this
 # content (unidentified), the fields describe no single file (contradictory),
 # or — this one — the request never named content at all.
-CAVEAT_CONTENT_UNSTATED = "firmware-content-unstated"
+CAVEAT_FIRMWARE_CONTENT_UNSTATED = "firmware-content-unstated"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
 # both declare firmware0_path = "filename.ext" with opt = "true/false". The
@@ -626,7 +627,7 @@ class CoreDeclarations:
     system: str
     firmware: tuple[FirmwareDeclaration, ...]
     database: tuple[str, ...] = ()
-    info_status: str = READ_OK
+    info_status: ReadStatus = READ_OK
     firmware_count: str = ""
     unread: tuple[str, ...] = ()
 
@@ -1015,6 +1016,14 @@ class CoreFirmware:
     requirements: tuple[FirmwareRequirement, ...]
     caveats: tuple[Caveat, ...]
     refused: tuple[RefusedDeclaration, ...] = ()
+    # The ``.info`` keys RetroArch's own enumeration never reaches (declared
+    # without a count, or past it). A field rather than a caveat read back out
+    # of the answer: whether this core declares something nobody asks for is a
+    # fact about the core, and the identification route needs it as data, not
+    # as the presence of a message. It stays out of the contract — the caveat
+    # that states it already carries the keys, and one fact serialized twice is
+    # one fact that can disagree with itself.
+    unread: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.declaration not in CORE_DECLARATION_STATES:
@@ -1598,14 +1607,14 @@ def _declaration_unknown(subject: str, data: dict[str, str]) -> Caveat:
     )
 
 
-def _states_unread(core: CoreFirmware) -> bool:
-    """Does this core carry declarations its own enumeration never reaches?"""
-    return any(caveat.code == CAVEAT_FIRMWARE_DECLARATION_UNREAD for caveat in core.caveats)
-
-
 def _declared_without_requiring(cores: tuple[CoreFirmware, ...]) -> bool:
-    """Was firmware declared here that never became a requirement?"""
-    return any(core.refused or _states_unread(core) for core in cores)
+    """Was firmware declared here that never became a requirement?
+
+    Both halves are fields: a declaration atlas would not follow (``refused``)
+    and one the emulator never asks for (``unread``). Reading them back out of
+    the caveat list would make a message the load-bearing part of an answer.
+    """
+    return any(core.refused or core.unread for core in cores)
 
 
 def _empty_answer_caveat(
@@ -1726,6 +1735,7 @@ def _resolve_cores(
                 requirements=requirements,
                 caveats=_core_caveats(core, core_caveats),
                 refused=refused,
+                unread=core.unread,
             )
         )
     return tuple(resolved), answer_caveats
@@ -1849,7 +1859,7 @@ def _cores_by_systemname(
     """
     caveats = [
         Caveat(
-            CAVEAT_CATALOGUE_UNAVAILABLE,
+            CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
             "this installation ships no emulator catalogue, so the emulators for a system are derived "
             "from the installed cores' own systemname — the identifier is an atlas system slug, not a "
             "frontend system name",
@@ -1868,7 +1878,7 @@ def _cores_by_systemname(
         names = ", ".join(sorted(c.core_so for c in hidden))
         caveats.append(
             Caveat(
-                CAVEAT_ASSIGNMENT_MAY_HIDE_CORES,
+                CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
                 f"this list is keyed on the cores' own systemname, and {len(hidden)} installed core(s) "
                 f"name {system!r} in their database while filing firmware by a system that was derived "
                 f"rather than ruled — an emulator missing from this list is one of these: {names}",
@@ -1954,6 +1964,7 @@ def _catalogue_entry_core(
             requirements=requirements,
             caveats=_core_caveats(core, core_caveats),
             refused=refused,
+            unread=core.unread,
         ),
         observed,
     )
@@ -1974,7 +1985,7 @@ def firmware_for_system(
     installed and standalone emulators, both stated as such rather than
     dropped, and *system* is the frontend's system name. Without one the list
     is derived from the installed cores' own ``systemname`` and *system* is an
-    atlas slug; :data:`CAVEAT_CATALOGUE_UNAVAILABLE` states that switch,
+    atlas slug; :data:`CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE` states that switch,
     because the two are different vocabularies.
 
     Each emulator answers with its **whole** declaration set, every requirement
@@ -1997,7 +2008,7 @@ def firmware_for_system(
     elif not catalogue.read:
         caveats.append(
             Caveat(
-                CAVEAT_CATALOGUE_UNREADABLE,
+                CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
                 "the frontend's emulator catalogue could not be read, so which emulators run this system is "
                 "unknown — this answer is empty because atlas could not look, not because nothing is there",
                 {"system": system},
@@ -2281,7 +2292,7 @@ def _declared_beyond_requirements(
     entries; the other direction is the claim this module exists to refuse.
     """
     for core in cores:
-        if _states_unread(core):
+        if core.unread:
             return True
         for refusal in core.refused:
             expected = hashes.for_path(refusal.declared)
@@ -2315,14 +2326,14 @@ def identify_firmware(
     A request that names no content at all — a bare ``size``, which two
     different files routinely share — is answered, not raised: it is a state of
     this domain like any other, and it comes back as an empty identification
-    carrying :data:`CAVEAT_CONTENT_UNSTATED`.
+    carrying :data:`CAVEAT_FIRMWARE_CONTENT_UNSTATED`.
     """
     caveats: list[Caveat] = list(context.caveats)
     stated = _stated_content(md5, sha1, size)
     if md5 is None and sha1 is None:
         caveats.append(
             Caveat(
-                CAVEAT_CONTENT_UNSTATED,
+                CAVEAT_FIRMWARE_CONTENT_UNSTATED,
                 "this request names no content: a size alone is not an identity — files of one size are "
                 "not one file — so there is nothing to look up and nothing this answer could be about",
                 stated,
@@ -2338,7 +2349,7 @@ def identify_firmware(
             # would send the caller looking in the wrong place.
             caveats.append(
                 Caveat(
-                    CAVEAT_CONTENT_CONTRADICTORY,
+                    CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY,
                     "the fields given describe no single file: the table knows a digest among them, and the "
                     "entry it names carries a different value for something else stated here — so the "
                     "request contradicts itself rather than the content being unknown",
@@ -2348,7 +2359,7 @@ def identify_firmware(
         else:
             caveats.append(
                 Caveat(
-                    CAVEAT_CONTENT_UNIDENTIFIED,
+                    CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED,
                     "the packaged identity table does not recognise this content — that is a normal answer "
                     "(the table covers only what System.dat covers), so it says nothing about the file's worth",
                     stated,

@@ -39,52 +39,52 @@ BUNDLED_XML = """<?xml version="1.0"?>
 
 class TestParse:
     def test_systems_and_order(self):
-        parsed = parse_es_systems(BUNDLED_XML, source="test")
+        parsed = parse_es_systems(BUNDLED_XML, provenance="test")
         assert set(parsed) == {"dreamcast", "n64", "ps3"}
         assert [e.label for e in parsed["n64"]] == ["Mupen64Plus-Next", "ParaLLEl N64"]
 
     def test_libretro_classification_extracts_core_so(self):
-        parsed = parse_es_systems(BUNDLED_XML, source="test")
+        parsed = parse_es_systems(BUNDLED_XML, provenance="test")
         entry = parsed["dreamcast"][0]
         assert entry.kind == atlas.KIND_LIBRETRO
         assert entry.core_so == "flycast_libretro.so"
 
     def test_standalone_classification(self):
-        parsed = parse_es_systems(BUNDLED_XML, source="test")
+        parsed = parse_es_systems(BUNDLED_XML, provenance="test")
         entry = parsed["ps3"][0]
         assert entry.kind == atlas.KIND_STANDALONE
         assert entry.core_so is None
 
     def test_malformed_xml_is_skipped_layer(self):
-        assert parse_es_systems("<systemList><system>", source="test") == {}
+        assert parse_es_systems("<systemList><system>", provenance="test") == {}
 
     def test_commented_out_systems_yield_nothing(self):
         # RetroDECK ships a custom_systems overlay that is entirely commented out.
         text = '<?xml version="1.0"?>\n<systemList>\n<!-- <system><name>x</name></system> -->\n</systemList>'
-        assert parse_es_systems(text, source="test") == {}
+        assert parse_es_systems(text, provenance="test") == {}
 
 
 class TestMerge:
     def test_custom_replaces_bundled_system(self):
-        bundled = parse_es_systems(BUNDLED_XML, source="bundled")
+        bundled = parse_es_systems(BUNDLED_XML, provenance="bundled")
         custom = parse_es_systems(
             '<systemList><system><name>n64</name>'
             '<command label="ParaLLEl N64">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>'
             "</system></systemList>",
-            source="custom",
+            provenance="custom",
         )
         merged = merge_layers(bundled, custom)
         assert [e.label for e in merged["n64"]] == ["ParaLLEl N64"]
-        assert merged["n64"][0].source == "custom"
+        assert merged["n64"][0].provenance == "custom"
         assert "dreamcast" in merged  # untouched systems stay
 
     def test_custom_adds_new_system(self):
         merged = merge_layers(
-            parse_es_systems(BUNDLED_XML, source="bundled"),
+            parse_es_systems(BUNDLED_XML, provenance="bundled"),
             parse_es_systems(
                 '<systemList><system><name>mysystem</name>'
                 "<command>%EMULATOR_SOMETHING% %ROM%</command></system></systemList>",
-                source="custom",
+                provenance="custom",
             ),
         )
         assert "mysystem" in merged
@@ -142,10 +142,10 @@ class TestRetroDeckCatalogue:
         rd = _retrodeck({RETRODECK_JSON: RD_JSON}, dirs=CATALOGUE_ROOTS)
         answer = rd.emulators_for("n64")
         assert answer.entries == ()
-        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNREADABLE]
+        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE]
         listing = rd.systems()
         assert listing.systems == ()
-        assert [c.code for c in listing.caveats] == [atlas.CAVEAT_CATALOGUE_UNREADABLE]
+        assert [c.code for c in listing.caveats] == [atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE]
 
     def test_systems_listing(self):
         assert _catalogue_fixture().systems().systems == ("dreamcast", "n64", "ps3")
@@ -160,7 +160,7 @@ class TestRetroDeckCatalogue:
         )
         entries = _entries(rd.emulators_for("dreamcast"))
         assert [e.label for e in entries] == ["Custom Flycast"]
-        assert entries[0].source == "es_systems.xml (custom_systems overlay)"
+        assert entries[0].provenance == "es_systems.xml (custom_systems overlay)"
 
 
 class TestEntrySaveLocation:

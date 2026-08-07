@@ -129,19 +129,19 @@ class EveryInstallation:
         )
 
     def firmware_for_core(
-        self, *, core_so: str, verify: bool = False
+        self, core_so: str, *, verify: bool = False
     ) -> tuple[InstallationAnswer[FirmwareAnswer], ...]:
         """What this core wants, and where, under each installation's firmware root."""
         return self._ask(
-            lambda installation: installation.firmware_for_core(core_so=core_so, verify=verify)
+            lambda installation: installation.firmware_for_core(core_so, verify=verify)
         )
 
     def firmware_for_system(
-        self, *, system: str, verify: bool = False
+        self, system: str, *, verify: bool = False
     ) -> tuple[InstallationAnswer[FirmwareAnswer], ...]:
         """Which cores run this system under each installation, and what each wants."""
         return self._ask(
-            lambda installation: installation.firmware_for_system(system=system, verify=verify)
+            lambda installation: installation.firmware_for_system(system, verify=verify)
         )
 
     def firmware_inventory(
