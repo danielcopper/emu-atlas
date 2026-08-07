@@ -1375,6 +1375,12 @@
           "unclaimed": [],
           "caveats": [
             {
+              "code": "saves-root-missing",
+              "data": {
+                "path": "/home/deck/Emulation/saves"
+              }
+            },
+            {
               "code": "arrangement-unverified",
               "data": {
                 "kind": "emudeck"
