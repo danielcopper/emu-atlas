@@ -307,27 +307,37 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 
 ### Placement caveats worth branching on
 
-| Code                                        | Meaning                                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `sorted-dir-missing`                        | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`        |
-| `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`      |
-| `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                             |
-| `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes         |
-| `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"      |
-| `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                           |
-| `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified        |
-| `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)    |
-| `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope           |
-| `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated         |
-| `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain             |
-| `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below     |
-| `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                           |
-| _(the health codes)_                        | the installation itself is broken — the findings ride here directly, see "Finding installations" |
-| `unverified-version`                        | the rule card was never verified against this emulator version                                   |
-| `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)                |
-| `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read      |
+| Code                                        | Meaning                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `sorted-dir-missing`                        | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`     |
+| `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`   |
+| `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                          |
+| `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes      |
+| `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"   |
+| `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                        |
+| `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified     |
+| `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it) |
+| `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope        |
+| `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated      |
+| `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain          |
+| `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below  |
+| `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                        |
+| `marker-missing`                            | health: the config marker this installation is detected by is gone                            |
+| `marker-unreadable`                         | health: the marker exists and its bytes could not be read                                     |
+| `marker-invalid`                            | health: the marker parsed to something unusable                                               |
+| `root-missing`                              | health: the installation's own root is not an existing directory                              |
+| `saves-root-missing`                        | health: its saves root is not an existing directory                                           |
+| `config-unreadable`                         | health: a bare RetroArch's `retroarch.cfg` could not be read                                  |
+| `companion-config-missing`                  | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                   |
+| `unverified-version`                        | the rule card was never verified against this emulator version                                |
+| `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)             |
+| `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read   |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
+
+The seven `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
+`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Only
+placements carry them today; a firmware or catalogue answer states its own degradations, so ask `health()` there.
 
 `content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
 to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the

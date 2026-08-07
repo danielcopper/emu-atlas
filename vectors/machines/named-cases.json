@@ -5044,6 +5044,79 @@
           ]
         }
       }
+    },
+    {
+      "name": "a-broken-unverified-arrangement-states-both-facts-in-one-list",
+      "rationale": "Two features meet in one caveat list, and their order is the contract: the health finding first (EmuDeck's settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then the arrangement's evidence caveat, then what the query itself could not resolve. A machine fact, a fact about atlas's evidence, and a missing argument are three different claims that must not merge, reorder, or crowd each other out — and the cfg still answers the directory, because an unreadable marker degrades the answer rather than replacing it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": {
+            "status": "unreadable"
+          },
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/Emulation/roms/gb/Tetris (World).zip": "",
+          "/home/deck/Emulation/saves/retroarch/saves/Tetris (World).srm": "sram"
+        },
+        "query": {
+          "content_path": "/home/deck/Emulation/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "standalone_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": [
+              {
+                "code": "marker-unreadable",
+                "data": {
+                  "path": "/home/deck/.config/EmuDeck/settings.sh",
+                  "status": "unreadable"
+                }
+              }
+            ]
+          }
+        ],
+        "save_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Tetris (World).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "marker-unreadable",
+              "data": {
+                "path": "/home/deck/.config/EmuDeck/settings.sh",
+                "status": "unreadable"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
+      }
     }
   ]
 }

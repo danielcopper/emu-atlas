@@ -267,12 +267,25 @@ class TestRetroDeckSaveLocation:
         issue = next(c for c in p.caveats if c.code == atlas.HEALTH_ISSUE_ROOT_MISSING)
         assert issue.data["path"] == "/run/media/gone/retrodeck"
 
-    def test_the_placement_carries_the_health_finding_itself(self):
-        # Identity, not a copy: what health() reports is what the answer
-        # carries, so the two can never describe the installation differently.
+    def test_the_placement_carries_the_health_findings_unchanged(self):
+        # Equality, deliberately not identity: handles are live, so health()
+        # and save_location() each read their own snapshot and build their own
+        # Caveat objects — `is` would be false by design, not by defect. What
+        # equality pins is everything a re-wrap would disturb, message
+        # included: the retired envelope carried a different code, a nested
+        # data["issue"], and an "installation health: " prefix, so any of the
+        # three coming back fails this.
         rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}'})
         findings = rd.health().issues
         assert [c for c in rd.save_location().caveats if c in findings] == list(findings)
+
+    def test_a_finding_reaches_the_placement_with_its_own_message(self):
+        # The prefix the envelope added is the cheapest tell that something
+        # rebuilt the finding on the way.
+        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}'})
+        finding = rd.health().issues[0]
+        carried = next(c for c in rd.save_location().caveats if c.code == finding.code)
+        assert carried.message == finding.message
 
     def test_observation_is_literal_for_glob_metacharacters(self):
         # '[USA]' in a ROM name must match itself, never act as a class (M2).

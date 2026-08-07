@@ -49,7 +49,7 @@ installations = atlas.detect(home="/home/deck")
 inst = installations[0]              # e.g. a RetroDeck handle — live, re-reads its sources per query
                                      # choosing is optional: atlas.every_installation(home) asks them all
 inst.health()                        # structured: a tuple of finding caveats with stable codes; ok = no findings
-                                     # the same findings ride in every answer's own caveats, unwrapped
+                                     # the same findings ride in a placement's own caveats, unwrapped
 
 inst.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
                    core_so="mupen64plus_next_libretro.so")
@@ -103,13 +103,14 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   gone) is detected and states its findings, never invisible and never "ok". The config is the truth, never the
   existence of a folder — a stale secondary root must not win.
 - **A health finding is a caveat, and travels as one.** It serializes `{code, data}` like every other caveat — the path
-  it is about, the read status behind it, the marker key that is wrong — and an answer computed on a broken installation
-  carries the findings themselves in its `caveats`, under their own codes. No category code with the real condition
-  nested in `data`: a distinct, stable code hidden behind a discriminator is a shape a client has to unpack before it
-  can branch, and one the firmware route already retired. The health answer itself serializes as an object like every
-  other answer — `ok` the summary field a client renders, `issues` the findings — while an installation's identity
-  carries the findings as a plain field, where an empty list is the whole summary. `ok` is derived from the findings and
-  stays derived: stating a summary is not storing a second copy of the fact.
+  it is about, the read status behind it, the marker key that is wrong — and a placement computed on a broken
+  installation carries the findings themselves in its `caveats`, under their own codes (the placement route alone today;
+  firmware and catalogue answers state their own degradations). No category code with the real condition nested in
+  `data`: a distinct, stable code hidden behind a discriminator is a shape a client has to unpack before it can branch,
+  and one the firmware route already retired. The health answer itself serializes as an object like every other answer —
+  `ok` the summary field a client renders, `issues` the findings — while an installation's identity carries the findings
+  as a plain field, where an empty list is the whole summary. `ok` is derived from the findings and stays derived:
+  stating a summary is not storing a second copy of the fact.
 - **The emulator handle means "as currently configured".** Granularity, roots, and modes are config readings with
   provenance, not static facts. Where an alternative mode exists (Flycast per-game VMUs), the handle names the config
   that selects it.

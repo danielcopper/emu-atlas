@@ -153,12 +153,17 @@ class Health:
     unreadable marker, the ``key`` behind an invalid one). Handles never hide a
     present-but-broken installation — they report it with the issues attached.
 
-    These issues *are* caveats, and they travel as themselves: an answer
+    These issues *are* caveats, and they travel as themselves: a placement
     computed on a broken installation carries the findings directly in its own
     ``caveats``, under their own codes. Nothing wraps them in a category code
     with the real condition nested in ``data`` — that shape hides a distinct,
     stable code behind a discriminator a client has to unpack, and the firmware
     route retired it for the same reason.
+
+    The placement route is the only one that does this today; a firmware or
+    catalogue answer states its own degradations and leaves health to
+    :meth:`Installation.health`. Whether the other routes should carry them too
+    is an open question, not an omission to route around.
     """
 
     issues: tuple[Caveat, ...] = ()
