@@ -14,7 +14,9 @@ than decorative:
   — a case built on an already-invalid base would pass for the wrong reason, and
   every case here is one mutation away from a base;
 - **the message is asserted**, not just the exception type. A rule that fires
-  for the wrong reason is a rule that will fire on a good vector one day.
+  for the wrong reason is a rule that will fire on a good vector one day — and
+  the sweep found one rule that could never fire at all, which is now deleted
+  rather than left as belt-and-braces nobody could reach.
 
 ``tests/test_machine_vectors.py`` keeps its own grammar cases: those read as
 documentation of the contradictions a vector can state, and they run through the
@@ -30,7 +32,7 @@ from typing import Any
 import pytest
 
 import atlas
-from atlas import installations, placement
+from atlas import installations
 from scripts import validate_vectors
 from scripts.validate_vectors import VectorError, validate_machines_vector
 
@@ -610,12 +612,15 @@ FIRMWARE_CORE_CASES = [
                                                "reason": "firmware-root-unusable"}],
                                      caveats=[{"code": "no-core", "data": {}}])]),
          "a refusal's reason must be stated as a caveat on the same core", id="refused-reason-unstated"),
-    # NO case for `_validate_core_refusals`'s last rule ("a refused declaration
-    # must be stated, or the file vanishes from the answer"): it cannot fire.
-    # A non-empty `refused` runs the loop above at least once, and that loop
-    # already demands a caveat whose code IS the refusal's reason — so an empty
-    # caveat list is refused a few lines earlier, every time. The rule is dead,
-    # not untested, and a case here would only prove that some other rule works.
+    # The same rule, reached with no caveats at all — and this is why a separate
+    # emptiness rule ("a refused declaration must be stated, or the file
+    # vanishes from the answer") cannot fire and was deleted: a non-empty
+    # `refused` runs that loop at least once, and the loop demands a caveat
+    # whose code IS the refusal's reason, so an empty caveat list is refused
+    # here, one item in, every time.
+    case(_base_firmware(cores=[_core(refused=[{"declared": "x", "need": "required",
+                                               "reason": "firmware-root-unusable"}])]),
+         "a refusal's reason must be stated as a caveat on the same core", id="refused-with-no-caveats-at-all"),
 ]
 
 REQUIREMENT_CASES = [
@@ -980,20 +985,26 @@ class TestTheVocabularyIsOneVocabulary:
         assert validate_vectors.KNOWN_UNRESOLVED_CODES == self._exported("UNRESOLVED_")
 
     def test_the_hole_vocabularies_match(self):
-        # The holes are tier-2 today (atlas.placement), not names a client can
-        # import from `atlas` — the validator still has to speak the same three.
         holes = {
             value
-            for name, value in vars(placement).items()
-            if name.startswith("HOLE_") and isinstance(value, str)
+            for name in atlas.__all__
+            if name.startswith("HOLE_") and isinstance(value := getattr(atlas, name), str)
         }
         assert validate_vectors.KNOWN_HOLES == holes
 
     def test_the_granularity_vocabularies_match(self):
-        assert validate_vectors.KNOWN_GRANULARITIES == set(placement.GRANULARITIES)
+        assert validate_vectors.KNOWN_GRANULARITIES == set(atlas.GRANULARITIES)
 
     def test_the_root_kind_vocabularies_match(self):
-        assert validate_vectors.KNOWN_ROOT_KINDS == set(placement.ROOT_KINDS)
+        assert validate_vectors.KNOWN_ROOT_KINDS == set(atlas.ROOT_KINDS)
+
+    def test_the_vocabularies_a_client_branches_on_are_all_tier_one(self):
+        # The sets above are read off `atlas` on purpose: a client branches on
+        # `needs`, `granularity.value` and `root_kind`, so their vocabularies
+        # are consumer surface. Reading them from a submodule instead would let
+        # one drop out of the export list without a test noticing.
+        promoted = {"HOLE_CONTENT_DIR", "HOLE_LIBRARY_NAME", "HOLE_SAVE_ID", "GRANULARITIES", "ROOT_KINDS"}
+        assert sorted(promoted - set(atlas.__all__)) == []
 
     def test_the_emulator_kind_vocabularies_match(self):
         assert validate_vectors.KNOWN_EMULATOR_KINDS == {atlas.KIND_LIBRETRO, atlas.KIND_STANDALONE}

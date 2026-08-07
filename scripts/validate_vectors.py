@@ -785,10 +785,11 @@ def _validate_core_refusals(name: str, core: Any) -> None:
             fail(f"{name}: a refused declaration's need must be one of {sorted(KNOWN_FIRMWARE_NEEDS)}")
         if item["reason"] not in KNOWN_REFUSAL_REASONS:
             fail(f"{name}: a refusal must say which fact it rests on: {sorted(KNOWN_REFUSAL_REASONS)}")
+        # This is also what keeps a refused declaration from vanishing from the
+        # answer: every refusal demands a caveat carrying its own reason, so a
+        # core with refusals and no caveats is refused here, one item in.
         if not any(c["code"] == item["reason"] for c in core["caveats"]):
             fail(f"{name}: a refusal's reason must be stated as a caveat on the same core")
-    if refused and not core["caveats"]:
-        fail(f"{name}: a refused declaration must be stated, or the file vanishes from the answer")
 
 
 def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
