@@ -47,6 +47,7 @@ installations = atlas.detect(home="/home/deck")
 #    Never a silently chosen winner: ambiguity is a truthful result.
 
 inst = installations[0]              # e.g. a RetroDeck handle — live, re-reads its sources per query
+                                     # choosing is optional: atlas.every_installation(home) asks them all
 inst.health()                        # structured: a tuple of issue caveats with stable codes; ok = no issues
 
 inst.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
@@ -86,6 +87,12 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 - **Installations are handles.** Every question is asked _of an installation_, never of a global "the system". A machine
   can carry RetroDECK, EmuDeck and a bare RetroArch side by side; each answers for itself. No cross-installation
   fall-through: a RetroDECK handle never borrows a coexisting install's config.
+- **Choosing one is optional, not abolished.** `atlas.every_installation(home)` mirrors the protocol's question set
+  across every detected installation and returns each answer labelled with the handle that produced it, in detection
+  order — the same arrangement's answer, twice, where two arrangements run the same emulator. That is fan-out and
+  nothing else: no merging, no deduplication, no preference, no resolver rule outside a handle. Returning every true
+  answer is not guessing; picking a winner would be, and a one-installation machine yields a one-entry result the caller
+  never chose. Nothing detected is an empty result, which is the same truthful empty `detect` answers with.
 - **Detection labels markers, it does not partition.** EmuDeck _is_ a configured `org.libretro.RetroArch` — both
   descriptions of the same RetroArch are true at once, so marker checks are ordered (EmuDeck before "bare standalone")
   and a handle may carry more than one description.

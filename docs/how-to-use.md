@@ -24,12 +24,16 @@ Every query follows the same five steps:
 
 ```python
 installations = atlas.detect(home="/home/deck")   # 1. find what is installed
-inst = installations[0]                           # 2. pick a handle (the caller chooses — atlas never picks a winner)
+inst = installations[0]                           # 2. choose a handle — or ask all of them (see below)
 health = inst.health()                            # 3. check health before trusting answers
 answer = inst.save_location(core_so="mgba_libretro.so", content_path=rom_path)   # 4. ask the handle
 for caveat in answer.caveats:                     # 5. read the caveats — always
     handle_or_log(caveat.code, caveat.data)
 ```
+
+Step 2 is the caller's, and it is optional: atlas never picks a winner, but it will ask every installation for you and
+label each answer with the handle it came from — see
+[Choosing is optional](#choosing-is-optional--ask-every-installation).
 
 Rules that hold for every answer:
 
@@ -75,6 +79,49 @@ Issue codes (`atlas.HEALTH_ISSUE_*`): `marker-missing`, `marker-unreadable`, `ma
 `saves-root-missing`, `config-unreadable`, `companion-config-missing`. Health is also mirrored into every placement's
 caveats (code `health`, the issue code in `data["issue"]`), so a placement computed on a broken installation says so
 itself.
+
+## Choosing is optional — ask every installation
+
+On a machine with two arrangements, "where does this save live?" has two true answers. `every_installation` puts one
+question to all of them and hands back every answer, labelled with the handle that produced it, in detection order:
+
+```python
+everywhere = atlas.every_installation(home="/home/deck")     # detect(), then ask — same arguments, same probe order
+for answered in everywhere.save_location(content_path=rom_path):
+    print(answered.installation.kind, answered.answer.dir)
+# retrodeck /run/media/deck/Emulation/retrodeck/saves/n64     — RetroDECK's shipped cfg sorts by content
+# emudeck   /home/deck/Emulation/saves/retroarch/saves        — EmuDeck's is flat: two arrangements, two layouts
+```
+
+Every question a handle answers, the aggregate asks all of them: `health()`, `save_location()`, `systems()`,
+`emulators_for()`, `firmware_for_core()`, `firmware_for_system()`, `firmware_inventory()`, `identify_firmware()` — same
+arguments, same answers. Each returns a tuple of labelled answers:
+
+- `answered.installation` is the handle itself, not a copy of its identity: read `kind`, `kinds`, `root()` and
+  `health()` off it, or ask it the next question (its `emulators_for`, then that entry's own `save_location`).
+- `answered.answer` is exactly what the handle route returns for that question — the same `SavePlacement`,
+  `CatalogueAnswer` or `FirmwareAnswer`, unchanged, with its own caveats.
+
+The aggregate resolves nothing itself. It merges nothing, drops no duplicates, and prefers nothing beyond detection
+order (RetroDECK, EmuDeck, standalone Flatpak, native): a machine that runs PPSSPP under two arrangements gives you
+PPSSPP twice, once with each arrangement's wiring, and the label is which is which. Handing you both is not guessing —
+picking one would be.
+
+An empty result is `atlas.detect`'s empty result: nothing is installed. That is its only meaning, because detection
+triggers on marker existence — a present-but-broken installation is still detected, still answers, and still carries its
+health issues.
+
+Already holding handles? Wrap them rather than detecting twice — `atlas.EveryInstallation(installations)`. Serializing
+works the same way the answers do, label plus the question's own serializer:
+
+```python
+atlas.installation_answers_contract(everywhere.save_location(content_path=rom_path), atlas.placement_contract)
+# [{'installation': {'kind': 'retrodeck', 'kinds': [...], 'root': ..., 'health': []},
+#   'answer': {'dir': '/run/media/deck/Emulation/retrodeck/saves/n64', ...}}, ...]
+```
+
+The handle route underneath is unchanged: a consumer that has chosen — decky mostly asks RetroDECK directly — keeps
+using it.
 
 ## Where does this save live?
 
@@ -390,7 +437,9 @@ from atlas import placement_contract, firmware_contract, installation_contract
 json.dumps(placement_contract(placement))
 ```
 
-Structured fields in these dicts are contractual; prose (`sources`, caveat messages) is deliberately absent.
+Structured fields in these dicts are contractual; prose (`sources`, caveat messages) is deliberately absent. An
+aggregate answer has no serializer of its own — `installation_answers_contract` composes the label with whichever of
+these you asked for, so a labelled answer and a handle-route answer serialize identically.
 
 ## Chained flows
 

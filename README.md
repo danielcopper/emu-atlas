@@ -36,7 +36,9 @@ Four principles, fixed before any code:
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, standalone installs, any of
   them side by side — and every question is asked _of an installation_, never of a global "the system":
   `installation.save_location(content_path=..., core_so=...)` and `installation.emulators_for(system)` on every handle —
-  the ones without a frontend catalogue answer with the reason rather than an empty list.
+  the ones without a frontend catalogue answer with the reason rather than an empty list. Choosing one of them is
+  optional: `every_installation(home)` asks them all and labels each answer with the handle it came from, because two
+  arrangements on one machine give two true answers and picking a winner would be the guess.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
   machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`, `file_size`, `file_digest`) whose every
   operation reports an explicit outcome — missing is not unreadable is not invalid text — because the emulators make
@@ -108,6 +110,10 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   with stable codes: unreadable or invalid markers, missing roots, a stale EmuDeck whose claimed RetroArch config is
   gone), ordered markers (EmuDeck claims the Flatpak it configures), and never a silently chosen winner. Handles are
   live: every query re-reads its governing sources, each exactly once.
+- `atlas.every_installation(home, machine=...)` puts the protocol's questions to every detected installation at once and
+  answers each labelled with the handle that produced it, in detection order — fan-out only: it merges nothing, prefers
+  nothing, and resolves nothing that a handle does not resolve. A machine with one installation answers once; a machine
+  with none answers with nothing, which is a result and not an error.
 - `installation.save_location(content_path=..., core_so=...)` resolves the save directory the way RetroArch does:
   platform-default roots, the four-layer override chain (gated by `auto_overrides_enable` / `game_specific_options` /
   `rgui_config_directory`), `library_name` read live from the core binary through the Flatpak-deployment translation,
