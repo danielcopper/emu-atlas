@@ -88,9 +88,14 @@ works on it. What each finding carries:
 | `config-unreadable`        | `path`, `status` | a bare RetroArch's `retroarch.cfg` could not be read                |
 | `companion-config-missing` | `path`, `status` | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
 
-The findings also travel **in the answers themselves**: a placement computed on a broken installation carries them in
-its own `caveats`, under these same codes with this same data. Nothing wraps them — branch on `marker-invalid`, not on a
-category code with the condition buried in `data`.
+The findings also travel **in the answers themselves**: every answer computed on a broken installation — a placement, a
+catalogue answer, a systems listing, any of the four firmware answers — carries them at the front of its own `caveats`,
+under these same codes with this same data. Nothing wraps them — branch on `marker-invalid`, not on a category code with
+the condition buried in `data`.
+
+They ride there whether or not they bear on what you asked: a finding is a true statement about the installation, and
+atlas does not decide for you which of them matter to the question at hand. So an answer can be perfectly usable and
+still carry findings — a broken marker degrades an installation without emptying its catalogue.
 
 ```python
 atlas.health_contract(inst.health())
@@ -336,8 +341,8 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
 The seven `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
-`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Only
-placements carry them today; a firmware or catalogue answer states its own degradations, so ask `health()` there.
+`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Every
+answer carries them, not just placements, and they come first in the list.
 
 `content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
 to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the
