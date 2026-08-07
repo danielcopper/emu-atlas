@@ -153,17 +153,21 @@ class Health:
     unreadable marker, the ``key`` behind an invalid one). Handles never hide a
     present-but-broken installation — they report it with the issues attached.
 
-    These issues *are* caveats, and they travel as themselves: a placement
+    These issues *are* caveats, and they travel as themselves: every answer
     computed on a broken installation carries the findings directly in its own
-    ``caveats``, under their own codes. Nothing wraps them in a category code
-    with the real condition nested in ``data`` — that shape hides a distinct,
-    stable code behind a discriminator a client has to unpack, and the firmware
-    route retired it for the same reason.
+    ``caveats``, under their own codes and ahead of what the query itself could
+    not resolve. Nothing wraps them in a category code with the real condition
+    nested in ``data`` — that shape hides a distinct, stable code behind a
+    discriminator a client has to unpack, and the firmware route retired it for
+    the same reason.
 
-    The placement route is the only one that does this today; a firmware or
-    catalogue answer states its own degradations and leaves health to
-    :meth:`Installation.health`. Whether the other routes should carry them too
-    is an open question, not an omission to route around.
+    Every answer, not only the ones a finding bears on: whether the arrangement
+    is broken is true of the installation however it was asked, and a map of
+    which finding affects which answer would have to be maintained and could
+    rot into silence. What broke is in the ``data``; judging relevance is the
+    caller's. Each route derives the findings from the reads it already made,
+    never from a second :meth:`Installation.health` call, so an answer and the
+    findings beside it were read from one revision of each source (REVIEW M4).
     """
 
     issues: tuple[Caveat, ...] = ()
@@ -2200,6 +2204,7 @@ def _retroarch_firmware_context(
     sandbox: _Sandbox,
     global_text: str | None,
     cfg_label: str,
+    findings: tuple[Caveat, ...],
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
 
@@ -2215,7 +2220,11 @@ def _retroarch_firmware_context(
     """
     machine = sandbox.machine
     parsed = parse_cfg_text(global_text) if global_text is not None else {}
-    caveats: list[Caveat] = []
+    # The installation's own health leads: whether the arrangement is broken is
+    # the most general thing about any answer, so it stands before what this
+    # particular read could not resolve. The caller derives the findings from
+    # the same reads it passed *global_text* out of.
+    caveats: list[Caveat] = list(findings)
     sources: list[str] = []
 
     raw_system = parsed.get("system_directory")
@@ -2313,17 +2322,21 @@ class _FirmwareQueries:
     def _read_firmware_context(self) -> FirmwareContext:
         raise NotImplementedError  # pragma: no cover - every handle supplies one
 
-    def _firmware_context(self) -> FirmwareContext:
-        """The handle's live read, carrying what atlas has established about this arrangement.
+    def _stated(self, context: FirmwareContext) -> FirmwareContext:
+        """A context with what atlas has established about this arrangement.
 
         Every firmware answer copies the context's caveats into itself, so
-        stating the arrangement's evidence once here states it on all four —
-        and on a handle that assembles its own catalogue for
-        :meth:`firmware_for_system` too, because that one asks for the context
-        the same way.
+        stating the evidence once here states it on all four. The installation's
+        health findings are already at the front of those caveats: each handle
+        derives them from the very reads it built the context out of, because a
+        second read for them could see a different revision of the same file
+        than the answer did (REVIEW M4).
         """
-        context = self._read_firmware_context()
         return _dc_replace(context, caveats=(*context.caveats, *arrangement_caveats(self.kind)))
+
+    def _firmware_context(self) -> FirmwareContext:
+        """The handle's live read, stated — the context all four questions answer from."""
+        return self._stated(self._read_firmware_context())
 
     def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer:
         """Does *core_so* need firmware, where does each file go, and is it there?"""
@@ -2633,12 +2646,18 @@ class _CatalogueQueries:
         overrides, every returned entry states that as a catalogue caveat: the
         system-level answer may be wrong for exactly those games.
 
-        No entries is four different facts, and the caveats tell them apart. No
-        entries and no caveat means the catalogue was read and the frontend
-        knows no emulator for this system — the only one of the four that is a
-        statement about the machine. The other three say why nobody could
-        answer from a catalogue at all: the arrangement ships none, atlas has
-        not established where it keeps one, or the one it has could not be read.
+        No entries is four different facts, and the three
+        ``emulator-catalogue-*`` codes tell them apart. None of the three means
+        the catalogue was read and the frontend knows no emulator for this
+        system — the only one of the four that is a statement about the
+        machine. The other three say why nobody could answer from a catalogue
+        at all: the arrangement ships none, atlas has not established where it
+        keeps one, or the one it has could not be read.
+
+        The test is those codes, not an empty ``caveats``: a broken
+        installation states its health findings on this answer as on every
+        other, so an empty caveat list is not what "read, and it declares
+        nothing" looks like there.
         """
         answer = self._catalogue_answer(system, content_path=content_path)
         return _dc_replace(answer, caveats=(*answer.caveats, *arrangement_caveats(self.kind)))
@@ -2649,11 +2668,17 @@ class _CatalogueQueries:
     # is what makes "every answer says what atlas has established about this
     # arrangement" a property of the surface rather than of remembering.
 
+    def health(self) -> Health:
+        raise NotImplementedError  # pragma: no cover - every handle answers it
+
     def _systems_answer(self) -> SystemsAnswer:
-        return SystemsAnswer(caveats=(self._catalogue_absence(),))
+        # A handle with no catalogue reads nothing to refuse, so its health is
+        # this query's own single read of the sources — no snapshot to reuse
+        # and none read twice.
+        return SystemsAnswer(caveats=(*self.health().issues, self._catalogue_absence()))
 
     def _catalogue_answer(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
-        return CatalogueAnswer(caveats=(self._catalogue_absence(),))
+        return CatalogueAnswer(caveats=(*self.health().issues, self._catalogue_absence()))
 
 
 class RetroDeck(_FirmwareQueries, _CatalogueQueries):
@@ -2852,12 +2877,17 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, bundled + custom_systems overlay)"
 
     def _systems_answer(self) -> SystemsAnswer:
-        """Every system the catalogue declares, sorted."""
-        config, _ = self._read_marker()
+        """Every system the catalogue declares, sorted.
+
+        The findings come from the marker snapshot this query already read, so
+        the answer's health and its roots are one revision of the file.
+        """
+        config, marker_issues = self._read_marker()
+        findings = self._health_from(config, marker_issues).issues
         by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
         if not read:
-            return SystemsAnswer(caveats=self._catalogue_unread_caveat())
-        return SystemsAnswer(tuple(sorted(by_system)), (self._CATALOGUE_SOURCE,))
+            return SystemsAnswer(caveats=(*findings, *self._catalogue_unread_caveat()))
+        return SystemsAnswer(tuple(sorted(by_system)), (self._CATALOGUE_SOURCE,), findings)
 
     def _gamelist_selections_at(self, root: str, system: str) -> GamelistSelections:
         gamelist_path = os.path.join(root, "ES-DE", "gamelists", system, "gamelist.xml")
@@ -2883,11 +2913,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         plus its ``custom_systems`` overlay, and the system's gamelist, each
         read once here and handed to the entry assembly together (REVIEW M4).
         """
-        config, _ = self._read_marker()
+        config, marker_issues = self._read_marker()
+        findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read = self._read_catalogue(root)
         if not read:
-            return CatalogueAnswer(caveats=self._catalogue_unread_caveat(system))
+            return CatalogueAnswer(caveats=(*findings, *self._catalogue_unread_caveat(system)))
         return CatalogueAnswer(
             self._entries_from(
                 by_system.get(system, ()),
@@ -2896,6 +2927,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
             ),
             (self._CATALOGUE_SOURCE,),
+            findings,
         )
 
     def _entries_from(
@@ -2987,12 +3019,24 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, marker_issues = self._read_marker()
         return self._save_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
 
-    def _read_firmware_context(self) -> FirmwareContext:
+    def _firmware_context_from(
+        self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]
+    ) -> FirmwareContext:
+        """The firmware context over a marker snapshot this query already read.
+
+        Health comes from that same snapshot rather than from a fresh
+        :meth:`health` call, so the findings an answer states and the roots it
+        resolved were read from one revision of ``retrodeck.json``.
+        """
         return _retroarch_firmware_context(
             sandbox=self._sandbox(),
             global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
             cfg_label=RETROARCH_CFG,
+            findings=self._health_from(config, marker_issues).issues,
         )
+
+    def _read_firmware_context(self) -> FirmwareContext:
+        return self._firmware_context_from(*self._read_marker())
 
     def firmware_for_system(self, *, system: str, verify: bool = False) -> FirmwareAnswer:
         """Which emulators RetroDECK offers for *system*, and what each of them wants.
@@ -3009,7 +3053,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         from this query's own snapshot: marker and both catalogue layers are
         read once here and handed on, never re-read.
         """
-        config, _ = self._read_marker()
+        config, marker_issues = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read = self._read_catalogue(root)
         entries = self._entries_from(
@@ -3025,8 +3069,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
             read=read,
         )
+        # The marker this query already read builds the context too — asking
+        # for a fresh one would read retrodeck.json twice inside one answer.
+        context = self._stated(self._firmware_context_from(config, marker_issues))
         return _resolve_for_system(
-            self._machine, self._firmware_context(), system=system, catalogue=catalogue, verify=verify
+            self._machine, context, system=system, catalogue=catalogue, verify=verify
         )
 
     def entry_save_location(
@@ -3249,11 +3296,19 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
 
     def _read_firmware_context(self) -> FirmwareContext:
         """The cfg is the truth here too: ``settings.sh`` names a ``biosPath``,
-        but what RetroArch actually hands its cores is ``system_directory``."""
+        but what RetroArch actually hands its cores is ``system_directory``.
+
+        The companion cfg is read once and answers both questions asked of it —
+        its text builds the context, its status decides the companion health
+        finding — so the two can never describe different revisions of it.
+        """
+        settings, marker_issues = self._read_marker()
+        cfg = self._machine.read_text(self._companion_cfg_path())
         return _retroarch_firmware_context(
             sandbox=self._sandbox(),
-            global_text=self._machine.read_text(self._companion_cfg_path()).text,
+            global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
+            findings=self._health_from(settings, marker_issues, cfg.status).issues,
         )
 
 
@@ -3357,10 +3412,14 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
+        # One read of the cfg answers both: its text is the context, its status
+        # is the health of an installation whose cfg *is* the marker.
+        cfg = self._machine.read_text(self._cfg_path())
         return _retroarch_firmware_context(
             sandbox=self._sandbox(),
-            global_text=self._machine.read_text(self._cfg_path()).text,
+            global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
+            findings=self._health_from(cfg.status).issues,
         )
 
 

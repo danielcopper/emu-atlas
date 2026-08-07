@@ -5117,6 +5117,171 @@
           ]
         }
       }
+    },
+    {
+      "name": "a-broken-installation-states-its-findings-on-every-answer",
+      "rationale": "One broken installation, three questions, three answers that all say so: the marker names a non-string path, so RetroDECK's roots fall back to defaults that do not exist, and the catalogue, the systems listing and the firmware answer each open with the same three findings in the same order. The point is that the findings are orthogonal to the answer: the cfg is still the truth, so the catalogue is read and names its emulator, the systems listing is populated, and the firmware root resolves — a broken installation degrades an answer, it does not empty it. An answer that stated the findings only where they happened to matter would leave a client reading the catalogue with no idea the installation is broken.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": 7}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": ""
+        },
+        "catalogue_query": {
+          "system": "n64"
+        },
+        "systems_query": {},
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/home/deck/retrodeck",
+            "health": [
+              {
+                "code": "marker-invalid",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                  "key": "paths.saves_path"
+                }
+              },
+              {
+                "code": "root-missing",
+                "data": {
+                  "path": "/home/deck/retrodeck"
+                }
+              },
+              {
+                "code": "saves-root-missing",
+                "data": {
+                  "path": "/home/deck/retrodeck/saves"
+                }
+              }
+            ]
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "marker-invalid",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "key": "paths.saves_path"
+              }
+            },
+            {
+              "code": "root-missing",
+              "data": {
+                "path": "/home/deck/retrodeck"
+              }
+            },
+            {
+              "code": "saves-root-missing",
+              "data": {
+                "path": "/home/deck/retrodeck/saves"
+              }
+            }
+          ]
+        },
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": [
+            {
+              "code": "marker-invalid",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "key": "paths.saves_path"
+              }
+            },
+            {
+              "code": "root-missing",
+              "data": {
+                "path": "/home/deck/retrodeck"
+              }
+            },
+            {
+              "code": "saves-root-missing",
+              "data": {
+                "path": "/home/deck/retrodeck/saves"
+              }
+            }
+          ]
+        },
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mupen64plus_next_libretro.so",
+              "label": null,
+              "declaration": "absent",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unknown",
+                  "data": {
+                    "core_so": "mupen64plus_next_libretro.so"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "marker-invalid",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "key": "paths.saves_path"
+              }
+            },
+            {
+              "code": "root-missing",
+              "data": {
+                "path": "/home/deck/retrodeck"
+              }
+            },
+            {
+              "code": "saves-root-missing",
+              "data": {
+                "path": "/home/deck/retrodeck/saves"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "core_so": "mupen64plus_next_libretro.so"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

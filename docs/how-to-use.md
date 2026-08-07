@@ -88,9 +88,14 @@ works on it. What each finding carries:
 | `config-unreadable`        | `path`, `status` | a bare RetroArch's `retroarch.cfg` could not be read                |
 | `companion-config-missing` | `path`, `status` | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
 
-The findings also travel **in the answers themselves**: a placement computed on a broken installation carries them in
-its own `caveats`, under these same codes with this same data. Nothing wraps them — branch on `marker-invalid`, not on a
-category code with the condition buried in `data`.
+The findings also travel **in the answers themselves**: every answer computed on a broken installation — a placement, a
+catalogue answer, a systems listing, any of the four firmware answers — carries them in its own `caveats`, ahead of what
+the query itself could not resolve, under these same codes with this same data. Nothing wraps them — branch on
+`marker-invalid`, not on a category code with the condition buried in `data`.
+
+They ride there whether or not they bear on what you asked: a finding is a true statement about the installation, and
+atlas does not decide for you which of them matter to the question at hand. So an answer can be perfectly usable and
+still carry findings — a broken marker degrades an installation without emptying its catalogue.
 
 ```python
 atlas.health_contract(inst.health())
@@ -336,8 +341,9 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
 The seven `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
-`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Only
-placements carry them today; a firmware or catalogue answer states its own degradations, so ask `health()` there.
+`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Every
+answer carries them, not just placements, ahead of what the query itself could not resolve. Do not key on the position:
+on the entry route (`EmulatorEntry.save_location()`) the entry's own catalogue caveats precede them. Match on the codes.
 
 `content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
 to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the
@@ -362,16 +368,28 @@ entry.core_so                      # 'mupen64plus_next_libretro.so' — or None 
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
 
-An empty `entries` is four different facts, and the caveat is how you tell them apart. **No caveat** means the catalogue
-was read and declares no emulator for that system — an answer about the machine, and the only one of the four you may
-act on as "nothing here":
+An empty `entries` is four different facts, and the three `emulator-catalogue-*` codes are how you tell them apart —
+**none of them present** means the catalogue was read and declares no emulator for that system, an answer about the
+machine and the only one of the four you may act on as "nothing here":
 
 | caveat code                        | what it means                                                         | what to do                               |
 | ---------------------------------- | --------------------------------------------------------------------- | ---------------------------------------- |
-| _(none)_                           | read, and the frontend knows no emulator for this system              | trust it                                 |
+| _(none of the three)_              | read, and the frontend knows no emulator for this system              | trust it                                 |
 | `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                   | name the core: `save_location(core_so=)` |
 | `emulator-catalogue-unestablished` | it may have one; atlas has not established where                      | same — but do not report "no emulators"  |
 | `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty | surface it; the machine may be broken    |
+
+Read the three codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
+these four, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken
+installation. Filter to the three codes (or ask `health()` separately, which is the same question asked directly).
+
+```python
+refusals = {c.code for c in answer.caveats} & {
+    "emulator-catalogue-unavailable", "emulator-catalogue-unestablished", "emulator-catalogue-unreadable",
+}
+if not answer.entries and not refusals:
+    nothing_here(system)          # the frontend genuinely knows no emulator for it
+```
 
 The middle two both mean "ask the user or use your own mapping", but only the first is a statement about the machine.
 `unestablished` is a statement about atlas, and a client that renders it as an absence is telling its user something

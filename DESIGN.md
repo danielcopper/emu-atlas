@@ -103,14 +103,17 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   gone) is detected and states its findings, never invisible and never "ok". The config is the truth, never the
   existence of a folder — a stale secondary root must not win.
 - **A health finding is a caveat, and travels as one.** It serializes `{code, data}` like every other caveat — the path
-  it is about, the read status behind it, the marker key that is wrong — and a placement computed on a broken
-  installation carries the findings themselves in its `caveats`, under their own codes (the placement route alone today;
-  firmware and catalogue answers state their own degradations). No category code with the real condition nested in
-  `data`: a distinct, stable code hidden behind a discriminator is a shape a client has to unpack before it can branch,
-  and one the firmware route already retired. The health answer itself serializes as an object like every other answer —
-  `ok` the summary field a client renders, `issues` the findings — while an installation's identity carries the findings
-  as a plain field, where an empty list is the whole summary. `ok` is derived from the findings and stays derived:
-  stating a summary is not storing a second copy of the fact.
+  it is about, the read status behind it, the marker key that is wrong — and **every** answer computed on a broken
+  installation carries the findings themselves in its `caveats`, under their own codes: placement, catalogue, systems
+  and all four firmware answers alike. The rule is blanket rather than causal on purpose — a true finding is never a
+  false statement, while a map of which finding affects which answer has to be maintained and can rot into silence, and
+  a client reading a catalogue answer would otherwise never learn the installation is broken. The `data` names what
+  broke; judging relevance is the client's. No category code with the real condition nested in `data`: a distinct,
+  stable code hidden behind a discriminator is a shape a client has to unpack before it can branch, and one the firmware
+  route already retired. The health answer itself serializes as an object like every other answer — `ok` the summary
+  field a client renders, `issues` the findings — while an installation's identity carries the findings as a plain
+  field, where an empty list is the whole summary. `ok` is derived from the findings and stays derived: stating a
+  summary is not storing a second copy of the fact.
 - **The emulator handle means "as currently configured".** Granularity, roots, and modes are config readings with
   provenance, not static facts. Where an alternative mode exists (Flycast per-game VMUs), the handle names the config
   that selects it.
