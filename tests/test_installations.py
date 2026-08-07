@@ -817,7 +817,9 @@ class TestSystemDirectoryRoot:
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert p.file_set.state == "observed"
         assert p.needs == ()
-        assert atlas.CAVEAT_SYSTEM_DIR_UNSET not in [c.code for c in p.caveats]
+        # Nothing to refuse: an absent key resolves, so neither route states a
+        # refusal for it — the cleared key is the one that still does.
+        assert atlas.CAVEAT_SYSTEM_DIR_CLEARED not in [c.code for c in p.caveats]
 
     def test_a_dropped_system_directory_line_is_stated(self):
         # The line sets nothing, so the platform default stands — silently,
@@ -1985,3 +1987,93 @@ class TestEveryAnswerStatesTheInstallationsHealth:
         assert not isinstance(placement, atlas.Unresolved)
         carried = [c.code for c in placement.caveats]
         assert carried[: len(rd.health().codes)] == list(rd.health().codes)
+
+
+class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
+    """Item 14's rule, on the other route: absent resolves, cleared refuses.
+
+    The firmware route used to refuse both spellings with one code, so a
+    machine whose config simply never names ``system_directory`` — the ordinary
+    case for a stock RetroArch — was told there was no root to check against,
+    while the card route had already resolved that same machine to RetroArch's
+    own default.
+    """
+
+    CFG = f"{HOME}/.config/retroarch/retroarch.cfg"
+    CONFIG_TREE = f"{HOME}/.config/retroarch"
+    CORES = f"{HOME}/.config/retroarch/cores"
+    INFO = 'display_name = "mGBA"\nsystemname = "GBA"\n'
+    DIRS = 'libretro_info_path = "~/.config/retroarch/cores"\n'
+
+    def _inventory(self, cfg: str, **kwargs):
+        machine = atlas.FixtureMachine(
+            {
+                self.CFG: cfg,
+                f"{self.CORES}/mgba_libretro.info": self.INFO,
+                **kwargs.pop("files", {}),
+            },
+            **kwargs,
+        )
+        return atlas.NativeRetroArch(HOME, machine).firmware_inventory()
+
+    def test_an_absent_key_resolves_to_the_platform_default(self):
+        answer = self._inventory(self.DIRS, dirs=[f"{self.CONFIG_TREE}/system"])
+        assert answer.root == f"{self.CONFIG_TREE}/system"
+
+    def test_an_absent_key_refuses_nothing(self):
+        answer = self._inventory(self.DIRS, dirs=[f"{self.CONFIG_TREE}/system"])
+        assert atlas.CAVEAT_SYSTEM_DIR_CLEARED not in [c.code for c in answer.caveats]
+
+    def test_a_resolved_default_that_is_not_there_is_stated_like_any_root(self):
+        # Resolving is not asserting: the default directory may not exist, and
+        # that is the same fact a configured missing root states.
+        answer = self._inventory(self.DIRS)
+        assert atlas.CAVEAT_FIRMWARE_ROOT_MISSING in [c.code for c in answer.caveats]
+
+    def test_a_cleared_key_refuses_with_its_own_code(self):
+        answer = self._inventory(f'system_directory = ""\n{self.DIRS}')
+        assert answer.root is None
+        assert atlas.CAVEAT_SYSTEM_DIR_CLEARED in [c.code for c in answer.caveats]
+
+    def test_the_cleared_refusal_carries_the_value(self):
+        answer = self._inventory(f'system_directory = "default"\n{self.DIRS}')
+        cleared = next(c for c in answer.caveats if c.code == atlas.CAVEAT_SYSTEM_DIR_CLEARED)
+        assert cleared.data == {"value": "default"}
+
+    def test_a_configured_key_is_unchanged(self):
+        answer = self._inventory(
+            f'system_directory = "/bios"\n{self.DIRS}', dirs=["/bios"]
+        )
+        assert answer.root == "/bios"
+        assert atlas.CAVEAT_SYSTEM_DIR_CLEARED not in [c.code for c in answer.caveats]
+
+    def test_both_routes_resolve_an_absent_key_to_the_same_directory(self):
+        # The point of sharing the helper: one directory, two routes.
+        machine = atlas.FixtureMachine(
+            {self.CFG: self.DIRS, f"{self.CORES}/mgba_libretro.info": self.INFO},
+            dirs=[f"{self.CONFIG_TREE}/system"],
+        )
+        handle = atlas.NativeRetroArch(HOME, machine)
+        placement = handle.save_location(core_so="flycast_libretro.so")
+        assert handle.firmware_inventory().root == f"{self.CONFIG_TREE}/system"
+        assert placement.dir.startswith(f"{self.CONFIG_TREE}/system")
+
+    def test_a_dropped_line_is_stated_beside_the_resolved_default(self):
+        # The silence this split would otherwise create: the key ends up absent
+        # because RetroArch refused the line, so the answer resolves — and says
+        # which line set nothing, or the configured path vanishes without trace.
+        answer = self._inventory(
+            f'system_directory "/bios"\n{self.DIRS}', dirs=[f"{self.CONFIG_TREE}/system"]
+        )
+        assert answer.root == f"{self.CONFIG_TREE}/system"
+        dropped = next(c for c in answer.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED)
+        assert dropped.data == {"key": "system_directory", "line": 'system_directory "/bios"'}
+
+    def test_a_dropped_line_for_another_key_is_not_this_routes_business(self):
+        # Only the key this route resolves is stated here; the save-layout keys
+        # are the card route's to report, and stating them twice would double
+        # every dropped line on a machine that asks both questions.
+        answer = self._inventory(
+            f'savefile_directory "/saves"\n{self.DIRS}', dirs=[f"{self.CONFIG_TREE}/system"]
+        )
+        assert atlas.CAVEAT_CFG_LINE_DROPPED not in [c.code for c in answer.caveats]

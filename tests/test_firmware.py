@@ -38,12 +38,13 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_NO_FIRMWARE_DECLARATION,
     CAVEAT_NO_FIRMWARE_REQUIREMENT,
-    CAVEAT_STANDALONE_EMULATOR,
+    CAVEAT_STANDALONE_UNSUPPORTED,
     CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
     CAVEAT_SYSTEM_UNKNOWN,
     CHECKED_MISMATCH,
     CHECKED_UNKNOWN,
     DECLARATION_ABSENT,
+    DECLARATION_UNSUPPORTED,
     DECLARATION_READ,
     DECLARATION_UNREADABLE,
     NEED_REQUIRED,
@@ -76,7 +77,7 @@ from atlas.machine import (
     PathKind,
     ReadResult,
 )
-from atlas.placement import CAVEAT_SYSTEM_DIR_UNSET, Caveat
+from atlas.placement import CAVEAT_SYSTEM_DIR_CLEARED, Caveat
 
 INFO_DIR = "/cores"
 BIOS_DIR = "/bios"
@@ -1152,8 +1153,8 @@ class TestPerSystemAnswer:
         )
         answer = firmware_for_system(machine, _context(machine), system="gb", catalogue=catalogue)
         standalone = answer.cores[1]
-        assert standalone.declaration == DECLARATION_ABSENT
-        assert [c.code for c in standalone.caveats] == [CAVEAT_STANDALONE_EMULATOR]
+        assert standalone.declaration == DECLARATION_UNSUPPORTED
+        assert [c.code for c in standalone.caveats] == [CAVEAT_STANDALONE_UNSUPPORTED]
 
     def test_one_identity_under_two_names_leaves_both_requirements_standing(self):
         # gb_bios.bin is on disk; SameBoy's dmg_boot.bin is byte-identical and
@@ -1637,7 +1638,9 @@ class TestNoDeclarationIsNeverSatisfied:
             )
         )
         answer = firmware_for_system(machine, _context(machine), system="snes", catalogue=catalogue)
-        assert [c.declaration for c in answer.cores] == [DECLARATION_READ, DECLARATION_ABSENT]
+        # The standalone is 'unsupported', not 'absent': it is installed, and
+        # what atlas is missing is a source for its rules, not the emulator.
+        assert [c.declaration for c in answer.cores] == [DECLARATION_READ, DECLARATION_UNSUPPORTED]
         assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNKNOWN]
 
     def test_the_catalogue_route_states_the_declarations_nobody_reads(self):
@@ -1670,7 +1673,7 @@ class TestNoDeclarationIsNeverSatisfied:
             root=None,
             cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores,
             hashes=load_hashes(TABLE),
-            caveats=(Caveat(CAVEAT_SYSTEM_DIR_UNSET, "system_directory is unset in the configs"),),
+            caveats=(Caveat(CAVEAT_SYSTEM_DIR_CLEARED, "system_directory is cleared in the configs"),),
         )
         for answer in (
             firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so"),
@@ -1682,7 +1685,7 @@ class TestNoDeclarationIsNeverSatisfied:
             assert answer.unclaimed == ()
             # The reason there is no root IS the answer here: an empty answer
             # that states nothing can only be read as "nothing needed".
-            assert [c.code for c in answer.caveats] == [CAVEAT_SYSTEM_DIR_UNSET]
+            assert [c.code for c in answer.caveats] == [CAVEAT_SYSTEM_DIR_CLEARED]
 
     def test_an_empty_answer_that_states_nothing_cannot_be_built(self):
         # The invariant behind the loop above: production seeds the reason into
@@ -1883,3 +1886,48 @@ def test_identity_equality_is_content_equality():
     left = FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, known_as=("x",))
     right = FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, known_as=("x",))
     assert left == right
+
+
+class TestUnsupportedIsNotAbsent:
+    """Two claims the old vocabulary spelled the same way.
+
+    ``absent`` is about the machine — no such core here. ``unsupported`` is
+    about atlas — the emulator is here and there is no source for what it
+    wants. A client deciding whether to offer "install this core" needs them
+    apart, and the placement route already kept them apart.
+    """
+
+    CATALOGUE = Catalogue(
+        (
+            CatalogueEntry(label="RPCS3 (Standalone)", kind="standalone", core_so=None),
+            CatalogueEntry(label="Mupen64Plus-Next", kind="libretro", core_so="mupen64plus_next_libretro.so"),
+        )
+    )
+
+    def _cores(self):
+        machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO})
+        answer = firmware_for_system(machine, _context(machine), system="ps3", catalogue=self.CATALOGUE)
+        return {core.label: core for core in answer.cores}
+
+    def test_a_standalone_is_unsupported(self):
+        assert self._cores()["RPCS3 (Standalone)"].declaration == DECLARATION_UNSUPPORTED
+
+    def test_a_core_the_catalogue_names_but_nobody_installed_stays_absent(self):
+        assert self._cores()["Mupen64Plus-Next"].declaration == DECLARATION_ABSENT
+
+    def test_the_standalone_caveat_is_the_placement_routes_word(self):
+        from atlas.placement import UNRESOLVED_STANDALONE
+
+        codes = [c.code for c in self._cores()["RPCS3 (Standalone)"].caveats]
+        assert codes == [UNRESOLVED_STANDALONE]
+
+    def test_an_unsupported_declaration_still_means_unknown(self):
+        # The tri-state rule holds for the new state: nothing was read, so
+        # nothing may render as a green light.
+        assert self._cores()["RPCS3 (Standalone)"].requirements_met is None
+
+    def test_the_two_states_do_not_share_a_caveat_code(self):
+        cores = self._cores()
+        standalone = {c.code for c in cores["RPCS3 (Standalone)"].caveats}
+        not_installed = {c.code for c in cores["Mupen64Plus-Next"].caveats}
+        assert standalone & not_installed == set()

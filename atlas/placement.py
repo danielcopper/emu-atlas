@@ -82,7 +82,11 @@ CAVEAT_FILENAMES_UNVERIFIED = "filenames-unverified"
 CAVEAT_FILENAMES_CONTENT_CONDITIONAL = "filenames-content-conditional"
 CAVEAT_FILE_SET_SPANS_ROOTS = "file-set-spans-roots"
 CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
-CAVEAT_SYSTEM_DIR_UNSET = "system-directory-unset"
+# Set to blank or the literal "default". Not the same as absent — an absent
+# key resolves to RetroArch's platform default on every route — and the
+# distinction is the whole reason this code is spelled 'cleared': the setting
+# is present and empty, and what a core is handed then depends on the run.
+CAVEAT_SYSTEM_DIR_CLEARED = "system-directory-cleared"
 CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
 CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
 CAVEAT_UNVERIFIED_VERSION = "unverified-version"

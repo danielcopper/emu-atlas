@@ -109,7 +109,7 @@ FIRMWARE_REQUIREMENT_FIELDS = {
     "checked",
     "satisfied",
 }
-KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent"}
+KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent", "unsupported"}
 KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none"}
 UNCLAIMED_FIELDS = {"path", "identity", "known_as"}
 IDENTIFICATION_FIELDS = {"identity", "known_as", "requirements", "caveats"}
@@ -154,7 +154,7 @@ KNOWN_CAVEAT_CODES = {
     "filenames-content-conditional",
     "file-set-spans-roots",
     "unknown-option-value",
-    "system-directory-unset",
+    "system-directory-cleared",
     "per-game-overrides-present",
     "per-game-override",
     "unverified-version",
@@ -178,7 +178,7 @@ KNOWN_CAVEAT_CODES = {
     "core-dir-unresolved",
     "firmware-root-missing",
     "core-not-installed",
-    "standalone-emulator",
+    "standalone-unsupported",
     "emulator-catalogue-unavailable",
     "firmware-unreadable",
     "firmware-content-unidentified",

@@ -97,7 +97,7 @@ from atlas.placement import (
     CAVEAT_SAVE_DIR_UNLISTABLE,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
-    CAVEAT_SYSTEM_DIR_UNSET,
+    CAVEAT_SYSTEM_DIR_CLEARED,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     HOLE_CONTENT_DIR,
     ROOT_CONTENT_DIRECTORY,
@@ -120,12 +120,14 @@ from atlas.retroarch_cfg import (
     UPSTREAM_DEFAULTS,
     IgnoredSetting,
     LayoutDefaults,
+    ParsedCfg,
     RejectedDirectory,
     RetroArchCfg,
     chain_bool,
     chain_value,
     expand_home,
     is_app_relative,
+    parse_cfg,
     parse_cfg_text,
     resolve_save_layout,
 )
@@ -1531,6 +1533,31 @@ def _content_system_root(content: _Content, *, source: str) -> _SystemRoot:
     )
 
 
+# What an *absent* ``system_directory`` resolves to, for every route that asks.
+# ``config_set_defaults`` seeds it before any config is read
+# (``configuration.c:5746-5749``), and on desktop Linux the seed is ``system``
+# under the RetroArch config tree (``platform_unix.c:2141-2143``). So the key
+# being absent is not a gap: it names a directory, and both the card route and
+# the firmware route resolve it to the same one — from here, once.
+#
+# One qualification, and it is a reachability one: the join is the *else*
+# branch. ``LIBRETRO_SYSTEM_DIRECTORY`` in the environment wins when it is set
+# (``platform_unix.c:2137-2140``), and atlas cannot read the environment the
+# emulator will run with — it is not on disk, and the seam abstracts the
+# machine, not the process. [V] unset on the reference machine, so the join is
+# what applies there; an installation that exports it is [O] — the answer would
+# name this directory while RetroArch used the exported one.
+PLATFORM_SYSTEM_DIR_SOURCE = (
+    "default: system_directory unset — RetroArch platform default applies "
+    "('system' under the config tree, platform_unix.c:2142-2143)"
+)
+
+
+def _platform_system_dir(retroarch_config_dir: str) -> str:
+    """RetroArch's own default system directory for this config tree."""
+    return os.path.join(retroarch_config_dir, "system")
+
+
 def _core_system_root(
     *,
     sandbox: _Sandbox,
@@ -1552,9 +1579,12 @@ def _core_system_root(
 
     - **Absent** — ``config_set_defaults`` has already put the platform default
       there (``configuration.c:5746-5749``), which on desktop Linux is
-      ``system`` under the config tree (``platform_unix.c:2137-2143``, the same
-      block that seeds the saves default this resolver answers with). So an
-      unset key resolves; it is not a hole and never was one.
+      ``system`` under the config tree (``platform_unix.c:2141-2143``, the same
+      block that seeds the saves default this resolver answers with) unless
+      ``LIBRETRO_SYSTEM_DIRECTORY`` is exported, which wins (``:2137-2140``) and
+      which atlas cannot read off a disk — [V] unset on the reference machine,
+      [O] anywhere it is set. So an unset key resolves; it is not a hole and
+      never was one.
     - **Blank or the literal ``default``** — ``system_directory`` passes
       ``handle_setting = true`` (``configuration.c:1691``), so the generic path
       loop writes whatever the merged config holds, with no directory test
@@ -1582,12 +1612,9 @@ def _core_system_root(
         )
     elif raw_system is None:
         root = _SystemRoot(
-            os.path.join(retroarch_config_dir, "system"),
+            _platform_system_dir(retroarch_config_dir),
             ROOT_SYSTEM_DIRECTORY,
-            sources=(
-                "default: system_directory unset — RetroArch platform default applies "
-                "('system' under the config tree, platform_unix.c:2142-2143)",
-            ),
+            sources=(PLATFORM_SYSTEM_DIR_SOURCE,),
         )
     elif configured is None:
         root = _content_system_root(
@@ -2199,11 +2226,22 @@ def _cfg_directory(
     return resolved.path, ()
 
 
+def _firmware_root_missing(root: str) -> Caveat:
+    """The whole firmware root is gone — one fact, not one per declared file."""
+    return Caveat(
+        CAVEAT_FIRMWARE_ROOT_MISSING,
+        f"the system_directory {root} is not an existing directory — every declared file below is "
+        "missing because the whole firmware root is gone, not one file at a time",
+        {"path": root},
+    )
+
+
 def _retroarch_firmware_context(
     *,
     sandbox: _Sandbox,
     global_text: str | None,
     cfg_label: str,
+    retroarch_config_dir: str,
     findings: tuple[Caveat, ...],
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
@@ -2219,7 +2257,12 @@ def _retroarch_firmware_context(
     two into one directory; nothing here assumes it.
     """
     machine = sandbox.machine
-    parsed = parse_cfg_text(global_text) if global_text is not None else {}
+    # The dropped lines are read here, not only the values: once an absent key
+    # resolves silently to the platform default, a line the parser refused
+    # looks exactly like a key nobody wrote — and the user did write it. The
+    # card route states the same fact for the same reason.
+    read = parse_cfg(global_text) if global_text is not None else ParsedCfg({})
+    parsed = read.values
     # The installation's own health leads: whether the arrangement is broken is
     # the most general thing about any answer, so it stands before what this
     # particular read could not resolve. The caller derives the findings from
@@ -2228,14 +2271,37 @@ def _retroarch_firmware_context(
     sources: list[str] = []
 
     raw_system = parsed.get("system_directory")
-    configured_system = sandbox.cfg_path("system_directory", raw_system)
+    configured_system = sandbox.cfg_path("system_directory", raw_system) if raw_system is not None else None
     root = configured_system.path if configured_system is not None else None
-    if configured_system is None:
+    caveats.extend(
+        _ignored_caveats(
+            tuple(
+                IgnoredSetting(IGNORED_LINE_DROPPED, cfg_label, line.key, line.line)
+                for line in read.dropped
+                if line.key == "system_directory"
+            )
+        )
+    )
+    if raw_system is None:
+        # Absent is not unset-and-unknown: RetroArch seeded the platform default
+        # before it read a line of config, so this route resolves it exactly as
+        # the card route does and scans there. A line the parser refused lands
+        # here too, and is stated above rather than resolving in silence.
+        root = _platform_system_dir(retroarch_config_dir)
+        sources.append(PLATFORM_SYSTEM_DIR_SOURCE)
+        if machine.path_kind(root) != KIND_DIRECTORY:
+            caveats.append(_firmware_root_missing(root))
+    elif configured_system is None:
+        # Set to blank or the literal "default": the setting is empty, and what
+        # the core is handed then depends on the run, not on the config.
         caveats.append(
             Caveat(
-                CAVEAT_SYSTEM_DIR_UNSET,
-                "system_directory is unset in the configs — its RetroArch default is not resolved yet, so "
-                "there is no root to check firmware against",
+                CAVEAT_SYSTEM_DIR_CLEARED,
+                f'system_directory = "{raw_system}" clears the setting, so what a core is handed as '
+                "its system directory is decided per run: with content loaded RetroArch passes the "
+                "content's own directory (runloop.c:1958-1997), and no content is named here — so "
+                "there is no one root to check firmware against",
+                {"value": raw_system},
             )
         )
     elif root is None:
@@ -2243,14 +2309,7 @@ def _retroarch_firmware_context(
     else:
         sources.append(f'{cfg_label}: system_directory = "{raw_system}"{configured_system.note}')
         if machine.path_kind(root) != KIND_DIRECTORY:
-            caveats.append(
-                Caveat(
-                    CAVEAT_FIRMWARE_ROOT_MISSING,
-                    f"the configured system_directory {root} is not an existing directory — every declared "
-                    "file below is missing because the whole firmware root is gone, not one file at a time",
-                    {"path": root},
-                )
-            )
+            caveats.append(_firmware_root_missing(root))
 
     info_dir, info_caveats = _cfg_directory(sandbox, parsed, "libretro_info_path")
     core_dir, core_dir_caveats = _cfg_directory(sandbox, parsed, "libretro_directory")
@@ -3032,6 +3091,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             sandbox=self._sandbox(),
             global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
             cfg_label=RETROARCH_CFG,
+            retroarch_config_dir=self._retroarch_config_dir(),
             findings=self._health_from(config, marker_issues).issues,
         )
 
@@ -3308,6 +3368,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             sandbox=self._sandbox(),
             global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
+            retroarch_config_dir=self._retroarch_config_dir(),
             findings=self._health_from(settings, marker_issues, cfg.status).issues,
         )
 
@@ -3419,6 +3480,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             sandbox=self._sandbox(),
             global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
+            retroarch_config_dir=self.root(),
             findings=self._health_from(cfg.status).issues,
         )
 

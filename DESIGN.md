@@ -82,7 +82,12 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 #      checked  verified | mismatch | unchecked | unknown  — what the machine says
 #    "unchecked" (we did not look) and "unknown" (we looked and cannot tell) are
 #    different answers. Having no declaration at all is a caveat on an EMPTY
-#    answer, because empty is honest and "nothing missing" would be a lie.
+#    answer, because empty is honest and "nothing missing" would be a lie —
+#    and which empty it is has its own field:
+#      declaration  read | unreadable | absent | unsupported
+#    "absent" is a claim about the machine (no such core here), "unsupported"
+#    one about atlas (the emulator is here, its rules are outside coverage) —
+#    the same fact, and the same word, the placement route answers with.
 ```
 
 - **Installations are handles.** Every question is asked _of an installation_, never of a global "the system". A machine
@@ -292,7 +297,10 @@ translation table as the real fix.
 
 - **Never guess.** Distinct states for "caller fills this hole" and "atlas does not know". Degradation is always
   explicit: missing reference config → deviation check omitted; unloadable core → `library_name` unknown; absent
-  catalogue → caller names the core. No answer is ever invented to keep a field non-empty.
+  catalogue → caller names the core. No answer is ever invented to keep a field non-empty. The converse binds equally: a
+  value RetroArch itself resolves is never reported as unknown. An absent `system_directory` is the case that taught it
+  — RetroArch seeds the platform default before reading a config, so both the card route and the firmware route resolve
+  it and answer; only a key cleared to nothing refuses, because what a core is handed then depends on the run.
 
 - **`.info` is never a path source.** `corename` ≠ `library_name` for 27% of the installed cores that load and declare a
   `corename`; the bsnes variants would split one real save directory into three fictional ones. `.info` serves
