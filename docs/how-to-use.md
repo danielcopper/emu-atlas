@@ -418,8 +418,13 @@ else:
     use(result.dir)
 ```
 
-Always handle the `Unresolved` branch: standalone emulators (DuckStation, PCSX2-SA, …) are catalogued but not yet
-resolvable, and pretending otherwise is exactly what atlas refuses to do.
+Always handle the `Unresolved` branch: standalone emulators (DuckStation, PCSX2-SA, …) are catalogued but outside the
+resolver's coverage, and pretending otherwise is exactly what atlas refuses to do.
+
+`standalone-unsupported` is one word on both routes: the placement route answers it as the `Unresolved` code above, and
+the firmware route as a caveat on a core whose `declaration` is `"unsupported"`. Both say the same thing — the emulator
+is installed, atlas has no source for its rules — which is a different axis from `arrangement-unverified`: that one says
+a reading was never confirmed on a live machine, this one says there was no reading to confirm.
 
 ## Firmware
 
@@ -437,9 +442,9 @@ Reading a `FirmwareAnswer`:
 
 ```python
 answer = inst.firmware_for_core(core_so="pcsx_rearmed_libretro.so", verify=True)
-answer.root                        # the live system_directory (None + caveat when unset)
+answer.root                        # the live system_directory (None + caveat only when the key is cleared)
 for core in answer.cores:
-    core.declaration               # 'read' | 'absent' (core not installed) | 'unreadable' — three different empties
+    core.declaration               # 'read' | 'absent' (not installed) | 'unreadable' | 'unsupported' — four empties
     core.requirements_met          # True | False | None — THE field to render (see below)
     for req in core.requirements:
         req.file_name, req.path    # what the core opens, and the absolute resolved destination
@@ -493,9 +498,17 @@ An answer with no requirements says which kind of empty it is, and the code is t
 | `no-firmware-declaration`      | read, and nothing declares it — an established absence | nothing needed                                  |
 | `no-firmware-requirement`      | declared, but nothing became a requirement             | read `core.refused` and the core caveats        |
 | `firmware-declaration-unknown` | atlas could not establish what is declared             | treat as unknown; never as "nothing needed"     |
+| `system-directory-cleared`     | the key is set to nothing, so the root is per-run      | name content, or fix the config                 |
+| `standalone-unsupported`       | this emulator is here, its rules are not covered       | your own knowledge; not an absence              |
 
 A per-system or per-core answer whose emulators were all read and declare nothing carries no such caveat: each entry
 says it itself with `declaration="read"` and an empty requirement list, which is the honest "needs nothing".
+
+**An absent `system_directory` is not one of these.** RetroArch seeds `system` under its config tree before reading any
+config, so atlas resolves the key's absence to that directory and answers in full — the same directory the placement
+route has resolved since it started answering for cores rooted there. Only a key set to blank or the literal `default`
+refuses, because what a core is handed then depends on the run: with content loaded RetroArch passes the content's own
+directory, and a firmware question names no content.
 
 Two more say a directory could not be read, and both mean the answer is narrower than the machine:
 
