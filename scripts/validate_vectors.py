@@ -165,6 +165,7 @@ KNOWN_CAVEAT_CODES = {
     "core-multi-option",
     "card-mode-unconfirmed",
     "card-generation-mismatch",
+    "arrangement-unverified",
     "sandbox-path-untranslated",
     "app-relative-path-unexpanded",
     "cfg-line-dropped",
