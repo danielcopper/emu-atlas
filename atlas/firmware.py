@@ -85,7 +85,7 @@ from atlas.machine import (
     PathKind,
 )
 from atlas.oddities import SaveMode, load_oddities
-from atlas.placement import ROOT_SYSTEM_DIRECTORY, Caveat
+from atlas.placement import ROOT_SYSTEM_DIRECTORY, UNRESOLVED_STANDALONE, Caveat
 from atlas.retroarch_cfg import cfg_uint
 
 FirmwareNeed = Literal["required", "optional"]
@@ -117,7 +117,10 @@ CAVEAT_INFO_PATH_UNRESOLVED = "info-path-unresolved"
 CAVEAT_CORE_DIR_UNRESOLVED = "core-dir-unresolved"
 CAVEAT_FIRMWARE_ROOT_MISSING = "firmware-root-missing"
 CAVEAT_CORE_NOT_INSTALLED = "core-not-installed"
-CAVEAT_STANDALONE_EMULATOR = "standalone-emulator"
+# One fact, one code on both routes: the placement route answers a standalone
+# emulator with the typed Unresolved outcome, the firmware route with this
+# caveat, and a client that learned the word on one route reads the other.
+CAVEAT_STANDALONE_UNSUPPORTED = UNRESOLVED_STANDALONE
 CAVEAT_CATALOGUE_UNAVAILABLE = "emulator-catalogue-unavailable"
 CAVEAT_FIRMWARE_UNREADABLE = "firmware-unreadable"
 CAVEAT_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
@@ -967,31 +970,43 @@ class RefusedDeclaration:
     reason: str
 
 
-CoreDeclarationState = Literal["read", "unreadable", "absent"]
+CoreDeclarationState = Literal["read", "unreadable", "absent", "unsupported"]
 
 DECLARATION_READ: CoreDeclarationState = "read"
 DECLARATION_UNREADABLE: CoreDeclarationState = "unreadable"
 DECLARATION_ABSENT: CoreDeclarationState = "absent"
+# Not a state of the machine but of atlas's coverage: the emulator is here and
+# atlas has no source for what it wants. Spelled the way the placement route
+# spells the same fact, because it *is* the same fact asked twice.
+DECLARATION_UNSUPPORTED: CoreDeclarationState = "unsupported"
 
-CORE_DECLARATION_STATES = ("read", "unreadable", "absent")
+CORE_DECLARATION_STATES = ("read", "unreadable", "absent", "unsupported")
 
 
 @dataclass(frozen=True, slots=True)
 class CoreFirmware:
     """What one emulator wants, resolved against the live firmware root.
 
-    ``declaration`` is the load-bearing field, and it has three values because
-    an empty ``requirements`` list has three meanings:
+    ``declaration`` is the load-bearing field, and it has four values because
+    an empty ``requirements`` list has four meanings:
 
     - ``read`` — atlas read this core's own ``.info``, so an empty list is the
       answer "this core needs no firmware".
     - ``unreadable`` — the core is here, its declaration is not (missing,
       unreadable, or not UTF-8). What it wants is unknown.
-    - ``absent`` — no such core here at all, or a standalone emulator that
-      ships no ``.info``.
+    - ``absent`` — no such core here at all. Exactly that, and nothing else:
+      a claim about what is installed on this machine.
+    - ``unsupported`` — the emulator is here and atlas has no source for what
+      it wants, which today means a standalone emulator: it ships no ``.info``,
+      and its own rules are outside the resolver's coverage. A claim about
+      atlas, not about the machine, and the same one the placement route makes
+      with :data:`~atlas.placement.UNRESOLVED_STANDALONE`.
 
-    Only the first makes an empty list mean *complete*; the other two make it
-    mean *unknown*, and each carries a caveat saying which.
+    Only the first makes an empty list mean *complete*; the other three make it
+    mean *unknown*, and each carries a caveat saying which. ``unsupported`` and
+    the evidence caveats are different axes and never substitute for each
+    other: ``arrangement-unverified`` says a reading was never confirmed live,
+    while this says there was no reading to confirm.
     """
 
     core_so: str | None
@@ -1878,22 +1893,23 @@ def _catalogue_entry_core(
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """One catalogue entry resolved, plus the observations it produced.
 
-    Four states, kept apart: a standalone emulator, a core the catalogue names
-    that is not installed, an installed core whose ``.info`` could not be read,
-    and one that was read.
+    Four states, kept apart: a standalone emulator (here, and outside atlas's
+    coverage), a core the catalogue names that is not installed (not here), an
+    installed core whose ``.info`` could not be read, and one that was read.
     """
     if entry.kind != KIND_LIBRETRO or entry.core_so is None:
         return (
             CoreFirmware(
                 core_so=entry.core_so,
                 label=entry.label,
-                declaration=DECLARATION_ABSENT,
+                declaration=DECLARATION_UNSUPPORTED,
                 requirements=(),
                 caveats=(
                     Caveat(
-                        CAVEAT_STANDALONE_EMULATOR,
-                        f"{entry.label} is a standalone emulator — its firmware rules are not "
-                        "resolvable yet (ROADMAP.md), so the empty list means unknown",
+                        CAVEAT_STANDALONE_UNSUPPORTED,
+                        f"{entry.label} is a standalone emulator — its firmware rules are outside "
+                        "the resolver's current coverage (ROADMAP.md), so the empty list means "
+                        "unknown; the emulator is here, atlas's source for it is not",
                         {"label": entry.label},
                     ),
                 ),
