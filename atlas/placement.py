@@ -69,8 +69,13 @@ _FILE_SET_STATES = ("observed", "declared", "unknown")
 # How a save is grouped — the values :attr:`Granularity.value` may take, and
 # therefore the values a rule card may select. Contractual: clients branch on
 # them and vectors assert them, so the packaged cards are validated against
-# this tuple at load rather than against a card author's spelling.
-GRANULARITIES = ("shared-card", "per-game-file", "per-game-files")
+# this tuple at load rather than against a card author's spelling. Named per
+# value like every other closed set here, and the tuple is built from the names
+# so the vocabulary has one source rather than two that can drift.
+GRANULARITY_SHARED_CARD = "shared-card"
+GRANULARITY_PER_GAME_FILE = "per-game-file"
+GRANULARITY_PER_GAME_FILES = "per-game-files"
+GRANULARITIES = (GRANULARITY_SHARED_CARD, GRANULARITY_PER_GAME_FILE, GRANULARITY_PER_GAME_FILES)
 
 
 def _freeze(mapping: Mapping[str, str]) -> Mapping[str, str]:
@@ -206,6 +211,16 @@ class FileSet:
     implies the whole save. ``complete`` is the explicit completeness claim:
     ``True`` only when a source-verified rule card closes the candidate
     universe for the active mode; the generic observation can never earn it.
+
+    **Today the field is reserved: it is ``False`` on every answer atlas can
+    give**, because no shipped rule card claims completeness and none can yet.
+    Closing the candidate universe means establishing which files the core can
+    write *at all* for the active mode — an upstream read, not an inventory of
+    what a card happens to list — and no card's evidence goes that far. The
+    field stays in the contract at its honest value rather than being dropped:
+    a client must not read "not complete" as "atlas has no opinion", and the
+    audit grind can earn a ``True`` here one card at a time without the shape
+    of an answer changing.
     """
 
     state: FileSetState

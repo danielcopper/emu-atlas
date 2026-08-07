@@ -26,6 +26,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VECTOR_GLOB = "vectors/*/*.json"
 TITLE_BANG = re.compile(r"^[a-z]+(\([^)]*\))?!:")
+# Conventional Commits: the marker is a FOOTER — at the start of a line, with
+# the colon. A substring match accepted "this is not a BREAKING CHANGE" in the
+# middle of a paragraph, which is the one sentence most likely to appear in a
+# body that means the opposite. `BREAKING-CHANGE` is the spec's own synonym.
+BREAKING_FOOTER = re.compile(r"^BREAKING[ -]CHANGE:", re.MULTILINE)
 # The base ref reaches git as an argument, so it must not be able to pose as an
 # option: the leading letter or digit is the guard, and the rest is git's
 # revision grammar as this gate meets it — "origin/main", a tag, a SHA, and the
@@ -45,9 +50,14 @@ def _git(*args: str) -> str:
     return result.stdout
 
 
-def _contract_at(ref: str | None) -> dict[str, dict[str, str]]:
-    """family → {canonical input JSON → canonical expected JSON} at *ref* (None = worktree)."""
-    contract: dict[str, dict[str, str]] = {}
+def _contract_at(ref: str | None) -> dict[str, dict[str, tuple[str, str]]]:
+    """family → {canonical input JSON → (canonical expected JSON, vector name)}.
+
+    ``None`` reads the worktree. The name rides along for the message only —
+    the contract itself is the input→expected mapping, and a rename is not a
+    change to it.
+    """
+    contract: dict[str, dict[str, tuple[str, str]]] = {}
     if ref is None:
         paths = sorted(REPO_ROOT.glob(VECTOR_GLOB))
         blobs = [p.read_text() for p in paths]
@@ -63,23 +73,46 @@ def _contract_at(ref: str | None) -> dict[str, dict[str, str]]:
         family = contract.setdefault(data["family"], {})
         for vector in data["vectors"]:
             key = json.dumps(vector["input"], sort_keys=True)
-            family[key] = json.dumps(vector["expected"], sort_keys=True)
+            family[key] = (json.dumps(vector["expected"], sort_keys=True), vector.get("name", "?"))
     return contract
 
 
-def find_breaking_changes(base_ref: str) -> list[str]:
-    base = _contract_at(base_ref)
-    head = _contract_at(None)
+def diff_contracts(
+    base: dict[str, dict[str, tuple[str, str]]], head: dict[str, dict[str, tuple[str, str]]]
+) -> list[str]:
+    """What broke between two contracts — the whole verdict, and no I/O.
+
+    An input that disappeared and an input whose expected block changed are the
+    same severity (a guarantee is gone either way) and different events, and the
+    third phrasing is the one that used to confuse: **editing a fixture** is a
+    removal, because the machine the old guarantee described no longer exists in
+    the corpus. That is not a false positive to be tuned away — the guarantee
+    really is gone — so the finding says which vector's fixture moved rather
+    than reporting a removal nobody can place.
+    """
     findings: list[str] = []
     for family, base_map in sorted(base.items()):
         head_map = head.get(family, {})
-        for key, base_expected in base_map.items():
-            head_expected = head_map.get(key)
-            if head_expected is None:
-                findings.append(f"{family}: a guaranteed input was removed (was -> {base_expected})")
-            elif head_expected != base_expected:
-                findings.append(f"{family}: expected changed {base_expected} -> {head_expected}")
+        head_names = {name for _, name in head_map.values()}
+        for key, (base_expected, name) in base_map.items():
+            entry = head_map.get(key)
+            if entry is None:
+                if name in head_names:
+                    findings.append(
+                        f"{family}: the fixture of {name!r} was edited — the machine its guarantee "
+                        f"described is no longer in the corpus (was -> {base_expected})"
+                    )
+                else:
+                    findings.append(
+                        f"{family}: a guaranteed input was removed ({name!r} -> {base_expected})"
+                    )
+            elif entry[0] != base_expected:
+                findings.append(f"{family}: expected changed for {name!r} {base_expected} -> {entry[0]}")
     return findings
+
+
+def find_breaking_changes(base_ref: str) -> list[str]:
+    return diff_contracts(_contract_at(base_ref), _contract_at(None))
 
 
 def main() -> None:
@@ -118,7 +151,7 @@ def main() -> None:
         print("(local run — in CI the PR title must carry '!' or the body a BREAKING CHANGE footer)")
         return
 
-    if TITLE_BANG.match(title) or "BREAKING CHANGE" in body:
+    if TITLE_BANG.match(title) or BREAKING_FOOTER.search(body):
         print("OK: breaking-change marker present")
         return
 

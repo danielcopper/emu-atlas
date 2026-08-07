@@ -135,6 +135,37 @@ class TestMarkerPathValuesMustBeStrings:
         assert issue.data["key"] == "paths.saves_path"
 
 
+class TestAMarkerThatIsGoneIsStatedNotDetected:
+    """``marker-missing`` is the one health code no vector can reach.
+
+    Detection triggers on the marker, so a machine without one has no
+    installation to ask — the code exists for the caller who kept a handle (or
+    built one) across the marker being moved, renamed, or unmounted, and that
+    is a direct-handle question by construction. Hence a test rather than a
+    fixture machine: the corpus would have to state an installation that
+    ``detect()`` cannot find.
+    """
+
+    def test_a_retrodeck_handle_whose_marker_is_gone_says_so(self):
+        rd = _retrodeck({})
+        assert rd.health().codes[0] == atlas.HEALTH_ISSUE_MARKER_MISSING
+
+    def test_the_finding_names_the_marker_it_looked_for(self):
+        issue = _retrodeck({}).health().issues[0]
+        assert issue.data["path"] == RETRODECK_JSON
+
+    def test_detection_finds_nothing_there(self):
+        # The other half of the reason this is not a vector: the same machine
+        # detects no installation at all, so no vector could ask it anything.
+        assert atlas.detect(HOME, FixtureMachine({})) == []
+
+    def test_a_bare_retroarch_handle_whose_cfg_is_gone_says_so(self):
+        # The bare arrangements have no marker but their cfg, so "missing
+        # marker" and "unreadable config" are two findings there, not one.
+        bare = atlas.BareRetroArchNative(HOME, FixtureMachine({}))
+        assert bare.health().codes == (atlas.HEALTH_ISSUE_MARKER_MISSING,)
+
+
 class TestTheMarkerVersionIsAKeyAtlasReads:
     """The marker's version drives a comparison, so its type is checked too.
 

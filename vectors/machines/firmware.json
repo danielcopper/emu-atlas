@@ -4275,6 +4275,216 @@
           ]
         }
       }
+    },
+    {
+      "name": "firmware-a-core-directory-that-does-not-resolve-is-stated",
+      "rationale": "The two directories a firmware answer needs are independent, and only one of them resolved here: the .info files were read (so what the cores DECLARE is known), while libretro_directory names nothing this machine has (so which of them are INSTALLED is not). The answer states core-dir-unresolved rather than presenting the declarations as an installed set.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/cores/mgba_libretro.info": "display_name = \"mGBA\"\nsystemname = \"Nintendo - Game Boy Advance\"\nfirmware_count = \"1\"\nfirmware0_path = \"gba_bios.bin\"\nfirmware0_desc = \"GBA BIOS\"\n",
+          "/mnt/sd/retrodeck/bios/gba_bios.bin": "bios",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "firmware_query": {
+          "kind": "inventory"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mgba_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mgba_libretro.so",
+                  "system": "gba",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "gba_bios.bin",
+                  "path": "/mnt/sd/retrodeck/bios/gba_bios.bin",
+                  "declared": "gba_bios.bin",
+                  "identity": {
+                    "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+                    "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+                    "size": 16384
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "core-dir-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-systemname-nobody-rules-is-filed-under-its-slug",
+      "rationale": "The last rung of the system-assignment ladder. No per-file override rules this name and no mapping knows it, so the slug is derived from the systemname itself — system_source says 'slug', which is how a client tells a ruled assignment from a computed one without re-deriving anything.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_info_path = \"/home/deck/.config/retroarch/cores\"\nlibretro_directory = \"/home/deck/.config/retroarch/cores\"\n",
+          "/home/deck/.config/retroarch/cores/fictional_libretro.info": "display_name = \"Fictional\"\nsystemname = \"Fictional Home Computer\"\nfirmware_count = \"1\"\nfirmware0_path = \"fictional.rom\"\nfirmware0_desc = \"Fictional BIOS\"\n",
+          "/home/deck/.config/retroarch/system/.keep": ""
+        },
+        "cores": {
+          "/home/deck/.config/retroarch/cores/fictional_libretro.so": {
+            "library_name": "Fictional"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "fictional_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "fictional_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "fictional_libretro.so",
+                  "system": "fictional-home-computer",
+                  "system_source": "slug",
+                  "need": "required",
+                  "file_name": "fictional.rom",
+                  "path": "/home/deck/.config/retroarch/system/fictional.rom",
+                  "declared": "fictional.rom",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-derived-assignment-names-the-cores-it-may-hide",
+      "rationale": "The atari800 shape, structurally: the core's own two sources disagree — its systemname maps one way, its database another — so its firmware is filed under a derived assignment. A query for the system the DATABASE names then selects nothing, and an answer that stopped there would read as 'no emulator for that system'. system-assignment-may-hide-cores names the core the derivation may have hidden, with on-machine evidence for it rather than every derived core on the disk.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_info_path = \"/home/deck/.config/retroarch/cores\"\nlibretro_directory = \"/home/deck/.config/retroarch/cores\"\n",
+          "/home/deck/.config/retroarch/cores/fictional_libretro.info": "display_name = \"Atari800\"\nsystemname = \"Atari 8-bit Family\"\ndatabase = \"Atari - 5200\"\nfirmware_count = \"1\"\nfirmware0_path = \"ATARIXL.ROM\"\nfirmware0_desc = \"Atari XL BIOS\"\n",
+          "/home/deck/.config/retroarch/system/.keep": ""
+        },
+        "cores": {
+          "/home/deck/.config/retroarch/cores/fictional_libretro.so": {
+            "library_name": "Fictional"
+          }
+        },
+        "firmware_query": {
+          "kind": "system",
+          "system": "atari5200"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "atari5200"
+              }
+            },
+            {
+              "code": "system-assignment-may-hide-cores",
+              "data": {
+                "count": "1",
+                "cores": "fictional_libretro.so",
+                "system": "atari5200",
+                "table_version": "2"
+              }
+            },
+            {
+              "code": "system-unknown",
+              "data": {
+                "system": "atari5200"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

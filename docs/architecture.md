@@ -182,6 +182,7 @@ classDiagram
 | You are…                        | You import                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------------ |
 | writing a client                | `import atlas` — entry points, handles, answers, vocabularies, serializers     |
+| branching on a field's value    | `import atlas` — every closed set a field can hold, values and types alike     |
 | writing a test or a fixture     | `from atlas.machine import FixtureMachine`                                     |
 | porting the resolver            | the Tier-2 modules, as the reference for what each parser reads                |
 | reading a cfg / catalogue alone | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems` |
