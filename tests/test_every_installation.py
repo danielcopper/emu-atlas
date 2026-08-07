@@ -13,6 +13,7 @@ import inspect
 from typing import Any
 
 import atlas
+from atlas.machine import FixtureMachine
 from atlas.contract import (
     catalogue_contract,
     firmware_contract,
@@ -46,15 +47,15 @@ COEXISTENCE_FILES = {
 COEXISTENCE_DIRS = ["/mnt/sd/retrodeck/saves", f"{HOME}/ra-saves"]
 
 
-def _coexistence() -> atlas.FixtureMachine:
-    return atlas.FixtureMachine(COEXISTENCE_FILES, dirs=COEXISTENCE_DIRS)
+def _coexistence() -> FixtureMachine:
+    return FixtureMachine(COEXISTENCE_FILES, dirs=COEXISTENCE_DIRS)
 
 
-def _handles(machine: atlas.FixtureMachine) -> list[atlas.Installation]:
+def _handles(machine: FixtureMachine) -> list[atlas.Installation]:
     return atlas.detect(HOME, machine)
 
 
-def _every(machine: atlas.FixtureMachine) -> atlas.EveryInstallation:
+def _every(machine: FixtureMachine) -> atlas.EveryInstallation:
     return atlas.EveryInstallation(_handles(machine))
 
 
@@ -62,13 +63,13 @@ class TestTheEmptyMachine:
     """Nothing installed is an answer, not a failure — detect's own empty."""
 
     def test_no_installations_are_asked(self):
-        assert _every(atlas.FixtureMachine({})).installations == ()
+        assert _every(FixtureMachine({})).installations == ()
 
     def test_a_question_answers_with_nothing(self):
-        assert _every(atlas.FixtureMachine({})).save_location(core_so=CORE_SO) == ()
+        assert _every(FixtureMachine({})).save_location(core_so=CORE_SO) == ()
 
     def test_the_empty_answer_serializes_to_an_empty_list(self):
-        answers = _every(atlas.FixtureMachine({})).save_location(core_so=CORE_SO)
+        answers = _every(FixtureMachine({})).save_location(core_so=CORE_SO)
         assert installation_answers_contract(answers, placement_contract) == []
 
 
@@ -92,7 +93,7 @@ class TestTheFanOut:
         assert [a.installation for a in answers] == handles
 
     def test_a_single_installation_machine_answers_once(self):
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {NATIVE_CFG: COEXISTENCE_FILES[NATIVE_CFG], ROM: ""}, dirs=[f"{HOME}/ra-saves"]
         )
         answers = _every(machine).save_location(content_path=ROM)
@@ -148,7 +149,7 @@ class TestItDelegates:
         assert [health_contract(h) for h in asked] == [health_contract(h) for h in direct]
 
     def test_the_label_carries_the_findings_in_full(self):
-        machine = atlas.FixtureMachine({RETRODECK_JSON: '{"paths": {"rd_home_path": "/gone"}}'})
+        machine = FixtureMachine({RETRODECK_JSON: '{"paths": {"rd_home_path": "/gone"}}'})
         answered = atlas.EveryInstallation(_handles(machine)).health()[0]
         serialized = installation_answers_contract([answered], health_contract)[0]
         assert serialized["installation"]["health"] == serialized["answer"]["issues"]
@@ -256,4 +257,4 @@ class TestTheOneCallForm:
         assert [i.kind for i in aggregate.installations] == [i.kind for i in _handles(machine)]
 
     def test_an_empty_machine_stays_empty(self):
-        assert atlas.every_installation(HOME, atlas.FixtureMachine({})).installations == ()
+        assert atlas.every_installation(HOME, FixtureMachine({})).installations == ()

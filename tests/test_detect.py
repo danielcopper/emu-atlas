@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atlas
+from atlas.machine import FixtureMachine
 
 RETRODECK_JSON = "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
 EMUDECK_SETTINGS = "/home/deck/.config/EmuDeck/settings.sh"
@@ -13,7 +14,7 @@ HOME = "/home/deck"
 
 
 def _detect(files, **kwargs):
-    return atlas.detect(HOME, atlas.FixtureMachine(files, **kwargs))
+    return atlas.detect(HOME, FixtureMachine(files, **kwargs))
 
 
 class TestMarkers:

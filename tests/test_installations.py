@@ -8,6 +8,8 @@ from collections import Counter
 import pytest
 
 import atlas
+from atlas.firmware import resolve_links
+from atlas.machine import FixtureMachine
 from atlas.machine import SYMLINK_HOPS
 
 HOME = "/home/deck"
@@ -22,7 +24,7 @@ RD_DEPLOY_CORES = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/f
 
 
 def _retrodeck(files, **kwargs):
-    machine = atlas.FixtureMachine(files, **kwargs)
+    machine = FixtureMachine(files, **kwargs)
     return atlas.RetroDeck(HOME, machine)
 
 
@@ -609,7 +611,7 @@ class TestLinkView:
     )
 
     def test_symlinked_save_dir_reports_physical_dir(self):
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 f"{HOME}/.config/retroarch/retroarch.cfg": self.FLAT_CFG,
                 "/data/real-saves/Game.srm": "s",
@@ -624,7 +626,7 @@ class TestLinkView:
     def test_dead_link_in_card_directory_is_stated(self):
         # The LRPS2 dir_prep case: the memcards link points into an unmounted
         # volume — the emulator-side path is dead and the answer says so.
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 RETRODECK_JSON: RD_JSON,
                 RETRODECK_CFG: (
@@ -648,7 +650,7 @@ class TestLinkView:
         assert dead[0].data["link"] == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
 
     def test_rejected_save_root_through_dead_link_says_why(self):
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 f"{HOME}/.config/retroarch/retroarch.cfg": self.FLAT_CFG,
                 f"{HOME}/roms/gba/Game.zip": "",
@@ -671,7 +673,7 @@ class TestLinkView:
         a dead link points at a name somebody can create, while a loop is a
         cycle somebody has to break.
         """
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 f"{HOME}/.config/retroarch/retroarch.cfg": self.FLAT_CFG,
                 f"{HOME}/roms/gba/Game.zip": "",
@@ -697,7 +699,7 @@ class TestLinkView:
         """
         chain = {f"{HOME}/links/saves": "/c/l1", f"/c/l{length - 1}": "/data/real-saves"}
         chain.update({f"/c/l{i}": f"/c/l{i + 1}" for i in range(1, length - 1)})
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 f"{HOME}/.config/retroarch/retroarch.cfg": self.FLAT_CFG,
                 "/data/real-saves/Game.srm": "s",
@@ -885,7 +887,7 @@ class TestSystemDirectoryRoot:
 
 class TestEmuDeck:
     def test_settings_parse_and_roots(self):
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
                 f"{HOME}/Emulation/saves/.keep": "",
@@ -899,7 +901,7 @@ class TestEmuDeck:
         assert ed.health().codes == (atlas.HEALTH_ISSUE_COMPANION_CONFIG_MISSING,)
 
     def test_save_location_reads_standalone_cfg(self):
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\nromsPath="$HOME/Emulation/roms"\n',
                 STANDALONE_CFG: (
@@ -1073,7 +1075,7 @@ class TestFlatpakSandboxPaths:
         # NativeRetroArch writes its cfg outside any sandbox: /var/config there
         # is a real host path, and substituting one would answer with a
         # directory this RetroArch never touches.
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 f"{HOME}/.config/retroarch/retroarch.cfg": (
                     'savefile_directory = "/var/config/saves"\n'
@@ -1430,7 +1432,7 @@ class TestOstreeHomeIsHostSide:
     MARKER = '{"paths": {"rd_home_path": "/var/home/deck/retrodeck", "saves_path": "/var/home/deck/retrodeck/saves"}}'
 
     def _retrodeck_at(self, home, cfg_body, files=None, cores=None):
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 self.JSON: self.MARKER,
                 self.CFG: cfg_body,
@@ -1464,7 +1466,7 @@ class TestOstreeHomeIsHostSide:
         # RetroArch resolves /home -> /var/home when it writes the cfg, while
         # the caller may still pass the symlink spelling as `home` — so the
         # configured path matches neither `home` nor a sandbox bind.
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 RETRODECK_JSON: self.MARKER,
                 RETRODECK_CFG: f'system_directory = "{self.HOME}/retrodeck/bios"\n',
@@ -1536,7 +1538,7 @@ class _CountingMachine:
     ``glob`` are repeatable probes that carry no revision of a file with them.
 
     Reads are keyed on the **file**, not on the spelling that reached it:
-    ``atlas.resolve_links`` follows the seam's own ``readlink`` the way the
+    ``resolve_links`` follows the seam's own ``readlink`` the way the
     resolver does. Two spellings of one file are one source — the deployed
     ``es_systems.xml`` really is reached through ``current/active``, a symlink
     — so a counter keyed on the spelling would guard "one spelling per source"
@@ -1544,13 +1546,13 @@ class _CountingMachine:
     """
 
     def __init__(self, files, **kwargs):
-        self._inner = atlas.FixtureMachine(files, **kwargs)
+        self._inner = FixtureMachine(files, **kwargs)
         self.reads: Counter[str] = Counter()
 
     def read_text(self, path):
         # An unresolvable chain (ELOOP) has no file to key on; the spelling is
         # then the most specific thing there is.
-        self.reads[atlas.resolve_links(self._inner, path) or path] += 1
+        self.reads[resolve_links(self._inner, path) or path] += 1
         return self._inner.read_text(path)
 
     def glob(self, pattern):
@@ -1728,7 +1730,7 @@ class TestOneReadPerSourcePerQuery:
 
     def test_firmware_for_system_answers_what_the_catalogue_answers(self):
         # Threading the snapshot must not change the enumeration it produces.
-        machine = atlas.FixtureMachine(self.FILES, cores=self.CORES)
+        machine = FixtureMachine(self.FILES, cores=self.CORES)
         rd = atlas.RetroDeck(HOME, machine)
         answer = rd.firmware_for_system(system="n64")
         assert [c.core_so for c in answer.cores] == [
@@ -1748,7 +1750,7 @@ class TestCfgDirectorySpelling:
     INFO = f"{RD_DEPLOY_CORES}/pcsx2_libretro.info"
 
     def _machine(self, slash):
-        return atlas.FixtureMachine(
+        return FixtureMachine(
             {
                 RETRODECK_JSON: RD_JSON,
                 RETRODECK_CFG: (
@@ -1776,7 +1778,7 @@ class TestCfgDirectorySpelling:
 class TestBareRetroArch:
     def test_native_upstream_default_sorts_by_core(self):
         # config.def.h:982 — upstream defaults to sort-by-core.
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 f"{HOME}/.config/retroarch/retroarch.cfg": 'savefile_directory = "~/saves"\n',
                 f"{HOME}/saves/.keep": "",
@@ -1813,7 +1815,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
     )
 
     def _only(self, files, **kwargs):
-        return atlas.detect(HOME, atlas.FixtureMachine(files, **kwargs))[0]
+        return atlas.detect(HOME, FixtureMachine(files, **kwargs))[0]
 
     def test_a_bare_retroarch_states_the_arrangement_has_none(self):
         # A settled fact: RetroArch ships no frontend catalogue, and no
@@ -1861,7 +1863,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         that was read and declares nothing — and the caller could not tell that
         atlas had never looked.
         """
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {RETRODECK_JSON: RD_JSON, self.DEPLOY_ESDE: {"status": "unreadable"}},
             dirs=["/mnt/sd/retrodeck/saves"],
         )
@@ -1877,7 +1879,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         # this fixture's health talking too — on a broken installation the
         # findings sit here, which is why the client's test is the three
         # emulator-catalogue-* codes rather than `not answer.caveats`.
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 RETRODECK_JSON: RD_JSON,
                 self.DEPLOY_ESDE: '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>'
@@ -2006,7 +2008,7 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
     DIRS = 'libretro_info_path = "~/.config/retroarch/cores"\n'
 
     def _inventory(self, cfg: str, **kwargs):
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 self.CFG: cfg,
                 f"{self.CORES}/mgba_libretro.info": self.INFO,
@@ -2049,7 +2051,7 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
 
     def test_both_routes_resolve_an_absent_key_to_the_same_directory(self):
         # The point of sharing the helper: one directory, two routes.
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {self.CFG: self.DIRS, f"{self.CORES}/mgba_libretro.info": self.INFO},
             dirs=[f"{self.CONFIG_TREE}/system"],
         )

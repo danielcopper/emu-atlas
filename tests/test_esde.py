@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import atlas
+from atlas.esde import parse_gamelist_alternative
+from atlas.installations import parse_gamelist
+from atlas.machine import FixtureMachine
 from atlas.esde import merge_layers, parse_es_systems
 
 HOME = "/home/deck"
@@ -102,7 +105,7 @@ def _entries(answer):
 
 
 def _retrodeck(files, **kwargs):
-    machine = atlas.FixtureMachine(files, **kwargs)
+    machine = FixtureMachine(files, **kwargs)
     return atlas.RetroDeck(HOME, machine)
 
 
@@ -216,10 +219,10 @@ class TestGamelistAlternative:
     )
 
     def test_parses_the_real_two_root_quirk(self):
-        assert atlas.parse_gamelist_alternative(self.REAL_SAMPLE) == "ParaLLEl N64"
+        assert parse_gamelist_alternative(self.REAL_SAMPLE) == "ParaLLEl N64"
 
     def test_parses_the_nested_shape(self):
-        assert atlas.parse_gamelist_alternative(self.NESTED_SAMPLE) == "ParaLLEl N64"
+        assert parse_gamelist_alternative(self.NESTED_SAMPLE) == "ParaLLEl N64"
 
     def test_document_level_wins_over_nested(self):
         # ES-DE takes the document-level element when both exist, label or not.
@@ -227,7 +230,7 @@ class TestGamelistAlternative:
             "<alternativeEmulator><label>ParaLLEl N64</label></alternativeEmulator>"
             "<gameList><alternativeEmulator><label>Mupen64Plus-Next</label></alternativeEmulator></gameList>"
         )
-        assert atlas.parse_gamelist_alternative(both) == "ParaLLEl N64"
+        assert parse_gamelist_alternative(both) == "ParaLLEl N64"
 
     def test_labelless_document_level_element_states_nothing(self):
         # ES-DE picks the document-level element, then reads its label — an
@@ -236,7 +239,7 @@ class TestGamelistAlternative:
             "<alternativeEmulator />"
             "<gameList><alternativeEmulator><label>ParaLLEl N64</label></alternativeEmulator></gameList>"
         )
-        assert atlas.parse_gamelist_alternative(both) is None
+        assert parse_gamelist_alternative(both) is None
 
     def test_selection_inside_a_game_is_not_a_system_selection(self):
         # Neither reader looks there; a game's own choice is <altemulator>.
@@ -245,13 +248,13 @@ class TestGamelistAlternative:
             "<alternativeEmulator><label>ParaLLEl N64</label></alternativeEmulator>"
             "</game></gameList>"
         )
-        assert atlas.parse_gamelist_alternative(text) is None
+        assert parse_gamelist_alternative(text) is None
 
     def test_absent_selection_is_none(self):
-        assert atlas.parse_gamelist_alternative('<?xml version="1.0"?>\n<gameList />') is None
+        assert parse_gamelist_alternative('<?xml version="1.0"?>\n<gameList />') is None
 
     def test_malformed_is_none_never_guessed(self):
-        assert atlas.parse_gamelist_alternative("<alternativeEmulator><label>") is None
+        assert parse_gamelist_alternative("<alternativeEmulator><label>") is None
 
     def test_selection_promotes_entry_to_default(self):
         rd = _catalogue_fixture(
@@ -300,7 +303,7 @@ class TestPerGameAltemulator:
     FILES = {"/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": GAMELIST}
 
     def test_parse_both_levels(self):
-        sel = atlas.parse_gamelist(self.GAMELIST)
+        sel = parse_gamelist(self.GAMELIST)
         assert sel.system_label == "ParaLLEl N64"
         assert sel.per_game == {
             "Paper Mario (USA).zip": "Mupen64Plus-Next",

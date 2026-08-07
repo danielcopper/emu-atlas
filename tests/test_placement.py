@@ -15,7 +15,16 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
-from atlas.retroarch_cfg import RETRODECK_DEFAULTS, resolve_save_layout
+from atlas.retroarch_cfg import LayoutDefaults, resolve_save_layout
+
+# Fixture knowledge, not atlas's: the shipped RetroDECK layout this file
+# exercises. Production reads the keys and falls back to upstream defaults.
+RETRODECK_SHIPPED = LayoutDefaults(
+    savefiles_in_content_dir=False,
+    sort_by_content=True,
+    sort_by_core=False,
+    label="RetroDECK shipped default",
+)
 
 
 class TestInvariants:
@@ -69,7 +78,7 @@ HOME = "/home/deck"
 
 
 def _layout(text):
-    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_DEFAULTS)
+    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED)
 
 
 def _build(text, *, content_dir_path=None, content_dir_name=None, library_name=None, **kwargs):

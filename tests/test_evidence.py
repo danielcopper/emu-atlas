@@ -14,6 +14,7 @@ import json
 import pytest
 
 import atlas
+from atlas.machine import FixtureMachine
 from atlas import installations
 from atlas.evidence import (
     ARRANGEMENT_EVIDENCE_SCHEMA,
@@ -136,8 +137,8 @@ class TestEveryHandleKindHasARecord:
         assert lookup_arrangement(kind) is not None
 
 
-def _machine(files, **kwargs) -> atlas.FixtureMachine:
-    return atlas.FixtureMachine(files, **kwargs)
+def _machine(files, **kwargs) -> FixtureMachine:
+    return FixtureMachine(files, **kwargs)
 
 
 # One fixture machine per arrangement, each minimal: the marker its detection

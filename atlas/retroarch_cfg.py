@@ -58,24 +58,6 @@ UPSTREAM_DEFAULTS = LayoutDefaults(
     label="RetroArch upstream default (config.def.h)",
 )
 
-# RetroDECK's shipped retroarch.cfg (components/retroarch/rd_config/retroarch.cfg).
-RETRODECK_DEFAULTS = LayoutDefaults(
-    savefiles_in_content_dir=False,
-    sort_by_content=True,
-    sort_by_core=False,
-    label="RetroDECK shipped default",
-)
-
-# EmuDeck's shipped cfg for org.libretro.RetroArch
-# (configs/org.libretro.RetroArch/config/retroarch/retroarch.cfg): flat layout.
-EMUDECK_DEFAULTS = LayoutDefaults(
-    savefiles_in_content_dir=False,
-    sort_by_content=False,
-    sort_by_core=False,
-    label="EmuDeck shipped default",
-)
-
-
 # What a setting's spelling can do wrong: the parser refuses the line, or the
 # typed getter refuses the value. Either way the setting is not applied.
 IGNORED_LINE_DROPPED = "line-dropped"
@@ -708,7 +690,7 @@ def resolve_save_layout(
 
 
 def interpret_cfg(
-    text: str | None, *, home: str, cfg_label: str, defaults: LayoutDefaults = RETRODECK_DEFAULTS
+    text: str | None, *, home: str, cfg_label: str, defaults: LayoutDefaults
 ) -> RetroArchCfg:
     """Interpret a single ``retroarch.cfg`` text (no overrides) — see :func:`resolve_save_layout`."""
     return resolve_save_layout(text, home=home, cfg_label=cfg_label, defaults=defaults)
