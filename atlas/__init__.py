@@ -186,7 +186,12 @@ from atlas.placement import (
     FILE_SET_DECLARED,
     FILE_SET_OBSERVED,
     FILE_SET_UNKNOWN,
+    GRANULARITIES,
+    HOLE_CONTENT_DIR,
+    HOLE_LIBRARY_NAME,
+    HOLE_SAVE_ID,
     ROOT_CONTENT_DIRECTORY,
+    ROOT_KINDS,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     UNRESOLVED_STANDALONE,
@@ -276,6 +281,16 @@ __all__ = [
     "SOURCE_SYSTEMNAME",
     "SOURCE_SLUG",
     "SOURCE_NONE",
+    # Vocabulary values — the holes a caller fills, and the closed sets the
+    # contract serializes them beside. A client branches on `needs` and reads
+    # `granularity.value` / `root_kind`, so by the tiering rule (a name a client
+    # acts on lives in `atlas`) their vocabularies are consumer surface too;
+    # without them the only way to branch was a hardcoded string.
+    "HOLE_CONTENT_DIR",
+    "HOLE_LIBRARY_NAME",
+    "HOLE_SAVE_ID",
+    "GRANULARITIES",
+    "ROOT_KINDS",
     # Health finding codes
     "HEALTH_ISSUE_MARKER_MISSING",
     "HEALTH_ISSUE_MARKER_UNREADABLE",

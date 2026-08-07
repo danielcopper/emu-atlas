@@ -206,6 +206,16 @@ class FileSet:
     implies the whole save. ``complete`` is the explicit completeness claim:
     ``True`` only when a source-verified rule card closes the candidate
     universe for the active mode; the generic observation can never earn it.
+
+    **Today the field is reserved: it is ``False`` on every answer atlas can
+    give**, because no shipped rule card claims completeness and none can yet.
+    Closing the candidate universe means establishing which files the core can
+    write *at all* for the active mode — an upstream read, not an inventory of
+    what a card happens to list — and no card's evidence goes that far. The
+    field stays in the contract at its honest value rather than being dropped:
+    a client must not read "not complete" as "atlas has no opinion", and the
+    audit grind can earn a ``True`` here one card at a time without the shape
+    of an answer changing.
     """
 
     state: FileSetState

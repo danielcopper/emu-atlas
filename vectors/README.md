@@ -116,7 +116,10 @@ Every other key is the canonical serialization of that question's answer, from `
 Two rules decide what belongs in a vector:
 
 - **structured fields are contractual** — every one is asserted, including caveat `code` and `data`, granularity
-  identity, `fallback_dir` / `physical_dir`, file sets and their completeness, and health findings;
+  identity, `fallback_dir` / `physical_dir`, file sets and their completeness, and health findings; `file_set.complete`
+  is **reserved**: it is `false` in every vector because no shipped rule card can yet establish which files a core
+  writes at all for the active mode, and a port that answers `true` anywhere is answering something atlas does not
+  claim;
 - **prose is not** — `sources`, caveat `message` and the `*provenance` fields are for humans and change freely, so they
   are not serialized and not asserted.
 

@@ -51,7 +51,9 @@ Rules that hold for every answer:
   when the core would not load, and `save_id` when the core names the save after the content's own id. Every hole is
   filled from the content — a value the configs state is never one, because you could not supply it either; atlas
   resolves those itself or states a caveat. Holes are not confined to the directory: a declared file set can be a
-  template too. An unknown is something atlas refuses to state — it never guesses to keep a field non-empty.
+  template too. An unknown is something atlas refuses to state — it never guesses to keep a field non-empty. Branch on
+  `atlas.HOLE_CONTENT_DIR` / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` rather than the strings, the way you would on any
+  other closed set here (`atlas.ROOT_KINDS`, `atlas.GRANULARITIES`).
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
 - **Arguments follow one rule: the question's subject may be positional, everything else is keyword-only.** The subject
@@ -260,7 +262,9 @@ Pass the path the way RetroArch gets it, and atlas names the content the way Ret
 `file_set.state` is one of three honest states — branch on it:
 
 - `"observed"` — `files` are real basenames currently on disk. A snapshot, **not** the complete save: `complete` says
-  whether a verified rule card closes the universe.
+  whether a verified rule card closes the universe. **`complete` is reserved and always `false` today** — closing the
+  universe means establishing which files the core can write at all for the active mode, and no shipped card's evidence
+  goes that far yet. Treat `false` as "no completeness claim", never as "atlas checked and the set is open".
 - `"declared"` — `files` come from a source-verified rule card (e.g. Flycast's VMU set). A declared name may still be a
   **template** — see below.
 - `"unknown"` — atlas refuses to guess; `files` is empty. Fall back to your own knowledge, and treat that fallback as
@@ -591,7 +595,8 @@ A summary combines fields — `satisfied` reads `found`, `checked`, `identity` a
 these answers do something else, and none of them answers "is this good?":
 
 - **what the run did**: `hash_checked` (you passed `verify`), `answer.cores` being listed at all;
-- **what one field contains**: `file_set.complete` says the list is closed, not that the placement is usable;
+- **what one field contains**: `file_set.complete` says the list is closed, not that the placement is usable (and it is
+  reserved today — see [Reading the file set](#reading-the-file-set));
 - **a shorthand for one richer field**: `req.present` is `req.found` collapsed to a boolean, and `found` stays the
   authoritative one — a directory sitting at the destination is not a missing file, and only `found` can say so.
 
