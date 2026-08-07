@@ -138,16 +138,21 @@ python scripts/validate_vectors.py     # shape: does every vector state a legal 
 python -m pytest tests/test_machine_vectors.py    # conformance: does the resolver answer exactly this
 ```
 
+The validator ships beside the corpus and runs on a bare Python — no atlas import, no dependencies, and it finds the
+vectors relative to its own location, so it works the same from an unpacked sdist as from the repo. The conformance run
+is the reference implementation's, and is where a port substitutes its own.
+
 A port implements the machine seam (read a file, list a directory, stat a path, read a link, load a core, size and
 digest a file), feeds each `input` to it, and compares its serialized answers to `expected`. Nothing else is needed —
 that is the point of the family.
 
 ## When an expected block changes
 
-Changing what an existing input maps to is a **breaking change** to this corpus, and
-`scripts/check_vector_breaking_change.py` says so: the PR title needs the `!` marker or its body a `BREAKING CHANGE:`
-footer, because release-please turns that into the major bump. Adding vectors only grows the contract. Editing a
-fixture's `input` counts as breaking too — the machine the old guarantee described is gone from the corpus.
+Changing what an existing input maps to is a **breaking change** to this corpus: the PR title needs the `!` marker or
+its body a `BREAKING CHANGE:` footer, because release-please turns that into the major bump. Adding vectors only grows
+the contract. Editing a fixture's `input` counts as breaking too — the machine the old guarantee described is gone from
+the corpus. The gate that decides this (`scripts/check_vector_breaking_change.py`) lives in the repository rather than
+in this package: it diffs the corpus against a git ref, which a release artifact does not carry.
 
 Vectors for old generations of an emulator's behaviour are never deleted: when a new generation lands, it gets its own
 fixture machine beside the existing one.

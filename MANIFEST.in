@@ -3,3 +3,9 @@ recursive-include vectors *.json
 # them readable — an sdist that ships the JSON without it hands a port author
 # data with no semantics.
 recursive-include vectors *.md
+# And the gate that spec tells them to run. It is stdlib-only for exactly this
+# reason (its vocabularies are hand-copied so it needs no atlas import), and it
+# resolves the corpus relative to its own parent directory, so it works from an
+# unpacked sdist as it does in the repo. The breaking-change gate deliberately
+# stays behind: it diffs against git history, which an sdist does not carry.
+include scripts/validate_vectors.py
