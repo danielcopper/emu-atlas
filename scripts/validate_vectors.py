@@ -165,6 +165,7 @@ KNOWN_CAVEAT_CODES = {
     "card-mode-unconfirmed",
     "card-generation-mismatch",
     "arrangement-unverified",
+    "arrangement-version-drifted",
     "sandbox-path-untranslated",
     "app-relative-path-unexpanded",
     "cfg-line-dropped",

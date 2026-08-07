@@ -24,6 +24,14 @@ An arrangement absent from the file is unverified: a missing record is not
 evidence, and the safe direction is to say so rather than to fall silent. A
 handle kind that never gained an entry is a build mistake all the same, and the
 test suite refuses it there instead of here.
+
+The record's pinned version is not provenance alone, it is a **tripwire**: a
+verified arrangement was verified against one version of itself, and the
+machine says which one it runs. When the two differ, every answer says so
+(``docs/re-verification.md`` is what closing it takes). Without that comparison
+an update to the arrangement would age all of atlas's world knowledge — parser
+grammar, path layout, shipped-build behaviour — while the answers stayed as
+clean as the day they were confirmed.
 """
 
 from __future__ import annotations
@@ -45,6 +53,14 @@ ARRANGEMENT_EVIDENCE_SCHEMA = 1
 # machine's) and reads the same way: a statement about what atlas has
 # established, not about what the machine is doing.
 CAVEAT_ARRANGEMENT_UNVERIFIED = "arrangement-unverified"
+
+# The other half of the same axis: the arrangement *was* observed, and this
+# machine no longer runs the version it was observed on. Per rule card,
+# ``unverified-version`` says this about one core's pinned behaviour; this code
+# says it about the arrangement as a whole — the parser grammar, the path
+# layout, the shipped build. One comparison guards all of it against aging in
+# silence.
+CAVEAT_ARRANGEMENT_VERSION_DRIFTED = "arrangement-version-drifted"
 
 
 def _expect_str(value: object, where: str) -> str:
@@ -141,31 +157,65 @@ def lookup_arrangement(kind: str) -> ArrangementEvidence | None:
     return _EVIDENCE.get(kind)
 
 
-def arrangement_caveats(kind: str) -> tuple[Caveat, ...]:
+def arrangement_caveats(kind: str, *, observed_version: str | None = None) -> tuple[Caveat, ...]:
     """What every answer from *kind* must state about its own evidence.
 
-    Empty for an arrangement observed on a live installation — a verified
-    arrangement says nothing, exactly as an installation with no health issues
-    says nothing. Otherwise one caveat, on the answer itself, so a client
-    branching on codes learns it without knowing which arrangements exist.
+    Two states produce a caveat, and they are the halves of one question — has
+    anyone watched this arrangement work, and was it *this* arrangement?
 
-    The message states what is missing and what is not: the missing part is a
-    live observation of the arrangement; the part that is *not* missing is the
-    config reading, which is source-verified against pinned upstream wherever it
-    runs. A client that renders this as "atlas guessed" would report something
-    nobody claimed.
+    - **Never observed.** One caveat, on the answer itself, so a client
+      branching on codes learns it without knowing which arrangements exist.
+      The message states what is missing and what is not: the missing part is a
+      live observation of the arrangement; the part that is *not* missing is
+      the config reading, which is source-verified against pinned upstream
+      wherever it runs. A client that renders this as "atlas guessed" would
+      report something nobody claimed.
+    - **Observed, on another version.** The record pins the version its
+      knowledge was confirmed against, and this machine states a different one.
+      What that establishes is that the confirmation is old, not that the
+      answer is wrong — nothing here re-decides a placement, and the message
+      says so while naming the re-verification that is pending.
+
+    *observed_version* is the version the machine states about itself, or
+    ``None`` when it states none. The comparison runs only when both sides
+    speak, so an arrangement whose machine names no version stays silent — and
+    that silence means *no drift established*, not *no drift*. The alternative
+    would put a permanent caveat on every answer of an installation that may
+    well be current, which claims a comparison nobody made. Where missing live
+    versions do decide something — a rule card pinned to one — the per-card
+    ``unverified-version`` caveat states that at the point it matters.
+
+    An arrangement verified against the version this machine runs says nothing
+    at all, exactly as an installation with no health issues says nothing.
     """
     record = lookup_arrangement(kind)
-    if record is not None and record.verified is not None:
+    if record is None or record.verified is None:
+        label = record.label if record is not None else f"the {kind!r} arrangement"
+        return (
+            Caveat(
+                CAVEAT_ARRANGEMENT_UNVERIFIED,
+                f"no live installation of {label} has been observed by atlas — how its configs are read is "
+                "source-verified against pinned upstream, but nothing has confirmed the wiring end to end on "
+                "a running machine, so this answer is derived rather than verified "
+                "(docs/how-to-use.md, 'What atlas has actually seen')",
+                {"kind": kind},
+            ),
+        )
+    # An empty string names no version any more than ``None`` does, and a
+    # comparison against it would report drift to nothing.
+    if not observed_version or observed_version == record.verified.version:
         return ()
-    label = record.label if record is not None else f"the {kind!r} arrangement"
     return (
         Caveat(
-            CAVEAT_ARRANGEMENT_UNVERIFIED,
-            f"no live installation of {label} has been observed by atlas — how its configs are read is "
-            "source-verified against pinned upstream, but nothing has confirmed the wiring end to end on "
-            "a running machine, so this answer is derived rather than verified "
-            "(docs/how-to-use.md, 'What atlas has actually seen')",
-            {"kind": kind},
+            CAVEAT_ARRANGEMENT_VERSION_DRIFTED,
+            f"atlas's knowledge of {record.label} was verified against {record.verified.version}, and this "
+            f"machine states {observed_version} — the reading procedures are source-verified either way, but "
+            "nothing has confirmed them against the version running here, so re-verification is pending "
+            "(docs/re-verification.md)",
+            {
+                "kind": kind,
+                "verified": record.verified.version,
+                "observed": observed_version,
+            },
         ),
     )

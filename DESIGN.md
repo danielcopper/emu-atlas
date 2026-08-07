@@ -251,6 +251,14 @@ deliberately kept out of `health()`, where it would report a working installatio
 versioned data (`atlas/data/arrangement_evidence.json`, the same boundary rule the rule cards follow), so verifying an
 arrangement on a reference machine retires its caveat by changing a record, never a resolver.
 
+Evidence has a shelf life, and the record's pinned version is the tripwire that says so: an arrangement is verified
+against one version of itself, the machine states the one it runs, and when the two differ every answer carries
+`arrangement-version-drifted` until `docs/re-verification.md` has been walked. One comparison guards everything the pin
+covers — parser grammar, path layout, shipped-build behaviour — the way `unverified-version` already guards a rule
+card's per-core knowledge. Both sides must speak for it to fire: an arrangement whose machine states no version is not
+compared, because a caveat from a comparison nobody made would be exactly the kind of unfounded claim the answer
+guarantee forbids. Silence there means _no drift established_, and the usage guide says so to clients.
+
 ## The two tiers
 
 The package has one consumer namespace and one tooling surface, and the split is deliberate rather than historical.

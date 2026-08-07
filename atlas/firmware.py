@@ -1156,6 +1156,12 @@ class FirmwareContext:
     ``cores`` means two different things — this installation ships no cores, or
     atlas never got to look — and only the first licenses a statement about what
     the machine has.
+
+    ``arrangement_version`` is the version the arrangement states about itself
+    in that same read, or ``None`` where it states none. It rides here rather
+    than being fetched where it is used, so the evidence an answer states and
+    the configs it was derived from come from one snapshot — and so a handle
+    that assembles a context cannot leave it out by forgetting.
     """
 
     root: str | None
@@ -1164,6 +1170,7 @@ class FirmwareContext:
     cores_read: bool = True
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    arrangement_version: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
