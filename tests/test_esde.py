@@ -106,9 +106,17 @@ def _retrodeck(files, **kwargs):
     return atlas.RetroDeck(HOME, machine)
 
 
+# The roots `RD_JSON` names, so the fixture models a *working* installation.
+# These tests are about what the catalogue declares; every answer from a broken
+# installation now carries its health findings, and a fixture that was broken
+# only by omission would put them in the way of every assertion here.
+CATALOGUE_ROOTS = ["/mnt/sd/retrodeck", "/mnt/sd/retrodeck/saves"]
+
+
 def _catalogue_fixture(extra_files=None, **kwargs):
     files = {RETRODECK_JSON: RD_JSON, BUNDLED_ESDE: BUNDLED_XML}
     files.update(extra_files or {})
+    kwargs.setdefault("dirs", CATALOGUE_ROOTS)
     return _retrodeck(files, **kwargs)
 
 
@@ -131,7 +139,7 @@ class TestRetroDeckCatalogue:
         # Without the bundled es_systems.xml there is no catalogue to read, and
         # a bare empty tuple would spell that exactly like a frontend that
         # knows no emulators at all. The caveat is the difference.
-        rd = _retrodeck({RETRODECK_JSON: RD_JSON})
+        rd = _retrodeck({RETRODECK_JSON: RD_JSON}, dirs=CATALOGUE_ROOTS)
         answer = rd.emulators_for("n64")
         assert answer.entries == ()
         assert [c.code for c in answer.caveats] == [atlas.CAVEAT_CATALOGUE_UNREADABLE]
@@ -461,7 +469,8 @@ class TestPerGameMatchIsAnchored:
                 ),
                 BUNDLED_ESDE: BUNDLED_XML,
                 **self.FILES,
-            }
+            },
+            dirs=CATALOGUE_ROOTS,
         )
         configured = _entries(rd.emulators_for("n64", content_path="/mnt/sd/games/n64/Game.m3u"))
         assert configured[0].label == "ParaLLEl N64"

@@ -1856,3 +1856,100 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         answer = atlas.RetroDeck(HOME, machine).emulators_for("dreamcast")
         assert answer.entries == ()
         assert answer.caveats == ()
+
+
+class TestEveryAnswerStatesTheInstallationsHealth:
+    """A broken installation says so on every answer, not only on placements.
+
+    The rule is blanket on purpose: a finding is a true statement about the
+    installation whatever was asked, while a map of which finding affects which
+    answer would have to be maintained and could rot silently. What broke is in
+    the ``data``; judging relevance is the client's.
+
+    The findings come from the reads each route already makes — never from a
+    second ``health()`` call inside a query — so the one-read-per-source
+    invariant above covers this wiring too.
+    """
+
+    ESDE = (
+        "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
+        "/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+    )
+    ES_SYSTEMS = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>\n'
+        '    <command label="Mupen64Plus-Next">retroarch -L '
+        "/app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+    )
+    # A marker whose `saves_path` is not a string: present, parseable, and
+    # unusable — so the roots fall back to defaults that do not exist either.
+    BROKEN = {RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": 7}}'}
+    HEALTHY = {RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/roms/systeminfo.txt": ""}
+    HEALTHY_DIRS = ["/mnt/sd/retrodeck/saves"]
+    CORE_SO = "mgba_libretro.so"
+
+    def _answers(self, rd) -> dict[str, tuple[atlas.Caveat, ...]]:
+        return {
+            "save_location": rd.save_location(core_so=self.CORE_SO).caveats,
+            "systems": rd.systems().caveats,
+            "emulators_for": rd.emulators_for("n64").caveats,
+            "firmware_for_core": rd.firmware_for_core(core_so=self.CORE_SO).caveats,
+            "firmware_for_system": rd.firmware_for_system(system="n64").caveats,
+            "firmware_inventory": rd.firmware_inventory().caveats,
+            "identify_firmware": rd.identify_firmware(md5="deadbeef").caveats,
+        }
+
+    def test_the_fixture_is_broken_in_three_ways(self):
+        assert _retrodeck(self.BROKEN).health().codes == (
+            atlas.HEALTH_ISSUE_MARKER_INVALID,
+            atlas.HEALTH_ISSUE_ROOT_MISSING,
+            atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,
+        )
+
+    def test_every_answer_leads_with_the_findings(self):
+        rd = _retrodeck(self.BROKEN)
+        findings = list(rd.health().issues)
+        led = {q: list(c[: len(findings)]) for q, c in self._answers(rd).items()}
+        assert led == {question: findings for question in led}
+
+    def test_each_finding_arrives_exactly_once(self):
+        rd = _retrodeck(self.BROKEN)
+        codes = rd.health().codes
+        repeated = {
+            question: sorted(c for c in codes if [x.code for x in caveats].count(c) != 1)
+            for question, caveats in self._answers(rd).items()
+        }
+        assert {q: r for q, r in repeated.items() if r} == {}
+
+    def test_a_finding_keeps_its_own_message(self):
+        # The re-wrap tell: a category prefix or a rebuilt message shows here.
+        rd = _retrodeck(self.BROKEN)
+        finding = rd.health().issues[0]
+        carried = rd.firmware_inventory().caveats[0]
+        assert (carried.code, carried.message, dict(carried.data)) == (
+            finding.code,
+            finding.message,
+            dict(finding.data),
+        )
+
+    def test_a_healthy_installation_adds_nothing(self):
+        rd = _retrodeck(self.HEALTHY, dirs=self.HEALTHY_DIRS)
+        health_codes = {
+            atlas.HEALTH_ISSUE_MARKER_INVALID,
+            atlas.HEALTH_ISSUE_ROOT_MISSING,
+            atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,
+        }
+        stated = {
+            question: [c.code for c in caveats if c.code in health_codes]
+            for question, caveats in self._answers(rd).items()
+        }
+        assert {q: codes for q, codes in stated.items() if codes} == {}
+
+    def test_the_entry_route_carries_them_too(self):
+        # The composed path — a catalogue entry answering for its own core —
+        # goes through the placement seam, so it should come free. Checked.
+        rd = _retrodeck({**self.BROKEN, self.ESDE: self.ES_SYSTEMS})
+        entry = rd.emulators_for("n64").entries[0]
+        placement = entry.save_location()
+        assert not isinstance(placement, atlas.Unresolved)
+        carried = [c.code for c in placement.caveats]
+        assert carried[: len(rd.health().codes)] == list(rd.health().codes)
