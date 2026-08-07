@@ -92,7 +92,6 @@ from atlas.placement import (
     CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
     CAVEAT_FILENAMES_UNVERIFIED,
     CAVEAT_FILE_SET_SPANS_ROOTS,
-    CAVEAT_HEALTH,
     CAVEAT_NO_CORE,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
     CAVEAT_SAVE_DIR_UNLISTABLE,
@@ -149,9 +148,17 @@ class Health:
     """Structured installation health — *ok* is simply the absence of issues.
 
     Each issue is a :class:`~atlas.placement.Caveat` whose ``code`` is one of
-    the ``HEALTH_ISSUE_*`` constants; ``data`` carries the affected path or
-    read status. Handles never hide a present-but-broken installation — they
-    report it with the issues attached.
+    the ``HEALTH_ISSUE_*`` constants; ``data`` carries the affected path plus
+    whatever else the finding established (the read ``status`` behind an
+    unreadable marker, the ``key`` behind an invalid one). Handles never hide a
+    present-but-broken installation — they report it with the issues attached.
+
+    These issues *are* caveats, and they travel as themselves: an answer
+    computed on a broken installation carries the findings directly in its own
+    ``caveats``, under their own codes. Nothing wraps them in a category code
+    with the real condition nested in ``data`` — that shape hides a distinct,
+    stable code behind a discriminator a client has to unpack, and the firmware
+    route retired it for the same reason.
     """
 
     issues: tuple[Caveat, ...] = ()
@@ -163,18 +170,6 @@ class Health:
     @property
     def codes(self) -> tuple[str, ...]:
         return tuple(issue.code for issue in self.issues)
-
-
-def _health_caveats(health: Health) -> tuple[Caveat, ...]:
-    """Health issues restated as placement caveats — one per issue, structured."""
-    return tuple(
-        Caveat(
-            CAVEAT_HEALTH,
-            f"installation health: {issue.message}",
-            {"issue": issue.code, **issue.data},
-        )
-        for issue in health.issues
-    )
 
 # The file RetroArch reads, and the Flatpak apps that ship one.
 RETROARCH_CFG = "retroarch.cfg"
@@ -2970,7 +2965,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 arrangement_version=version if isinstance(version, str) else None,
                 extra_caveats=(
                     *extra_caveats,
-                    *_health_caveats(health),
+                    *health.issues,
                     *arrangement_caveats(self.kind),
                 ),
             ),
@@ -3243,7 +3238,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
                 arrangement="emudeck",
                 arrangement_version=None,
-                extra_caveats=(*_health_caveats(health), *arrangement_caveats(self.kind)),
+                extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
             ),
         )
 
@@ -3352,7 +3347,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
                 core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
                 arrangement="bare",
                 arrangement_version=None,
-                extra_caveats=(*_health_caveats(health), *arrangement_caveats(self.kind)),
+                extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
             ),
         )
 

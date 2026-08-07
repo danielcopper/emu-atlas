@@ -15,6 +15,7 @@ import atlas
 from atlas.contract import (
     catalogue_contract,
     firmware_contract,
+    health_contract,
     identification_contract,
     installation_answers_contract,
     installation_contract,
@@ -137,6 +138,20 @@ class TestItDelegates:
     def test_health(self):
         asked, direct = self._pairs(lambda h: h.health())
         assert asked == direct
+
+    def test_health_serializes_through_the_aggregate(self):
+        # The aggregate delegates, so the health findings' shape should come
+        # for free — checked rather than assumed, since health is the one
+        # answer whose serializer the label carries too.
+        asked, direct = self._pairs(lambda h: h.health())
+        assert [health_contract(h) for h in asked] == [health_contract(h) for h in direct]
+
+    def test_the_label_carries_the_findings_in_full(self):
+        machine = atlas.FixtureMachine({RETRODECK_JSON: '{"paths": {"rd_home_path": "/gone"}}'})
+        answered = atlas.EveryInstallation(_handles(machine)).health()[0]
+        assert installation_answers_contract([answered], health_contract)[0]["installation"][
+            "health"
+        ] == health_contract(answered.answer)
 
     def test_firmware_for_core(self):
         asked, direct = self._pairs(lambda h: h.firmware_for_core(core_so=CORE_SO))

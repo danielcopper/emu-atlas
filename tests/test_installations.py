@@ -128,9 +128,10 @@ class TestMarkerPathValuesMustBeStrings:
         )
         p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.dir == "/mnt/sd/retrodeck/saves"
-        assert [c.data["issue"] for c in p.caveats if c.code == atlas.CAVEAT_HEALTH] == [
-            atlas.HEALTH_ISSUE_MARKER_INVALID
-        ]
+        # The finding rides in the placement under its own code, carrying the
+        # key it is about — not wrapped in a category with the condition nested.
+        issue = next(c for c in p.caveats if c.code == atlas.HEALTH_ISSUE_MARKER_INVALID)
+        assert issue.data["key"] == "paths.saves_path"
 
 
 class TestRetroDeckSaveLocation:
@@ -263,10 +264,15 @@ class TestRetroDeckSaveLocation:
             }
         )
         p = rd.save_location()
-        assert any(
-            c.code == atlas.CAVEAT_HEALTH and c.data["issue"] == atlas.HEALTH_ISSUE_ROOT_MISSING
-            for c in p.caveats
-        )
+        issue = next(c for c in p.caveats if c.code == atlas.HEALTH_ISSUE_ROOT_MISSING)
+        assert issue.data["path"] == "/run/media/gone/retrodeck"
+
+    def test_the_placement_carries_the_health_finding_itself(self):
+        # Identity, not a copy: what health() reports is what the answer
+        # carries, so the two can never describe the installation differently.
+        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}'})
+        findings = rd.health().issues
+        assert [c for c in rd.save_location().caveats if c in findings] == list(findings)
 
     def test_observation_is_literal_for_glob_metacharacters(self):
         # '[USA]' in a ROM name must match itself, never act as a class (M2).
