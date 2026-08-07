@@ -1543,6 +1543,7 @@
         "catalogue": {
           "entries": [
             {
+              "system": "n64",
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -1550,6 +1551,7 @@
               "caveats": []
             },
             {
+              "system": "n64",
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -1592,6 +1594,7 @@
         "catalogue": {
           "entries": [
             {
+              "system": "n64",
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -1635,6 +1638,7 @@
         "catalogue": {
           "entries": [
             {
+              "system": "n64",
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -1642,6 +1646,7 @@
               "caveats": []
             },
             {
+              "system": "n64",
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -1685,6 +1690,7 @@
         "catalogue": {
           "entries": [
             {
+              "system": "n64",
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -1692,6 +1698,7 @@
               "caveats": []
             },
             {
+              "system": "n64",
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -4089,6 +4096,7 @@
         "catalogue": {
           "entries": [
             {
+              "system": "n64",
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -4096,6 +4104,7 @@
               "caveats": []
             },
             {
+              "system": "n64",
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -4169,6 +4178,7 @@
         "catalogue": {
           "entries": [
             {
+              "system": "n64",
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -4176,6 +4186,7 @@
               "caveats": []
             },
             {
+              "system": "n64",
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -5172,6 +5183,7 @@
         "catalogue": {
           "entries": [
             {
+              "system": "n64",
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -5574,6 +5586,73 @@
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "catalogue-entry-caveats-carry-their-data",
+      "rationale": "The system-level ask on a system whose gamelist carries a per-game override: every entry says so, and the caveat's data says how many games it is about — one, here. Bare codes could not carry that count, which is the whole difference between 'this answer may be wrong for some game' and knowing how much of the system it concerns. The entry also names its own system, so an entry that travels out of the call that produced it still says what it launches.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n  <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<game>\n\t\t<path>./Paper Mario.z64</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
+          "/mnt/sd/retrodeck/roms/n64/Paper Mario.z64": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "n64",
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": [
+                {
+                  "code": "per-game-overrides-present",
+                  "data": {
+                    "count": "1"
+                  }
+                }
+              ]
+            },
+            {
+              "system": "n64",
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "selection": null,
+              "caveats": [
+                {
+                  "code": "per-game-overrides-present",
+                  "data": {
+                    "count": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": []
         }
       }
     }
