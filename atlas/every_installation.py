@@ -13,8 +13,9 @@ The aggregate adds nothing to an answer. It delegates every question to the
 handles unchanged, in the order :func:`~atlas.detect.detect` returned them
 (documented probe order, highest priority first), so a labelled answer is
 byte-identical to the one the handle route gives for the same question. Every
-resolver rule stays where it is resolved — in the handle — and this module is
-therefore the one place in atlas that reads nothing off the machine itself.
+resolver rule stays where it is resolved — in the handle — which makes this the
+one question-answering surface in atlas that reads nothing off the machine
+itself: it holds no seam and performs no read.
 
 Three consequences worth stating, because each is a decision:
 

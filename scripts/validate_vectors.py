@@ -52,8 +52,15 @@ ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
 # one with a full payload per arrangement, one whose arrangements refuse for
 # different reasons — rather than every question the surface offers; widening
 # it means teaching the runner to ask, and giving the answer a shape below.
-AGGREGATE_QUERY_FIELDS = {"question", "content_path", "core_so", "system"}
-KNOWN_AGGREGATE_QUESTIONS = {"save_location", "emulators_for"}
+#
+# Per question: (the keys it is asked by, the keys it may also carry). The map
+# is the single source of both rules, because a key the runner never passes on
+# — a core_so on a catalogue question — makes the vector state something no
+# answer can reflect, and half a rule refuses only half of those.
+AGGREGATE_QUESTION_FIELDS = {
+    "save_location": ({"question"}, {"content_path", "core_so"}),
+    "emulators_for": ({"question", "system"}, {"content_path"}),
+}
 AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
 FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify"}
 KNOWN_FIRMWARE_QUERY_KINDS = {"core", "system", "inventory"}
@@ -331,30 +338,38 @@ def _validate_systems_query(name: str, query: Any) -> None:
 
 
 def _validate_aggregate_question(name: str, query: dict[str, Any]) -> None:
-    """Each question carries what that question is asked by, and nothing else."""
+    """Each question carries what that question is asked by, and nothing else.
+
+    Both halves come off :data:`AGGREGATE_QUESTION_FIELDS`, so a question
+    cannot end up with its missing keys refused and its stray ones accepted:
+    a key the runner does not pass on for this question is a vector stating
+    something no answer below can reflect.
+    """
     question = query.get("question")
-    if question not in KNOWN_AGGREGATE_QUESTIONS:
-        fail(f"{name}: input.aggregate_query.question must be one of {sorted(KNOWN_AGGREGATE_QUESTIONS)}")
-    if question == "emulators_for" and "system" not in query:
-        fail(f"{name}: an 'emulators_for' aggregate query needs input.aggregate_query.system")
-    if question == "save_location" and "system" in query:
-        fail(f"{name}: a 'save_location' aggregate query takes no system")
+    if question not in AGGREGATE_QUESTION_FIELDS:
+        fail(f"{name}: input.aggregate_query.question must be one of {sorted(AGGREGATE_QUESTION_FIELDS)}")
+    required, optional = AGGREGATE_QUESTION_FIELDS[question]
+    keys = set(query)
+    missing = sorted(required - keys)
+    if missing:
+        fail(f"{name}: a {question!r} aggregate query needs {missing}")
+    stray = sorted(keys - required - optional)
+    if stray:
+        fail(f"{name}: a {question!r} aggregate query is not asked by {stray} — the runner never passes it on")
 
 
 def _validate_aggregate_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.aggregate_query must be an object")
     # Naming a handle here would ask the aggregate to choose one, which is the
-    # one thing it does not do: it asks every detected installation.
+    # one thing it does not do: it asks every detected installation. Its own
+    # message, because "not asked by" would read as a missing feature.
     if "installation" in query:
         fail(
             f"{name}: input.aggregate_query takes no 'installation' — the aggregate asks every "
             "detected handle; use the query family of a single question to name one"
         )
-    keys = set(query)
-    if not keys <= AGGREGATE_QUERY_FIELDS:
-        fail(f"{name}: input.aggregate_query keys must be a subset of {sorted(AGGREGATE_QUERY_FIELDS)}")
-    for key in keys:
+    for key in set(query):
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.aggregate_query.{key} must be a non-empty string")
     _validate_aggregate_question(name, query)

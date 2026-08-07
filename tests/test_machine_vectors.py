@@ -256,6 +256,36 @@ class TestTheGrammarRefusesContradictions:
         with pytest.raises(validate_vectors.VectorError, match="aggregate_query.question"):
             validate_vectors.validate_machines_vector(vector)
 
+    def test_an_aggregate_query_carrying_a_key_its_question_ignores_is_refused(self):
+        # The catalogue question is not asked by a core: the runner never
+        # passes the key on, so the vector would state something no answer in
+        # it can reflect — and it would read as if the core had governed.
+        vector = self._vector(
+            aggregate_query={
+                "question": "emulators_for",
+                "system": "n64",
+                "core_so": "mgba_libretro.so",
+            },
+            expected=self._NOBODY_ANSWERED,
+        )
+        with pytest.raises(validate_vectors.VectorError, match="is not asked by"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_save_location_aggregate_query_carrying_a_system_is_refused(self):
+        vector = self._vector(
+            aggregate_query={**self._SAVE_LOCATION_EVERYWHERE, "system": "n64"},
+            expected=self._NOBODY_ANSWERED,
+        )
+        with pytest.raises(validate_vectors.VectorError, match="is not asked by"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_an_aggregate_query_without_the_key_its_question_needs_is_refused(self):
+        vector = self._vector(
+            aggregate_query={"question": "emulators_for"}, expected=self._NOBODY_ANSWERED
+        )
+        with pytest.raises(validate_vectors.VectorError, match="needs \\['system'\\]"):
+            validate_vectors.validate_machines_vector(vector)
+
     def test_an_aggregate_expectation_without_a_query_is_refused(self):
         vector = self._vector(expected=self._NOBODY_ANSWERED)
         with pytest.raises(validate_vectors.VectorError, match="aggregate_query and aggregate"):
