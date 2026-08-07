@@ -29,6 +29,8 @@ from typing import Any
 
 import pytest
 
+import atlas
+from atlas import installations, placement
 from scripts import validate_vectors
 from scripts.validate_vectors import VectorError, validate_machines_vector
 
@@ -936,3 +938,118 @@ def test_a_widened_aggregate_vocabulary_without_an_answer_shape_is_refused(monke
     )
     with pytest.raises(VectorError, match=re.escape("no answer shape is defined")):
         validate_machines_vector(vector)
+
+
+class TestTheVocabularyIsOneVocabulary:
+    """The validator mirrors atlas's closed sets by hand — so the mirror is checked.
+
+    Being stdlib-only and standalone is the point of this script: a port author
+    runs it without importing atlas at all. The price is that every vocabulary
+    in it is hand-copied, and a hand-copied list drifts silently — a code the
+    resolver started emitting would make the gate refuse a truthful vector, and
+    a code atlas retired would keep passing one nobody can produce. Nothing here
+    judges the lists; it checks that the two are the same list.
+    """
+
+    def _exported(self, prefix: str) -> set[str]:
+        return {
+            value
+            for name in atlas.__all__
+            if name.startswith(prefix) and isinstance(value := getattr(atlas, name), str)
+        }
+
+    def _caveat_codes(self) -> set[str]:
+        # Health findings ride in answer caveats under their own codes, so the
+        # caveat vocabulary contains the health one by construction.
+        return self._exported("CAVEAT_") | self._exported("HEALTH_ISSUE_")
+
+    def test_the_validator_knows_every_code_atlas_can_emit(self):
+        assert sorted(self._caveat_codes() - validate_vectors.KNOWN_CAVEAT_CODES) == []
+
+    def test_the_validator_knows_no_code_atlas_cannot_emit(self):
+        assert sorted(validate_vectors.KNOWN_CAVEAT_CODES - self._caveat_codes()) == []
+
+    def test_the_health_vocabularies_match(self):
+        assert validate_vectors.KNOWN_HEALTH_ISSUES == self._exported("HEALTH_ISSUE_")
+
+    def test_the_unresolved_vocabularies_match(self):
+        assert validate_vectors.KNOWN_UNRESOLVED_CODES == self._exported("UNRESOLVED_")
+
+    def test_the_hole_vocabularies_match(self):
+        # The holes are tier-2 today (atlas.placement), not names a client can
+        # import from `atlas` — the validator still has to speak the same three.
+        holes = {
+            value
+            for name, value in vars(placement).items()
+            if name.startswith("HOLE_") and isinstance(value, str)
+        }
+        assert validate_vectors.KNOWN_HOLES == holes
+
+    def test_the_granularity_vocabularies_match(self):
+        assert validate_vectors.KNOWN_GRANULARITIES == set(placement.GRANULARITIES)
+
+    def test_the_root_kind_vocabularies_match(self):
+        assert validate_vectors.KNOWN_ROOT_KINDS == set(placement.ROOT_KINDS)
+
+    def test_the_emulator_kind_vocabularies_match(self):
+        assert validate_vectors.KNOWN_EMULATOR_KINDS == {atlas.KIND_LIBRETRO, atlas.KIND_STANDALONE}
+
+    def test_the_installation_kind_vocabularies_match(self):
+        kinds = {
+            member.kind
+            for name, member in vars(installations).items()
+            if not name.startswith("_") and isinstance(member, type) and isinstance(vars(member).get("kind"), str)
+        }
+        assert validate_vectors.KNOWN_KINDS == kinds
+
+
+class TestACodesNameIsItsString:
+    """``CAVEAT_SORTED_DIR_MISSING`` is ``"sorted-dir-missing"`` — one rule, one exception.
+
+    The name and the string are two spellings of the same code, and when they
+    drift apart the name stops being a way to find the code: a client greps the
+    string, a maintainer greps the constant, and one of them comes up empty.
+
+    The exception is deliberate and stays. ``UNRESOLVED_STANDALONE`` is
+    ``"standalone-unsupported"``: the prefix marks the *Unresolved* namespace
+    rather than being part of the code, and the string matches the firmware
+    caveat of the same name exactly — one outcome, one spelling, whichever
+    surface answers it. A naive rule flags it, which is why the rule below names
+    it instead of being loosened for it.
+    """
+
+    EXCEPTIONS = {"UNRESOLVED_STANDALONE": "standalone-unsupported"}
+    FAMILIES = ("CAVEAT_", "HEALTH_ISSUE_", "UNRESOLVED_")
+
+    def _codes(self) -> dict[str, str]:
+        return {
+            name: value
+            for name in atlas.__all__
+            if name.startswith(self.FAMILIES) and isinstance(value := getattr(atlas, name), str)
+        }
+
+    def _expected_code(self, name: str) -> str:
+        """The string a constant's name says it holds — family prefix off, kebab-cased.
+
+        The prefix is the whole family (``HEALTH_ISSUE_``, not ``HEALTH_``):
+        splitting at the first underscore instead would demand
+        ``issue-marker-missing``, which is a rule about nothing.
+        """
+        family = next(prefix for prefix in self.FAMILIES if name.startswith(prefix))
+        return name[len(family) :].lower().replace("_", "-")
+
+    def test_every_code_is_named_after_itself(self):
+        drifted = sorted(
+            f"{name} = {value!r} (expected {self._expected_code(name)!r})"
+            for name, value in self._codes().items()
+            if name not in self.EXCEPTIONS and value != self._expected_code(name)
+        )
+        assert drifted == []
+
+    def test_the_documented_exception_is_still_the_only_one(self):
+        assert {n: v for n, v in self._codes().items() if n in self.EXCEPTIONS} == self.EXCEPTIONS
+
+    def test_the_exception_matches_the_caveat_of_the_same_name(self):
+        # What licenses the exception: the Unresolved outcome and the firmware
+        # caveat are one fact, so they are one string.
+        assert atlas.UNRESOLVED_STANDALONE == atlas.CAVEAT_STANDALONE_UNSUPPORTED
