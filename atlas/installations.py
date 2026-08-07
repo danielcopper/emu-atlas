@@ -2204,7 +2204,7 @@ def _retroarch_firmware_context(
     sandbox: _Sandbox,
     global_text: str | None,
     cfg_label: str,
-    findings: tuple[Caveat, ...] = (),
+    findings: tuple[Caveat, ...],
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
 
@@ -2646,12 +2646,18 @@ class _CatalogueQueries:
         overrides, every returned entry states that as a catalogue caveat: the
         system-level answer may be wrong for exactly those games.
 
-        No entries is four different facts, and the caveats tell them apart. No
-        entries and no caveat means the catalogue was read and the frontend
-        knows no emulator for this system — the only one of the four that is a
-        statement about the machine. The other three say why nobody could
-        answer from a catalogue at all: the arrangement ships none, atlas has
-        not established where it keeps one, or the one it has could not be read.
+        No entries is four different facts, and the three
+        ``emulator-catalogue-*`` codes tell them apart. None of the three means
+        the catalogue was read and the frontend knows no emulator for this
+        system — the only one of the four that is a statement about the
+        machine. The other three say why nobody could answer from a catalogue
+        at all: the arrangement ships none, atlas has not established where it
+        keeps one, or the one it has could not be read.
+
+        The test is those codes, not an empty ``caveats``: a broken
+        installation states its health findings on this answer as on every
+        other, so an empty caveat list is not what "read, and it declares
+        nothing" looks like there.
         """
         answer = self._catalogue_answer(system, content_path=content_path)
         return _dc_replace(answer, caveats=(*answer.caveats, *arrangement_caveats(self.kind)))

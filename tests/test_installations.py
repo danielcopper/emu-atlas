@@ -1677,6 +1677,35 @@ class TestOneReadPerSourcePerQuery:
         assert machine.repeats() == {}
         assert self.INFO in machine.reads
 
+    def test_systems_reads_each_source_once(self):
+        # The listing reads the marker for its root and again, in effect, for
+        # the health findings it carries — one read has to serve both.
+        machine = self._query(lambda rd: rd.systems())
+        assert machine.repeats() == {}
+        assert RETRODECK_JSON in machine.reads
+
+    def test_an_emudeck_query_reads_each_source_once(self):
+        # The other handle family, where the companion cfg is what two things
+        # want: the context reads its text, the health finding its status.
+        machine = _CountingMachine(
+            {
+                EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+                STANDALONE_CFG: 'system_directory = "/home/deck/Emulation/bios"\n',
+            }
+        )
+        atlas.EmuDeck(HOME, machine).firmware_inventory()
+        assert machine.reads
+        assert machine.repeats() == {}
+        assert STANDALONE_CFG in machine.reads
+
+    def test_an_emudeck_catalogue_query_reads_each_source_once(self):
+        machine = _CountingMachine(
+            {EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\n', STANDALONE_CFG: ""}
+        )
+        atlas.EmuDeck(HOME, machine).systems()
+        assert machine.reads
+        assert machine.repeats() == {}
+
     def test_the_counter_would_see_a_repeat(self):
         # The guard above proves nothing unless a second read is visible.
         machine = self._query(lambda rd: (rd.root(), rd.saves_root()))
@@ -1840,9 +1869,12 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         assert rd.emulators_for("n64").entries == ()
         assert rd.systems().systems == ()
 
-    def test_a_read_catalogue_that_knows_no_emulator_carries_no_caveat(self):
+    def test_a_read_catalogue_that_knows_no_emulator_is_silent_on_a_healthy_installation(self):
         # The one empty answer a client may act on: read, and the frontend
-        # genuinely knows nothing for this system.
+        # genuinely knows nothing for this system. The empty caveat list is
+        # this fixture's health talking too — on a broken installation the
+        # findings sit here, which is why the client's test is the three
+        # emulator-catalogue-* codes rather than `not answer.caveats`.
         machine = atlas.FixtureMachine(
             {
                 RETRODECK_JSON: RD_JSON,
