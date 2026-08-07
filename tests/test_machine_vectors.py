@@ -68,7 +68,7 @@ def _select(installs, selector: str | None, context: str):
     raise AssertionError(f"{context}: no detected installation of kind {selector!r}")
 
 
-def _aggregate(installs, query):
+def _aggregate(installs, query, name):
     """The vector's question put to every detected installation, serialized.
 
     No handle is selected — that is what this family proves. The question names
@@ -89,82 +89,133 @@ def _aggregate(installs, query):
             every.emulators_for(query["system"], content_path=query.get("content_path")),
             catalogue_contract,
         )
-    raise AssertionError(f"the runner cannot ask {question!r} of every installation")
+    raise AssertionError(f"{name}: the runner cannot ask {question!r} of every installation")
+
+
+def _catalogue(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return catalogue_contract(
+        install.emulators_for(query["system"], content_path=query.get("content_path"))
+    )
+
+
+def _systems(installs, query, name):
+    return systems_contract(_select(installs, query.get("installation"), name).systems())
+
+
+def _save_location(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return placement_contract(
+        install.save_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+    )
+
+
+def _firmware(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    verify = query.get("verify", False)
+    kind = query["kind"]
+    if kind == "core":
+        answer = install.firmware_for_core(core_so=query["core_so"], verify=verify)
+    elif kind == "system":
+        answer = install.firmware_for_system(system=query["system"], verify=verify)
+    else:
+        answer = install.firmware_inventory(verify=verify)
+    return firmware_contract(answer)
+
+
+def _identification(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return identification_contract(
+        install.identify_firmware(
+            md5=query.get("md5"), sha1=query.get("sha1"), size=query.get("size")
+        )
+    )
+
+
+def _entry_save_location(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    entries = install.emulators_for(query["system"], content_path=query.get("content_path")).entries
+    if "label" in query:
+        entry = next(e for e in entries if e.label == query["label"])
+    else:
+        entry = entries[0]
+    outcome = entry.save_location(content_path=query.get("content_path"))
+    if isinstance(outcome, atlas.Unresolved):
+        return unresolved_contract(outcome)
+    return placement_contract(outcome)
+
+
+# expected key → (the input key that asks it, how the runner asks it). The map
+# is what makes an unknown expectation an error instead of a silent pass: a
+# vector could once carry an `expected.savelocation` typo and prove nothing,
+# because the runner only ever looked for the keys it knew.
+QUESTIONS = {
+    "catalogue": ("catalogue_query", _catalogue),
+    "systems": ("systems_query", _systems),
+    "aggregate": ("aggregate_query", _aggregate),
+    "save_location": ("query", _save_location),
+    "firmware": ("firmware_query", _firmware),
+    "identification": ("identify_query", _identification),
+    "entry_save_location": ("entry_query", _entry_save_location),
+}
 
 
 @pytest.mark.parametrize("vector", list(_load_vectors()))
 def test_machine_vector(vector):
     inp = vector["input"]
     expected = vector["expected"]
-    rationale = vector.get("rationale", vector["name"])
+    name = vector["name"]
+    rationale = vector.get("rationale", name)
     machine = _machine(inp)
 
     installs = atlas.detect(inp["home"], machine)
     assert [installation_contract(i) for i in installs] == expected["installations"], rationale
 
-    if "catalogue" in expected:
-        query = inp["catalogue_query"]
-        # Any handle, selected the way every other query selects one: the
-        # catalogue question is on the protocol now, so a vector can ask it of
-        # an arrangement that answers with a refusal.
-        install = _select(installs, query.get("installation"), vector["name"])
-        answer = install.emulators_for(query["system"], content_path=query.get("content_path"))
-        assert catalogue_contract(answer) == expected["catalogue"], rationale
+    for key, expectation in expected.items():
+        if key == "installations":
+            continue
+        # An expectation the runner cannot ask is a vector that proves nothing
+        # while passing — the failure mode a typo produces, and the one a port
+        # would inherit silently.
+        assert key in QUESTIONS, f"{name}: the runner cannot ask for expected.{key}"
+        query_key, ask = QUESTIONS[key]
+        assert query_key in inp, f"{name}: expected.{key} needs input.{query_key} to ask it"
+        assert ask(installs, inp[query_key], name) == expectation, rationale
 
-    if "systems" in expected:
-        install = _select(installs, inp["systems_query"].get("installation"), vector["name"])
-        assert systems_contract(install.systems()) == expected["systems"], rationale
 
-    if "aggregate" in expected:
-        assert _aggregate(installs, inp["aggregate_query"]) == expected["aggregate"], rationale
+class TestTheRunnerAsksEverythingItIsGiven:
+    """An expectation nobody asks is a guarantee nobody checks.
 
-    if "save_location" in expected:
-        query = inp["query"]
-        install = _select(installs, query.get("installation"), vector["name"])
-        placement = install.save_location(
-            content_path=query.get("content_path"), core_so=query.get("core_so")
-        )
-        assert placement_contract(placement) == expected["save_location"], rationale
+    The runner used to look for the keys it knew and step over the rest, so
+    ``expected.savelocation`` — a typo away from the real key — rode in the
+    corpus as a vector that passed while proving nothing. The validator refuses
+    the same shape, but a port runs the runner, and each has to hold on its own.
+    """
 
-    if "firmware" in expected:
-        firmware_query = inp["firmware_query"]
-        install = _select(installs, firmware_query.get("installation"), vector["name"])
-        verify = firmware_query.get("verify", False)
-        kind = firmware_query["kind"]
-        if kind == "core":
-            answer = install.firmware_for_core(core_so=firmware_query["core_so"], verify=verify)
-        elif kind == "system":
-            answer = install.firmware_for_system(system=firmware_query["system"], verify=verify)
-        else:
-            answer = install.firmware_inventory(verify=verify)
-        assert firmware_contract(answer) == expected["firmware"], rationale
+    _MACHINE = {"home": "/home/deck", "files": {"/home/deck/x": ""}}
+    _EMPTY_SYSTEMS = {"systems": [], "caveats": []}
 
-    if "identification" in expected:
-        identify_query = inp["identify_query"]
-        install = _select(installs, identify_query.get("installation"), vector["name"])
-        identified = install.identify_firmware(
-            md5=identify_query.get("md5"),
-            sha1=identify_query.get("sha1"),
-            size=identify_query.get("size"),
-        )
-        assert identification_contract(identified) == expected["identification"], rationale
+    def _vector(self, expected, **input_keys):
+        return {
+            "name": "synthetic",
+            "input": {**self._MACHINE, **input_keys},
+            "expected": {"installations": [], **expected},
+        }
 
-    if "entry_save_location" in expected:
-        entry_query = inp["entry_query"]
-        install = _select(installs, entry_query.get("installation"), vector["name"])
-        entries = install.emulators_for(
-            entry_query["system"], content_path=entry_query.get("content_path")
-        ).entries
-        if "label" in entry_query:
-            entry = next(e for e in entries if e.label == entry_query["label"])
-        else:
-            entry = entries[0]
-        outcome = entry.save_location(content_path=entry_query.get("content_path"))
-        if isinstance(outcome, atlas.Unresolved):
-            got = unresolved_contract(outcome)
-        else:
-            got = placement_contract(outcome)
-        assert got == expected["entry_save_location"], rationale
+    def test_an_expectation_the_runner_cannot_ask_is_refused(self):
+        with pytest.raises(AssertionError, match="cannot ask for expected.savelocation"):
+            test_machine_vector(self._vector({"savelocation": {}}))
+
+    def test_an_expectation_without_its_query_is_refused(self):
+        # The validator states this rule too; a port that only runs the runner
+        # would otherwise meet a KeyError instead of the reason.
+        with pytest.raises(AssertionError, match="needs input.systems_query"):
+            test_machine_vector(self._vector({"systems": self._EMPTY_SYSTEMS}))
+
+    def test_a_machine_with_nothing_to_ask_still_runs(self):
+        # The guard against a vacuous suite: the two refusals above must come
+        # from the rules, not from every synthetic vector failing anyway.
+        test_machine_vector(self._vector({}))
 
 
 class TestTheGrammarRefusesContradictions:

@@ -140,6 +140,12 @@ KNOWN_HEALTH_ISSUES = {
     "config-unreadable",
 }
 KNOWN_ROOT_KINDS = {"savefile_directory", "content_directory", "system_directory"}
+# The holes a placement may hand back — each one a value the CALLER fills from
+# the content at hand. Closed like every other vocabulary here, and for the
+# sharpest reason of them all: a hole nobody can fill is worse than a stated
+# unknown, because a client reads it as work it is supposed to do. Nothing a
+# config states belongs here either; that is atlas's own to resolve.
+KNOWN_HOLES = {"content_dir", "library_name", "save_id"}
 KNOWN_GRANULARITIES = {"shared-card", "per-game-file", "per-game-files"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone"}
@@ -606,6 +612,9 @@ def _validate_placement(name: str, placement: Any) -> None:
     needs = placement["needs"]
     if not isinstance(needs, list) or not all(isinstance(n, str) for n in needs):
         fail(f"{name}: save_location.needs must be a list of strings")
+    unknown_holes = sorted(set(needs) - KNOWN_HOLES)
+    if unknown_holes:
+        fail(f"{name}: save_location.needs must be holes from {sorted(KNOWN_HOLES)}, got {unknown_holes}")
     for opt_dir in ("fallback_dir", "physical_dir"):
         value = placement[opt_dir]
         if value is not None and (not isinstance(value, str) or not value):
