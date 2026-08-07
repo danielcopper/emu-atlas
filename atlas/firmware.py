@@ -1708,6 +1708,42 @@ def _core_caveats(core: CoreDeclarations, refusals: tuple[Caveat, ...]) -> tuple
     return (*refusals, *_unread_declaration_caveats(core), *system_assignment_caveats(core))
 
 
+def _read_core(
+    machine: Machine,
+    context: FirmwareContext,
+    core: CoreDeclarations,
+    label: str | None,
+    *,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """One core whose ``.info`` was read: the answer for it, and what it observed.
+
+    Both routes that reach a read declaration — the per-core/system one and the
+    catalogue one — build it here, because they differ only in where the label
+    comes from. A field carried at one site and forgotten at the other is
+    invisible: the answer still type-checks, the caveat that mentions the fact
+    still appears on the core, and the suite stays green. ``unread`` was
+    exactly that. It reached the catalogue route empty, so
+    ``_declared_without_requiring`` saw nothing declared and an empty
+    ``firmware_for_system`` answer stopped saying which kind of empty it was.
+    """
+    requirements, refused, core_caveats, observed = _requirements_for(
+        machine, context, core, verify=verify
+    )
+    return (
+        CoreFirmware(
+            core_so=core.core_so,
+            label=label,
+            declaration=DECLARATION_READ,
+            requirements=requirements,
+            caveats=_core_caveats(core, core_caveats),
+            refused=refused,
+            unread=core.unread,
+        ),
+        observed,
+    )
+
+
 def _resolve_cores(
     machine: Machine,
     context: FirmwareContext,
@@ -1723,21 +1759,9 @@ def _resolve_cores(
         if core.info_status != READ_OK:
             resolved.append(_undeclarable_core(core, label))
             continue
-        requirements, refused, core_caveats, observed = _requirements_for(
-            machine, context, core, verify=verify
-        )
+        answer, observed = _read_core(machine, context, core, label, verify=verify)
         answer_caveats.extend(observed)
-        resolved.append(
-            CoreFirmware(
-                core_so=core.core_so,
-                label=label,
-                declaration=DECLARATION_READ,
-                requirements=requirements,
-                caveats=_core_caveats(core, core_caveats),
-                refused=refused,
-                unread=core.unread,
-            )
-        )
+        resolved.append(answer)
     return tuple(resolved), answer_caveats
 
 
@@ -1955,19 +1979,7 @@ def _catalogue_entry_core(
         )
     if core.info_status != READ_OK:
         return _undeclarable_core(core, entry.label), []
-    requirements, refused, core_caveats, observed = _requirements_for(machine, context, core, verify=verify)
-    return (
-        CoreFirmware(
-            core_so=core.core_so,
-            label=entry.label,
-            declaration=DECLARATION_READ,
-            requirements=requirements,
-            caveats=_core_caveats(core, core_caveats),
-            refused=refused,
-            unread=core.unread,
-        ),
-        observed,
-    )
+    return _read_core(machine, context, core, entry.label, verify=verify)
 
 
 def firmware_for_system(

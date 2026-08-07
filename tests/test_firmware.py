@@ -1931,3 +1931,57 @@ class TestUnsupportedIsNotAbsent:
         standalone = {c.code for c in cores["RPCS3 (Standalone)"].caveats}
         not_installed = {c.code for c in cores["Mupen64Plus-Next"].caveats}
         assert standalone & not_installed == set()
+
+
+class TestBothRoutesCarryWhatWasDeclaredButNotRequired:
+    """The catalogue route answers from the same fields as the per-core route.
+
+    An empty answer must always say which kind of empty it is (item 13), and
+    one of the three kinds — something is declared that never became a
+    requirement — is read off ``CoreFirmware.unread`` and ``.refused``. Those
+    are fields the answer carries, so a route that builds a ``CoreFirmware``
+    without them turns that caveat off silently: the core still states the
+    declaration in its own caveat, the shape still type-checks, and the answer
+    quietly loses the sentence a client branches on.
+    """
+
+    # firmware0_path with no firmware_count: RetroArch's enumeration reads
+    # nothing, so the file is declared and never asked for.
+    INFO = 'display_name = "Nestopia"\nsystemname = "Nintendo - NES"\nfirmware0_path = "disksys.rom"\n'
+    CATALOGUE = Catalogue(
+        (CatalogueEntry(label="Nestopia", kind="libretro", core_so="nestopia_libretro.so"),)
+    )
+
+    def _answer(self, *, through_catalogue: bool):
+        # The `.so` too: a declaration is only read for an installed core, and
+        # without it both routes answer 'core-not-installed' instead.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/nestopia_libretro.info": self.INFO,
+                f"{INFO_DIR}/nestopia_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        context = _context(machine)
+        if through_catalogue:
+            return firmware_for_system(machine, context, system="nes", catalogue=self.CATALOGUE)
+        return firmware_for_core(machine, context, core_so="nestopia_libretro.so")
+
+    def test_the_core_route_states_it_on_the_core(self):
+        # A one-core question needs no answer-level restatement: the core it is
+        # about says so itself, and that is where a client reads it.
+        answer = self._answer(through_catalogue=False)
+        assert CAVEAT_FIRMWARE_DECLARATION_UNREAD in [c.code for c in answer.cores[0].caveats]
+
+    def test_the_catalogue_route_says_it_at_answer_level(self):
+        # A per-system answer aggregates cores, so the answer level is the only
+        # place the fact appears there — and it must not go missing because one
+        # route built its CoreFirmware without the field it is read from.
+        answer = self._answer(through_catalogue=True)
+        assert [c.code for c in answer.caveats] == [CAVEAT_NO_FIRMWARE_REQUIREMENT]
+
+    def test_the_catalogue_route_carries_the_unread_declaration(self):
+        answer = self._answer(through_catalogue=True)
+        assert answer.cores[0].unread == ("firmware0_path",)
+
+    def test_neither_route_invents_a_requirement(self):
+        assert [c.requirements for c in self._answer(through_catalogue=True).cores] == [()]
