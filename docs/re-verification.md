@@ -46,7 +46,16 @@ logic; only the machine proves the reality, and a diff of zero is what "verified
 ## 5. Re-pin — and until then, the caveat stands
 
 Update the `verified` block in `atlas/data/arrangement_evidence.json` (version, date, reference) and the pinned revision
-in the research headers. That one file retires the caveat; no resolver changes.
+in the research headers. That one file retires the caveat, and **no resolver changes** — but the corpus does move with
+it, so expect the next step rather than a green suite.
 
-Until it does, the drift caveat is the honest state of things: the answers still stand — the configs are read the way
-upstream reads them either way — but nobody has confirmed the wiring end to end on the version running here.
+Every fixture machine that states the old version is a drifted machine the moment the pin moves, and the vector runner
+says so: those vectors fail until their expected blocks match. That is the tripwire working on the corpus, not a
+regression. For each one, decide which machine it is meant to be — bump its marker version to the new pin where the
+vector is about something else (most of them: the flycast, LRPS2 and opera cards, the firmware cases), or take the drift
+caveat into its expected block where the point _is_ a machine running an older build. Vectors for old generations are
+never deleted, so the second option is a real one.
+
+Until all of this is done, the drift caveat is the honest state of things: the answers still stand — the configs are
+read the way upstream reads them either way — but nobody has confirmed the wiring end to end on the version running
+here.

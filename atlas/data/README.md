@@ -113,7 +113,9 @@ not compared, and stays silent rather than claiming a comparison nobody made.
 Two rules make this file the whole mechanism. **A missing record counts as unverified** — omission is never evidence —
 though a handle kind with no record at all fails the test suite, because a fact nobody wrote down should not ship.
 **Verifying an arrangement retires its caveat here, not in a resolver**: add or re-pin the `verified` block, and the
-answers stop carrying it. No code names an arrangement's evidence state.
+answers stop carrying it. No code names an arrangement's evidence state. Re-pinning does move the vector corpus, though
+— every fixture stating the old version is a drifted machine afterwards, and the runner enforces it
+(`docs/re-verification.md`, step 5).
 
 ## `firmware_hashes.json`
 
