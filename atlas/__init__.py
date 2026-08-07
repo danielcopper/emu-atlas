@@ -11,10 +11,13 @@ Two entry points, per DESIGN.md:
 - :func:`atlas.detect` finds what is installed and returns installation handles;
 - every question is asked of a handle —
   ``installation.save_location(content_path=..., core_so=...)``,
-  ``installation.firmware_for_core(core_so=...)``,
-  ``installation.firmware_for_system(system=...)``,
+  ``installation.firmware_for_core("mgba_libretro.so")``,
+  ``installation.firmware_for_system("gba")``,
   ``installation.firmware_inventory()``,
   ``installation.identify_firmware(md5=...)``.
+
+The question's subject may be positional — the core, the system — while every
+modifier stays keyword-only.
 
 Choosing a handle is optional: :func:`atlas.every_installation` puts the same
 questions to every detected installation at once and answers each labelled with

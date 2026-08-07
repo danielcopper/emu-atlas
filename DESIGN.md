@@ -280,14 +280,32 @@ translation table as the real fix.
 
 ## Settled decisions
 
-- **Summary fields are earned, not decorative.** An answer carries one only where the client's _first_ question is a
-  fact the answer itself establishes: "is this installation ok?" (`Health.ok`) and "is everything this core needs in
-  place?" (`FirmwareAnswer`'s per-core `requirements_met`). Its shape follows what the answer can establish — a plain
-  yes/no where the question is always answerable (health is ok exactly when there are no findings), yes/no/**unknown**
-  where it is not (an unreadable declaration makes "is everything present?" unanswerable, and `None` says so rather than
-  guessing green). Nothing gets a summary that merely restates the field which _is_ the answer: the placement's `dir`,
-  the catalogue's entries and refusal codes, an identification's `identity`. A second spelling of the same fact has to
-  be co-maintained through every grammar change, and the day the two disagree the client believes the summary.
+- **Summary fields are earned, not decorative.** A subject — a whole answer, or one entry of one — carries a summary
+  only where the client's _first_ question is a fact that subject itself establishes. Three do: "is this installation
+  ok?" (`Health.ok`), "is everything this core needs in place?" (`CoreFirmware.requirements_met`), and "is this one file
+  usable?" (`FirmwareRequirement.satisfied`). The shape follows what can be established — a plain yes/no where the
+  question is always answerable (health is ok exactly when there are no findings), yes/no/**unknown** where it is not
+  (an unreadable declaration, an unverified digest: `None` says so rather than guessing green). Nothing gets a summary
+  that merely restates the field which _is_ the answer: the placement's `dir`, the catalogue's entries and refusal
+  codes, an identification's `identity`. A second spelling of the same fact has to be co-maintained through every
+  grammar change, and the day the two disagree the client believes the summary.
+
+  A summary judges by **combining** fields — `satisfied` is `found` and `checked` and `identity` and `need` read
+  together — which is what earns it a place beside them. Three kinds of boolean are therefore _not_ summaries and are
+  not governed by this rule:
+
+  - **Run facts** — what this run did, not what the subject is: `hash_checked`, `CoreEnumeration.listed`,
+    `Catalogue.read`, `FirmwareContext.cores_read`.
+  - **Field qualifiers** — a claim about one field's contents: `FileSet.complete` says the list is closed, not that the
+    placement is good.
+  - **Field projections** — a lossy boolean spelling of _one_ richer field, kept beside it because it is the branch most
+    clients take, with the richer field staying authoritative. `FirmwareRequirement.present` projects `found`: a
+    directory at the destination is not a missing file, so `found` carries the path kind and `present` answers the
+    common question. A projection collapses one field; a summary combines several, and that is the test for which a new
+    boolean is.
+
+  The categories are exhaustive by measurement, not by intent: every boolean and tri-state member of the exported answer
+  types falls into one of the four.
 
 - **Resolver, not knowledge base.** "Static lists are the trap" applies to atlas's own data as much as to wiki path
   lists. The plan to ship extracted `library_name` tables as package data is rejected for the same reason it was

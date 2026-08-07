@@ -14,6 +14,10 @@ data. The rule for what serializes:
   explanations and may change freely — they are deliberately absent here. Two
   words, two scopes: ``sources`` is what a whole answer was read from,
   ``*provenance`` is where one field's own value came from.
+  ``FirmwareRequirement.system_source`` is neither and keeps its name: it is a
+  closed vocabulary naming *which rule* assigned the system (an override, the
+  core's ``systemname``, a slug, or nothing), so it is data a client branches
+  on and it serializes.
 
 A port that reproduces these dicts for every vector reads the machine the way
 the reference does.
@@ -224,9 +228,10 @@ def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
 def catalogue_contract(answer: CatalogueAnswer) -> dict[str, Any]:
     """The stable form of a catalogue answer — entries, and why there are none.
 
-    ``caveats`` carries the whole caveat here, not just its code as the entries
-    do: which arrangement could not answer, and whether that is a fact about
-    the machine or about atlas, lives in the data.
+    Both caveat lists carry ``{code, data}``: at answer level, which
+    arrangement could not answer and whether that is a fact about the machine
+    or about atlas; on an entry, what its own degradation is about. One shape
+    for a caveat, wherever it sits.
     """
     return {
         "entries": [emulator_contract(e) for e in answer.entries],

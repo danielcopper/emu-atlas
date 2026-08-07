@@ -363,13 +363,15 @@ to a concrete handle to find out.
 ```python
 answer = inst.emulators_for("n64", content_path=rom_path)
 answer.entries                     # the launch entries, in effective priority order
-answer.sources                     # provenance — what was read to say so (prose, for debugging)
+answer.sources                     # what was read to say so (prose, for debugging)
 answer.caveats                     # why there are no entries, when there are none
 
 entry = answer.entries[0]          # the effective default (per-game altemulator > per-system choice > declared order)
 entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro'
 entry.core_so                      # 'mupen64plus_next_libretro.so' — or None for a standalone emulator
 entry.system                       # 'n64' — an entry says what it launches, wherever it travels
+entry.selection                    # why it is first, when a user promoted it — None for declared order
+entry.caveats                      # this entry's own degradations, e.g. per-game overrides nobody checked
 entry.provenance                   # which catalogue layer declared it (prose, for debugging)
 
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
@@ -557,9 +559,15 @@ Three subjects carry one, each because the first thing a client asks is exactly 
 The shape rule is the difference between them: a plain boolean only where the fact can always be established, and the
 third state wherever "cannot tell" is reachable.
 
-Other booleans on these answers are **not** summaries and do not answer "is this good?" — they say what the run did
-(`hash_checked`) or qualify one field's own contents (`file_set.complete` says the list is closed, not that the
-placement is usable).
+A summary combines fields — `satisfied` reads `found`, `checked`, `identity` and `need` together. The other booleans on
+these answers do something else, and none of them answers "is this good?":
+
+- **what the run did**: `hash_checked` (you passed `verify`), `answer.cores` being listed at all;
+- **what one field contains**: `file_set.complete` says the list is closed, not that the placement is usable;
+- **a shorthand for one richer field**: `req.present` is `req.found` collapsed to a boolean, and `found` stays the
+  authoritative one — a directory sitting at the destination is not a missing file, and only `found` can say so.
+
+Read the shorthand when it answers your question, and the field behind it when the distinction matters.
 
 No other answer gets one, and that is deliberate rather than pending. A placement's summary would restate `dir`, a
 catalogue's would restate `entries` plus the refusal codes, an identification's would restate `identity` — a second
