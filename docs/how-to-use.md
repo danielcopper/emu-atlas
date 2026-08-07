@@ -499,7 +499,11 @@ An answer with no requirements says which kind of empty it is, and the code is t
 | `no-firmware-requirement`      | declared, but nothing became a requirement             | read `core.refused` and the core caveats        |
 | `firmware-declaration-unknown` | atlas could not establish what is declared             | treat as unknown; never as "nothing needed"     |
 | `system-directory-cleared`     | the key is set to nothing, so the root is per-run      | name content, or fix the config                 |
-| `standalone-unsupported`       | this emulator is here, its rules are not covered       | your own knowledge; not an absence              |
+
+These are **answer-level** codes, in `answer.caveats`. Two facts about an individual emulator live on the entry instead,
+in `core.caveats`: `core-not-installed`, and `standalone-unsupported` for one that is here but whose rules are not
+covered (`declaration="unsupported"`). A system whose only emulator is standalone therefore answers
+`firmware-declaration-unknown` at the top and carries the reason on the core — branch on both collections.
 
 A per-system or per-core answer whose emulators were all read and declare nothing carries no such caveat: each entry
 says it itself with `declaration="read"` and an empty requirement list, which is the honest "needs nothing".

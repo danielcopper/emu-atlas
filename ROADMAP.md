@@ -39,6 +39,13 @@ know" and collapsed it into "not required" → "nothing missing" → green.
   wheel/sdist built and verified from a clean install, vectors in the sdist and attached to releases, generated docs
   with full source identity.
 
+**One answer grammar** (item 17, in progress): health findings are caveats — `{code, data}` everywhere, no envelope —
+and every answer from a broken installation states them. On the firmware route, a standalone emulator answers
+`declaration="unsupported"` with the placement route's own `standalone-unsupported`, and an absent `system_directory`
+resolves to RetroArch's platform default instead of refusing, leaving `system-directory-cleared` to mean only a key set
+to nothing. Still open in the item: `identify_firmware`'s untyped refusal, the naming sweep, the summary-field
+convention.
+
 ## Next: follow-up branches
 
 Small branches from main, one concern each, per-branch PRs.
@@ -117,11 +124,6 @@ The four firmware entry points ship: live `.info` declarations from the installe
   firmware answer share a subject without the caller passing a `core_so` back in.
 - **Standalone emulators declare nothing.** An emulator without a libretro core ships no `.info`; the catalogue route
   lists it and states it as unresolvable. Part of block 4.
-- **RetroArch's platform default `system_directory` on the firmware route.** The placement route now resolves it —
-  `system` under the config tree, [V] `platform_unix.c:2142-2143` at the pinned revision, applied by
-  `config_set_defaults` (`configuration.c:5746-5749`) before any cfg is read. The firmware route still answers an unset
-  key with an empty answer plus `system-directory-unset`, so one fact has two shapes; item 17's "one fact, one shape"
-  pass owns closing it.
 - **`systemfiles_in_content_dir` on the firmware route.** RetroArch's own firmware check moves to the content's
   directory when the flag is set and content is loaded ([V] `menu/menu_displaylist.c:854-878`). A firmware answer has no
   content, so atlas answers for the flagless case and does not state the difference yet.

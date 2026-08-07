@@ -120,12 +120,14 @@ from atlas.retroarch_cfg import (
     UPSTREAM_DEFAULTS,
     IgnoredSetting,
     LayoutDefaults,
+    ParsedCfg,
     RejectedDirectory,
     RetroArchCfg,
     chain_bool,
     chain_value,
     expand_home,
     is_app_relative,
+    parse_cfg,
     parse_cfg_text,
     resolve_save_layout,
 )
@@ -1534,9 +1536,17 @@ def _content_system_root(content: _Content, *, source: str) -> _SystemRoot:
 # What an *absent* ``system_directory`` resolves to, for every route that asks.
 # ``config_set_defaults`` seeds it before any config is read
 # (``configuration.c:5746-5749``), and on desktop Linux the seed is ``system``
-# under the RetroArch config tree (``platform_unix.c:2137-2143``). So the key
+# under the RetroArch config tree (``platform_unix.c:2141-2143``). So the key
 # being absent is not a gap: it names a directory, and both the card route and
 # the firmware route resolve it to the same one — from here, once.
+#
+# One qualification, and it is a reachability one: the join is the *else*
+# branch. ``LIBRETRO_SYSTEM_DIRECTORY`` in the environment wins when it is set
+# (``platform_unix.c:2137-2140``), and atlas cannot read the environment the
+# emulator will run with — it is not on disk, and the seam abstracts the
+# machine, not the process. [V] unset on the reference machine, so the join is
+# what applies there; an installation that exports it is [O] — the answer would
+# name this directory while RetroArch used the exported one.
 PLATFORM_SYSTEM_DIR_SOURCE = (
     "default: system_directory unset — RetroArch platform default applies "
     "('system' under the config tree, platform_unix.c:2142-2143)"
@@ -1569,9 +1579,12 @@ def _core_system_root(
 
     - **Absent** — ``config_set_defaults`` has already put the platform default
       there (``configuration.c:5746-5749``), which on desktop Linux is
-      ``system`` under the config tree (``platform_unix.c:2137-2143``, the same
-      block that seeds the saves default this resolver answers with). So an
-      unset key resolves; it is not a hole and never was one.
+      ``system`` under the config tree (``platform_unix.c:2141-2143``, the same
+      block that seeds the saves default this resolver answers with) unless
+      ``LIBRETRO_SYSTEM_DIRECTORY`` is exported, which wins (``:2137-2140``) and
+      which atlas cannot read off a disk — [V] unset on the reference machine,
+      [O] anywhere it is set. So an unset key resolves; it is not a hole and
+      never was one.
     - **Blank or the literal ``default``** — ``system_directory`` passes
       ``handle_setting = true`` (``configuration.c:1691``), so the generic path
       loop writes whatever the merged config holds, with no directory test
@@ -2244,7 +2257,12 @@ def _retroarch_firmware_context(
     two into one directory; nothing here assumes it.
     """
     machine = sandbox.machine
-    parsed = parse_cfg_text(global_text) if global_text is not None else {}
+    # The dropped lines are read here, not only the values: once an absent key
+    # resolves silently to the platform default, a line the parser refused
+    # looks exactly like a key nobody wrote — and the user did write it. The
+    # card route states the same fact for the same reason.
+    read = parse_cfg(global_text) if global_text is not None else ParsedCfg({})
+    parsed = read.values
     # The installation's own health leads: whether the arrangement is broken is
     # the most general thing about any answer, so it stands before what this
     # particular read could not resolve. The caller derives the findings from
@@ -2255,10 +2273,20 @@ def _retroarch_firmware_context(
     raw_system = parsed.get("system_directory")
     configured_system = sandbox.cfg_path("system_directory", raw_system) if raw_system is not None else None
     root = configured_system.path if configured_system is not None else None
+    caveats.extend(
+        _ignored_caveats(
+            tuple(
+                IgnoredSetting(IGNORED_LINE_DROPPED, cfg_label, line.key, line.line)
+                for line in read.dropped
+                if line.key == "system_directory"
+            )
+        )
+    )
     if raw_system is None:
         # Absent is not unset-and-unknown: RetroArch seeded the platform default
         # before it read a line of config, so this route resolves it exactly as
-        # the card route does and scans there.
+        # the card route does and scans there. A line the parser refused lands
+        # here too, and is stated above rather than resolving in silence.
         root = _platform_system_dir(retroarch_config_dir)
         sources.append(PLATFORM_SYSTEM_DIR_SOURCE)
         if machine.path_kind(root) != KIND_DIRECTORY:

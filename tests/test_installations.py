@@ -2057,3 +2057,23 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
         placement = handle.save_location(core_so="flycast_libretro.so")
         assert handle.firmware_inventory().root == f"{self.CONFIG_TREE}/system"
         assert placement.dir.startswith(f"{self.CONFIG_TREE}/system")
+
+    def test_a_dropped_line_is_stated_beside_the_resolved_default(self):
+        # The silence this split would otherwise create: the key ends up absent
+        # because RetroArch refused the line, so the answer resolves — and says
+        # which line set nothing, or the configured path vanishes without trace.
+        answer = self._inventory(
+            f'system_directory "/bios"\n{self.DIRS}', dirs=[f"{self.CONFIG_TREE}/system"]
+        )
+        assert answer.root == f"{self.CONFIG_TREE}/system"
+        dropped = next(c for c in answer.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED)
+        assert dropped.data == {"key": "system_directory", "line": 'system_directory "/bios"'}
+
+    def test_a_dropped_line_for_another_key_is_not_this_routes_business(self):
+        # Only the key this route resolves is stated here; the save-layout keys
+        # are the card route's to report, and stating them twice would double
+        # every dropped line on a machine that asks both questions.
+        answer = self._inventory(
+            f'savefile_directory "/saves"\n{self.DIRS}', dirs=[f"{self.CONFIG_TREE}/system"]
+        )
+        assert atlas.CAVEAT_CFG_LINE_DROPPED not in [c.code for c in answer.caveats]
