@@ -37,6 +37,7 @@ from atlas.esde import (
     parse_es_systems,
     parse_gamelist,
 )
+from atlas.evidence import arrangement_caveats
 from atlas.firmware import (
     CAVEAT_CATALOGUE_UNAVAILABLE,
     CAVEAT_CATALOGUE_UNESTABLISHED,
@@ -2306,10 +2307,23 @@ class _FirmwareQueries:
     system's emulators overrides :meth:`firmware_for_system` to pass it.
     """
 
+    kind: str
     _machine: Machine
 
-    def _firmware_context(self) -> FirmwareContext:
+    def _read_firmware_context(self) -> FirmwareContext:
         raise NotImplementedError  # pragma: no cover - every handle supplies one
+
+    def _firmware_context(self) -> FirmwareContext:
+        """The handle's live read, carrying what atlas has established about this arrangement.
+
+        Every firmware answer copies the context's caveats into itself, so
+        stating the arrangement's evidence once here states it on all four —
+        and on a handle that assembles its own catalogue for
+        :meth:`firmware_for_system` too, because that one asks for the context
+        the same way.
+        """
+        context = self._read_firmware_context()
+        return _dc_replace(context, caveats=(*context.caveats, *arrangement_caveats(self.kind)))
 
     def firmware_for_core(self, *, core_so: str, verify: bool = False) -> FirmwareAnswer:
         """Does *core_so* need firmware, where does each file go, and is it there?"""
@@ -2595,15 +2609,31 @@ class _CatalogueQueries:
       it as "no emulators" would be told something nobody checked.
     """
 
+    kind: str
+
     def _catalogue_absence(self) -> Caveat:
         raise NotImplementedError  # pragma: no cover - every handle supplies one
 
     def systems(self) -> SystemsAnswer:
         """Every system the frontend catalogue declares, sorted."""
-        return SystemsAnswer(caveats=(self._catalogue_absence(),))
+        answer = self._systems_answer()
+        return _dc_replace(answer, caveats=(*answer.caveats, *arrangement_caveats(self.kind)))
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
         """The emulators that can launch *system*, in launch-priority order."""
+        answer = self._catalogue_answer(system, content_path=content_path)
+        return _dc_replace(answer, caveats=(*answer.caveats, *arrangement_caveats(self.kind)))
+
+    # The two public questions above are the whole catalogue surface, and a
+    # handle overrides the two below instead: what it *answers* is its own,
+    # how the answer states its arrangement's evidence is not. Splitting them
+    # is what makes "every answer says what atlas has established about this
+    # arrangement" a property of the surface rather than of remembering.
+
+    def _systems_answer(self) -> SystemsAnswer:
+        return SystemsAnswer(caveats=(self._catalogue_absence(),))
+
+    def _catalogue_answer(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
         return CatalogueAnswer(caveats=(self._catalogue_absence(),))
 
 
@@ -2802,7 +2832,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
     _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, bundled + custom_systems overlay)"
 
-    def systems(self) -> SystemsAnswer:
+    def _systems_answer(self) -> SystemsAnswer:
         """Every system the catalogue declares, sorted."""
         config, _ = self._read_marker()
         by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
@@ -2825,7 +2855,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """Where this system's ROMs live — the anchor gamelist paths are relative to."""
         return os.path.join(self._config_path(config, "roms_path", "roms")[0], system)
 
-    def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
+    def _catalogue_answer(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
         """The emulators that can launch *system*, in launch-priority order.
 
         First entry = the effective default, resolved live through ES-DE's
@@ -2927,7 +2957,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 core_path_resolver=lambda so: self._core_path_in(global_text, so),
                 arrangement="retrodeck",
                 arrangement_version=version if isinstance(version, str) else None,
-                extra_caveats=(*extra_caveats, *_health_caveats(health)),
+                extra_caveats=(
+                    *extra_caveats,
+                    *_health_caveats(health),
+                    *arrangement_caveats(self.kind),
+                ),
             ),
         )
 
@@ -2942,7 +2976,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, marker_issues = self._read_marker()
         return self._save_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
 
-    def _firmware_context(self) -> FirmwareContext:
+    def _read_firmware_context(self) -> FirmwareContext:
         return _retroarch_firmware_context(
             sandbox=self._sandbox(),
             global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
@@ -3198,11 +3232,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
                 arrangement="emudeck",
                 arrangement_version=None,
-                extra_caveats=_health_caveats(health),
+                extra_caveats=(*_health_caveats(health), *arrangement_caveats(self.kind)),
             ),
         )
 
-    def _firmware_context(self) -> FirmwareContext:
+    def _read_firmware_context(self) -> FirmwareContext:
         """The cfg is the truth here too: ``settings.sh`` names a ``biosPath``,
         but what RetroArch actually hands its cores is ``system_directory``."""
         return _retroarch_firmware_context(
@@ -3307,11 +3341,11 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
                 core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
                 arrangement="bare",
                 arrangement_version=None,
-                extra_caveats=_health_caveats(health),
+                extra_caveats=(*_health_caveats(health), *arrangement_caveats(self.kind)),
             ),
         )
 
-    def _firmware_context(self) -> FirmwareContext:
+    def _read_firmware_context(self) -> FirmwareContext:
         return _retroarch_firmware_context(
             sandbox=self._sandbox(),
             global_text=self._machine.read_text(self._cfg_path()).text,

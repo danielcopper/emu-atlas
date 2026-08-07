@@ -114,6 +114,14 @@ from atlas.firmware import (
 )
 from atlas.detect import detect
 from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE, EmulatorSpec, GamelistSelections, parse_es_systems, parse_gamelist, parse_gamelist_alternative
+from atlas.evidence import (
+    CAVEAT_ARRANGEMENT_UNVERIFIED,
+    ArrangementEvidence,
+    LiveVerification,
+    arrangement_caveats,
+    load_arrangement_evidence,
+    lookup_arrangement,
+)
 from atlas.installations import (
     HEALTH_ISSUE_COMPANION_CONFIG_MISSING,
     HEALTH_ISSUE_CONFIG_UNREADABLE,
@@ -212,8 +220,10 @@ from atlas.retroarch_cfg import (
 __all__ = [
     "parse_es_systems",
     "lookup_card",
+    "lookup_arrangement",
     "lookup_audit",
     "load_oddities",
+    "load_arrangement_evidence",
     "load_audit",
     "VerifiedOn",
     "SaveMode",
@@ -221,6 +231,8 @@ __all__ = [
     "GamelistSelections",
     "CoreCard",
     "AuditEntry",
+    "ArrangementEvidence",
+    "LiveVerification",
     "CAVEAT_APP_RELATIVE_PATH_UNEXPANDED",
     "CAVEAT_CFG_LINE_DROPPED",
     "CAVEAT_CFG_VALUE_REJECTED",
@@ -233,6 +245,7 @@ __all__ = [
     "CAVEAT_CORE_SUSPECT",
     "CAVEAT_CORE_MULTI_OPTION",
     "CAVEAT_CARD_GENERATION_MISMATCH",
+    "CAVEAT_ARRANGEMENT_UNVERIFIED",
     "CAVEAT_CARD_MODE_UNCONFIRMED",
     "CAVEAT_SORTED_DIR_UNCREATABLE",
     "CAVEAT_CORE_UNQUERYABLE",
@@ -360,6 +373,7 @@ __all__ = [
     "UNRESOLVED_STANDALONE",
     "Unresolved",
     "UPSTREAM_DEFAULTS",
+    "arrangement_caveats",
     "build_save_placement",
     "catalogue_contract",
     "detect",

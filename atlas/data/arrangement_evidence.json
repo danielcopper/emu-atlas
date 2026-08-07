@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "spec": "DESIGN.md — evidence levels; docs/research/coverage-matrix.md — the per-arrangement verification record",
+  "description": "Which emulator arrangements atlas has observed on a live installation, keyed by installation kind. An arrangement's config reading is source-verified against pinned upstream either way — this file records only whether a real machine running that arrangement has confirmed the wiring end to end. An arrangement with no entry counts as unverified: nothing here is evidence by omission.",
+  "arrangements": {
+    "retrodeck": {
+      "label": "RetroDECK",
+      "verified": {
+        "version": "0.10.9b",
+        "date": "2026-08-05",
+        "reference": "the RetroDECK 0.10.9b installation atlas's live verification round ran against (docs/research/retrodeck-save-placement.md; per-core records in core_audit.json)"
+      },
+      "note": "[V] Save roots, the override chain, the ES-DE catalogue and the firmware tree were read off a running installation and compared against the resolver's answers."
+    },
+    "emudeck": {
+      "label": "an EmuDeck arrangement",
+      "verified": null,
+      "note": "[D] Read from EmuDeck's shipped configuration upstream (settings.sh, its org.libretro.RetroArch cfg); no EmuDeck machine has been observed. Which frontend it runs is a separate open question (emulator-catalogue-unestablished)."
+    },
+    "standalone_retroarch_flatpak": {
+      "label": "the standalone RetroArch Flatpak",
+      "verified": null,
+      "note": "[D] The cfg location and RetroArch's own upstream defaults are source-verified; no unclaimed org.libretro.RetroArch installation has been observed."
+    },
+    "native_retroarch": {
+      "label": "a native RetroArch install",
+      "verified": null,
+      "note": "[D] The cfg location and RetroArch's own upstream defaults are source-verified; no native installation has been observed."
+    }
+  }
+}
