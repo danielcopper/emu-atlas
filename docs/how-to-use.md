@@ -93,10 +93,13 @@ its own `caveats`, under these same codes with this same data. Nothing wraps the
 category code with the condition buried in `data`.
 
 ```python
-serialized = atlas.health_contract(inst.health())
-# [{'code': 'root-missing', 'data': {'path': '/run/media/deck/Emulation/retrodeck'}}]
-# — the same list installation_contract() puts under 'health'; empty means ok
+atlas.health_contract(inst.health())
+# {'ok': False,
+#  'issues': [{'code': 'root-missing', 'data': {'path': '/run/media/deck/Emulation/retrodeck'}}]}
 ```
+
+`ok` is the summary field, the same role `requirements_met` plays on a firmware answer. Inside `installation_contract()`
+health is a _field_ rather than an answer, so it carries the `issues` list alone — empty means ok there.
 
 ## Choosing is optional — ask every installation
 

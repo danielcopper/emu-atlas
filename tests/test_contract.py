@@ -35,18 +35,28 @@ def _healthy() -> atlas.RetroDeck:
 
 
 class TestHealthContract:
-    def test_healthy_serializes_to_no_findings(self):
-        assert health_contract(_healthy().health()) == []
+    """The health answer is an object like every other answer in the grammar."""
+
+    def test_a_healthy_installation_answers_ok_with_no_issues(self):
+        assert health_contract(_healthy().health()) == {"ok": True, "issues": []}
+
+    def test_a_broken_one_is_not_ok(self):
+        assert health_contract(_broken().health())["ok"] is False
 
     def test_a_finding_serializes_as_a_caveat(self):
-        assert health_contract(_broken().health())[0] == {
+        assert health_contract(_broken().health())["issues"][0] == {
             "code": atlas.HEALTH_ISSUE_ROOT_MISSING,
             "data": {"path": GONE},
         }
 
     def test_every_finding_is_carried(self):
         health = _broken().health()
-        assert [f["code"] for f in health_contract(health)] == list(health.codes)
+        assert [f["code"] for f in health_contract(health)["issues"]] == list(health.codes)
+
+    def test_ok_says_what_the_issues_say(self):
+        # The summary is derived, never a second fact: it can only ever agree.
+        answer = health_contract(_broken().health())
+        assert answer["ok"] == (not answer["issues"])
 
     def test_the_form_is_json(self):
         # A read-only mapping inside would serialize fine here and fail in a
@@ -55,10 +65,12 @@ class TestHealthContract:
         assert json.loads(json.dumps(serialized)) == serialized
 
 
-class TestInstallationContractComposesHealth:
-    def test_the_health_field_is_the_health_contract(self):
+class TestInstallationContractCarriesTheFindings:
+    """Inside an installation, health is a field — the findings, unwrapped."""
+
+    def test_the_health_field_is_the_findings(self):
         handle = _broken()
-        assert installation_contract(handle)["health"] == health_contract(handle.health())
+        assert installation_contract(handle)["health"] == health_contract(handle.health())["issues"]
 
     def test_a_healthy_installation_states_an_empty_list(self):
         assert installation_contract(_healthy())["health"] == []

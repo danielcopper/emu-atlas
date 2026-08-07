@@ -149,9 +149,8 @@ class TestItDelegates:
     def test_the_label_carries_the_findings_in_full(self):
         machine = atlas.FixtureMachine({RETRODECK_JSON: '{"paths": {"rd_home_path": "/gone"}}'})
         answered = atlas.EveryInstallation(_handles(machine)).health()[0]
-        assert installation_answers_contract([answered], health_contract)[0]["installation"][
-            "health"
-        ] == health_contract(answered.answer)
+        serialized = installation_answers_contract([answered], health_contract)[0]
+        assert serialized["installation"]["health"] == serialized["answer"]["issues"]
 
     def test_firmware_for_core(self):
         asked, direct = self._pairs(lambda h: h.firmware_for_core(core_so=CORE_SO))

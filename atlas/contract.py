@@ -66,18 +66,33 @@ def unresolved_contract(unresolved: Unresolved) -> dict[str, Any]:
     return {"unresolved": {"code": unresolved.code, "data": dict(unresolved.data)}}
 
 
-def health_contract(health: Health) -> list[dict[str, Any]]:
-    """The stable form of an installation's health — its findings, in full.
+def _findings_contract(health: Health) -> list[dict[str, Any]]:
+    """The findings alone — one ``{code, data}`` per issue, in order.
 
-    A finding is a caveat and serializes as one, ``{code, data}`` like every
-    other caveat in this module. Bare codes were the old shape and lost exactly
-    what a client acts on: *which* marker is invalid, *which* root is missing,
-    what the failing read answered. ``ok`` is not a field here because it never
-    was one — health is ok exactly when this list is empty, and a serialized
-    summary of a list right beside the list is a second place for the same fact
-    to be wrong.
+    A finding is a caveat and serializes as one, like every other caveat in
+    this module. Bare codes were the old shape and lost exactly what a client
+    acts on: *which* marker is invalid, *which* root is missing, what the
+    failing read answered.
     """
     return [{"code": issue.code, "data": dict(issue.data)} for issue in health.issues]
+
+
+def health_contract(health: Health) -> dict[str, Any]:
+    """The stable form of a health answer — the summary, and the findings.
+
+    Every answer in this grammar serializes as an object, and health is an
+    answer like the rest: ``ok`` is its summary field, the one a client renders
+    (the same role ``requirements_met`` plays on a firmware answer), and
+    ``issues`` carries the findings. ``ok`` is derived from the findings and
+    stays derived on the value object — serializing it is stating the summary,
+    not storing a second copy of the fact.
+
+    :func:`installation_contract` embeds the findings *without* this wrapper:
+    there, health is a field of an installation's identity rather than an
+    answer in its own right, and the object it sits in already carries the
+    summary in the only form that matters there — an empty list.
+    """
+    return {"ok": health.ok, "issues": _findings_contract(health)}
 
 
 def installation_contract(installation: Installation) -> dict[str, Any]:
@@ -86,7 +101,7 @@ def installation_contract(installation: Installation) -> dict[str, Any]:
         "kind": installation.kind,
         "kinds": list(installation.kinds),
         "root": installation.root(),
-        "health": health_contract(installation.health()),
+        "health": _findings_contract(installation.health()),
     }
 
 
@@ -215,7 +230,7 @@ def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
 
 def installation_answers_contract(
     answers: Sequence[InstallationAnswer[AnswerT]],
-    serialize: Callable[[AnswerT], Any],
+    serialize: Callable[[AnswerT], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """The stable form of an aggregate answer — every installation's answer, labelled.
 
@@ -230,10 +245,6 @@ def installation_answers_contract(
     The list is ordered, and the order is contractual: it is detection order,
     the same order :func:`~atlas.detect.detect` states. An empty list is the
     empty machine, and stays a truthful answer rather than an error.
-
-    ``serialize`` returns whatever shape its own question's serializer returns
-    — an object for most, a list of findings for ``health_contract`` — because
-    the payload is that question's form and this function does not reshape it.
     """
     return [
         {

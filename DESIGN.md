@@ -106,8 +106,10 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   it is about, the read status behind it, the marker key that is wrong — and an answer computed on a broken installation
   carries the findings themselves in its `caveats`, under their own codes. No category code with the real condition
   nested in `data`: a distinct, stable code hidden behind a discriminator is a shape a client has to unpack before it
-  can branch, and one the firmware route already retired. `Health.ok` stays the summary — findings absent — and it is
-  derived, never a second stored fact.
+  can branch, and one the firmware route already retired. The health answer itself serializes as an object like every
+  other answer — `ok` the summary field a client renders, `issues` the findings — while an installation's identity
+  carries the findings as a plain field, where an empty list is the whole summary. `ok` is derived from the findings and
+  stays derived: stating a summary is not storing a second copy of the fact.
 - **The emulator handle means "as currently configured".** Granularity, roots, and modes are config readings with
   provenance, not static facts. Where an alternative mode exists (Flycast per-game VMUs), the handle names the config
   that selects it.
