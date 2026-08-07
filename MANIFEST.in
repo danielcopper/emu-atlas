@@ -1,1 +1,5 @@
 recursive-include vectors *.json
+# The vectors are the normative artifact, and the fixture grammar is what makes
+# them readable — an sdist that ships the JSON without it hands a port author
+# data with no semantics.
+recursive-include vectors *.md
