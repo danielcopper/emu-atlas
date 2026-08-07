@@ -14,6 +14,7 @@ import json
 import pytest
 
 import atlas
+from atlas import installations
 from atlas.evidence import (
     ARRANGEMENT_EVIDENCE_SCHEMA,
     CAVEAT_ARRANGEMENT_UNVERIFIED,
@@ -31,6 +32,35 @@ CORE_SO = "mgba_libretro.so"
 SYSTEM = "gb"
 
 VERIFIED_RECORD = {"version": "0.10.9b", "date": "2026-08-05", "reference": "one live installation"}
+
+
+def _handle_kinds() -> set[str]:
+    """Every installation kind there is — read off the handle classes themselves.
+
+    A completeness check whose two sides are both hand-written lists proves
+    nothing: a fifth handle would change neither, and the check would pass
+    while the new arrangement had no record. So the kinds come from the code
+    that defines them — every public handle class in
+    :mod:`atlas.installations` declaring a ``kind`` of its own. Shared bases
+    (``_RetroArchInstall``) declare none and are private besides; the protocol's
+    ``kind`` is a property, not a string.
+    """
+    return {
+        member.kind
+        for name, member in vars(installations).items()
+        if not name.startswith("_")
+        and isinstance(member, type)
+        and isinstance(vars(member).get("kind"), str)
+    }
+
+
+def _unverified_kinds() -> set[str]:
+    """The kinds the packaged data says nobody has observed live."""
+    return {
+        kind
+        for kind in _handle_kinds()
+        if (record := lookup_arrangement(kind)) is None or record.verified is None
+    }
 
 
 def _record(**entry) -> str:
@@ -101,20 +131,9 @@ class TestEveryHandleKindHasARecord:
     down, so the omission is refused here rather than shipped.
     """
 
-    KINDS = ("retrodeck", "emudeck", "standalone_retroarch_flatpak", "native_retroarch")
-
-    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("kind", sorted(_handle_kinds()))
     def test_the_kind_is_recorded(self, kind):
         assert lookup_arrangement(kind) is not None
-
-    def test_the_kinds_checked_are_the_kinds_detection_returns(self):
-        detected = {
-            atlas.RetroDeck.kind,
-            atlas.EmuDeck.kind,
-            atlas.StandaloneRetroArchFlatpak.kind,
-            atlas.NativeRetroArch.kind,
-        }
-        assert detected == set(self.KINDS)
 
 
 def _machine(files, **kwargs) -> atlas.FixtureMachine:
@@ -164,6 +183,18 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
 
 
 class TestEveryAnswerStatesItsEvidence:
+    def test_every_unverified_kind_has_a_fixture_machine(self):
+        # The parametrized check below can only cover what this dict names, so
+        # a newly unverified arrangement without a fixture would skip it in
+        # silence. The dict is hand-written (each kind needs its own marker
+        # files); that it is complete is not.
+        assert set(UNVERIFIED_MACHINES) == _unverified_kinds()
+
+    def test_the_verified_kinds_are_the_one_this_file_asks_directly(self):
+        # RETRODECK_MACHINE stands for every verified kind — true while there
+        # is one. A second verified arrangement needs its own fixture here.
+        assert _handle_kinds() - _unverified_kinds() == {atlas.RetroDeck.kind}
+
     @pytest.mark.parametrize("kind", sorted(UNVERIFIED_MACHINES))
     def test_every_question_of_an_unverified_arrangement_says_so(self, kind):
         files, kwargs = UNVERIFIED_MACHINES[kind]

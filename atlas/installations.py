@@ -2620,7 +2620,26 @@ class _CatalogueQueries:
         return _dc_replace(answer, caveats=(*answer.caveats, *arrangement_caveats(self.kind)))
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
-        """The emulators that can launch *system*, in launch-priority order."""
+        """The emulators that can launch *system*, in launch-priority order.
+
+        The first entry is the effective default, resolved live through the
+        frontend's own hierarchy: a per-game ``altemulator`` (when
+        *content_path* is given and a gamelist entry matches it) outranks a
+        per-system ``alternativeEmulator``, which outranks the declared order.
+        A selection naming no declared entry keeps the declared order — ES-DE
+        falls back the same way.
+
+        When *content_path* is omitted and the gamelist carries per-game
+        overrides, every returned entry states that as a catalogue caveat: the
+        system-level answer may be wrong for exactly those games.
+
+        No entries is four different facts, and the caveats tell them apart. No
+        entries and no caveat means the catalogue was read and the frontend
+        knows no emulator for this system — the only one of the four that is a
+        statement about the machine. The other three say why nobody could
+        answer from a catalogue at all: the arrangement ships none, atlas has
+        not established where it keeps one, or the one it has could not be read.
+        """
         answer = self._catalogue_answer(system, content_path=content_path)
         return _dc_replace(answer, caveats=(*answer.caveats, *arrangement_caveats(self.kind)))
 
@@ -2856,21 +2875,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return os.path.join(self._config_path(config, "roms_path", "roms")[0], system)
 
     def _catalogue_answer(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
-        """The emulators that can launch *system*, in launch-priority order.
+        """RetroDECK's own catalogue answer — one snapshot of the ES-DE sources.
 
-        First entry = the effective default, resolved live through ES-DE's
-        hierarchy: per-game ``altemulator`` (when *content_path* is given and a
-        gamelist entry matches) > per-system ``alternativeEmulator`` > declared
-        first entry. A selection label matching no declared entry keeps the
-        declared order — ES-DE itself falls back the same way.
-
-        When *content_path* is omitted and the gamelist carries per-game
-        overrides, every returned entry states that as a catalogue caveat: the
-        system-level answer may be wrong for exactly those games.
-
-        No entries and a catalogue that was read is an answer about the machine:
-        the frontend knows no emulator for this system. No entries because the
-        catalogue could not be read is not, and says so.
+        The contract this fills in is on
+        :meth:`_CatalogueQueries.emulators_for`; what is RetroDECK's alone is
+        where the answer comes from: the marker, the bundled ``es_systems.xml``
+        plus its ``custom_systems`` overlay, and the system's gamelist, each
+        read once here and handed to the entry assembly together (REVIEW M4).
         """
         config, _ = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]

@@ -146,9 +146,10 @@ What it means: **no machine running this arrangement has confirmed the wiring en
   treat any derived fact.
 
 It rides on every answer that carries caveats: `save_location()`, `systems()`, `emulators_for()`, the three firmware
-calls and `identify_firmware()` — through the aggregate too, since that delegates. The status is packaged data
-(`atlas/data/arrangement_evidence.json`), so the day an arrangement is verified on a reference machine, the record
-changes and the caveat stops appearing; no client change is needed either way.
+calls, `identify_firmware()`, and the entry route's `EmulatorEntry.save_location()` — through the aggregate too, since
+that delegates. The status is packaged data (`atlas/data/arrangement_evidence.json`), so the day an arrangement is
+verified on a reference machine, the record changes and the caveat stops appearing; no client change is needed either
+way.
 
 ## Where does this save live?
 

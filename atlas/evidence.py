@@ -165,7 +165,7 @@ def arrangement_caveats(kind: str) -> tuple[Caveat, ...]:
             f"no live installation of {label} has been observed by atlas — how its configs are read is "
             "source-verified against pinned upstream, but nothing has confirmed the wiring end to end on "
             "a running machine, so this answer is derived rather than verified "
-            "(docs/research/coverage-matrix.md)",
+            "(docs/how-to-use.md, 'What atlas has actually seen')",
             {"kind": kind},
         ),
     )

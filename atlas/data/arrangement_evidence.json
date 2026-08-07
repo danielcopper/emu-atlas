@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "spec": "DESIGN.md — evidence levels; docs/research/coverage-matrix.md — the per-arrangement verification record",
+  "spec": "DESIGN.md — the answer guarantee and its evidence levels; docs/how-to-use.md — what arrangement-unverified tells a client. The per-core marks in docs/research/coverage-matrix.md are a different record: which cores were checked where, not whether the arrangement itself was ever observed.",
   "description": "Which emulator arrangements atlas has observed on a live installation, keyed by installation kind. An arrangement's config reading is source-verified against pinned upstream either way — this file records only whether a real machine running that arrangement has confirmed the wiring end to end. An arrangement with no entry counts as unverified: nothing here is evidence by omission.",
   "arrangements": {
     "retrodeck": {
