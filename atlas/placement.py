@@ -51,6 +51,14 @@ from atlas.retroarch_cfg import RetroArchCfg
 RootKind = Literal["savefile_directory", "content_directory", "system_directory"]
 FileSetState = Literal["observed", "declared", "unknown"]
 
+# The three states a file set can be in, as values. Every other closed
+# vocabulary in the contract ships both its type and its constants; a client
+# branches on `file_set.state`, and a literal in that branch is a typo away
+# from silently never matching.
+FILE_SET_OBSERVED: FileSetState = "observed"
+FILE_SET_DECLARED: FileSetState = "declared"
+FILE_SET_UNKNOWN: FileSetState = "unknown"
+
 ROOT_SAVEFILE_DIRECTORY: RootKind = "savefile_directory"
 ROOT_CONTENT_DIRECTORY: RootKind = "content_directory"
 ROOT_SYSTEM_DIRECTORY: RootKind = "system_directory"
@@ -235,7 +243,7 @@ class Granularity:
 
 
 UNKNOWN_FILE_SET = FileSet(
-    state="unknown",
+    state=FILE_SET_UNKNOWN,
     files=(),
     provenance="file set not stated — no observation available (never guessed)",
 )

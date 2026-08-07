@@ -15,7 +15,9 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
-from atlas.retroarch_cfg import RETRODECK_DEFAULTS, resolve_save_layout
+from atlas.retroarch_cfg import resolve_save_layout
+from tests.shipped_layouts import RETRODECK_SHIPPED
+
 
 
 class TestInvariants:
@@ -69,7 +71,7 @@ HOME = "/home/deck"
 
 
 def _layout(text):
-    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_DEFAULTS)
+    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED)
 
 
 def _build(text, *, content_dir_path=None, content_dir_name=None, library_name=None, **kwargs):

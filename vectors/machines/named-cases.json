@@ -426,7 +426,7 @@
     },
     {
       "name": "emudeck-flat-layout",
-      "rationale": "EmuDeck: settings.sh is the truth, the standalone org.libretro.RetroArch Flatpak is its RetroArch, the shipped layout is flat (sort keys false). One handle for both descriptions — no separate standalone installation.",
+      "rationale": "EmuDeck: settings.sh is the truth, the bare org.libretro.RetroArch Flatpak is its RetroArch, the shipped layout is flat (sort keys false). One handle for both descriptions — no separate bare installation.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -445,7 +445,7 @@
             "kind": "emudeck",
             "kinds": [
               "emudeck",
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
             "health": []
@@ -497,9 +497,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "standalone_retroarch_flatpak",
+            "kind": "bare_retroarch_flatpak",
             "kinds": [
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
             "health": []
@@ -523,7 +523,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "standalone_retroarch_flatpak"
+                "kind": "bare_retroarch_flatpak"
               }
             },
             {
@@ -550,9 +550,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "standalone_retroarch_flatpak",
+            "kind": "bare_retroarch_flatpak",
             "kinds": [
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
             "health": []
@@ -576,7 +576,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "standalone_retroarch_flatpak"
+                "kind": "bare_retroarch_flatpak"
               }
             },
             {
@@ -606,9 +606,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/user/.config/retroarch",
             "health": []
@@ -634,7 +634,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -727,9 +727,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/user/.config/retroarch",
             "health": []
@@ -753,7 +753,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -790,9 +790,9 @@
             "health": []
           },
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -817,7 +817,7 @@
             "kind": "emudeck",
             "kinds": [
               "emudeck",
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
             "health": []
@@ -1940,7 +1940,7 @@
           "/mnt/sd/retrodeck/saves"
         ],
         "query": {
-          "installation": "native_retroarch",
+          "installation": "bare_retroarch_native",
           "content_path": "/home/deck/roms/gb/Tetris (World).zip"
         }
       },
@@ -1955,9 +1955,9 @@
             "health": []
           },
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -1981,7 +1981,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -2270,7 +2270,7 @@
     },
     {
       "name": "emudeck-stale-marker-companion-missing",
-      "rationale": "settings.sh survives while the claimed org.libretro.RetroArch Flatpak is gone: the EmuDeck handle stays (it claims the standalone identity), and its health exposes the missing companion config instead of silently suppressing a bare handle.",
+      "rationale": "settings.sh survives while the claimed org.libretro.RetroArch Flatpak is gone: the EmuDeck handle stays (it claims the bare identity), and its health exposes the missing companion config instead of silently suppressing a bare handle.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2287,7 +2287,7 @@
             "kind": "emudeck",
             "kinds": [
               "emudeck",
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
             "health": [
@@ -4382,9 +4382,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -4402,7 +4402,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -4431,7 +4431,7 @@
             "kind": "emudeck",
             "kinds": [
               "emudeck",
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
             "health": []
@@ -4525,7 +4525,7 @@
         ],
         "catalogue_query": {
           "system": "n64",
-          "installation": "native_retroarch"
+          "installation": "bare_retroarch_native"
         }
       },
       "expected": {
@@ -4539,9 +4539,9 @@
             "health": []
           },
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -4559,7 +4559,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -4596,9 +4596,9 @@
             "health": []
           },
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -4638,9 +4638,9 @@
           },
           {
             "installation": {
-              "kind": "native_retroarch",
+              "kind": "bare_retroarch_native",
               "kinds": [
-                "native_retroarch"
+                "bare_retroarch_native"
               ],
               "root": "/home/deck/.config/retroarch",
               "health": []
@@ -4663,7 +4663,7 @@
                 {
                   "code": "arrangement-unverified",
                   "data": {
-                    "kind": "native_retroarch"
+                    "kind": "bare_retroarch_native"
                   }
                 },
                 {
@@ -4707,9 +4707,9 @@
             "health": []
           },
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -4739,9 +4739,9 @@
           },
           {
             "installation": {
-              "kind": "native_retroarch",
+              "kind": "bare_retroarch_native",
               "kinds": [
-                "native_retroarch"
+                "bare_retroarch_native"
               ],
               "root": "/home/deck/.config/retroarch",
               "health": []
@@ -4758,7 +4758,7 @@
                 {
                   "code": "arrangement-unverified",
                   "data": {
-                    "kind": "native_retroarch"
+                    "kind": "bare_retroarch_native"
                   }
                 }
               ]
@@ -4785,9 +4785,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -4796,9 +4796,9 @@
         "aggregate": [
           {
             "installation": {
-              "kind": "native_retroarch",
+              "kind": "bare_retroarch_native",
               "kinds": [
-                "native_retroarch"
+                "bare_retroarch_native"
               ],
               "root": "/home/deck/.config/retroarch",
               "health": []
@@ -4821,7 +4821,7 @@
                 {
                   "code": "arrangement-unverified",
                   "data": {
-                    "kind": "native_retroarch"
+                    "kind": "bare_retroarch_native"
                   }
                 },
                 {
@@ -4889,7 +4889,7 @@
             "kind": "emudeck",
             "kinds": [
               "emudeck",
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
             "health": []
@@ -4932,7 +4932,7 @@
               "kind": "emudeck",
               "kinds": [
                 "emudeck",
-                "standalone_retroarch_flatpak"
+                "bare_retroarch_flatpak"
               ],
               "root": "/home/deck/Emulation",
               "health": []
@@ -5079,7 +5079,7 @@
             "kind": "emudeck",
             "kinds": [
               "emudeck",
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
             "health": [
@@ -5399,9 +5399,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -5445,7 +5445,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -5475,9 +5475,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -5498,7 +5498,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -5529,9 +5529,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -5582,7 +5582,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]

@@ -17,12 +17,12 @@
       "verified": null,
       "note": "[D] Read from EmuDeck's shipped configuration upstream (settings.sh, its org.libretro.RetroArch cfg); no EmuDeck machine has been observed. Which frontend it runs is a separate open question (emulator-catalogue-unestablished)."
     },
-    "standalone_retroarch_flatpak": {
-      "label": "the standalone RetroArch Flatpak",
+    "bare_retroarch_flatpak": {
+      "label": "the bare RetroArch Flatpak",
       "verified": null,
       "note": "[D] The cfg location and RetroArch's own upstream defaults are source-verified; no unclaimed org.libretro.RetroArch installation has been observed."
     },
-    "native_retroarch": {
+    "bare_retroarch_native": {
       "label": "a native RetroArch install",
       "verified": null,
       "note": "[D] The cfg location and RetroArch's own upstream defaults are source-verified; no native installation has been observed."

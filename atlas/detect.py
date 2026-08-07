@@ -3,11 +3,11 @@
 ``detect(home, machine)`` probes the config markers of each known arrangement
 and returns a handle for every one it finds. Detection labels markers, it does
 not partition: EmuDeck *is* a configured ``org.libretro.RetroArch``, so the
-EmuDeck marker is checked before concluding "bare standalone", and the EmuDeck
-handle claims the standalone Flatpak (its ``kinds`` carries both descriptions —
+EmuDeck marker is checked before concluding "a bare RetroArch", and the EmuDeck
+handle claims that Flatpak (its ``kinds`` carries both descriptions —
 no second handle for the same RetroArch). Multiple arrangements coexist
 ordinarily, so the result is a list, highest-priority first: RetroDECK, EmuDeck,
-the standalone RetroArch Flatpak, a native RetroArch. Ambiguity is a truthful
+the bare RetroArch Flatpak, a bare native RetroArch. Ambiguity is a truthful
 result — the caller chooses, atlas never silently picks a winner.
 
 Every probe goes through the machine seam, so detection is fully provable from a
@@ -25,9 +25,9 @@ from atlas.installations import (
     STANDALONE_FLATPAK_CFG_SUFFIX,
     EmuDeck,
     Installation,
-    NativeRetroArch,
+    BareRetroArchNative,
     RetroDeck,
-    StandaloneRetroArchFlatpak,
+    BareRetroArchFlatpak,
 )
 from atlas.machine import KIND_MISSING, Machine, RealMachine
 
@@ -54,12 +54,12 @@ def detect(home: str, machine: Machine | None = None) -> list[Installation]:
     if emudeck_present:
         found.append(EmuDeck(home, machine))
 
-    # EmuDeck claims the standalone Flatpak — same RetroArch, two descriptions,
+    # EmuDeck claims the bare Flatpak — same RetroArch, two descriptions,
     # one handle. Only an unclaimed Flatpak appears as its own installation.
     if not emudeck_present and machine.path_kind(os.path.join(home, STANDALONE_FLATPAK_CFG_SUFFIX)) != KIND_MISSING:
-        found.append(StandaloneRetroArchFlatpak(home, machine))
+        found.append(BareRetroArchFlatpak(home, machine))
 
     if machine.path_kind(os.path.join(home, NATIVE_CFG_SUFFIX)) != KIND_MISSING:
-        found.append(NativeRetroArch(home, machine))
+        found.append(BareRetroArchNative(home, machine))
 
     return found

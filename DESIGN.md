@@ -4,6 +4,10 @@ Status: **settled** — rewritten after the RetroDECK/RetroArch research (`docs/
 Supersedes the phase-1 draft, which framed atlas as a knowledge library; the research showed that framing reproduces
 exactly the trap the README names. Nothing here is API-frozen; the _decisions_ are settled, signatures are not.
 
+This document is the spec: what atlas is and why it decides as it does. The **map** — layer diagram, the handles and
+their protocol, the answer types, and which tier a name lives in — is `docs/architecture.md`, maintained alongside the
+surface.
+
 ## What atlas is
 
 **A resolver, not a lookup.** Atlas answers questions about the running machine by reading the running machine — the
@@ -54,7 +58,7 @@ inst.health()                        # structured: a tuple of finding caveats wi
 inst.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
                    core_so="mupen64plus_next_libretro.so")
 # -> the primary route: the caller names the core. It is the only save route on the handles
-#    with no frontend catalogue — EmuDeck, the standalone Flatpak, the native install.
+#    with no frontend catalogue — EmuDeck and the two bare RetroArch installs.
 
 answer = inst.emulators_for("n64")   # on EVERY handle: a CatalogueAnswer (entries, sources, caveats)
 emu = answer.entries[0]              # launch entries in effective priority order, as configured right now
@@ -100,7 +104,7 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   answer is not guessing; picking a winner would be, and a one-installation machine yields a one-entry result the caller
   never chose. Nothing detected is an empty result, which is the same truthful empty `detect` answers with.
 - **Detection labels markers, it does not partition.** EmuDeck _is_ a configured `org.libretro.RetroArch` — both
-  descriptions of the same RetroArch are true at once, so marker checks are ordered (EmuDeck before "bare standalone")
+  descriptions of the same RetroArch are true at once, so marker checks are ordered (EmuDeck before "a bare RetroArch")
   and a handle may carry more than one description.
 - **Detection reports health, structurally.** Detection triggers on marker _existence_; health separates marker read
   status, parse status, root state, and required-companion state into individual finding caveats with stable codes — a
@@ -162,9 +166,9 @@ class Machine(Protocol):
   a component that is not a directory, is a truthful negative. The production implementation walks this itself rather
   than calling the stdlib's `glob`, which returns silently on any `OSError` from `scandir` and so cannot tell the two
   apart at all.
-- `readlink` exists because RetroDECK's whole standalone save architecture is symlinks (`dir_prep`): the emulator-side
-  path and the real path are two truthful answers to different questions, and a dead link (`path_kind` → missing, link
-  present) is a real state the resolver must be able to see.
+- `readlink` exists because RetroDECK's whole standalone-emulator save architecture is symlinks (`dir_prep`): the
+  emulator-side path and the real path are two truthful answers to different questions, and a dead link (`path_kind` →
+  missing, link present) is a real state the resolver must be able to see.
 - `query_core` exists because `library_name` — the value that names sort-by-core directories _and_ the override
   directory — lives only in the core binary. Loading the core and asking it is the same read RetroArch performs; it is a
   live read, not a table. The production implementation is process-isolated (a crashing core costs one answer, not the
@@ -246,6 +250,25 @@ caveat is a claim about atlas's evidence, never about the machine — it does no
 deliberately kept out of `health()`, where it would report a working installation as defective. The status is packaged,
 versioned data (`atlas/data/arrangement_evidence.json`, the same boundary rule the rule cards follow), so verifying an
 arrangement on a reference machine retires its caveat by changing a record, never a resolver.
+
+## The two tiers
+
+The package has one consumer namespace and one tooling surface, and the split is deliberate rather than historical.
+
+**Tier 1 — `import atlas`.** The two entry points, the aggregate over them, the handles they answer with, every answer
+type, every vocabulary those answers speak (as types _and_ as constants, including the seam's `PathKind`/`ReadStatus`,
+which answers carry), and the ten serializers. A client never needs a submodule; every name here is one it can act on.
+
+**Tier 2 — `from atlas.<module> import …`.** The machine seam (`atlas.machine`), the parsers (`atlas.retroarch_cfg`,
+`atlas.esde`, `atlas.core_info`, `atlas.content_path`), the packaged-data loaders (`atlas.oddities`, `atlas.evidence`),
+the read-result types, and the module-level resolver functions the handles wrap. Public, documented, and used by ports,
+vectors and the test suite — but not consumer API.
+
+Why the line falls there: a name in the top-level namespace reads as "the way to do this". `atlas.firmware_for_core` and
+`installation.firmware_for_core` were both importable, took different arguments, and answered the same question — one of
+them wrongly, for a consumer who picked by name. Tiering removes the choice rather than documenting it. The rule for
+placing a new name: if a client acts on it, Tier 1; if it exists so a port or a test can reproduce the resolver, Tier 2.
+`docs/architecture.md` draws the layers and says what to import from where.
 
 ## Consumption
 

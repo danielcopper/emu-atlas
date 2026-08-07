@@ -9,9 +9,9 @@ same fallbacks the emulator itself uses — through the injected machine seam.
   chain) supplies the layout. The cfg is what RetroArch reads, so the cfg is the
   truth; ``retrodeck.json`` is context.
 - :class:`EmuDeck` — an EmuDeck arrangement. Its truth is ``settings.sh``; its
-  RetroArch is the standalone ``org.libretro.RetroArch`` Flatpak, so the handle
+  RetroArch is the bare ``org.libretro.RetroArch`` Flatpak, so the handle
   carries both descriptions (``kinds``) — the same RetroArch under two names.
-- :class:`StandaloneRetroArchFlatpak` / :class:`NativeRetroArch` — bare
+- :class:`BareRetroArchFlatpak` / :class:`BareRetroArchNative` — bare
   RetroArch installs, differing in config location and default set.
 
 Health is reported, not guessed around: a readable config whose root points into
@@ -104,6 +104,9 @@ from atlas.placement import (
     ROOT_CONTENT_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     TEMPLATE_ROM_STEM,
+    FILE_SET_DECLARED,
+    FILE_SET_OBSERVED,
+    FILE_SET_UNKNOWN,
     UNKNOWN_FILE_SET,
     UNRESOLVED_STANDALONE,
     Caveat,
@@ -1863,20 +1866,20 @@ def _file_set_of(
             mode is not None and mode.complete and declared is not None and set(observed) <= set(declared)
         )
         return FileSet(
-            state="observed",
+            state=FILE_SET_OBSERVED,
             files=observed,
             provenance=f"observed on the machine: {directory}",
             complete=complete,
         )
     if declared is not None and card is not None:
         return FileSet(
-            state="declared",
+            state=FILE_SET_DECLARED,
             files=declared,
             provenance=f"declared by rule card '{card.key}' (none present yet)",
             complete=mode.complete if mode is not None else False,
         )
     return FileSet(
-        state="unknown",
+        state=FILE_SET_UNKNOWN,
         files=(),
         provenance=f"no files present at {directory} — file set not stated (never guessed)",
     )
@@ -3206,19 +3209,19 @@ def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
 
 
 class EmuDeck(_FirmwareQueries, _CatalogueQueries):
-    """An EmuDeck arrangement — ``settings.sh`` is its truth, the standalone
+    """An EmuDeck arrangement — ``settings.sh`` is its truth, the bare
     ``org.libretro.RetroArch`` Flatpak is its RetroArch.
 
     The handle carries both descriptions (``kinds``): EmuDeck *is* a configured
-    standalone RetroArch, so both statements are true of the same installation.
+    bare RetroArch, so both statements are true of the same installation.
     Like every handle it is live — one snapshot of each source per query
     (REVIEW M4) — and its health covers the claimed companion RetroArch config,
     so a stale ``settings.sh`` next to a vanished Flatpak is visible instead of
-    silently suppressing the standalone handle (REVIEW H10).
+    silently suppressing the bare handle (REVIEW H10).
     """
 
     kind = "emudeck"
-    kinds = ("emudeck", "standalone_retroarch_flatpak")
+    kinds = ("emudeck", "bare_retroarch_flatpak")
     _RA_APP_ID = RETROARCH_FLATPAK_APP_ID
 
     def _catalogue_absence(self) -> Caveat:
@@ -3333,7 +3336,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return os.path.join(cores_dir, core_so)
 
     def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
-        """Where EmuDeck's RetroArch keeps the save — resolved from the standalone Flatpak cfg."""
+        """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg."""
         settings, marker_issues = self._read_marker()
         global_cfg_path = self._companion_cfg_path()
         cfg = self._machine.read_text(global_cfg_path)
@@ -3376,7 +3379,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
 
 
 class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
-    """Shared behavior for a bare RetroArch install (standalone Flatpak or native).
+    """Shared behavior for a bare RetroArch install (the Flatpak or a native one).
 
     The saves root comes from the cfg's ``savefile_directory``; when unset, the
     RetroArch platform default applies — ``saves`` under the config tree that
@@ -3436,7 +3439,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
     def _sandbox(self) -> _Sandbox:
         """This install's cfg spellings — a native install's are the host's own.
 
-        ``_app_id`` is ``None`` for :class:`NativeRetroArch`: it writes its cfg
+        ``_app_id`` is ``None`` for :class:`BareRetroArchNative`: it writes its cfg
         outside any sandbox, so a ``/var/...`` value there is a real host path
         (odd, but the user's), and the existence checks downstream judge it like
         any other. Translating it would move the answer to a directory this
@@ -3487,22 +3490,22 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         )
 
 
-class StandaloneRetroArchFlatpak(_RetroArchInstall):
+class BareRetroArchFlatpak(_RetroArchInstall):
     """The ``org.libretro.RetroArch`` Flatpak install."""
 
-    kind = "standalone_retroarch_flatpak"
-    kinds = ("standalone_retroarch_flatpak",)
+    kind = "bare_retroarch_flatpak"
+    kinds = ("bare_retroarch_flatpak",)
     _app_id = RETROARCH_FLATPAK_APP_ID
 
     def __init__(self, home: str, machine: Machine) -> None:
         super().__init__(home, machine, STANDALONE_FLATPAK_CFG_SUFFIX)
 
 
-class NativeRetroArch(_RetroArchInstall):
+class BareRetroArchNative(_RetroArchInstall):
     """A native ``~/.config/retroarch`` install."""
 
-    kind = "native_retroarch"
-    kinds = ("native_retroarch",)
+    kind = "bare_retroarch_native"
+    kinds = ("bare_retroarch_native",)
 
     def __init__(self, home: str, machine: Machine) -> None:
         super().__init__(home, machine, NATIVE_CFG_SUFFIX)

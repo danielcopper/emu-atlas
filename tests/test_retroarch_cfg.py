@@ -3,26 +3,26 @@
 from __future__ import annotations
 
 from atlas.retroarch_cfg import (
-    EMUDECK_DEFAULTS,
     IGNORED_LINE_DROPPED,
     IGNORED_VALUE_REJECTED,
-    RETRODECK_DEFAULTS,
     UPSTREAM_DEFAULTS,
     cfg_bool,
     chain_bool,
     chain_value,
-    interpret_cfg,
     is_app_relative,
     parse_cfg,
     parse_cfg_text,
     resolve_save_layout,
 )
+from tests.shipped_layouts import EMUDECK_SHIPPED, RETRODECK_SHIPPED
+
+
 
 HOME = "/home/deck"
 
 
 def _cfg(text):
-    return interpret_cfg(text, home=HOME, cfg_label="retroarch.cfg")
+    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED)
 
 
 def _chain(global_text, *overrides, is_directory=None):
@@ -31,7 +31,7 @@ def _chain(global_text, *overrides, is_directory=None):
         global_text,
         home=HOME,
         cfg_label="retroarch.cfg",
-        defaults=RETRODECK_DEFAULTS,
+        defaults=RETRODECK_SHIPPED,
         overrides=[(f"override {i}", text) for i, text in enumerate(overrides, start=1)],
         is_directory=is_directory,
     )
@@ -63,12 +63,12 @@ class TestDefaults:
 
     def test_upstream_defaults_sort_by_core(self):
         # RetroArch's compile-time default sorts by core (config.def.h:982).
-        cfg = interpret_cfg(None, home=HOME, cfg_label="retroarch.cfg", defaults=UPSTREAM_DEFAULTS)
+        cfg = resolve_save_layout(None, home=HOME, cfg_label="retroarch.cfg", defaults=UPSTREAM_DEFAULTS)
         assert cfg.sort_by_core is True
         assert cfg.sort_by_content is False
 
     def test_emudeck_defaults_flat(self):
-        cfg = interpret_cfg(None, home=HOME, cfg_label="retroarch.cfg", defaults=EMUDECK_DEFAULTS)
+        cfg = resolve_save_layout(None, home=HOME, cfg_label="retroarch.cfg", defaults=EMUDECK_SHIPPED)
         assert cfg.sort_by_core is False
         assert cfg.sort_by_content is False
 
@@ -138,7 +138,7 @@ class TestOverrideChain:
             'sort_savefiles_by_content_enable = "true"\n',
             home=HOME,
             cfg_label="retroarch.cfg",
-            defaults=RETRODECK_DEFAULTS,
+            defaults=RETRODECK_SHIPPED,
             overrides=[("core override PPSSPP/PPSSPP.cfg", 'sort_savefiles_by_content_enable = "false"')],
         )
         assert cfg.sort_by_content is False
@@ -149,7 +149,7 @@ class TestOverrideChain:
             'sort_savefiles_by_content_enable = "true"\n',
             home=HOME,
             cfg_label="retroarch.cfg",
-            defaults=RETRODECK_DEFAULTS,
+            defaults=RETRODECK_SHIPPED,
             overrides=[
                 ("core override", 'sort_savefiles_by_content_enable = "false"'),
                 ("game override", 'sort_savefiles_by_content_enable = "true"'),
@@ -163,7 +163,7 @@ class TestOverrideChain:
             'savefile_directory = "/mnt/saves"\nsort_savefiles_enable = "true"\n',
             home=HOME,
             cfg_label="retroarch.cfg",
-            defaults=RETRODECK_DEFAULTS,
+            defaults=RETRODECK_SHIPPED,
             overrides=[("core override", 'sort_savefiles_by_content_enable = "false"')],
         )
         assert cfg.savefile_directory == "/mnt/saves"
@@ -176,7 +176,7 @@ class TestOverrideChain:
             'savefile_directory = "/mnt/saves"\n',
             home=HOME,
             cfg_label="retroarch.cfg",
-            defaults=RETRODECK_DEFAULTS,
+            defaults=RETRODECK_SHIPPED,
             overrides=[("game override", 'savefile_directory = "/mnt/elsewhere"')],
         )
         assert cfg.savefile_directory == "/mnt/elsewhere"
@@ -543,11 +543,11 @@ class TestBooleanVocabulary:
         assert cfg.sort_by_content is True
 
     def test_uppercase_true_is_not_true(self):
-        cfg = interpret_cfg(
+        cfg = resolve_save_layout(
             'sort_savefiles_enable = "TRUE"\n',
             home=HOME,
             cfg_label="retroarch.cfg",
-            defaults=EMUDECK_DEFAULTS,
+            defaults=EMUDECK_SHIPPED,
         )
         assert cfg.sort_by_core is False  # the EmuDeck default stands, unchanged
 
@@ -558,7 +558,7 @@ class TestBooleanVocabulary:
             'sort_savefiles_by_content_enable = "false"\n',
             home=HOME,
             cfg_label="retroarch.cfg",
-            defaults=RETRODECK_DEFAULTS,
+            defaults=RETRODECK_SHIPPED,
             overrides=[("core override", 'sort_savefiles_by_content_enable = "yes"')],
         )
         assert cfg.sort_by_content is False
@@ -570,7 +570,7 @@ class TestIgnoredSettings:
             "",
             home=HOME,
             cfg_label="retroarch.cfg",
-            defaults=RETRODECK_DEFAULTS,
+            defaults=RETRODECK_SHIPPED,
             overrides=[("core override", 'sort_savefiles_enable = "yes"')],
         )
         assert [(i.kind, i.layer, i.key, i.text) for i in cfg.ignored] == [

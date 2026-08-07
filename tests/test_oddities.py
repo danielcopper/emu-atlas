@@ -8,6 +8,7 @@ import json
 import pytest
 
 import atlas
+from atlas.machine import FixtureMachine
 from atlas.oddities import load_audit, load_oddities, lookup_card
 from atlas.placement import GRANULARITIES, ROOT_KINDS
 
@@ -75,7 +76,7 @@ class TestCardLookup:
 
 
 def _retrodeck(files, **kwargs):
-    machine = atlas.FixtureMachine(files, **kwargs)
+    machine = FixtureMachine(files, **kwargs)
     return atlas.RetroDeck(HOME, machine)
 
 
@@ -1286,7 +1287,7 @@ class TestVerificationMatrix:
 
     def test_unverified_arrangement_fires_caveat(self):
         # The flycast card was never verified on EmuDeck — the answer says so.
-        machine = atlas.FixtureMachine(
+        machine = FixtureMachine(
             {
                 f"{HOME}/.config/EmuDeck/settings.sh": 'savesPath="$HOME/Emulation/saves"\nromsPath="$HOME/Emulation/roms"\n',
                 f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": (

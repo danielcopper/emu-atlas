@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 import atlas
+from atlas.machine import FixtureMachine
 from scripts import validate_vectors
 from atlas.contract import (
     catalogue_contract,
@@ -46,8 +47,8 @@ def _load_vectors():
             yield pytest.param(vector, id=f"{path.stem}:{vector['name']}")
 
 
-def _machine(inp) -> atlas.FixtureMachine:
-    return atlas.FixtureMachine(
+def _machine(inp) -> FixtureMachine:
+    return FixtureMachine(
         inp["files"],
         symlinks=inp.get("symlinks"),
         cores=inp.get("cores"),

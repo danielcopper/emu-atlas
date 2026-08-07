@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 
 import atlas
+from atlas.machine import FixtureMachine
 from atlas.contract import health_contract, installation_contract
 
 HOME = "/home/deck"
@@ -19,12 +20,12 @@ GONE = "/run/media/gone/retrodeck"
 
 
 def _broken() -> atlas.RetroDeck:
-    machine = atlas.FixtureMachine({RETRODECK_JSON: '{"paths": {"rd_home_path": "%s"}}' % GONE})
+    machine = FixtureMachine({RETRODECK_JSON: '{"paths": {"rd_home_path": "%s"}}' % GONE})
     return atlas.RetroDeck(HOME, machine)
 
 
 def _healthy() -> atlas.RetroDeck:
-    machine = atlas.FixtureMachine(
+    machine = FixtureMachine(
         {
             RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
             "/mnt/sd/retrodeck/roms/systeminfo.txt": "",

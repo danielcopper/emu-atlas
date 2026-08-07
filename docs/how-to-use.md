@@ -18,6 +18,10 @@ pip install -e .
 import atlas
 ```
 
+Everything a client needs is in that namespace: the entry points, the handles, the answer types, the vocabularies and
+the serializers. The machine seam, the parsers and the packaged-data loaders are port and tooling surface and live in
+their own modules (`from atlas.machine import FixtureMachine`) — `docs/architecture.md` has the map.
+
 ## The standard query pattern
 
 Every query follows the same five steps:
@@ -63,7 +67,7 @@ installations = atlas.detect(home="/home/deck")
 for inst in installations:
     print(inst.kind, inst.kinds, inst.root())
 # retrodeck ('retrodeck',) /run/media/deck/Emulation/retrodeck
-# emudeck ('emudeck', 'standalone_retroarch_flatpak') /home/deck/Emulation
+# emudeck ('emudeck', 'bare_retroarch_flatpak') /home/deck/Emulation
 ```
 
 A machine can carry several arrangements at once; each answers only for itself (no cross-installation fall-through).
@@ -134,7 +138,7 @@ arguments, same answers. Each returns a tuple of labelled answers:
   `CatalogueAnswer` or `FirmwareAnswer`, unchanged, with its own caveats.
 
 The aggregate resolves nothing itself. It merges nothing, drops no duplicates, and prefers nothing beyond detection
-order (RetroDECK, EmuDeck, standalone Flatpak, native): a machine that runs PPSSPP under two arrangements gives you
+order (RetroDECK, EmuDeck, bare Flatpak, bare native): a machine that runs PPSSPP under two arrangements gives you
 PPSSPP twice, once with each arrangement's wiring, and the label is which is which. Handing you both is not guessing —
 picking one would be.
 
@@ -158,13 +162,13 @@ using it.
 
 Every answer from an arrangement atlas has never observed on a live installation carries one caveat,
 `arrangement-unverified`, with the installation kind in `data["kind"]`. Today that is every EmuDeck arrangement and
-every bare RetroArch (standalone Flatpak and native); RetroDECK was verified against a running 0.10.9b installation and
-its answers say nothing.
+every bare RetroArch (the Flatpak and a native install); RetroDECK was verified against a running 0.10.9b installation
+and its answers say nothing.
 
 ```python
 for c in answer.caveats:
     if c.code == "arrangement-unverified":
-        mark_as_derived(c.data["kind"])      # 'emudeck' | 'standalone_retroarch_flatpak' | 'native_retroarch'
+        mark_as_derived(c.data["kind"])      # 'emudeck' | 'bare_retroarch_flatpak' | 'bare_retroarch_native'
 ```
 
 What it means: **no machine running this arrangement has confirmed the wiring end to end.** What it does _not_ mean:

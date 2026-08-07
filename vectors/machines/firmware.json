@@ -27,9 +27,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -54,7 +54,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -84,9 +84,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -118,7 +118,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -259,9 +259,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -369,7 +369,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -432,7 +432,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -769,9 +769,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -786,7 +786,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -896,9 +896,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -971,7 +971,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -1001,9 +1001,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -1065,7 +1065,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -1095,9 +1095,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -1183,7 +1183,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -1211,9 +1211,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -1267,7 +1267,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -1308,7 +1308,7 @@
             "kind": "emudeck",
             "kinds": [
               "emudeck",
-              "standalone_retroarch_flatpak"
+              "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
             "health": [
@@ -1611,9 +1611,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -1675,7 +1675,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -1725,9 +1725,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -1823,7 +1823,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -1854,9 +1854,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -1916,7 +1916,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -2011,9 +2011,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2060,7 +2060,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -2095,9 +2095,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2137,7 +2137,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -2175,9 +2175,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2239,7 +2239,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -2337,9 +2337,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2380,7 +2380,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -2413,9 +2413,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2455,7 +2455,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -2489,9 +2489,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2532,7 +2532,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -2559,9 +2559,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2611,7 +2611,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -2833,9 +2833,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2885,7 +2885,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -2927,9 +2927,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -2989,7 +2989,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -3020,9 +3020,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3066,7 +3066,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -3114,9 +3114,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3150,7 +3150,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -3186,9 +3186,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3241,7 +3241,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -3277,9 +3277,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3323,7 +3323,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -3355,9 +3355,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3397,7 +3397,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -3428,9 +3428,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3474,7 +3474,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -3506,9 +3506,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3568,7 +3568,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -3601,9 +3601,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3650,7 +3650,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             }
           ]
@@ -3682,9 +3682,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3731,7 +3731,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -3766,9 +3766,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3800,7 +3800,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -3839,9 +3839,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3888,7 +3888,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -3922,9 +3922,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3938,7 +3938,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
@@ -3974,9 +3974,9 @@
       "expected": {
         "installations": [
           {
-            "kind": "native_retroarch",
+            "kind": "bare_retroarch_native",
             "kinds": [
-              "native_retroarch"
+              "bare_retroarch_native"
             ],
             "root": "/home/deck/.config/retroarch",
             "health": []
@@ -3990,7 +3990,7 @@
             {
               "code": "arrangement-unverified",
               "data": {
-                "kind": "native_retroarch"
+                "kind": "bare_retroarch_native"
               }
             },
             {
