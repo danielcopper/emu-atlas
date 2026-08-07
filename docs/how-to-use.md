@@ -75,10 +75,28 @@ if not health.ok:
 # e.g. root-missing {'path': '/run/media/deck/Emulation/retrodeck'}  → the SD card is not mounted
 ```
 
-Issue codes (`atlas.HEALTH_ISSUE_*`): `marker-missing`, `marker-unreadable`, `marker-invalid`, `root-missing`,
-`saves-root-missing`, `config-unreadable`, `companion-config-missing`. Health is also mirrored into every placement's
-caveats (code `health`, the issue code in `data["issue"]`), so a placement computed on a broken installation says so
-itself.
+A finding is a `Caveat` like any other — stable `code`, machine-readable `data`, human `message` — so the same branching
+works on it. What each finding carries:
+
+| code                       | `data`           | what it says                                                        |
+| -------------------------- | ---------------- | ------------------------------------------------------------------- |
+| `marker-missing`           | `path`           | the config marker this arrangement is detected by is not there      |
+| `marker-unreadable`        | `path`, `status` | it exists and its bytes could not be read (`status` is the read)    |
+| `marker-invalid`           | `path`[, `key`]  | it parsed to something unusable; `key` names the offending entry    |
+| `root-missing`             | `path`           | the installation's own root is not an existing directory            |
+| `saves-root-missing`       | `path`           | its saves root is not an existing directory                         |
+| `config-unreadable`        | `path`, `status` | a bare RetroArch's `retroarch.cfg` could not be read                |
+| `companion-config-missing` | `path`, `status` | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
+
+The findings also travel **in the answers themselves**: a placement computed on a broken installation carries them in
+its own `caveats`, under these same codes with this same data. Nothing wraps them — branch on `marker-invalid`, not on a
+category code with the condition buried in `data`.
+
+```python
+serialized = atlas.health_contract(inst.health())
+# [{'code': 'root-missing', 'data': {'path': '/run/media/deck/Emulation/retrodeck'}}]
+# — the same list installation_contract() puts under 'health'; empty means ok
+```
 
 ## Choosing is optional — ask every installation
 
@@ -286,25 +304,25 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 
 ### Placement caveats worth branching on
 
-| Code                                        | Meaning                                                                                       |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `sorted-dir-missing`                        | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`     |
-| `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`   |
-| `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                          |
-| `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes      |
-| `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"   |
-| `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                        |
-| `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified     |
-| `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it) |
-| `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope        |
-| `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated      |
-| `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain          |
-| `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below  |
-| `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                        |
-| `health`                                    | the installation itself has issues; `data["issue"]` carries the health code                   |
-| `unverified-version`                        | the rule card was never verified against this emulator version                                |
-| `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)             |
-| `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read   |
+| Code                                        | Meaning                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `sorted-dir-missing`                        | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`        |
+| `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`      |
+| `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                             |
+| `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes         |
+| `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"      |
+| `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                           |
+| `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified        |
+| `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)    |
+| `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope           |
+| `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated         |
+| `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain             |
+| `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below     |
+| `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                           |
+| _(the health codes)_                        | the installation itself is broken — the findings ride here directly, see "Finding installations" |
+| `unverified-version`                        | the rule card was never verified against this emulator version                                   |
+| `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)                |
+| `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read      |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
@@ -462,8 +480,9 @@ Both carry `data["path"]` — the directory that could not be read.
 Every answer type has one canonical serializer — the same code the conformance vectors assert:
 
 ```python
-from atlas import placement_contract, firmware_contract, installation_contract
+from atlas import placement_contract, firmware_contract, health_contract, installation_contract
 json.dumps(placement_contract(placement))
+json.dumps(health_contract(inst.health()))   # what installation_contract() puts under 'health'
 ```
 
 Structured fields in these dicts are contractual; prose (`sources`, caveat messages) is deliberately absent. An
