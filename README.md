@@ -57,6 +57,8 @@ Four principles, fixed before any code:
 emu-atlas depends on nothing and nothing depends on it: sigil identifies, atlas locates,
 [gavel](https://github.com/danielcopper/romm-gavel) decides — three independent libraries a client composes.
 
+Map of the surface — layers, handles, answer types, and what to import from where: `docs/architecture.md`.
+
 ## What lives here
 
 1. **RetroArch knowledge** — interpretation of `retroarch.cfg` (the three save-layout keys and their override
