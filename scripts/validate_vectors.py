@@ -34,6 +34,7 @@ INPUT_FIELDS_OPTIONAL = {
     "inaccessible",
     "unlistable",
     "query",
+    "aggregate_query",
     "catalogue_query",
     "systems_query",
     "entry_query",
@@ -45,6 +46,15 @@ CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
 # The systems question takes no arguments — only which handle answers it.
 SYSTEMS_QUERY_FIELDS = {"installation"}
 ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
+# The aggregate asks EVERY detected handle one question, so it names the
+# question instead of a handle. The fan-out is the same for every question it
+# mirrors, so the vocabulary is the questions that make the LABEL provable —
+# one with a full payload per arrangement, one whose arrangements refuse for
+# different reasons — rather than every question the surface offers; widening
+# it means teaching the runner to ask, and giving the answer a shape below.
+AGGREGATE_QUERY_FIELDS = {"question", "content_path", "core_so", "system"}
+KNOWN_AGGREGATE_QUESTIONS = {"save_location", "emulators_for"}
+AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
 FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify"}
 KNOWN_FIRMWARE_QUERY_KINDS = {"core", "system", "inventory"}
 IDENTIFY_QUERY_FIELDS = {"installation", "md5", "sha1", "size"}
@@ -320,6 +330,36 @@ def _validate_systems_query(name: str, query: Any) -> None:
     _validate_handle_selector(name, "systems_query", query)
 
 
+def _validate_aggregate_question(name: str, query: dict[str, Any]) -> None:
+    """Each question carries what that question is asked by, and nothing else."""
+    question = query.get("question")
+    if question not in KNOWN_AGGREGATE_QUESTIONS:
+        fail(f"{name}: input.aggregate_query.question must be one of {sorted(KNOWN_AGGREGATE_QUESTIONS)}")
+    if question == "emulators_for" and "system" not in query:
+        fail(f"{name}: an 'emulators_for' aggregate query needs input.aggregate_query.system")
+    if question == "save_location" and "system" in query:
+        fail(f"{name}: a 'save_location' aggregate query takes no system")
+
+
+def _validate_aggregate_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict):
+        fail(f"{name}: input.aggregate_query must be an object")
+    # Naming a handle here would ask the aggregate to choose one, which is the
+    # one thing it does not do: it asks every detected installation.
+    if "installation" in query:
+        fail(
+            f"{name}: input.aggregate_query takes no 'installation' — the aggregate asks every "
+            "detected handle; use the query family of a single question to name one"
+        )
+    keys = set(query)
+    if not keys <= AGGREGATE_QUERY_FIELDS:
+        fail(f"{name}: input.aggregate_query keys must be a subset of {sorted(AGGREGATE_QUERY_FIELDS)}")
+    for key in keys:
+        if not isinstance(query[key], str) or not query[key]:
+            fail(f"{name}: input.aggregate_query.{key} must be a non-empty string")
+    _validate_aggregate_question(name, query)
+
+
 def _validate_blob_spec(name: str, path: str, spec: Any) -> None:
     # A binary blob: it exists, reads as invalid-text, and answers the
     # declared identity for file_size / file_digest.
@@ -435,6 +475,8 @@ def _validate_input_queries(name: str, inp: Any) -> None:
     """The optional question an input asks, at most one shape per family."""
     if "query" in inp:
         _validate_query(name, inp["query"])
+    if "aggregate_query" in inp:
+        _validate_aggregate_query(name, inp["aggregate_query"])
     if "catalogue_query" in inp:
         _validate_catalogue_query(name, inp["catalogue_query"])
     if "systems_query" in inp:
@@ -913,6 +955,46 @@ def _validate_systems(name: str, answer: Any) -> None:
         fail(f"{name}: expected.systems states systems and {unread}")
 
 
+def _validate_aggregate_answer(name: str, answered: Any, question: str) -> None:
+    """One labelled answer: the handle it came from, and that question's own form.
+
+    The answer is held to the shape that question already has — the aggregate
+    adds none of its own. A question whose vocabulary was widened without a
+    shape to validate it by is refused here rather than checked as some other
+    question's answer.
+    """
+    _require_exact(name, answered, AGGREGATE_ANSWER_FIELDS, "each aggregate answer")
+    if question == "save_location":
+        _validate_placement(name, answered["answer"])
+    elif question == "emulators_for":
+        _validate_catalogue(name, answered["answer"])
+    else:
+        fail(f"{name}: no answer shape is defined for the aggregate question {question!r}")
+
+
+def _validate_aggregate(name: str, aggregate: Any, query: dict[str, Any], installations: Any) -> None:
+    """The aggregate answer: every detected installation's answer, labelled, in order.
+
+    The labels are held to ``expected.installations`` exactly — same handles,
+    same order, none dropped and none added. That is the whole guarantee the
+    aggregate makes: it fans out over what detection found, in detection order,
+    and never picks a winner. It is also what makes the empty machine a
+    truthful answer rather than a special case — no installations, no answers.
+    """
+    if not isinstance(aggregate, list):
+        fail(f"{name}: expected.aggregate must be a list")
+    for answered in aggregate:
+        _validate_aggregate_answer(name, answered, query["question"])
+    labels = [answered["installation"] for answered in aggregate]
+    _validate_installations(name, labels)
+    if labels != installations:
+        fail(
+            f"{name}: expected.aggregate must answer for exactly the detected installations, in "
+            f"detection order — got {[label['kind'] for label in labels]}, "
+            f"expected {[inst['kind'] for inst in installations]}"
+        )
+
+
 def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     if not isinstance(expected, dict):
         fail(f"{name}: expected must be an object")
@@ -920,6 +1002,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     allowed = {
         "installations",
         "save_location",
+        "aggregate",
         "catalogue",
         "systems",
         "entry_save_location",
@@ -928,6 +1011,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     }
     if "installations" not in keys or not keys <= allowed:
         fail(f"{name}: expected keys must be 'installations' plus optional {sorted(allowed - {'installations'})}")
+    if ("aggregate" in keys) != ("aggregate_query" in inp):
+        fail(f"{name}: aggregate_query and aggregate expectation must appear together")
     if ("catalogue" in keys) != ("catalogue_query" in inp):
         fail(f"{name}: catalogue_query and catalogue expectation must appear together")
     if ("systems" in keys) != ("systems_query" in inp):
@@ -941,12 +1026,17 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     if ("identification" in keys) != ("identify_query" in inp):
         fail(f"{name}: identify_query and identification expectation must appear together")
     _validate_installations(name, expected["installations"])
+    # 'aggregate' is deliberately not in this set: asking every installation on
+    # a machine that has none is a question with a truthful empty answer, not a
+    # question nobody can answer.
     if (
         keys & {"save_location", "entry_save_location", "catalogue", "systems", "firmware", "identification"}
     ) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
     if "save_location" in keys:
         _validate_placement(name, expected["save_location"])
+    if "aggregate" in keys:
+        _validate_aggregate(name, expected["aggregate"], inp["aggregate_query"], expected["installations"])
     if "catalogue" in keys:
         _validate_catalogue(name, expected["catalogue"])
     if "systems" in keys:

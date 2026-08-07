@@ -4467,6 +4467,274 @@
           ]
         }
       }
+    },
+    {
+      "name": "aggregate-every-installation-answers-with-its-own-config",
+      "rationale": "Asking every installation instead of choosing one: a machine carrying RetroDECK and a native RetroArch answers the same save question twice — the card root the RetroDECK cfg names, the home root the native cfg names — each labelled with the handle that produced it, in detection order. Nothing is merged and nothing is preferred: an answer that carried only the first installation's placement, or one placement for both labels, fails this vector.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/roms/gb/Tetris (World).zip": "",
+          "/mnt/sd/retrodeck/saves/Tetris (World).srm": "sram",
+          "/home/deck/ra-saves/Tetris (World).srm": "sram"
+        },
+        "aggregate_query": {
+          "question": "save_location",
+          "content_path": "/home/deck/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          },
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "aggregate": [
+          {
+            "installation": {
+              "kind": "retrodeck",
+              "kinds": [
+                "retrodeck"
+              ],
+              "root": "/mnt/sd/retrodeck",
+              "health": []
+            },
+            "answer": {
+              "dir": "/mnt/sd/retrodeck/saves",
+              "root_kind": "savefile_directory",
+              "needs": [],
+              "fallback_dir": null,
+              "physical_dir": null,
+              "file_set": {
+                "state": "observed",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "complete": false
+              },
+              "granularity": null,
+              "caveats": [
+                {
+                  "code": "no-core",
+                  "data": {}
+                }
+              ]
+            }
+          },
+          {
+            "installation": {
+              "kind": "native_retroarch",
+              "kinds": [
+                "native_retroarch"
+              ],
+              "root": "/home/deck/.config/retroarch",
+              "health": []
+            },
+            "answer": {
+              "dir": "/home/deck/ra-saves",
+              "root_kind": "savefile_directory",
+              "needs": [],
+              "fallback_dir": null,
+              "physical_dir": null,
+              "file_set": {
+                "state": "observed",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "complete": false
+              },
+              "granularity": null,
+              "caveats": [
+                {
+                  "code": "no-core",
+                  "data": {}
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "aggregate-each-arrangement-states-its-own-catalogue-refusal",
+      "rationale": "The labels are load-bearing. Asked the same catalogue question, the two arrangements refuse for different reasons — RetroDECK could not read the catalogue it has, the native install ships none at all — and both refusals survive the fan-out. Collapsing them into one answer would report a claim about atlas as a fact about the machine, or the reverse.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/ra-saves"
+        ],
+        "aggregate_query": {
+          "question": "emulators_for",
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          },
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "aggregate": [
+          {
+            "installation": {
+              "kind": "retrodeck",
+              "kinds": [
+                "retrodeck"
+              ],
+              "root": "/mnt/sd/retrodeck",
+              "health": []
+            },
+            "answer": {
+              "entries": [],
+              "caveats": [
+                {
+                  "code": "emulator-catalogue-unreadable",
+                  "data": {
+                    "system": "n64"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "installation": {
+              "kind": "native_retroarch",
+              "kinds": [
+                "native_retroarch"
+              ],
+              "root": "/home/deck/.config/retroarch",
+              "health": []
+            },
+            "answer": {
+              "entries": [],
+              "caveats": [
+                {
+                  "code": "emulator-catalogue-unavailable",
+                  "data": {
+                    "arrangement": "retroarch"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "aggregate-a-single-installation-machine-answers-once",
+      "rationale": "The ordinary machine: one installation, a one-entry aggregate. The caller gets a labelled answer without ever having chosen a handle, and the answer is the handle's own.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/roms/gb/Tetris (World).zip": "",
+          "/home/deck/ra-saves/Tetris (World).srm": "sram"
+        },
+        "aggregate_query": {
+          "question": "save_location",
+          "content_path": "/home/deck/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "native_retroarch",
+            "kinds": [
+              "native_retroarch"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "aggregate": [
+          {
+            "installation": {
+              "kind": "native_retroarch",
+              "kinds": [
+                "native_retroarch"
+              ],
+              "root": "/home/deck/.config/retroarch",
+              "health": []
+            },
+            "answer": {
+              "dir": "/home/deck/ra-saves",
+              "root_kind": "savefile_directory",
+              "needs": [],
+              "fallback_dir": null,
+              "physical_dir": null,
+              "file_set": {
+                "state": "observed",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "complete": false
+              },
+              "granularity": null,
+              "caveats": [
+                {
+                  "code": "no-core",
+                  "data": {}
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "aggregate-an-empty-machine-answers-nothing",
+      "rationale": "Nothing installed is a truthful answer, not an error: detection finds no marker, so the aggregate answers for nobody. This is the one expectation in the family that stands without a detected installation — asking every installation on a machine that has none is a question with an empty answer, not a question nobody can answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/Documents/notes.txt": "no emulator here"
+        },
+        "aggregate_query": {
+          "question": "save_location",
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [],
+        "aggregate": []
+      }
     }
   ]
 }
