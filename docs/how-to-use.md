@@ -75,10 +75,31 @@ if not health.ok:
 # e.g. root-missing {'path': '/run/media/deck/Emulation/retrodeck'}  → the SD card is not mounted
 ```
 
-Issue codes (`atlas.HEALTH_ISSUE_*`): `marker-missing`, `marker-unreadable`, `marker-invalid`, `root-missing`,
-`saves-root-missing`, `config-unreadable`, `companion-config-missing`. Health is also mirrored into every placement's
-caveats (code `health`, the issue code in `data["issue"]`), so a placement computed on a broken installation says so
-itself.
+A finding is a `Caveat` like any other — stable `code`, machine-readable `data`, human `message` — so the same branching
+works on it. What each finding carries:
+
+| code                       | `data`           | what it says                                                        |
+| -------------------------- | ---------------- | ------------------------------------------------------------------- |
+| `marker-missing`           | `path`           | the config marker this arrangement is detected by is not there      |
+| `marker-unreadable`        | `path`, `status` | it exists and its bytes could not be read (`status` is the read)    |
+| `marker-invalid`           | `path`[, `key`]  | it parsed to something unusable; `key` names the offending entry    |
+| `root-missing`             | `path`           | the installation's own root is not an existing directory            |
+| `saves-root-missing`       | `path`           | its saves root is not an existing directory                         |
+| `config-unreadable`        | `path`, `status` | a bare RetroArch's `retroarch.cfg` could not be read                |
+| `companion-config-missing` | `path`, `status` | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
+
+The findings also travel **in the answers themselves**: a placement computed on a broken installation carries them in
+its own `caveats`, under these same codes with this same data. Nothing wraps them — branch on `marker-invalid`, not on a
+category code with the condition buried in `data`.
+
+```python
+atlas.health_contract(inst.health())
+# {'ok': False,
+#  'issues': [{'code': 'root-missing', 'data': {'path': '/run/media/deck/Emulation/retrodeck'}}]}
+```
+
+`ok` is the summary field, the same role `requirements_met` plays on a firmware answer. Inside `installation_contract()`
+health is a _field_ rather than an answer, so it carries the `issues` list alone — empty means ok there.
 
 ## Choosing is optional — ask every installation
 
@@ -301,12 +322,22 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain          |
 | `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below  |
 | `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                        |
-| `health`                                    | the installation itself has issues; `data["issue"]` carries the health code                   |
+| `marker-missing`                            | health: the config marker this installation is detected by is gone                            |
+| `marker-unreadable`                         | health: the marker exists and its bytes could not be read                                     |
+| `marker-invalid`                            | health: the marker parsed to something unusable                                               |
+| `root-missing`                              | health: the installation's own root is not an existing directory                              |
+| `saves-root-missing`                        | health: its saves root is not an existing directory                                           |
+| `config-unreadable`                         | health: a bare RetroArch's `retroarch.cfg` could not be read                                  |
+| `companion-config-missing`                  | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                   |
 | `unverified-version`                        | the rule card was never verified against this emulator version                                |
 | `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)             |
 | `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read   |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
+
+The seven `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
+`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Only
+placements carry them today; a firmware or catalogue answer states its own degradations, so ask `health()` there.
 
 `content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
 to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the
@@ -462,8 +493,9 @@ Both carry `data["path"]` — the directory that could not be read.
 Every answer type has one canonical serializer — the same code the conformance vectors assert:
 
 ```python
-from atlas import placement_contract, firmware_contract, installation_contract
+from atlas import placement_contract, firmware_contract, health_contract, installation_contract
 json.dumps(placement_contract(placement))
+json.dumps(health_contract(inst.health()))   # what installation_contract() puts under 'health'
 ```
 
 Structured fields in these dicts are contractual; prose (`sources`, caveat messages) is deliberately absent. An

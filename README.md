@@ -106,7 +106,7 @@ Places this knowledge could plug in — options, not commitments:
 The resolver core is built and verified live against a real RetroDECK 0.10.9b installation. What exists now:
 
 - `atlas.detect(home, machine=...)` finds RetroDECK, EmuDeck, the standalone `org.libretro.RetroArch` Flatpak, and a
-  native install — handles implementing one `Installation` protocol, with structured health (a list of issue caveats
+  native install — handles implementing one `Installation` protocol, with structured health (a list of finding caveats
   with stable codes: unreadable or invalid markers, missing roots, a stale EmuDeck whose claimed RetroArch config is
   gone), ordered markers (EmuDeck claims the Flatpak it configures), and never a silently chosen winner. Handles are
   live: every query re-reads its governing sources, each exactly once.

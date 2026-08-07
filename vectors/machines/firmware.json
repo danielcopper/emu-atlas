@@ -1312,7 +1312,12 @@
             ],
             "root": "/home/deck/Emulation",
             "health": [
-              "saves-root-missing"
+              {
+                "code": "saves-root-missing",
+                "data": {
+                  "path": "/home/deck/Emulation/saves"
+                }
+              }
             ]
           }
         ],

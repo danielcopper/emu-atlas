@@ -48,7 +48,8 @@ installations = atlas.detect(home="/home/deck")
 
 inst = installations[0]              # e.g. a RetroDeck handle — live, re-reads its sources per query
                                      # choosing is optional: atlas.every_installation(home) asks them all
-inst.health()                        # structured: a tuple of issue caveats with stable codes; ok = no issues
+inst.health()                        # structured: a tuple of finding caveats with stable codes; ok = no findings
+                                     # the same findings ride in a placement's own caveats, unwrapped
 
 inst.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
                    core_so="mupen64plus_next_libretro.so")
@@ -97,10 +98,19 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   descriptions of the same RetroArch are true at once, so marker checks are ordered (EmuDeck before "bare standalone")
   and a handle may carry more than one description.
 - **Detection reports health, structurally.** Detection triggers on marker _existence_; health separates marker read
-  status, parse status, root state, and required-companion state into individual issue caveats with stable codes — a
+  status, parse status, root state, and required-companion state into individual finding caveats with stable codes — a
   present-but-broken installation (unreadable marker, unmounted SD card, stale EmuDeck whose claimed RetroArch config is
-  gone) is detected and states its issues, never invisible and never "ok". The config is the truth, never the existence
-  of a folder — a stale secondary root must not win.
+  gone) is detected and states its findings, never invisible and never "ok". The config is the truth, never the
+  existence of a folder — a stale secondary root must not win.
+- **A health finding is a caveat, and travels as one.** It serializes `{code, data}` like every other caveat — the path
+  it is about, the read status behind it, the marker key that is wrong — and a placement computed on a broken
+  installation carries the findings themselves in its `caveats`, under their own codes (the placement route alone today;
+  firmware and catalogue answers state their own degradations). No category code with the real condition nested in
+  `data`: a distinct, stable code hidden behind a discriminator is a shape a client has to unpack before it can branch,
+  and one the firmware route already retired. The health answer itself serializes as an object like every other answer —
+  `ok` the summary field a client renders, `issues` the findings — while an installation's identity carries the findings
+  as a plain field, where an empty list is the whole summary. `ok` is derived from the findings and stays derived:
+  stating a summary is not storing a second copy of the fact.
 - **The emulator handle means "as currently configured".** Granularity, roots, and modes are config readings with
   provenance, not static facts. Where an alternative mode exists (Flycast per-game VMUs), the handle names the config
   that selects it.
@@ -245,10 +255,10 @@ arrangement on a reference machine retires its caveat by changing a record, neve
 The conformance vectors are the portable artifact: fixture machine in (files, dirs, symlinks, core answers — failure
 states included), expected answers out. Vector files are schema-versioned; expectations are the canonical contract
 serializations (`atlas/contract.py`) asserted with **exact equality** over every stable field — directories, root kinds,
-holes, file sets with completeness, granularity identity, caveat codes _and_ data, health issue codes. Structured fields
-are contractual; prose (sources, messages) is explicitly not. A port that passes them demonstrably reads the machine the
-way the reference does. They are the contract for _resolver behaviour_ — not a data set to re-ship — and each release
-publishes them as a versioned artifact.
+holes, file sets with completeness, granularity identity, caveat codes _and_ data, health findings (codes and data alike
+— a finding is a caveat). Structured fields are contractual; prose (sources, messages) is explicitly not. A port that
+passes them demonstrably reads the machine the way the reference does. They are the contract for _resolver behaviour_ —
+not a data set to re-ship — and each release publishes them as a versioned artifact.
 
 ## Vocabulary
 

@@ -74,7 +74,10 @@ def _freeze(mapping: Mapping[str, str]) -> Mapping[str, str]:
 CAVEAT_NO_CORE = "no-core"
 CAVEAT_CORE_UNQUERYABLE = "core-unqueryable"
 CAVEAT_SORTED_DIR_MISSING = "sorted-dir-missing"
-CAVEAT_HEALTH = "health"
+# No "health" code lives here: an installation's health findings are caveats
+# already, with their own stable codes (atlas.installations.HEALTH_ISSUE_*), and
+# they ride in an answer's caveat list as themselves. A category code wrapping
+# them would put the real condition in data for a client to unpack.
 CAVEAT_FILENAMES_UNVERIFIED = "filenames-unverified"
 CAVEAT_FILENAMES_CONTENT_CONDITIONAL = "filenames-content-conditional"
 CAVEAT_FILE_SET_SPANS_ROOTS = "file-set-spans-roots"

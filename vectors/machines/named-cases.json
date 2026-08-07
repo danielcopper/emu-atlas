@@ -381,8 +381,18 @@
             ],
             "root": "/run/media/deck/Emulation/retrodeck",
             "health": [
-              "root-missing",
-              "saves-root-missing"
+              {
+                "code": "root-missing",
+                "data": {
+                  "path": "/run/media/deck/Emulation/retrodeck"
+                }
+              },
+              {
+                "code": "saves-root-missing",
+                "data": {
+                  "path": "/run/media/deck/Emulation/retrodeck/saves"
+                }
+              }
             ]
           }
         ]
@@ -1998,7 +2008,13 @@
             ],
             "root": "/home/deck/retrodeck",
             "health": [
-              "marker-unreadable"
+              {
+                "code": "marker-unreadable",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                  "status": "unreadable"
+                }
+              }
             ]
           }
         ]
@@ -2025,7 +2041,12 @@
             ],
             "root": "/home/deck/retrodeck",
             "health": [
-              "marker-invalid"
+              {
+                "code": "marker-invalid",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
+                }
+              }
             ]
           }
         ]
@@ -2263,7 +2284,13 @@
             ],
             "root": "/home/deck/Emulation",
             "health": [
-              "companion-config-missing"
+              {
+                "code": "companion-config-missing",
+                "data": {
+                  "path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg",
+                  "status": "missing"
+                }
+              }
             ]
           }
         ]
@@ -4204,7 +4231,13 @@
             ],
             "root": "/home/deck/retrodeck",
             "health": [
-              "marker-invalid"
+              {
+                "code": "marker-invalid",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                  "key": "paths.saves_path"
+                }
+              }
             ]
           }
         ]
@@ -4922,6 +4955,167 @@
             }
           }
         ]
+      }
+    },
+    {
+      "name": "health-findings-ride-directly-in-the-answers-caveats",
+      "rationale": "A broken installation that still answers: the marker names a non-string path, so RetroDECK's roots fall back to defaults that do not exist, and the three findings — which marker key is invalid, which root is missing, which saves root — reach the placement as themselves, each under its own stable code with its own data. Nothing wraps them in a category code with the condition nested in data, and the same three findings serialize identically in installations[].health. The cfg still decides the directory: a broken marker degrades the answer, it does not replace it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": 7}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+          "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram"
+        },
+        "query": {
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/home/deck/retrodeck",
+            "health": [
+              {
+                "code": "marker-invalid",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                  "key": "paths.saves_path"
+                }
+              },
+              {
+                "code": "root-missing",
+                "data": {
+                  "path": "/home/deck/retrodeck"
+                }
+              },
+              {
+                "code": "saves-root-missing",
+                "data": {
+                  "path": "/home/deck/retrodeck/saves"
+                }
+              }
+            ]
+          }
+        ],
+        "save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Golden Sun (USA).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "marker-invalid",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "key": "paths.saves_path"
+              }
+            },
+            {
+              "code": "root-missing",
+              "data": {
+                "path": "/home/deck/retrodeck"
+              }
+            },
+            {
+              "code": "saves-root-missing",
+              "data": {
+                "path": "/home/deck/retrodeck/saves"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-broken-unverified-arrangement-states-both-facts-in-one-list",
+      "rationale": "Two features meet in one caveat list, and their order is the contract: the health finding first (EmuDeck's settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then the arrangement's evidence caveat, then what the query itself could not resolve. A machine fact, a fact about atlas's evidence, and a missing argument are three different claims that must not merge, reorder, or crowd each other out — and the cfg still answers the directory, because an unreadable marker degrades the answer rather than replacing it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": {
+            "status": "unreadable"
+          },
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/Emulation/roms/gb/Tetris (World).zip": "",
+          "/home/deck/Emulation/saves/retroarch/saves/Tetris (World).srm": "sram"
+        },
+        "query": {
+          "content_path": "/home/deck/Emulation/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "standalone_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": [
+              {
+                "code": "marker-unreadable",
+                "data": {
+                  "path": "/home/deck/.config/EmuDeck/settings.sh",
+                  "status": "unreadable"
+                }
+              }
+            ]
+          }
+        ],
+        "save_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Tetris (World).srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "marker-unreadable",
+              "data": {
+                "path": "/home/deck/.config/EmuDeck/settings.sh",
+                "status": "unreadable"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
       }
     }
   ]

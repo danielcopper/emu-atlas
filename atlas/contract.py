@@ -6,8 +6,9 @@ data. The rule for what serializes:
 
 - **Structured fields are contractual**: directories, root kinds, holes,
   file-set state/files/completeness, granularity values and option identity,
-  caveat codes and caveat data, health issue codes, installation identity.
-  Vectors assert them with exact equality; ports must reproduce them.
+  caveat codes and caveat data, installation identity, and health findings —
+  which are caveats and serialize as caveats, code and data alike. Vectors
+  assert them with exact equality; ports must reproduce them.
 - **Prose is not**: ``sources``, caveat ``message``, ``option_source``,
   ``FileSet.source`` are human-readable explanations and may change freely —
   they are deliberately absent here.
@@ -27,7 +28,7 @@ from atlas.firmware import (
     FirmwareIdentity,
     FirmwareRequirement,
 )
-from atlas.installations import CatalogueAnswer, EmulatorEntry, Installation, SystemsAnswer
+from atlas.installations import CatalogueAnswer, EmulatorEntry, Health, Installation, SystemsAnswer
 from atlas.placement import SavePlacement, Unresolved
 
 AnswerT = TypeVar("AnswerT")
@@ -65,13 +66,42 @@ def unresolved_contract(unresolved: Unresolved) -> dict[str, Any]:
     return {"unresolved": {"code": unresolved.code, "data": dict(unresolved.data)}}
 
 
+def _findings_contract(health: Health) -> list[dict[str, Any]]:
+    """The findings alone — one ``{code, data}`` per issue, in order.
+
+    A finding is a caveat and serializes as one, like every other caveat in
+    this module. Bare codes were the old shape and lost exactly what a client
+    acts on: *which* marker is invalid, *which* root is missing, what the
+    failing read answered.
+    """
+    return [{"code": issue.code, "data": dict(issue.data)} for issue in health.issues]
+
+
+def health_contract(health: Health) -> dict[str, Any]:
+    """The stable form of a health answer — the summary, and the findings.
+
+    Every answer in this grammar serializes as an object, and health is an
+    answer like the rest: ``ok`` is its summary field, the one a client renders
+    (the same role ``requirements_met`` plays on a firmware answer), and
+    ``issues`` carries the findings. ``ok`` is derived from the findings and
+    stays derived on the value object — serializing it is stating the summary,
+    not storing a second copy of the fact.
+
+    :func:`installation_contract` embeds the findings *without* this wrapper:
+    there, health is a field of an installation's identity rather than an
+    answer in its own right, and the object it sits in already carries the
+    summary in the only form that matters there — an empty list.
+    """
+    return {"ok": health.ok, "issues": _findings_contract(health)}
+
+
 def installation_contract(installation: Installation) -> dict[str, Any]:
     """The stable identity/health form of an installation handle."""
     return {
         "kind": installation.kind,
         "kinds": list(installation.kinds),
         "root": installation.root(),
-        "health": list(installation.health().codes),
+        "health": _findings_contract(installation.health()),
     }
 
 

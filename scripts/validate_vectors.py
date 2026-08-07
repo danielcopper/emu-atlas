@@ -150,7 +150,6 @@ KNOWN_CAVEAT_CODES = {
     "sorted-dir-uncreatable",
     "dead-symlink",
     "symlink-loop",
-    "health",
     "filenames-unverified",
     "filenames-content-conditional",
     "file-set-spans-roots",
@@ -202,6 +201,13 @@ KNOWN_CAVEAT_CODES = {
     "firmware-scan-incomplete",
     "core-enumeration-incomplete",
     "save-dir-unlistable",
+    # An installation's health findings are caveats with their own stable
+    # codes, and an answer computed on a broken installation carries them
+    # directly — so the caveat vocabulary contains the health vocabulary by
+    # construction rather than by a second list that can drift from it. The
+    # envelope code "health" is deliberately absent: it retired with schema 3's
+    # grammar, and a vector still spelling it names a code no resolver emits.
+    *KNOWN_HEALTH_ISSUES,
 }
 # The codes that may stand in for "nothing could be read here". Each says a
 # different thing to a client — nothing declares firmware, nothing declared
@@ -531,12 +537,24 @@ def _validate_installations(name: str, installations: Any) -> None:
             fail(f"{name}: installation kinds must be a non-empty list of known kinds, got {kinds!r}")
         if not isinstance(inst["root"], str) or not inst["root"]:
             fail(f"{name}: installation root must be a non-empty string")
-        health = inst["health"]
-        if not isinstance(health, list) or not all(h in KNOWN_HEALTH_ISSUES for h in health):
-            fail(
-                f"{name}: installation health must be a list of issue codes from "
-                f"{sorted(KNOWN_HEALTH_ISSUES)}, got {health!r}"
-            )
+        _validate_health(name, inst["health"])
+
+
+def _validate_health(name: str, health: Any) -> None:
+    """An installation's health: its findings, each a caveat like any other.
+
+    Bare codes were the old shape. A finding carries the path it is about (and
+    the read status or marker key behind it), so it serializes as ``{code,
+    data}`` — and a vector that states only the code would pin an answer that
+    has lost what a client acts on.
+    """
+    _validate_caveats(name, health)
+    unknown = sorted({finding["code"] for finding in health} - KNOWN_HEALTH_ISSUES)
+    if unknown:
+        fail(
+            f"{name}: installation health findings must be issue codes from "
+            f"{sorted(KNOWN_HEALTH_ISSUES)}, got {unknown}"
+        )
 
 
 def _validate_caveats(name: str, caveats: Any) -> None:
