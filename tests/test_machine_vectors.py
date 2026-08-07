@@ -25,6 +25,7 @@ from atlas.contract import (
     systems_contract,
     firmware_contract,
     identification_contract,
+    installation_answers_contract,
     installation_contract,
     placement_contract,
     unresolved_contract,
@@ -66,6 +67,30 @@ def _select(installs, selector: str | None, context: str):
     raise AssertionError(f"{context}: no detected installation of kind {selector!r}")
 
 
+def _aggregate(installs, query):
+    """The vector's question put to every detected installation, serialized.
+
+    No handle is selected — that is what this family proves. The question names
+    itself, and its answers serialize through the contract function that
+    question already has.
+    """
+    every = atlas.EveryInstallation(installs)
+    question = query["question"]
+    if question == "save_location":
+        return installation_answers_contract(
+            every.save_location(
+                content_path=query.get("content_path"), core_so=query.get("core_so")
+            ),
+            placement_contract,
+        )
+    if question == "emulators_for":
+        return installation_answers_contract(
+            every.emulators_for(query["system"], content_path=query.get("content_path")),
+            catalogue_contract,
+        )
+    raise AssertionError(f"the runner cannot ask {question!r} of every installation")
+
+
 @pytest.mark.parametrize("vector", list(_load_vectors()))
 def test_machine_vector(vector):
     inp = vector["input"]
@@ -88,6 +113,9 @@ def test_machine_vector(vector):
     if "systems" in expected:
         install = _select(installs, inp["systems_query"].get("installation"), vector["name"])
         assert systems_contract(install.systems()) == expected["systems"], rationale
+
+    if "aggregate" in expected:
+        assert _aggregate(installs, inp["aggregate_query"]) == expected["aggregate"], rationale
 
     if "save_location" in expected:
         query = inp["query"]
@@ -154,6 +182,8 @@ class TestTheGrammarRefusesContradictions:
         "health": [],
     }
     _UNREAD = [{"code": "emulator-catalogue-unreadable", "data": {}}]
+    _SAVE_LOCATION_EVERYWHERE = {"question": "save_location"}
+    _NOBODY_ANSWERED = {"installations": [], "aggregate": []}
 
     def _vector(self, expected=None, **input_keys):
         return {
@@ -206,6 +236,78 @@ class TestTheGrammarRefusesContradictions:
             },
         )
         with pytest.raises(validate_vectors.VectorError, match="states systems"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_an_aggregate_query_naming_a_handle_is_refused(self):
+        # Naming one handle asks the aggregate to choose, which is the one
+        # thing it does not do — the single-question families are where a
+        # vector names a handle.
+        vector = self._vector(
+            aggregate_query={**self._SAVE_LOCATION_EVERYWHERE, "installation": "retrodeck"},
+            expected=self._NOBODY_ANSWERED,
+        )
+        with pytest.raises(validate_vectors.VectorError, match="takes no 'installation'"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_an_aggregate_question_the_runner_cannot_ask_is_refused(self):
+        vector = self._vector(
+            aggregate_query={"question": "roms_dir"}, expected=self._NOBODY_ANSWERED
+        )
+        with pytest.raises(validate_vectors.VectorError, match="aggregate_query.question"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_an_aggregate_query_carrying_a_key_its_question_ignores_is_refused(self):
+        # The catalogue question is not asked by a core: the runner never
+        # passes the key on, so the vector would state something no answer in
+        # it can reflect — and it would read as if the core had governed.
+        vector = self._vector(
+            aggregate_query={
+                "question": "emulators_for",
+                "system": "n64",
+                "core_so": "mgba_libretro.so",
+            },
+            expected=self._NOBODY_ANSWERED,
+        )
+        with pytest.raises(validate_vectors.VectorError, match="is not asked by"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_save_location_aggregate_query_carrying_a_system_is_refused(self):
+        vector = self._vector(
+            aggregate_query={**self._SAVE_LOCATION_EVERYWHERE, "system": "n64"},
+            expected=self._NOBODY_ANSWERED,
+        )
+        with pytest.raises(validate_vectors.VectorError, match="is not asked by"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_an_aggregate_query_without_the_key_its_question_needs_is_refused(self):
+        vector = self._vector(
+            aggregate_query={"question": "emulators_for"}, expected=self._NOBODY_ANSWERED
+        )
+        with pytest.raises(validate_vectors.VectorError, match="needs \\['system'\\]"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_an_aggregate_expectation_without_a_query_is_refused(self):
+        vector = self._vector(expected=self._NOBODY_ANSWERED)
+        with pytest.raises(validate_vectors.VectorError, match="aggregate_query and aggregate"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_an_empty_machine_may_still_be_asked_every_installation(self):
+        # The one expectation that stands with no installations detected:
+        # nothing installed is an answer, not a question nobody can answer.
+        vector = self._vector(
+            aggregate_query=self._SAVE_LOCATION_EVERYWHERE, expected=self._NOBODY_ANSWERED
+        )
+        validate_vectors.validate_machines_vector(vector)
+
+    def test_an_aggregate_that_skips_a_detected_installation_is_refused(self):
+        # The fan-out answers for everything detection found. A vector that
+        # asserts fewer answers than installations locks in exactly the
+        # silently chosen winner the aggregate exists to avoid.
+        vector = self._vector(
+            aggregate_query=self._SAVE_LOCATION_EVERYWHERE,
+            expected={"installations": [self._INSTALLATION], "aggregate": []},
+        )
+        with pytest.raises(validate_vectors.VectorError, match="in detection order"):
             validate_vectors.validate_machines_vector(vector)
 
     def test_entries_stated_beside_a_no_catalogue_code_are_refused(self):
