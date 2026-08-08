@@ -93,8 +93,12 @@ The four firmware entry points ship: live `.info` declarations from the installe
   be structurally meaningless — and `neogeo.zip` is one of the mandatory files this work exists to surface. The fix
   belongs in the table (a per-entry statement of what kind of identity it is, with provenance), not in a file-extension
   heuristic; only then can `checked` grow a fifth value that means something.
-- **The system vocabulary.** `firmware_for_system` speaks ES-DE's system name where a catalogue exists and an atlas slug
-  where none does, and says which via a caveat. The canonical translation table is the real fix.
+- **Atlas's own vocabulary is not yet one vocabulary (item 20b).** `firmware_for_system` speaks ES-DE's system name
+  where a catalogue exists and an atlas slug derived from the core's own `systemname` where none does, and says which
+  via a caveat. 13 of the 55 slugs that derivation can produce (`dc`, `gg`, `pce`, `sms`, `lynx`, …) are not ids, so the
+  fix is to unify the derived names toward the ES-DE ids — per name, from what the machine declares, never assumed from
+  the spelling. Translating _foreign_ vocabularies is not on this list and never will be: a client's naming dialect is
+  the client's to map (`DESIGN.md`, Vocabulary).
 - **Per-file system assignment.** `FIRMWARE_SYSTEM_OVERRIDE` is `[D]` and deliberately incomplete: it is atlas's own
   reading, cross-read against RomM's `known_bios_files.json`, and the two disagree (the Super Game Boy dumps are `snes`
   here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it — 33 of the 96

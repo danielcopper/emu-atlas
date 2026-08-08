@@ -74,9 +74,11 @@ Map of the surface — layers, handles, answer types, and what to import from wh
    across the frontends that ship ES-DE (RetroDECK, EmuDeck, and a bare ES-DE install).
 4. **Standalone emulators** — per-emulator config parsing and save/BIOS placement rules (Dolphin, PPSSPP, RPCS3, …), as
    multi-emulator support becomes concrete.
-5. **A canonical system vocabulary** — atlas ids plus translation tables for the naming dialects (RomM slugs, ES-DE
-   system names, RetroArch core/database names); planned, so until it lands a query speaks the vocabulary of the source
-   that enumerates it.
+5. **The system vocabulary** — the ids every question about a system takes, which are ES-DE's system names, shipped as
+   packaged data cited to a stated build and guarded by a test that parses that build's own `es_systems.xml`. What is
+   offered to clients is validation, not translation: `known_systems()` and `from_esde_system()` let a client check its
+   own map before using it. Foreign naming dialects are the client's by design — atlas carries no other product's
+   vocabulary, because it could never be verified against the machine (`DESIGN.md`, Vocabulary).
 
 Conformance follows the gavel pattern: language-neutral vectors, each one a fixture machine in and the expected
 installations + placements out.

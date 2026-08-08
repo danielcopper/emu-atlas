@@ -442,9 +442,9 @@ what the machine declares, never assumed from the spelling.
 ## Open questions
 
 - The catalogue API when multiple frontends coexist on one EmuDeck install.
-- Exact canonical system-id set (lean toward ES-DE names). It bites today: `firmware_for_system` speaks the frontend's
-  system name where a catalogue exists and an atlas slug where none does (`dreamcast` vs `dc`), and states which via a
-  caveat rather than translating.
+- The derived-slug switch on catalogue-less arrangements (item 20b): `firmware_for_system` speaks the frontend's system
+  name where a catalogue exists and an atlas slug derived from the core's own `systemname` where none does (`dreamcast`
+  vs `dc`), and states which via a caveat rather than translating. The id set itself is settled — see Vocabulary.
 - Whether `checked` needs a fifth value for artifacts whose whole-file hash is not a meaningful identity — MAME-style
   romset zips hash differently per romset version and merge mode. 21 of the 388 packaged identities are archives or data
   packs; deciding this needs per-entry provenance in the table, not an extension heuristic.

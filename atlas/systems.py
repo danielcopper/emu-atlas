@@ -37,10 +37,10 @@ SYSTEM_IDS_SCHEMA = 1
 
 # This check exists verbatim three times, one per packaged-data loader
 # (:func:`atlas.evidence._expect_str`, :func:`atlas.oddities._expect_str`). The
-# triplication is the deliberate cost of loader independence: each loader reads
-# one file and depends on nothing else in atlas, so a defect in one table can
-# never fail the load of another — and a fidelity finding about what counts as a
-# string belongs in all three.
+# triplication is the deliberate cost of keeping the loaders independent of each
+# other: each reads its one file and shares no machinery with the other two, so
+# a defect in one table can never fail the load of another — and a fidelity
+# finding about what counts as a string belongs in all three.
 def _expect_str(value: object, where: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{where}: expected a non-empty string, got {value!r}")
@@ -105,7 +105,7 @@ def from_esde_system(name: str) -> str | None:
     answers "is this an id atlas can be asked about", which is the question a
     caller holding a name from anywhere else actually has. It is also the only
     honest way to check membership from outside: the id set is packaged data
-    that moves with the frontend, never a literal a client should carry.
+    that moves with atlas releases, never a literal a client should carry.
 
     >>> from_esde_system("dreamcast")
     'dreamcast'
