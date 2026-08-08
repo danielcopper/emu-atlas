@@ -68,6 +68,7 @@ classDiagram
         +save_location(content_path, core_so) SavePlacement
         +systems() SystemsAnswer
         +emulators_for(system, content_path) CatalogueAnswer
+        +rom_location(system) RomPlacement
         +firmware_for_core(core_so, verify) FirmwareAnswer
         +firmware_for_system(system, verify) FirmwareAnswer
         +firmware_inventory(verify) FirmwareAnswer
@@ -132,6 +133,12 @@ classDiagram
         +entries: tuple~EmulatorEntry~
         +caveats: tuple~Caveat~
     }
+    class RomPlacement {
+        +dir: str|None
+        +physical_dir: str|None
+        +extensions: tuple
+        +caveats: tuple~Caveat~
+    }
     class EmulatorEntry {
         +system / label / kind / core_so
         +save_location(content_path)
@@ -170,6 +177,7 @@ classDiagram
     SavePlacement *-- Caveat
     CatalogueAnswer *-- EmulatorEntry
     CatalogueAnswer *-- Caveat
+    RomPlacement *-- Caveat
     EmulatorEntry ..> SavePlacement : save_location()
     EmulatorEntry ..> Unresolved : standalone emulator
     FirmwareAnswer *-- CoreFirmware

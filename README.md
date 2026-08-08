@@ -35,10 +35,11 @@ Four principles, fixed before any code:
 
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, bare RetroArch installs, any
   of them side by side — and every question is asked _of an installation_, never of a global "the system":
-  `installation.save_location(content_path=..., core_so=...)` and `installation.emulators_for(system)` on every handle —
-  the ones without a frontend catalogue answer with the reason rather than an empty list. Choosing one of them is
-  optional: `every_installation(home)` asks them all and labels each answer with the handle it came from, because two
-  arrangements on one machine give two true answers and picking a winner would be the guess.
+  `installation.save_location(content_path=..., core_so=...)`, `installation.emulators_for(system)` and
+  `installation.rom_location(system)` on every handle — the ones without a frontend catalogue answer with the reason
+  rather than an empty list. Choosing one of them is optional: `every_installation(home)` asks them all and labels each
+  answer with the handle it came from, because two arrangements on one machine give two true answers and picking a
+  winner would be the guess.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
   machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`, `file_size`, `file_digest`) whose every
   operation reports an explicit outcome — missing is not unreadable is not invalid text — because the emulators make
@@ -136,6 +137,16 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   RetroArch ships no catalogue at all, an EmuDeck arrangement may have one atlas has not established the location of,
   and a catalogue atlas could not read — missing, unreadable, or empty — is not an empty one; three codes, because a
   client must not read the last two as "nothing here".
+- `installation.rom_location(system)` — on every handle — answers where that system's ROMs live and which file
+  extensions the frontend will launch, both off the same `<system>` declaration, so neither has to be recomputed from a
+  table that cannot follow a user who moved their library. The directory is the declared `<path>` with `%ROMPATH%`
+  substituted from the setting the frontend itself substitutes it from, resolved the way the frontend resolves it —
+  including its own home-relative default where that setting is genuinely unset, because on this arrangement the home
+  behind it is read rather than assumed. A `dir` reached through symlinks reports its `physical_dir` beside it, as a
+  save placement does. Where nothing was resolved the answer says which kind of nothing: no catalogue, an unread one, a
+  system declared without a path, a setting that is not an absolute path, a settings file that exists and could not be
+  read, or a Flatpak override that moved the tree those settings live in. The extensions are the declaration verbatim —
+  both cases where the file lists both, mistakes included — because which of them to act on is the frontend's business.
 - The audit trail: `docs/research/coverage-matrix.md` (generated, with full source identity) tracks every referenced
   emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
   verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer

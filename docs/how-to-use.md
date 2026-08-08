@@ -132,13 +132,13 @@ for answered in everywhere.save_location(content_path=rom_path):
 ```
 
 Every question a handle answers, the aggregate asks all of them: `health()`, `save_location()`, `systems()`,
-`emulators_for()`, `firmware_for_core()`, `firmware_for_system()`, `firmware_inventory()`, `identify_firmware()` — same
-arguments, same answers. Each returns a tuple of labelled answers:
+`emulators_for()`, `rom_location()`, `firmware_for_core()`, `firmware_for_system()`, `firmware_inventory()`,
+`identify_firmware()` — same arguments, same answers. Each returns a tuple of labelled answers:
 
 - `answered.installation` is the handle itself, not a copy of its identity: read `kind`, `kinds`, `root()` and
   `health()` off it, or ask it the next question (its `emulators_for`, then that entry's own `save_location`).
 - `answered.answer` is exactly what the handle route returns for that question — the same `SavePlacement`,
-  `CatalogueAnswer` or `FirmwareAnswer`, unchanged, with its own caveats.
+  `CatalogueAnswer`, `RomPlacement` or `FirmwareAnswer`, unchanged, with its own caveats.
 
 The aggregate resolves nothing itself. It merges nothing, drops no duplicates, and prefers nothing beyond detection
 order (RetroDECK, EmuDeck, bare Flatpak, bare native): a machine that runs PPSSPP under two arrangements gives you
@@ -502,6 +502,74 @@ the firmware route as a caveat on a core whose `declaration` is `"unsupported"`.
 is installed, atlas has no source for its rules — which is a different axis from `arrangement-unverified`: that one says
 a reading was never confirmed on a live machine, this one says there was no reading to confirm.
 
+## Where do this system's ROMs live? (and what launches them)
+
+The same catalogue declares, per system, the directory its ROMs sit in and the file extensions the frontend will launch.
+Both are read off the machine:
+
+```python
+placement = inst.rom_location("n64")
+placement.dir            # '/run/media/deck/Emulation/retrodeck/roms/n64'  — or None, see below
+placement.physical_dir   # None normally; the backing directory when `dir` goes through symlinks
+placement.extensions     # ('.n64', '.N64', '.z64', '.Z64', '.zip', '.ZIP')
+placement.caveats
+```
+
+`dir` and `physical_dir` are the same pair a save placement answers with, and they mean the same thing here: where a
+distribution wires a tree into place with a symlink, the frontend-side path and the physical path are both true and
+answer different questions. Write through `dir` unless you specifically need the backing location.
+
+**Do not recompute either of these from a table of your own.** The directory is the catalogue's `<path>` with ES-DE's
+`%ROMPATH%` substituted from the setting ES-DE substitutes it from, so it follows a user who moved their library; a map
+in your code does not, and it is wrong silently. The extensions are the declaration verbatim — both cases where the file
+lists both cases — because which of them to act on is the frontend's business and not something atlas filters for you.
+
+**`dir` is `None` whenever atlas resolved no directory, and the caveat says which of seven reasons.** Three are the ones
+the catalogue question already has — the arrangement ships no catalogue (`emulator-catalogue-unavailable`), atlas has
+not established where it keeps one (`emulator-catalogue-unestablished`), or it could not be read
+(`emulator-catalogue-unreadable`). Four belong to this question, and they split along the line that decides what you can
+do about them — the first two are facts about the machine, the last two statements about atlas:
+
+| caveat                         | what it means                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `rom-path-undeclared`          | the catalogue was read and declares no such system, or declares it without a `<path>` |
+| `rom-path-unresolved`          | the frontend's ROM-directory setting holds something that is not an absolute path     |
+| `frontend-settings-unreadable` | the file that setting lives in is there and atlas could not read it                   |
+| `config-home-relocated`        | a Flatpak override moved the tree the frontend's own default is relative to           |
+
+**An unset ROM-directory setting is not one of those cases** — it resolves. The frontend has a documented home-relative
+default, and on this arrangement its home is knowable rather than guessable: the distribution's only launch path hands
+the frontend an explicit `--home` pointing at the app's own config tree, which is the same tree the setting was read
+from. So `dir` comes back as that tree's `ROMs` directory, and the answer is a reading rather than an assumption.
+Resolving is not asserting the directory exists — nothing stats it, and an absent one is the ordinary missing-directory
+state.
+
+A settings file that is **missing** is the unset case, and one that is **there and unreadable** is not: the frontend
+reads that file without trouble, so whatever it says is the configuration in force, and answering the default would name
+a directory belonging to a configuration nobody established. That is what `frontend-settings-unreadable` says, and it
+carries the read status in `data["status"]` (`unreadable`, `invalid-text`, or `unparseable`).
+
+`config-home-relocated` is worth handling on its own rather than as one more "no directory". It fires when a Flatpak
+override redefines `XDG_CONFIG_HOME` or `HOME` for the app — which moves the tree the frontend's default is relative to,
+and moves the settings file atlas read along with it. So the caveat is a warning about **this handle's other answers**
+too, not only about this one: they may rest on a settings file that is not the one in force. `data` names the override
+file and the key.
+
+Never read `None` as "look in the default place" — where there is a default worth standing behind, atlas has already
+applied it. `rom-path-unresolved` and `config-home-relocated` both carry the declared path in `data["declared"]`, so a
+client that knows its own setup can finish the substitution atlas refused to guess at.
+
+Extensions survive an unresolved directory: which files launch is declared in the same element and does not depend on
+where they sit.
+
+**Treat the extension list as declared text, not as a clean vocabulary.** atlas passes the tokens through exactly as the
+catalogue writes them, and real catalogues contain mistakes: the shipped build this was measured against declares one
+system's list with a token whose leading dot is simply missing, and another system's with the same token twice. So do
+not assume every token starts with `.`, and do not assume the list is a set. Normalize into whatever shape your own
+matching needs — but do it on your side, on a copy. atlas will not clean the list, because a cleaned list is a claim
+about what the frontend launches, and the frontend launches what its own typo says: a dot-less token matches nothing
+there either, and inventing the dot would make atlas's answer disagree with the machine.
+
 ## Firmware
 
 Four questions, verification strictly opt-in. The first three share one answer shape (`FirmwareAnswer`);
@@ -744,6 +812,17 @@ Honest limits you must cover yourself today (roadmap: `ROADMAP.md`):
   open work.
 - **Savestates.** Only savefiles are resolved; `savestate_directory` and the `sort_savestates_*` keys are unread.
 - **Standalone emulators.** Catalogued, but placements answer `Unresolved` until the standalone block lands.
-- **Reverse lookup.** Atlas is forward-only (ROM → placement); "which ROM owns this save path" is yours.
-- **File metadata.** Placements name files; mtime/size/hash of save files are yours to gather.
+- **Reverse lookup is a non-goal, not a gap.** Atlas is forward-only (ROM → placement); "which ROM owns this save path"
+  is not on the roadmap. Inverting a placement would mean reading a directory and guessing which content produced each
+  name — precisely the guess the forward answer exists to avoid, and undecidable wherever a core names saves after
+  something other than the ROM stem. **Invert it yourself instead**: walk your own library's forward answers and build
+  the index from them, `{placement → rom}` for the ROMs you know about. That index is exact for every ROM you hold, it
+  says nothing about files you never asked for (which is the honest answer), and it costs one pass you already have the
+  inputs for.
+- **File metadata is the client's job, deliberately.** Placements name files; mtime, size and hash are yours to gather.
+  That is not atlas withholding a cheap field — it is refusing to make every placement pay for one. Answering it would
+  add a stat per named file to answers that mostly do not want it, and a hash means reading the bytes: the seam prices
+  them separately for exactly this reason (`file_size` is a stat, `file_digest` reads the file). Ask the filesystem
+  directly, or reach through the same seam atlas uses — `Machine.file_size` and `Machine.file_digest` (`md5`/`sha1`) are
+  the escape hatch when you want your reads to go through the fixture seam in tests too.
 - **Sync decisions.** What to do when local and server disagree is deliberately out of scope (gavel's territory).

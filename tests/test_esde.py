@@ -5,7 +5,13 @@ from __future__ import annotations
 import atlas
 from atlas.installations import parse_gamelist
 from atlas.machine import FixtureMachine
-from atlas.esde import merge_layers, parse_es_systems, parse_gamelist_alternative
+from atlas.esde import (
+    merge_layers,
+    parse_es_settings,
+    parse_es_systems,
+    parse_gamelist_alternative,
+    resolve_rom_path,
+)
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -43,17 +49,17 @@ class TestParse:
     def test_systems_and_order(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test")
         assert set(parsed) == {"dreamcast", "n64", "ps3"}
-        assert [e.label for e in parsed["n64"]] == ["Mupen64Plus-Next", "ParaLLEl N64"]
+        assert [e.label for e in parsed["n64"].entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
 
     def test_libretro_classification_extracts_core_so(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test")
-        entry = parsed["dreamcast"][0]
+        entry = parsed["dreamcast"].entries[0]
         assert entry.kind == atlas.KIND_LIBRETRO
         assert entry.core_so == "flycast_libretro.so"
 
     def test_standalone_classification(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test")
-        entry = parsed["ps3"][0]
+        entry = parsed["ps3"].entries[0]
         assert entry.kind == atlas.KIND_STANDALONE
         assert entry.core_so is None
 
@@ -66,6 +72,112 @@ class TestParse:
         assert parse_es_systems(text, provenance="test") == {}
 
 
+class TestParseSettings:
+    """``es_settings.xml`` is a rootless fragment sequence, and the reader says which empty it got."""
+
+    SETTING = "ROMDirectory"
+    DIRECTORY = "/mnt/sd/roms"
+    ROM_DIRECTORY = f'<string name="{SETTING}" value="{DIRECTORY}" />'
+    ONLY_THE_DIRECTORY = {SETTING: DIRECTORY}
+
+    def test_rootless_siblings_are_all_read(self):
+        # The whole reason for the synthetic root: xml.etree stops at the second
+        # element, and every real machine's file has more than one.
+        text = f'<string name="MediaDirectory" value="/media" />\n{self.ROM_DIRECTORY}\n'
+        assert parse_es_settings(text) == {"MediaDirectory": "/media", **self.ONLY_THE_DIRECTORY}
+
+    def test_an_xml_declaration_is_stripped_before_the_wrap(self):
+        text = f'<?xml version="1.0"?>\n{self.ROM_DIRECTORY}\n'
+        assert parse_es_settings(text) == self.ONLY_THE_DIRECTORY
+
+    def test_a_declaration_with_an_encoding_is_stripped_too(self):
+        text = f'<?xml version="1.0" encoding="UTF-8"?>{self.ROM_DIRECTORY}'
+        assert parse_es_settings(text) == self.ONLY_THE_DIRECTORY
+
+    def test_a_byte_order_mark_is_stripped_and_the_file_parses(self):
+        # pugixml detects the encoding from the mark and reads the file, so its
+        # settings are the ones in force — refusing them would answer about a
+        # configuration the frontend is not using.
+        text = f'\ufeff<?xml version="1.0"?>\n{self.ROM_DIRECTORY}\n'
+        assert parse_es_settings(text) == self.ONLY_THE_DIRECTORY
+
+    def test_a_single_element_needs_no_wrapping_and_still_reads(self):
+        assert parse_es_settings(self.ROM_DIRECTORY) == self.ONLY_THE_DIRECTORY
+
+    def test_non_string_elements_are_left_alone(self):
+        text = f'<bool name="Debug" value="true" />\n{self.ROM_DIRECTORY}'
+        assert parse_es_settings(text) == self.ONLY_THE_DIRECTORY
+
+    def test_a_string_without_a_value_reads_as_the_empty_setting(self):
+        # Which is the state RetroDECK's shipped template is in before its first
+        # sed, and the state that makes the frontend's own default apply.
+        assert parse_es_settings(f'<string name="{self.SETTING}" />') == {self.SETTING: ""}
+
+    def test_an_empty_file_states_no_settings(self):
+        assert parse_es_settings("") == {}
+
+    def test_whitespace_only_states_no_settings(self):
+        assert parse_es_settings("\n  \n") == {}
+
+    def test_junk_is_unparseable_and_says_so(self):
+        # None, not {} — a file nobody could parse and a file that sets nothing
+        # are the same mapping and opposite facts.
+        assert parse_es_settings("not xml at all <<<") is None
+
+    def test_a_truncated_element_is_unparseable(self):
+        assert parse_es_settings(f'<string name="{self.SETTING}"') is None
+
+    def test_the_two_empties_are_distinguishable(self):
+        assert parse_es_settings("") is not None
+
+
+class TestResolveRomPath:
+    """``loadConfig``'s substitution: replace the token, then collapse — always."""
+
+    DECLARED = "%ROMPATH%/n64"
+    DIRECTORY = "/mnt/sd/roms"
+    RESOLVED = f"{DIRECTORY}/n64"
+    LITERAL = "/srv/games/n64"
+
+    def test_the_token_is_replaced_with_the_configured_directory(self):
+        assert resolve_rom_path(self.DECLARED, self.DIRECTORY) == self.RESOLVED
+
+    def test_a_trailing_separator_is_absorbed_rather_than_doubled(self):
+        # ES-DE appends the separator only where it is missing, so a configured
+        # ".../roms/" must not spell the answer ".../roms//n64".
+        assert resolve_rom_path(self.DECLARED, f"{self.DIRECTORY}/") == self.RESOLVED
+
+    def test_a_run_of_separators_collapses_all_the_way(self):
+        # Utils::String::replace re-scans until the pattern is gone; one Python
+        # pass would leave a doubled separator behind.
+        assert resolve_rom_path("%ROMPATH%///n64", f"{self.DIRECTORY}/") == self.RESOLVED
+
+    def test_a_literal_path_resolves_to_itself(self):
+        # ES-DE insists on the token only when generating placeholder
+        # directories, never when loading the catalogue.
+        assert resolve_rom_path(self.LITERAL, None) == self.LITERAL
+
+    def test_a_literal_path_is_collapsed_too(self):
+        # loadConfig collapses unconditionally, on a path that carried no token
+        # just the same.
+        assert resolve_rom_path("/srv//games/n64", None) == self.LITERAL
+
+    def test_a_token_in_the_middle_is_still_substituted(self):
+        assert resolve_rom_path("%ROMPATH%/sub/n64", self.DIRECTORY) == f"{self.DIRECTORY}/sub/n64"
+
+    def test_an_unset_directory_leaves_the_token_unresolved(self):
+        assert resolve_rom_path(self.DECLARED, None) is None
+
+    def test_a_relative_directory_is_refused_rather_than_joined(self):
+        assert resolve_rom_path(self.DECLARED, "Emulation/roms") is None
+
+    def test_a_home_prefixed_directory_is_refused_rather_than_expanded(self):
+        assert resolve_rom_path(self.DECLARED, "~/Emulation/roms") is None
+
+    def test_an_empty_declaration_resolves_to_nothing(self):
+        assert resolve_rom_path("", self.DIRECTORY) is None
+
+
 class TestMerge:
     def test_custom_replaces_bundled_system(self):
         bundled = parse_es_systems(BUNDLED_XML, provenance="bundled")
@@ -76,8 +188,8 @@ class TestMerge:
             provenance="custom",
         )
         merged = merge_layers(bundled, custom)
-        assert [e.label for e in merged["n64"]] == ["ParaLLEl N64"]
-        assert merged["n64"][0].provenance == "custom"
+        assert [e.label for e in merged["n64"].entries] == ["ParaLLEl N64"]
+        assert merged["n64"].entries[0].provenance == "custom"
         assert "dreamcast" in merged  # untouched systems stay
 
     def test_custom_adds_new_system(self):

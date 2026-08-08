@@ -1771,6 +1771,14 @@ class TestOneReadPerSourcePerQuery:
         assert machine.repeats() == {}
         assert self.INFO in machine.reads
 
+    def test_rom_location_reads_each_source_once(self):
+        # This one reaches furthest: the marker, both catalogue layers, ES-DE's
+        # settings, and — because this fixture sets no ROMDirectory — all four
+        # Flatpak overrides files.
+        machine = self._query(lambda rd: rd.rom_location("n64"))
+        assert machine.repeats() == {}
+        assert self.DEPLOY_ESDE in machine.reads
+
     def test_systems_reads_each_source_once(self):
         # The listing reads the marker for its root and again, in effect, for
         # the health findings it carries — one read has to serve both.
@@ -1982,6 +1990,126 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         answer = atlas.RetroDeck(HOME, machine).emulators_for("dreamcast")
         assert answer.entries == ()
         assert answer.caveats == ()
+
+
+class TestTheRomDirectorySettingIsReadOrRefused:
+    """Which empty an ``es_settings.xml`` is decides whether the default may apply.
+
+    ES-DE falls back on its own ``<home>/ROMs`` only where the setting is not
+    set. A file that exists and could not be read says nothing about the
+    setting, so answering the default there would state a directory belonging
+    to a configuration nobody established — the collapse this suite guards.
+    """
+
+    DEPLOY_ESDE = (
+        "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
+        "/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+    )
+    ES_SYSTEMS = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>\n'
+        "    <path>%ROMPATH%/n64</path>\n    <extension>.z64 .Z64</extension>\n"
+        '    <command label="Mupen64Plus-Next">retroarch -L '
+        "/app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+    )
+    SETTINGS = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml"
+    CONFIG_HOME = f"{HOME}/.var/app/net.retrodeck.retrodeck/config"
+    DEFAULT_DIR = f"{CONFIG_HOME}/ROMs/n64"
+    UNREADABLE = {"status": "unreadable"}
+    NOT_ABSOLUTE = "~/Emulation/roms"
+    NOT_ABSOLUTE_SETTINGS = f'<string name="ROMDirectory" value="{NOT_ABSOLUTE}" />'
+
+    def _placement(self, settings=None, system="n64"):
+        files = {RETRODECK_JSON: RD_JSON, self.DEPLOY_ESDE: self.ES_SYSTEMS}
+        if settings is not None:
+            files[self.SETTINGS] = settings
+        machine = FixtureMachine(files, dirs=["/mnt/sd/retrodeck/saves"])
+        return atlas.RetroDeck(HOME, machine).rom_location(system)
+
+    @staticmethod
+    def _cites_the_settings(placement) -> bool:
+        """Whether the answer claims to have read ES-DE's settings file."""
+        return any("es_settings.xml" in source for source in placement.sources)
+
+    def test_no_settings_file_at_all_resolves_the_frontends_own_default(self):
+        # Missing is a reading: there is no file, so there is no configured
+        # value, and the frontend's home-relative default is what applies.
+        placement = self._placement()
+        assert placement.dir == self.DEFAULT_DIR
+        assert placement.caveats == ()
+
+    def test_a_file_that_sets_the_key_empty_resolves_the_default_too(self):
+        placement = self._placement('<string name="ROMDirectory" value="" />')
+        assert placement.dir == self.DEFAULT_DIR
+        assert placement.caveats == ()
+
+    def test_a_file_that_names_no_such_key_resolves_the_default_too(self):
+        placement = self._placement('<string name="MediaDirectory" value="/media" />')
+        assert placement.dir == self.DEFAULT_DIR
+        assert placement.caveats == ()
+
+    def test_settings_that_cannot_be_read_state_no_directory(self):
+        placement = self._placement(self.UNREADABLE)
+        assert placement.dir is None
+        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_FRONTEND_SETTINGS_UNREADABLE]
+
+    def test_the_unreadable_caveat_names_the_file_and_the_read_status(self):
+        caveat = self._placement(self.UNREADABLE).caveats[0]
+        assert caveat.data == {"system": "n64", "path": self.SETTINGS, "status": "unreadable"}
+
+    def test_settings_whose_bytes_are_not_text_state_no_directory(self):
+        placement = self._placement({"status": "invalid-text"})
+        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_FRONTEND_SETTINGS_UNREADABLE]
+        assert placement.caveats[0].data["status"] == "invalid-text"
+
+    def test_settings_that_do_not_parse_state_no_directory(self):
+        placement = self._placement("this is not xml <<<")
+        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_FRONTEND_SETTINGS_UNREADABLE]
+        assert placement.caveats[0].data["status"] == "unparseable"
+
+    def test_an_unreadable_file_is_not_the_default_case(self):
+        # The collapse itself: the two must not answer the same directory.
+        assert self._placement(self.UNREADABLE).dir != self._placement().dir
+
+    def test_the_extensions_survive_settings_nobody_could_read(self):
+        # Which files launch is declared in the same element and does not
+        # depend on where they sit.
+        assert self._placement(self.UNREADABLE).extensions == (".z64", ".Z64")
+
+    def test_a_resolving_answer_cites_the_settings_it_read(self):
+        # The counterpart the two assertions below would be vacuous without.
+        assert self._cites_the_settings(self._placement('<string name="ROMDirectory" value="/r" />'))
+
+    def test_an_unreadable_settings_file_is_not_cited_as_a_source(self):
+        # A source names a reading the answer rests on, and this one rests on
+        # the failure — which the caveat states instead.
+        assert not self._cites_the_settings(self._placement(self.UNREADABLE))
+
+    def test_a_non_absolute_setting_is_refused_rather_than_expanded(self):
+        placement = self._placement(self.NOT_ABSOLUTE_SETTINGS)
+        assert placement.dir is None
+        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_ROM_PATH_UNRESOLVED]
+
+    def test_the_refusal_names_the_declaration_and_the_configured_value(self):
+        caveat = self._placement(self.NOT_ABSOLUTE_SETTINGS).caveats[0]
+        assert caveat.data == {
+            "system": "n64",
+            "declared": "%ROMPATH%/n64",
+            "configured": self.NOT_ABSOLUTE,
+        }
+
+    def test_the_refusal_says_which_value_it_would_not_resolve_against(self):
+        # The message is prose and non-contractual, but a reason that never
+        # names the offending value leaves nothing to act on.
+        caveat = self._placement(self.NOT_ABSOLUTE_SETTINGS).caveats[0]
+        assert self.NOT_ABSOLUTE in caveat.message
+        assert "not an absolute path" in caveat.message
+
+    def test_the_undeclared_branch_never_opens_the_settings_file(self):
+        # Fixed with the sources: this answer returns before reading them, so
+        # citing ROMDirectory would claim a reading that did not happen.
+        placement = self._placement(system="dreamcast")
+        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_ROM_PATH_UNDECLARED]
+        assert not self._cites_the_settings(placement)
 
 
 class TestEveryAnswerStatesTheInstallationsHealth:

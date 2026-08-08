@@ -34,7 +34,14 @@ from atlas.firmware import (
     FirmwareIdentity,
     FirmwareRequirement,
 )
-from atlas.installations import CatalogueAnswer, EmulatorEntry, Health, Installation, SystemsAnswer
+from atlas.installations import (
+    CatalogueAnswer,
+    EmulatorEntry,
+    Health,
+    Installation,
+    RomPlacement,
+    SystemsAnswer,
+)
 from atlas.placement import SavePlacement, Unresolved
 
 AnswerT = TypeVar("AnswerT")
@@ -244,6 +251,24 @@ def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
     return {
         "systems": list(answer.systems),
         "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+    }
+
+
+def rom_placement_contract(placement: RomPlacement) -> dict[str, Any]:
+    """The stable form of a ROM placement — the directory, the extensions, and why not.
+
+    ``dir`` serializes as ``null`` where atlas resolved none, which is the
+    field's honest value and not an omission: the caveats say which of the ways
+    it was, and a client that treats null as "look in the default place" would
+    be inventing the answer this refuses to give. ``physical_dir`` is ``null``
+    in the ordinary case — no symlinks were traversed — and carries the backing
+    directory only where they were, the same way a save placement's does.
+    """
+    return {
+        "dir": placement.dir,
+        "physical_dir": placement.physical_dir,
+        "extensions": list(placement.extensions),
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
     }
 
 

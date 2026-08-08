@@ -47,7 +47,8 @@ import atlas
 
 installations = atlas.detect(home="/home/deck")
 # -> every arrangement present on the machine, each as its own handle (one Installation
-#    protocol: kind, kinds, root, health, save_location, plus the four firmware calls below).
+#    protocol: kind, kinds, root, health, save_location, the three catalogue questions,
+#    plus the four firmware calls below).
 #    Never a silently chosen winner: ambiguity is a truthful result.
 
 inst = installations[0]              # e.g. a RetroDeck handle — live, re-reads its sources per query
@@ -64,6 +65,11 @@ answer = inst.emulators_for("n64")   # on EVERY handle: a CatalogueAnswer (entri
 emu = answer.entries[0]              # launch entries in effective priority order, as configured right now
                                      # no entries? the caveat says which kind of none — see below
 emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64")   # the entry carries its own core
+
+inst.rom_location("n64")             # on EVERY handle: a RomPlacement (dir, physical_dir, extensions,
+                                     # sources, caveats) — where that system's ROMs live and which files
+                                     # the frontend launches, both off the same <system> declaration.
+                                     # no dir? the caveat says which kind of none, same as above.
 
 # -> SavePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir),
 #    or — on the entry route — Unresolved (a typed domain outcome, e.g. a standalone entry
@@ -131,14 +137,21 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   entries, first = default), _capability_ (core `.info` `systemid` — which cores can run a platform), _fact_ (RetroArch
   playlists — which core actually launched a ROM). When no catalogue exists, the caller names the core; atlas does not
   invent a default.
-- **Absent is not one answer, so the question is on the protocol.** Every handle answers `emulators_for` / `systems`;
-  only RetroDECK answers from a catalogue, and the others say why in a caveat rather than leaving the caller to
-  `isinstance`-narrow and guess. The reasons are three distinct codes because they are three distinct claims: a bare
-  RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement), an EmuDeck arrangement
-  may have one whose location atlas has not established (`emulator-catalogue-unestablished`, a statement about atlas —
-  never to be read as an absence), and a catalogue atlas could not read — missing, unreadable, or empty — says nothing
-  at all (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware route already
-  states.
+- **Absent is not one answer, so the question is on the protocol.** Every handle answers `emulators_for` / `systems` /
+  `rom_location`; only RetroDECK answers from a catalogue, and the others say why in a caveat rather than leaving the
+  caller to `isinstance`-narrow and guess. The reasons are three distinct codes because they are three distinct claims:
+  a bare RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement), an EmuDeck
+  arrangement may have one whose location atlas has not established (`emulator-catalogue-unestablished`, a statement
+  about atlas — never to be read as an absence), and a catalogue atlas could not read — missing, unreadable, or empty —
+  says nothing at all (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware
+  route already states.
+- **A directory read out of a config atlas could not read is not a directory.** `rom_location` resolves the frontend's
+  own documented default where the ROM-directory setting is genuinely unset, because on this arrangement the home that
+  default hangs off is read rather than assumed. It refuses where the settings file exists and cannot be read
+  (`frontend-settings-unreadable`) and where a Flatpak override moved the tree that file lives in
+  (`config-home-relocated`) — the second reaching past this answer, since other readings from the same handle rest on
+  that tree too. Missing and unreadable are the same empty mapping and opposite facts, which is exactly the collapse the
+  seam's explicit outcomes exist to prevent.
 
 ## The machine seam
 
@@ -329,6 +342,18 @@ what the machine declares, never assumed from the spelling.
 
 ## Settled decisions
 
+- **Atlas is forward-only, and reverse lookup is a non-goal.** Every question runs content → placement. The inverse —
+  "which ROM owns this save file?" — is not a missing feature, it is one atlas would have to guess at: it means reading
+  a directory and attributing each name to a content item, and a core that names saves after anything but the ROM stem
+  (a disc's product id, a shared memory card serving every game of a system) makes the attribution undecidable from the
+  file alone. The recommended route inverts the forward answer instead: a client walks the library it already knows,
+  asks each item where its save goes, and keeps `{placement → item}`. That index is exact for everything the client
+  holds and silent about everything else, which is the honest shape of the answer. Atlas will not ship it, because the
+  library it would need to walk is the client's, not the machine's.
+- **File metadata on placements is the client's job.** A placement names files; it never carries their mtime, size or
+  hash. Those are one stat — or, for a hash, a full read — per named file, on answers that mostly do not want them, and
+  the seam prices the two separately for that reason (`file_size` stats, `file_digest` reads). Clients that want their
+  reads to go through the same seam in tests use `Machine.file_size` / `Machine.file_digest` directly.
 - **Summary fields are earned, not decorative.** A subject — a whole answer, or one entry of one — carries a summary
   only where the client's _first_ question is a fact that subject itself establishes. Three do: "is this installation
   ok?" (`Health.ok`), "is everything this core needs in place?" (`CoreFirmware.requirements_met`), and "is this one file

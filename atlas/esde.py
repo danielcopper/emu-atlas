@@ -89,8 +89,25 @@ def _launch_entries(system_el: ET.Element, *, system: str, provenance: str) -> t
     return tuple(entries)
 
 
-def parse_es_systems(text: str, *, provenance: str) -> dict[str, tuple[EmulatorSpec, ...]]:
-    """Parse one ``es_systems.xml`` layer into ``{system: entries-in-order}``.
+@dataclass(frozen=True, slots=True)
+class SystemDeclaration:
+    """One ``<system>`` as declared: what launches it, where it lives, what counts.
+
+    ``rom_path`` is the ``<path>`` text **verbatim**, still carrying whatever
+    tokens the file wrote (``%ROMPATH%/n64``) — resolving them needs a setting
+    this parser does not read, so substituting here would mean guessing it.
+    ``extensions`` is the ``<extension>`` list split on whitespace, each token
+    exactly as declared: ES-DE lists both cases separately (``.z64 .Z64``), and
+    normalizing would state a vocabulary the file does not.
+    """
+
+    entries: tuple[EmulatorSpec, ...] = ()
+    rom_path: str | None = None
+    extensions: tuple[str, ...] = ()
+
+
+def parse_es_systems(text: str, *, provenance: str) -> dict[str, SystemDeclaration]:
+    """Parse one ``es_systems.xml`` layer into ``{system: declaration}``.
 
     Malformed XML yields ``{}`` — the layer is skipped, never guessed at.
     """
@@ -98,27 +115,130 @@ def parse_es_systems(text: str, *, provenance: str) -> dict[str, tuple[EmulatorS
         root = ET.fromstring(text)
     except ET.ParseError:
         return {}
-    result: dict[str, tuple[EmulatorSpec, ...]] = {}
+    result: dict[str, SystemDeclaration] = {}
     for system_el in root.findall("system"):
         name = (system_el.findtext("name") or "").strip()
         if not name:
             continue
-        result[name] = _launch_entries(system_el, system=name, provenance=provenance)
+        declared_path = (system_el.findtext("path") or "").strip()
+        result[name] = SystemDeclaration(
+            entries=_launch_entries(system_el, system=name, provenance=provenance),
+            rom_path=declared_path or None,
+            extensions=tuple((system_el.findtext("extension") or "").split()),
+        )
     return result
 
 
 def merge_layers(
-    bundled: dict[str, tuple[EmulatorSpec, ...]],
-    custom: dict[str, tuple[EmulatorSpec, ...]],
-) -> dict[str, tuple[EmulatorSpec, ...]]:
+    bundled: dict[str, SystemDeclaration],
+    custom: dict[str, SystemDeclaration],
+) -> dict[str, SystemDeclaration]:
     """Merge the custom overlay over the bundled catalogue.
 
     Per ES-DE semantics a custom system of the same name replaces the bundled
-    one entirely; other custom systems are added.
+    one entirely; other custom systems are added. Replacement is of the whole
+    declaration — an overlay system brings its own path and extensions along
+    with its commands, because that is the ``<system>`` element ES-DE ends up
+    with.
     """
     merged = dict(bundled)
     merged.update(custom)
     return merged
+
+
+# ES-DE substitutes exactly this token in a system's <path>, and only there;
+# every other %TOKEN% in the file belongs to <command>.
+ROMPATH_TOKEN = "%ROMPATH%"
+
+
+def parse_es_settings(text: str) -> dict[str, str] | None:
+    """The ``<string name= value=>`` settings of an ``es_settings.xml``, or ``None``.
+
+    **The file is not well-formed XML**, and that is not a defect to route
+    around: ES-DE writes a bare sequence of sibling elements with no root, and
+    reads it back with pugixml, which does not enforce the single-root rule.
+    Handing the text straight to ``xml.etree`` fails at the second element
+    ("junk after document element") — so a reader that did the obvious thing
+    would call every real machine's settings unreadable and then report the ROM
+    directory unresolvable everywhere. The document is wrapped in a synthetic
+    root to read the fragments the way the writer meant them.
+
+    A leading UTF-8 BOM is stripped for the same reason, not as a courtesy:
+    pugixml detects the encoding from it and reads such a file normally, so the
+    settings in it are the settings *in force*, and refusing them would make
+    atlas answer about a configuration the frontend is not using. It has to go
+    before the wrap either way — inside one it would push the XML declaration
+    off the front of the document.
+
+    ``None`` is *unparseable even then*, and is why this does not simply answer
+    ``{}``: a file that could not be read and a file that sets nothing are the
+    same empty mapping and opposite facts, and only one of them means the
+    frontend's own defaults apply.
+    """
+    body = text.removeprefix("\ufeff").lstrip()
+    if body.startswith("<?"):
+        _, _, body = body.partition("?>")
+    try:
+        root = ET.fromstring(f"<es-settings>{body}</es-settings>")
+    except ET.ParseError:
+        return None
+    settings: dict[str, str] = {}
+    for element in root:
+        if element.tag != "string":
+            continue
+        name = element.get("name")
+        if name:
+            settings[name] = element.get("value") or ""
+    return settings
+
+
+def _collapse_separators(path: str) -> str:
+    """ES-DE's ``//`` collapse — the loop, not one pass.
+
+    ``Utils::String::replace`` re-scans until the pattern is gone
+    (``es-core/src/utils/StringUtil.cpp``, ES-DE 3.4.1), so ``a///b`` reaches
+    ``a/b`` there. Python's ``str.replace`` is one pass over non-overlapping
+    matches and would leave ``a//b`` behind, which is a different directory
+    string for anything comparing paths textually.
+    """
+    while "//" in path:
+        path = path.replace("//", "/")
+    return path
+
+
+def resolve_rom_path(declared: str, rom_directory: str | None) -> str | None:
+    """A system's declared ``<path>`` with ``%ROMPATH%`` substituted, or ``None``.
+
+    Follows ``SystemData::loadConfig()`` (``es-app/src/SystemData.cpp``, ES-DE
+    3.4.1, ~L859-861, line numbers read from the tagged source over the web):
+    the token is replaced with the ROM directory, then ``//`` is collapsed —
+    **unconditionally**, on a path that carried no token just the same, which is
+    why the collapse here is not inside the substitution branch.
+
+    The directory is normalized to exactly one trailing separator first, because
+    that is the shape ES-DE substitutes: ``FileData::getROMDirectory()``
+    (``es-app/src/FileData.cpp``, ES-DE 3.4.1, ~L313-345) appends one where the
+    configured value lacks it and returns the empty-setting default with one
+    already on. Doing it here rather than appending unconditionally keeps a
+    configured ``…/roms/`` from spelling the answer ``…/roms//n64``.
+
+    A declared path carrying no token needs no directory and resolves to
+    itself: ES-DE insists on the token only in ``createSystemDirectories()``
+    (~L1366, the placeholder-generation path), never when loading the
+    catalogue, so a literal ``<path>`` is a real path here too.
+
+    ``None`` when the token is present and *rom_directory* cannot stand in for
+    it: unset, or not absolute. A relative or ``~``-prefixed value is refused
+    rather than expanded, because what those resolve against is the ES-DE
+    process's own environment inside its sandbox, which atlas has not
+    established — and a ROM directory guessed wrong is a directory the caller
+    would go looking in.
+    """
+    if ROMPATH_TOKEN not in declared:
+        return _collapse_separators(declared) or None
+    if not rom_directory or not rom_directory.startswith("/"):
+        return None
+    return _collapse_separators(declared.replace(ROMPATH_TOKEN, f"{rom_directory.rstrip('/')}/"))
 
 
 @dataclass(frozen=True, slots=True)

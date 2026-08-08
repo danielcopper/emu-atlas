@@ -37,6 +37,7 @@ INPUT_FIELDS_OPTIONAL = {
     "aggregate_query",
     "catalogue_query",
     "systems_query",
+    "rom_location_query",
     "entry_query",
     "firmware_query",
     "identify_query",
@@ -45,6 +46,9 @@ QUERY_FIELDS = {"content_path", "core_so", "installation"}
 CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
 # The systems question takes no arguments — only which handle answers it.
 SYSTEMS_QUERY_FIELDS = {"installation"}
+# ROM placement is asked of one system; content plays no part in where a
+# system's ROMs live, so unlike the catalogue query this one takes no path.
+ROM_LOCATION_QUERY_FIELDS = {"installation", "system"}
 ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
 # The aggregate asks EVERY detected handle one question, so it names the
 # question instead of a handle. The fan-out is the same for every question it
@@ -190,6 +194,10 @@ KNOWN_CAVEAT_CODES = {
     "firmware-unreadable",
     "firmware-content-unidentified",
     "system-unknown",
+    "rom-path-undeclared",
+    "rom-path-unresolved",
+    "frontend-settings-unreadable",
+    "config-home-relocated",
     "system-assignment-derived",
     "core-without-systemname",
     "system-assignment-may-hide-cores",
@@ -343,6 +351,19 @@ def _validate_catalogue_query(name: str, query: Any) -> None:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.catalogue_query.{key} must be a non-empty string")
     _validate_handle_selector(name, "catalogue_query", query)
+
+
+def _validate_rom_location_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict):
+        fail(f"{name}: input.rom_location_query must be an object")
+    if not set(query) <= ROM_LOCATION_QUERY_FIELDS or "system" not in query:
+        fail(
+            f"{name}: input.rom_location_query must carry 'system' plus optional "
+            f"{sorted(ROM_LOCATION_QUERY_FIELDS - {'system'})}"
+        )
+    if not isinstance(query["system"], str) or not query["system"]:
+        fail(f"{name}: input.rom_location_query.system must be a non-empty string")
+    _validate_handle_selector(name, "rom_location_query", query)
 
 
 def _validate_systems_query(name: str, query: Any) -> None:
@@ -510,6 +531,8 @@ def _validate_input_queries(name: str, inp: Any) -> None:
         _validate_catalogue_query(name, inp["catalogue_query"])
     if "systems_query" in inp:
         _validate_systems_query(name, inp["systems_query"])
+    if "rom_location_query" in inp:
+        _validate_rom_location_query(name, inp["rom_location_query"])
     if "entry_query" in inp:
         _validate_entry_query(name, inp["entry_query"])
     if "firmware_query" in inp:
@@ -971,6 +994,35 @@ def _no_catalogue_codes_in(caveats: list[Any]) -> list[str]:
     return sorted({c["code"] for c in caveats} & NO_CATALOGUE_CODES)
 
 
+def _validate_rom_location(name: str, placement: Any) -> None:
+    """A ROM placement: the pair of directory views, the declaration, and why not."""
+    fields = {"dir", "physical_dir", "extensions", "caveats"}
+    if not isinstance(placement, dict) or set(placement) != fields:
+        fail(f"{name}: expected.rom_location must carry exactly {sorted(fields)}")
+    for key in ("dir", "physical_dir"):
+        if placement[key] is not None and (not isinstance(placement[key], str) or not placement[key]):
+            fail(f"{name}: expected.rom_location.{key} must be a non-empty string or null")
+    if placement["physical_dir"] is not None and placement["dir"] is None:
+        fail(f"{name}: expected.rom_location.physical_dir without a dir — nothing was resolved to back")
+    if not isinstance(placement["extensions"], list) or not all(
+        isinstance(e, str) and e for e in placement["extensions"]
+    ):
+        fail(f"{name}: expected.rom_location.extensions must be a list of non-empty strings")
+    _validate_caveats(name, placement["caveats"])
+    # Both facts come out of the same <system> element, so a catalogue nobody
+    # read yields neither — an expectation stating either alongside one of those
+    # codes locks in an answer no resolver can produce.
+    unread = _no_catalogue_codes_in(placement["caveats"])
+    if unread and (placement["dir"] or placement["extensions"]):
+        fail(f"{name}: expected.rom_location states an answer and {unread}")
+    # No directory is never the whole answer: every branch that resolves none
+    # says which kind of none it is, and a vector asserting silence would lock
+    # in the one shape the caveats exist to prevent — a client reading null as
+    # "look in the default place".
+    if placement["dir"] is None and not placement["caveats"]:
+        fail(f"{name}: expected.rom_location resolved no dir and states no caveat saying why")
+
+
 def _validate_catalogue(name: str, catalogue: Any) -> None:
     """A catalogue answer: the entries, and why there are none when there are none."""
     if not isinstance(catalogue, dict) or set(catalogue) != {"entries", "caveats"}:
@@ -1049,6 +1101,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         "aggregate",
         "catalogue",
         "systems",
+        "rom_location",
         "entry_save_location",
         "firmware",
         "identification",
@@ -1061,6 +1114,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: catalogue_query and catalogue expectation must appear together")
     if ("systems" in keys) != ("systems_query" in inp):
         fail(f"{name}: systems_query and systems expectation must appear together")
+    if ("rom_location" in keys) != ("rom_location_query" in inp):
+        fail(f"{name}: rom_location_query and rom_location expectation must appear together")
     if ("save_location" in keys) != ("query" in inp):
         fail(f"{name}: a query and a save_location expectation must appear together")
     if ("entry_save_location" in keys) != ("entry_query" in inp):
@@ -1083,6 +1138,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_aggregate(name, expected["aggregate"], inp["aggregate_query"], expected["installations"])
     if "catalogue" in keys:
         _validate_catalogue(name, expected["catalogue"])
+    if "rom_location" in keys:
+        _validate_rom_location(name, expected["rom_location"])
     if "systems" in keys:
         _validate_systems(name, expected["systems"])
     if "entry_save_location" in keys:
