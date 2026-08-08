@@ -47,7 +47,8 @@ import atlas
 
 installations = atlas.detect(home="/home/deck")
 # -> every arrangement present on the machine, each as its own handle (one Installation
-#    protocol: kind, kinds, root, health, save_location, plus the four firmware calls below).
+#    protocol: kind, kinds, root, health, save_location, the three catalogue questions,
+#    plus the four firmware calls below).
 #    Never a silently chosen winner: ambiguity is a truthful result.
 
 inst = installations[0]              # e.g. a RetroDeck handle — live, re-reads its sources per query
@@ -64,6 +65,11 @@ answer = inst.emulators_for("n64")   # on EVERY handle: a CatalogueAnswer (entri
 emu = answer.entries[0]              # launch entries in effective priority order, as configured right now
                                      # no entries? the caveat says which kind of none — see below
 emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64")   # the entry carries its own core
+
+inst.rom_location("n64")             # on EVERY handle: a RomPlacement (dir, physical_dir, extensions,
+                                     # sources, caveats) — where that system's ROMs live and which files
+                                     # the frontend launches, both off the same <system> declaration.
+                                     # no dir? the caveat says which kind of none, same as above.
 
 # -> SavePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir),
 #    or — on the entry route — Unresolved (a typed domain outcome, e.g. a standalone entry
@@ -131,14 +137,21 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   entries, first = default), _capability_ (core `.info` `systemid` — which cores can run a platform), _fact_ (RetroArch
   playlists — which core actually launched a ROM). When no catalogue exists, the caller names the core; atlas does not
   invent a default.
-- **Absent is not one answer, so the question is on the protocol.** Every handle answers `emulators_for` / `systems`;
-  only RetroDECK answers from a catalogue, and the others say why in a caveat rather than leaving the caller to
-  `isinstance`-narrow and guess. The reasons are three distinct codes because they are three distinct claims: a bare
-  RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement), an EmuDeck arrangement
-  may have one whose location atlas has not established (`emulator-catalogue-unestablished`, a statement about atlas —
-  never to be read as an absence), and a catalogue atlas could not read — missing, unreadable, or empty — says nothing
-  at all (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware route already
-  states.
+- **Absent is not one answer, so the question is on the protocol.** Every handle answers `emulators_for` / `systems` /
+  `rom_location`; only RetroDECK answers from a catalogue, and the others say why in a caveat rather than leaving the
+  caller to `isinstance`-narrow and guess. The reasons are three distinct codes because they are three distinct claims:
+  a bare RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement), an EmuDeck
+  arrangement may have one whose location atlas has not established (`emulator-catalogue-unestablished`, a statement
+  about atlas — never to be read as an absence), and a catalogue atlas could not read — missing, unreadable, or empty —
+  says nothing at all (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware
+  route already states.
+- **A directory read out of a config atlas could not read is not a directory.** `rom_location` resolves the frontend's
+  own documented default where the ROM-directory setting is genuinely unset, because on this arrangement the home that
+  default hangs off is read rather than assumed. It refuses where the settings file exists and cannot be read
+  (`frontend-settings-unreadable`) and where a Flatpak override moved the tree that file lives in
+  (`config-home-relocated`) — the second reaching past this answer, since other readings from the same handle rest on
+  that tree too. Missing and unreadable are the same empty mapping and opposite facts, which is exactly the collapse the
+  seam's explicit outcomes exist to prevent.
 
 ## The machine seam
 

@@ -132,13 +132,13 @@ for answered in everywhere.save_location(content_path=rom_path):
 ```
 
 Every question a handle answers, the aggregate asks all of them: `health()`, `save_location()`, `systems()`,
-`emulators_for()`, `firmware_for_core()`, `firmware_for_system()`, `firmware_inventory()`, `identify_firmware()` — same
-arguments, same answers. Each returns a tuple of labelled answers:
+`emulators_for()`, `rom_location()`, `firmware_for_core()`, `firmware_for_system()`, `firmware_inventory()`,
+`identify_firmware()` — same arguments, same answers. Each returns a tuple of labelled answers:
 
 - `answered.installation` is the handle itself, not a copy of its identity: read `kind`, `kinds`, `root()` and
   `health()` off it, or ask it the next question (its `emulators_for`, then that entry's own `save_location`).
 - `answered.answer` is exactly what the handle route returns for that question — the same `SavePlacement`,
-  `CatalogueAnswer` or `FirmwareAnswer`, unchanged, with its own caveats.
+  `CatalogueAnswer`, `RomPlacement` or `FirmwareAnswer`, unchanged, with its own caveats.
 
 The aggregate resolves nothing itself. It merges nothing, drops no duplicates, and prefers nothing beyond detection
 order (RetroDECK, EmuDeck, bare Flatpak, bare native): a machine that runs PPSSPP under two arrangements gives you
@@ -524,16 +524,18 @@ answer different questions. Write through `dir` unless you specifically need the
 in your code does not, and it is wrong silently. The extensions are the declaration verbatim — both cases where the file
 lists both cases — because which of them to act on is the frontend's business and not something atlas filters for you.
 
-**`dir` is `None` whenever atlas resolved no directory, and the caveat says which of four reasons.** Three are the ones
+**`dir` is `None` whenever atlas resolved no directory, and the caveat says which of seven reasons.** Three are the ones
 the catalogue question already has — the arrangement ships no catalogue (`emulator-catalogue-unavailable`), atlas has
 not established where it keeps one (`emulator-catalogue-unestablished`), or it could not be read
-(`emulator-catalogue-unreadable`). Two more belong to this question, and both are facts about the machine rather than
-about atlas:
+(`emulator-catalogue-unreadable`). Four belong to this question, and they split along the line that decides what you can
+do about them — the first two are facts about the machine, the last two statements about atlas:
 
-| caveat                | what it means                                                                         |
-| --------------------- | ------------------------------------------------------------------------------------- |
-| `rom-path-undeclared` | the catalogue was read and declares no such system, or declares it without a `<path>` |
-| `rom-path-unresolved` | it declares a `%ROMPATH%` path atlas will not resolve — see below                     |
+| caveat                         | what it means                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `rom-path-undeclared`          | the catalogue was read and declares no such system, or declares it without a `<path>` |
+| `rom-path-unresolved`          | the frontend's ROM-directory setting holds something that is not an absolute path     |
+| `frontend-settings-unreadable` | the file that setting lives in is there and atlas could not read it                   |
+| `config-home-relocated`        | a Flatpak override moved the tree the frontend's own default is relative to           |
 
 **An unset ROM-directory setting is not one of those cases** — it resolves. The frontend has a documented home-relative
 default, and on this arrangement its home is knowable rather than guessable: the distribution's only launch path hands
@@ -542,14 +544,20 @@ from. So `dir` comes back as that tree's `ROMs` directory, and the answer is a r
 Resolving is not asserting the directory exists — nothing stats it, and an absent one is the ordinary missing-directory
 state.
 
-What is left under `rom-path-unresolved` is the genuinely unknowable: a configured value that is not an absolute path,
-and an environment atlas cannot follow — a Flatpak override that redefines the app's config home moves the tree the
-default is relative to, and may mean the settings file atlas read is not the one in force either. Both come back with no
-directory and a message saying which.
+A settings file that is **missing** is the unset case, and one that is **there and unreadable** is not: the frontend
+reads that file without trouble, so whatever it says is the configuration in force, and answering the default would name
+a directory belonging to a configuration nobody established. That is what `frontend-settings-unreadable` says, and it
+carries the read status in `data["status"]` (`unreadable`, `invalid-text`, or `unparseable`).
+
+`config-home-relocated` is worth handling on its own rather than as one more "no directory". It fires when a Flatpak
+override redefines `XDG_CONFIG_HOME` or `HOME` for the app — which moves the tree the frontend's default is relative to,
+and moves the settings file atlas read along with it. So the caveat is a warning about **this handle's other answers**
+too, not only about this one: they may rest on a settings file that is not the one in force. `data` names the override
+file and the key.
 
 Never read `None` as "look in the default place" — where there is a default worth standing behind, atlas has already
-applied it. `rom-path-unresolved` carries the declared path in `data["declared"]`, so a client that knows its own setup
-can finish the substitution atlas refused to guess at.
+applied it. `rom-path-unresolved` and `config-home-relocated` both carry the declared path in `data["declared"]`, so a
+client that knows its own setup can finish the substitution atlas refused to guess at.
 
 Extensions survive an unresolved directory: which files launch is declared in the same element and does not depend on
 where they sit.

@@ -637,6 +637,69 @@ carries its own choice as `<altemulator>` — so the lookup stays depth-bounded.
 When no catalogue exists (bare RetroArch, EmuDeck without ES-DE), the caller names the core; a default cannot be read
 and must not be invented.
 
+### Where a system's ROMs live — `%ROMPATH%` and the home behind it
+
+**[V]** The same `<system>` element carries `<path>` and `<extension>`. `<path>` is written with ES-DE's own token
+(`%ROMPATH%/n64`), and `SystemData::loadConfig()` substitutes it —
+`path = Utils::String::replace(path, "%ROMPATH%", rompath)` followed by an **unconditional**
+`path = Utils::String::replace(path, "//", "/")` (`es-app/src/SystemData.cpp` ~L859-861, ES-DE 3.4.1; `rompath` is
+`FileData::getROMDirectory()`, bound at ~L781). Line numbers read from the tagged upstream source over the web, not from
+a local checkout — the shipped component is a binary. Two details a reimplementation gets wrong by default:
+
+- `Utils::String::replace` **loops** until the pattern is gone (`es-core/src/utils/StringUtil.cpp`), so `a///b` reaches
+  `a/b`. Python's single-pass `str.replace` leaves `a//b`.
+- The collapse runs on paths that carried no token too, because it is not inside the substitution branch.
+
+**[V]** `FileData::getROMDirectory()` (`es-app/src/FileData.cpp` ~L313-345, ES-DE 3.4.1) returns `<home>/ROMs/` when the
+`ROMDirectory` setting is empty, and otherwise the configured value with **one** trailing separator appended where it is
+missing. So the directory ES-DE substitutes always ends in a separator, which is what the `//` collapse then absorbs — a
+configured `…/roms/` must not spell the answer `…/roms//n64`.
+
+**[V]** The token is _required_ only in `createSystemDirectories()` (~L1214), whose guard at ~L1366 skips any system
+whose `<path>` does not start with it, with a warning. That is the placeholder-generation path. `loadConfig()` has no
+such guard, so a `<path>` without the token is a literal directory ES-DE loads normally.
+
+**[V]** The setting is `ROMDirectory` in `es_settings.xml`, **not** `roms_path` in `retrodeck.json`, and the two are
+wired one way only. RetroDECK writes its `roms_path` into ES-DE's setting —
+`set_setting_value "$es_settings" "ROMDirectory" "$roms_path" "es_settings"` (`components/es-de/component_prepare.sh:17`
+and `:35`, `component_update.sh:19`), whose `es_settings` branch is a `sed -i` over `name" value="…"`
+(`libexec/framework.sh:130-132`). Nothing anywhere in the deployment reads `ROMDirectory` back out (unfiltered grep of
+the whole `files/` tree, 0.10.9b, 2026-08-08). A user who edits either file alone has moved one and not the other, and
+only `ROMDirectory` is what the frontend substitutes.
+
+**[V]** The shipped template holds the setting **empty**: `<string name="ROMDirectory" value="" />`
+(`components/es-de/rd_config/es_settings.xml:158`). The empty-setting branch is therefore the state a fresh installation
+is in before the first `component_prepare.sh` run, not a theoretical one.
+
+**[V]** The home that branch falls back on is not the user's. RetroDECK's only path to the frontend is
+`components/es-de/component_launcher.sh:10`:
+
+```bash
+exec "$component_path/bin/es-de" --home "${XDG_CONFIG_HOME}" "$@"
+```
+
+An explicit `--home` outranks both `portable.txt` and `$HOME`, and under Flatpak `XDG_CONFIG_HOME` is the per-app config
+directory — the same tree `es_settings.xml` was read out of. So one path answers both questions, and the empty-setting
+default is a reading rather than an assumption.
+
+**[D]** RetroDECK ships the `RetroDECK/ES-DE` fork; `getROMDirectory` is taken as unmodified at the pinned build. The
+component is a binary here, so this is not verified against fork source.
+
+**[V]** What can still move that tree is a Flatpak override redefining `XDG_CONFIG_HOME` or `HOME` for the app. Four
+files can carry one, and `flatpak override --show [APP]` opens exactly these (`strace`, flatpak 1.16.6, reference
+machine 2026-08-08):
+
+| file                                        | scope                          |
+| ------------------------------------------- | ------------------------------ |
+| `~/.local/share/flatpak/overrides/<app id>` | user installation, this app    |
+| `/var/lib/flatpak/overrides/<app id>`       | system installation, this app  |
+| `~/.local/share/flatpak/overrides/global`   | user installation, every app   |
+| `/var/lib/flatpak/overrides/global`         | system installation, every app |
+
+Per-app beats global — "if the application ID APP is not specified then the overrides affect all applications, but the
+per-application overrides can override the global overrides" (`flatpak-override(1)`). None of the four exists on the
+reference machine, so the resolved default holds there.
+
 ## 16. What this implies for the design
 
 Recorded as consequences of the findings; the decisions themselves are settled in `DESIGN.md`:
