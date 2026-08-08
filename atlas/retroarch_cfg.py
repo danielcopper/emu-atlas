@@ -1,7 +1,7 @@
-"""Interpretation of ``retroarch.cfg`` and its override chain — the save-layout keys.
+"""Interpretation of ``retroarch.cfg`` and its override chain — the layout keys.
 
-RetroArch's on-disk save layout is not a static path: it is governed by live
-config values, resolved through a four-layer chain in which later files win
+RetroArch's on-disk layout for save data is not a static path: it is governed by
+live config values, resolved through a four-layer chain in which later files win
 (``config_load_override()``, RetroArch ``configuration.c:7095``):
 
 1. ``retroarch.cfg`` — global
@@ -19,6 +19,14 @@ applied. Defaults differ per install flavor and are passed in as
 :class:`LayoutDefaults`; the shipped sets below are read from the respective
 upstream sources, version-pinned in ``docs/research/retrodeck-save-placement.md``.
 
+**Two families, one chain.** Savefiles and savestates are placed by four keys
+each, and the two quartets go through the very same machinery: RetroArch reads
+them side by side in one function (``runloop.c:8752-8979``), with the same
+content fallback, the same two sorting stages in the same order and the same
+silent revert. So the resolution here is parameterized by :class:`LayoutKeys`
+rather than written twice — the family decides which keys are read and what the
+provenance calls them, and nothing else.
+
 Pure text in, value object out. No I/O — the machine seam supplies the texts.
 """
 
@@ -27,22 +35,71 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Sequence
 
-_IN_CONTENT_DIR = "savefiles_in_content_dir"
-_SORT_BY_CONTENT = "sort_savefiles_by_content_enable"
-_SORT_BY_CORE = "sort_savefiles_enable"
-_SAVEFILE_DIRECTORY = "savefile_directory"
 
-# The keys this module resolves — the ones that decide where a save lands. A
-# line RetroArch drops is stated only when it aims at one of these: elsewhere a
-# dropped line is simply a key that is not set, which is what atlas reports.
-_GOVERNING_KEYS = (_IN_CONTENT_DIR, _SORT_BY_CONTENT, _SORT_BY_CORE, _SAVEFILE_DIRECTORY)
+@dataclass(frozen=True, slots=True)
+class LayoutKeys:
+    """The four cfg keys that place one family of save data.
+
+    RetroArch spells the same four questions twice, once per family, and reads
+    both quartets in one pass (``runloop.c:8763-8768``). Naming them here is
+    what lets one resolution answer for either: ``in_content_dir`` roots at the
+    content, ``sort_by_content`` and ``sort_by_core`` append their components in
+    that order, and ``directory`` is the configured root.
+
+    ``label`` names the family in prose, and ``platform_default_subdir`` is the
+    directory RetroArch seeds under its config tree before reading any config —
+    ``saves`` for savefiles, ``states`` for savestates
+    (``platform_unix.c:2133-2136``). Both travel with the keys because every
+    caller that needs one needs the other.
+    """
+
+    in_content_dir: str
+    sort_by_content: str
+    sort_by_core: str
+    directory: str
+    label: str
+    platform_default_subdir: str
+
+    @property
+    def governing(self) -> tuple[str, str, str, str]:
+        """The four keys, in the order a resolution reads them.
+
+        A line RetroArch drops is stated only when it aims at one of these:
+        elsewhere a dropped line is simply a key that is not set, which is what
+        atlas reports.
+        """
+        return (self.in_content_dir, self.sort_by_content, self.sort_by_core, self.directory)
+
+
+SAVEFILE_KEYS = LayoutKeys(
+    in_content_dir="savefiles_in_content_dir",
+    sort_by_content="sort_savefiles_by_content_enable",
+    sort_by_core="sort_savefiles_enable",
+    directory="savefile_directory",
+    label="savefile",
+    platform_default_subdir="saves",
+)
+
+SAVESTATE_KEYS = LayoutKeys(
+    in_content_dir="savestates_in_content_dir",
+    sort_by_content="sort_savestates_by_content_enable",
+    sort_by_core="sort_savestates_enable",
+    directory="savestate_directory",
+    label="savestate",
+    platform_default_subdir="states",
+)
 
 
 @dataclass(frozen=True, slots=True)
 class LayoutDefaults:
-    """The per-flavor defaults applied when a key is absent from every layer."""
+    """The per-flavor defaults applied when a key is absent from every layer.
 
-    savefiles_in_content_dir: bool
+    One set serves both families: upstream gives the savestate keys the same
+    compile-time values as their savefile twins (``config.def.h:982-989``), and
+    the two arrangements that ship their own defaults set both quartets.
+    """
+
+    in_content_dir: bool
     sort_by_content: bool
     sort_by_core: bool
     label: str
@@ -50,9 +107,12 @@ class LayoutDefaults:
 
 # RetroArch upstream compile-time defaults (config.def.h:982-989). Note that
 # upstream sorts BY CORE by default — a bare install without the key set puts
-# saves in per-library_name subdirectories.
+# saves in per-library_name subdirectories. The savestate quartet is identical
+# key for key: DEFAULT_SORT_SAVESTATES_ENABLE true (:983),
+# DEFAULT_SORT_SAVESTATES_BY_CONTENT_ENABLE false (:985),
+# DEFAULT_SAVESTATES_IN_CONTENT_DIR false (:988).
 UPSTREAM_DEFAULTS = LayoutDefaults(
-    savefiles_in_content_dir=False,
+    in_content_dir=False,
     sort_by_content=False,
     sort_by_core=True,
     label="RetroArch upstream default (config.def.h)",
@@ -86,7 +146,7 @@ class IgnoredSetting:
 
 @dataclass(frozen=True, slots=True)
 class RejectedDirectory:
-    """A ``savefile_directory`` RetroArch read and refused as a saves root.
+    """A configured directory RetroArch read and refused as a root.
 
     ``path_is_directory`` failed on it, so that read set nothing
     (``configuration.c:6920-6932``). ``layer`` names the file that stated the
@@ -110,31 +170,35 @@ class RejectedDirectory:
 
 @dataclass(frozen=True, slots=True)
 class RetroArchCfg:
-    """The save-layout decision resolved through the override chain, with provenance.
+    """One family's layout decision resolved through the override chain, with provenance.
 
-    ``savefile_directory`` is the resolved saves-root value with ``~`` expanded,
-    or ``None`` when the platform default applies (key absent, blank, or the
-    literal ``"default"``). RetroArch initializes platform default directories
-    before applying the config — on desktop Unix the SRAM default is ``saves``
-    under the RetroArch config tree (``platform_unix.c:2133-2134``; that tree is
+    ``keys`` says which family this is — which four cfg keys were read, and
+    therefore what the fields below mean. ``directory`` is the resolved root
+    value with ``~`` expanded, or ``None`` when the platform default applies
+    (key absent, blank, or the literal ``"default"``). RetroArch initializes
+    platform default directories before applying the config — on desktop Unix
+    the SRAM default is ``saves`` and the savestate default ``states``, both
+    under the RetroArch config tree (``platform_unix.c:2133-2136``; that tree is
     ``$XDG_CONFIG_HOME/retroarch`` or ``$HOME/.config/retroarch``,
     ``platform_unix.c:1943-1957``) — so an unset key means *that* directory,
-    never the ROM's directory (the ``runloop.c:8786`` content fallback fires
-    only when the effective dir is still empty, which the platform defaults
-    prevent on desktop). The caller supplies the concrete platform default.
+    never the ROM's directory (the content fallback at ``runloop.c:8786`` and
+    its savestate twin at ``:8799`` fire only when the effective dir is still
+    empty, which the platform defaults prevent on desktop). The caller supplies
+    the concrete platform default.
     ``sources`` records, per governing key, which file (or default) produced
     the value; when an override won, it names it. ``ignored`` carries the
     governing settings the configs *state* and RetroArch does not apply — a
     line its parser drops, a value its typed getter refuses — so a caller sees
     why the file and the answer disagree. ``rejected_directories`` is the same
-    kind of gap for the saves root: values RetroArch read and found not to be
+    kind of gap for the root: values RetroArch read and found not to be
     directories.
     """
 
-    savefiles_in_content_dir: bool
+    keys: LayoutKeys
+    in_content_dir: bool
     sort_by_content: bool
     sort_by_core: bool
-    savefile_directory: str | None
+    directory: str | None
     sources: tuple[str, ...]
     ignored: tuple[IgnoredSetting, ...] = ()
     rejected_directories: tuple[RejectedDirectory, ...] = ()
@@ -511,8 +575,9 @@ def chain_value(
     The generic path/array loops write whatever the merged config holds
     (``configuration.c:6532-6537``), so the last layer that sets the key is the
     answer; only ``savefile_directory`` and its savestate twin are validated
-    before they are applied (``:6914-6960``). The dropped lines travel along:
-    a line the parser refused sets nothing, and nothing else in the answer says so.
+    before they are applied (``:6914-6933`` and ``:6935-6960``). The dropped
+    lines travel along: a line the parser refused sets nothing, and nothing else
+    in the answer says so.
     """
     parsed_layers = _parse_layers(layers)
     reads = _read_layers(parsed_layers, key)
@@ -537,21 +602,22 @@ def _resolve_flag(
     return value, source, tuple(ignored)
 
 
-def _resolve_savefile_directory(
-    layers: Sequence[_Layer], *, home: str, is_directory: DirectoryCheck | None
+def _resolve_directory(
+    layers: Sequence[_Layer], *, keys: LayoutKeys, home: str, is_directory: DirectoryCheck | None
 ) -> tuple[str | None, str, tuple[RejectedDirectory, ...]]:
-    """The saves root through the chain — ``None`` when the platform default applies.
+    """The family's root through the chain — ``None`` when the platform default applies.
 
     Each read is validated the way ``config_load_file`` validates it
-    (``configuration.c:6914-6933``): the literal ``default`` resets to the
-    platform default unconditionally, and every other value must pass
-    ``path_is_directory`` or the read sets nothing and what stood before it
-    stands on. Without an *is_directory* check the values are taken as written
-    — except the empty string, which ``path_is_directory`` refuses on every
-    machine.
+    (``configuration.c:6914-6933`` for ``savefile_directory``, and its
+    line-for-line twin at ``:6935-6960`` for ``savestate_directory``): the
+    literal ``default`` resets to the platform default unconditionally, and
+    every other value must pass ``path_is_directory`` or the read sets nothing
+    and what stood before it stands on. Without an *is_directory* check the
+    values are taken as written — except the empty string, which
+    ``path_is_directory`` refuses on every machine.
 
-    **Blank means opposite things for the two directory keys, and that is not
-    a bug in either.** One boolean in the settings table decides it — the
+    **Blank means opposite things for different directory keys, and that is not
+    a bug in any of them.** One boolean in the settings table decides it — the
     ``handle_setting`` argument of ``SETTING_PATH``:
 
     - ``savefile_directory`` passes ``false`` (``configuration.c:1709``), so
@@ -560,6 +626,10 @@ def _resolve_savefile_directory(
       for an entry whose value is empty and hands the empty string on
       unchanged (``config_file.c:1202-1216``), ``path_is_directory("")``
       fails, and the read is a no-op — blank **keeps** the standing root.
+    - ``savestate_directory`` passes ``false`` too (``configuration.c:1710``),
+      so both save families behave identically here. Worth stating because the
+      neighbouring keys do not: this is a per-key flag, not a property of
+      "directory settings", and the savestate row had to be read to know it.
     - ``rgui_config_directory`` passes ``true`` (``configuration.c:1736``), so
       the generic path loop writes whatever the config holds with no test at
       all (``:6536-6537``) — blank **clears** it, exactly as the literal
@@ -567,31 +637,31 @@ def _resolve_savefile_directory(
       ``directory_menu_config`` then falls back to the directory of
       ``retroarch.cfg`` (``file_path_special.c:203-206``).
 
-    So a blank saves root in an override changes nothing, while a blank
-    override directory moves the entire override tree. atlas reproduces both
+    So a blank root in an override changes nothing, while a blank override
+    directory moves the entire override tree. atlas reproduces both
     (:func:`atlas.installations._override_directory` holds the second).
 
     An application-relative value (``:`` prefix) is kept as written: it names a
     directory only the running process knows, and the consumer states that
     rather than expanding it into a host path atlas cannot verify.
     """
-    savefile_directory: str | None = None
+    directory: str | None = None
     source = (
-        f"default: {_SAVEFILE_DIRECTORY} unset — RetroArch platform default applies "
-        "(saves under the config tree, platform_unix.c:2133-2134)"
+        f"default: {keys.directory} unset — RetroArch platform default applies "
+        f"({keys.platform_default_subdir} under the config tree, platform_unix.c:2133-2136)"
     )
     # Which read produced the root that stands decides how a refusal reads: a
     # refusal the chain never got past fell back to what preceded it, while one
     # a later read overwrote did not — see RejectedDirectory.superseded.
     refusals: list[tuple[int, str, str]] = []
     last_set = -1
-    for index, (label, parsed, is_override) in enumerate(_read_layers(layers, _SAVEFILE_DIRECTORY)):
-        raw = parsed.values[_SAVEFILE_DIRECTORY]
+    for index, (label, parsed, is_override) in enumerate(_read_layers(layers, keys.directory)):
+        raw = parsed.values[keys.directory]
         suffix = " (override wins)" if is_override else ""
         if raw == _UNSET_VALUE:
-            savefile_directory, last_set = None, index
+            directory, last_set = None, index
             source = (
-                f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}" — resets to the RetroArch '
+                f'{label}: {keys.directory} = "{raw}" — resets to the RetroArch '
                 f"platform default{suffix}"
             )
             continue
@@ -599,40 +669,44 @@ def _resolve_savefile_directory(
         if candidate is None or (is_directory is not None and not is_directory(candidate)):
             refusals.append((index, label, candidate if candidate is not None else raw))
             continue
-        savefile_directory, last_set = candidate, index
-        source = f'{label}: {_SAVEFILE_DIRECTORY} = "{raw}"{suffix}'
+        directory, last_set = candidate, index
+        source = f'{label}: {keys.directory} = "{raw}"{suffix}'
     rejected = [
         RejectedDirectory(label, value, superseded=index < last_set)
         for index, label, value in refusals
     ]
-    return savefile_directory, source, tuple(rejected)
+    return directory, source, tuple(rejected)
 
 
-def _dropped_governing_lines(layers: Sequence[_Layer]) -> tuple[IgnoredSetting, ...]:
-    """Lines RetroArch dropped that aimed at one of the save-layout keys.
+def _dropped_governing_lines(layers: Sequence[_Layer], keys: LayoutKeys) -> tuple[IgnoredSetting, ...]:
+    """Lines RetroArch dropped that aimed at one of *this family's* layout keys.
 
     RetroArch drops them silently and so does atlas — but a dropped line
     naming the very setting this answer is about is the one case where the
-    file and the emulator disagree about the save location, so it is stated.
+    file and the emulator disagree about the location, so it is stated. A line
+    aimed at the *other* family's keys is not this answer's business: it moves
+    a directory this answer never reports.
     """
+    governing = keys.governing
     return tuple(
         IgnoredSetting(IGNORED_LINE_DROPPED, label, line.key, line.line)
         for label, parsed, _ in layers
         for line in parsed.dropped
-        if line.key in _GOVERNING_KEYS
+        if line.key in governing
     )
 
 
-def resolve_save_layout(
+def resolve_layout(
     global_text: str | None,
     *,
+    keys: LayoutKeys,
     home: str,
     cfg_label: str,
     defaults: LayoutDefaults,
     overrides: Sequence[CfgLayer] = (),
     is_directory: DirectoryCheck | None = None,
 ) -> RetroArchCfg:
-    """Resolve the save layout through the override chain, as RetroArch reads it.
+    """Resolve one family's layout through the override chain, as RetroArch reads it.
 
     The overrides are merged into the global cfg and each key is read from the
     result — the last file that sets it wins, and a value RetroArch refuses
@@ -643,8 +717,14 @@ def resolve_save_layout(
     global_text:
         The global cfg's content, or ``None`` when no cfg was found (``None``
         and an empty file both yield the all-defaults decision).
+    keys:
+        Which family to resolve — :data:`SAVEFILE_KEYS` or
+        :data:`SAVESTATE_KEYS`. Deliberately without a default: it is the one
+        argument that decides *what the answer is about*, and a resolution
+        silently defaulting to the savefile quartet would answer the wrong
+        question in the one shape that looks right.
     home:
-        The machine home, used to expand a leading ``~`` in ``savefile_directory``.
+        The machine home, used to expand a leading ``~`` in the root value.
     cfg_label:
         Human-readable label for the global cfg, woven into provenance strings.
     defaults:
@@ -655,8 +735,8 @@ def resolve_save_layout(
         Each layer overrides only the keys it actually sets.
     is_directory:
         ``path_is_directory`` as this machine answers it, used to validate each
-        ``savefile_directory`` RetroArch reads. Omitted, the values are taken
-        as written and ``rejected_directories`` reports only the blank one.
+        root value RetroArch reads. Omitted, the values are taken as written
+        and ``rejected_directories`` reports only the blank one.
     """
     empty = ParsedCfg({})
     layers: list[_Layer] = [
@@ -666,24 +746,25 @@ def resolve_save_layout(
 
     defaults_label = defaults.label
     in_content_dir, s1, i1 = _resolve_flag(
-        layers, _IN_CONTENT_DIR, default=defaults.savefiles_in_content_dir, defaults_label=defaults_label
+        layers, keys.in_content_dir, default=defaults.in_content_dir, defaults_label=defaults_label
     )
     sort_by_content, s2, i2 = _resolve_flag(
-        layers, _SORT_BY_CONTENT, default=defaults.sort_by_content, defaults_label=defaults_label
+        layers, keys.sort_by_content, default=defaults.sort_by_content, defaults_label=defaults_label
     )
     sort_by_core, s3, i3 = _resolve_flag(
-        layers, _SORT_BY_CORE, default=defaults.sort_by_core, defaults_label=defaults_label
+        layers, keys.sort_by_core, default=defaults.sort_by_core, defaults_label=defaults_label
     )
-    savefile_directory, dir_source, rejected = _resolve_savefile_directory(
-        layers, home=home, is_directory=is_directory
+    directory, dir_source, rejected = _resolve_directory(
+        layers, keys=keys, home=home, is_directory=is_directory
     )
 
     return RetroArchCfg(
-        savefiles_in_content_dir=in_content_dir,
+        keys=keys,
+        in_content_dir=in_content_dir,
         sort_by_content=sort_by_content,
         sort_by_core=sort_by_core,
-        savefile_directory=savefile_directory,
+        directory=directory,
         sources=(s1, s2, s3, dir_source),
-        ignored=(*_dropped_governing_lines(layers), *i1, *i2, *i3),
+        ignored=(*_dropped_governing_lines(layers, keys), *i1, *i2, *i3),
         rejected_directories=rejected,
     )

@@ -39,9 +39,14 @@ INPUT_FIELDS_OPTIONAL = {
     "systems_query",
     "rom_location_query",
     "entry_query",
+    "state_query",
+    "entry_state_query",
     "firmware_query",
     "identify_query",
 }
+# The savefile and savestate questions take the same three arguments, because
+# they are the same question about two families — one vocabulary, not two that
+# have to be kept in step.
 QUERY_FIELDS = {"content_path", "core_so", "installation"}
 CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
 # The systems question takes no arguments — only which handle answers it.
@@ -63,6 +68,7 @@ ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
 # answer can reflect, and half a rule refuses only half of those.
 AGGREGATE_QUESTION_FIELDS = {
     "save_location": ({"question"}, {"content_path", "core_so"}),
+    "state_location": ({"question"}, {"content_path", "core_so"}),
     "emulators_for": ({"question", "system"}, {"content_path"}),
 }
 AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
@@ -80,6 +86,12 @@ PLACEMENT_FIELDS = {
     "granularity",
     "caveats",
 }
+# A savestate placement is a save placement without `granularity`, and the
+# omission is the contract: no core writes a savestate, so no rule card can
+# ever state how one groups them (atlas/placement.py). Derived from the save
+# set rather than spelled out, so the two can never drift in the fields they
+# do share.
+SAVESTATE_PLACEMENT_FIELDS = PLACEMENT_FIELDS - {"granularity"}
 FILE_SET_FIELDS = {"state", "files", "complete"}
 FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats"}
 FIRMWARE_CORE_FIELDS = {
@@ -144,6 +156,9 @@ KNOWN_HEALTH_ISSUES = {
     "config-unreadable",
 }
 KNOWN_ROOT_KINDS = {"savefile_directory", "content_directory", "system_directory"}
+# Closed around its own question: a savestate is never anchored at the saves
+# root, and never at a core's system directory — no card can move it there.
+KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
 # The holes a placement may hand back — each one a value the CALLER fills from
 # the content at hand. Closed like every other vocabulary here, and for the
 # sharpest reason of them all: a hole nobody can fill is worse than a stated
@@ -182,6 +197,7 @@ KNOWN_CAVEAT_CODES = {
     "cfg-value-rejected",
     "content-dir-observation",
     "content-path-unnamed",
+    "core-savestates-unsupported",
     "no-firmware-declaration",
     "no-firmware-requirement",
     "firmware-declaration-unknown",
@@ -269,16 +285,21 @@ def _validate_handle_selector(name: str, family: str, query: Any) -> None:
         fail(f"{name}: input.{family}.installation must be one of {sorted(KNOWN_KINDS)}")
 
 
-def _validate_query(name: str, query: Any) -> None:
+def _validate_query(name: str, query: Any, family: str = "query") -> None:
+    """A placement question — *family* says which of the two it is.
+
+    Both take the same three keys, so both are held to one rule; only the
+    message names the key the vector actually wrote.
+    """
     if not isinstance(query, dict):
-        fail(f"{name}: input.query must be an object")
+        fail(f"{name}: input.{family} must be an object")
     keys = set(query)
     if not keys or not keys <= QUERY_FIELDS:
-        fail(f"{name}: input.query keys must be a non-empty subset of {sorted(QUERY_FIELDS)}")
+        fail(f"{name}: input.{family} keys must be a non-empty subset of {sorted(QUERY_FIELDS)}")
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
-            fail(f"{name}: input.query.{key} must be a non-empty string")
-    _validate_handle_selector(name, "query", query)
+            fail(f"{name}: input.{family}.{key} must be a non-empty string")
+    _validate_handle_selector(name, family, query)
 
 
 def _validate_firmware_query_fields(name: str, query: Any) -> None:
@@ -323,19 +344,19 @@ def _validate_identify_query(name: str, query: Any) -> None:
         fail(f"{name}: input.identify_query must state some content — md5, sha1, or size")
 
 
-def _validate_entry_query(name: str, query: Any) -> None:
+def _validate_entry_query(name: str, query: Any, family: str = "entry_query") -> None:
     if not isinstance(query, dict):
-        fail(f"{name}: input.entry_query must be an object")
+        fail(f"{name}: input.{family} must be an object")
     keys = set(query)
     if "system" not in keys or not keys <= ENTRY_QUERY_FIELDS:
         fail(
-            f"{name}: input.entry_query must carry 'system' plus optional "
+            f"{name}: input.{family} must carry 'system' plus optional "
             "'label'/'content_path'/'installation'"
         )
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
-            fail(f"{name}: input.entry_query.{key} must be a non-empty string")
-    _validate_handle_selector(name, "entry_query", query)
+            fail(f"{name}: input.{family}.{key} must be a non-empty string")
+    _validate_handle_selector(name, family, query)
 
 
 def _validate_catalogue_query(name: str, query: Any) -> None:
@@ -535,6 +556,10 @@ def _validate_input_queries(name: str, inp: Any) -> None:
         _validate_rom_location_query(name, inp["rom_location_query"])
     if "entry_query" in inp:
         _validate_entry_query(name, inp["entry_query"])
+    if "state_query" in inp:
+        _validate_query(name, inp["state_query"], "state_query")
+    if "entry_state_query" in inp:
+        _validate_entry_query(name, inp["entry_state_query"], "entry_state_query")
     if "firmware_query" in inp:
         _validate_firmware_query(name, inp["firmware_query"])
     if "identify_query" in inp:
@@ -626,36 +651,76 @@ def _validate_granularity(name: str, granularity: Any) -> None:
         fail(f"{name}: every alternative's granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
 
 
-def _validate_placement(name: str, placement: Any) -> None:
-    _require_exact(name, placement, PLACEMENT_FIELDS, "save_location")
+def _validate_placement_core(name: str, placement: Any, *, root_kinds: set[str], what: str) -> None:
+    """The fields both placement questions answer — one rule, applied twice.
+
+    *root_kinds* is the vocabulary of the question being validated, which is
+    the whole reason this takes a parameter: a savestate placement naming
+    ``savefile_directory`` is exactly the confusion the split vocabularies
+    exist to catch, and a shared set would wave it through.
+    """
     if not isinstance(placement["dir"], str) or not placement["dir"]:
-        fail(f"{name}: save_location.dir must be a non-empty string")
-    if placement["root_kind"] not in KNOWN_ROOT_KINDS:
-        fail(f"{name}: save_location.root_kind must be one of {sorted(KNOWN_ROOT_KINDS)}")
+        fail(f"{name}: {what}.dir must be a non-empty string")
+    if placement["root_kind"] not in root_kinds:
+        fail(f"{name}: {what}.root_kind must be one of {sorted(root_kinds)}")
     needs = placement["needs"]
     if not isinstance(needs, list) or not all(isinstance(n, str) for n in needs):
-        fail(f"{name}: save_location.needs must be a list of strings")
+        fail(f"{name}: {what}.needs must be a list of strings")
     unknown_holes = sorted(set(needs) - KNOWN_HOLES)
     if unknown_holes:
-        fail(f"{name}: save_location.needs must be holes from {sorted(KNOWN_HOLES)}, got {unknown_holes}")
+        fail(f"{name}: {what}.needs must be holes from {sorted(KNOWN_HOLES)}, got {unknown_holes}")
     for opt_dir in ("fallback_dir", "physical_dir"):
         value = placement[opt_dir]
         if value is not None and (not isinstance(value, str) or not value):
-            fail(f"{name}: save_location.{opt_dir} must be null or a non-empty string")
+            fail(f"{name}: {what}.{opt_dir} must be null or a non-empty string")
     _validate_file_set(name, placement["file_set"])
-    if placement["granularity"] is not None:
-        _validate_granularity(name, placement["granularity"])
     _validate_caveats(name, placement["caveats"])
 
 
+def _validate_placement(name: str, placement: Any) -> None:
+    _require_exact(name, placement, PLACEMENT_FIELDS, "save_location")
+    _validate_placement_core(name, placement, root_kinds=KNOWN_ROOT_KINDS, what="save_location")
+    if placement["granularity"] is not None:
+        _validate_granularity(name, placement["granularity"])
+
+
+def _validate_savestate_placement(name: str, placement: Any) -> None:
+    """A savestate placement — the save shape minus the field it cannot have.
+
+    ``_require_exact`` is what enforces the omission: a vector carrying
+    ``"granularity": null`` here is refused rather than quietly accepted, so
+    the contract stays the one the serializer actually produces.
+    """
+    _require_exact(name, placement, SAVESTATE_PLACEMENT_FIELDS, "state_location")
+    _validate_placement_core(
+        name, placement, root_kinds=KNOWN_STATE_ROOT_KINDS, what="state_location"
+    )
+    if placement["file_set"]["complete"]:
+        fail(
+            f"{name}: state_location.file_set.complete must be false — which slots exist is a live "
+            "setting away from changing, so no savestate observation is ever closed"
+        )
+
+
+def _validate_unresolved(name: str, outcome: Any, what: str) -> bool:
+    """Is this the typed refusal? Refuses a malformed one either way."""
+    if not (isinstance(outcome, dict) and set(outcome) == {"unresolved"}):
+        return False
+    unresolved = outcome["unresolved"]
+    _require_exact(name, unresolved, {"code", "data"}, f"{what}.unresolved")
+    if unresolved["code"] not in KNOWN_UNRESOLVED_CODES:
+        fail(f"{name}: unresolved code must be one of {sorted(KNOWN_UNRESOLVED_CODES)}")
+    return True
+
+
 def _validate_entry_outcome(name: str, outcome: Any) -> None:
-    if isinstance(outcome, dict) and set(outcome) == {"unresolved"}:
-        unresolved = outcome["unresolved"]
-        _require_exact(name, unresolved, {"code", "data"}, "entry_save_location.unresolved")
-        if unresolved["code"] not in KNOWN_UNRESOLVED_CODES:
-            fail(f"{name}: unresolved code must be one of {sorted(KNOWN_UNRESOLVED_CODES)}")
-        return
-    _validate_placement(name, outcome)
+    if not _validate_unresolved(name, outcome, "entry_save_location"):
+        _validate_placement(name, outcome)
+
+
+def _validate_state_entry_outcome(name: str, outcome: Any) -> None:
+    if not _validate_unresolved(name, outcome, "entry_state_location"):
+        _validate_savestate_placement(name, outcome)
 
 
 def _validate_identity(name: str, identity: Any, what: str) -> None:
@@ -1062,6 +1127,8 @@ def _validate_aggregate_answer(name: str, answered: Any, question: str) -> None:
     _require_exact(name, answered, AGGREGATE_ANSWER_FIELDS, "each aggregate answer")
     if question == "save_location":
         _validate_placement(name, answered["answer"])
+    elif question == "state_location":
+        _validate_savestate_placement(name, answered["answer"])
     elif question == "emulators_for":
         _validate_catalogue(name, answered["answer"])
     else:
@@ -1103,6 +1170,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         "systems",
         "rom_location",
         "entry_save_location",
+        "state_location",
+        "entry_state_location",
         "firmware",
         "identification",
     }
@@ -1120,6 +1189,10 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: a query and a save_location expectation must appear together")
     if ("entry_save_location" in keys) != ("entry_query" in inp):
         fail(f"{name}: entry_query and entry_save_location expectation must appear together")
+    if ("state_location" in keys) != ("state_query" in inp):
+        fail(f"{name}: state_query and state_location expectation must appear together")
+    if ("entry_state_location" in keys) != ("entry_state_query" in inp):
+        fail(f"{name}: entry_state_query and entry_state_location expectation must appear together")
     if ("firmware" in keys) != ("firmware_query" in inp):
         fail(f"{name}: firmware_query and firmware expectation must appear together")
     if ("identification" in keys) != ("identify_query" in inp):
@@ -1129,7 +1202,17 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     # a machine that has none is a question with a truthful empty answer, not a
     # question nobody can answer.
     if (
-        keys & {"save_location", "entry_save_location", "catalogue", "systems", "firmware", "identification"}
+        keys
+        & {
+            "save_location",
+            "state_location",
+            "entry_save_location",
+            "entry_state_location",
+            "catalogue",
+            "systems",
+            "firmware",
+            "identification",
+        }
     ) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
     if "save_location" in keys:
@@ -1142,8 +1225,12 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_rom_location(name, expected["rom_location"])
     if "systems" in keys:
         _validate_systems(name, expected["systems"])
+    if "state_location" in keys:
+        _validate_savestate_placement(name, expected["state_location"])
     if "entry_save_location" in keys:
         _validate_entry_outcome(name, expected["entry_save_location"])
+    if "entry_state_location" in keys:
+        _validate_state_entry_outcome(name, expected["entry_state_location"])
     if "firmware" in keys:
         _validate_firmware(name, expected["firmware"])
     if "identification" in keys:

@@ -58,8 +58,11 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
    for the six `multi-option` cores: interpreting those options into a granularity value, which is what task 15's card
    variants are for.
 
-7. **Savestates.** Only savefiles are resolved; the `sort_savestates_*` keys and `states_path` are unread. Same
-   machinery, second instance.
+7. ~~**Savestates.**~~ **Done** — `state_location` resolves the savestate quartet through the same parameterized chain
+   (`docs/research/retrodeck-save-placement.md` §18). Still open here: nothing reads `retrodeck.json`'s `states_path`,
+   which is RetroDECK's input to the cfg and not what RetroArch reads, so it would be a second answer about one tree —
+   the same reason `roms_path` stopped being one. A `states_root()` accessor beside `saves_root()` is the open question,
+   not a resolver gap.
 
 ## Honesty improvements
 

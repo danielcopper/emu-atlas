@@ -1,7 +1,8 @@
-"""Save placements — resolved directories, honest file sets, and provenance.
+"""Placements — resolved directories, honest file sets, and provenance.
 
 A :class:`SavePlacement` answers "where does this emulator, configured as it is,
-keep the save for this content?". Its shape follows the research findings
+keep the save for this content?"; a :class:`SavestatePlacement` answers the same
+question for its savestates. Their shape follows the research findings
 (``docs/research/retrodeck-save-placement.md`` §16):
 
 - **Directory and file set are different kinds of knowledge.** The directory
@@ -29,8 +30,25 @@ keep the save for this content?". Its shape follows the research findings
   (``runloop.c:1958-1999``), so a card rooted there answers
   ``content_directory`` on those machines.
 - **Filesystem state is part of the answer** — RetroArch silently reverts to the
-  unsorted root when a sorted directory cannot be created (``runloop.c:8844``);
-  ``caveats`` carries that and every other stated degradation.
+  unsorted root when a sorted directory cannot be created (``runloop.c:8844``,
+  and its savestate twin ``:8878-8887``); ``caveats`` carries that and every
+  other stated degradation.
+
+**Why savestates get their own type.** The directory math is shared to the line
+— one upstream function resolves both families side by side
+(``runloop.c:8752-8979``) — so the resolution is parameterized rather than
+copied. What is *not* shared is the field set, and the reason is structural: the
+libretro API hands a core no savestate directory at all (``libretro.h`` defines
+``GET_SYSTEM_DIRECTORY``, ``GET_SAVE_DIRECTORY``, ``GET_CONTENT_DIRECTORY``,
+``GET_PLAYLIST_DIRECTORY`` and ``GET_FILE_BROWSER_START_DIRECTORY``, and nothing
+for states), and RetroArch serializes the state itself. A core therefore cannot
+deviate from state placement, no rule card for it can ever exist, and
+``granularity`` — which is a card's word about how a *core* groups the data it
+writes — has an empty domain here. Carrying it as a permanent ``None`` would be
+the blank field this grammar refuses, and it could not even be rescued by a
+caveat: there is nothing to report. So :class:`SavestatePlacement` is
+:class:`SavePlacement` minus that one field, the way :class:`RomPlacement`
+already carries the fields its own question has and no others.
 
 Pure compute. No I/O — the installation handles observe the machine and pass
 the results in.
@@ -47,8 +65,14 @@ from atlas.retroarch_cfg import RetroArchCfg
 
 # Root kinds — where the placement's directory is anchored. The closed
 # vocabularies are Literal types so an invalid state is a type error first
-# and a constructor error second (REVIEW M10).
+# and a constructor error second (REVIEW M10). Each question has its own set,
+# because a vocabulary is closed only if it is closed around one question: a
+# savefile is never anchored at savestate_directory, and a savestate is never
+# anchored at a core's system directory (no card can move it — see the module
+# docstring), so a shared union would hand every client values its own branch
+# can never see.
 RootKind = Literal["savefile_directory", "content_directory", "system_directory"]
+StateRootKind = Literal["savestate_directory", "content_directory"]
 FileSetState = Literal["observed", "declared", "unknown"]
 
 # The three states a file set can be in, as values. Every other closed
@@ -63,7 +87,14 @@ ROOT_SAVEFILE_DIRECTORY: RootKind = "savefile_directory"
 ROOT_CONTENT_DIRECTORY: RootKind = "content_directory"
 ROOT_SYSTEM_DIRECTORY: RootKind = "system_directory"
 
+ROOT_SAVESTATE_DIRECTORY: StateRootKind = "savestate_directory"
+# The content root is the one value both questions share, and it is the same
+# fact on both: the ROM's own directory, reached either by the family's
+# in-content-dir flag or by a root that resolved to nothing.
+STATE_ROOT_CONTENT_DIRECTORY: StateRootKind = "content_directory"
+
 ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory")
+STATE_ROOT_KINDS = ("savestate_directory", "content_directory")
 _FILE_SET_STATES = ("observed", "declared", "unknown")
 
 # How a save is grouped — the values :attr:`Granularity.value` may take, and
@@ -119,6 +150,11 @@ CAVEAT_CFG_LINE_DROPPED = "cfg-line-dropped"
 CAVEAT_CFG_VALUE_REJECTED = "cfg-value-rejected"
 CAVEAT_CONTENT_DIR_OBSERVATION = "content-dir-observation"
 CAVEAT_CONTENT_PATH_UNNAMED = "content-path-unnamed"
+# The core's own .info says it cannot make savestates. A statement about the
+# declaration, not about the directory: the placement still resolves, and the
+# caveat is what keeps "here is the directory" from reading as "and states will
+# appear in it".
+CAVEAT_CORE_SAVESTATES_UNSUPPORTED = "core-savestates-unsupported"
 
 
 @dataclass(frozen=True, slots=True)
@@ -336,6 +372,113 @@ class Unresolved:
         object.__setattr__(self, "data", _freeze(self.data))
 
 
+@dataclass(frozen=True, slots=True)
+class SavestatePlacement:
+    """A resolved savestate location with provenance and stated degradations.
+
+    :class:`SavePlacement` field for field, minus ``granularity`` — see the
+    module docstring for why that one cannot exist here. ``dir`` is concrete
+    when the caller supplied the content path; otherwise it is a template whose
+    remaining holes are listed in ``needs``. ``root_kind`` names the anchor
+    (:data:`ROOT_SAVESTATE_DIRECTORY`, :data:`STATE_ROOT_CONTENT_DIRECTORY`).
+
+    ``file_set`` is where the two questions differ in substance rather than in
+    fields. A savefile's set is per-core behaviour with no metadata source; a
+    savestate's is RetroArch's own, and atlas can state it: the base name is
+    ``<stem>.state`` (``runloop.c:8942-8949``, ``file_path_special.h:44``), the
+    numbered slots are ``<stem>.state<N>`` for N above zero and the auto slot is
+    ``<stem>.state.auto`` (``runloop.c:8185-8207``). Which of them exist is
+    still an observation — the slot is a live setting and nothing on disk says
+    how many were ever written — so the set is never ``complete``.
+
+    ``fallback_dir`` and ``physical_dir`` mean exactly what they do on a save
+    placement: the root RetroArch silently reverts to when it cannot create the
+    sorted directory (``runloop.c:8878-8887``), and the link-resolved backing
+    directory where the answer is reached through symlinks.
+    """
+
+    dir: str
+    root_kind: StateRootKind
+    needs: tuple[str, ...]
+    file_set: FileSet
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...]
+    fallback_dir: str | None = None
+    physical_dir: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.dir:
+            raise ValueError("SavestatePlacement: dir must be non-empty")
+        if self.root_kind not in STATE_ROOT_KINDS:
+            raise ValueError(
+                f"SavestatePlacement: root_kind must be one of {STATE_ROOT_KINDS}, got {self.root_kind!r}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class _ResolvedDirectory:
+    """RetroArch's path math applied to one family's layout — the shared part."""
+
+    dir: str
+    rooted_in_content: bool
+    needs: tuple[str, ...]
+    sources: tuple[str, ...]
+
+
+def _resolve_placement_dir(
+    *,
+    layout: RetroArchCfg,
+    platform_default_dir: str,
+    content_dir_path: str | None,
+    content_dir_name: str | None,
+    library_name: str | None,
+) -> _ResolvedDirectory:
+    """The directory both families are placed by — one port of one upstream rule.
+
+    Root selection first (``runloop.c:8785-8813``), then the sorting stages,
+    which run regardless of how the root was selected (``runloop.c:8822-8888``)
+    — content component first, then ``library_name``. The savefile and
+    savestate halves of that function are the same shape line for line; the
+    only thing that differs is which four settings were read, which is what
+    ``layout.keys`` carries.
+    """
+    needs: list[str] = []
+    sources = list(layout.sources)
+    keys = layout.keys
+
+    if layout.in_content_dir:
+        rooted_in_content = True
+        sources.append(f"layout: root is the ROM's own directory ({keys.in_content_dir})")
+        if content_dir_path is not None:
+            parts = [content_dir_path]
+        else:
+            parts = ["<content_dir>"]
+            needs.append(HOLE_CONTENT_DIR)
+    else:
+        rooted_in_content = False
+        parts = [platform_default_dir if layout.directory is None else layout.directory]
+
+    if layout.sort_by_content:
+        if content_dir_name is not None:
+            parts.append(content_dir_name)
+        else:
+            parts.append("<content_dir>")
+            needs.append(HOLE_CONTENT_DIR)
+    if layout.sort_by_core:
+        if library_name is not None:
+            parts.append(library_name)
+        else:
+            parts.append("<library_name>")
+            needs.append(HOLE_LIBRARY_NAME)
+
+    return _ResolvedDirectory(
+        dir=os.path.join(*parts),
+        rooted_in_content=rooted_in_content,
+        needs=_holes(needs),
+        sources=tuple(sources),
+    )
+
+
 def build_save_placement(
     *,
     layout: RetroArchCfg,
@@ -359,46 +502,55 @@ def build_save_placement(
     ``query_core``); when the layout sorts by core and it is absent, the
     ``<library_name>`` hole remains.
     """
-    needs: list[str] = []
-    all_sources = list(layout.sources) + list(extra_sources)
-
-    # Root selection first (runloop.c:8785-8813), then the sorting stages run
-    # regardless of how the root was selected (runloop.c:8822-8841) — content
-    # component first, then library_name.
-    if layout.savefiles_in_content_dir:
-        root_kind = ROOT_CONTENT_DIRECTORY
-        all_sources.append("layout: root is the ROM's own directory (savefiles_in_content_dir)")
-        if content_dir_path is not None:
-            parts = [content_dir_path]
-        else:
-            parts = ["<content_dir>"]
-            needs.append(HOLE_CONTENT_DIR)
-    elif layout.savefile_directory is None:
-        root_kind = ROOT_SAVEFILE_DIRECTORY
-        parts = [platform_default_dir]
-    else:
-        root_kind = ROOT_SAVEFILE_DIRECTORY
-        parts = [layout.savefile_directory]
-
-    if layout.sort_by_content:
-        if content_dir_name is not None:
-            parts.append(content_dir_name)
-        else:
-            parts.append("<content_dir>")
-            needs.append(HOLE_CONTENT_DIR)
-    if layout.sort_by_core:
-        if library_name is not None:
-            parts.append(library_name)
-        else:
-            parts.append("<library_name>")
-            needs.append(HOLE_LIBRARY_NAME)
-    directory = os.path.join(*parts)
-
+    resolved = _resolve_placement_dir(
+        layout=layout,
+        platform_default_dir=platform_default_dir,
+        content_dir_path=content_dir_path,
+        content_dir_name=content_dir_name,
+        library_name=library_name,
+    )
     return SavePlacement(
-        dir=directory,
-        root_kind=root_kind,
-        needs=_holes(needs),
+        dir=resolved.dir,
+        root_kind=ROOT_CONTENT_DIRECTORY if resolved.rooted_in_content else ROOT_SAVEFILE_DIRECTORY,
+        needs=resolved.needs,
         file_set=file_set,
-        sources=tuple(all_sources),
+        sources=(*resolved.sources, *extra_sources),
+        caveats=tuple(caveats),
+    )
+
+
+def build_savestate_placement(
+    *,
+    layout: RetroArchCfg,
+    platform_default_dir: str,
+    content_dir_path: str | None,
+    content_dir_name: str | None,
+    library_name: str | None,
+    extra_sources: tuple[str, ...] = (),
+    caveats: tuple[Caveat, ...] = (),
+    file_set: FileSet = UNKNOWN_FILE_SET,
+) -> SavestatePlacement:
+    """The savestate twin of :func:`build_save_placement`, over the same path math.
+
+    ``platform_default_dir`` is ``states`` under the config tree
+    (``platform_unix.c:2135-2136``) — the effective root whenever
+    ``savestate_directory`` is unset or reset, the same way its savefile twin
+    resolves to ``saves``.
+    """
+    resolved = _resolve_placement_dir(
+        layout=layout,
+        platform_default_dir=platform_default_dir,
+        content_dir_path=content_dir_path,
+        content_dir_name=content_dir_name,
+        library_name=library_name,
+    )
+    return SavestatePlacement(
+        dir=resolved.dir,
+        root_kind=(
+            STATE_ROOT_CONTENT_DIRECTORY if resolved.rooted_in_content else ROOT_SAVESTATE_DIRECTORY
+        ),
+        needs=resolved.needs,
+        file_set=file_set,
+        sources=(*resolved.sources, *extra_sources),
         caveats=tuple(caveats),
     )

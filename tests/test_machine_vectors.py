@@ -30,6 +30,7 @@ from atlas.contract import (
     installation_contract,
     placement_contract,
     rom_placement_contract,
+    savestate_placement_contract,
     unresolved_contract,
 )
 
@@ -85,6 +86,13 @@ def _aggregate(installs, query, name):
             ),
             placement_contract,
         )
+    if question == "state_location":
+        return installation_answers_contract(
+            every.state_location(
+                content_path=query.get("content_path"), core_so=query.get("core_so")
+            ),
+            savestate_placement_contract,
+        )
     if question == "emulators_for":
         return installation_answers_contract(
             every.emulators_for(query["system"], content_path=query.get("content_path")),
@@ -116,6 +124,13 @@ def _save_location(installs, query, name):
     )
 
 
+def _state_location(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return savestate_placement_contract(
+        install.state_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+    )
+
+
 def _firmware(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     verify = query.get("verify", False)
@@ -138,17 +153,29 @@ def _identification(installs, query, name):
     )
 
 
-def _entry_save_location(installs, query, name):
+def _entry_of(installs, query, name):
+    """The catalogue entry a vector's entry query names — first one by default."""
     install = _select(installs, query.get("installation"), name)
     entries = install.emulators_for(query["system"], content_path=query.get("content_path")).entries
     if "label" in query:
-        entry = next(e for e in entries if e.label == query["label"])
-    else:
-        entry = entries[0]
+        return next(e for e in entries if e.label == query["label"])
+    return entries[0]
+
+
+def _entry_save_location(installs, query, name):
+    entry = _entry_of(installs, query, name)
     outcome = entry.save_location(content_path=query.get("content_path"))
     if isinstance(outcome, atlas.Unresolved):
         return unresolved_contract(outcome)
     return placement_contract(outcome)
+
+
+def _entry_state_location(installs, query, name):
+    entry = _entry_of(installs, query, name)
+    outcome = entry.state_location(content_path=query.get("content_path"))
+    if isinstance(outcome, atlas.Unresolved):
+        return unresolved_contract(outcome)
+    return savestate_placement_contract(outcome)
 
 
 # expected key → (the input key that asks it, how the runner asks it). The map
@@ -161,6 +188,8 @@ QUESTIONS = {
     "rom_location": ("rom_location_query", _rom_location),
     "aggregate": ("aggregate_query", _aggregate),
     "save_location": ("query", _save_location),
+    "state_location": ("state_query", _state_location),
+    "entry_state_location": ("entry_state_query", _entry_state_location),
     "firmware": ("firmware_query", _firmware),
     "identification": ("identify_query", _identification),
     "entry_save_location": ("entry_query", _entry_save_location),

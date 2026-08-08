@@ -244,6 +244,7 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
     """
     return {
         "save_location": tuple(c.code for c in handle.save_location(core_so=CORE_SO).caveats),
+        "state_location": tuple(c.code for c in handle.state_location(core_so=CORE_SO).caveats),
         "systems": tuple(c.code for c in handle.systems().caveats),
         "emulators_for": tuple(c.code for c in handle.emulators_for(SYSTEM).caveats),
         "rom_location": tuple(c.code for c in handle.rom_location(SYSTEM).caveats),

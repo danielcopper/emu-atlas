@@ -8,14 +8,18 @@ from atlas.placement import (
     Caveat,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
+    ROOT_SAVESTATE_DIRECTORY,
+    STATE_ROOT_CONTENT_DIRECTORY,
     UNKNOWN_FILE_SET,
     FileSet,
     SavePlacement,
+    SavestatePlacement,
     build_save_placement,
+    build_savestate_placement,
     file_set_holes,
     needs_with_file_set,
 )
-from atlas.retroarch_cfg import resolve_save_layout
+from atlas.retroarch_cfg import SAVEFILE_KEYS, SAVESTATE_KEYS, resolve_layout
 from tests.shipped_layouts import RETRODECK_SHIPPED
 
 
@@ -71,7 +75,9 @@ HOME = "/home/deck"
 
 
 def _layout(text):
-    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED)
+    return resolve_layout(
+        text, keys=SAVEFILE_KEYS, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED
+    )
 
 
 def _build(text, *, content_dir_path=None, content_dir_name=None, library_name=None, **kwargs):
@@ -228,3 +234,105 @@ class TestFileSetAndProvenance:
         p = _build('savefile_directory = "/saves"\n', caveats=(caveat,))
         assert p.caveats == (caveat,)
         assert p.caveats[0].code == "test-code"
+
+
+class TestSavestatePlacementIsTheSaveShapeMinusOneField:
+    """The fork the answer grammar makes for savestates, and why it holds.
+
+    No core writes a savestate — the libretro API hands it no savestate
+    directory and RetroArch serializes the file itself — so no rule card can
+    ever state how one groups them. The field is absent rather than permanently
+    ``None``, which is what these tests pin down.
+    """
+
+    def test_the_type_carries_no_granularity_at_all(self):
+        assert not hasattr(_state('savestate_directory = "/states"\n'), "granularity")
+
+    def test_it_carries_every_other_field_a_save_placement_does(self):
+        save = set(SavePlacement.__dataclass_fields__)
+        state = set(SavestatePlacement.__dataclass_fields__)
+        assert save - state == {"granularity"}
+        assert state - save == set()
+
+    def test_root_kind_vocabulary_is_its_own(self):
+        # The saves root is not a value a savestate placement can hold: a
+        # client branching on it must never meet the other question's anchors.
+        with pytest.raises(ValueError):
+            SavestatePlacement(
+                dir="/states",
+                root_kind="savefile_directory",  # type: ignore[arg-type]
+                needs=(),
+                file_set=UNKNOWN_FILE_SET,
+                sources=(),
+                caveats=(),
+            )
+
+    def test_placement_dir_must_be_non_empty(self):
+        with pytest.raises(ValueError):
+            SavestatePlacement(
+                dir="",
+                root_kind=ROOT_SAVESTATE_DIRECTORY,
+                needs=(),
+                file_set=UNKNOWN_FILE_SET,
+                sources=(),
+                caveats=(),
+            )
+
+
+def _state(text, *, content_dir_path=None, content_dir_name=None, library_name=None, **kwargs):
+    return build_savestate_placement(
+        layout=resolve_layout(
+            text, keys=SAVESTATE_KEYS, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED
+        ),
+        platform_default_dir="/platform/states",
+        content_dir_path=content_dir_path,
+        content_dir_name=content_dir_name,
+        library_name=library_name,
+        **kwargs,
+    )
+
+
+# RetroDECK ships sort-by-content ON for savestates too (its rd_config sets
+# sort_savestates_by_content_enable = "true"), so a root test that left the flag
+# to the defaults would be testing the sorting stage as well.
+UNSORTED = 'sort_savestates_by_content_enable = "false"\n'
+
+
+class TestSavestateRootsFollowTheSamePathMath:
+    """One upstream function places both families (runloop.c:8752-8979), so one port does."""
+
+    def test_the_configured_root_is_the_root(self):
+        placement = _state(UNSORTED + 'savestate_directory = "/states"\n')
+        assert placement.dir == "/states"
+        assert placement.root_kind == ROOT_SAVESTATE_DIRECTORY
+
+    def test_an_unset_root_is_the_platform_default_not_the_content_dir(self):
+        placement = _state(UNSORTED, content_dir_path="/roms/gba")
+        assert placement.dir == "/platform/states"
+        assert placement.root_kind == ROOT_SAVESTATE_DIRECTORY
+
+    def test_in_content_dir_roots_at_the_rom(self):
+        placement = _state(
+            UNSORTED + 'savestates_in_content_dir = "true"\n', content_dir_path="/roms/gba"
+        )
+        assert placement.dir == "/roms/gba"
+        assert placement.root_kind == STATE_ROOT_CONTENT_DIRECTORY
+
+    def test_sorting_stages_apply_in_upstream_order(self):
+        placement = _state(
+            'savestate_directory = "/states"\n'
+            'sort_savestates_by_content_enable = "true"\n'
+            'sort_savestates_enable = "true"\n',
+            content_dir_name="gba",
+            library_name="mGBA",
+        )
+        assert placement.dir == "/states/gba/mGBA"
+
+    def test_unfilled_components_stay_holes(self):
+        placement = _state(
+            'savestate_directory = "/states"\n'
+            'sort_savestates_by_content_enable = "true"\n'
+            'sort_savestates_enable = "true"\n'
+        )
+        assert placement.dir == "/states/<content_dir>/<library_name>"
+        assert placement.needs == ("content_dir", "library_name")

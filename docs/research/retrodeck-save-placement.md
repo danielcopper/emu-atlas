@@ -761,3 +761,128 @@ Recorded as consequences of the findings; the decisions themselves are settled i
   after is sufficient to attribute newly written files to a run.
 - Core probing requires crash isolation (fork per core) and tolerates missing host libraries as "unknown", never as a
   guess.
+
+## 18. Savestates — the same math, a different quartet
+
+Collected for the savestate placement question. Same pinned revisions as the rest of this document.
+
+**[V]** Four keys govern savestates, mirroring the savefile four: `savestate_directory`, `savestates_in_content_dir`,
+`sort_savestates_by_content_enable`, `sort_savestates_enable` (`runloop.c:8765-8768`).
+
+**[V]** **The directory math is one function, not two.** `runloop_path_set_redirect` (`runloop.c:8752-8979`) resolves
+both families side by side in a single pass, and the savestate half is the savefile half line for line:
+
+```text
+savestates_in_content_dir, or savestate_directory empty -> the ROM's own directory  (runloop.c:8798-8808)
+otherwise                                               -> <savestate_directory>
+                                                           + <content_dir>    if sort_savestates_by_content_enable  (:8861-8866)
+                                                           + <library_name>   if sort_savestates_enable             (:8869-8874)
+```
+
+**[V]** Order is content directory first, then core — the same order and the same `content_dir_name` string, which is
+computed once for whichever family asked for it (`runloop.c:8779-8783`).
+
+**[V]** The sorted directory is not guaranteed here either: if it does not exist and cannot be created, RetroArch
+silently reverts to the unsorted root (`runloop.c:8878-8887`), the twin of `:8844`. The directory is created at
+**content load**, not at save time — which is why a machine that has never written a state can still carry the whole
+sorted tree (observed, see below).
+
+**[V]** The platform default is `states` under the RetroArch config tree (`platform_unix.c:2135-2136`), seeded before
+any config is read (`configuration.c:5740-5741`) exactly as the `saves` default is. Unlike the system directory, no
+environment variable overrides it, so the seeded value is what an absent key resolves to.
+
+**[V]** Upstream compile-time defaults are identical to the savefile quartet's: `DEFAULT_SORT_SAVESTATES_ENABLE` true
+(`config.def.h:983`), `DEFAULT_SORT_SAVESTATES_BY_CONTENT_ENABLE` false (`:985`), `DEFAULT_SAVESTATES_IN_CONTENT_DIR`
+false (`:988`). A bare install therefore sorts states by core.
+
+### Blank versus absent — no asymmetry, and the row had to be read to know it
+
+**[V]** `savestate_directory` passes `handle_setting = false` in the settings table (`configuration.c:1710`), the same
+as `savefile_directory` (`:1709`) and unlike `rgui_config_directory` (`:1736`). So the generic path loop skips it
+(`:6534-6535`) and the only thing that sets it is the validated block at `:6935-6960` — a line-for-line twin of the
+savefile block at `:6914-6933`: the literal `default` resets to the platform default, an existing directory is applied,
+anything else warns and sets nothing. **Blank keeps the standing root for savestates too.**
+
+**[V]** One divergence inside that block, and it is the guard rather than the logic: the savestate branch tests
+`RARCH_OVERRIDE_SETTING_STATE_PATH` (the `--savestate`/`-S` flag) where the savefile branch tests `..._SAVE_PATH`.
+**[V]** Neither flag appears anywhere in the shipped `es_systems.xml` (RetroDECK 0.10.9b) — 893 `<command>` occurrences
+in the file text, being the 509 live elements §1 counts plus 384 inside commented-out blocks. So on this arrangement the
+config chain is the whole truth for states exactly as §10 established for saves.
+
+**[V]** `config_save_overrides` treats the two directories specially (`configuration.c:9053-9089`, `:9195-9218`) because
+they alias one runtime buffer. That is the menu's _write_ path and has no effect on resolution.
+
+### What a savestate is called
+
+**[V]** The base name is the content's stem with `.state` appended — `FILE_PATH_STATE_EXTENSION`
+(`file_path_special.h:44`), applied by `fill_pathname_dir` at `runloop.c:8942-8949`, so the same "stem cut once, last
+component appended unchanged" math §4 describes for `.srm`.
+
+**[V]** Slots come off that base in `runloop_get_savestate_path` (`runloop.c:8185-8207`): slot 0 is `<stem>.state`, slot
+N above zero is `<stem>.stateN`, and a negative slot is `<stem>.state.auto`.
+
+**[V]** With `savestate_thumbnail_enable`, RetroArch writes a `.png` beside each state — `<state path>.png`
+(`gfx_thumbnail.c:3409-3425` builds it; `task_save.c:1226-1230` → `task_screenshot.c:476-485` writes it). The reference
+machine has the setting off.
+
+**[V]** Input-movie replays share the directory but are not savestates: `name.replay` is set from the same resolved
+directory (`runloop.c:8923`, `:8950`).
+
+### Why no core can deviate — and what a core still gets to say
+
+**[V]** The libretro API exposes **no savestate directory to a core**. The environment callbacks that hand out
+directories are `GET_SYSTEM_DIRECTORY` (9), `GET_CONTENT_DIRECTORY` / `GET_CORE_ASSETS_DIRECTORY` (30),
+`GET_SAVE_DIRECTORY` (31), `GET_PLAYLIST_DIRECTORY` (79) and `GET_FILE_BROWSER_START_DIRECTORY` (80); there is none for
+states. `GET_SAVESTATE_CONTEXT` (72 | EXPERIMENTAL) tells a core _why_ it is being serialized, not where the result
+goes. RetroArch serializes the state and writes the file itself.
+
+**Consequence for the design.** The savefile question needs per-core rule cards because a core writes its own save data
+and can root it anywhere (§8). No such card can exist for savestates, and none ever will while the API stays as it is.
+That is why the savestate answer carries no `granularity`: the field is a card's word about how a core groups what it
+writes, and its domain here is empty rather than merely unestablished.
+
+**[V]** What a core does declare is whether it can be serialized at all. `savestate = "false"` in a `.info` sets
+`CORE_INFO_SAVESTATE_DISABLED` (`core_info.c:1841-1860`), and RetroArch checks that level before offering a state
+(`core_info.c:2899-2937`). Of the 292 `.info` files a stock RetroDECK 0.10.9b ships, **68 declare
+`savestate = "false"`** (159 true, 1 the non-boolean `"serialized"`); `savestate_features` reads `deterministic` 55,
+`serialized` 78, `basic` 24, and the unrecognized literal `null` 33.
+
+**[V]** The declaration does not bind absolutely, and both escapes are in that same function:
+`core_info_savestate_bypass` waves the check through (`:2904-2905`), and at the BASIC level a running core reporting a
+nonzero `retro_serialize_size()` overrides stale metadata (`:2926-2929`). The second is a fact about a running core, so
+no config read can see it.
+
+**[V]** Two parse details follow from `config_get_bool`'s vocabulary: `savestate = "serialized"` is not a boolean, so
+the block never runs and the DETERMINISTIC default stands; and `savestate_features` recognizes only the literals `basic`
+and `serialized`, so `null` leaves the default standing too.
+
+### RetroDECK's shipped defaults, and the drift on the reference machine
+
+**[V]** `components/retroarch/rd_config/retroarch.cfg` ships `savestate_directory = "RETRODECKHOMEDIR/states"`,
+`savestates_in_content_dir = "false"`, `sort_savestates_by_content_enable = "true"`, `sort_savestates_enable = "false"`.
+`component_prepare.sh:28` (and `:209`) writes `states_path` into the first of them; `retrodeck.json` carries
+`paths.states_path` beside `saves_path`.
+
+**[V-live]** The reference installation reads `savestate_directory = "/run/media/deck/Emulation/retrodeck/states"` with
+**`sort_savestates_by_content_enable = "false"`** — the user drift §9 already recorded, still standing. So the expected
+layout there is flat: `states/<rom_stem>.state`.
+
+**[V-live]** The drift left a footprint that confirms the whole rule. `states/` carries content-sorted directories from
+the period when the flag was true — system-named directories alongside several per-game directories, including
+multi-disc `.m3u` spellings — and **not one `.state` file anywhere under the RetroDECK home**. Empty sorted directories
+with no states in them are exactly what `path_mkdir` at content load produces (`runloop.c:8878-8879`); a save-time
+creation could not have made them. The remaining entries under `states/` (`dolphin`, `mame-sa`, `primehack`,
+`ps2/pcsx2`, `ps3/rpcs3`, `PSP/PPSSPP-SA`, `psx/duckstation`, `nds/melonds`, `xroar/*`) are RetroDECK's standalone
+`dir_prep` homes, not RetroArch's.
+
+**[V]** The only override file on the machine, `config/PPSSPP/PPSSPP.cfg`, sets `sort_savefiles_by_content_enable` alone
+— it does **not** touch the savestate sort. So on a stock installation PPSSPP's states stay content-sorted while its
+saves go flat: the shipped override splits the two families apart.
+
+### EmuDeck
+
+**[V]** EmuDeck sets all four state keys (`functions/EmuScripts/RetroArch_maincfg.sh:3053`, `:3057`, `:3091-3092`,
+upstream `acc45fc`), with one asymmetry worth recording: `savestate_directory` is the hardcoded
+`~/.var/app/org.libretro.RetroArch/config/retroarch/states`, where the saves root is derived from `savesPath`.
+`functions/autofix.sh:74-75` forces both state sort flags back to false, and unlike the savefile line at `:73` — the
+broken one §13 flagged — those two are correctly written.

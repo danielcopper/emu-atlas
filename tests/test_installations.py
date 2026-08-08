@@ -1803,6 +1803,26 @@ class TestOneReadPerSourcePerQuery:
         assert self.DEPLOY_ESDE in machine.reads
         assert ESDE_SETTINGS in machine.reads
 
+    def test_state_location_reads_each_source_once(self):
+        machine = self._query(
+            lambda rd: rd.state_location(content_path=self.CONTENT, core_so="parallel_n64_libretro.so")
+        )
+        assert machine.repeats() == {}
+        # The support declaration is a real read, and the only source this
+        # question has that its savefile twin does not.
+        assert self.INFO in machine.reads
+
+    def test_entry_state_location_reads_each_source_once(self):
+        # Same shape as the entry save route: the catalogue ask that produced
+        # the entry is its own query, so only the entry's own reads count.
+        machine = _CountingMachine(self.FILES, cores=self.CORES)
+        entry = atlas.RetroDeck(HOME, machine).emulators_for("n64").entries[0]
+        machine.reads.clear()
+        entry.state_location(content_path=self.CONTENT)
+        assert machine.repeats() == {}
+        assert self.DEPLOY_ESDE in machine.reads
+        assert ESDE_SETTINGS in machine.reads
+
     def test_firmware_for_core_reads_each_source_once(self):
         machine = self._query(lambda rd: rd.firmware_for_core(core_so="parallel_n64_libretro.so"))
         assert machine.repeats() == {}

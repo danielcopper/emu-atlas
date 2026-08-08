@@ -60,8 +60,8 @@ SwanStation) need the code-rule-plus-card route for file-set/granularity precisi
 ### 2. Remaining resolver gaps (docs/tasks/save-detection.md)
 
 `#include` in cfg parsing (H2 remainder, needs Machine access in the parser), option validation against live definitions
-(M1 remainder), savestates, subsystem content, platform default core dirs (H9 remainder), playlists as the
-bare-RetroArch catalogue, override enumeration without a core, deviation warnings against shipped reference configs.
+(M1 remainder), subsystem content, platform default core dirs (H9 remainder), playlists as the bare-RetroArch catalogue,
+override enumeration without a core, deviation warnings against shipped reference configs.
 
 ### 3. Card variants via feature detection
 

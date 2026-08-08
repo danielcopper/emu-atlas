@@ -11,13 +11,13 @@ from __future__ import annotations
 from atlas.retroarch_cfg import LayoutDefaults
 
 RETRODECK_SHIPPED = LayoutDefaults(
-    savefiles_in_content_dir=False,
+    in_content_dir=False,
     sort_by_content=True,
     sort_by_core=False,
     label="RetroDECK shipped default",
 )
 EMUDECK_SHIPPED = LayoutDefaults(
-    savefiles_in_content_dir=False,
+    in_content_dir=False,
     sort_by_content=False,
     sort_by_core=False,
     label="EmuDeck shipped default",

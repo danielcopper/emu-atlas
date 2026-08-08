@@ -5,6 +5,8 @@ from __future__ import annotations
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
     IGNORED_VALUE_REJECTED,
+    SAVEFILE_KEYS,
+    SAVESTATE_KEYS,
     UPSTREAM_DEFAULTS,
     cfg_bool,
     chain_bool,
@@ -12,7 +14,7 @@ from atlas.retroarch_cfg import (
     is_app_relative,
     parse_cfg,
     parse_cfg_text,
-    resolve_save_layout,
+    resolve_layout,
 )
 from tests.shipped_layouts import EMUDECK_SHIPPED, RETRODECK_SHIPPED
 
@@ -22,13 +24,16 @@ HOME = "/home/deck"
 
 
 def _cfg(text):
-    return resolve_save_layout(text, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED)
+    return resolve_layout(
+        text, keys=SAVEFILE_KEYS, home=HOME, cfg_label="retroarch.cfg", defaults=RETRODECK_SHIPPED
+    )
 
 
 def _chain(global_text, *overrides, is_directory=None):
     """The layout resolved over a labelled chain — layer N is ``override N``."""
-    return resolve_save_layout(
+    return resolve_layout(
         global_text,
+        keys=SAVEFILE_KEYS,
         home=HOME,
         cfg_label="retroarch.cfg",
         defaults=RETRODECK_SHIPPED,
@@ -45,15 +50,15 @@ def _only(*existing):
 class TestDefaults:
     def test_none_text_is_all_defaults(self):
         cfg = _cfg(None)
-        assert cfg.savefiles_in_content_dir is False
+        assert cfg.in_content_dir is False
         assert cfg.sort_by_content is True  # RetroDECK shipped default
         assert cfg.sort_by_core is False
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
 
     def test_empty_text_is_all_defaults(self):
         cfg = _cfg("")
         assert cfg.sort_by_content is True
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
 
     def test_defaults_provenance_marks_default(self):
         cfg = _cfg(None)
@@ -63,12 +68,12 @@ class TestDefaults:
 
     def test_upstream_defaults_sort_by_core(self):
         # RetroArch's compile-time default sorts by core (config.def.h:982).
-        cfg = resolve_save_layout(None, home=HOME, cfg_label="retroarch.cfg", defaults=UPSTREAM_DEFAULTS)
+        cfg = resolve_layout(None,keys=SAVEFILE_KEYS, home=HOME, cfg_label="retroarch.cfg", defaults=UPSTREAM_DEFAULTS)
         assert cfg.sort_by_core is True
         assert cfg.sort_by_content is False
 
     def test_emudeck_defaults_flat(self):
-        cfg = resolve_save_layout(None, home=HOME, cfg_label="retroarch.cfg", defaults=EMUDECK_SHIPPED)
+        cfg = resolve_layout(None,keys=SAVEFILE_KEYS, home=HOME, cfg_label="retroarch.cfg", defaults=EMUDECK_SHIPPED)
         assert cfg.sort_by_core is False
         assert cfg.sort_by_content is False
 
@@ -80,7 +85,7 @@ class TestSaveLayoutFlags:
             'sort_savefiles_by_content_enable = "true"\n'
             'sort_savefiles_enable = "true"\n'
         )
-        assert cfg.savefiles_in_content_dir is True
+        assert cfg.in_content_dir is True
         assert cfg.sort_by_content is True
         assert cfg.sort_by_core is True
 
@@ -96,19 +101,19 @@ class TestSaveLayoutFlags:
 class TestSavefileDirectory:
     def test_tilde_expands_against_home(self):
         cfg = _cfg('savefile_directory = "~/RetroArch/saves"\n')
-        assert cfg.savefile_directory == "/home/deck/RetroArch/saves"
+        assert cfg.directory == "/home/deck/RetroArch/saves"
 
     def test_bare_tilde_is_home(self):
         cfg = _cfg('savefile_directory = "~"\n')
-        assert cfg.savefile_directory == HOME
+        assert cfg.directory == HOME
 
     def test_absolute_path_kept(self):
         cfg = _cfg('savefile_directory = "/mnt/saves"\n')
-        assert cfg.savefile_directory == "/mnt/saves"
+        assert cfg.directory == "/mnt/saves"
 
     def test_literal_default_resets_to_platform_default(self):
         cfg = _cfg('savefile_directory = "default"\n')
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
         assert any("platform default" in s for s in cfg.sources)
 
     def test_blank_reaches_the_platform_default_by_being_refused(self):
@@ -118,24 +123,25 @@ class TestSavefileDirectory:
         # With one layer nothing stood before the read, so the answer is the
         # platform default either way; in an override the two diverge.
         cfg = _cfg('savefile_directory = ""\n')
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
 
     def test_uppercase_default_is_not_the_unset_spelling(self):
         # string_is_equal is case-sensitive (configuration.c:6918): "DEFAULT" is
         # an ordinary (relative, non-existent) path, not a reset.
         cfg = _cfg('savefile_directory = "DEFAULT"\n')
-        assert cfg.savefile_directory == "DEFAULT"
+        assert cfg.directory == "DEFAULT"
 
     def test_absent_is_unset_with_default_provenance(self):
         cfg = _cfg('sort_savefiles_enable = "true"\n')
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
         assert any("default: savefile_directory unset" in s for s in cfg.sources)
 
 
 class TestOverrideChain:
     def test_core_override_wins_over_global(self):
-        cfg = resolve_save_layout(
+        cfg = resolve_layout(
             'sort_savefiles_by_content_enable = "true"\n',
+            keys=SAVEFILE_KEYS,
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
@@ -145,8 +151,9 @@ class TestOverrideChain:
         assert any("override wins" in s for s in cfg.sources)
 
     def test_later_layer_wins_over_earlier(self):
-        cfg = resolve_save_layout(
+        cfg = resolve_layout(
             'sort_savefiles_by_content_enable = "true"\n',
+            keys=SAVEFILE_KEYS,
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
@@ -159,27 +166,29 @@ class TestOverrideChain:
         assert any("game override" in s and "override wins" in s for s in cfg.sources)
 
     def test_override_touches_only_its_keys(self):
-        cfg = resolve_save_layout(
+        cfg = resolve_layout(
             'savefile_directory = "/mnt/saves"\nsort_savefiles_enable = "true"\n',
+            keys=SAVEFILE_KEYS,
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
             overrides=[("core override", 'sort_savefiles_by_content_enable = "false"')],
         )
-        assert cfg.savefile_directory == "/mnt/saves"
+        assert cfg.directory == "/mnt/saves"
         assert cfg.sort_by_core is True
         assert cfg.sort_by_content is False
 
     def test_override_can_set_savefile_directory(self):
         # configuration.c:7240 — an override file can set the save dir itself.
-        cfg = resolve_save_layout(
+        cfg = resolve_layout(
             'savefile_directory = "/mnt/saves"\n',
+            keys=SAVEFILE_KEYS,
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
             overrides=[("game override", 'savefile_directory = "/mnt/elsewhere"')],
         )
-        assert cfg.savefile_directory == "/mnt/elsewhere"
+        assert cfg.directory == "/mnt/elsewhere"
 
 
 class TestReadsPerKey:
@@ -286,7 +295,7 @@ class TestSavefileDirectoryValidation:
             'savefile_directory = "/run/media/gone/saves"',
             is_directory=_only("/mnt/sd/saves"),
         )
-        assert cfg.savefile_directory == "/mnt/sd/saves"
+        assert cfg.directory == "/mnt/sd/saves"
         assert [(r.layer, r.value) for r in cfg.rejected_directories] == [
             ("override 1", "/run/media/gone/saves")
         ]
@@ -295,7 +304,7 @@ class TestSavefileDirectoryValidation:
         # The single-layer case, unchanged: nothing stood before the boot load
         # but the platform default that config_set_defaults installed.
         cfg = _chain('savefile_directory = "/run/media/gone/saves"\n', is_directory=_only())
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
         assert [(r.layer, r.value) for r in cfg.rejected_directories] == [
             ("retroarch.cfg", "/run/media/gone/saves")
         ]
@@ -306,7 +315,7 @@ class TestSavefileDirectoryValidation:
             'savefile_directory = "/mnt/sd/other"',
             is_directory=_only("/mnt/sd/other"),
         )
-        assert cfg.savefile_directory == "/mnt/sd/other"
+        assert cfg.directory == "/mnt/sd/other"
         assert [(r.layer, r.superseded) for r in cfg.rejected_directories] == [("retroarch.cfg", True)]
 
     def test_a_refusal_the_chain_never_got_past_is_not_superseded(self):
@@ -326,7 +335,7 @@ class TestSavefileDirectoryValidation:
             'savefile_directory = "default"',
             is_directory=_only(),
         )
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
         assert [r.superseded for r in cfg.rejected_directories] == [True]
 
     def test_a_usable_override_still_wins(self):
@@ -335,7 +344,7 @@ class TestSavefileDirectoryValidation:
             'savefile_directory = "/mnt/sd/other"',
             is_directory=_only("/mnt/sd/saves", "/mnt/sd/other"),
         )
-        assert cfg.savefile_directory == "/mnt/sd/other"
+        assert cfg.directory == "/mnt/sd/other"
         assert cfg.rejected_directories == ()
 
     def test_a_shadowed_layer_is_not_the_fallback_for_an_unusable_one(self):
@@ -347,7 +356,7 @@ class TestSavefileDirectoryValidation:
             'savefile_directory = "/run/media/gone/saves"',
             is_directory=_only("/mnt/sd/saves", "/mnt/sd/other"),
         )
-        assert cfg.savefile_directory == "/mnt/sd/saves"
+        assert cfg.directory == "/mnt/sd/saves"
 
     def test_literal_default_in_an_override_resets_past_a_valid_global(self):
         # "default" is not validated at all (configuration.c:6918) — it sets the
@@ -357,7 +366,7 @@ class TestSavefileDirectoryValidation:
             'savefile_directory = "default"',
             is_directory=_only("/mnt/sd/saves"),
         )
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
 
     def test_blank_in_an_override_is_refused_not_a_reset(self):
         # config_get_path hands an empty entry on like any other value
@@ -368,23 +377,23 @@ class TestSavefileDirectoryValidation:
             'savefile_directory = ""',
             is_directory=_only("/mnt/sd/saves"),
         )
-        assert cfg.savefile_directory == "/mnt/sd/saves"
+        assert cfg.directory == "/mnt/sd/saves"
         assert [(r.layer, r.value) for r in cfg.rejected_directories] == [("override 1", "")]
 
     def test_blank_is_refused_even_without_a_directory_check(self):
         # No machine is needed for this one: "" is a directory nowhere.
         cfg = _chain('savefile_directory = ""\n')
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
         assert [(r.layer, r.value) for r in cfg.rejected_directories] == [("retroarch.cfg", "")]
 
     def test_the_check_sees_the_expanded_value(self):
         cfg = _chain('savefile_directory = "~/saves"\n', is_directory=_only(f"{HOME}/saves"))
-        assert cfg.savefile_directory == f"{HOME}/saves"
+        assert cfg.directory == f"{HOME}/saves"
         assert cfg.rejected_directories == ()
 
     def test_without_a_check_every_written_path_is_taken_as_written(self):
         cfg = _chain('savefile_directory = "/mnt/sd/saves"\n', 'savefile_directory = "/nowhere"')
-        assert cfg.savefile_directory == "/nowhere"
+        assert cfg.directory == "/nowhere"
         assert cfg.rejected_directories == ()
 
 
@@ -400,12 +409,12 @@ class TestParsingEdgeCases:
     def test_exact_key_match_no_prefix_collision(self):
         # A stray key that merely starts like a real one must not set it.
         cfg = _cfg('savefiles_in_content_dir_extra = "true"\n')
-        assert cfg.savefiles_in_content_dir is False
+        assert cfg.in_content_dir is False
 
     def test_savefile_directory_and_in_content_dir_do_not_collide(self):
         cfg = _cfg('savefile_directory = "/mnt/saves"\nsavefiles_in_content_dir = "true"\n')
-        assert cfg.savefile_directory == "/mnt/saves"
-        assert cfg.savefiles_in_content_dir is True
+        assert cfg.directory == "/mnt/saves"
+        assert cfg.in_content_dir is True
 
     def test_first_occurrence_wins(self):
         # config_file.c:496-507 — the map only takes a key not already present.
@@ -521,7 +530,7 @@ class TestNulTerminatedText:
         # applies. RetroDECK ships sort-by-content, so the key past the NUL
         # must not turn sort-by-core on.
         cfg = _cfg('savefile_directory = "/mnt/saves"\x00\nsort_savefiles_enable = "true"\n')
-        assert cfg.savefile_directory == "/mnt/saves"
+        assert cfg.directory == "/mnt/saves"
         assert cfg.sort_by_core is False
 
 
@@ -543,8 +552,9 @@ class TestBooleanVocabulary:
         assert cfg.sort_by_content is True
 
     def test_uppercase_true_is_not_true(self):
-        cfg = resolve_save_layout(
+        cfg = resolve_layout(
             'sort_savefiles_enable = "TRUE"\n',
+            keys=SAVEFILE_KEYS,
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=EMUDECK_SHIPPED,
@@ -554,8 +564,9 @@ class TestBooleanVocabulary:
     def test_rejected_override_value_leaves_the_global_layer_standing(self):
         # "the global layer", not "the previous layer": what a refused value
         # falls back to is always the boot load's value — see TestReadsPerKey.
-        cfg = resolve_save_layout(
+        cfg = resolve_layout(
             'sort_savefiles_by_content_enable = "false"\n',
+            keys=SAVEFILE_KEYS,
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
@@ -566,8 +577,9 @@ class TestBooleanVocabulary:
 
 class TestIgnoredSettings:
     def test_rejected_value_is_reported_with_layer_key_and_value(self):
-        cfg = resolve_save_layout(
+        cfg = resolve_layout(
             "",
+            keys=SAVEFILE_KEYS,
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
@@ -579,7 +591,7 @@ class TestIgnoredSettings:
 
     def test_dropped_line_aiming_at_a_governing_key_is_reported(self):
         cfg = _cfg('savefile_directory="/mnt/saves"\n')
-        assert cfg.savefile_directory is None
+        assert cfg.directory is None
         assert [(i.kind, i.key, i.text) for i in cfg.ignored] == [
             (IGNORED_LINE_DROPPED, "savefile_directory", 'savefile_directory="/mnt/saves"')
         ]
@@ -600,4 +612,98 @@ class TestApplicationRelativePaths:
 
     def test_colon_value_is_kept_as_configured_not_read_as_unset(self):
         cfg = _cfg('savefile_directory = ":/saves"\n')
-        assert cfg.savefile_directory == ":/saves"
+        assert cfg.directory == ":/saves"
+
+
+def _states(text, *overrides, is_directory=None):
+    """The savestate family resolved over the same chain the savefile one uses."""
+    return resolve_layout(
+        text,
+        keys=SAVESTATE_KEYS,
+        home=HOME,
+        cfg_label="retroarch.cfg",
+        defaults=RETRODECK_SHIPPED,
+        overrides=[(f"override {i}", t) for i, t in enumerate(overrides, start=1)],
+        is_directory=is_directory,
+    )
+
+
+class TestTheTwoFamiliesAreResolvedApart:
+    """One chain, two quartets — and neither reads the other's keys.
+
+    The failure this guards against is the cheap one: a savestate answer that
+    silently reports the saves root because the port reused a key it should have
+    parameterized. RetroArch reads both quartets in one function
+    (runloop.c:8763-8768) and keeps them apart there too.
+    """
+
+    def test_the_savestate_root_comes_from_the_savestate_key(self):
+        cfg = _states('savestate_directory = "/mnt/states"\nsavefile_directory = "/mnt/saves"\n')
+        assert cfg.directory == "/mnt/states"
+
+    def test_the_savefile_key_does_not_set_the_savestate_root(self):
+        assert _states('savefile_directory = "/mnt/saves"\n').directory is None
+
+    def test_the_savestate_key_does_not_set_the_savefile_root(self):
+        assert _cfg('savestate_directory = "/mnt/states"\n').directory is None
+
+    def test_each_family_reads_its_own_sort_flags(self):
+        text = 'sort_savestates_enable = "true"\nsort_savefiles_enable = "false"\n'
+        assert _states(text).sort_by_core is True
+        assert _cfg(text).sort_by_core is False
+
+    def test_the_answer_names_the_family_it_resolved(self):
+        assert _states("").keys is SAVESTATE_KEYS
+        assert _cfg("").keys is SAVEFILE_KEYS
+
+    def test_the_platform_default_subdir_differs(self):
+        # 'saves' against 'states' under the config tree, platform_unix.c:2133-2136.
+        assert SAVEFILE_KEYS.platform_default_subdir == "saves"
+        assert SAVESTATE_KEYS.platform_default_subdir == "states"
+
+
+class TestTheSavestateRootTakesTheSameSpellings:
+    """configuration.c:6935-6960 is a line-for-line twin of the savefile block."""
+
+    def test_default_resets_to_the_platform_default(self):
+        assert _states('savestate_directory = "default"\n').directory is None
+
+    def test_home_is_expanded(self):
+        assert _states('savestate_directory = "~/states"\n').directory == f"{HOME}/states"
+
+    def test_a_value_that_is_not_a_directory_sets_nothing(self):
+        cfg = _states('savestate_directory = "/gone/states"\n', is_directory=_only())
+        assert cfg.directory is None
+        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [
+            ("retroarch.cfg", "/gone/states")
+        ]
+
+    def test_blank_in_an_override_keeps_the_standing_root(self):
+        # savestate_directory passes handle_setting=false (configuration.c:1710)
+        # exactly as savefile_directory does (:1709), so the generic path loop
+        # skips it and only the directory-testing block sets it.
+        cfg = _states('savestate_directory = "/mnt/states"\n', 'savestate_directory = ""')
+        assert cfg.directory == "/mnt/states"
+
+    def test_an_override_can_move_the_root(self):
+        cfg = _states('savestate_directory = "/mnt/states"\n', 'savestate_directory = "/mnt/other"')
+        assert cfg.directory == "/mnt/other"
+
+
+class TestOnlyThisFamilysDroppedLinesAreStated:
+    """A line aimed at the other family moves a directory this answer never reports."""
+
+    def test_a_dropped_savestate_line_is_stated_on_the_savestate_answer(self):
+        cfg = _states('savestate_directory="/mnt/states"\n')
+        assert [(i.kind, i.key) for i in cfg.ignored] == [
+            (IGNORED_LINE_DROPPED, "savestate_directory")
+        ]
+
+    def test_a_dropped_savefile_line_is_not(self):
+        assert _states('savefile_directory="/mnt/saves"\n').ignored == ()
+
+    def test_and_the_savefile_answer_states_the_mirror_image(self):
+        assert _cfg('savestate_directory="/mnt/states"\n').ignored == ()
+        assert [(i.kind, i.key) for i in _cfg('savefile_directory="/mnt/saves"\n').ignored] == [
+            (IGNORED_LINE_DROPPED, "savefile_directory")
+        ]

@@ -61,6 +61,11 @@ inst.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
 # -> the primary route: the caller names the core. It is the only save route on the handles
 #    with no frontend catalogue — EmuDeck and the two bare RetroArch installs.
 
+inst.state_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
+                    core_so="mupen64plus_next_libretro.so")
+# -> the same question for savestates, off the same configs through the savestate
+#    quartet of keys. Its own answer type — see "Placements" below.
+
 answer = inst.emulators_for("n64")   # on EVERY handle: a CatalogueAnswer (entries, sources, caveats)
 emu = answer.entries[0]              # launch entries in effective priority order, as configured right now
                                      # no entries? the caveat says which kind of none — see below
@@ -75,6 +80,7 @@ inst.rom_location("n64")             # on EVERY handle: a RomPlacement (dir, phy
 #    or — on the entry route — Unresolved (a typed domain outcome, e.g. a standalone entry
 #    before that block lands).
 #    Granularity — per-game file / shared card, with the option that selects it — is part of the placement.
+#    SavestatePlacement is the same shape without granularity, and the omission is the contract.
 ```
 
 ```python
@@ -243,6 +249,20 @@ findings:
   directory reached through symlinks reports the fully resolved backing path (`physical_dir`); a dead link is a stated
   caveat.
 
+**Savestates are the same placement question and a different answer type.** RetroArch resolves both families in one
+function, so atlas ports the chain once and parameterizes it by the four keys the family is spelled with
+(`docs/research/retrodeck-save-placement.md` §18). What forks is the answer: `SavestatePlacement` is `SavePlacement`
+without `granularity`. That field is a rule card's word about how a _core_ groups the data it writes, and no core writes
+a savestate — the libretro API hands it no savestate directory and RetroArch serializes the file itself — so no card for
+it can exist and the field's domain is empty rather than merely unestablished. Carrying it as a permanent `None` would
+be the blank field this design refuses, and the usual escape does not apply: a caveat naming what the value depends on
+has nothing to name. `root_kind` is closed around its own question for the same reason. In exchange, the savestate
+answer can state something the savefile answer cannot: RetroArch names the files itself, so `<stem>.state`, the numbered
+slots and the auto slot are known rather than per-core behaviour — the file set is still an observation, because which
+slots were ever written is not on disk, but it is observed through a pattern that matches savestates and nothing else.
+Whether a core can be serialized at all _is_ per-core, and it is read live from the `.info` the core ships beside it
+(capability, never a path) and stated as a caveat with both of the ways RetroArch lets that declaration be overridden.
+
 Every answer carries provenance: which config file produced each governing value, which default applied, which override
 won. Where a shipped reference config is readable on the machine (RetroDECK's Flatpak deployment; a distro's
 `/etc/retroarch.cfg`), atlas can additionally report deviation from it — read live, not hardcoded. Where no reference
@@ -278,7 +298,8 @@ The package has one consumer namespace and one tooling surface, and the split is
 
 **Tier 1 — `import atlas`.** The two entry points, the aggregate over them, the handles they answer with, every answer
 type, every vocabulary those answers speak (as types _and_ as constants, including the seam's `PathKind`/`ReadStatus`,
-which answers carry), and the ten serializers. A client never needs a submodule; every name here is one it can act on.
+which answers carry), and one serializer per answer type. A client never needs a submodule; every name here is one it
+can act on.
 
 **Tier 2 — `from atlas.<module> import …`.** The machine seam (`atlas.machine`), the parsers (`atlas.retroarch_cfg`,
 `atlas.esde`, `atlas.core_info`, `atlas.content_path`), the packaged-data loaders (`atlas.oddities`, `atlas.evidence`),

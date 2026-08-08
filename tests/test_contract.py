@@ -78,3 +78,37 @@ class TestInstallationContractCarriesTheFindings:
 
     def test_identity_is_unchanged(self):
         assert set(installation_contract(_healthy())) == {"kind", "kinds", "root", "health"}
+
+
+class TestTheSavestateFormOmitsGranularity:
+    """The one field the two placement serializers do not share.
+
+    A ``"granularity": null`` here would be a key no answer can ever fill, and
+    a client would read it as "not established yet" rather than "cannot exist".
+    Its absence is therefore contractual, and so is the rest of the form being
+    identical — the two answers come off one upstream rule.
+    """
+
+    def _placements(self):
+        handle = _healthy()
+        return (
+            atlas.placement_contract(handle.save_location()),
+            atlas.savestate_placement_contract(handle.state_location()),
+        )
+
+    def test_granularity_is_absent_rather_than_null(self):
+        _, state = self._placements()
+        assert "granularity" not in state
+
+    def test_every_other_key_is_the_same(self):
+        save, state = self._placements()
+        assert set(save) - set(state) == {"granularity"}
+        assert set(state) - set(save) == set()
+
+    def test_the_root_kind_names_the_savestate_anchor(self):
+        _, state = self._placements()
+        assert state["root_kind"] == atlas.ROOT_SAVESTATE_DIRECTORY
+
+    def test_the_form_is_json(self):
+        _, state = self._placements()
+        assert json.loads(json.dumps(state)) == state
