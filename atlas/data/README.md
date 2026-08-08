@@ -117,6 +117,27 @@ answers stop carrying it. No code names an arrangement's evidence state. Re-pinn
 — every fixture stating the old version is a drifted machine afterwards, and the runner enforces it
 (`docs/re-verification.md`, step 5).
 
+## `system_ids.json` — the whole system vocabulary
+
+Every id a question about a system can take, read by `atlas.systems`. One list, nothing else in the file.
+
+```json
+"systems": ["3do", "gb", "n64", …]
+```
+
+The ids are **ES-DE's system names**, because that is what a frontend catalogue declares and what the questions answer
+about. Cited to the `es_systems.xml` of a pinned build, so the set is checkable rather than an opinion: a name that file
+does not declare is not an id, however plausible. Commented-out blocks are not declarations and are not included — the
+guard test parses the file with ElementTree, which drops them, and asserts set-identity with this list.
+
+**No foreign vocabulary belongs here.** Another product's platform identifiers — a library manager's slugs, a metadata
+service's ids — are world knowledge atlas cannot check against any machine, and a client holding them owns the mapping
+into these ids (`DESIGN.md`, Vocabulary). What ships for them is the target set to validate against, not a table.
+
+**The loader is fail-closed**: an unreadable schema, an empty list, an entry that is not a non-empty string, and a
+repeated id each fail the load. A vocabulary whose own account of itself does not add up would answer "not an id" for
+names that are, and a caller validating against it would delete the mapping that was right.
+
 ## `firmware_hashes.json`
 
 What a correct firmware file's bytes are: the `md5` / `sha1` / `size` triple that identifies it. This is world knowledge

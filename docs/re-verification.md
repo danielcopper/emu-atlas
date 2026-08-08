@@ -27,6 +27,22 @@ small, and it is the whole surface world knowledge rests on.
 - Changed behaviour → a **new generation**: new vectors for it, and the vectors for the old generation stay (one fixture
   machine per supported generation, never deleted).
 
+**If ES-DE moved, `atlas/data/system_ids.json` is one of the cited spots.** That list _is_ the `es_systems.xml` of the
+pinned build — atlas's whole system vocabulary, cited to that file — so an ES-DE bump means re-deriving it from the new
+deployment. Re-derive, do not patch by hand: a system the build renames and one it drops look the same from inside the
+list, and both turn a name clients validate against into one no question can answer.
+
+The signal is a test: `tests/test_systems.py` parses the deployed file and asserts set-identity, so it fails on this
+machine the moment the two disagree. It **skips** where RetroDECK is not installed, so a green CI run is not the check —
+this step is.
+
+Note what does _not_ signal it. `known_systems` and `from_esde_system` are pure lookups over that list, with no answer
+to hang a caveat on, so nothing warns a caller that the vocabulary they validated against came from a build this machine
+no longer runs. The drift signal lives on the **answers** instead (`arrangement-version-drifted`, step 5), which is
+where a stale vocabulary surfaces as a system that resolves to nothing. Clients that validate their own platform maps
+against `known_systems()` (`docs/how-to-use.md`) re-run that check when they bump atlas — the id set moving is exactly
+what their check is for.
+
 ## 3. Cores: only carded, only moved
 
 Rule cards (`atlas/data/core_oddities.json`) and audit entries (`atlas/data/core_audit.json`) pin core versions of their

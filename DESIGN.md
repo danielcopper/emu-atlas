@@ -301,13 +301,31 @@ not a data set to re-ship — and each release publishes them as a versioned art
 
 ## Vocabulary
 
-_Planned; nothing of this is built._ Atlas is to define canonical system ids and ship translation tables for the
-dialects it meets (RomM `slug` / `fs_slug`, ES-DE `system`, RetroArch core and database names), with public functions
-accepting canonical ids and explicit translators (`from_romm_slug("gba")`) — never guessing. Today there is no
-translation layer at all: a query takes the vocabulary of whichever source enumerates it — the frontend's system name
-where a catalogue exists, an atlas slug where none does — and `firmware_for_system` states that switch as a caveat
-instead of translating. The canonical id set is itself still open (see Open questions); the ROADMAP names the
-translation table as the real fix.
+**The canonical ids are ES-DE's system names**, packaged and cited (`atlas/data/system_ids.json`, read by
+`atlas.systems`). ES-DE's vocabulary is the canonical one because it is the vocabulary a frontend catalogue on the
+machine actually declares — the questions answer about names that exist there, not about names atlas invented — and the
+id set is pinned to the `es_systems.xml` of a stated build, so membership is checkable rather than an opinion. A test
+parses that build's file and asserts set-identity, which is what keeps the snapshot honest as the build moves.
+
+**atlas carries no foreign product vocabulary.** No library manager's platform slugs, no metadata service's ids, nothing
+network-facing — not as a table, not as a translator, not ever. Such a mapping is world knowledge atlas cannot check
+against any machine, which is exactly what the boundary rule refuses: it is versioned by someone else, it changes
+without telling atlas, and much of what it names is not an emulated system at all. Shipping one would also put the
+mapping two releases away from the client that depends on it, so a wrong entry would be atlas's bug to ship and the
+client's bug to suffer.
+
+So the mapping belongs to whoever holds the other vocabulary, and atlas gives them the target set to check it against:
+`known_systems()` and `from_esde_system(name)`. The worked example is decky-romm-sync, whose ADR-0010 owns its RomM-slug
+normalization; validating its targets against `known_systems()` is what turns "this platform answers nothing" from a
+silent miss into a failing test on the side that can fix it. The failure being prevented is one specific one: an
+identifier no catalogue declares reaches a question, the question answers "no emulator for that system", and a
+vocabulary mistake has been read as a fact about the machine.
+
+_Still open (item 20b):_ the firmware route derives a system from a core's own `systemname` where no catalogue
+enumerates one (`SOURCE_SLUG`), and that derivation speaks **atlas slugs, not ES-DE names** — 13 of the 55 it can
+produce (`dc`, `gg`, `pce`, `sms`, `lynx`, …) are not ids. `firmware_for_system` states that switch as a caveat rather
+than translating. That one is atlas's own seam, not a foreign vocabulary, so it is atlas's to close — but per name, from
+what the machine declares, never assumed from the spelling.
 
 ## Settled decisions
 
