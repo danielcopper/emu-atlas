@@ -3515,6 +3515,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
         if resolved.directory is None:
             return placement, version
+        # Dropping resolved.caveats here is safe only because every branch of
+        # _esde_system_dir that carries one also answers directory=None, so a
+        # resolved directory has nothing to say. The day one of them resolves
+        # AND caveats, this line starts swallowing it.
+        #
         # The same link view every placement answers with, from the one helper
         # all of them share — a fourth symlink walk is exactly what the seam's
         # three existing ones warn against.
@@ -3791,8 +3796,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if content_path is not None:
             root = self._config_path(config, "rd_home_path", "")[0]
             selections = self._gamelist_selections_at(root, spec.system)
-            by_system, _read = self._read_catalogue(root)
-            anchor = self._esde_system_dir(by_system, spec.system)
+            by_system, read = self._read_catalogue(root)
+            # A catalogue nobody could read declares nothing, which is not the
+            # same fact as a catalogue that was read and declares no <path> for
+            # this system — and handing the empty snapshot straight to the
+            # resolution would spell the first as the second.
+            anchor = (
+                self._esde_system_dir(by_system, spec.system)
+                if read
+                else _RomDirectory(caveats=self._catalogue_unread_caveat(spec.system))
+            )
             if anchor.caveats:
                 placement = _dc_replace(
                     placement, caveats=(*placement.caveats, *anchor.caveats)

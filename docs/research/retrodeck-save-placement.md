@@ -721,10 +721,14 @@ now do not:
 - **`roms_dir()`**, which reported `roms_path` and so became the less authoritative of two public answers about one
   tree.
 
-Both resolve through the one chain now. A corollary worth stating because it bit the fixtures: a machine carrying a ROM
-tree and **no** `ROMDirectory` is not a machine RetroDECK produces — `component_prepare.sh` writes the setting on every
-prepare — so anything modelling one is modelling an installation that cannot exist, and the honest reading of an empty
-setting stays the frontend's own `<home>/ROMs` default.
+Both resolve through the one chain now.
+
+**[V]** A corollary worth stating because it bit the fixtures: a machine carrying a ROM tree and **no** `ROMDirectory`
+is not a machine RetroDECK produces. The setting is written in two of `component_prepare.sh`'s three guarded blocks —
+`reset` (`:17`) and `postmove` (`:35`), not `startup` — and the `reset` block goes on to **generate the ROM tree
+itself** ten lines later, `start_esde --create-system-dirs` (`:27`). The tree and the setting are born together, in that
+order, from the same block. So a fixture with system directories and no `ROMDirectory` models an installation that
+cannot exist, and the honest reading of an empty setting stays the frontend's own `<home>/ROMs` default.
 
 ## 16. What this implies for the design
 

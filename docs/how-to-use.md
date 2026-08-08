@@ -487,8 +487,9 @@ query, which is the one thing atlas's one-read-per-source rule exists to avoid; 
 **If the anchor cannot be resolved, the per-game step is skipped and the answer says so.** The directory comes off the
 frontend's own `ROMDirectory`, and that can refuse — see the ROM section below for the four codes. When one of them
 appears on `emulators_for(system, content_path=…)` or on an entry's `save_location`, read it as "a per-game override may
-apply here and atlas could not check": the entry order you got is the per-system one. It cannot happen on a stock
-installation, where the setting is written on every prepare.
+apply here and atlas could not check": the entry order you got is the per-system one. It does not happen on a stock
+installation — the distribution writes that setting in the same step that generates the ROM tree, so a machine with
+system directories has the setting too.
 
 The entry answers the save question itself, so the core never round-trips through your code:
 

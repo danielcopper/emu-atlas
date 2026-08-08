@@ -6,6 +6,7 @@ import atlas
 from atlas.installations import parse_gamelist
 from atlas.machine import FixtureMachine
 from atlas.esde import (
+    EmulatorSpec,
     merge_layers,
     parse_es_settings,
     parse_es_systems,
@@ -702,3 +703,36 @@ class TestAnAnchorThatCannotBeResolvedSaysSo:
         # opened, so complaining about them would be noise.
         answer = self._unreadable_settings().emulators_for("n64")
         assert [c.code for c in answer.caveats] == []
+
+    def test_an_unread_catalogue_is_not_a_catalogue_that_declares_nothing(self):
+        """The entry route reads the catalogue for the anchor and must keep its read flag.
+
+        An unreadable ``es_systems.xml`` parses to an empty snapshot, and an
+        empty snapshot looks exactly like one that was read and declares no
+        ``<path>`` — so the resolution would answer ``rom-path-undeclared``, a
+        statement about the declaration, for a machine where nobody could look.
+        Handles are live, so the catalogue can go unreadable between the ask
+        that produced the entry and this call.
+        """
+        machine = FixtureMachine(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+                BUNDLED_ESDE: {"status": "unreadable"},
+            },
+            dirs=CATALOGUE_ROOTS,
+        )
+        spec = EmulatorSpec(
+            system="n64",
+            label="ParaLLEl N64",
+            kind=atlas.KIND_LIBRETRO,
+            core_so="parallel_n64_libretro.so",
+            command="",
+            provenance="test",
+        )
+        placement = atlas.RetroDeck(HOME, machine).entry_save_location(
+            spec, content_path="/mnt/sd/retrodeck/roms/n64/Game.m3u"
+        )
+        codes = [c.code for c in placement.caveats]
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE in codes
+        assert atlas.CAVEAT_ROM_PATH_UNDECLARED not in codes

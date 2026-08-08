@@ -2060,6 +2060,31 @@
       }
     },
     {
+      "name": "a-roms-path-atlas-no-longer-reads-cannot-make-the-marker-invalid",
+      "rationale": "roms_path is type-checked nowhere any more, because nothing reads it: the ROM root comes off ES-DE's own ROMDirectory, and retrodeck.json's copy is only the value RetroDECK seds into that setting. The scoping rule is that atlas reports on what it reads, so a key no read touches cannot make an installation unhealthy — reporting it would be a claim about who wrote the file. This machine is healthy with a roms_path that is not even a string, which is exactly the answer a marker-invalid finding here would get wrong.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": 5}}"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ]
+      }
+    },
+    {
       "name": "sorted-dir-blocked-by-file-reverts-to-root",
       "rationale": "A file where the sorted directory belongs: RetroArch's mkdir MUST fail and it reverts to the unsorted root (runloop.c:8844) — the fallback is not conditional, it is the known answer.",
       "input": {
