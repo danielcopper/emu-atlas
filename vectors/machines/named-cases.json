@@ -2060,6 +2060,31 @@
       }
     },
     {
+      "name": "a-roms-path-atlas-no-longer-reads-cannot-make-the-marker-invalid",
+      "rationale": "roms_path is type-checked nowhere any more, because nothing reads it: the ROM root comes off ES-DE's own ROMDirectory, and retrodeck.json's copy is only the value RetroDECK seds into that setting. The scoping rule is that atlas reports on what it reads, so a key no read touches cannot make an installation unhealthy — reporting it would be a claim about who wrote the file. This machine is healthy with a roms_path that is not even a string, which is exactly the answer a marker-invalid finding here would get wrong.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": 5}}"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ]
+      }
+    },
+    {
       "name": "sorted-dir-blocked-by-file-reverts-to-root",
       "rationale": "A file where the sorted directory belongs: RetroArch's mkdir MUST fail and it reverts to the unsorted root (runloop.c:8844) — the fallback is not conditional, it is the known answer.",
       "input": {
@@ -4143,7 +4168,7 @@
     },
     {
       "name": "per-game-selection-reaches-the-game-that-declares-it",
-      "rationale": "The other half of the anchor: the same machine asked about the game the <altemulator> is written on. Its emulator leads the entry list with the per-game provenance, and the entry route for a different emulator states the override the caller is about to contradict — anchoring must not cost the match it is there to place correctly.",
+      "rationale": "The other half of the anchor: the same machine asked about the game the <altemulator> is written on. Its emulator leads the entry list with the per-game provenance, and the entry route for a different emulator states the override the caller is about to contradict — anchoring must not cost the match it is there to place correctly. The settings file carries the ROM root because the frontend builds the directory those gamelist paths hang off from its own ROMDirectory — a fixture with a ROM tree and no ROMDirectory models a machine RetroDECK cannot produce, since its own component_prepare.sh seds roms_path into that setting on every prepare.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4153,7 +4178,8 @@
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n\t<game>\n\t\t<path>./Game.m3u</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
           "/mnt/sd/retrodeck/roms/n64/Game.m3u": "",
           "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u": "",
-          "/mnt/sd/retrodeck/saves/Game.srm": "sram"
+          "/mnt/sd/retrodeck/saves/Game.srm": "sram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n"
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mupen64plus_next_libretro.so": {
@@ -4170,6 +4196,97 @@
         "entry_query": {
           "system": "n64",
           "content_path": "/mnt/sd/retrodeck/roms/n64/Game.m3u",
+          "label": "Mupen64Plus-Next"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "n64",
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "selection": "gamelist.xml: altemulator = \"ParaLLEl N64\" (per-game)",
+              "caveats": []
+            },
+            {
+              "system": "n64",
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        },
+        "entry_save_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game.srm"
+            ],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "per-game-override",
+              "data": {
+                "label": "ParaLLEl N64"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "the-per-game-anchor-follows-es-de-s-rom-directory-not-the-markers",
+      "rationale": "The two ROM paths a machine can carry, pointed at different trees. retrodeck.json's roms_path is only the value RetroDECK seds INTO ES-DE's ROMDirectory and never reads back, so where a user has moved them apart the frontend launches from ROMDirectory alone — and the directory a gamelist's ./Game.m3u hangs off is the one ES-DE built, not the one RetroDECK wrote down. The game under ROMDirectory therefore carries its per-game override, and this fixture pins that: anchoring on the marker would hand the override to a file ES-DE never launches. The other half — the same machine asked about the file sitting under the marker's path, which carries no override — is a unit test, because one vector asks one query.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/games\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n\t<game>\n\t\t<path>./Game.m3u</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
+          "/mnt/sd/retrodeck/saves/Game.srm": "sram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/es-de-roms\" />\n",
+          "/mnt/sd/es-de-roms/n64/Game.m3u": "",
+          "/mnt/sd/es-de-roms/n64/Collection/Game.m3u": "",
+          "/mnt/sd/games/n64/Game.m3u": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/parallel_n64_libretro.so": {
+            "library_name": "ParaLLEl N64"
+          }
+        },
+        "catalogue_query": {
+          "system": "n64",
+          "content_path": "/mnt/sd/es-de-roms/n64/Game.m3u"
+        },
+        "entry_query": {
+          "system": "n64",
+          "content_path": "/mnt/sd/es-de-roms/n64/Game.m3u",
           "label": "Mupen64Plus-Next"
         }
       },

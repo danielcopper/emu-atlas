@@ -2473,7 +2473,12 @@ def _json_type_name(value: object) -> str:
 # The ``retrodeck.json`` path keys atlas reads — the ones :meth:`RetroDeck._config_path`
 # is asked for. A key read through it belongs here, because this is the list the
 # type check below is scoped to.
-_MARKER_PATH_KEYS = ("rd_home_path", "saves_path", "bios_path", "roms_path")
+#
+# ``roms_path`` left when the ROM directory moved to ES-DE's own ``ROMDirectory``:
+# nothing here reads it any more, so checking it would be atlas reporting on a
+# key it does not use — the same thing the scoping rule below refuses to do for
+# every other key RetroDECK writes.
+_MARKER_PATH_KEYS = ("rd_home_path", "saves_path", "bios_path")
 
 
 def _malformed_marker_paths(config: Mapping[str, Any]) -> tuple[str, str] | None:
@@ -2676,6 +2681,50 @@ CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
 # because to a client they answer the same question — and it is not one of
 # them: the bytes arrived.
 _SETTINGS_UNPARSEABLE = "unparseable"
+
+
+@dataclass(frozen=True, slots=True)
+class _RomRoot:
+    """What ES-DE substitutes for ``%ROMPATH%``, or which way it could not be established.
+
+    ``directory`` is set exactly when the three refusal fields are not: an
+    absolute root the frontend would really use, whether that is the configured
+    value or ES-DE's own default for a file that sets nothing.
+
+    The refusals stay apart rather than collapsing into one "no root", because
+    each becomes a different caveat code — and they carry only what those
+    messages need, not the messages themselves: two of the three name the
+    system's declared ``<path>``, which the root does not know and has no
+    business knowing.
+    """
+
+    directory: str | None = None
+    unreadable: str | None = None
+    relocated: tuple[str, str] | None = None
+    not_absolute: str | None = None
+    sources: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class _RomDirectory:
+    """One system's ROM directory as ES-DE resolves it, and what was read to say so.
+
+    ``sources`` is not the same question as whether a directory came out:
+    settings that were read and set nothing still resolve — through the
+    frontend's own default — while settings nobody could read resolve nothing
+    and are no source at all.
+    """
+
+    directory: str | None = None
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+# The resolution a query skips because it has nothing to anchor: no content
+# path was named, so no per-game entry can match and the directory is never
+# consulted. Distinct from a resolution that refused — that one carries the
+# caveat saying so.
+_NO_ANCHOR_NEEDED = _RomDirectory()
 
 
 @dataclass(frozen=True, slots=True)
@@ -3029,9 +3078,29 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """The RetroDECK BIOS directory (``bios_path`` or the fallback)."""
         return self._config_path(self._read_marker()[0], "bios_path", "bios")[0]
 
-    def roms_dir(self) -> str:
-        """The RetroDECK ROMs directory (``roms_path`` or the fallback)."""
-        return self._config_path(self._read_marker()[0], "roms_path", "roms")[0]
+    def roms_dir(self) -> str | None:
+        """The ROM root the frontend substitutes for ``%ROMPATH%`` — or ``None``.
+
+        The **root**, not a system's directory: a system's own directory is
+        ``rom_location(system).dir``, which is this plus whatever ``<path>`` the
+        catalogue declares for it — usually the system name, and not reliably
+        so, which is why the two are different questions.
+
+        Read from ES-DE's ``ROMDirectory`` rather than ``retrodeck.json``'s
+        ``roms_path``. The two agree on a stock installation and are wired one
+        way — RetroDECK seds its own value into ES-DE's setting and never reads
+        it back — so where a user has moved them apart, only this one is what
+        the frontend launches from.
+
+        ``None`` is a refusal, never "no ROMs here", and it is the same refusal
+        :meth:`rom_location` states — for three of its reasons, the ones that
+        belong to the root: ES-DE's settings exist and could not be read, a
+        Flatpak override moved the config home out from under them, or the
+        configured value is not an absolute path. A bare string cannot carry
+        which, and raising is not this domain's grammar, so a caller who needs
+        the reason asks ``rom_location(system)`` and reads its caveats.
+        """
+        return self._rom_root().directory
 
     def _health_from(self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]) -> Health:
         issues = list(marker_issues)
@@ -3151,8 +3220,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return os.path.join(self._home, ".var", "app", self._APP_ID, "config")
 
-    def _rom_directory(self, system: str) -> tuple[str | None, tuple[Caveat, ...]]:
-        """The configured ``ROMDirectory`` — or the caveat for settings nobody could read.
+    def _esde_settings_path(self) -> str:
+        return os.path.join(self._esde_config_home(), self._ESDE_SETTINGS_SUFFIX)
+
+    def _rom_directory(self) -> tuple[str | None, str | None]:
+        """The configured ``ROMDirectory``, and the status that stopped the reading.
 
         The value comes from ``es_settings.xml`` rather than from
         ``retrodeck.json``'s ``roms_path``, and the difference is the boundary
@@ -3166,23 +3238,93 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         is not in force. *Missing* is a reading — there is no file, so there is
         no configured value, and the frontend's own default is what applies
         (:meth:`_default_rom_directory`); so is a file that parses and sets the
-        key empty or not at all. *Unreadable*, *invalid-text* and *unparseable*
-        are not readings: the file is there, ES-DE reads it fine, and what it
-        says could be anything — so this answers a caveat and no directory,
-        rather than the default a file nobody could read has no claim to.
+        key empty or not at all. Both answer ``(None, None)``. *Unreadable*,
+        *invalid-text* and *unparseable* are not readings: the file is there,
+        ES-DE reads it fine, and what it says could be anything — so those
+        answer the status, and no directory, rather than the default a file
+        nobody could read has no claim to.
+
+        The status rather than the caveat, because the two callers label it
+        differently and only one of them has a system to name.
         """
-        settings_path = os.path.join(self._esde_config_home(), self._ESDE_SETTINGS_SUFFIX)
-        result = self._machine.read_text(settings_path)
+        result = self._machine.read_text(self._esde_settings_path())
         if result.status == READ_MISSING:
-            return None, ()
+            return None, None
         if result.text is None:
-            return None, self._settings_unreadable_caveat(system, settings_path, result.status)
+            return None, result.status
         settings = parse_es_settings(result.text)
         if settings is None:
-            return None, self._settings_unreadable_caveat(
-                system, settings_path, _SETTINGS_UNPARSEABLE
+            return None, _SETTINGS_UNPARSEABLE
+        return settings.get(self._ROM_DIRECTORY_SETTING) or None, None
+
+    def _rom_root(self) -> _RomRoot:
+        """What ES-DE substitutes for ``%ROMPATH%`` — the ROM root, before any ``<path>``.
+
+        The one chain every ROM-directory answer on this handle resolves
+        through: :meth:`roms_dir` *is* this root, and :meth:`_esde_system_dir`
+        is this root with the catalogue's declaration applied. Keeping them one
+        chain is the point — two would be two rules about the same tree, and
+        the day they disagreed atlas would be contradicting itself.
+        """
+        configured, unreadable = self._rom_directory()
+        if unreadable is not None:
+            return _RomRoot(unreadable=unreadable)
+        sources = (self._ROM_DIRECTORY_SOURCE,)
+        if configured is None:
+            moved = self._config_home_override()
+            if moved is not None:
+                return _RomRoot(relocated=moved, sources=sources)
+            return _RomRoot(directory=self._default_rom_directory(), sources=sources)
+        if not configured.startswith("/"):
+            return _RomRoot(not_absolute=configured, sources=sources)
+        return _RomRoot(directory=configured, sources=sources)
+
+    def _esde_system_dir(
+        self, by_system: Mapping[str, SystemDeclaration], system: str
+    ) -> _RomDirectory:
+        """Where ES-DE puts *system*'s ROMs: the root with the catalogue's ``<path>`` applied.
+
+        Both the answer to "where do this system's ROMs live" and the anchor
+        per-game gamelist entries are matched against, because they are the
+        same directory — ES-DE reads a gamelist's ``./Name.ext`` relative to
+        the very ``startPath`` it built here. Anchoring any other way means
+        matching overrides against a directory the frontend does not launch
+        from, which is how an override goes missing on a machine whose two ROM
+        paths have drifted apart.
+        """
+        declaration = by_system.get(system)
+        if declaration is None or declaration.rom_path is None:
+            return _RomDirectory(caveats=self._rom_path_undeclared_caveat(system, declaration))
+        declared = declaration.rom_path
+        root = self._rom_root()
+        if root.unreadable is not None:
+            return _RomDirectory(
+                caveats=self._settings_unreadable_caveat(
+                    system, self._esde_settings_path(), root.unreadable
+                )
             )
-        return settings.get(self._ROM_DIRECTORY_SETTING) or None, ()
+        if root.relocated is not None:
+            return _RomDirectory(
+                sources=root.sources,
+                caveats=self._config_home_relocated_caveat(system, declared, *root.relocated),
+            )
+        if root.not_absolute is not None:
+            return _RomDirectory(
+                sources=root.sources,
+                caveats=self._rom_path_unresolved_caveat(system, declared, root.not_absolute),
+            )
+        resolved = resolve_rom_path(declared, root.directory)
+        if resolved is None:
+            # Unreachable as the branches above stand: the root is absolute
+            # here and the declaration is non-empty, which is every way
+            # resolve_rom_path refuses. Stated rather than dropped, because a
+            # directory that silently became None is the one answer this
+            # question must never give.
+            return _RomDirectory(
+                sources=root.sources,
+                caveats=self._rom_path_unresolved_caveat(system, declared, root.directory or ""),
+            )
+        return _RomDirectory(directory=resolved, sources=root.sources)
 
     @staticmethod
     def _settings_unreadable_caveat(system: str, path: str, status: str) -> tuple[Caveat, ...]:
@@ -3303,10 +3445,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, _ = self._read_marker()
         return self._gamelist_selections_at(self._config_path(config, "rd_home_path", "")[0], system)
 
-    def _system_roms_dir(self, config: dict[str, Any], system: str) -> str:
-        """Where this system's ROMs live — the anchor gamelist paths are relative to."""
-        return os.path.join(self._config_path(config, "roms_path", "roms")[0], system)
-
     def _catalogue_answer(
         self, system: str, *, content_path: str | None = None
     ) -> tuple[CatalogueAnswer, str | None]:
@@ -3326,16 +3464,24 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         version = _marker_version(config)
         if not read:
             return CatalogueAnswer(caveats=(*findings, *self._catalogue_unread_caveat(system))), version
+        # The anchor is only consulted where a content path was named, so only
+        # that query pays ES-DE's settings read — and only that query can be
+        # told the anchor failed, which is the whole reason its caveats join.
+        anchor = (
+            self._esde_system_dir(by_system, system)
+            if content_path is not None
+            else _NO_ANCHOR_NEEDED
+        )
         return (
             CatalogueAnswer(
                 self._entries_from(
                     _declared_entries(by_system, system),
                     self._gamelist_selections_at(root, system),
-                    system_roms_dir=self._system_roms_dir(config, system),
+                    system_roms_dir=anchor.directory,
                     content_path=content_path,
                 ),
                 (self._CATALOGUE_SOURCE,),
-                findings,
+                (*findings, *anchor.caveats),
             ),
             version,
         )
@@ -3357,69 +3503,32 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             return RomPlacement(caveats=(*findings, *self._catalogue_unread_caveat(system))), version
 
         # A source names a reading this answer rests on, so the settings file
-        # joins the list only once it has been read: the branch below returns
-        # before opening it, and the branch after that opens it and fails.
+        # joins the list only where the resolution actually read it — which is
+        # every outcome except the two that never opened it or opened it and
+        # failed. The resolution reports that itself rather than being asked.
         declaration = by_system.get(system)
-        if declaration is None or declaration.rom_path is None:
-            return (
-                RomPlacement(
-                    extensions=() if declaration is None else declaration.extensions,
-                    sources=(self._CATALOGUE_SOURCE,),
-                    caveats=(*findings, *self._rom_path_undeclared_caveat(system, declaration)),
-                ),
-                version,
-            )
-
-        rom_directory, unreadable = self._rom_directory(system)
-        if unreadable:
-            return (
-                RomPlacement(
-                    extensions=declaration.extensions,
-                    sources=(self._CATALOGUE_SOURCE,),
-                    caveats=(*findings, *unreadable),
-                ),
-                version,
-            )
-
-        sources = (self._CATALOGUE_SOURCE, self._ROM_DIRECTORY_SOURCE)
-        if rom_directory is None:
-            # Unset is the DEFAULT case, not a dead end — unless something moved
-            # the home that default is relative to, which is the one thing that
-            # makes it unknowable.
-            moved = self._config_home_override()
-            if moved is not None:
-                return (
-                    RomPlacement(
-                        extensions=declaration.extensions,
-                        sources=sources,
-                        caveats=(
-                            *findings,
-                            *self._config_home_relocated_caveat(system, declaration.rom_path, *moved),
-                        ),
-                    ),
-                    version,
-                )
-            rom_directory = self._default_rom_directory()
-        resolved = resolve_rom_path(declaration.rom_path, rom_directory)
-        if resolved is None:
-            return (
-                RomPlacement(
-                    extensions=declaration.extensions,
-                    sources=sources,
-                    caveats=(*findings, *self._rom_path_unresolved_caveat(system, declaration.rom_path, rom_directory)),
-                ),
-                version,
-            )
+        resolved = self._esde_system_dir(by_system, system)
+        placement = RomPlacement(
+            extensions=() if declaration is None else declaration.extensions,
+            sources=(self._CATALOGUE_SOURCE, *resolved.sources),
+            caveats=(*findings, *resolved.caveats),
+        )
+        if resolved.directory is None:
+            return placement, version
+        # Dropping resolved.caveats here is safe only because every branch of
+        # _esde_system_dir that carries one also answers directory=None, so a
+        # resolved directory has nothing to say. The day one of them resolves
+        # AND caveats, this line starts swallowing it.
+        #
         # The same link view every placement answers with, from the one helper
         # all of them share — a fourth symlink walk is exactly what the seam's
         # three existing ones warn against.
-        physical_dir, link_caveats = _link_view(self._machine, resolved)
+        physical_dir, link_caveats = _link_view(self._machine, resolved.directory)
         return (
-            RomPlacement(
-                dir=resolved,
+            _dc_replace(
+                placement,
+                dir=resolved.directory,
                 physical_dir=physical_dir,
-                extensions=declaration.extensions,
-                sources=sources,
                 caveats=(*findings, *link_caveats),
             ),
             version,
@@ -3505,7 +3614,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         specs: tuple[EmulatorSpec, ...],
         selections: GamelistSelections,
         *,
-        system_roms_dir: str,
+        system_roms_dir: str | None,
         content_path: str | None,
     ) -> tuple[EmulatorEntry, ...]:
         """Apply ES-DE's selection hierarchy to one already-read catalogue snapshot.
@@ -3513,10 +3622,15 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         Split out from :meth:`emulators_for` so the firmware route can ask the
         same question of the sources it has already read, instead of reading
         the marker and both catalogue layers a second time.
+
+        ``system_roms_dir`` is ``None`` where there is no anchor to match
+        against — either nothing named content, or the directory could not be
+        resolved. Per-game matching is skipped either way; the caller that
+        asked for it is the one holding the caveat that says why.
         """
         chosen_label: str | None = None
         chosen_source: str | None = None
-        if content_path is not None:
+        if content_path is not None and system_roms_dir is not None:
             per_game = _match_per_game(selections, content_path, system_roms_dir=system_roms_dir)
             if per_game is not None:
                 chosen_label = per_game
@@ -3631,7 +3745,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         entries = self._entries_from(
             _declared_entries(by_system, system),
             self._gamelist_selections_at(root, system),
-            system_roms_dir=self._system_roms_dir(config, system),
+            # No content is named on this route, so no per-game entry can match
+            # and the anchor is never consulted — this query reads ES-DE's
+            # settings not at all.
+            system_roms_dir=None,
             content_path=None,
         )
         catalogue = Catalogue(
@@ -3660,6 +3777,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         Resolves the placement for a catalogue entry and, when *content_path*
         is given, checks the gamelist for a per-game override that would launch
         a different emulator — all from one snapshot of the governing sources.
+
+        That check now costs this route the catalogue and ES-DE's settings,
+        which it did not read before, and only on the content branch: the
+        anchor is the system's ``<path>`` resolved against ``ROMDirectory``, and
+        the catalogue is the only thing that declares a ``<path>``. There is no
+        cheaper faithful route — the previous one was cheaper by reading the
+        wrong file.
         """
         config, marker_issues = self._read_marker()
         placement = self._save_location_from(
@@ -3672,8 +3796,26 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if content_path is not None:
             root = self._config_path(config, "rd_home_path", "")[0]
             selections = self._gamelist_selections_at(root, spec.system)
-            override_label = _match_per_game(
-                selections, content_path, system_roms_dir=self._system_roms_dir(config, spec.system)
+            by_system, read = self._read_catalogue(root)
+            # A catalogue nobody could read declares nothing, which is not the
+            # same fact as a catalogue that was read and declares no <path> for
+            # this system — and handing the empty snapshot straight to the
+            # resolution would spell the first as the second.
+            anchor = (
+                self._esde_system_dir(by_system, spec.system)
+                if read
+                else _RomDirectory(caveats=self._catalogue_unread_caveat(spec.system))
+            )
+            if anchor.caveats:
+                placement = _dc_replace(
+                    placement, caveats=(*placement.caveats, *anchor.caveats)
+                )
+            override_label = (
+                None
+                if anchor.directory is None
+                else _match_per_game(
+                    selections, content_path, system_roms_dir=anchor.directory
+                )
             )
             if override_label is not None and override_label != spec.label:
                 placement = _dc_replace(
