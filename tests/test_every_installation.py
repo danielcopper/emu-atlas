@@ -21,7 +21,7 @@ from atlas.contract import (
     identification_contract,
     installation_answers_contract,
     installation_contract,
-    placement_contract,
+    savefile_placement_contract,
     rom_placement_contract,
     savestate_placement_contract,
     systems_contract,
@@ -68,11 +68,11 @@ class TestTheEmptyMachine:
         assert _every(FixtureMachine({})).installations == ()
 
     def test_a_question_answers_with_nothing(self):
-        assert _every(FixtureMachine({})).save_location(core_so=CORE_SO) == ()
+        assert _every(FixtureMachine({})).savefile_location(core_so=CORE_SO) == ()
 
     def test_the_empty_answer_serializes_to_an_empty_list(self):
-        answers = _every(FixtureMachine({})).save_location(core_so=CORE_SO)
-        assert installation_answers_contract(answers, placement_contract) == []
+        answers = _every(FixtureMachine({})).savefile_location(core_so=CORE_SO)
+        assert installation_answers_contract(answers, savefile_placement_contract) == []
 
 
 class TestTheFanOut:
@@ -80,31 +80,31 @@ class TestTheFanOut:
 
     def test_every_installation_answers(self):
         machine = _coexistence()
-        answers = atlas.EveryInstallation(_handles(machine)).save_location(content_path=ROM)
+        answers = atlas.EveryInstallation(_handles(machine)).savefile_location(content_path=ROM)
         assert len(answers) == len(_handles(machine))
 
     def test_the_answers_keep_detection_order(self):
-        answers = _every(_coexistence()).save_location(content_path=ROM)
+        answers = _every(_coexistence()).savefile_location(content_path=ROM)
         assert [a.installation.kind for a in answers] == ["retrodeck", "bare_retroarch_native"]
 
     def test_each_answer_is_labelled_with_the_handle_that_gave_it(self):
         # Identity, not a copy: the label is the handle a caller drills down
         # with, and reading kind/root/health off it stays a live read.
         handles = _handles(_coexistence())
-        answers = atlas.EveryInstallation(handles).save_location(content_path=ROM)
+        answers = atlas.EveryInstallation(handles).savefile_location(content_path=ROM)
         assert [a.installation for a in answers] == handles
 
     def test_a_single_installation_machine_answers_once(self):
         machine = FixtureMachine(
             {NATIVE_CFG: COEXISTENCE_FILES[NATIVE_CFG], ROM: ""}, dirs=[f"{HOME}/ra-saves"]
         )
-        answers = _every(machine).save_location(content_path=ROM)
+        answers = _every(machine).savefile_location(content_path=ROM)
         assert [a.installation.kind for a in answers] == ["bare_retroarch_native"]
 
     def test_the_two_answers_are_not_the_same_answer(self):
         # The point of the aggregate: two arrangements, two save roots, both
         # true — nothing merged, nothing preferred.
-        answers = _every(_coexistence()).save_location(content_path=ROM)
+        answers = _every(_coexistence()).savefile_location(content_path=ROM)
         assert [a.answer.dir for a in answers] == ["/mnt/sd/retrodeck/saves", f"{HOME}/ra-saves"]
 
 
@@ -118,12 +118,12 @@ class TestItDelegates:
         aggregate = question(atlas.EveryInstallation(handles))
         return [a.answer for a in aggregate], [question(handle) for handle in handles]
 
-    def test_save_location(self):
-        asked, direct = self._pairs(lambda h: h.save_location(content_path=ROM, core_so=CORE_SO))
-        assert [placement_contract(p) for p in asked] == [placement_contract(p) for p in direct]
+    def test_savefile_location(self):
+        asked, direct = self._pairs(lambda h: h.savefile_location(content_path=ROM, core_so=CORE_SO))
+        assert [savefile_placement_contract(p) for p in asked] == [savefile_placement_contract(p) for p in direct]
 
-    def test_state_location(self):
-        asked, direct = self._pairs(lambda h: h.state_location(content_path=ROM, core_so=CORE_SO))
+    def test_savestate_location(self):
+        asked, direct = self._pairs(lambda h: h.savestate_location(content_path=ROM, core_so=CORE_SO))
         assert [savestate_placement_contract(p) for p in asked] == [
             savestate_placement_contract(p) for p in direct
         ]
@@ -219,7 +219,7 @@ class TestTheSurfaceMirrorsTheProtocol:
         } - self.IDENTITY
 
     def test_the_protocol_has_questions_to_mirror(self):
-        assert "save_location" in self._questions()
+        assert "savefile_location" in self._questions()
 
     def test_every_protocol_question_is_on_the_aggregate(self):
         missing = sorted(q for q in self._questions() if not hasattr(atlas.EveryInstallation, q))
@@ -246,8 +246,8 @@ class TestTheContract:
     """The serialized aggregate answer: the label, and the question's own form."""
 
     def _first(self) -> dict[str, Any]:
-        answers = _every(_coexistence()).save_location(content_path=ROM)
-        return installation_answers_contract(answers, placement_contract)[0]
+        answers = _every(_coexistence()).savefile_location(content_path=ROM)
+        return installation_answers_contract(answers, savefile_placement_contract)[0]
 
     def test_each_entry_is_the_label_and_the_answer(self):
         assert set(self._first()) == {"installation", "answer"}
@@ -258,8 +258,8 @@ class TestTheContract:
 
     def test_the_answer_is_the_questions_own_contract(self):
         handle = _handles(_coexistence())[0]
-        direct = handle.save_location(content_path=ROM)
-        assert self._first()["answer"] == placement_contract(direct)
+        direct = handle.savefile_location(content_path=ROM)
+        assert self._first()["answer"] == savefile_placement_contract(direct)
 
 
 class TestTheOneCallForm:

@@ -28,7 +28,7 @@ from atlas.contract import (
     identification_contract,
     installation_answers_contract,
     installation_contract,
-    placement_contract,
+    savefile_placement_contract,
     rom_placement_contract,
     savestate_placement_contract,
     unresolved_contract,
@@ -79,16 +79,16 @@ def _aggregate(installs, query, name):
     """
     every = atlas.EveryInstallation(installs)
     question = query["question"]
-    if question == "save_location":
+    if question == "savefile_location":
         return installation_answers_contract(
-            every.save_location(
+            every.savefile_location(
                 content_path=query.get("content_path"), core_so=query.get("core_so")
             ),
-            placement_contract,
+            savefile_placement_contract,
         )
-    if question == "state_location":
+    if question == "savestate_location":
         return installation_answers_contract(
-            every.state_location(
+            every.savestate_location(
                 content_path=query.get("content_path"), core_so=query.get("core_so")
             ),
             savestate_placement_contract,
@@ -117,17 +117,17 @@ def _systems(installs, query, name):
     return systems_contract(_select(installs, query.get("installation"), name).systems())
 
 
-def _save_location(installs, query, name):
+def _savefile_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
-    return placement_contract(
-        install.save_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+    return savefile_placement_contract(
+        install.savefile_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
     )
 
 
-def _state_location(installs, query, name):
+def _savestate_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return savestate_placement_contract(
-        install.state_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+        install.savestate_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
     )
 
 
@@ -162,17 +162,17 @@ def _entry_of(installs, query, name):
     return entries[0]
 
 
-def _entry_save_location(installs, query, name):
+def _entry_savefile_location(installs, query, name):
     entry = _entry_of(installs, query, name)
-    outcome = entry.save_location(content_path=query.get("content_path"))
+    outcome = entry.savefile_location(content_path=query.get("content_path"))
     if isinstance(outcome, atlas.Unresolved):
         return unresolved_contract(outcome)
-    return placement_contract(outcome)
+    return savefile_placement_contract(outcome)
 
 
-def _entry_state_location(installs, query, name):
+def _entry_savestate_location(installs, query, name):
     entry = _entry_of(installs, query, name)
-    outcome = entry.state_location(content_path=query.get("content_path"))
+    outcome = entry.savestate_location(content_path=query.get("content_path"))
     if isinstance(outcome, atlas.Unresolved):
         return unresolved_contract(outcome)
     return savestate_placement_contract(outcome)
@@ -187,12 +187,12 @@ QUESTIONS = {
     "systems": ("systems_query", _systems),
     "rom_location": ("rom_location_query", _rom_location),
     "aggregate": ("aggregate_query", _aggregate),
-    "save_location": ("query", _save_location),
-    "state_location": ("state_query", _state_location),
-    "entry_state_location": ("entry_state_query", _entry_state_location),
+    "savefile_location": ("savefile_query", _savefile_location),
+    "savestate_location": ("savestate_query", _savestate_location),
+    "entry_savestate_location": ("entry_savestate_query", _entry_savestate_location),
     "firmware": ("firmware_query", _firmware),
     "identification": ("identify_query", _identification),
-    "entry_save_location": ("entry_query", _entry_save_location),
+    "entry_savefile_location": ("entry_savefile_query", _entry_savefile_location),
 }
 
 
@@ -326,7 +326,7 @@ class TestTheGrammarRefusesContradictions:
         "health": [],
     }
     _UNREAD = [{"code": "emulator-catalogue-unreadable", "data": {}}]
-    _SAVE_LOCATION_EVERYWHERE = {"question": "save_location"}
+    _SAVEFILE_LOCATION_EVERYWHERE = {"question": "savefile_location"}
     _NOBODY_ANSWERED = {"installations": [], "aggregate": []}
 
     def _vector(self, expected=None, **input_keys):
@@ -387,7 +387,7 @@ class TestTheGrammarRefusesContradictions:
         # thing it does not do — the single-question families are where a
         # vector names a handle.
         vector = self._vector(
-            aggregate_query={**self._SAVE_LOCATION_EVERYWHERE, "installation": "retrodeck"},
+            aggregate_query={**self._SAVEFILE_LOCATION_EVERYWHERE, "installation": "retrodeck"},
             expected=self._NOBODY_ANSWERED,
         )
         with pytest.raises(validate_vectors.VectorError, match="takes no 'installation'"):
@@ -415,9 +415,9 @@ class TestTheGrammarRefusesContradictions:
         with pytest.raises(validate_vectors.VectorError, match="is not asked by"):
             validate_vectors.validate_machines_vector(vector)
 
-    def test_a_save_location_aggregate_query_carrying_a_system_is_refused(self):
+    def test_a_savefile_location_aggregate_query_carrying_a_system_is_refused(self):
         vector = self._vector(
-            aggregate_query={**self._SAVE_LOCATION_EVERYWHERE, "system": "n64"},
+            aggregate_query={**self._SAVEFILE_LOCATION_EVERYWHERE, "system": "n64"},
             expected=self._NOBODY_ANSWERED,
         )
         with pytest.raises(validate_vectors.VectorError, match="is not asked by"):
@@ -439,7 +439,7 @@ class TestTheGrammarRefusesContradictions:
         # The one expectation that stands with no installations detected:
         # nothing installed is an answer, not a question nobody can answer.
         vector = self._vector(
-            aggregate_query=self._SAVE_LOCATION_EVERYWHERE, expected=self._NOBODY_ANSWERED
+            aggregate_query=self._SAVEFILE_LOCATION_EVERYWHERE, expected=self._NOBODY_ANSWERED
         )
         validate_vectors.validate_machines_vector(vector)
 
@@ -448,7 +448,7 @@ class TestTheGrammarRefusesContradictions:
         # asserts fewer answers than installations locks in exactly the
         # silently chosen winner the aggregate exists to avoid.
         vector = self._vector(
-            aggregate_query=self._SAVE_LOCATION_EVERYWHERE,
+            aggregate_query=self._SAVEFILE_LOCATION_EVERYWHERE,
             expected={"installations": [self._INSTALLATION], "aggregate": []},
         )
         with pytest.raises(validate_vectors.VectorError, match="in detection order"):

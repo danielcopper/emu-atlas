@@ -92,8 +92,8 @@ class TestTheSavestateFormOmitsGranularity:
     def _placements(self):
         handle = _healthy()
         return (
-            atlas.placement_contract(handle.save_location()),
-            atlas.savestate_placement_contract(handle.state_location()),
+            atlas.savefile_placement_contract(handle.savefile_location()),
+            atlas.savestate_placement_contract(handle.savestate_location()),
         )
 
     def test_granularity_is_absent_rather_than_null(self):

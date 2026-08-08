@@ -30,7 +30,7 @@ Every query follows the same five steps:
 installations = atlas.detect(home="/home/deck")   # 1. find what is installed
 inst = installations[0]                           # 2. choose a handle — or ask all of them (see below)
 health = inst.health()                            # 3. check health before trusting answers
-answer = inst.save_location(core_so="mgba_libretro.so", content_path=rom_path)   # 4. ask the handle
+answer = inst.savefile_location(core_so="mgba_libretro.so", content_path=rom_path)   # 4. ask the handle
 for caveat in answer.caveats:                     # 5. read the caveats — always
     handle_or_log(caveat.code, caveat.data)
 ```
@@ -60,8 +60,8 @@ Rules that hold for every answer:
 - **Arguments follow one rule: the question's subject may be positional, everything else is keyword-only.** The subject
   is what the question is _about_ — the system in `emulators_for("n64")` and `firmware_for_system("gba")`, the core in
   `firmware_for_core("mgba_libretro.so")`. Modifiers never are: `verify=`, `content_path=`, `core_so=` on
-  `save_location`, and the digests on `identify_firmware` all read as noise at a call site without their names. Passing
-  a subject by keyword keeps working — the rule permits positional, it does not demand it.
+  `savefile_location`, and the digests on `identify_firmware` all read as noise at a call site without their names.
+  Passing a subject by keyword keeps working — the rule permits positional, it does not demand it.
 
 ## Finding installations
 
@@ -125,19 +125,19 @@ question to all of them and hands back every answer, labelled with the handle th
 
 ```python
 everywhere = atlas.every_installation(home="/home/deck")     # detect(), then ask — same arguments, same probe order
-for answered in everywhere.save_location(content_path=rom_path):
+for answered in everywhere.savefile_location(content_path=rom_path):
     print(answered.installation.kind, answered.answer.dir)
 # retrodeck /run/media/deck/Emulation/retrodeck/saves/n64     — RetroDECK's shipped cfg sorts by content
 # emudeck   /home/deck/Emulation/saves/retroarch/saves        — EmuDeck's is flat: two arrangements, two layouts
 ```
 
-Every question a handle answers, the aggregate asks all of them: `health()`, `save_location()`, `systems()`,
+Every question a handle answers, the aggregate asks all of them: `health()`, `savefile_location()`, `systems()`,
 `emulators_for()`, `rom_location()`, `firmware_for_core()`, `firmware_for_system()`, `firmware_inventory()`,
 `identify_firmware()` — same arguments, same answers. Each returns a tuple of labelled answers:
 
 - `answered.installation` is the handle itself, not a copy of its identity: read `kind`, `kinds`, `root()` and
-  `health()` off it, or ask it the next question (its `emulators_for`, then that entry's own `save_location`).
-- `answered.answer` is exactly what the handle route returns for that question — the same `SavePlacement`,
+  `health()` off it, or ask it the next question (its `emulators_for`, then that entry's own `savefile_location`).
+- `answered.answer` is exactly what the handle route returns for that question — the same `SavefilePlacement`,
   `CatalogueAnswer`, `RomPlacement` or `FirmwareAnswer`, unchanged, with its own caveats.
 
 The aggregate resolves nothing itself. It merges nothing, drops no duplicates, and prefers nothing beyond detection
@@ -153,7 +153,7 @@ Already holding handles? Wrap them rather than detecting twice — `atlas.EveryI
 works the same way the answers do, label plus the question's own serializer:
 
 ```python
-atlas.installation_answers_contract(everywhere.save_location(content_path=rom_path), atlas.placement_contract)
+atlas.installation_answers_contract(everywhere.savefile_location(content_path=rom_path), atlas.savefile_placement_contract)
 # [{'installation': {'kind': 'retrodeck', 'kinds': [...], 'root': ..., 'health': []},
 #   'answer': {'dir': '/run/media/deck/Emulation/retrodeck/saves/n64', ...}}, ...]
 ```
@@ -183,9 +183,9 @@ What it means: **no machine running this arrangement has confirmed the wiring en
 - **Not** a reason to refuse the answer. It is the same answer, with its evidence level attached — treat it the way you
   treat any derived fact.
 
-It rides on every answer that carries caveats: `save_location()`, `systems()`, `emulators_for()`, the three firmware
-calls, `identify_firmware()`, and the entry route's `EmulatorEntry.save_location()` — through the aggregate too, since
-that delegates. The status is packaged data (`atlas/data/arrangement_evidence.json`), so the day an arrangement is
+It rides on every answer that carries caveats: `savefile_location()`, `systems()`, `emulators_for()`, the three firmware
+calls, `identify_firmware()`, and the entry route's `EmulatorEntry.savefile_location()` — through the aggregate too,
+since that delegates. The status is packaged data (`atlas/data/arrangement_evidence.json`), so the day an arrangement is
 verified on a reference machine, the record changes and the caveat stops appearing; no client change is needed either
 way.
 
@@ -251,7 +251,7 @@ version and re-run your check when you bump it.
 The direct route — you name the core:
 
 ```python
-placement = inst.save_location(
+placement = inst.savefile_location(
     content_path="/run/media/deck/Emulation/roms/n64/Paper Mario (USA).z64",
     core_so="mupen64plus_next_libretro.so",
 )
@@ -269,7 +269,7 @@ placement.sources      # provenance — which config said what (prose, for debug
 Without `content_path`, the answer is a template and `needs` names the holes:
 
 ```python
-placement = inst.save_location(core_so="mupen64plus_next_libretro.so")
+placement = inst.savefile_location(core_so="mupen64plus_next_libretro.so")
 placement.dir    # '/…/saves/<content_dir>'
 placement.needs  # ('content_dir',)
 ```
@@ -415,7 +415,8 @@ Treat caveat codes you do not recognize conservatively: the answer stands, but s
 The seven `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
 `health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Every
 answer carries them, not just placements, ahead of what the query itself could not resolve. Do not key on the position:
-on the entry route (`EmulatorEntry.save_location()`) the entry's own catalogue caveats precede them. Match on the codes.
+on the entry route (`EmulatorEntry.savefile_location()`) the entry's own catalogue caveats precede them. Match on the
+codes.
 
 `content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
 to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the
@@ -424,10 +425,10 @@ extensions; `complete` is `false`, and deciding which of those files are yours t
 
 ## Where do this ROM's savestates live?
 
-`state_location` is `save_location`'s twin, and it takes the same two optional arguments:
+`savestate_location` is `savefile_location`'s twin, and it takes the same two optional arguments:
 
 ```python
-placement = inst.state_location(
+placement = inst.savestate_location(
     content_path="/run/media/deck/Emulation/roms/n64/Paper Mario (USA).z64",
     core_so="mupen64plus_next_libretro.so",
 )
@@ -440,7 +441,7 @@ It answers off the same configs through RetroArch's savestate keys (`savestate_d
 `sort_savestates_by_content_enable`, `sort_savestates_enable`), and everything you know about save placements holds: the
 same override chain, the same holes in `needs`, the same `fallback_dir` when a sorted directory does not exist yet, the
 same `physical_dir` through symlinks, the same caveat codes for the same conditions. The entry route has it too
-(`entry.state_location(content_path=…)`), and so does the aggregate.
+(`entry.savestate_location(content_path=…)`), and so does the aggregate.
 
 Three differences are worth knowing, and all three are things the answer states rather than things you have to remember:
 
@@ -492,12 +493,12 @@ An empty `entries` is four different facts, and the three `emulator-catalogue-*`
 **none of them present** means the catalogue was read and declares no emulator for that system, an answer about the
 machine and the only one of the four you may act on as "nothing here":
 
-| caveat code                        | what it means                                                         | what to do                               |
-| ---------------------------------- | --------------------------------------------------------------------- | ---------------------------------------- |
-| _(none of the three)_              | read, and the frontend knows no emulator for this system              | trust it                                 |
-| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                   | name the core: `save_location(core_so=)` |
-| `emulator-catalogue-unestablished` | it may have one; atlas has not established where                      | same — but do not report "no emulators"  |
-| `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty | surface it; the machine may be broken    |
+| caveat code                        | what it means                                                         | what to do                                   |
+| ---------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- |
+| _(none of the three)_              | read, and the frontend knows no emulator for this system              | trust it                                     |
+| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                   | name the core: `savefile_location(core_so=)` |
+| `emulator-catalogue-unestablished` | it may have one; atlas has not established where                      | same — but do not report "no emulators"      |
+| `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty | surface it; the machine may be broken        |
 
 Read the three codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
 these four, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken
@@ -530,15 +531,15 @@ query, which is the one thing atlas's one-read-per-source rule exists to avoid; 
 
 **If the anchor cannot be resolved, the per-game step is skipped and the answer says so.** The directory comes off the
 frontend's own `ROMDirectory`, and that can refuse — see the ROM section below for the four codes. When one of them
-appears on `emulators_for(system, content_path=…)` or on an entry's `save_location`, read it as "a per-game override may
-apply here and atlas could not check": the entry order you got is the per-system one. It does not happen on a stock
+appears on `emulators_for(system, content_path=…)` or on an entry's `savefile_location`, read it as "a per-game override
+may apply here and atlas could not check": the entry order you got is the per-system one. It does not happen on a stock
 installation — the distribution writes that setting in the same step that generates the ROM tree, so a machine with
 system directories has the setting too.
 
 The entry answers the save question itself, so the core never round-trips through your code:
 
 ```python
-result = entry.save_location(content_path=rom_path)
+result = entry.savefile_location(content_path=rom_path)
 if isinstance(result, atlas.Unresolved):
     # a typed domain outcome, not an exception — e.g. standalone emulators are not resolvable yet
     print(result.code)             # 'standalone-unsupported'
@@ -735,8 +736,8 @@ Both carry `data["path"]` — the directory that could not be read.
 Every answer type has one canonical serializer — the same code the conformance vectors assert:
 
 ```python
-from atlas import placement_contract, firmware_contract, health_contract, installation_contract
-json.dumps(placement_contract(placement))
+from atlas import savefile_placement_contract, firmware_contract, health_contract, installation_contract
+json.dumps(savefile_placement_contract(placement))
 json.dumps(health_contract(inst.health()))   # what installation_contract() puts under 'health'
 ```
 
@@ -792,7 +793,7 @@ if not catalogue.entries:                        # no entries is four facts — 
     return needs_a_core_from_you(catalogue.caveats)
 entry = apply_user_overrides(catalogue.entries, rom)  # your per-game/per-platform pins beat the frontend default
 
-result = entry.save_location(content_path=rom.file_path)
+result = entry.savefile_location(content_path=rom.file_path)
 if isinstance(result, atlas.Unresolved):
     return unsupported(result.code)              # standalone emulator — atlas will not guess
 
@@ -856,7 +857,7 @@ for req in ident.requirements:
 Handles are live — every query re-reads its sources. So drift detection is: ask again, compare.
 
 ```python
-placement = entry.save_location(content_path=rom.file_path)
+placement = entry.savefile_location(content_path=rom.file_path)
 if placement.dir != last_seen_dir(rom):
     migrate(from_=last_seen_dir(rom), to=placement.dir)
     # placement.sources names which config produced the change — log it for the user

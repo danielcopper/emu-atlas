@@ -10,7 +10,7 @@ Two entry points, per DESIGN.md:
 
 - :func:`atlas.detect` finds what is installed and returns installation handles;
 - every question is asked of a handle —
-  ``installation.save_location(content_path=..., core_so=...)``,
+  ``installation.savefile_location(content_path=..., core_so=...)``,
   ``installation.firmware_for_core("mgba_libretro.so")``,
   ``installation.firmware_for_system("gba")``,
   ``installation.firmware_inventory()``,
@@ -70,7 +70,7 @@ from atlas.contract import (
     identification_contract,
     installation_answers_contract,
     installation_contract,
-    placement_contract,
+    savefile_placement_contract,
     systems_contract,
     unresolved_contract,
 )
@@ -98,7 +98,7 @@ from atlas.placement import (
     Caveat,
     FileSet,
     Granularity,
-    SavePlacement,
+    SavefilePlacement,
     SavestatePlacement,
     Unresolved,
 )
@@ -249,7 +249,7 @@ __all__ = [
     "BareRetroArchFlatpak",
     "BareRetroArchNative",
     # Answers
-    "SavePlacement",
+    "SavefilePlacement",
     "SavestatePlacement",
     "Unresolved",
     "FileSet",
@@ -268,7 +268,7 @@ __all__ = [
     "RefusedDeclaration",
     "Caveat",
     # Serializers — one per answer type, the same code the vectors assert
-    "placement_contract",
+    "savefile_placement_contract",
     "savestate_placement_contract",
     "unresolved_contract",
     "health_contract",

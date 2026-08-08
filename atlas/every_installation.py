@@ -21,7 +21,7 @@ Three consequences worth stating, because each is a decision:
 
 - **The label is the handle**, not a copy of its identity. A consumer that wants
   to drill down asks it the next question (``emulators_for``, then the entry's
-  own ``save_location``), which a detached ``(kind, root)`` pair cannot answer;
+  own ``savefile_location``), which a detached ``(kind, root)`` pair cannot answer;
   and identity read off a handle is a live read, which a snapshot taken at
   fan-out time would silently age. So ``kind``, ``kinds`` and ``root()`` are
   reached through the label instead of being fanned out. ``health()`` *is*
@@ -48,7 +48,7 @@ from atlas.detect import detect
 from atlas.firmware import FirmwareAnswer, FirmwareIdentification
 from atlas.installations import CatalogueAnswer, Health, Installation, RomPlacement, SystemsAnswer
 from atlas.machine import Machine
-from atlas.placement import SavePlacement, SavestatePlacement
+from atlas.placement import SavefilePlacement, SavestatePlacement
 
 AnswerT = TypeVar("AnswerT")
 
@@ -60,7 +60,7 @@ class InstallationAnswer(Generic[AnswerT]):
     The pair travels together because the answer alone is ambiguous the moment
     more than one arrangement is installed: two save locations for one ROM are
     both true, and which is which is a fact about their origin. ``answer`` is
-    whatever the question returns — a :class:`~atlas.placement.SavePlacement`,
+    whatever the question returns — a :class:`~atlas.placement.SavefilePlacement`,
     a :class:`~atlas.firmware.FirmwareAnswer`, a
     :class:`~atlas.installations.Health` — unchanged and unwrapped.
     """
@@ -106,22 +106,22 @@ class EveryInstallation:
         """Each installation's structured health — check before trusting its answers."""
         return self._ask(lambda installation: installation.health())
 
-    def save_location(
+    def savefile_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> tuple[InstallationAnswer[SavePlacement], ...]:
+    ) -> tuple[InstallationAnswer[SavefilePlacement], ...]:
         """Where each installation keeps this save — one placement per arrangement."""
         return self._ask(
-            lambda installation: installation.save_location(
+            lambda installation: installation.savefile_location(
                 content_path=content_path, core_so=core_so
             )
         )
 
-    def state_location(
+    def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> tuple[InstallationAnswer[SavestatePlacement], ...]:
         """Where each installation keeps this content's savestates."""
         return self._ask(
-            lambda installation: installation.state_location(
+            lambda installation: installation.savestate_location(
                 content_path=content_path, core_so=core_so
             )
         )

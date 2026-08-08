@@ -35,7 +35,7 @@ Four principles, fixed before any code:
 
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, bare RetroArch installs, any
   of them side by side — and every question is asked _of an installation_, never of a global "the system":
-  `installation.save_location(content_path=..., core_so=...)`, `installation.state_location(...)`,
+  `installation.savefile_location(content_path=..., core_so=...)`, `installation.savestate_location(...)`,
   `installation.emulators_for(system)` and `installation.rom_location(system)` on every handle — the ones without a
   frontend catalogue answer with the reason rather than an empty list. Choosing one of them is optional:
   `every_installation(home)` asks them all and labels each answer with the handle it came from, because two arrangements
@@ -119,7 +119,7 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   answers each labelled with the handle that produced it, in detection order — fan-out only: it merges nothing, prefers
   nothing, and resolves nothing that a handle does not resolve. A machine with one installation answers once; a machine
   with none answers with nothing, which is a result and not an error.
-- `installation.save_location(content_path=..., core_so=...)` resolves the save directory the way RetroArch does:
+- `installation.savefile_location(content_path=..., core_so=...)` resolves the save directory the way RetroArch does:
   platform-default roots, the four-layer override chain (gated by `auto_overrides_enable` / `game_specific_options` /
   `rgui_config_directory`), `library_name` read live from the core binary through the Flatpak-deployment translation,
   file sets observed literally (glob-escaped, RetroArch's `.ldci` bookkeeping filtered) or honestly unknown, granularity
@@ -129,7 +129,7 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   report". A sorted directory that does not exist yet is a conditional answer with a structural `fallback_dir`; a
   placement reached through symlinks reports its `physical_dir`, and a dead `dir_prep` link is a stated caveat, not a
   silent path.
-- `installation.state_location(content_path=..., core_so=...)` answers the same question for savestates, through
+- `installation.savestate_location(content_path=..., core_so=...)` answers the same question for savestates, through
   RetroArch's savestate quartet of keys and the very same chain — one upstream function places both families, so atlas
   ports it once. Its answer is a `SavestatePlacement`: a save placement without `granularity`, because no core writes a
   savestate and no rule card for one can exist. In exchange it can name the files — `<stem>.state`, the numbered slots,

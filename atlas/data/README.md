@@ -35,7 +35,7 @@ boolean fails the load instead of silently asserting completeness.
 ### File names are templates in the placement's own hole vocabulary
 
 A declared name may carry exactly two tokens, and they are not local to this file: they are the holes
-`SavePlacement.needs` speaks (`atlas/placement.py`, which the loader imports — one definition, not a second spelling
+`SavefilePlacement.needs` speaks (`atlas/placement.py`, which the loader imports — one definition, not a second spelling
 here).
 
 - `<rom_stem>` — the resolver fills it from the content path. Not a hole in an answer: either it is substituted or the

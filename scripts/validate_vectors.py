@@ -33,14 +33,14 @@ INPUT_FIELDS_OPTIONAL = {
     "dirs",
     "inaccessible",
     "unlistable",
-    "query",
+    "savefile_query",
     "aggregate_query",
     "catalogue_query",
     "systems_query",
     "rom_location_query",
-    "entry_query",
-    "state_query",
-    "entry_state_query",
+    "entry_savefile_query",
+    "savestate_query",
+    "entry_savestate_query",
     "firmware_query",
     "identify_query",
 }
@@ -67,8 +67,8 @@ ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
 # — a core_so on a catalogue question — makes the vector state something no
 # answer can reflect, and half a rule refuses only half of those.
 AGGREGATE_QUESTION_FIELDS = {
-    "save_location": ({"question"}, {"content_path", "core_so"}),
-    "state_location": ({"question"}, {"content_path", "core_so"}),
+    "savefile_location": ({"question"}, {"content_path", "core_so"}),
+    "savestate_location": ({"question"}, {"content_path", "core_so"}),
     "emulators_for": ({"question", "system"}, {"content_path"}),
 }
 AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
@@ -285,7 +285,7 @@ def _validate_handle_selector(name: str, family: str, query: Any) -> None:
         fail(f"{name}: input.{family}.installation must be one of {sorted(KNOWN_KINDS)}")
 
 
-def _validate_query(name: str, query: Any, family: str = "query") -> None:
+def _validate_query(name: str, query: Any, family: str = "savefile_query") -> None:
     """A placement question — *family* says which of the two it is.
 
     Both take the same three keys, so both are held to one rule; only the
@@ -344,7 +344,7 @@ def _validate_identify_query(name: str, query: Any) -> None:
         fail(f"{name}: input.identify_query must state some content — md5, sha1, or size")
 
 
-def _validate_entry_query(name: str, query: Any, family: str = "entry_query") -> None:
+def _validate_entry_query(name: str, query: Any, family: str = "entry_savefile_query") -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.{family} must be an object")
     keys = set(query)
@@ -544,8 +544,8 @@ def _validate_input_cores(name: str, cores: Any) -> None:
 
 def _validate_input_queries(name: str, inp: Any) -> None:
     """The optional question an input asks, at most one shape per family."""
-    if "query" in inp:
-        _validate_query(name, inp["query"])
+    if "savefile_query" in inp:
+        _validate_query(name, inp["savefile_query"])
     if "aggregate_query" in inp:
         _validate_aggregate_query(name, inp["aggregate_query"])
     if "catalogue_query" in inp:
@@ -554,12 +554,12 @@ def _validate_input_queries(name: str, inp: Any) -> None:
         _validate_systems_query(name, inp["systems_query"])
     if "rom_location_query" in inp:
         _validate_rom_location_query(name, inp["rom_location_query"])
-    if "entry_query" in inp:
-        _validate_entry_query(name, inp["entry_query"])
-    if "state_query" in inp:
-        _validate_query(name, inp["state_query"], "state_query")
-    if "entry_state_query" in inp:
-        _validate_entry_query(name, inp["entry_state_query"], "entry_state_query")
+    if "entry_savefile_query" in inp:
+        _validate_entry_query(name, inp["entry_savefile_query"])
+    if "savestate_query" in inp:
+        _validate_query(name, inp["savestate_query"], "savestate_query")
+    if "entry_savestate_query" in inp:
+        _validate_entry_query(name, inp["entry_savestate_query"], "entry_savestate_query")
     if "firmware_query" in inp:
         _validate_firmware_query(name, inp["firmware_query"])
     if "identify_query" in inp:
@@ -627,7 +627,7 @@ def _validate_caveats(name: str, caveats: Any) -> None:
 
 
 def _validate_file_set(name: str, file_set: Any) -> None:
-    _require_exact(name, file_set, FILE_SET_FIELDS, "save_location.file_set")
+    _require_exact(name, file_set, FILE_SET_FIELDS, "savefile_location.file_set")
     if file_set["state"] not in KNOWN_FILE_SET_STATES:
         fail(f"{name}: file_set.state must be one of {sorted(KNOWN_FILE_SET_STATES)}")
     if not isinstance(file_set["files"], list) or not all(isinstance(f, str) for f in file_set["files"]):
@@ -677,9 +677,9 @@ def _validate_placement_core(name: str, placement: Any, *, root_kinds: set[str],
     _validate_caveats(name, placement["caveats"])
 
 
-def _validate_placement(name: str, placement: Any) -> None:
-    _require_exact(name, placement, PLACEMENT_FIELDS, "save_location")
-    _validate_placement_core(name, placement, root_kinds=KNOWN_ROOT_KINDS, what="save_location")
+def _validate_savefile_placement(name: str, placement: Any) -> None:
+    _require_exact(name, placement, PLACEMENT_FIELDS, "savefile_location")
+    _validate_placement_core(name, placement, root_kinds=KNOWN_ROOT_KINDS, what="savefile_location")
     if placement["granularity"] is not None:
         _validate_granularity(name, placement["granularity"])
 
@@ -691,13 +691,13 @@ def _validate_savestate_placement(name: str, placement: Any) -> None:
     ``"granularity": null`` here is refused rather than quietly accepted, so
     the contract stays the one the serializer actually produces.
     """
-    _require_exact(name, placement, SAVESTATE_PLACEMENT_FIELDS, "state_location")
+    _require_exact(name, placement, SAVESTATE_PLACEMENT_FIELDS, "savestate_location")
     _validate_placement_core(
-        name, placement, root_kinds=KNOWN_STATE_ROOT_KINDS, what="state_location"
+        name, placement, root_kinds=KNOWN_STATE_ROOT_KINDS, what="savestate_location"
     )
     if placement["file_set"]["complete"]:
         fail(
-            f"{name}: state_location.file_set.complete must be false — which slots exist is a live "
+            f"{name}: savestate_location.file_set.complete must be false — which slots exist is a live "
             "setting away from changing, so no savestate observation is ever closed"
         )
 
@@ -713,13 +713,13 @@ def _validate_unresolved(name: str, outcome: Any, what: str) -> bool:
     return True
 
 
-def _validate_entry_outcome(name: str, outcome: Any) -> None:
-    if not _validate_unresolved(name, outcome, "entry_save_location"):
-        _validate_placement(name, outcome)
+def _validate_savefile_entry_outcome(name: str, outcome: Any) -> None:
+    if not _validate_unresolved(name, outcome, "entry_savefile_location"):
+        _validate_savefile_placement(name, outcome)
 
 
-def _validate_state_entry_outcome(name: str, outcome: Any) -> None:
-    if not _validate_unresolved(name, outcome, "entry_state_location"):
+def _validate_savestate_entry_outcome(name: str, outcome: Any) -> None:
+    if not _validate_unresolved(name, outcome, "entry_savestate_location"):
         _validate_savestate_placement(name, outcome)
 
 
@@ -1125,9 +1125,9 @@ def _validate_aggregate_answer(name: str, answered: Any, question: str) -> None:
     question's answer.
     """
     _require_exact(name, answered, AGGREGATE_ANSWER_FIELDS, "each aggregate answer")
-    if question == "save_location":
-        _validate_placement(name, answered["answer"])
-    elif question == "state_location":
+    if question == "savefile_location":
+        _validate_savefile_placement(name, answered["answer"])
+    elif question == "savestate_location":
         _validate_savestate_placement(name, answered["answer"])
     elif question == "emulators_for":
         _validate_catalogue(name, answered["answer"])
@@ -1164,14 +1164,14 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     keys = set(expected)
     allowed = {
         "installations",
-        "save_location",
+        "savefile_location",
         "aggregate",
         "catalogue",
         "systems",
         "rom_location",
-        "entry_save_location",
-        "state_location",
-        "entry_state_location",
+        "entry_savefile_location",
+        "savestate_location",
+        "entry_savestate_location",
         "firmware",
         "identification",
     }
@@ -1185,14 +1185,14 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: systems_query and systems expectation must appear together")
     if ("rom_location" in keys) != ("rom_location_query" in inp):
         fail(f"{name}: rom_location_query and rom_location expectation must appear together")
-    if ("save_location" in keys) != ("query" in inp):
-        fail(f"{name}: a query and a save_location expectation must appear together")
-    if ("entry_save_location" in keys) != ("entry_query" in inp):
-        fail(f"{name}: entry_query and entry_save_location expectation must appear together")
-    if ("state_location" in keys) != ("state_query" in inp):
-        fail(f"{name}: state_query and state_location expectation must appear together")
-    if ("entry_state_location" in keys) != ("entry_state_query" in inp):
-        fail(f"{name}: entry_state_query and entry_state_location expectation must appear together")
+    if ("savefile_location" in keys) != ("savefile_query" in inp):
+        fail(f"{name}: a savefile_query and a savefile_location expectation must appear together")
+    if ("entry_savefile_location" in keys) != ("entry_savefile_query" in inp):
+        fail(f"{name}: entry_savefile_query and entry_savefile_location expectation must appear together")
+    if ("savestate_location" in keys) != ("savestate_query" in inp):
+        fail(f"{name}: savestate_query and savestate_location expectation must appear together")
+    if ("entry_savestate_location" in keys) != ("entry_savestate_query" in inp):
+        fail(f"{name}: entry_savestate_query and entry_savestate_location expectation must appear together")
     if ("firmware" in keys) != ("firmware_query" in inp):
         fail(f"{name}: firmware_query and firmware expectation must appear together")
     if ("identification" in keys) != ("identify_query" in inp):
@@ -1204,10 +1204,10 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     if (
         keys
         & {
-            "save_location",
-            "state_location",
-            "entry_save_location",
-            "entry_state_location",
+            "savefile_location",
+            "savestate_location",
+            "entry_savefile_location",
+            "entry_savestate_location",
             "catalogue",
             "systems",
             "firmware",
@@ -1215,8 +1215,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         }
     ) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
-    if "save_location" in keys:
-        _validate_placement(name, expected["save_location"])
+    if "savefile_location" in keys:
+        _validate_savefile_placement(name, expected["savefile_location"])
     if "aggregate" in keys:
         _validate_aggregate(name, expected["aggregate"], inp["aggregate_query"], expected["installations"])
     if "catalogue" in keys:
@@ -1225,12 +1225,12 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_rom_location(name, expected["rom_location"])
     if "systems" in keys:
         _validate_systems(name, expected["systems"])
-    if "state_location" in keys:
-        _validate_savestate_placement(name, expected["state_location"])
-    if "entry_save_location" in keys:
-        _validate_entry_outcome(name, expected["entry_save_location"])
-    if "entry_state_location" in keys:
-        _validate_state_entry_outcome(name, expected["entry_state_location"])
+    if "savestate_location" in keys:
+        _validate_savestate_placement(name, expected["savestate_location"])
+    if "entry_savefile_location" in keys:
+        _validate_savefile_entry_outcome(name, expected["entry_savefile_location"])
+    if "entry_savestate_location" in keys:
+        _validate_savestate_entry_outcome(name, expected["entry_savestate_location"])
     if "firmware" in keys:
         _validate_firmware(name, expected["firmware"])
     if "identification" in keys:

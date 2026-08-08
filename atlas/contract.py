@@ -42,12 +42,12 @@ from atlas.installations import (
     RomPlacement,
     SystemsAnswer,
 )
-from atlas.placement import SavePlacement, SavestatePlacement, Unresolved
+from atlas.placement import SavefilePlacement, SavestatePlacement, Unresolved
 
 AnswerT = TypeVar("AnswerT")
 
 
-def _placement_core(placement: SavePlacement | SavestatePlacement) -> dict[str, Any]:
+def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[str, Any]:
     """The fields both placement questions answer, in one shape.
 
     Shared rather than written twice, because the two answers really are the
@@ -70,8 +70,8 @@ def _placement_core(placement: SavePlacement | SavestatePlacement) -> dict[str, 
     }
 
 
-def placement_contract(placement: SavePlacement) -> dict[str, Any]:
-    """The stable, JSON-shaped form of a :class:`~atlas.placement.SavePlacement`."""
+def savefile_placement_contract(placement: SavefilePlacement) -> dict[str, Any]:
+    """The stable, JSON-shaped form of a :class:`~atlas.placement.SavefilePlacement`."""
     granularity = placement.granularity
     return {
         **_placement_core(placement),
@@ -90,7 +90,7 @@ def placement_contract(placement: SavePlacement) -> dict[str, Any]:
 def savestate_placement_contract(placement: SavestatePlacement) -> dict[str, Any]:
     """The stable form of a :class:`~atlas.placement.SavestatePlacement`.
 
-    :func:`placement_contract` without ``granularity``, and the omission is the
+    :func:`savefile_placement_contract` without ``granularity``, and the omission is the
     contract rather than an oversight: granularity is a rule card's word about
     how a *core* groups the data it writes, and no core writes a savestate —
     RetroArch serializes it and the libretro API never tells the core where it
@@ -311,7 +311,7 @@ def installation_answers_contract(
 
     Composed rather than defined: the label is :func:`installation_contract`,
     the payload is whatever serializer the question already has, passed in by
-    the caller who asked it (``placement_contract`` for ``save_location``,
+    the caller who asked it (``savefile_placement_contract`` for ``savefile_location``,
     ``catalogue_contract`` for ``emulators_for``, …). The aggregate adds no
     fields of its own, so it may not add serialization of its own either — an
     aggregate answer that differed from the handle-route answer in any way

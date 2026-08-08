@@ -17,7 +17,7 @@ flowchart TB
     subgraph api["Tier 1 — import atlas"]
         entry["detect(home) · every_installation(home)"]
         handles["RetroDeck · EmuDeck · BareRetroArchFlatpak · BareRetroArchNative<br/><small>one Installation protocol</small>"]
-        answers["Answers<br/><small>SavePlacement · SavestatePlacement · CatalogueAnswer · FirmwareAnswer · Health …<br/>every one carries its caveats</small>"]
+        answers["Answers<br/><small>SavefilePlacement · SavestatePlacement · CatalogueAnswer · FirmwareAnswer · Health …<br/>every one carries its caveats</small>"]
     end
 
     subgraph resolver["Resolver"]
@@ -65,8 +65,8 @@ classDiagram
         +kinds: tuple
         +root() str
         +health() Health
-        +save_location(content_path, core_so) SavePlacement
-        +state_location(content_path, core_so) SavestatePlacement
+        +savefile_location(content_path, core_so) SavefilePlacement
+        +savestate_location(content_path, core_so) SavestatePlacement
         +systems() SystemsAnswer
         +emulators_for(system, content_path) CatalogueAnswer
         +rom_location(system) RomPlacement
@@ -112,7 +112,7 @@ summary field, marked `«summary»` — a fact the subject establishes by combin
 
 ```mermaid
 classDiagram
-    class SavePlacement {
+    class SavefilePlacement {
         +dir: str
         +root_kind: RootKind
         +needs: tuple
@@ -150,8 +150,8 @@ classDiagram
     }
     class EmulatorEntry {
         +system / label / kind / core_so
-        +save_location(content_path)
-        +state_location(content_path)
+        +savefile_location(content_path)
+        +savestate_location(content_path)
     }
     class FirmwareAnswer {
         +root: str
@@ -185,13 +185,13 @@ classDiagram
 
     SavestatePlacement *-- FileSet
     SavestatePlacement *-- Caveat
-    SavePlacement *-- FileSet
-    SavePlacement *-- Caveat
+    SavefilePlacement *-- FileSet
+    SavefilePlacement *-- Caveat
     CatalogueAnswer *-- EmulatorEntry
     CatalogueAnswer *-- Caveat
     RomPlacement *-- Caveat
-    EmulatorEntry ..> SavePlacement : save_location()
-    EmulatorEntry ..> SavestatePlacement : state_location()
+    EmulatorEntry ..> SavefilePlacement : savefile_location()
+    EmulatorEntry ..> SavestatePlacement : savestate_location()
     EmulatorEntry ..> Unresolved : standalone emulator
     FirmwareAnswer *-- CoreFirmware
     CoreFirmware *-- FirmwareRequirement
