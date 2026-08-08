@@ -2671,6 +2671,12 @@ CAVEAT_ROM_PATH_UNRESOLVED = "rom-path-unresolved"
 CAVEAT_FRONTEND_SETTINGS_UNREADABLE = "frontend-settings-unreadable"
 CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
 
+# Why the settings could not be read, where the read itself succeeded and the
+# parse did not. Alongside the seam's own read statuses in the caveat's data,
+# because to a client they answer the same question — and it is not one of
+# them: the bytes arrived.
+_SETTINGS_UNPARSEABLE = "unparseable"
+
 
 @dataclass(frozen=True, slots=True)
 class RomPlacement:
@@ -2684,9 +2690,11 @@ class RomPlacement:
     ``dir`` is ``None`` wherever atlas could not resolve one, and never a
     partial path: a caller acts on this by looking in a directory, so a
     half-resolved string would send it somewhere real and wrong. Which kind of
-    ``None`` it is — no catalogue, unread catalogue, undeclared system, a
-    setting that is not a path, settings nobody could read, or a relocated
-    config home — is a caveat, exactly as an empty :class:`CatalogueAnswer` is.
+    ``None`` it is — an arrangement with no catalogue, one whose catalogue atlas
+    has not located, one whose catalogue could not be read, a system the
+    catalogue declares no path for, a setting that is not a path, settings
+    nobody could read, or a relocated config home — is a caveat, exactly as an
+    empty :class:`CatalogueAnswer` is.
 
     ``extensions`` is the frontend's declaration, not a filter atlas applies:
     the tokens are verbatim, both cases are listed where the file lists both,
@@ -3167,10 +3175,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         result = self._machine.read_text(settings_path)
         if result.status == READ_MISSING:
             return None, ()
-        settings = None if result.text is None else parse_es_settings(result.text)
+        if result.text is None:
+            return None, self._settings_unreadable_caveat(system, settings_path, result.status)
+        settings = parse_es_settings(result.text)
         if settings is None:
             return None, self._settings_unreadable_caveat(
-                system, settings_path, "unparseable" if result.text is not None else result.status
+                system, settings_path, _SETTINGS_UNPARSEABLE
             )
         return settings.get(self._ROM_DIRECTORY_SETTING) or None, ()
 
