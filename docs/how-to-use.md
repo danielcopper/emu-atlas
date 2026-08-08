@@ -543,6 +543,14 @@ refused to guess at.
 Extensions survive an unresolved directory: which files launch is declared in the same element and does not depend on
 where they sit.
 
+**Treat the extension list as declared text, not as a clean vocabulary.** atlas passes the tokens through exactly as the
+catalogue writes them, and real catalogues contain mistakes: the shipped build this was measured against declares one
+system's list with a token whose leading dot is simply missing, and another system's with the same token twice. So do
+not assume every token starts with `.`, and do not assume the list is a set. Normalize into whatever shape your own
+matching needs — but do it on your side, on a copy. atlas will not clean the list, because a cleaned list is a claim
+about what the frontend launches, and the frontend launches what its own typo says: a dot-less token matches nothing
+there either, and inventing the dot would make atlas's answer disagree with the machine.
+
 ## Firmware
 
 Four questions, verification strictly opt-in. The first three share one answer shape (`FirmwareAnswer`);
