@@ -502,6 +502,42 @@ the firmware route as a caveat on a core whose `declaration` is `"unsupported"`.
 is installed, atlas has no source for its rules — which is a different axis from `arrangement-unverified`: that one says
 a reading was never confirmed on a live machine, this one says there was no reading to confirm.
 
+## Where do this system's ROMs live? (and what launches them)
+
+The same catalogue declares, per system, the directory its ROMs sit in and the file extensions the frontend will launch.
+Both are read off the machine:
+
+```python
+placement = inst.rom_location("n64")
+placement.dir          # '/run/media/deck/Emulation/retrodeck/roms/n64'  — or None, see below
+placement.extensions   # ('.n64', '.N64', '.z64', '.Z64', '.zip', '.ZIP')
+placement.caveats
+```
+
+**Do not recompute either of these from a table of your own.** The directory is the catalogue's `<path>` with ES-DE's
+`%ROMPATH%` substituted from the setting ES-DE substitutes it from, so it follows a user who moved their library; a map
+in your code does not, and it is wrong silently. The extensions are the declaration verbatim — both cases where the file
+lists both cases — because which of them to act on is the frontend's business and not something atlas filters for you.
+
+**`dir` is `None` whenever atlas resolved no directory, and the caveat says which of four reasons.** Three are the ones
+the catalogue question already has — the arrangement ships no catalogue (`emulator-catalogue-unavailable`), atlas has
+not established where it keeps one (`emulator-catalogue-unestablished`), or it could not be read
+(`emulator-catalogue-unreadable`). Two more belong to this question, and both are facts about the machine rather than
+about atlas:
+
+| caveat                | what it means                                                                                |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| `rom-path-undeclared` | the catalogue was read and declares no such system, or declares it without a `<path>`        |
+| `rom-path-unresolved` | it declares a `%ROMPATH%` path, and the frontend's ROM directory setting resolves to nothing |
+
+Never read `None` as "look in the default place". There is no default atlas would stand behind: where an unset setting
+sends the frontend depends on that process's own environment, which atlas has not established. `rom-path-unresolved`
+carries the declared path in `data["declared"]`, so a client that knows its own setup can finish the substitution atlas
+refused to guess at.
+
+Extensions survive an unresolved directory: which files launch is declared in the same element and does not depend on
+where they sit.
+
 ## Firmware
 
 Four questions, verification strictly opt-in. The first three share one answer shape (`FirmwareAnswer`);
@@ -744,6 +780,17 @@ Honest limits you must cover yourself today (roadmap: `ROADMAP.md`):
   open work.
 - **Savestates.** Only savefiles are resolved; `savestate_directory` and the `sort_savestates_*` keys are unread.
 - **Standalone emulators.** Catalogued, but placements answer `Unresolved` until the standalone block lands.
-- **Reverse lookup.** Atlas is forward-only (ROM → placement); "which ROM owns this save path" is yours.
-- **File metadata.** Placements name files; mtime/size/hash of save files are yours to gather.
+- **Reverse lookup is a non-goal, not a gap.** Atlas is forward-only (ROM → placement); "which ROM owns this save path"
+  is not on the roadmap. Inverting a placement would mean reading a directory and guessing which content produced each
+  name — precisely the guess the forward answer exists to avoid, and undecidable wherever a core names saves after
+  something other than the ROM stem. **Invert it yourself instead**: walk your own library's forward answers and build
+  the index from them, `{placement → rom}` for the ROMs you know about. That index is exact for every ROM you hold, it
+  says nothing about files you never asked for (which is the honest answer), and it costs one pass you already have the
+  inputs for.
+- **File metadata is the client's job, deliberately.** Placements name files; mtime, size and hash are yours to gather.
+  That is not atlas withholding a cheap field — it is refusing to make every placement pay for one. Answering it would
+  add a stat per named file to answers that mostly do not want it, and a hash means reading the bytes: the seam prices
+  them separately for exactly this reason (`file_size` is a stat, `file_digest` reads the file). Ask the filesystem
+  directly, or reach through the same seam atlas uses — `Machine.file_size` and `Machine.file_digest` (`md5`/`sha1`) are
+  the escape hatch when you want your reads to go through the fixture seam in tests too.
 - **Sync decisions.** What to do when local and server disagree is deliberately out of scope (gavel's territory).

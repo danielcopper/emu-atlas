@@ -329,6 +329,18 @@ what the machine declares, never assumed from the spelling.
 
 ## Settled decisions
 
+- **Atlas is forward-only, and reverse lookup is a non-goal.** Every question runs content → placement. The inverse —
+  "which ROM owns this save file?" — is not a missing feature, it is one atlas would have to guess at: it means reading
+  a directory and attributing each name to a content item, and a core that names saves after anything but the ROM stem
+  (a disc's product id, a shared memory card serving every game of a system) makes the attribution undecidable from the
+  file alone. The recommended route inverts the forward answer instead: a client walks the library it already knows,
+  asks each item where its save goes, and keeps `{placement → item}`. That index is exact for everything the client
+  holds and silent about everything else, which is the honest shape of the answer. Atlas will not ship it, because the
+  library it would need to walk is the client's, not the machine's.
+- **File metadata on placements is the client's job.** A placement names files; it never carries their mtime, size or
+  hash. Those are one stat — or, for a hash, a full read — per named file, on answers that mostly do not want them, and
+  the seam prices the two separately for that reason (`file_size` stats, `file_digest` reads). Clients that want their
+  reads to go through the same seam in tests use `Machine.file_size` / `Machine.file_digest` directly.
 - **Summary fields are earned, not decorative.** A subject — a whole answer, or one entry of one — carries a summary
   only where the client's _first_ question is a fact that subject itself establishes. Three do: "is this installation
   ok?" (`Health.ok`), "is everything this core needs in place?" (`CoreFirmware.requirements_met`), and "is this one file
