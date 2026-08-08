@@ -1,6 +1,6 @@
 """Placements — resolved directories, honest file sets, and provenance.
 
-A :class:`SavePlacement` answers "where does this emulator, configured as it is,
+A :class:`SavefilePlacement` answers "where does this emulator, configured as it is,
 keep the save for this content?"; a :class:`SavestatePlacement` answers the same
 question for its savestates. Their shape follows the research findings
 (``docs/research/retrodeck-save-placement.md`` §16):
@@ -47,7 +47,7 @@ deviate from state placement, no rule card for it can ever exist, and
 writes — has an empty domain here. Carrying it as a permanent ``None`` would be
 the blank field this grammar refuses, and it could not even be rescued by a
 caveat: there is nothing to report. So :class:`SavestatePlacement` is
-:class:`SavePlacement` minus that one field, the way :class:`RomPlacement`
+:class:`SavefilePlacement` minus that one field, the way :class:`RomPlacement`
 already carries the fields its own question has and no others.
 
 Pure compute. No I/O — the installation handles observe the machine and pass
@@ -239,7 +239,7 @@ class FileSet:
 
     A declared set can itself be a template: where the card names the files
     through the content's own id, the names keep their ``<save_id>`` hole and
-    :data:`SavePlacement.needs` lists it. Stating the shape in full is not the
+    :data:`SavefilePlacement.needs` lists it. Stating the shape in full is not the
     same as claiming the resolved name — it is the directory grammar applied to
     file names.
 
@@ -301,7 +301,7 @@ UNKNOWN_FILE_SET = FileSet(
 
 
 @dataclass(frozen=True, slots=True)
-class SavePlacement:
+class SavefilePlacement:
     """A resolved save location with provenance and stated degradations.
 
     ``dir`` is concrete when the caller supplied the content path; otherwise it
@@ -342,9 +342,9 @@ class SavePlacement:
 
     def __post_init__(self) -> None:
         if not self.dir:
-            raise ValueError("SavePlacement: dir must be non-empty (an unanswerable placement is Unresolved)")
+            raise ValueError("SavefilePlacement: dir must be non-empty (an unanswerable placement is Unresolved)")
         if self.root_kind not in ROOT_KINDS:
-            raise ValueError(f"SavePlacement: root_kind must be one of {ROOT_KINDS}, got {self.root_kind!r}")
+            raise ValueError(f"SavefilePlacement: root_kind must be one of {ROOT_KINDS}, got {self.root_kind!r}")
 
 
 # Unresolved outcome codes — stable identifiers like caveat codes.
@@ -376,7 +376,7 @@ class Unresolved:
 class SavestatePlacement:
     """A resolved savestate location with provenance and stated degradations.
 
-    :class:`SavePlacement` field for field, minus ``granularity`` — see the
+    :class:`SavefilePlacement` field for field, minus ``granularity`` — see the
     module docstring for why that one cannot exist here. ``dir`` is concrete
     when the caller supplied the content path; otherwise it is a template whose
     remaining holes are listed in ``needs``. ``root_kind`` names the anchor
@@ -479,7 +479,7 @@ def _resolve_placement_dir(
     )
 
 
-def build_save_placement(
+def build_savefile_placement(
     *,
     layout: RetroArchCfg,
     platform_default_dir: str,
@@ -489,8 +489,8 @@ def build_save_placement(
     extra_sources: tuple[str, ...] = (),
     caveats: tuple[Caveat, ...] = (),
     file_set: FileSet = UNKNOWN_FILE_SET,
-) -> SavePlacement:
-    """Compose a :class:`SavePlacement` from a resolved layout and the caller's fills.
+) -> SavefilePlacement:
+    """Compose a :class:`SavefilePlacement` from a resolved layout and the caller's fills.
 
     ``platform_default_dir`` is the arrangement's RetroArch platform default
     saves directory (``saves`` under the config tree, ``platform_unix.c:2133-2134``)
@@ -509,7 +509,7 @@ def build_save_placement(
         content_dir_name=content_dir_name,
         library_name=library_name,
     )
-    return SavePlacement(
+    return SavefilePlacement(
         dir=resolved.dir,
         root_kind=ROOT_CONTENT_DIRECTORY if resolved.rooted_in_content else ROOT_SAVEFILE_DIRECTORY,
         needs=resolved.needs,
@@ -530,7 +530,7 @@ def build_savestate_placement(
     caveats: tuple[Caveat, ...] = (),
     file_set: FileSet = UNKNOWN_FILE_SET,
 ) -> SavestatePlacement:
-    """The savestate twin of :func:`build_save_placement`, over the same path math.
+    """The savestate twin of :func:`build_savefile_placement`, over the same path math.
 
     ``platform_default_dir`` is ``states`` under the config tree
     (``platform_unix.c:2135-2136``) — the effective root whenever

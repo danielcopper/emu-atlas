@@ -88,7 +88,7 @@ def _retrodeck(files, **kwargs):
 
 def _flycast_query(files):
     rd = _retrodeck(files, cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}})
-    return rd.save_location(content_path=ROM, core_so="flycast_libretro.so")
+    return rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so")
 
 
 class TestFlycastResolution:
@@ -248,7 +248,7 @@ class TestFlycastResolution:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},
         )
-        p = rd.save_location(core_so="flycast_libretro.so")
+        p = rd.savefile_location(core_so="flycast_libretro.so")
         conditional = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
         assert conditional
         assert conditional[0].data["files_without_save_id"].startswith("<rom_stem>.A1.bin")
@@ -399,7 +399,7 @@ class TestFlycastResolution:
             },
             cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}},
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so")
         assert p.granularity is None
 
 
@@ -422,7 +422,7 @@ class TestLRPS2Card:
             },
             cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
         assert p.dir == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert p.file_set.state == "declared"
@@ -447,7 +447,7 @@ class TestLRPS2Card:
             },
             cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
         )
-        p = rd.save_location(
+        p = rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso", core_so="pcsx2_libretro.so"
         )
         assert p.dir == "/mnt/sd/retrodeck/saves/ps2"
@@ -467,7 +467,7 @@ class TestLRPS2Card:
             },
             cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("Mcd001.ps2",)
 
@@ -496,7 +496,7 @@ class TestFeatureDetection:
         }
         base.update(files or {})
         rd = _retrodeck(base, cores={f"{DEPLOY}/flycast_libretro.so": core_spec})
-        return rd.save_location(content_path=ROM, core_so="flycast_libretro.so")
+        return rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so")
 
     def test_registered_key_confirms_card_despite_version_drift(self):
         # Version drifted (fffffff ≠ pinned 1dac369), but the governing option
@@ -597,7 +597,7 @@ class TestOperaCard:
         }
         base.update(files)
         rd = _retrodeck(base, cores={f"{DEPLOY}/opera_libretro.so": {"library_name": "Opera"}})
-        return rd.save_location(content_path=self.ROM_3DO, core_so="opera_libretro.so")
+        return rd.savefile_location(content_path=self.ROM_3DO, core_so="opera_libretro.so")
 
     def test_default_per_game_nests_subdir_under_save_dir(self):
         p = self._query({})
@@ -646,7 +646,7 @@ class TestAuditVerdictCaveats:
             },
             cores={f"{DEPLOY}/{core_so}": {"library_name": library_name}},
         )
-        return rd.save_location(content_path=f"/mnt/sd/retrodeck/roms/{system}/{rom}", core_so=core_so)
+        return rd.savefile_location(content_path=f"/mnt/sd/retrodeck/roms/{system}/{rom}", core_so=core_so)
 
     def test_multi_option_verdict_names_the_options_that_decide_granularity(self):
         p = self._query(
@@ -1249,7 +1249,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         assert not any(c.code == atlas.CAVEAT_UNVERIFIED_VERSION for c in p.caveats)
 
     def test_arrangement_version_drift_fires_caveat(self):
@@ -1261,7 +1261,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["arrangement_live"] == "0.11.0"
@@ -1276,7 +1276,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "fffffff"}},
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["core_live"] == "fffffff"
@@ -1293,7 +1293,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},  # no library_version
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["verification"] == "runtime-version-unknown"
@@ -1314,7 +1314,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["verification"] == "runtime-version-unknown"
@@ -1329,7 +1329,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         assert any("verified on retrodeck 0.10.9b" in s for s in p.sources)
 
     def test_unverified_arrangement_fires_caveat(self):
@@ -1348,7 +1348,7 @@ class TestVerificationMatrix:
             cores={"/cores/flycast_libretro.so": {"library_name": "Flycast"}},
         )
         ed = atlas.EmuDeck(HOME, machine)
-        p = ed.save_location(content_path=f"{HOME}/Emulation/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = ed.savefile_location(content_path=f"{HOME}/Emulation/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["arrangement"] == "emudeck"

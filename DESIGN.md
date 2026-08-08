@@ -47,7 +47,7 @@ import atlas
 
 installations = atlas.detect(home="/home/deck")
 # -> every arrangement present on the machine, each as its own handle (one Installation
-#    protocol: kind, kinds, root, health, save_location, the three catalogue questions,
+#    protocol: kind, kinds, root, health, savefile_location, the three catalogue questions,
 #    plus the four firmware calls below).
 #    Never a silently chosen winner: ambiguity is a truthful result.
 
@@ -56,12 +56,12 @@ inst = installations[0]              # e.g. a RetroDeck handle — live, re-read
 inst.health()                        # structured: a tuple of finding caveats with stable codes; ok = no findings
                                      # the same findings ride in a placement's own caveats, unwrapped
 
-inst.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
+inst.savefile_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
                    core_so="mupen64plus_next_libretro.so")
 # -> the primary route: the caller names the core. It is the only save route on the handles
 #    with no frontend catalogue — EmuDeck and the two bare RetroArch installs.
 
-inst.state_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
+inst.savestate_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
                     core_so="mupen64plus_next_libretro.so")
 # -> the same question for savestates, off the same configs through the savestate
 #    quartet of keys. Its own answer type — see "Placements" below.
@@ -69,14 +69,14 @@ inst.state_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
 answer = inst.emulators_for("n64")   # on EVERY handle: a CatalogueAnswer (entries, sources, caveats)
 emu = answer.entries[0]              # launch entries in effective priority order, as configured right now
                                      # no entries? the caveat says which kind of none — see below
-emu.save_location(content_path="/.../roms/n64/Paper Mario (USA).z64")   # the entry carries its own core
+emu.savefile_location(content_path="/.../roms/n64/Paper Mario (USA).z64")   # the entry carries its own core
 
 inst.rom_location("n64")             # on EVERY handle: a RomPlacement (dir, physical_dir, extensions,
                                      # sources, caveats) — where that system's ROMs live and which files
                                      # the frontend launches, both off the same <system> declaration.
                                      # no dir? the caveat says which kind of none, same as above.
 
-# -> SavePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir),
+# -> SavefilePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir),
 #    or — on the entry route — Unresolved (a typed domain outcome, e.g. a standalone entry
 #    before that block lands).
 #    Granularity — per-game file / shared card, with the option that selects it — is part of the placement.
@@ -251,7 +251,7 @@ findings:
 
 **Savestates are the same placement question and a different answer type.** RetroArch resolves both families in one
 function, so atlas ports the chain once and parameterizes it by the four keys the family is spelled with
-(`docs/research/retrodeck-save-placement.md` §18). What forks is the answer: `SavestatePlacement` is `SavePlacement`
+(`docs/research/retrodeck-save-placement.md` §18). What forks is the answer: `SavestatePlacement` is `SavefilePlacement`
 without `granularity`. That field is a rule card's word about how a _core_ groups the data it writes, and no core writes
 a savestate — the libretro API hands it no savestate directory and RetroArch serializes the file itself — so no card for
 it can exist and the field's domain is empty rather than merely unestablished. Carrying it as a permanent `None` would

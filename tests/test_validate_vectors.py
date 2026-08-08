@@ -180,7 +180,7 @@ def _base_plain() -> Vector:
 
 def _base_placement(**overrides) -> Vector:
     return _vector(
-        {"save_location": _placement(**overrides)}, installed=True, query={"content_path": ROM}
+        {"savefile_location": _placement(**overrides)}, installed=True, savefile_query={"content_path": ROM}
     )
 
 
@@ -212,9 +212,9 @@ def _base_systems(**overrides) -> Vector:
 
 def _base_entry(outcome=None) -> Vector:
     return _vector(
-        {"entry_save_location": outcome if outcome is not None else _placement()},
+        {"entry_savefile_location": outcome if outcome is not None else _placement()},
         installed=True,
-        entry_query={"system": SYSTEM},
+        entry_savefile_query={"system": SYSTEM},
     )
 
 
@@ -227,7 +227,7 @@ def _base_aggregate(answers=None) -> Vector:
     return _vector(
         {"aggregate": aggregate},
         installed=True,
-        aggregate_query={"question": "save_location"},
+        aggregate_query={"question": "savefile_location"},
     )
 
 
@@ -339,16 +339,16 @@ INPUT_CORE_CASES = [
 ]
 
 QUERY_CASES = [
-    case(_vector({"save_location": _placement()}, installed=True, query="nope"),
-         "input.query must be an object", id="query-not-object"),
-    case(_vector({"save_location": _placement()}, installed=True, query={}),
-         "input.query keys must be a non-empty subset", id="query-empty"),
-    case(_vector({"save_location": _placement()}, installed=True, query={"nope": "x"}),
-         "input.query keys must be a non-empty subset", id="query-stray-key"),
-    case(_vector({"save_location": _placement()}, installed=True, query={"content_path": ""}),
+    case(_vector({"savefile_location": _placement()}, installed=True, savefile_query="nope"),
+         "input.savefile_query must be an object", id="query-not-object"),
+    case(_vector({"savefile_location": _placement()}, installed=True, savefile_query={}),
+         "input.savefile_query keys must be a non-empty subset", id="query-empty"),
+    case(_vector({"savefile_location": _placement()}, installed=True, savefile_query={"nope": "x"}),
+         "input.savefile_query keys must be a non-empty subset", id="query-stray-key"),
+    case(_vector({"savefile_location": _placement()}, installed=True, savefile_query={"content_path": ""}),
          "must be a non-empty string", id="query-empty-value"),
-    case(_vector({"save_location": _placement()}, installed=True,
-                 query={"content_path": ROM, "installation": "nope"}),
+    case(_vector({"savefile_location": _placement()}, installed=True,
+                 savefile_query={"content_path": ROM, "installation": "nope"}),
          "installation must be one of", id="query-unknown-handle"),
     case(_vector({"catalogue": {"entries": [], "caveats": []}}, installed=True, catalogue_query="x"),
          "input.catalogue_query must be an object", id="catalogue-query-not-object"),
@@ -363,13 +363,13 @@ QUERY_CASES = [
          "input.systems_query keys must be a subset", id="systems-query-not-object"),
     case(_vector({"systems": {"systems": [], "caveats": []}}, installed=True,
                  systems_query={"nope": "x"}), "input.systems_query keys must be a subset", id="systems-query-stray"),
-    case(_vector({"entry_save_location": _placement()}, installed=True, entry_query="x"),
-         "input.entry_query must be an object", id="entry-query-not-object"),
-    case(_vector({"entry_save_location": _placement()}, installed=True, entry_query={}),
+    case(_vector({"entry_savefile_location": _placement()}, installed=True, entry_savefile_query="x"),
+         "input.entry_savefile_query must be an object", id="entry-query-not-object"),
+    case(_vector({"entry_savefile_location": _placement()}, installed=True, entry_savefile_query={}),
          "must carry 'system'", id="entry-query-no-system"),
-    case(_vector({"entry_save_location": _placement()}, installed=True,
-                 entry_query={"system": SYSTEM, "nope": "x"}), "must carry 'system'", id="entry-query-stray"),
-    case(_vector({"entry_save_location": _placement()}, installed=True, entry_query={"system": 7}),
+    case(_vector({"entry_savefile_location": _placement()}, installed=True,
+                 entry_savefile_query={"system": SYSTEM, "nope": "x"}), "must carry 'system'", id="entry-query-stray"),
+    case(_vector({"entry_savefile_location": _placement()}, installed=True, entry_savefile_query={"system": 7}),
          "must be a non-empty string", id="entry-query-value-type"),
 ]
 
@@ -407,35 +407,35 @@ IDENTIFY_QUERY_CASES = [
 AGGREGATE_QUERY_CASES = [
     case(_vector({"aggregate": []}, aggregate_query="x"),
          "input.aggregate_query must be an object", id="aggregate-query-not-object"),
-    case(_vector({"aggregate": []}, aggregate_query={"question": "save_location", "installation": "retrodeck"}),
+    case(_vector({"aggregate": []}, aggregate_query={"question": "savefile_location", "installation": "retrodeck"}),
          "takes no 'installation'", id="aggregate-query-names-handle"),
     case(_vector({"aggregate": []}, aggregate_query={"question": "nope"}),
          "aggregate_query.question must be one of", id="aggregate-query-unknown-question"),
     case(_vector({"aggregate": []}, aggregate_query={"question": "emulators_for"}),
          "aggregate query needs", id="aggregate-query-missing-key"),
-    case(_vector({"aggregate": []}, aggregate_query={"question": "save_location", "system": SYSTEM}),
+    case(_vector({"aggregate": []}, aggregate_query={"question": "savefile_location", "system": SYSTEM}),
          "is not asked by", id="aggregate-query-stray-key"),
     case(_vector({"aggregate": []}, aggregate_query={"question": ""}),
          "must be a non-empty string", id="aggregate-query-empty-value"),
 ]
 
 PAIRING_CASES = [
-    case(_vector({"save_location": _placement()}, installed=True),
-         "a query and a save_location expectation must appear together", id="pair-save-location"),
-    case(_vector(installed=True, query={"content_path": ROM}),
-         "a query and a save_location expectation must appear together", id="pair-query-alone"),
+    case(_vector({"savefile_location": _placement()}, installed=True),
+         "a savefile_query and a savefile_location expectation must appear together", id="pair-save-location"),
+    case(_vector(installed=True, savefile_query={"content_path": ROM}),
+         "a savefile_query and a savefile_location expectation must appear together", id="pair-query-alone"),
     case(_vector({"catalogue": {"entries": [], "caveats": []}}, installed=True),
          "catalogue_query and catalogue expectation", id="pair-catalogue"),
     case(_vector({"systems": {"systems": [], "caveats": []}}, installed=True),
          "systems_query and systems expectation", id="pair-systems"),
-    case(_vector({"entry_save_location": _placement()}, installed=True),
-         "entry_query and entry_save_location expectation", id="pair-entry"),
+    case(_vector({"entry_savefile_location": _placement()}, installed=True),
+         "entry_savefile_query and entry_savefile_location expectation", id="pair-entry"),
     case(_vector({"firmware": _firmware()}, installed=True),
          "firmware_query and firmware expectation", id="pair-firmware"),
     case(_vector({"identification": _identification()}, installed=True),
          "identify_query and identification expectation", id="pair-identification"),
     case(_vector({"aggregate": []}), "aggregate_query and aggregate expectation", id="pair-aggregate"),
-    case(_vector({"save_location": _placement()}, query={"content_path": ROM}),
+    case(_vector({"savefile_location": _placement()}, savefile_query={"content_path": ROM}),
          "needs a detected installation", id="expectation-without-installation"),
 ]
 
@@ -465,16 +465,16 @@ INSTALLATION_CASES = [
 ]
 
 PLACEMENT_CASES = [
-    case(_base_placement(dir=""), "save_location.dir must be a non-empty string", id="placement-empty-dir"),
-    case(_base_placement(root_kind="nope"), "save_location.root_kind must be one of", id="placement-root-kind"),
-    case(_base_placement(needs="content_dir"), "save_location.needs must be a list", id="placement-needs-not-list"),
-    case(_base_placement(needs=["rom_stem"]), "save_location.needs must be holes from", id="placement-unknown-hole"),
+    case(_base_placement(dir=""), "savefile_location.dir must be a non-empty string", id="placement-empty-dir"),
+    case(_base_placement(root_kind="nope"), "savefile_location.root_kind must be one of", id="placement-root-kind"),
+    case(_base_placement(needs="content_dir"), "savefile_location.needs must be a list", id="placement-needs-not-list"),
+    case(_base_placement(needs=["rom_stem"]), "savefile_location.needs must be holes from", id="placement-unknown-hole"),
     case(_base_placement(fallback_dir=""), "must be null or a non-empty string", id="placement-empty-fallback"),
     case(_base_placement(physical_dir=7), "must be null or a non-empty string", id="placement-physical-type"),
-    case(_vector({"save_location": {**_placement(), "stray": 1}}, installed=True, query={"content_path": ROM}),
-         "save_location must be exactly the fields", id="placement-stray-field"),
+    case(_vector({"savefile_location": {**_placement(), "stray": 1}}, installed=True, savefile_query={"content_path": ROM}),
+         "savefile_location must be exactly the fields", id="placement-stray-field"),
     case(_base_placement(file_set={"state": "unknown", "files": []}),
-         "save_location.file_set must be exactly the fields", id="file-set-missing-field"),
+         "savefile_location.file_set must be exactly the fields", id="file-set-missing-field"),
     case(_base_placement(file_set=_file_set(state="nope")), "file_set.state must be one of", id="file-set-state"),
     case(_base_placement(file_set=_file_set(state="observed", files="a.srm")),
          "file_set.files must be a list of strings", id="file-set-files-type"),
@@ -498,7 +498,7 @@ ENTRY_CASES = [
     case(_base_entry({"unresolved": {"code": "nope", "data": {}}}),
          "unresolved code must be one of", id="entry-unknown-unresolved-code"),
     case(_base_entry({"unresolved": {"code": "standalone-unsupported"}}),
-         "entry_save_location.unresolved must be exactly the fields", id="entry-unresolved-missing-data"),
+         "entry_savefile_location.unresolved must be exactly the fields", id="entry-unresolved-missing-data"),
 ]
 
 CATALOGUE_CASES = [

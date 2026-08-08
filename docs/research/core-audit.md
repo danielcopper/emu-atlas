@@ -47,7 +47,7 @@ sorted-dir math instead of bypassing it.
 
 ## What a verdict says at answer time
 
-A verdict only exists for a caller if the answer carries it. `SavePlacement.granularity` is `None` for every core
+A verdict only exists for a caller if the answer carries it. `SavefilePlacement.granularity` is `None` for every core
 without a rule card, so an empty field cannot be the carrier — it reads as _nothing to report_ no matter which verdict
 produced it. The separation is a caveat:
 
@@ -121,7 +121,7 @@ there).
 
 `per_game_capable` is deliberately tri-state: `true` means at least one per-game mode is established by source, shipped
 binary, or observation; `false` requires evidence that no such mode exists; `null` means unknown. It is a static
-capability, not the mode currently selected on a running machine. `SavePlacement.granularity` answers the latter by
+capability, not the mode currently selected on a running machine. `SavefilePlacement.granularity` answers the latter by
 reading live configuration where a runtime rule exists; today that is complete for rule-card cores and `None` elsewhere
 (`docs/tasks/save-detection.md`) — where the `None` is deliberate rather than incidental, the `core-multi-option` caveat
 says so and names the options. A shared default can therefore coexist with `per_game_capable: true`.

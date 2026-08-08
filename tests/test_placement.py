@@ -12,9 +12,9 @@ from atlas.placement import (
     STATE_ROOT_CONTENT_DIRECTORY,
     UNKNOWN_FILE_SET,
     FileSet,
-    SavePlacement,
+    SavefilePlacement,
     SavestatePlacement,
-    build_save_placement,
+    build_savefile_placement,
     build_savestate_placement,
     file_set_holes,
     needs_with_file_set,
@@ -41,7 +41,7 @@ class TestInvariants:
 
     def test_root_kind_vocabulary_is_closed(self):
         with pytest.raises(ValueError):
-            SavePlacement(
+            SavefilePlacement(
                 dir="/saves",
                 root_kind="wherever",  # type: ignore[arg-type]
                 needs=(),
@@ -52,7 +52,7 @@ class TestInvariants:
 
     def test_placement_dir_must_be_non_empty(self):
         with pytest.raises(ValueError):
-            SavePlacement(
+            SavefilePlacement(
                 dir="",
                 root_kind="savefile_directory",
                 needs=(),
@@ -81,7 +81,7 @@ def _layout(text):
 
 
 def _build(text, *, content_dir_path=None, content_dir_name=None, library_name=None, **kwargs):
-    return build_save_placement(
+    return build_savefile_placement(
         layout=_layout(text),
         platform_default_dir="/platform/saves",
         content_dir_path=content_dir_path,
@@ -249,7 +249,7 @@ class TestSavestatePlacementIsTheSaveShapeMinusOneField:
         assert not hasattr(_state('savestate_directory = "/states"\n'), "granularity")
 
     def test_it_carries_every_other_field_a_save_placement_does(self):
-        save = set(SavePlacement.__dataclass_fields__)
+        save = set(SavefilePlacement.__dataclass_fields__)
         state = set(SavestatePlacement.__dataclass_fields__)
         assert save - state == {"granularity"}
         assert state - save == set()

@@ -151,7 +151,7 @@ class TestMarkerPathValuesMustBeStrings:
             },
             dirs=self.FALLBACK_DIRS,
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.dir == "/mnt/sd/retrodeck/saves"
         # The finding rides in the placement under its own code, carrying the
         # key it is about — not wrapped in a category with the condition nested.
@@ -227,7 +227,7 @@ class TestTheMarkerVersionIsAKeyAtlasReads:
         assert rd.saves_root() == "/mnt/sd/retrodeck/saves"
 
     def test_the_placement_states_the_finding_and_still_resolves(self):
-        placement = self._rd({"version": 11}).save_location(
+        placement = self._rd({"version": 11}).savefile_location(
             content_path="/mnt/sd/retrodeck/roms/gba/Game.zip"
         )
         assert placement.dir == "/mnt/sd/retrodeck/saves"
@@ -236,7 +236,7 @@ class TestTheMarkerVersionIsAKeyAtlasReads:
     def test_no_drift_is_claimed_from_a_version_that_is_not_one(self):
         # Nothing was compared, so nothing is stated — a value atlas refused to
         # read must not come back out as the version this machine runs.
-        placement = self._rd({"version": 11}).save_location(
+        placement = self._rd({"version": 11}).savefile_location(
             content_path="/mnt/sd/retrodeck/roms/gba/Game.zip"
         )
         assert atlas.CAVEAT_ARRANGEMENT_VERSION_DRIFTED not in [c.code for c in placement.caveats]
@@ -250,7 +250,7 @@ class TestTheMarkerVersionIsAKeyAtlasReads:
         assert self._rd({"version": ""}).health() == atlas.Health()
 
 
-class TestRetroDeckSaveLocation:
+class TestRetroDeckSavefileLocation:
     def test_cfg_is_the_truth_not_json(self):
         # The cfg is what RetroArch reads; a user-edited cfg wins over retrodeck.json.
         rd = _retrodeck(
@@ -264,7 +264,7 @@ class TestRetroDeckSaveLocation:
                 "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.dir == "/elsewhere/saves"
 
     def test_missing_cfg_uses_platform_default(self):
@@ -273,7 +273,7 @@ class TestRetroDeckSaveLocation:
         rd = _retrodeck(
             {RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/roms/gba/Game.zip": ""}
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/<library_name>"
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.needs == ("library_name",)
@@ -293,7 +293,7 @@ class TestRetroDeckSaveLocation:
             },
             cores={f"{RD_DEPLOY_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
         )
-        p = rd.save_location(
+        p = rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/psp/Game.iso", core_so="ppsspp_libretro.so"
         )
         assert p.dir == "/mnt/sd/retrodeck/saves"
@@ -314,7 +314,7 @@ class TestRetroDeckSaveLocation:
             },
             cores={f"{RD_DEPLOY_CORES}/mgba_libretro.so": {"library_name": "mGBA"}},
         )
-        p = rd.save_location(
+        p = rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so"
         )
         assert p.dir == "/mnt/sd/retrodeck/saves/mGBA"
@@ -334,7 +334,7 @@ class TestRetroDeckSaveLocation:
             },
             cores={f"{RD_DEPLOY_CORES}/applewin_libretro.so": None},
         )
-        p = rd.save_location(
+        p = rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/apple2/game.dsk", core_so="applewin_libretro.so"
         )
         assert p.dir == "/mnt/sd/retrodeck/saves/<library_name>"
@@ -353,7 +353,7 @@ class TestRetroDeckSaveLocation:
                 "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("Paper Mario (USA).srm",)
 
@@ -369,7 +369,7 @@ class TestRetroDeckSaveLocation:
                 "/mnt/sd/retrodeck/roms/gba/Game.zip": "",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.file_set.state == "unknown"
         assert p.file_set.files == ()
 
@@ -379,13 +379,13 @@ class TestRetroDeckSaveLocation:
                 RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}',
             }
         )
-        p = rd.save_location()
+        p = rd.savefile_location()
         issue = next(c for c in p.caveats if c.code == atlas.HEALTH_ISSUE_ROOT_MISSING)
         assert issue.data["path"] == "/run/media/gone/retrodeck"
 
     def test_the_placement_carries_the_health_findings_unchanged(self):
         # Equality, deliberately not identity: handles are live, so health()
-        # and save_location() each read their own snapshot and build their own
+        # and savefile_location() each read their own snapshot and build their own
         # Caveat objects — `is` would be false by design, not by defect. What
         # equality pins is everything a re-wrap would disturb, message
         # included: the retired envelope carried a different code, a nested
@@ -393,14 +393,14 @@ class TestRetroDeckSaveLocation:
         # three coming back fails this.
         rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}'})
         findings = rd.health().issues
-        assert [c for c in rd.save_location().caveats if c in findings] == list(findings)
+        assert [c for c in rd.savefile_location().caveats if c in findings] == list(findings)
 
     def test_a_finding_reaches_the_placement_with_its_own_message(self):
         # The prefix the envelope added is the cheapest tell that something
         # rebuilt the finding on the way.
         rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}'})
         finding = rd.health().issues[0]
-        carried = next(c for c in rd.save_location().caveats if c.code == finding.code)
+        carried = next(c for c in rd.savefile_location().caveats if c.code == finding.code)
         assert carried.message == finding.message
 
     def test_observation_is_literal_for_glob_metacharacters(self):
@@ -417,7 +417,7 @@ class TestRetroDeckSaveLocation:
                 "/mnt/sd/retrodeck/saves/Game U.srm": "decoy",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game [USA].zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game [USA].zip")
         assert p.file_set.files == ("Game [USA].srm",)
 
     def test_disk_index_companion_is_filtered(self):
@@ -435,7 +435,7 @@ class TestRetroDeckSaveLocation:
                 "/mnt/sd/retrodeck/saves/Game.ldci": "{}",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/psx/Game.chd")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/psx/Game.chd")
         assert p.file_set.files == ("Game.srm",)
 
     def test_observed_never_claims_completeness(self):
@@ -450,7 +450,7 @@ class TestRetroDeckSaveLocation:
                 "/mnt/sd/retrodeck/saves/Game.srm": "s",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.file_set.state == "observed"
         assert p.file_set.complete is False
 
@@ -468,7 +468,7 @@ class TestRetroDeckSaveLocation:
                 "/mnt/sd/retrodeck/saves/Tetris (World) (Rev 1).rtc": "r",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gb/Tetris (World) (Rev 1).zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gb/Tetris (World) (Rev 1).zip")
         assert p.file_set.files == ("Tetris (World) (Rev 1).rtc", "Tetris (World) (Rev 1).srm")
 
 
@@ -495,7 +495,7 @@ class TestArchiveContentResolves:
 
     def test_the_entry_names_the_save(self):
         rd = self._machine()
-        p = rd.save_location(content_path=self.ENTRY, core_so="mgba_libretro.so")
+        p = rd.savefile_location(content_path=self.ENTRY, core_so="mgba_libretro.so")
         assert p.dir == "/mnt/sd/retrodeck/saves/gba"
         assert p.file_set.files == ("Golden Sun (USA).srm",)
 
@@ -508,7 +508,7 @@ class TestArchiveContentResolves:
                 "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram",
             }
         )
-        p = rd.save_location(content_path=self.ENTRY, core_so="mgba_libretro.so")
+        p = rd.savefile_location(content_path=self.ENTRY, core_so="mgba_libretro.so")
         assert p.dir == "/mnt/sd/retrodeck/saves"
 
     def test_the_archive_itself_is_not_a_save(self):
@@ -525,7 +525,7 @@ class TestArchiveContentResolves:
                 "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).srm": "sram",
             }
         )
-        p = rd.save_location(
+        p = rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip#Golden Sun (USA).gba"
         )
         assert p.file_set.files == ("Golden Sun (USA).srm",)
@@ -553,13 +553,13 @@ class TestContentDirObservation:
         )
 
     def test_the_content_siblings_are_stated_not_hidden(self):
-        p = self._machine().save_location(content_path=self.CUE)
+        p = self._machine().savefile_location(content_path=self.CUE)
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("Game.bin", "Game.png", "Game.srm")
         assert p.file_set.complete is False
 
     def test_the_observation_carries_the_caveat_that_says_so(self):
-        p = self._machine().save_location(content_path=self.CUE)
+        p = self._machine().savefile_location(content_path=self.CUE)
         caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_CONTENT_DIR_OBSERVATION)
         assert caveat.data == {"dir": "/mnt/sd/retrodeck/roms/psx"}
 
@@ -567,8 +567,8 @@ class TestContentDirObservation:
         # The ROM is filtered by the name it has on disk, and that name has to
         # survive the trailing slash the rest of the math already normalizes
         # away — otherwise the content file reads as save data.
-        with_slash = self._machine().save_location(content_path=f"{self.CUE}/")
-        without = self._machine().save_location(content_path=self.CUE)
+        with_slash = self._machine().savefile_location(content_path=f"{self.CUE}/")
+        without = self._machine().savefile_location(content_path=self.CUE)
         assert with_slash.file_set.files == without.file_set.files
         assert "Game.cue" not in with_slash.file_set.files
 
@@ -584,7 +584,7 @@ class TestContentDirObservation:
                 "/mnt/sd/retrodeck/saves/Game.srm": "sram",
             }
         )
-        p = rd.save_location(content_path=self.CUE)
+        p = rd.savefile_location(content_path=self.CUE)
         assert p.file_set.files == ("Game.srm",)
         assert not any(c.code == atlas.CAVEAT_CONTENT_DIR_OBSERVATION for c in p.caveats)
 
@@ -608,26 +608,26 @@ class TestUnnamedContentPath:
         )
 
     def test_no_dotfile_is_reported_as_a_save(self):
-        p = self._machine().save_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
+        p = self._machine().savefile_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
         assert p.file_set.state == "unknown"
         assert p.file_set.files == ()
 
     def test_the_refusal_is_stated(self):
-        p = self._machine().save_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
+        p = self._machine().savefile_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
         caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_CONTENT_PATH_UNNAMED)
         assert caveat.data == {"content_path": "/mnt/sd/retrodeck/roms/psx/Game/"}
 
     def test_the_directory_is_still_answered(self):
         # The name is missing, not the layout: the sort component is the
         # directory of the last component (file_path.c:493-534).
-        p = self._machine().save_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
+        p = self._machine().savefile_location(content_path="/mnt/sd/retrodeck/roms/psx/Game/")
         assert p.dir == "/mnt/sd/retrodeck/saves/psx"
 
     def test_an_empty_content_path_is_answered_not_raised(self):
         # An empty string fills no coordinate at all, so every hole stays a
         # hole — and the answer says why it was not filled. Domain states never
         # raise, and a content-directory root would otherwise build an empty
-        # dir (which SavePlacement refuses).
+        # dir (which SavefilePlacement refuses).
         rd = _retrodeck(
             {
                 RETRODECK_JSON: RD_JSON,
@@ -638,7 +638,7 @@ class TestUnnamedContentPath:
                 "/mnt/sd/retrodeck/saves/.keep": "",
             }
         )
-        p = rd.save_location(content_path="")
+        p = rd.savefile_location(content_path="")
         assert p.dir == "<content_dir>"
         assert p.needs == ("content_dir",)
         assert p.file_set.state == "unknown"
@@ -662,7 +662,7 @@ class TestConditionalPlacement:
                 "/mnt/sd/retrodeck/saves/gba/Game.srm": "s",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.fallback_dir is None
         assert not any(c.code == atlas.CAVEAT_SORTED_DIR_MISSING for c in p.caveats)
 
@@ -675,7 +675,7 @@ class TestConditionalPlacement:
                 "/mnt/sd/retrodeck/saves/.keep": "",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.dir == "/mnt/sd/retrodeck/saves/gba"
         assert p.fallback_dir == "/mnt/sd/retrodeck/saves"
         assert any(c.code == atlas.CAVEAT_SORTED_DIR_MISSING for c in p.caveats)
@@ -691,7 +691,7 @@ class TestConditionalPlacement:
                 "/mnt/sd/retrodeck/saves/gba": "i am a file, not a directory",
             }
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.dir == "/mnt/sd/retrodeck/saves"
         assert p.fallback_dir is None
         assert any(c.code == atlas.CAVEAT_SORTED_DIR_UNCREATABLE for c in p.caveats)
@@ -710,7 +710,7 @@ class TestConditionalPlacement:
             },
             dirs=["/mnt/sd/retrodeck/saves"],
         )
-        p = rd.save_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip")
         assert p.dir == "/mnt/sd/retrodeck/roms/gba/gba"
         assert p.fallback_dir == "/mnt/sd/retrodeck/roms/gba"
         assert any(c.code == atlas.CAVEAT_SORTED_DIR_MISSING for c in p.caveats)
@@ -733,7 +733,7 @@ class TestLinkView:
             },
             symlinks={f"{HOME}/links/saves": "/data/real-saves"},
         )
-        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).savefile_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/links/saves"
         assert p.physical_dir == "/data/real-saves"
 
@@ -754,7 +754,7 @@ class TestLinkView:
             symlinks={"/mnt/sd/retrodeck/bios/pcsx2/memcards": "/run/media/gone/saves/ps2/memcards"},
             cores={f"{RD_DEPLOY_CORES}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
         )
-        p = atlas.RetroDeck(HOME, machine).save_location(
+        p = atlas.RetroDeck(HOME, machine).savefile_location(
             content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so"
         )
         assert p.dir == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
@@ -771,7 +771,7 @@ class TestLinkView:
             },
             symlinks={f"{HOME}/links/saves": "/run/media/gone/saves"},
         )
-        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).savefile_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/.config/retroarch/saves"
         codes = [c.code for c in p.caveats]
         assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY in codes
@@ -794,7 +794,7 @@ class TestLinkView:
             },
             symlinks={f"{HOME}/links/saves": "/data/a", "/data/a": "/data/b", "/data/b": "/data/a"},
         )
-        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).savefile_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/.config/retroarch/saves"
         looping = [c for c in p.caveats if c.code == atlas.CAVEAT_SYMLINK_LOOP]
         assert looping
@@ -821,7 +821,7 @@ class TestLinkView:
             },
             symlinks=chain,
         )
-        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).savefile_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert (p.physical_dir == "/data/real-saves") is settles
         assert (atlas.CAVEAT_SYMLINK_LOOP in [c.code for c in p.caveats]) is not settles
 
@@ -862,7 +862,7 @@ class TestSystemDirectoryRoot:
         )
 
     def _placement(self, cfg, files=None, content: str | None = CONTENT, **kwargs):
-        return self._flycast(cfg, files, **kwargs).save_location(
+        return self._flycast(cfg, files, **kwargs).savefile_location(
             content_path=content, core_so="flycast_libretro.so"
         )
 
@@ -984,7 +984,7 @@ class TestSystemDirectoryRoot:
                     "retroarch-core-options.cfg": 'reicast_per_content_vmus = "VMU A1"\n'
                 },
             )
-            p = rd.save_location(content_path=self.CONTENT, core_so="flycast_libretro.so")
+            p = rd.savefile_location(content_path=self.CONTENT, core_so="flycast_libretro.so")
             return next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS)
 
         assert spanning("").data["also_under"] == atlas.ROOT_SYSTEM_DIRECTORY
@@ -1014,7 +1014,7 @@ class TestEmuDeck:
         # the only one — roots are fine.
         assert ed.health().codes == (atlas.HEALTH_ISSUE_COMPANION_CONFIG_MISSING,)
 
-    def test_save_location_reads_standalone_cfg(self):
+    def test_savefile_location_reads_standalone_cfg(self):
         machine = FixtureMachine(
             {
                 EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\nromsPath="$HOME/Emulation/roms"\n',
@@ -1028,7 +1028,7 @@ class TestEmuDeck:
             }
         )
         ed = atlas.EmuDeck(HOME, machine)
-        p = ed.save_location(content_path=f"{HOME}/Emulation/roms/gba/Game.zip")
+        p = ed.savefile_location(content_path=f"{HOME}/Emulation/roms/gba/Game.zip")
         assert p.dir == "/home/deck/Emulation/saves/retroarch/saves"
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
 
@@ -1057,7 +1057,7 @@ class TestFlatpakSandboxPaths:
             },
             cores={f"{RD_DEPLOY_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
         )
-        return rd.save_location(
+        return rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/psp/Game.iso", core_so="ppsspp_libretro.so"
         )
 
@@ -1157,7 +1157,7 @@ class TestFlatpakSandboxPaths:
             },
             cores={f"{RD_DEPLOY_CORES}/opera_libretro.so": {"library_name": "Opera"}},
         )
-        p = rd.save_location(
+        p = rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/3do/Game.chd", core_so="opera_libretro.so"
         )
         assert p.granularity is not None
@@ -1199,7 +1199,7 @@ class TestFlatpakSandboxPaths:
                 f"{HOME}/roms/gba/Game.zip": "",
             }
         )
-        p = atlas.BareRetroArchNative(HOME, machine).save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = atlas.BareRetroArchNative(HOME, machine).savefile_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == "/var/config/saves"
 
 
@@ -1225,7 +1225,7 @@ class TestCfgFidelity:
             },
             cores={f"{RD_DEPLOY_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
         )
-        return rd.save_location(
+        return rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/psp/Game.iso", core_so="ppsspp_libretro.so"
         )
 
@@ -1347,7 +1347,7 @@ class TestOverrideChainSemantics:
             },
             cores={f"{RD_DEPLOY_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
         )
-        return rd.save_location(
+        return rd.savefile_location(
             content_path="/mnt/sd/retrodeck/roms/psp/Game.iso", core_so="ppsspp_libretro.so"
         )
 
@@ -1564,7 +1564,7 @@ class TestOstreeHomeIsHostSide:
             f'savefile_directory = "{self.HOME}/retrodeck/saves"\n'
             'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n',
         )
-        p = rd.save_location(content_path=f"{self.HOME}/retrodeck/roms/gba/Game.zip")
+        p = rd.savefile_location(content_path=f"{self.HOME}/retrodeck/roms/gba/Game.zip")
         assert p.dir == f"{self.HOME}/retrodeck/saves"
         assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED not in [c.code for c in p.caveats]
 
@@ -1604,7 +1604,7 @@ class TestOstreeHomeIsHostSide:
             files={f"{overrides}/mGBA/mGBA.cfg": 'sort_savefiles_by_content_enable = "false"'},
             cores={f"{RD_DEPLOY_CORES}/mgba_libretro.so": {"library_name": "mGBA"}},
         )
-        p = rd.save_location(
+        p = rd.savefile_location(
             content_path=f"{self.HOME}/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so"
         )
         assert p.dir == f"{self.HOME}/retrodeck/saves"
@@ -1762,9 +1762,9 @@ class TestOneReadPerSourcePerQuery:
         assert machine.reads
         return machine
 
-    def test_save_location_reads_each_source_once(self):
+    def test_savefile_location_reads_each_source_once(self):
         machine = self._query(
-            lambda rd: rd.save_location(content_path=self.CONTENT, core_so="parallel_n64_libretro.so")
+            lambda rd: rd.savefile_location(content_path=self.CONTENT, core_so="parallel_n64_libretro.so")
         )
         assert machine.repeats() == {}
 
@@ -1789,13 +1789,13 @@ class TestOneReadPerSourcePerQuery:
         machine = self._query(lambda rd: rd.firmware_for_system(system="n64"))
         assert ESDE_SETTINGS not in machine.reads
 
-    def test_entry_save_location_reads_each_source_once(self):
+    def test_entry_savefile_location_reads_each_source_once(self):
         # The catalogue ask that produced the entry is its own query; the
         # invariant is per query, so only the entry's own reads are counted.
         machine = _CountingMachine(self.FILES, cores=self.CORES)
         entry = atlas.RetroDeck(HOME, machine).emulators_for("n64").entries[0]
         machine.reads.clear()
-        entry.save_location(content_path=self.CONTENT)
+        entry.savefile_location(content_path=self.CONTENT)
         assert machine.repeats() == {}
         # This route gained the catalogue and the settings when the anchor
         # moved off the marker: the per-game check needs the system's <path>,
@@ -1803,22 +1803,22 @@ class TestOneReadPerSourcePerQuery:
         assert self.DEPLOY_ESDE in machine.reads
         assert ESDE_SETTINGS in machine.reads
 
-    def test_state_location_reads_each_source_once(self):
+    def test_savestate_location_reads_each_source_once(self):
         machine = self._query(
-            lambda rd: rd.state_location(content_path=self.CONTENT, core_so="parallel_n64_libretro.so")
+            lambda rd: rd.savestate_location(content_path=self.CONTENT, core_so="parallel_n64_libretro.so")
         )
         assert machine.repeats() == {}
         # The support declaration is a real read, and the only source this
         # question has that its savefile twin does not.
         assert self.INFO in machine.reads
 
-    def test_entry_state_location_reads_each_source_once(self):
+    def test_entry_savestate_location_reads_each_source_once(self):
         # Same shape as the entry save route: the catalogue ask that produced
         # the entry is its own query, so only the entry's own reads count.
         machine = _CountingMachine(self.FILES, cores=self.CORES)
         entry = atlas.RetroDeck(HOME, machine).emulators_for("n64").entries[0]
         machine.reads.clear()
-        entry.state_location(content_path=self.CONTENT)
+        entry.savestate_location(content_path=self.CONTENT)
         assert machine.repeats() == {}
         assert self.DEPLOY_ESDE in machine.reads
         assert ESDE_SETTINGS in machine.reads
@@ -1958,7 +1958,7 @@ class TestBareRetroArch:
             }
         )
         inst = atlas.BareRetroArchNative(HOME, machine)
-        p = inst.save_location(content_path=f"{HOME}/roms/gba/Game.zip")
+        p = inst.savefile_location(content_path=f"{HOME}/roms/gba/Game.zip")
         assert p.dir == f"{HOME}/saves/<library_name>"
         assert p.needs == ("library_name",)
 
@@ -2247,7 +2247,7 @@ class TestEveryAnswerStatesTheInstallationsHealth:
 
     def _answers(self, rd) -> dict[str, tuple[atlas.Caveat, ...]]:
         return {
-            "save_location": rd.save_location(core_so=self.CORE_SO).caveats,
+            "savefile_location": rd.savefile_location(core_so=self.CORE_SO).caveats,
             "systems": rd.systems().caveats,
             "emulators_for": rd.emulators_for("n64").caveats,
             "firmware_for_core": rd.firmware_for_core(core_so=self.CORE_SO).caveats,
@@ -2307,7 +2307,7 @@ class TestEveryAnswerStatesTheInstallationsHealth:
         # goes through the placement seam, so it should come free. Checked.
         rd = _retrodeck({**self.BROKEN, self.ESDE: self.ES_SYSTEMS})
         entry = rd.emulators_for("n64").entries[0]
-        placement = entry.save_location()
+        placement = entry.savefile_location()
         assert not isinstance(placement, atlas.Unresolved)
         carried = [c.code for c in placement.caveats]
         assert carried[: len(rd.health().codes)] == list(rd.health().codes)
@@ -2378,7 +2378,7 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
             dirs=[f"{self.CONFIG_TREE}/system"],
         )
         handle = atlas.BareRetroArchNative(HOME, machine)
-        placement = handle.save_location(core_so="flycast_libretro.so")
+        placement = handle.savefile_location(core_so="flycast_libretro.so")
         assert handle.firmware_inventory().root == f"{self.CONFIG_TREE}/system"
         assert placement.dir.startswith(f"{self.CONFIG_TREE}/system")
 

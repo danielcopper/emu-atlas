@@ -1,6 +1,6 @@
 """Installation handles — every question is asked *of an installation*.
 
-Detection produces these; each answers ``save_location`` for its own flavor by
+Detection produces these; each answers ``savefile_location`` for its own flavor by
 reading the configs that govern it — the same files, in the same order, with the
 same fallbacks the emulator itself uses — through the injected machine seam.
 
@@ -120,10 +120,10 @@ from atlas.placement import (
     FileSet,
     Granularity,
     RootKind,
-    SavePlacement,
+    SavefilePlacement,
     SavestatePlacement,
     Unresolved,
-    build_save_placement,
+    build_savefile_placement,
     build_savestate_placement,
     file_set_holes,
     needs_with_file_set,
@@ -1727,7 +1727,7 @@ def _system_directory_placement(
     retroarch_config_dir: str,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
-) -> SavePlacement:
+) -> SavefilePlacement:
     """The placement for a card whose core roots its saves in the system directory.
 
     The card states which directory the core *asks* for; which directory that
@@ -1771,7 +1771,7 @@ def _system_directory_placement(
     if observable:
         physical_dir, link_caveats = _link_view(machine, directory)
         all_caveats.extend(link_caveats)
-    return SavePlacement(
+    return SavefilePlacement(
         dir=directory,
         root_kind=root.root_kind,
         needs=needs_with_file_set(root.needs, file_set.files),
@@ -2018,7 +2018,7 @@ def _standard_placement(
     reachable: bool,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
-) -> SavePlacement:
+) -> SavefilePlacement:
     """The standard rule: RetroArch's own path math, then what lies at the result.
 
     Whatever the configs resolved to is only the intended directory — the
@@ -2046,7 +2046,7 @@ def _standard_placement(
         )
 
     file_set = UNKNOWN_FILE_SET
-    placement = build_save_placement(
+    placement = build_savefile_placement(
         layout=layout,
         platform_default_dir=platform_default_dir,
         content_dir_path=content.dir_path,
@@ -2090,7 +2090,7 @@ def _standard_placement(
             )
             all_caveats.extend(link_caveats)
 
-    return SavePlacement(
+    return SavefilePlacement(
         dir=final_dir,
         root_kind=placement.root_kind,
         needs=needs_with_file_set(placement.needs, file_set.files),
@@ -2234,12 +2234,12 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
     )
 
 
-def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlacement:
+def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> SavefilePlacement:
     """Where the savefile lands: the shared chain, then the per-core rule cards.
 
     The cards are what this route has and the savestate one does not — cores
     write their own save data and can put it elsewhere entirely, which is a
-    thing no core can do to a savestate (:func:`_retroarch_state_location`).
+    thing no core can do to a savestate (:func:`_retroarch_savestate_location`).
     """
     chain = _read_chain(machine, query, SAVEFILE_KEYS)
     content, core = chain.content, chain.core
@@ -2478,7 +2478,7 @@ def _core_info_unreadable_caveat(core_so: str, status: ReadStatus) -> Caveat:
     )
 
 
-def _retroarch_state_location(machine: Machine, query: _SaveQuery) -> SavestatePlacement:
+def _retroarch_savestate_location(machine: Machine, query: _SaveQuery) -> SavestatePlacement:
     """Where the savestate lands: the shared chain, and nothing per-core after it.
 
     The savefile route continues into rule cards here, because a core writes
@@ -2929,15 +2929,15 @@ class _CatalogueHost(Protocol):
     so the catalogue answer itself — RetroDECK's to hand out.
     """
 
-    def entry_save_location(
+    def entry_savefile_location(
         self,
         spec: EmulatorSpec,
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavePlacement | Unresolved: ...
+    ) -> SavefilePlacement | Unresolved: ...
 
-    def entry_state_location(
+    def entry_savestate_location(
         self,
         spec: EmulatorSpec,
         entry_caveats: tuple[Caveat, ...] = (),
@@ -3096,7 +3096,7 @@ class RomPlacement:
 
     ``physical_dir`` is the fully link-resolved backing directory when ``dir``
     reaches its files through symlinks, and ``None`` otherwise — the same pair
-    and the same convention :class:`~atlas.placement.SavePlacement` answers
+    and the same convention :class:`~atlas.placement.SavefilePlacement` answers
     with, because it is the same question: a distribution that wires a tree
     into place with symlinks leaves the frontend-side path and the physical
     path as two truthful answers, and a client copying files may need either.
@@ -3169,7 +3169,7 @@ class EmulatorEntry:
         """Stated catalogue-level degradations (e.g. unchecked per-game overrides)."""
         return self._caveats
 
-    def save_location(self, *, content_path: str | None = None) -> SavePlacement | Unresolved:
+    def savefile_location(self, *, content_path: str | None = None) -> SavefilePlacement | Unresolved:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
         Catalogue-level degradations stay attached to the derived answer
@@ -3180,11 +3180,11 @@ class EmulatorEntry:
         """
         if self._spec.kind != KIND_LIBRETRO:
             return self._standalone()
-        return self._installation.entry_save_location(
+        return self._installation.entry_savefile_location(
             self._spec, self._caveats, content_path=content_path
         )
 
-    def state_location(self, *, content_path: str | None = None) -> SavestatePlacement | Unresolved:
+    def savestate_location(self, *, content_path: str | None = None) -> SavestatePlacement | Unresolved:
         """Where this emulator keeps the savestates — core filled in from the catalogue.
 
         The savefile route's twin, and it refuses on the same entries: a
@@ -3194,7 +3194,7 @@ class EmulatorEntry:
         """
         if self._spec.kind != KIND_LIBRETRO:
             return self._standalone()
-        return self._installation.entry_state_location(
+        return self._installation.entry_savestate_location(
             self._spec, self._caveats, content_path=content_path
         )
 
@@ -4058,7 +4058,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
-    def _save_location_from(
+    def _savefile_location_from(
         self,
         config: dict[str, Any],
         marker_issues: tuple[Caveat, ...],
@@ -4066,8 +4066,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
-    ) -> SavePlacement:
-        return _retroarch_save_location(
+    ) -> SavefilePlacement:
+        return _retroarch_savefile_location(
             self._machine,
             self._query_from(
                 config,
@@ -4078,7 +4078,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
-    def _state_location_from(
+    def _savestate_location_from(
         self,
         config: dict[str, Any],
         marker_issues: tuple[Caveat, ...],
@@ -4087,7 +4087,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
     ) -> SavestatePlacement:
-        return _retroarch_state_location(
+        return _retroarch_savestate_location(
             self._machine,
             self._query_from(
                 config,
@@ -4098,7 +4098,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
-    def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
+    def savefile_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavefilePlacement:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.
 
         ``core_so`` is the core's ``.so`` basename (e.g.
@@ -4107,9 +4107,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         ones leave holes and stated caveats, never guesses.
         """
         config, marker_issues = self._read_marker()
-        return self._save_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
+        return self._savefile_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
 
-    def state_location(
+    def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement:
         """Where this RetroDECK's RetroArch keeps the savestates for *content_path*.
@@ -4119,7 +4119,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         instead of the savefile one.
         """
         config, marker_issues = self._read_marker()
-        return self._state_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
+        return self._savestate_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
 
     def _firmware_context_from(
         self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]
@@ -4228,21 +4228,21 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
-    def entry_save_location(
+    def entry_savefile_location(
         self,
         spec: EmulatorSpec,
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavePlacement:
-        """The entry route behind :meth:`EmulatorEntry.save_location` — one marker read.
+    ) -> SavefilePlacement:
+        """The entry route behind :meth:`EmulatorEntry.savefile_location` — one marker read.
 
         Resolves the placement for a catalogue entry and, when *content_path*
         is given, checks the gamelist for a per-game override that would launch
         a different emulator — all from one snapshot of the governing sources.
         """
         config, marker_issues = self._read_marker()
-        placement = self._save_location_from(
+        placement = self._savefile_location_from(
             config,
             marker_issues,
             content_path=content_path,
@@ -4254,21 +4254,21 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         extra = self._entry_caveats_for(config, spec, content_path)
         return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
 
-    def entry_state_location(
+    def entry_savestate_location(
         self,
         spec: EmulatorSpec,
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
     ) -> SavestatePlacement:
-        """The entry route behind :meth:`EmulatorEntry.state_location` — one marker read.
+        """The entry route behind :meth:`EmulatorEntry.savestate_location` — one marker read.
 
         The savefile route's twin, down to the per-game override check: which
         emulator ES-DE would actually launch decides both answers, so the one
         that would not launch says so on both.
         """
         config, marker_issues = self._read_marker()
-        placement = self._state_location_from(
+        placement = self._savestate_location_from(
             config,
             marker_issues,
             content_path=content_path,
@@ -4329,7 +4329,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
             "atlas has not established where an EmuDeck arrangement keeps its frontend catalogue — "
             "EmuDeck can be driven by ES-DE, Pegasus or Steam ROM Manager — so which emulators run a "
-            "system is unknown here; name the core yourself with save_location(core_so=...)",
+            "system is unknown here; name the core yourself with savefile_location(core_so=...)",
             {"arrangement": "emudeck"},
         )
 
@@ -4452,13 +4452,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
         )
 
-    def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
+    def savefile_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavefilePlacement:
         """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg."""
-        return _retroarch_save_location(
+        return _retroarch_savefile_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
-    def state_location(
+    def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement:
         """Where EmuDeck's RetroArch keeps the savestates — the same cfg, the state keys.
@@ -4469,7 +4469,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         own config tree rather than one derived from ``savesPath`` — which is a
         fact about that installer, read here like any other.
         """
-        return _retroarch_state_location(
+        return _retroarch_savestate_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
@@ -4517,7 +4517,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         return Caveat(
             CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
             "a bare RetroArch install ships no frontend catalogue, so there is no launch entry to "
-            "answer with — name the core yourself with save_location(core_so=...)",
+            "answer with — name the core yourself with savefile_location(core_so=...)",
             {"arrangement": "retroarch"},
         )
 
@@ -4591,13 +4591,13 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
         )
 
-    def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
+    def savefile_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavefilePlacement:
         """Where this RetroArch install keeps the save for *content_path* under *core_so*."""
-        return _retroarch_save_location(
+        return _retroarch_savefile_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
-    def state_location(
+    def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement:
         """Where this RetroArch install keeps the savestates for *content_path*.
@@ -4607,7 +4607,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         its savefile twin is — so an unconfigured install sorts states into
         per-``library_name`` subdirectories of ``states`` under the config tree.
         """
-        return _retroarch_state_location(
+        return _retroarch_savestate_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
@@ -4671,11 +4671,11 @@ class Installation(Protocol):
 
     def health(self) -> Health: ...
 
-    def save_location(
+    def savefile_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> SavePlacement: ...
+    ) -> SavefilePlacement: ...
 
-    def state_location(
+    def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement: ...
 

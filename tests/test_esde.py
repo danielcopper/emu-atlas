@@ -292,9 +292,9 @@ class TestRetroDeckCatalogue:
         assert entries[0].provenance == "es_systems.xml (custom_systems overlay)"
 
 
-class TestEntrySaveLocation:
+class TestEntrySavefileLocation:
     def test_full_circle_dreamcast_entry_hits_the_rule_card(self):
-        # catalogue -> default entry -> save_location: core known, card applies,
+        # catalogue -> default entry -> savefile_location: core known, card applies,
         # the no-core caveat class does not exist on this path.
         rd = _catalogue_fixture(
             {
@@ -311,8 +311,8 @@ class TestEntrySaveLocation:
             cores={f"{DEPLOY}/cores/flycast_libretro.so": {"library_name": "Flycast"}},
         )
         entry = _entries(rd.emulators_for("dreamcast"))[0]
-        p = entry.save_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi")
-        assert isinstance(p, atlas.SavePlacement)
+        p = entry.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi")
+        assert isinstance(p, atlas.SavefilePlacement)
         assert p.dir == "/mnt/sd/retrodeck/bios/dc"
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert not any(c.code == atlas.CAVEAT_NO_CORE for c in p.caveats)
@@ -323,7 +323,7 @@ class TestEntrySaveLocation:
         # Outside the resolver's coverage is an answer, not an exception (M8).
         rd = _catalogue_fixture()
         entry = _entries(rd.emulators_for("ps3"))[0]
-        outcome = entry.save_location(content_path="/mnt/sd/retrodeck/roms/ps3/game")
+        outcome = entry.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps3/game")
         assert isinstance(outcome, atlas.Unresolved)
         assert outcome.code == atlas.UNRESOLVED_STANDALONE
         assert outcome.data["system"] == "ps3"
@@ -477,7 +477,7 @@ class TestPerGameAltemulator:
         )
         assert all(not e.caveats for e in _entries(rd.emulators_for("n64")))
 
-    def test_wrong_entry_save_location_gets_override_caveat(self):
+    def test_wrong_entry_savefile_location_gets_override_caveat(self):
         # caller picked the system default, but THIS game's altemulator points elsewhere
         rd = _catalogue_fixture(
             {
@@ -486,8 +486,8 @@ class TestPerGameAltemulator:
             }
         )
         parallel = _entries(rd.emulators_for("n64"))[0]  # ParaLLEl (system default)
-        p = parallel.save_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
-        assert isinstance(p, atlas.SavePlacement)
+        p = parallel.savefile_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
+        assert isinstance(p, atlas.SavefilePlacement)
         override = [c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
         assert override
         assert override[0].data["label"] == "Mupen64Plus-Next"
@@ -638,12 +638,12 @@ class TestPerGameMatchIsAnchored:
             {**self.FILES, RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'}
         )
         mupen = _entries(rd.emulators_for("n64"))[0]
-        nested = mupen.save_location(content_path=f"{self.ROMS}/Collection/Game.m3u")
-        assert isinstance(nested, atlas.SavePlacement)
+        nested = mupen.savefile_location(content_path=f"{self.ROMS}/Collection/Game.m3u")
+        assert isinstance(nested, atlas.SavefilePlacement)
         assert not [c for c in nested.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
         # The game that does carry it still gets it.
-        owner = mupen.save_location(content_path=f"{self.ROMS}/Game.m3u")
-        assert isinstance(owner, atlas.SavePlacement)
+        owner = mupen.savefile_location(content_path=f"{self.ROMS}/Game.m3u")
+        assert isinstance(owner, atlas.SavefilePlacement)
         assert [c.data["label"] for c in owner.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE] == [
             "ParaLLEl N64"
         ]
@@ -694,8 +694,8 @@ class TestAnAnchorThatCannotBeResolvedSaysSo:
                 ESDE_SETTINGS: {"status": "unreadable"},
             }
         )
-        placement = _entries(rd.emulators_for("n64"))[0].save_location(content_path=self.CONTENT)
-        assert isinstance(placement, atlas.SavePlacement)
+        placement = _entries(rd.emulators_for("n64"))[0].savefile_location(content_path=self.CONTENT)
+        assert isinstance(placement, atlas.SavefilePlacement)
         assert atlas.CAVEAT_FRONTEND_SETTINGS_UNREADABLE in [c.code for c in placement.caveats]
 
     def test_a_query_without_content_is_not_caveated_for_an_anchor_it_never_wanted(self):
@@ -730,7 +730,7 @@ class TestAnAnchorThatCannotBeResolvedSaysSo:
             command="",
             provenance="test",
         )
-        placement = atlas.RetroDeck(HOME, machine).entry_save_location(
+        placement = atlas.RetroDeck(HOME, machine).entry_savefile_location(
             spec, content_path="/mnt/sd/retrodeck/roms/n64/Game.m3u"
         )
         codes = [c.code for c in placement.caveats]

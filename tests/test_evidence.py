@@ -243,8 +243,8 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
     holds that decision down.
     """
     return {
-        "save_location": tuple(c.code for c in handle.save_location(core_so=CORE_SO).caveats),
-        "state_location": tuple(c.code for c in handle.state_location(core_so=CORE_SO).caveats),
+        "savefile_location": tuple(c.code for c in handle.savefile_location(core_so=CORE_SO).caveats),
+        "savestate_location": tuple(c.code for c in handle.savestate_location(core_so=CORE_SO).caveats),
         "systems": tuple(c.code for c in handle.systems().caveats),
         "emulators_for": tuple(c.code for c in handle.emulators_for(SYSTEM).caveats),
         "rom_location": tuple(c.code for c in handle.rom_location(SYSTEM).caveats),
@@ -301,7 +301,7 @@ class TestEveryAnswerStatesItsEvidence:
         # The aggregate delegates, so it should come for free — proven, not assumed.
         files, kwargs = UNVERIFIED_MACHINES["bare_retroarch_native"]
         every = atlas.every_installation(HOME, _machine(files, **kwargs))
-        answered = every.save_location(core_so=CORE_SO)[0]
+        answered = every.savefile_location(core_so=CORE_SO)[0]
         assert CAVEAT_ARRANGEMENT_UNVERIFIED in [c.code for c in answered.answer.caveats]
 
 
@@ -356,7 +356,7 @@ class TestEveryAnswerStatesTheDrift:
 
     def test_the_aggregate_carries_it_too(self):
         every = atlas.EveryInstallation((_retrodeck(DRIFTED_VERSION),))
-        answered = every.save_location(core_so=CORE_SO)[0]
+        answered = every.savefile_location(core_so=CORE_SO)[0]
         assert CAVEAT_ARRANGEMENT_VERSION_DRIFTED in [c.code for c in answered.answer.caveats]
 
 

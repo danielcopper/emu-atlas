@@ -94,15 +94,15 @@ A path in both lists is a contradiction, not a mode-000 shorthand, and is refuse
 Each expectation is paired with the input key that asks it. Several may appear in one vector; each pair must be complete
 — a query with no expectation asks nothing, an expectation with no query is checked by nobody.
 
-| input key         | expected key          | the question                                          |
-| ----------------- | --------------------- | ----------------------------------------------------- |
-| `query`           | `save_location`       | where does this save live                             |
-| `catalogue_query` | `catalogue`           | which emulators can launch this system                |
-| `systems_query`   | `systems`             | which systems does the frontend declare               |
-| `entry_query`     | `entry_save_location` | the same placement, asked _through_ a catalogue entry |
-| `firmware_query`  | `firmware`            | `kind` is `core`, `system` or `inventory`             |
-| `identify_query`  | `identification`      | what is this content, by `md5` / `sha1` / `size`      |
-| `aggregate_query` | `aggregate`           | one question put to **every** detected installation   |
+| input key              | expected key              | the question                                          |
+| ---------------------- | ------------------------- | ----------------------------------------------------- |
+| `savefile_query`       | `savefile_location`       | where does this savefile live                         |
+| `catalogue_query`      | `catalogue`               | which emulators can launch this system                |
+| `systems_query`        | `systems`                 | which systems does the frontend declare               |
+| `entry_savefile_query` | `entry_savefile_location` | the same placement, asked _through_ a catalogue entry |
+| `firmware_query`       | `firmware`                | `kind` is `core`, `system` or `inventory`             |
+| `identify_query`       | `identification`          | what is this content, by `md5` / `sha1` / `size`      |
+| `aggregate_query`      | `aggregate`               | one question put to **every** detected installation   |
 
 Every single-question family may name `installation` (a handle kind) to choose which detected installation answers;
 without it the first one does. `aggregate_query` may not — asking the aggregate to choose is the one thing it does not
