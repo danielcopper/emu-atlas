@@ -33,9 +33,12 @@ from atlas.esde import (
     KIND_LIBRETRO,
     EmulatorSpec,
     GamelistSelections,
+    SystemDeclaration,
     merge_layers,
+    parse_es_settings,
     parse_es_systems,
     parse_gamelist,
+    resolve_rom_path,
 )
 from atlas.evidence import arrangement_caveats
 from atlas.firmware import (
@@ -2624,6 +2627,48 @@ class SystemsAnswer:
     caveats: tuple[Caveat, ...] = ()
 
 
+# The two ways a READ catalogue still yields no ROM directory. Both are facts
+# about the catalogue rather than about atlas, which is what separates them from
+# the three emulator-catalogue-* codes: there, nobody could look.
+CAVEAT_ROM_PATH_UNDECLARED = "rom-path-undeclared"
+CAVEAT_ROM_PATH_UNRESOLVED = "rom-path-unresolved"
+
+
+@dataclass(frozen=True, slots=True)
+class RomPlacement:
+    """Where one system's ROMs live, and which files the frontend launches.
+
+    Both come from the catalogue's own ``<system>`` declaration, so both are
+    facts about this machine rather than a table: ``dir`` is the ``<path>``
+    with ES-DE's ``%ROMPATH%`` substituted from the setting ES-DE substitutes
+    it from, and ``extensions`` is the ``<extension>`` list as declared.
+
+    ``dir`` is ``None`` wherever atlas could not resolve one, and never a
+    partial path: a caller acts on this by looking in a directory, so a
+    half-resolved string would send it somewhere real and wrong. Which kind of
+    ``None`` it is — no catalogue, unread catalogue, undeclared system, or a
+    ``%ROMPATH%`` nothing established — is a caveat, exactly as an empty
+    :class:`CatalogueAnswer` is.
+
+    ``extensions`` is the frontend's declaration, not a filter atlas applies:
+    the tokens are verbatim, both cases are listed where the file lists both,
+    and what to do with them is the caller's business.
+    """
+
+    dir: str | None = None
+    extensions: tuple[str, ...] = ()
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+def _declared_entries(
+    by_system: Mapping[str, SystemDeclaration], system: str
+) -> tuple[EmulatorSpec, ...]:
+    """The launch entries a read catalogue declares for *system* — none if it declares no such system."""
+    declaration = by_system.get(system)
+    return () if declaration is None else declaration.entries
+
+
 class EmulatorEntry:
     """One catalogue entry — an emulator that can launch one system, as configured.
 
@@ -2730,6 +2775,25 @@ class _CatalogueQueries:
             caveats=(*answer.caveats, *arrangement_caveats(self.kind, observed_version=version)),
         )
 
+    def rom_location(self, system: str) -> RomPlacement:
+        """Where *system*'s ROMs live, and which extensions the frontend launches.
+
+        Both facts are declared per system in the frontend's own catalogue and
+        are read from it live — a client that recomputes either from a table of
+        its own is answering from somewhere the machine cannot contradict.
+
+        No directory is four different facts, and the codes tell them apart the
+        way the catalogue question's do: the arrangement ships no catalogue, it
+        has one atlas has not established, its catalogue could not be read, or
+        the catalogue was read and this is what it says — no such system, or a
+        ``%ROMPATH%`` nothing here resolves.
+        """
+        answer, version = self._rom_location_answer(system)
+        return _dc_replace(
+            answer,
+            caveats=(*answer.caveats, *arrangement_caveats(self.kind, observed_version=version)),
+        )
+
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
         """The emulators that can launch *system*, in launch-priority order.
 
@@ -2788,6 +2852,12 @@ class _CatalogueQueries:
         self, system: str, *, content_path: str | None = None
     ) -> tuple[CatalogueAnswer, str | None]:
         return CatalogueAnswer(caveats=(*self.health().issues, self._catalogue_absence())), None
+
+    def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
+        # Same refusal as the two above, for the same reason: where a system's
+        # ROMs live is declared in the catalogue this arrangement does not have,
+        # so the honest answer names the absence rather than a directory.
+        return RomPlacement(caveats=(*self.health().issues, self._catalogue_absence())), None
 
 
 class RetroDeck(_FirmwareQueries, _CatalogueQueries):
@@ -2954,7 +3024,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     # user overlay under <rd_home>/ES-DE/custom_systems (observed layout).
     _ESDE_BUNDLED_SANDBOX = "/app/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
 
-    def _read_catalogue(self, root: str) -> tuple[dict[str, tuple[EmulatorSpec, ...]], bool]:
+    def _read_catalogue(self, root: str) -> tuple[dict[str, SystemDeclaration], bool]:
         """The merged ES-DE catalogue, and whether the bundled layer could be read.
 
         The second value is not a detail: an empty catalogue because the shipped
@@ -2963,7 +3033,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         frontend knows none for that system. The custom overlay is genuinely
         optional, so only the bundled layer decides.
         """
-        bundled: dict[str, tuple[EmulatorSpec, ...]] = {}
+        bundled: dict[str, SystemDeclaration] = {}
         read = False
         bundled_path = self._sandbox().bundled(self._ESDE_BUNDLED_SANDBOX)
         if bundled_path is not None:
@@ -2976,7 +3046,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 # overlay fully commented out, so it parses to zero systems by
                 # design and can never stand in for this.
                 read = bool(bundled)
-        custom: dict[str, tuple[EmulatorSpec, ...]] = {}
+        custom: dict[str, SystemDeclaration] = {}
         custom_path = os.path.join(root, "ES-DE", "custom_systems", "es_systems.xml")
         custom_text = self._machine.read_text(custom_path).text
         if custom_text is not None:
@@ -3001,6 +3071,34 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, bundled + custom_systems overlay)"
+    _ROM_DIRECTORY_SOURCE = "ES-DE ROMDirectory read live (es_settings.xml)"
+
+    # ES-DE keeps its settings in its app-data tree under the Flatpak's config
+    # directory, NOT under the RetroDECK home the catalogue overlay lives in —
+    # the two diverge on an SD-card install, where <rd_home>/ES-DE/settings/
+    # does not exist at all (observed 2026-08-08).
+    _ESDE_SETTINGS_SUFFIX = os.path.join("ES-DE", "settings", "es_settings.xml")
+    _ROM_DIRECTORY_SETTING = "ROMDirectory"
+
+    def _rom_directory(self) -> str | None:
+        """What ES-DE substitutes for ``%ROMPATH%``, read from ES-DE's own settings.
+
+        The value comes from ``es_settings.xml`` rather than from
+        ``retrodeck.json``'s ``roms_path``, and the difference is the boundary
+        rule, not pedantry: ``ROMDirectory`` is the setting ES-DE actually
+        substitutes, while ``roms_path`` is RetroDECK's bookkeeping about the
+        same tree. They agree on a stock installation and are two different
+        files a user can move apart, and only one of them is what the frontend
+        reads. Same shape as this handle's cfg-over-marker rule everywhere else.
+
+        ``None`` where the file is missing, unreadable, or sets no such key —
+        the caller states that rather than falling back on the other file.
+        """
+        settings_path = os.path.join(self._home, ".var", "app", self._APP_ID, "config", self._ESDE_SETTINGS_SUFFIX)
+        text = self._machine.read_text(settings_path).text
+        if text is None:
+            return None
+        return parse_es_settings(text).get(self._ROM_DIRECTORY_SETTING) or None
 
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
         """Every system the catalogue declares, sorted — and the version that read stated.
@@ -3054,7 +3152,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return (
             CatalogueAnswer(
                 self._entries_from(
-                    by_system.get(system, ()),
+                    _declared_entries(by_system, system),
                     self._gamelist_selections_at(root, system),
                     system_roms_dir=self._system_roms_dir(config, system),
                     content_path=content_path,
@@ -3063,6 +3161,98 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 findings,
             ),
             version,
+        )
+
+    def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
+        """RetroDECK's ROM placement — the catalogue's declaration, resolved ES-DE's way.
+
+        One snapshot again: the marker, both catalogue layers and ES-DE's
+        settings are each read once here. The extensions survive an unresolved
+        directory on purpose — which files launch is declared in the same
+        element and does not depend on where they sit, so refusing to state
+        them would throw away a fact atlas holds.
+        """
+        config, marker_issues = self._read_marker()
+        findings = self._health_from(config, marker_issues).issues
+        by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
+        version = _marker_version(config)
+        if not read:
+            return RomPlacement(caveats=(*findings, *self._catalogue_unread_caveat(system))), version
+
+        sources = (self._CATALOGUE_SOURCE, self._ROM_DIRECTORY_SOURCE)
+        declaration = by_system.get(system)
+        if declaration is None or declaration.rom_path is None:
+            return (
+                RomPlacement(
+                    extensions=() if declaration is None else declaration.extensions,
+                    sources=sources,
+                    caveats=(*findings, *self._rom_path_undeclared_caveat(system, declaration)),
+                ),
+                version,
+            )
+
+        rom_directory = self._rom_directory()
+        resolved = resolve_rom_path(declaration.rom_path, rom_directory)
+        unresolved: tuple[Caveat, ...] = ()
+        if resolved is None:
+            unresolved = self._rom_path_unresolved_caveat(system, declaration.rom_path, rom_directory)
+        return (
+            RomPlacement(
+                dir=resolved,
+                extensions=declaration.extensions,
+                sources=sources,
+                caveats=(*findings, *unresolved),
+            ),
+            version,
+        )
+
+    @staticmethod
+    def _rom_path_undeclared_caveat(
+        system: str, declaration: SystemDeclaration | None
+    ) -> tuple[Caveat, ...]:
+        """A read catalogue that names no directory for this system.
+
+        The two ways it happens — no such system, or a system declared without
+        a ``<path>`` — are one code and one thing to do about it, so they
+        differ in the message and not in the data. What a client acts on is
+        that this catalogue states no directory.
+        """
+        subject = (
+            f"declares no system {system!r}"
+            if declaration is None
+            else f"declares {system!r} without a <path>"
+        )
+        return (
+            Caveat(
+                CAVEAT_ROM_PATH_UNDECLARED,
+                f"the frontend's catalogue was read and {subject}, so where its ROMs live is not "
+                "something this machine states — the answer is empty because the declaration is, "
+                "not because atlas could not look",
+                {"system": system},
+            ),
+        )
+
+    @staticmethod
+    def _rom_path_unresolved_caveat(
+        system: str, declared: str, rom_directory: str | None
+    ) -> tuple[Caveat, ...]:
+        """A declared path whose ``%ROMPATH%`` nothing here resolves.
+
+        The declaration travels in the data: it is the fact atlas *did*
+        establish, and a caller that knows its own ES-DE setup can finish the
+        substitution atlas refused to guess at.
+        """
+        reason = "ES-DE's settings state no ROMDirectory" if not rom_directory else (
+            f"ES-DE's ROMDirectory is {rom_directory!r}, which is not an absolute path"
+        )
+        return (
+            Caveat(
+                CAVEAT_ROM_PATH_UNRESOLVED,
+                f"the catalogue declares {system!r} at {declared!r}, and {reason} — atlas states no "
+                "directory rather than guessing one, because a ROM directory guessed wrong is a real "
+                "directory the caller would go looking in",
+                {"system": system, "declared": declared},
+            ),
         )
 
     def _entries_from(
@@ -3194,7 +3384,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read = self._read_catalogue(root)
         entries = self._entries_from(
-            by_system.get(system, ()),
+            _declared_entries(by_system, system),
             self._gamelist_selections_at(root, system),
             system_roms_dir=self._system_roms_dir(config, system),
             content_path=None,
@@ -3619,6 +3809,8 @@ class Installation(Protocol):
     def systems(self) -> SystemsAnswer: ...
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer: ...
+
+    def rom_location(self, system: str) -> RomPlacement: ...
 
     def firmware_for_core(self, core_so: str, *, verify: bool = False) -> FirmwareAnswer: ...
 

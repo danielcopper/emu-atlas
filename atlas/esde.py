@@ -89,8 +89,25 @@ def _launch_entries(system_el: ET.Element, *, system: str, provenance: str) -> t
     return tuple(entries)
 
 
-def parse_es_systems(text: str, *, provenance: str) -> dict[str, tuple[EmulatorSpec, ...]]:
-    """Parse one ``es_systems.xml`` layer into ``{system: entries-in-order}``.
+@dataclass(frozen=True, slots=True)
+class SystemDeclaration:
+    """One ``<system>`` as declared: what launches it, where it lives, what counts.
+
+    ``rom_path`` is the ``<path>`` text **verbatim**, still carrying whatever
+    tokens the file wrote (``%ROMPATH%/n64``) — resolving them needs a setting
+    this parser does not read, so substituting here would mean guessing it.
+    ``extensions`` is the ``<extension>`` list split on whitespace, each token
+    exactly as declared: ES-DE lists both cases separately (``.z64 .Z64``), and
+    normalizing would state a vocabulary the file does not.
+    """
+
+    entries: tuple[EmulatorSpec, ...] = ()
+    rom_path: str | None = None
+    extensions: tuple[str, ...] = ()
+
+
+def parse_es_systems(text: str, *, provenance: str) -> dict[str, SystemDeclaration]:
+    """Parse one ``es_systems.xml`` layer into ``{system: declaration}``.
 
     Malformed XML yields ``{}`` — the layer is skipped, never guessed at.
     """
@@ -98,27 +115,95 @@ def parse_es_systems(text: str, *, provenance: str) -> dict[str, tuple[EmulatorS
         root = ET.fromstring(text)
     except ET.ParseError:
         return {}
-    result: dict[str, tuple[EmulatorSpec, ...]] = {}
+    result: dict[str, SystemDeclaration] = {}
     for system_el in root.findall("system"):
         name = (system_el.findtext("name") or "").strip()
         if not name:
             continue
-        result[name] = _launch_entries(system_el, system=name, provenance=provenance)
+        declared_path = (system_el.findtext("path") or "").strip()
+        result[name] = SystemDeclaration(
+            entries=_launch_entries(system_el, system=name, provenance=provenance),
+            rom_path=declared_path or None,
+            extensions=tuple((system_el.findtext("extension") or "").split()),
+        )
     return result
 
 
 def merge_layers(
-    bundled: dict[str, tuple[EmulatorSpec, ...]],
-    custom: dict[str, tuple[EmulatorSpec, ...]],
-) -> dict[str, tuple[EmulatorSpec, ...]]:
+    bundled: dict[str, SystemDeclaration],
+    custom: dict[str, SystemDeclaration],
+) -> dict[str, SystemDeclaration]:
     """Merge the custom overlay over the bundled catalogue.
 
     Per ES-DE semantics a custom system of the same name replaces the bundled
-    one entirely; other custom systems are added.
+    one entirely; other custom systems are added. Replacement is of the whole
+    declaration — an overlay system brings its own path and extensions along
+    with its commands, because that is the ``<system>`` element ES-DE ends up
+    with.
     """
     merged = dict(bundled)
     merged.update(custom)
     return merged
+
+
+# ES-DE substitutes exactly this token in a system's <path>, and only there;
+# every other %TOKEN% in the file belongs to <command>.
+ROMPATH_TOKEN = "%ROMPATH%"
+
+
+def parse_es_settings(text: str) -> dict[str, str]:
+    """The ``<string name= value=>`` settings of an ``es_settings.xml``.
+
+    **The file is not well-formed XML**, and that is not a defect to route
+    around: ES-DE writes a bare sequence of sibling elements with no root, and
+    reads it back with pugixml, which does not enforce the single-root rule.
+    Handing the text straight to ``xml.etree`` fails at the second element
+    ("junk after document element") — so a reader that did the obvious thing
+    would call every real machine's settings unreadable and then report the ROM
+    directory unresolvable everywhere. The document is wrapped in a synthetic
+    root to read the fragments the way the writer meant them.
+
+    Unparseable even then yields ``{}`` — a layer that could not be read, which
+    the caller must not confuse with one that set nothing.
+    """
+    body = text.lstrip()
+    if body.startswith("<?"):
+        _, _, body = body.partition("?>")
+    try:
+        root = ET.fromstring(f"<es-settings>{body}</es-settings>")
+    except ET.ParseError:
+        return {}
+    settings: dict[str, str] = {}
+    for element in root:
+        if element.tag != "string":
+            continue
+        name = element.get("name")
+        if name:
+            settings[name] = element.get("value") or ""
+    return settings
+
+
+def resolve_rom_path(declared: str, rom_directory: str | None) -> str | None:
+    """A system's declared ``<path>`` with ``%ROMPATH%`` substituted, or ``None``.
+
+    Follows ES-DE: an unconditional string replace of the token, then the
+    ``//`` collapse that absorbs the directory's trailing separator. A declared
+    path carrying no token needs no directory and resolves to itself — ES-DE
+    only insists on the token when generating placeholder directories, not when
+    loading the catalogue, so a path without one is a real path here too.
+
+    ``None`` when the token is present and *rom_directory* cannot stand in for
+    it: unset, or not absolute. A relative or ``~``-prefixed value is refused
+    rather than expanded, because what those resolve against is the ES-DE
+    process's own environment inside its sandbox, which atlas has not
+    established — and a ROM directory guessed wrong is a directory the caller
+    would go looking in.
+    """
+    if ROMPATH_TOKEN not in declared:
+        return declared or None
+    if not rom_directory or not rom_directory.startswith("/"):
+        return None
+    return declared.replace(ROMPATH_TOKEN, f"{rom_directory}/").replace("//", "/")
 
 
 @dataclass(frozen=True, slots=True)

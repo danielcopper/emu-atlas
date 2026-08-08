@@ -46,7 +46,7 @@ from typing import Callable, Generic, Sequence, TypeVar
 
 from atlas.detect import detect
 from atlas.firmware import FirmwareAnswer, FirmwareIdentification
-from atlas.installations import CatalogueAnswer, Health, Installation, SystemsAnswer
+from atlas.installations import CatalogueAnswer, Health, Installation, RomPlacement, SystemsAnswer
 from atlas.machine import Machine
 from atlas.placement import SavePlacement
 
@@ -127,6 +127,10 @@ class EveryInstallation:
         return self._ask(
             lambda installation: installation.emulators_for(system, content_path=content_path)
         )
+
+    def rom_location(self, system: str) -> tuple[InstallationAnswer[RomPlacement], ...]:
+        """Where each installation keeps *system*'s ROMs, or why it states nowhere."""
+        return self._ask(lambda installation: installation.rom_location(system))
 
     def firmware_for_core(
         self, core_so: str, *, verify: bool = False

@@ -62,6 +62,7 @@ from atlas.installations import (
 # --- The answers ------------------------------------------------------------
 from atlas.contract import (
     catalogue_contract,
+    rom_placement_contract,
     emulator_contract,
     firmware_contract,
     health_contract,
@@ -81,7 +82,15 @@ from atlas.firmware import (
     RefusedDeclaration,
     UnclaimedFile,
 )
-from atlas.installations import CatalogueAnswer, EmulatorEntry, Health, SystemsAnswer
+from atlas.installations import (
+    CAVEAT_ROM_PATH_UNDECLARED,
+    CAVEAT_ROM_PATH_UNRESOLVED,
+    CatalogueAnswer,
+    EmulatorEntry,
+    Health,
+    RomPlacement,
+    SystemsAnswer,
+)
 from atlas.placement import Caveat, FileSet, Granularity, SavePlacement, Unresolved
 
 # --- The vocabularies those answers speak ------------------------------------
@@ -232,6 +241,7 @@ __all__ = [
     "Health",
     "CatalogueAnswer",
     "SystemsAnswer",
+    "RomPlacement",
     "EmulatorEntry",
     "FirmwareAnswer",
     "CoreFirmware",
@@ -248,6 +258,7 @@ __all__ = [
     "installation_contract",
     "installation_answers_contract",
     "catalogue_contract",
+    "rom_placement_contract",
     "emulator_contract",
     "systems_contract",
     "firmware_contract",
@@ -363,6 +374,8 @@ __all__ = [
     "CAVEAT_NO_FIRMWARE_REQUIREMENT",
     "CAVEAT_PER_GAME_OVERRIDE",
     "CAVEAT_PER_GAME_OVERRIDES_PRESENT",
+    "CAVEAT_ROM_PATH_UNDECLARED",
+    "CAVEAT_ROM_PATH_UNRESOLVED",
     "CAVEAT_SANDBOX_PATH_UNTRANSLATED",
     "CAVEAT_SAVE_DIR_UNLISTABLE",
     "CAVEAT_SORTED_DIR_MISSING",

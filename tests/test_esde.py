@@ -43,17 +43,17 @@ class TestParse:
     def test_systems_and_order(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test")
         assert set(parsed) == {"dreamcast", "n64", "ps3"}
-        assert [e.label for e in parsed["n64"]] == ["Mupen64Plus-Next", "ParaLLEl N64"]
+        assert [e.label for e in parsed["n64"].entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
 
     def test_libretro_classification_extracts_core_so(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test")
-        entry = parsed["dreamcast"][0]
+        entry = parsed["dreamcast"].entries[0]
         assert entry.kind == atlas.KIND_LIBRETRO
         assert entry.core_so == "flycast_libretro.so"
 
     def test_standalone_classification(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test")
-        entry = parsed["ps3"][0]
+        entry = parsed["ps3"].entries[0]
         assert entry.kind == atlas.KIND_STANDALONE
         assert entry.core_so is None
 
@@ -76,8 +76,8 @@ class TestMerge:
             provenance="custom",
         )
         merged = merge_layers(bundled, custom)
-        assert [e.label for e in merged["n64"]] == ["ParaLLEl N64"]
-        assert merged["n64"][0].provenance == "custom"
+        assert [e.label for e in merged["n64"].entries] == ["ParaLLEl N64"]
+        assert merged["n64"].entries[0].provenance == "custom"
         assert "dreamcast" in merged  # untouched systems stay
 
     def test_custom_adds_new_system(self):
