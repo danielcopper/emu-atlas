@@ -530,15 +530,26 @@ not established where it keeps one (`emulator-catalogue-unestablished`), or it c
 (`emulator-catalogue-unreadable`). Two more belong to this question, and both are facts about the machine rather than
 about atlas:
 
-| caveat                | what it means                                                                                |
-| --------------------- | -------------------------------------------------------------------------------------------- |
-| `rom-path-undeclared` | the catalogue was read and declares no such system, or declares it without a `<path>`        |
-| `rom-path-unresolved` | it declares a `%ROMPATH%` path, and the frontend's ROM directory setting resolves to nothing |
+| caveat                | what it means                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `rom-path-undeclared` | the catalogue was read and declares no such system, or declares it without a `<path>` |
+| `rom-path-unresolved` | it declares a `%ROMPATH%` path atlas will not resolve — see below                     |
 
-Never read `None` as "look in the default place". There is no default atlas would stand behind: where an unset setting
-sends the frontend depends on that process's own environment, which atlas has not established. `rom-path-unresolved`
-carries the declared path in `data["declared"]`, so a client that knows its own setup can finish the substitution atlas
-refused to guess at.
+**An unset ROM-directory setting is not one of those cases** — it resolves. The frontend has a documented home-relative
+default, and on this arrangement its home is knowable rather than guessable: the distribution's only launch path hands
+the frontend an explicit `--home` pointing at the app's own config tree, which is the same tree the setting was read
+from. So `dir` comes back as that tree's `ROMs` directory, and the answer is a reading rather than an assumption.
+Resolving is not asserting the directory exists — nothing stats it, and an absent one is the ordinary missing-directory
+state.
+
+What is left under `rom-path-unresolved` is the genuinely unknowable: a configured value that is not an absolute path,
+and an environment atlas cannot follow — a Flatpak override that redefines the app's config home moves the tree the
+default is relative to, and may mean the settings file atlas read is not the one in force either. Both come back with no
+directory and a message saying which.
+
+Never read `None` as "look in the default place" — where there is a default worth standing behind, atlas has already
+applied it. `rom-path-unresolved` carries the declared path in `data["declared"]`, so a client that knows its own setup
+can finish the substitution atlas refused to guess at.
 
 Extensions survive an unresolved directory: which files launch is declared in the same element and does not depend on
 where they sit.
