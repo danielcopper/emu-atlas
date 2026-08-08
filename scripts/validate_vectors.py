@@ -992,6 +992,23 @@ def _no_catalogue_codes_in(caveats: list[Any]) -> list[str]:
     return sorted({c["code"] for c in caveats} & NO_CATALOGUE_CODES)
 
 
+def _validate_rom_location(name: str, placement: Any) -> None:
+    """A ROM placement: the pair of directory views, the declaration, and why not."""
+    fields = {"dir", "physical_dir", "extensions", "caveats"}
+    if not isinstance(placement, dict) or set(placement) != fields:
+        fail(f"{name}: expected.rom_location must carry exactly {sorted(fields)}")
+    for key in ("dir", "physical_dir"):
+        if placement[key] is not None and (not isinstance(placement[key], str) or not placement[key]):
+            fail(f"{name}: expected.rom_location.{key} must be a non-empty string or null")
+    if placement["physical_dir"] is not None and placement["dir"] is None:
+        fail(f"{name}: expected.rom_location.physical_dir without a dir — nothing was resolved to back")
+    if not isinstance(placement["extensions"], list) or not all(
+        isinstance(e, str) and e for e in placement["extensions"]
+    ):
+        fail(f"{name}: expected.rom_location.extensions must be a list of non-empty strings")
+    _validate_caveats(name, placement["caveats"])
+
+
 def _validate_catalogue(name: str, catalogue: Any) -> None:
     """A catalogue answer: the entries, and why there are none when there are none."""
     if not isinstance(catalogue, dict) or set(catalogue) != {"entries", "caveats"}:
@@ -1107,6 +1124,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_aggregate(name, expected["aggregate"], inp["aggregate_query"], expected["installations"])
     if "catalogue" in keys:
         _validate_catalogue(name, expected["catalogue"])
+    if "rom_location" in keys:
+        _validate_rom_location(name, expected["rom_location"])
     if "systems" in keys:
         _validate_systems(name, expected["systems"])
     if "entry_save_location" in keys:

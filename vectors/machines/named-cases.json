@@ -6561,6 +6561,7 @@
         ],
         "rom_location": {
           "dir": "/mnt/sd/retrodeck/roms/n64",
+          "physical_dir": null,
           "extensions": [
             ".n64",
             ".N64",
@@ -6610,6 +6611,7 @@
         ],
         "rom_location": {
           "dir": null,
+          "physical_dir": null,
           "extensions": [
             ".n64",
             ".N64",
@@ -6667,6 +6669,7 @@
         ],
         "rom_location": {
           "dir": null,
+          "physical_dir": null,
           "extensions": [],
           "caveats": [
             {
@@ -6704,6 +6707,7 @@
         ],
         "rom_location": {
           "dir": null,
+          "physical_dir": null,
           "extensions": [],
           "caveats": [
             {
@@ -6719,6 +6723,59 @@
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "rom-location-answers-both-views-when-the-roms-tree-is-symlinked",
+      "rationale": "The distribution wires trees into place with symlinks, so a ROM directory can be a link like a saves directory can. Both answers are true and they answer different questions: dir is the path the frontend uses and the one a config states, physical_dir is where the bytes actually land — a client copying a ROM in may need either, and collapsing them would pick for it. Same pair, same convention, same resolution helper as SavePlacement; a placement that traverses nothing keeps physical_dir null rather than repeating dir.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n <system>\n  <name>pathless</name>\n  <command label=\"Something\">%EMULATOR_SOMETHING% %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<bool name=\"AlternativeEmulatorPerGame\" value=\"true\" />\n<string name=\"MediaDirectory\" value=\"/mnt/sd/retrodeck/ES-DE/downloaded_media\" />\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
+          "/mnt/external/library/n64/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "symlinks": {
+          "/mnt/sd/retrodeck/roms/n64": "/mnt/external/library/n64"
+        },
+        "rom_location_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "rom_location": {
+          "dir": "/mnt/sd/retrodeck/roms/n64",
+          "physical_dir": "/mnt/external/library/n64",
+          "extensions": [
+            ".n64",
+            ".N64",
+            ".z64",
+            ".Z64",
+            ".zip",
+            ".ZIP"
+          ],
+          "caveats": []
         }
       }
     }

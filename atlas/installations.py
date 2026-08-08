@@ -2653,9 +2653,19 @@ class RomPlacement:
     ``extensions`` is the frontend's declaration, not a filter atlas applies:
     the tokens are verbatim, both cases are listed where the file lists both,
     and what to do with them is the caller's business.
+
+    ``physical_dir`` is the fully link-resolved backing directory when ``dir``
+    reaches its files through symlinks, and ``None`` otherwise — the same pair
+    and the same convention :class:`~atlas.placement.SavePlacement` answers
+    with, because it is the same question: a distribution that wires a tree
+    into place with symlinks leaves the frontend-side path and the physical
+    path as two truthful answers, and a client copying files may need either.
+    A traversal that ends nowhere resolves to ``None`` and says so as a
+    ``dead-symlink`` or ``symlink-loop`` caveat.
     """
 
     dir: str | None = None
+    physical_dir: str | None = None
     extensions: tuple[str, ...] = ()
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
@@ -3193,15 +3203,29 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         rom_directory = self._rom_directory()
         resolved = resolve_rom_path(declaration.rom_path, rom_directory)
-        unresolved: tuple[Caveat, ...] = ()
         if resolved is None:
-            unresolved = self._rom_path_unresolved_caveat(system, declaration.rom_path, rom_directory)
+            return (
+                RomPlacement(
+                    extensions=declaration.extensions,
+                    sources=sources,
+                    caveats=(
+                        *findings,
+                        *self._rom_path_unresolved_caveat(system, declaration.rom_path, rom_directory),
+                    ),
+                ),
+                version,
+            )
+        # The same link view every placement answers with, from the one helper
+        # all of them share — a fourth symlink walk is exactly what the seam's
+        # three existing ones warn against.
+        physical_dir, link_caveats = _link_view(self._machine, resolved)
         return (
             RomPlacement(
                 dir=resolved,
+                physical_dir=physical_dir,
                 extensions=declaration.extensions,
                 sources=sources,
-                caveats=(*findings, *unresolved),
+                caveats=(*findings, *link_caveats),
             ),
             version,
         )

@@ -509,10 +509,15 @@ Both are read off the machine:
 
 ```python
 placement = inst.rom_location("n64")
-placement.dir          # '/run/media/deck/Emulation/retrodeck/roms/n64'  — or None, see below
-placement.extensions   # ('.n64', '.N64', '.z64', '.Z64', '.zip', '.ZIP')
+placement.dir            # '/run/media/deck/Emulation/retrodeck/roms/n64'  — or None, see below
+placement.physical_dir   # None normally; the backing directory when `dir` goes through symlinks
+placement.extensions     # ('.n64', '.N64', '.z64', '.Z64', '.zip', '.ZIP')
 placement.caveats
 ```
+
+`dir` and `physical_dir` are the same pair a save placement answers with, and they mean the same thing here: where a
+distribution wires a tree into place with a symlink, the frontend-side path and the physical path are both true and
+answer different questions. Write through `dir` unless you specifically need the backing location.
 
 **Do not recompute either of these from a table of your own.** The directory is the catalogue's `<path>` with ES-DE's
 `%ROMPATH%` substituted from the setting ES-DE substitutes it from, so it follows a user who moved their library; a map

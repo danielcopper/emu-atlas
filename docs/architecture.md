@@ -135,6 +135,7 @@ classDiagram
     }
     class RomPlacement {
         +dir: str|None
+        +physical_dir: str|None
         +extensions: tuple
         +caveats: tuple~Caveat~
     }
