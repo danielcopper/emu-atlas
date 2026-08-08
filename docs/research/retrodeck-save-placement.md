@@ -709,6 +709,23 @@ Per-app beats global — "if the application ID APP is not specified then the ov
 per-application overrides can override the global overrides" (`flatpak-override(1)`). None of the four exists on the
 reference machine (every run returned `ENOENT`), so the resolved default holds there.
 
+**Consequence for every ROM-directory answer, not just the ROM question.** The dependency being one-way settles which
+source each of them reads: `roms_path` is RetroDECK's _input_ to the sed and nothing reads it back, so from atlas's view
+it is bookkeeping about a tree, never a statement of where the frontend looks. Two answers used to take it anyway and
+now do not:
+
+- The **per-game anchor**. ES-DE resolves a gamelist's `./Game.m3u` against the `startPath` it built in `loadConfig()`,
+  which is the system's `<path>` with `ROMDirectory` substituted. Anchoring on `roms_path` instead matches overrides
+  against a directory the frontend does not launch from — on a machine whose two paths have drifted apart, the override
+  is handed to a file ES-DE never launches, or missed on the one it does.
+- **`roms_dir()`**, which reported `roms_path` and so became the less authoritative of two public answers about one
+  tree.
+
+Both resolve through the one chain now. A corollary worth stating because it bit the fixtures: a machine carrying a ROM
+tree and **no** `ROMDirectory` is not a machine RetroDECK produces — `component_prepare.sh` writes the setting on every
+prepare — so anything modelling one is modelling an installation that cannot exist, and the honest reading of an empty
+setting stays the frontend's own `<home>/ROMs` default.
+
 ## 16. What this implies for the design
 
 Recorded as consequences of the findings; the decisions themselves are settled in `DESIGN.md`:

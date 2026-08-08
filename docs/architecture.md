@@ -75,7 +75,7 @@ classDiagram
         +identify_firmware(md5, sha1, size) FirmwareIdentification
     }
     class RetroDeck {
-        +roms_dir() str
+        +roms_dir() str|None
         +saves_root() str
         +gamelist_selections(system)
     }

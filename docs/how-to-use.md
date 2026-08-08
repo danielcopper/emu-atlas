@@ -472,16 +472,23 @@ The middle two both mean "ask the user or use your own mapping", but only the fi
 nobody checked.
 
 The per-game step is ES-DE's, so it happens on the RetroDECK handle only, and it matches on the path: pass the ROM the
-way it lies under the system's ROM directory (`roms_dir()` on that handle, plus the system name). Gamelist entries are
-relative to that directory and are resolved against it, and a folder entry covers the files directly inside it. A path
-somewhere else — a copy, a staging directory — matches no game, and the answer is then the per-system one. Two files of
-the same name at different depths are two different games, and only the one the gamelist names carries the override.
+way it lies under the system's ROM directory — which is exactly `rom_location(system).dir`, the same directory the ROM
+question answers. Gamelist entries are relative to that directory and are resolved against it, and a folder entry covers
+the files directly inside it. A path somewhere else — a copy, a staging directory — matches no game, and the answer is
+then the per-system one. Two files of the same name at different depths are two different games, and only the one the
+gamelist names carries the override.
 
 That comparison is **lexical** — `.`, `..` and repeated slashes are folded, symlinks are not followed. RetroDECK's tree
 uses symlinks liberally, so a ROM spelled through one (or through any other route to the same file) will not match its
 per-game entry, and you get the per-system answer instead. Resolving links would cost a read per gamelist entry per
-query, which is the one thing atlas's one-read-per-source rule exists to avoid; spelling the path the way it lies under
-`roms_dir()` costs you nothing.
+query, which is the one thing atlas's one-read-per-source rule exists to avoid; spelling the path the way
+`rom_location(system).dir` gives it to you costs you nothing.
+
+**If the anchor cannot be resolved, the per-game step is skipped and the answer says so.** The directory comes off the
+frontend's own `ROMDirectory`, and that can refuse — see the ROM section below for the four codes. When one of them
+appears on `emulators_for(system, content_path=…)` or on an entry's `save_location`, read it as "a per-game override may
+apply here and atlas could not check": the entry order you got is the per-system one. It cannot happen on a stock
+installation, where the setting is written on every prepare.
 
 The entry answers the save question itself, so the core never round-trips through your code:
 
@@ -518,6 +525,17 @@ placement.caveats
 `dir` and `physical_dir` are the same pair a save placement answers with, and they mean the same thing here: where a
 distribution wires a tree into place with a symlink, the frontend-side path and the physical path are both true and
 answer different questions. Write through `dir` unless you specifically need the backing location.
+
+**`dir` is also the anchor** the per-game emulator override matches against, because it is the directory ES-DE launches
+from — so a ROM named the way it lies under `rom_location(system).dir` is a ROM the catalogue question can place
+per-game.
+
+Need the ROM **root** rather than one system's directory? That is `roms_dir()` on the RetroDECK handle: the value the
+frontend substitutes for `%ROMPATH%`, with no `<path>` applied. The per-system directory is usually that root plus the
+system name and not reliably so — the catalogue declares the `<path>`, and a custom system may declare anything — which
+is why they are two questions and only `rom_location` answers the second. `roms_dir()` returns `None` where the
+resolution refuses, for the three of the reasons below that belong to the root; it cannot carry which, so ask
+`rom_location(system)` when you need that.
 
 **Do not recompute either of these from a table of your own.** The directory is the catalogue's `<path>` with ES-DE's
 `%ROMPATH%` substituted from the setting ES-DE substitutes it from, so it follows a user who moved their library; a map
