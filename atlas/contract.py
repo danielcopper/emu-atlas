@@ -42,14 +42,19 @@ from atlas.installations import (
     RomPlacement,
     SystemsAnswer,
 )
-from atlas.placement import SavePlacement, Unresolved
+from atlas.placement import SavePlacement, SavestatePlacement, Unresolved
 
 AnswerT = TypeVar("AnswerT")
 
 
-def placement_contract(placement: SavePlacement) -> dict[str, Any]:
-    """The stable, JSON-shaped form of a :class:`~atlas.placement.SavePlacement`."""
-    granularity = placement.granularity
+def _placement_core(placement: SavePlacement | SavestatePlacement) -> dict[str, Any]:
+    """The fields both placement questions answer, in one shape.
+
+    Shared rather than written twice, because the two answers really are the
+    same answer about different data: one upstream function resolves both
+    (``runloop.c:8752-8979``). What is *not* shared is exactly the field that
+    only one of them has — see :func:`savestate_placement_contract`.
+    """
     return {
         "dir": placement.dir,
         "root_kind": placement.root_kind,
@@ -61,6 +66,15 @@ def placement_contract(placement: SavePlacement) -> dict[str, Any]:
             "files": list(placement.file_set.files),
             "complete": placement.file_set.complete,
         },
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+    }
+
+
+def placement_contract(placement: SavePlacement) -> dict[str, Any]:
+    """The stable, JSON-shaped form of a :class:`~atlas.placement.SavePlacement`."""
+    granularity = placement.granularity
+    return {
+        **_placement_core(placement),
         "granularity": None
         if granularity is None
         else {
@@ -70,8 +84,25 @@ def placement_contract(placement: SavePlacement) -> dict[str, Any]:
             "options_file": granularity.options_file,
             "alternatives": [list(pair) for pair in granularity.alternatives],
         },
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
     }
+
+
+def savestate_placement_contract(placement: SavestatePlacement) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.placement.SavestatePlacement`.
+
+    :func:`placement_contract` without ``granularity``, and the omission is the
+    contract rather than an oversight: granularity is a rule card's word about
+    how a *core* groups the data it writes, and no core writes a savestate —
+    RetroArch serializes it and the libretro API never tells the core where it
+    goes. A ``"granularity": null`` here would be a field no answer could ever
+    fill, which a client would rightly read as "not established yet".
+
+    ``root_kind`` speaks its own closed vocabulary
+    (:data:`~atlas.placement.STATE_ROOT_KINDS`) for the same reason: a savestate
+    is never anchored at ``savefile_directory`` and never at a core's system
+    directory.
+    """
+    return _placement_core(placement)
 
 
 def unresolved_contract(unresolved: Unresolved) -> dict[str, Any]:

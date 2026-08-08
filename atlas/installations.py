@@ -29,6 +29,7 @@ from typing import Any, Callable, Mapping, Protocol, Sequence, runtime_checkable
 from dataclasses import dataclass, replace as _dc_replace
 
 from atlas.content_path import content_file_name, content_system_dir, split_content_path
+from atlas.core_info import parse_core_info
 from atlas.esde import (
     KIND_LIBRETRO,
     EmulatorSpec,
@@ -44,6 +45,7 @@ from atlas.evidence import arrangement_caveats
 from atlas.firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
+    CAVEAT_CORE_INFO_UNREADABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
@@ -83,6 +85,7 @@ from atlas.placement import (
     CAVEAT_CFG_VALUE_REJECTED,
     CAVEAT_CONTENT_DIR_OBSERVATION,
     CAVEAT_CONTENT_PATH_UNNAMED,
+    CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_SORTED_DIR_UNCREATABLE,
     CAVEAT_CORE_MULTI_OPTION,
@@ -106,6 +109,7 @@ from atlas.placement import (
     HOLE_CONTENT_DIR,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
+    STATE_ROOT_CONTENT_DIRECTORY,
     TEMPLATE_ROM_STEM,
     FILE_SET_DECLARED,
     FILE_SET_OBSERVED,
@@ -117,26 +121,32 @@ from atlas.placement import (
     Granularity,
     RootKind,
     SavePlacement,
+    SavestatePlacement,
     Unresolved,
     build_save_placement,
+    build_savestate_placement,
     file_set_holes,
     needs_with_file_set,
 )
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
+    SAVEFILE_KEYS,
+    SAVESTATE_KEYS,
     UPSTREAM_DEFAULTS,
     IgnoredSetting,
     LayoutDefaults,
+    LayoutKeys,
     ParsedCfg,
     RejectedDirectory,
     RetroArchCfg,
+    cfg_bool,
     chain_bool,
     chain_value,
     expand_home,
     is_app_relative,
     parse_cfg,
     parse_cfg_text,
-    resolve_save_layout,
+    resolve_layout,
 )
 
 # Health issue codes — stable identifiers clients and vectors branch on.
@@ -736,21 +746,32 @@ class _CoreIdentity:
     caveats: tuple[Caveat, ...] = ()
 
 
+# What naming no core costs, per family. The code is one — a client branches on
+# CAVEAT_NO_CORE either way — but the consequences genuinely differ, and a save
+# route's sentence on a savestate answer would name a mechanism (rule cards)
+# that cannot reach savestates at all.
+NO_CORE_FOR_SAVES = (
+    "no core given — per-core overrides and save-behaviour rule cards not checked: this answer "
+    "assumes a standard core, and a card-carrying core (e.g. one rooted in system_directory, like "
+    "Flycast) keeps its saves elsewhere entirely"
+)
+NO_CORE_FOR_STATES = (
+    "no core given — per-core overrides not checked, sorting by core cannot be resolved, and "
+    "whether this core declares savestate support at all was not read. No rule card can move a "
+    "savestate, so unlike the save answer this one is not assuming a standard core"
+)
+
+
 def _identify_core(
-    machine: Machine, *, core_so: str | None, core_path_resolver: Callable[[str], str | None]
+    machine: Machine,
+    *,
+    core_so: str | None,
+    core_path_resolver: Callable[[str], str | None],
+    no_core_message: str = NO_CORE_FOR_SAVES,
 ) -> _CoreIdentity:
     """Load the named core and ask it its ``library_name`` — the same read RetroArch does."""
     if core_so is None:
-        return _CoreIdentity(
-            caveats=(
-                Caveat(
-                    CAVEAT_NO_CORE,
-                    "no core given — per-core overrides and save-behaviour rule cards not checked: this answer "
-                    "assumes a standard core, and a card-carrying core (e.g. one rooted in system_directory, like "
-                    "Flycast) keeps its saves elsewhere entirely",
-                ),
-            )
-        )
+        return _CoreIdentity(caveats=(Caveat(CAVEAT_NO_CORE, no_core_message),))
     so_path = core_so if os.sep in core_so else core_path_resolver(core_so)
     info = machine.query_core(so_path) if so_path else None
     if info is None:
@@ -925,7 +946,7 @@ def _override_layers(
 
 @dataclass(frozen=True, slots=True)
 class _SaveRoot:
-    """The configured saves root as the host sees it — and whether it can look.
+    """The configured root as the host sees it — and whether it can look.
 
     ``reachable`` is false for a sandbox path with no host location: RetroArch's
     own "is this an existing directory" test cannot be reproduced from here,
@@ -939,7 +960,7 @@ class _SaveRoot:
 
 
 def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
-    """The resolved saves root as the host reads it — the cfg may spell it sandbox-side.
+    """The resolved root as the host reads it — the cfg may spell it sandbox-side.
 
     An untranslatable spelling stays as configured: it is where the emulator
     writes, in the only namespace that names it, and the caveat states that
@@ -947,41 +968,44 @@ def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
     with a location this RetroArch never touches. An application-relative value
     is the same kind of answer — the value as configured, unreachable from here
     — except that not even the emulator-side spelling is a path yet.
+
+    Which key is being translated comes off the layout itself, so the savefile
+    and savestate roots take the same route and each names its own key.
     """
-    configured = layout.savefile_directory
+    key = layout.keys.directory
+    configured = layout.directory
     if configured is None:
         return _SaveRoot(layout)
     if is_app_relative(configured):
-        return _SaveRoot(
-            layout, reachable=False, caveats=(_app_relative_caveat("savefile_directory", configured),)
-        )
-    resolved = sandbox.host("savefile_directory", configured)
+        return _SaveRoot(layout, reachable=False, caveats=(_app_relative_caveat(key, configured),))
+    resolved = sandbox.host(key, configured)
     if resolved.path == configured:
         return _SaveRoot(layout)
     if resolved.path is None:
         return _SaveRoot(layout, reachable=False, caveats=resolved.caveats)
     return _SaveRoot(
-        _dc_replace(layout, savefile_directory=resolved.path),
-        sources=(f'savefile_directory = "{configured}"{resolved.note}',),
+        _dc_replace(layout, directory=resolved.path),
+        sources=(f'{key} = "{configured}"{resolved.note}',),
     )
 
 
-def _save_dir_probe(machine: Machine, sandbox: _Sandbox) -> Callable[[str], bool]:
-    """``path_is_directory`` for one ``savefile_directory`` read, host-side.
+def _save_dir_probe(machine: Machine, sandbox: _Sandbox, key: str) -> Callable[[str], bool]:
+    """``path_is_directory`` for one root read of *key*, host-side.
 
-    RetroArch runs this test on every value it reads (``configuration.c:6920``)
-    and keeps the value only when it passes. A value atlas cannot test — one
-    that exists only inside the Flatpak sandbox, one relative to the running
-    executable's directory — passes: the emulator's own test still decides it,
-    and answering "not a directory" here would reject a saves root that is very
-    likely there. That the answer rests on an unperformed read is stated by the
-    translation's own caveat.
+    RetroArch runs this test on every value it reads (``configuration.c:6920``
+    for the saves root, ``:6941`` for the savestate one) and keeps the value
+    only when it passes. A value atlas cannot test — one that exists only
+    inside the Flatpak sandbox, one relative to the running executable's
+    directory — passes: the emulator's own test still decides it, and answering
+    "not a directory" here would reject a root that is very likely there. That
+    the answer rests on an unperformed read is stated by the translation's own
+    caveat.
     """
 
     def is_directory(value: str) -> bool:
         if is_app_relative(value):
             return True
-        host = sandbox.host("savefile_directory", value).path
+        host = sandbox.host(key, value).path
         return host is None or machine.path_kind(host) == KIND_DIRECTORY
 
     return is_directory
@@ -992,24 +1016,32 @@ def _rejected_dir_caveats(
     sandbox: _Sandbox,
     rejected: Sequence[RejectedDirectory],
     *,
+    key: str,
     effective: str,
 ) -> tuple[Caveat, ...]:
-    """The saves roots the configs state and RetroArch refuses, layer by layer.
+    """The roots the configs state and RetroArch refuses, layer by layer.
 
     ``path_is_directory`` failed, so that read set nothing
-    (``configuration.c:6920-6932``) and some other read decides the root. Which
-    one is not fixed: usually the refusal is the last word and what stands
-    preceded it — after an override, the global cfg's root rather than the
-    platform default — but a refused global cfg can be followed by an override
-    that supplies a usable root, and then the standing root was set afterwards.
-    The message says whichever it was; claiming the wrong one would teach a
-    reader a causality RetroArch does not have. The layer is named either way,
-    because that is what tells a caller which file to fix.
+    (``configuration.c:6920-6932``, and the savestate twin ``:6941-6959``) and
+    some other read decides the root. Which one is not fixed: usually the
+    refusal is the last word and what stands preceded it — after an override,
+    the global cfg's root rather than the platform default — but a refused
+    global cfg can be followed by an override that supplies a usable root, and
+    then the standing root was set afterwards. The message says whichever it
+    was; claiming the wrong one would teach a reader a causality RetroArch does
+    not have. The layer is named either way, because that is what tells a caller
+    which file to fix.
 
     ``configured`` stays the cfg's own spelling — that is the line to edit —
     but inside a Flatpak that spelling is not where atlas looked. Where the two
     differ, the message names the host path too, so "not an existing directory"
     can be checked against the place the check was actually made.
+
+    The code is the same for both families and the data is unchanged, because
+    the caveat rides on the answer whose root it is about: a client reading it
+    off a savestate placement is not left guessing which directory was refused,
+    and a second code would have split one fact in two. *key* names the setting
+    in the message, which is the part that would otherwise be wrong.
     """
     caveats: list[Caveat] = []
     for entry in rejected:
@@ -1018,7 +1050,7 @@ def _rejected_dir_caveats(
             if entry.superseded
             else f"keeps {effective!r}, the root that stood before this file"
         )
-        host = sandbox.host("savefile_directory", entry.value).path
+        host = sandbox.host(key, entry.value).path
         looked_at = (
             f" (atlas looked at its host spelling {host!r})"
             if host is not None and host != entry.value
@@ -1027,9 +1059,9 @@ def _rejected_dir_caveats(
         caveats.append(
             Caveat(
                 CAVEAT_INVALID_SAVE_DIRECTORY,
-                f"{entry.layer}: savefile_directory {entry.value!r} is not an existing "
+                f"{entry.layer}: {key} {entry.value!r} is not an existing "
                 f"directory{looked_at} — RetroArch refuses it and {stands} "
-                "(configuration.c:6920-6932)",
+                "(configuration.c:6914-6960)",
                 {"layer": entry.layer, "configured": entry.value, "effective": effective},
             )
         )
@@ -2038,7 +2070,7 @@ def _standard_placement(
             if placement.root_kind == ROOT_CONTENT_DIRECTORY:
                 effective_root = content.dir_path
             else:
-                effective_root = layout.savefile_directory or platform_default_dir
+                effective_root = layout.directory or platform_default_dir
             final_dir, fallback_dir, sorted_dir_caveats = _sorted_dir_fallback(
                 machine, intended_dir=final_dir, effective_root=effective_root
             )
@@ -2071,18 +2103,67 @@ def _standard_placement(
     )
 
 
-def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlacement:
-    """The shared resolver: global cfg → override chain → placement, all live.
+@dataclass(frozen=True, slots=True)
+class _Chain:
+    """One family's governing sources, read once and resolved — what both routes share.
 
-    Reads the same four layers RetroArch reads (``configuration.c:7095``),
-    resolves ``library_name`` from the core binary when a core is named, and
-    observes the file set for existing saves. Every degradation is a stated
-    caveat, never a silent guess. The query carries the global cfg's content,
-    read exactly once by the caller — one query derives every decision from
-    one snapshot of each source (REVIEW M4).
+    Everything up to the point where the two questions part company: the
+    content's coordinates, what the core said about itself, the override gates
+    and the layers they admitted, the resolved layout, and the platform default
+    its root falls back to. Frozen tuples rather than the caller's own lists,
+    because a route that appended to a shared list would be editing the other
+    route's evidence.
+    """
+
+    content: _Content
+    core: _CoreIdentity
+    gates: _OverrideGates
+    layers: tuple[_CfgLayer, ...]
+    layout: RetroArchCfg
+    # The global cfg's settings from the one parse this chain made. Carried
+    # rather than re-derived: the snapshot is the same either way, but a route
+    # that parses the text again pays for a second walk of a file that runs to
+    # thousands of lines on a real installation.
+    global_values: Mapping[str, str]
+    reachable: bool
+    platform_default_dir: str
+    retroarch_config_dir: str
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...]
+
+    @property
+    def effective_root(self) -> str:
+        """The root that stands — the configured one, or the platform default."""
+        return self.layout.directory or self.platform_default_dir
+
+
+# The consequence of naming no core, per family — see NO_CORE_FOR_SAVES.
+_NO_CORE_MESSAGES = {
+    SAVEFILE_KEYS.label: NO_CORE_FOR_SAVES,
+    SAVESTATE_KEYS.label: NO_CORE_FOR_STATES,
+}
+
+
+def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain:
+    """Global cfg → override chain → resolved layout, for one family, all live.
+
+    Reads the same four layers RetroArch reads (``configuration.c:7095``) and
+    resolves ``library_name`` from the core binary when a core is named. Every
+    degradation is a stated caveat, never a silent guess. The query carries the
+    global cfg's content, read exactly once by the caller — one query derives
+    every decision from one snapshot of each source (REVIEW M4).
+
+    *keys* picks the family. Nothing below is written twice for savestates:
+    RetroArch reads both quartets in one function and applies the same rule to
+    each (``runloop.c:8752-8979``), so the port takes the same shape.
     """
     content = _content_coordinates(query.content_path)
-    core = _identify_core(machine, core_so=query.core_so, core_path_resolver=query.core_path_resolver)
+    core = _identify_core(
+        machine,
+        core_so=query.core_so,
+        core_path_resolver=query.core_path_resolver,
+        no_core_message=_NO_CORE_MESSAGES[keys.label],
+    )
     caveats = [*query.extra_caveats, *core.caveats]
     if query.content_path is not None and content.rom_stem is None:
         caveats.append(_unnamed_content_caveat(query.content_path))
@@ -2103,13 +2184,14 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
     )
     sources_extra.extend(override_sources)
 
-    layout = resolve_save_layout(
+    layout = resolve_layout(
         query.global_text,
+        keys=keys,
         home=query.sandbox.home,
         cfg_label=query.cfg_label,
         defaults=query.defaults,
         overrides=overrides,
-        is_directory=_save_dir_probe(machine, query.sandbox),
+        is_directory=_save_dir_probe(machine, query.sandbox, keys.directory),
     )
     caveats.extend(_ignored_caveats(layout.ignored))
     layers: list[_CfgLayer] = [
@@ -2122,19 +2204,50 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
     sources_extra.extend(saves_root.sources)
     caveats.extend(saves_root.caveats)
 
-    # The RetroArch platform default saves dir — 'saves' under the config tree
-    # (platform_unix.c:2133-2134) — is the effective root whenever no layer left
-    # a usable value: the key unset everywhere, reset to "default", or every
+    # The RetroArch platform default root — 'saves' or 'states' under the config
+    # tree (platform_unix.c:2133-2136) — is the effective root whenever no layer
+    # left a usable value: the key unset everywhere, reset to "default", or every
     # value RetroArch read refused by its own directory test.
-    platform_default_dir = os.path.join(retroarch_config_dir, "saves")
+    platform_default_dir = os.path.join(retroarch_config_dir, keys.platform_default_subdir)
     caveats.extend(
         _rejected_dir_caveats(
             machine,
             query.sandbox,
             layout.rejected_directories,
-            effective=layout.savefile_directory or platform_default_dir,
+            key=keys.directory,
+            effective=layout.directory or platform_default_dir,
         )
     )
+
+    return _Chain(
+        content=content,
+        core=core,
+        gates=gates,
+        layers=tuple(layers),
+        layout=layout,
+        global_values=parse_cfg_text(query.global_text) if query.global_text is not None else {},
+        reachable=saves_root.reachable,
+        platform_default_dir=platform_default_dir,
+        retroarch_config_dir=retroarch_config_dir,
+        sources=tuple(sources_extra),
+        caveats=tuple(caveats),
+    )
+
+
+def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlacement:
+    """Where the savefile lands: the shared chain, then the per-core rule cards.
+
+    The cards are what this route has and the savestate one does not — cores
+    write their own save data and can put it elsewhere entirely, which is a
+    thing no core can do to a savestate (:func:`_retroarch_state_location`).
+    """
+    chain = _read_chain(machine, query, SAVEFILE_KEYS)
+    content, core = chain.content, chain.core
+    layout, layers = chain.layout, list(chain.layers)
+    retroarch_config_dir = chain.retroarch_config_dir
+    platform_default_dir = chain.platform_default_dir
+    sources_extra = list(chain.sources)
+    caveats = list(chain.caveats)
 
     # Rule cards: cores whose save behaviour deviates from the standard rule.
     # The card names the governing option; its current value is read live.
@@ -2169,7 +2282,7 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
             library_name=core.library_name,
             layers=layers,
             content=content,
-            gates=gates,
+            gates=chain.gates,
         )
         card, card_mode, granularity = applied.card, applied.mode, applied.granularity
         caveats.extend(applied.caveats)
@@ -2207,14 +2320,238 @@ def _retroarch_save_location(machine: Machine, query: _SaveQuery) -> SavePlaceme
             content=content,
             retroarch_config_dir=retroarch_config_dir,
         ),
-        reachable=saves_root.reachable,
+        reachable=chain.reachable,
         sources=tuple(sources_extra),
         caveats=tuple(caveats),
     )
 
 
+# What RetroArch names a savestate, and therefore what atlas globs for. The
+# base is the content's stem with ".state" appended (runloop.c:8942-8949,
+# FILE_PATH_STATE_EXTENSION at file_path_special.h:44); slot N above zero
+# appends the number and the auto slot appends ".auto" (runloop.c:8185-8207).
+# With savestate_thumbnail_enable a ".png" is written beside each of them
+# (task_save.c:1226-1230 -> task_screenshot.c:476-485), which is why the glob
+# is a prefix match rather than the three exact names.
+STATE_EXTENSION = ".state"
+
+
+def _observed_state_set(
+    machine: Machine, *, directory: str, rom_stem: str
+) -> tuple[FileSet, tuple[Caveat, ...]]:
+    """The savestates actually lying in *directory* for this ROM.
+
+    The glob is ``<stem>.state*``, and the narrowness is the point. A savefile
+    observation has to match ``<stem>.*`` because the extensions are the core's
+    own and no source lists them; a savestate is written by RetroArch alone,
+    under a name this module can state, so the pattern names exactly the
+    artifacts of this question. What that buys is precision in the one place
+    the save route has to hedge: the ROM's own directory. There ``<stem>.*``
+    sweeps up further disc tracks, cover art and the archive itself and the
+    answer says so (``content-dir-observation``), while ``<stem>.state*``
+    matches none of them — so no such hedge is needed here.
+
+    Neighbours that share the directory and are *not* savestates stay out by
+    construction: the ``.srm`` of a machine whose two roots coincide, the
+    ``.replay`` of a recorded input movie (``runloop.c:8923``, ``:8950`` put it
+    in this very directory), the ``.cht`` cheat file. A replay is a different
+    artifact answering a different question, and folding it in would make a
+    state set that no state ever wrote.
+
+    A directory that could not be listed yields *unknown* with a caveat naming
+    it — never "no states present", which is the sentence an empty directory
+    earns and would send a caller off to restore a state it already has.
+    """
+    pattern = os.path.join(_glob_escape(directory), _glob_escape(rom_stem) + STATE_EXTENSION + "*")
+    listing = machine.glob(pattern)
+    caveats = tuple(_unlistable_caveat(path) for path in listing.unreadable)
+    if listing.unreadable:
+        return UNKNOWN_FILE_SET, caveats
+    if not listing.matches:
+        return (
+            FileSet(
+                state=FILE_SET_UNKNOWN,
+                files=(),
+                provenance=(
+                    f"no savestates present at {directory} — file set not stated (never guessed)"
+                ),
+            ),
+            caveats,
+        )
+    return (
+        FileSet(
+            state=FILE_SET_OBSERVED,
+            files=tuple(sorted(os.path.basename(match) for match in listing.matches)),
+            provenance=f"observed on the machine: {directory}",
+            # Never closed: which slots exist is a live setting away from
+            # changing, and nothing on disk says how many were ever written.
+            complete=False,
+        ),
+        caveats,
+    )
+
+
+def _savestate_support_caveats(
+    machine: Machine,
+    *,
+    sandbox: _Sandbox,
+    parsed: Mapping[str, str],
+    core_so: str,
+    layers: Sequence[_CfgLayer],
+) -> tuple[Caveat, ...]:
+    """What the core's own ``.info`` says about whether it can make savestates.
+
+    ``savestate = "false"`` sets the support level to
+    ``CORE_INFO_SAVESTATE_DISABLED`` (``core_info.c:1841-1860``), and RetroArch
+    checks that level before it offers a state at all
+    (``core_info.c:2899-2937``). 68 of the 292 ``.info`` files a stock RetroDECK
+    ships declare it, so a state placement that said only "here is the
+    directory" would be technically true and read as a promise for a quarter of
+    the matrix.
+
+    It is stated as a caveat rather than as a refusal because the declaration
+    does not bind absolutely, and both escapes are visible from here: the cfg
+    key ``core_info_savestate_bypass`` waves the check through entirely
+    (``:2904-2905``), and for the BASIC level a running core reporting a nonzero
+    ``retro_serialize_size()`` overrides stale metadata (``:2926-2929``) — which
+    atlas cannot evaluate, because it is a fact about a running core and not
+    about anything on disk. So the message names them and the directory answer
+    stands.
+
+    Silence here means the declaration says states work, or the bypass is on.
+    A ``.info`` that could not be read is not silence: it goes out as
+    ``core-info-unreadable``, the same code the firmware route states for the
+    same file, because "atlas could not look" and "the core is fine" are the
+    two things this grammar may never collapse.
+    """
+    bypass, ignored = chain_bool(layers, "core_info_savestate_bypass", default=False)
+    caveats = _ignored_caveats(ignored)
+    if bypass:
+        # The check the declaration feeds is skipped wholesale, so the
+        # declaration says nothing about this machine's behaviour.
+        return caveats
+    info_dir, dir_caveats = _cfg_directory(sandbox, parsed, "libretro_info_path")
+    if info_dir is None:
+        return (*caveats, *dir_caveats, _info_path_unresolved_caveat())
+    info_path = os.path.join(info_dir, os.path.basename(core_so).removesuffix(".so") + ".info")
+    read = machine.read_text(info_path)
+    if read.text is None:
+        return (*caveats, _core_info_unreadable_caveat(core_so, read.status))
+    declared = parse_core_info(read.text).get("savestate")
+    # Only an explicit, well-formed false lowers the level. An absent key and a
+    # spelling config_get_bool refuses (one shipped .info says
+    # savestate = "serialized") both leave the block unentered and the
+    # DETERMINISTIC default standing (core_info.c:1836-1861).
+    if declared is None or cfg_bool(declared) is not False:
+        return caveats
+    return (
+        *caveats,
+        Caveat(
+            CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
+            f"{os.path.basename(core_so)} declares savestate = \"{declared}\" in its .info, so RetroArch "
+            "treats it as having no savestate support (core_info.c:1841-1860, checked at :2899-2937) — "
+            "the directory below is where a state would go, not a promise that one can be made. Two "
+            "things still override the declaration: core_info_savestate_bypass = \"true\" in the cfg, and "
+            "a running core reporting a nonzero retro_serialize_size(), which atlas cannot ask from here",
+            {"core_so": os.path.basename(core_so), "declared": declared},
+        ),
+    )
+
+
+def _info_path_unresolved_caveat() -> Caveat:
+    """``libretro_info_path`` names no readable directory, so no ``.info`` was read."""
+    return Caveat(
+        CAVEAT_INFO_PATH_UNRESOLVED,
+        "libretro_info_path does not resolve to a readable directory on this machine — whether this "
+        "core declares savestate support could not be established, so the absence of a warning below "
+        "is not a statement that states work",
+    )
+
+
+def _core_info_unreadable_caveat(core_so: str, status: ReadStatus) -> Caveat:
+    """The core's ``.info`` is there in name only — the same gap the firmware route states."""
+    return Caveat(
+        CAVEAT_CORE_INFO_UNREADABLE,
+        f"{os.path.basename(core_so)}'s .info could not be read ({status}) — whether this core declares "
+        "savestate support is unknown, so no warning below is not 'states work'",
+        {"core_so": os.path.basename(core_so), "status": status},
+    )
+
+
+def _retroarch_state_location(machine: Machine, query: _SaveQuery) -> SavestatePlacement:
+    """Where the savestate lands: the shared chain, and nothing per-core after it.
+
+    The savefile route continues into rule cards here, because a core writes
+    its own save data and may put it anywhere. A savestate has no such branch:
+    the libretro API hands a core no savestate directory (``libretro.h``), so
+    RetroArch serializes and writes the file itself and the four cfg keys are
+    the whole story. What the core does get to say is whether it can be
+    serialized at all, which is a caveat and not a placement
+    (:func:`_savestate_support_caveats`).
+    """
+    chain = _read_chain(machine, query, SAVESTATE_KEYS)
+    content = chain.content
+    caveats = list(chain.caveats)
+
+    if query.core_so is not None:
+        # Asked of the .info whether or not the binary itself loaded: the two
+        # are separate reads of separate files, and a core that would not load
+        # is exactly one whose declaration is still worth reporting.
+        caveats.extend(
+            _savestate_support_caveats(
+                machine,
+                sandbox=query.sandbox,
+                parsed=chain.global_values,
+                core_so=query.core_so,
+                layers=chain.layers,
+            )
+        )
+
+    placement = build_savestate_placement(
+        layout=chain.layout,
+        platform_default_dir=chain.platform_default_dir,
+        content_dir_path=content.dir_path,
+        content_dir_name=content.dir_name,
+        library_name=chain.core.library_name,
+        extra_sources=chain.sources,
+    )
+
+    final_dir = placement.dir
+    fallback_dir: str | None = None
+    physical_dir: str | None = None
+    file_set = UNKNOWN_FILE_SET
+    if not placement.needs and chain.reachable:
+        effective_root = (
+            content.dir_path
+            if placement.root_kind == STATE_ROOT_CONTENT_DIRECTORY
+            else chain.effective_root
+        )
+        final_dir, fallback_dir, sorted_caveats = _sorted_dir_fallback(
+            machine, intended_dir=final_dir, effective_root=effective_root
+        )
+        caveats.extend(sorted_caveats)
+        if content.rom_stem is not None:
+            file_set, set_caveats = _observed_state_set(
+                machine, directory=final_dir, rom_stem=content.rom_stem
+            )
+            caveats.extend(set_caveats)
+        physical_dir, link_caveats = _link_view(machine, final_dir)
+        caveats.extend(link_caveats)
+
+    return SavestatePlacement(
+        dir=final_dir,
+        root_kind=placement.root_kind,
+        needs=placement.needs,
+        file_set=file_set,
+        sources=placement.sources,
+        caveats=tuple(caveats),
+        fallback_dir=fallback_dir,
+        physical_dir=physical_dir,
+    )
+
+
 def _cfg_directory(
-    sandbox: _Sandbox, parsed: dict[str, str], key: str
+    sandbox: _Sandbox, parsed: Mapping[str, str], key: str
 ) -> tuple[str | None, tuple[Caveat, ...]]:
     """Resolve a cfg directory key to a host directory that exists, or ``None``.
 
@@ -2586,10 +2923,10 @@ def _match_per_game(
 class _CatalogueHost(Protocol):
     """What an entry needs back from the installation that produced it.
 
-    Narrow on purpose: an entry asks its installation exactly one thing, so the
-    type it is bound to is that one method rather than a concrete handle. It
-    used to be ``RetroDeck``, which made every entry — and so the catalogue
-    answer itself — RetroDECK's to hand out.
+    Narrow on purpose: an entry asks its installation for placements and
+    nothing else, so the type it is bound to is those methods rather than a
+    concrete handle. It used to be ``RetroDeck``, which made every entry — and
+    so the catalogue answer itself — RetroDECK's to hand out.
     """
 
     def entry_save_location(
@@ -2599,6 +2936,14 @@ class _CatalogueHost(Protocol):
         *,
         content_path: str | None = None,
     ) -> SavePlacement | Unresolved: ...
+
+    def entry_state_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> SavestatePlacement | Unresolved: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -2834,14 +3179,32 @@ class EmulatorEntry:
         exception (REVIEW M8).
         """
         if self._spec.kind != KIND_LIBRETRO:
-            return Unresolved(
-                UNRESOLVED_STANDALONE,
-                f"standalone emulator {self._spec.label!r} ({self._spec.system}) is not resolvable yet — "
-                "standalone emulators are the next big roadmap block (ROADMAP.md)",
-                {"label": self._spec.label, "system": self._spec.system},
-            )
+            return self._standalone()
         return self._installation.entry_save_location(
             self._spec, self._caveats, content_path=content_path
+        )
+
+    def state_location(self, *, content_path: str | None = None) -> SavestatePlacement | Unresolved:
+        """Where this emulator keeps the savestates — core filled in from the catalogue.
+
+        The savefile route's twin, and it refuses on the same entries: a
+        standalone emulator's states are outside the resolver's coverage for
+        exactly the reason its saves are — nothing here reads that emulator's
+        own config.
+        """
+        if self._spec.kind != KIND_LIBRETRO:
+            return self._standalone()
+        return self._installation.entry_state_location(
+            self._spec, self._caveats, content_path=content_path
+        )
+
+    def _standalone(self) -> Unresolved:
+        """The outcome both placement questions give for a non-libretro entry."""
+        return Unresolved(
+            UNRESOLVED_STANDALONE,
+            f"standalone emulator {self._spec.label!r} ({self._spec.system}) is not resolvable yet — "
+            "standalone emulators are the next big roadmap block (ROADMAP.md)",
+            {"label": self._spec.label, "system": self._spec.system},
         )
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
@@ -3657,6 +4020,44 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             )
         return tuple(EmulatorEntry(self, spec, entry_caveats) for spec in specs)
 
+    def _query_from(
+        self,
+        config: dict[str, Any],
+        marker_issues: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+        core_so: str | None,
+        extra_caveats: tuple[Caveat, ...] = (),
+    ) -> _SaveQuery:
+        """The placement question over a marker snapshot this query already read.
+
+        Which family it is asked about is the resolver's business, not the
+        query's: savefiles and savestates are governed by the same cfg, the same
+        override chain and the same core, so one question object serves both.
+        """
+        health = self._health_from(config, marker_issues)
+        global_cfg_path = os.path.join(self._home, RETRODECK_CFG_SUFFIX)
+        global_text = self._machine.read_text(global_cfg_path).text
+        version = _marker_version(config)
+        return _SaveQuery(
+            sandbox=self._sandbox(),
+            global_cfg_path=global_cfg_path,
+            global_text=global_text,
+            cfg_label=RETROARCH_CFG,
+            override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
+            defaults=UPSTREAM_DEFAULTS,
+            content_path=content_path,
+            core_so=core_so,
+            core_path_resolver=lambda so: self._core_path_in(global_text, so),
+            arrangement="retrodeck",
+            arrangement_version=version,
+            extra_caveats=(
+                *extra_caveats,
+                *health.issues,
+                *arrangement_caveats(self.kind, observed_version=version),
+            ),
+        )
+
     def _save_location_from(
         self,
         config: dict[str, Any],
@@ -3666,29 +4067,34 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
     ) -> SavePlacement:
-        health = self._health_from(config, marker_issues)
-        global_cfg_path = os.path.join(self._home, RETRODECK_CFG_SUFFIX)
-        global_text = self._machine.read_text(global_cfg_path).text
-        version = _marker_version(config)
         return _retroarch_save_location(
             self._machine,
-            _SaveQuery(
-                sandbox=self._sandbox(),
-                global_cfg_path=global_cfg_path,
-                global_text=global_text,
-                cfg_label=RETROARCH_CFG,
-                override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
-                defaults=UPSTREAM_DEFAULTS,
+            self._query_from(
+                config,
+                marker_issues,
                 content_path=content_path,
                 core_so=core_so,
-                core_path_resolver=lambda so: self._core_path_in(global_text, so),
-                arrangement="retrodeck",
-                arrangement_version=version,
-                extra_caveats=(
-                    *extra_caveats,
-                    *health.issues,
-                    *arrangement_caveats(self.kind, observed_version=version),
-                ),
+                extra_caveats=extra_caveats,
+            ),
+        )
+
+    def _state_location_from(
+        self,
+        config: dict[str, Any],
+        marker_issues: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+        core_so: str | None,
+        extra_caveats: tuple[Caveat, ...] = (),
+    ) -> SavestatePlacement:
+        return _retroarch_state_location(
+            self._machine,
+            self._query_from(
+                config,
+                marker_issues,
+                content_path=content_path,
+                core_so=core_so,
+                extra_caveats=extra_caveats,
             ),
         )
 
@@ -3702,6 +4108,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         config, marker_issues = self._read_marker()
         return self._save_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
+
+    def state_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> SavestatePlacement:
+        """Where this RetroDECK's RetroArch keeps the savestates for *content_path*.
+
+        The savefile question's twin, taking the same two optional arguments and
+        answering off the same configs — through the savestate quartet of keys
+        instead of the savefile one.
+        """
+        config, marker_issues = self._read_marker()
+        return self._state_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
 
     def _firmware_context_from(
         self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]
@@ -3765,6 +4183,51 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine, context, system=system, catalogue=catalogue, verify=verify
         )
 
+    def _entry_caveats_for(
+        self, config: dict[str, Any], spec: EmulatorSpec, content_path: str
+    ) -> tuple[Caveat, ...]:
+        """What the gamelist says about *this* game being launched by *this* entry.
+
+        Costs the catalogue and ES-DE's settings, and only on the content
+        branch: the anchor is the system's ``<path>`` resolved against
+        ``ROMDirectory``, and the catalogue is the only thing that declares a
+        ``<path>``. There is no cheaper faithful route — the previous one was
+        cheaper by reading the wrong file.
+
+        The same fact governs both placement questions, because it is about
+        which emulator runs at all: an entry that would not launch this game
+        keeps neither its saves nor its states.
+        """
+        root = self._config_path(config, "rd_home_path", "")[0]
+        selections = self._gamelist_selections_at(root, spec.system)
+        by_system, read = self._read_catalogue(root)
+        # A catalogue nobody could read declares nothing, which is not the
+        # same fact as a catalogue that was read and declares no <path> for
+        # this system — and handing the empty snapshot straight to the
+        # resolution would spell the first as the second.
+        anchor = (
+            self._esde_system_dir(by_system, spec.system)
+            if read
+            else _RomDirectory(caveats=self._catalogue_unread_caveat(spec.system))
+        )
+        override_label = (
+            None
+            if anchor.directory is None
+            else _match_per_game(selections, content_path, system_roms_dir=anchor.directory)
+        )
+        if override_label is None or override_label == spec.label:
+            return anchor.caveats
+        return (
+            *anchor.caveats,
+            Caveat(
+                CAVEAT_PER_GAME_OVERRIDE,
+                f"this game carries a per-game altemulator override selecting "
+                f"{override_label!r} — ES-DE would launch that emulator, not "
+                f"{spec.label!r}; ask emulators_for with content_path",
+                {"label": override_label},
+            ),
+        )
+
     def entry_save_location(
         self,
         spec: EmulatorSpec,
@@ -3777,13 +4240,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         Resolves the placement for a catalogue entry and, when *content_path*
         is given, checks the gamelist for a per-game override that would launch
         a different emulator — all from one snapshot of the governing sources.
-
-        That check now costs this route the catalogue and ES-DE's settings,
-        which it did not read before, and only on the content branch: the
-        anchor is the system's ``<path>`` resolved against ``ROMDirectory``, and
-        the catalogue is the only thing that declares a ``<path>``. There is no
-        cheaper faithful route — the previous one was cheaper by reading the
-        wrong file.
         """
         config, marker_issues = self._read_marker()
         placement = self._save_location_from(
@@ -3793,45 +4249,36 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
         )
-        if content_path is not None:
-            root = self._config_path(config, "rd_home_path", "")[0]
-            selections = self._gamelist_selections_at(root, spec.system)
-            by_system, read = self._read_catalogue(root)
-            # A catalogue nobody could read declares nothing, which is not the
-            # same fact as a catalogue that was read and declares no <path> for
-            # this system — and handing the empty snapshot straight to the
-            # resolution would spell the first as the second.
-            anchor = (
-                self._esde_system_dir(by_system, spec.system)
-                if read
-                else _RomDirectory(caveats=self._catalogue_unread_caveat(spec.system))
-            )
-            if anchor.caveats:
-                placement = _dc_replace(
-                    placement, caveats=(*placement.caveats, *anchor.caveats)
-                )
-            override_label = (
-                None
-                if anchor.directory is None
-                else _match_per_game(
-                    selections, content_path, system_roms_dir=anchor.directory
-                )
-            )
-            if override_label is not None and override_label != spec.label:
-                placement = _dc_replace(
-                    placement,
-                    caveats=(
-                        *placement.caveats,
-                        Caveat(
-                            CAVEAT_PER_GAME_OVERRIDE,
-                            f"this game carries a per-game altemulator override selecting "
-                            f"{override_label!r} — ES-DE would launch that emulator, not "
-                            f"{spec.label!r}; ask emulators_for with content_path",
-                            {"label": override_label},
-                        ),
-                    ),
-                )
-        return placement
+        if content_path is None:
+            return placement
+        extra = self._entry_caveats_for(config, spec, content_path)
+        return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
+
+    def entry_state_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> SavestatePlacement:
+        """The entry route behind :meth:`EmulatorEntry.state_location` — one marker read.
+
+        The savefile route's twin, down to the per-game override check: which
+        emulator ES-DE would actually launch decides both answers, so the one
+        that would not launch says so on both.
+        """
+        config, marker_issues = self._read_marker()
+        placement = self._state_location_from(
+            config,
+            marker_issues,
+            content_path=content_path,
+            core_so=spec.core_so,
+            extra_caveats=entry_caveats,
+        )
+        if content_path is None:
+            return placement
+        extra = self._entry_caveats_for(config, spec, content_path)
+        return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
 
 
 def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
@@ -3984,28 +4431,46 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return None
         return os.path.join(cores_dir, core_so)
 
-    def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
-        """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg."""
+    def _query(self, *, content_path: str | None, core_so: str | None) -> _SaveQuery:
+        """The placement question, over one read of the companion cfg."""
         settings, marker_issues = self._read_marker()
         global_cfg_path = self._companion_cfg_path()
         cfg = self._machine.read_text(global_cfg_path)
         health = self._health_from(settings, marker_issues, cfg.status)
+        return _SaveQuery(
+            sandbox=self._sandbox(),
+            global_cfg_path=global_cfg_path,
+            global_text=cfg.text,
+            cfg_label=RETROARCH_CFG,
+            override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
+            defaults=UPSTREAM_DEFAULTS,
+            content_path=content_path,
+            core_so=core_so,
+            core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
+            arrangement="emudeck",
+            arrangement_version=None,
+            extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
+        )
+
+    def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
+        """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg."""
         return _retroarch_save_location(
-            self._machine,
-            _SaveQuery(
-                sandbox=self._sandbox(),
-                global_cfg_path=global_cfg_path,
-                global_text=cfg.text,
-                cfg_label=RETROARCH_CFG,
-                override_config_dir=os.path.join(self._retroarch_config_dir(), "config"),
-                defaults=UPSTREAM_DEFAULTS,
-                content_path=content_path,
-                core_so=core_so,
-                core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
-                arrangement="emudeck",
-                arrangement_version=None,
-                extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
-            ),
+            self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
+    def state_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> SavestatePlacement:
+        """Where EmuDeck's RetroArch keeps the savestates — the same cfg, the state keys.
+
+        EmuDeck writes all four of them (``RetroArch_maincfg.sh:3053``,
+        ``:3057``, ``:3091-3092``), and unlike the saves root its
+        ``savestate_directory`` is a fixed path under the RetroArch Flatpak's
+        own config tree rather than one derived from ``savesPath`` — which is a
+        fact about that installer, read here like any other.
+        """
+        return _retroarch_state_location(
+            self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
@@ -4107,26 +4572,43 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             return None
         return os.path.join(cores_dir, core_so)
 
-    def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
-        """Where this RetroArch install keeps the save for *content_path* under *core_so*."""
+    def _query(self, *, content_path: str | None, core_so: str | None) -> _SaveQuery:
+        """The placement question, over one read of this install's cfg."""
         cfg = self._machine.read_text(self._cfg_path())
         health = self._health_from(cfg.status)
+        return _SaveQuery(
+            sandbox=self._sandbox(),
+            global_cfg_path=self._cfg_path(),
+            global_text=cfg.text,
+            cfg_label=RETROARCH_CFG,
+            override_config_dir=os.path.join(self.root(), "config"),
+            defaults=UPSTREAM_DEFAULTS,
+            content_path=content_path,
+            core_so=core_so,
+            core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
+            arrangement="bare",
+            arrangement_version=None,
+            extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
+        )
+
+    def save_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavePlacement:
+        """Where this RetroArch install keeps the save for *content_path* under *core_so*."""
         return _retroarch_save_location(
-            self._machine,
-            _SaveQuery(
-                sandbox=self._sandbox(),
-                global_cfg_path=self._cfg_path(),
-                global_text=cfg.text,
-                cfg_label=RETROARCH_CFG,
-                override_config_dir=os.path.join(self.root(), "config"),
-                defaults=UPSTREAM_DEFAULTS,
-                content_path=content_path,
-                core_so=core_so,
-                core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
-                arrangement="bare",
-                arrangement_version=None,
-                extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
-            ),
+            self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
+    def state_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> SavestatePlacement:
+        """Where this RetroArch install keeps the savestates for *content_path*.
+
+        A bare install carries the upstream compile-time defaults, and there
+        ``sort_savestates_enable`` is **true** (``config.def.h:983``) exactly as
+        its savefile twin is — so an unconfigured install sorts states into
+        per-``library_name`` subdirectories of ``states`` under the config tree.
+        """
+        return _retroarch_state_location(
+            self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
@@ -4192,6 +4674,10 @@ class Installation(Protocol):
     def save_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavePlacement: ...
+
+    def state_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> SavestatePlacement: ...
 
     def systems(self) -> SystemsAnswer: ...
 

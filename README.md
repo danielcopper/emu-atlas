@@ -35,11 +35,11 @@ Four principles, fixed before any code:
 
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, bare RetroArch installs, any
   of them side by side — and every question is asked _of an installation_, never of a global "the system":
-  `installation.save_location(content_path=..., core_so=...)`, `installation.emulators_for(system)` and
-  `installation.rom_location(system)` on every handle — the ones without a frontend catalogue answer with the reason
-  rather than an empty list. Choosing one of them is optional: `every_installation(home)` asks them all and labels each
-  answer with the handle it came from, because two arrangements on one machine give two true answers and picking a
-  winner would be the guess.
+  `installation.save_location(content_path=..., core_so=...)`, `installation.state_location(...)`,
+  `installation.emulators_for(system)` and `installation.rom_location(system)` on every handle — the ones without a
+  frontend catalogue answer with the reason rather than an empty list. Choosing one of them is optional:
+  `every_installation(home)` asks them all and labels each answer with the handle it came from, because two arrangements
+  on one machine give two true answers and picking a winner would be the guess.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
   machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`, `file_size`, `file_digest`) whose every
   operation reports an explicit outcome — missing is not unreadable is not invalid text — because the emulators make
@@ -129,6 +129,12 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   report". A sorted directory that does not exist yet is a conditional answer with a structural `fallback_dir`; a
   placement reached through symlinks reports its `physical_dir`, and a dead `dir_prep` link is a stated caveat, not a
   silent path.
+- `installation.state_location(content_path=..., core_so=...)` answers the same question for savestates, through
+  RetroArch's savestate quartet of keys and the very same chain — one upstream function places both families, so atlas
+  ports it once. Its answer is a `SavestatePlacement`: a save placement without `granularity`, because no core writes a
+  savestate and no rule card for one can exist. In exchange it can name the files — `<stem>.state`, the numbered slots,
+  the auto slot and their thumbnails are RetroArch's own naming — and a core whose `.info` declares no savestate support
+  is stated as a caveat rather than left to be discovered.
 - `installation.emulators_for(system, content_path=...)` — on every handle — answers which emulators can launch a
   system. On RetroDECK it reads the ES-DE catalogue live (bundled + custom overlay) and resolves the effective default
   through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. Entries carry

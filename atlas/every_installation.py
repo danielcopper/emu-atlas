@@ -48,7 +48,7 @@ from atlas.detect import detect
 from atlas.firmware import FirmwareAnswer, FirmwareIdentification
 from atlas.installations import CatalogueAnswer, Health, Installation, RomPlacement, SystemsAnswer
 from atlas.machine import Machine
-from atlas.placement import SavePlacement
+from atlas.placement import SavePlacement, SavestatePlacement
 
 AnswerT = TypeVar("AnswerT")
 
@@ -112,6 +112,16 @@ class EveryInstallation:
         """Where each installation keeps this save — one placement per arrangement."""
         return self._ask(
             lambda installation: installation.save_location(
+                content_path=content_path, core_so=core_so
+            )
+        )
+
+    def state_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> tuple[InstallationAnswer[SavestatePlacement], ...]:
+        """Where each installation keeps this content's savestates."""
+        return self._ask(
+            lambda installation: installation.state_location(
                 content_path=content_path, core_so=core_so
             )
         )

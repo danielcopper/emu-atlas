@@ -23,6 +23,7 @@ from atlas.contract import (
     installation_contract,
     placement_contract,
     rom_placement_contract,
+    savestate_placement_contract,
     systems_contract,
 )
 
@@ -120,6 +121,12 @@ class TestItDelegates:
     def test_save_location(self):
         asked, direct = self._pairs(lambda h: h.save_location(content_path=ROM, core_so=CORE_SO))
         assert [placement_contract(p) for p in asked] == [placement_contract(p) for p in direct]
+
+    def test_state_location(self):
+        asked, direct = self._pairs(lambda h: h.state_location(content_path=ROM, core_so=CORE_SO))
+        assert [savestate_placement_contract(p) for p in asked] == [
+            savestate_placement_contract(p) for p in direct
+        ]
 
     def test_emulators_for(self):
         asked, direct = self._pairs(lambda h: h.emulators_for("n64", content_path=ROM))

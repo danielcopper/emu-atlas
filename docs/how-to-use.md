@@ -422,6 +422,50 @@ to the ROM, and the observation matches everything there under the ROM's name �
 cover art, the archive the ROM came in. atlas states the whole set rather than filtering by an invented list of content
 extensions; `complete` is `false`, and deciding which of those files are yours to upload is the client's call.
 
+## Where do this ROM's savestates live?
+
+`state_location` is `save_location`'s twin, and it takes the same two optional arguments:
+
+```python
+placement = inst.state_location(
+    content_path="/run/media/deck/Emulation/roms/n64/Paper Mario (USA).z64",
+    core_so="mupen64plus_next_libretro.so",
+)
+placement.dir        # '/run/media/deck/Emulation/retrodeck/states'
+placement.root_kind  # 'savestate_directory' | 'content_directory'
+placement.file_set   # the states lying there — '<stem>.state', '<stem>.state1', '<stem>.state.auto', '.png' thumbs
+```
+
+It answers off the same configs through RetroArch's savestate keys (`savestate_directory`, `savestates_in_content_dir`,
+`sort_savestates_by_content_enable`, `sort_savestates_enable`), and everything you know about save placements holds: the
+same override chain, the same holes in `needs`, the same `fallback_dir` when a sorted directory does not exist yet, the
+same `physical_dir` through symlinks, the same caveat codes for the same conditions. The entry route has it too
+(`entry.state_location(content_path=…)`), and so does the aggregate.
+
+Three differences are worth knowing, and all three are things the answer states rather than things you have to remember:
+
+- **No `granularity`.** The field is absent, not `None`. It says how a _core_ groups the save data it writes, and no
+  core writes a savestate — RetroArch serializes it and never tells the core where it goes — so there is nothing for a
+  rule card to state, now or later.
+- **`root_kind` has two values, not three.** A savestate is never anchored at the saves root and never at a core's
+  system directory.
+- **The file set is narrower and sharper.** A savefile's extensions are the core's own, so the observation has to match
+  everything under the ROM's stem; a savestate's names are RetroArch's own, so the observation matches `<stem>.state*`
+  and nothing else. Two consequences: `content-dir-observation` does not appear on a state placement even when the
+  states sit next to the ROM, and an input-movie `.replay` sharing the directory is not in the set. It is still an
+  observation and never `complete` — how many slots were ever written is not written anywhere.
+
+One caveat is this question's own:
+
+| Code                          | Meaning                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `core-savestates-unsupported` | this core's `.info` declares `savestate = "false"` — the directory resolves, states may not |
+
+Take it as a warning, not a refusal. Two things override the declaration and atlas says so in the message: the cfg key
+`core_info_savestate_bypass`, and a running core reporting a nonzero `retro_serialize_size()`, which nothing on disk can
+answer. Where the `.info` could not be read at all you get `core-info-unreadable` or `info-path-unresolved` instead —
+"atlas could not look" is never spelled as "states work here".
+
 ## Which emulator would launch this? (the catalogue)
 
 **Every handle answers this**, and the ones that cannot answer it from a catalogue say why — so you never have to narrow

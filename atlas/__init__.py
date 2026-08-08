@@ -62,6 +62,7 @@ from atlas.installations import (
 # --- The answers ------------------------------------------------------------
 from atlas.contract import (
     catalogue_contract,
+    savestate_placement_contract,
     rom_placement_contract,
     emulator_contract,
     firmware_contract,
@@ -93,7 +94,14 @@ from atlas.installations import (
     RomPlacement,
     SystemsAnswer,
 )
-from atlas.placement import Caveat, FileSet, Granularity, SavePlacement, Unresolved
+from atlas.placement import (
+    Caveat,
+    FileSet,
+    Granularity,
+    SavePlacement,
+    SavestatePlacement,
+    Unresolved,
+)
 
 # --- The vocabularies those answers speak ------------------------------------
 # Closed sets, as types and as constants: a client branches on the value, and
@@ -181,6 +189,7 @@ from atlas.placement import (
     CAVEAT_CONTENT_DIR_OBSERVATION,
     CAVEAT_CONTENT_PATH_UNNAMED,
     CAVEAT_CORE_MULTI_OPTION,
+    CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_CORE_SUSPECT,
     CAVEAT_CORE_UNAUDITED,
     CAVEAT_CORE_UNQUERYABLE,
@@ -213,10 +222,14 @@ from atlas.placement import (
     ROOT_CONTENT_DIRECTORY,
     ROOT_KINDS,
     ROOT_SAVEFILE_DIRECTORY,
+    ROOT_SAVESTATE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
+    STATE_ROOT_CONTENT_DIRECTORY,
+    STATE_ROOT_KINDS,
     UNRESOLVED_STANDALONE,
     FileSetState,
     RootKind,
+    StateRootKind,
 )
 
 __all__ = [
@@ -237,6 +250,7 @@ __all__ = [
     "BareRetroArchNative",
     # Answers
     "SavePlacement",
+    "SavestatePlacement",
     "Unresolved",
     "FileSet",
     "Granularity",
@@ -255,6 +269,7 @@ __all__ = [
     "Caveat",
     # Serializers — one per answer type, the same code the vectors assert
     "placement_contract",
+    "savestate_placement_contract",
     "unresolved_contract",
     "health_contract",
     "installation_contract",
@@ -269,6 +284,7 @@ __all__ = [
     "PathKind",
     "ReadStatus",
     "RootKind",
+    "StateRootKind",
     "FileSetState",
     "FirmwareNeed",
     "FirmwareChecked",
@@ -289,6 +305,8 @@ __all__ = [
     "ROOT_SAVEFILE_DIRECTORY",
     "ROOT_CONTENT_DIRECTORY",
     "ROOT_SYSTEM_DIRECTORY",
+    "ROOT_SAVESTATE_DIRECTORY",
+    "STATE_ROOT_CONTENT_DIRECTORY",
     "FILE_SET_OBSERVED",
     "FILE_SET_DECLARED",
     "FILE_SET_UNKNOWN",
@@ -319,6 +337,7 @@ __all__ = [
     "GRANULARITY_PER_GAME_FILES",
     "GRANULARITIES",
     "ROOT_KINDS",
+    "STATE_ROOT_KINDS",
     # Health finding codes
     "HEALTH_ISSUE_MARKER_MISSING",
     "HEALTH_ISSUE_MARKER_UNREADABLE",
@@ -345,6 +364,7 @@ __all__ = [
     "CAVEAT_CORE_INFO_UNREADABLE",
     "CAVEAT_CORE_MULTI_OPTION",
     "CAVEAT_CORE_NOT_INSTALLED",
+    "CAVEAT_CORE_SAVESTATES_UNSUPPORTED",
     "CAVEAT_CORE_SUSPECT",
     "CAVEAT_CORE_UNAUDITED",
     "CAVEAT_CORE_UNQUERYABLE",
