@@ -2658,11 +2658,18 @@ def _environment_overrides(text: str) -> dict[str, str]:
 _CONFIG_HOME_ENV_KEYS = ("XDG_CONFIG_HOME", "HOME")
 
 
-# The two ways a READ catalogue still yields no ROM directory. Both are facts
-# about the catalogue rather than about atlas, which is what separates them from
-# the three emulator-catalogue-* codes: there, nobody could look.
+# The ways a READ catalogue still yields no ROM directory. The first two are
+# facts about the machine — the catalogue declares nothing, or the frontend's
+# own setting is not a path anything can be resolved against — and a client acts
+# on them by fixing the machine. The last two are statements about atlas: the
+# file that decides the directory could not be read, or the environment that
+# decides where that file's defaults land was moved somewhere atlas cannot
+# follow. Four facts, four codes: a client branches on the code, and prose is
+# the one thing it cannot branch on.
 CAVEAT_ROM_PATH_UNDECLARED = "rom-path-undeclared"
 CAVEAT_ROM_PATH_UNRESOLVED = "rom-path-unresolved"
+CAVEAT_FRONTEND_SETTINGS_UNREADABLE = "frontend-settings-unreadable"
+CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
 
 
 @dataclass(frozen=True, slots=True)
@@ -2677,9 +2684,9 @@ class RomPlacement:
     ``dir`` is ``None`` wherever atlas could not resolve one, and never a
     partial path: a caller acts on this by looking in a directory, so a
     half-resolved string would send it somewhere real and wrong. Which kind of
-    ``None`` it is — no catalogue, unread catalogue, undeclared system, or a
-    ``%ROMPATH%`` nothing established — is a caveat, exactly as an empty
-    :class:`CatalogueAnswer` is.
+    ``None`` it is — no catalogue, unread catalogue, undeclared system, a
+    setting that is not a path, settings nobody could read, or a relocated
+    config home — is a caveat, exactly as an empty :class:`CatalogueAnswer` is.
 
     ``extensions`` is the frontend's declaration, not a filter atlas applies:
     the tokens are verbatim, both cases are listed where the file lists both,
@@ -3136,8 +3143,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return os.path.join(self._home, ".var", "app", self._APP_ID, "config")
 
-    def _rom_directory(self) -> str | None:
-        """The configured ``ROMDirectory``, read from ES-DE's own settings.
+    def _rom_directory(self, system: str) -> tuple[str | None, tuple[Caveat, ...]]:
+        """The configured ``ROMDirectory`` — or the caveat for settings nobody could read.
 
         The value comes from ``es_settings.xml`` rather than from
         ``retrodeck.json``'s ``roms_path``, and the difference is the boundary
@@ -3147,23 +3154,53 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         files a user can move apart, and only one of them is what the frontend
         reads. Same shape as this handle's cfg-over-marker rule everywhere else.
 
-        ``None`` where the file is missing, unreadable, or sets the key empty —
-        which is not a dead end but the *default* case; see
-        :meth:`_default_rom_directory`.
+        Three outcomes, and collapsing any two of them states a directory that
+        is not in force. *Missing* is a reading — there is no file, so there is
+        no configured value, and the frontend's own default is what applies
+        (:meth:`_default_rom_directory`); so is a file that parses and sets the
+        key empty or not at all. *Unreadable*, *invalid-text* and *unparseable*
+        are not readings: the file is there, ES-DE reads it fine, and what it
+        says could be anything — so this answers a caveat and no directory,
+        rather than the default a file nobody could read has no claim to.
         """
         settings_path = os.path.join(self._esde_config_home(), self._ESDE_SETTINGS_SUFFIX)
-        text = self._machine.read_text(settings_path).text
-        if text is None:
-            return None
-        return parse_es_settings(text).get(self._ROM_DIRECTORY_SETTING) or None
+        result = self._machine.read_text(settings_path)
+        if result.status == READ_MISSING:
+            return None, ()
+        settings = None if result.text is None else parse_es_settings(result.text)
+        if settings is None:
+            return None, self._settings_unreadable_caveat(
+                system, settings_path, "unparseable" if result.text is not None else result.status
+            )
+        return settings.get(self._ROM_DIRECTORY_SETTING) or None, ()
+
+    @staticmethod
+    def _settings_unreadable_caveat(system: str, path: str, status: str) -> tuple[Caveat, ...]:
+        """The frontend's settings are there and atlas could not read them.
+
+        A statement about atlas, not about the machine, and the reason it is
+        not the unset case: the frontend reads this file, so the ROM directory
+        it names is the one in force — and falling back on the default here
+        would state a directory belonging to a configuration nobody established.
+        """
+        return (
+            Caveat(
+                CAVEAT_FRONTEND_SETTINGS_UNREADABLE,
+                f"the frontend's settings at {path} exist and could not be read ({status}), so what "
+                f"they say about {system!r}'s ROM directory is unknown — atlas states none rather "
+                "than the default, which only applies to a file that sets nothing",
+                {"system": system, "path": path, "status": status},
+            ),
+        )
 
     def _default_rom_directory(self) -> str:
         """Where the frontend looks when ``ROMDirectory`` is unset — resolved, not asserted.
 
         ES-DE falls back on ``<home>/ROMs/`` when the setting is empty
-        (``es-app/src/FileData.cpp::getROMDirectory()``, ES-DE 3.4.1; RetroDECK
-        ships the ``RetroDECK/ES-DE`` fork with that function unmodified at the
-        pinned build), and its home is not the user's: the launcher passes
+        (``es-app/src/FileData.cpp::getROMDirectory()``, ES-DE 3.4.1, ~L313-345,
+        line numbers read from the tagged source over the web; RetroDECK ships
+        the ``RetroDECK/ES-DE`` fork with that function unmodified at the pinned
+        build), and its home is not the user's: the launcher passes
         ``--home "${XDG_CONFIG_HOME}"`` unconditionally, which outranks both
         ``portable.txt`` and ``$HOME``. That makes the branch reachable and its
         value knowable, which is the whole difference between resolving and
@@ -3176,12 +3213,37 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return os.path.join(self._esde_config_home(), "ROMs")
 
-    # Where Flatpak keeps per-app overrides: the user's, then the system's.
+    # Flatpak's overrides directories, one per installation. Both hold a file
+    # per app id and a file named "global" that applies to every app — observed
+    # live: `flatpak override --show [APP]` (flatpak 1.16.6) opens exactly these
+    # four paths, `strace`d on the reference machine 2026-08-08.
     _FLATPAK_OVERRIDES_USER = os.path.join(".local", "share", "flatpak", "overrides")
     _FLATPAK_OVERRIDES_SYSTEM = os.path.join("/var", "lib", "flatpak", "overrides")
+    _FLATPAK_OVERRIDES_GLOBAL = "global"
 
-    def _config_home_override(self) -> str | None:
-        """The environment key an overrides file uses to move the app's config home.
+    def _override_files(self) -> tuple[str, ...]:
+        """Every Flatpak overrides file that can speak for this app, most specific first.
+
+        App-specific before global, because that is Flatpak's own precedence —
+        "if the application ID APP is not specified then the overrides affect
+        all applications, but the per-application overrides can override the
+        global overrides" (flatpak-override(1)). Both installations are read at
+        each level: which one deploys this app is not something atlas has
+        established, and the order only decides which key a message names —
+        every one of these files means the same thing to the answer.
+        """
+        directories = (
+            os.path.join(self._home, self._FLATPAK_OVERRIDES_USER),
+            self._FLATPAK_OVERRIDES_SYSTEM,
+        )
+        return tuple(
+            os.path.join(directory, name)
+            for name in (self._APP_ID, self._FLATPAK_OVERRIDES_GLOBAL)
+            for directory in directories
+        )
+
+    def _config_home_override(self) -> tuple[str, str] | None:
+        """The overrides file and key that move the app's config home, if one does.
 
         The default above holds only while the frontend's ``--home`` expands to
         the tree atlas read the settings from. A Flatpak overrides file can
@@ -3191,19 +3253,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         default branch in the first place. Either way the honest answer is to
         stop resolving and say why, not to state a plausible directory.
 
-        Returns the offending key name, or ``None`` when nothing moved it.
+        Returns ``(path, key)``, or ``None`` when nothing moved it.
         """
-        for path in (
-            os.path.join(self._home, self._FLATPAK_OVERRIDES_USER, self._APP_ID),
-            os.path.join(self._FLATPAK_OVERRIDES_SYSTEM, self._APP_ID),
-        ):
+        for path in self._override_files():
             text = self._machine.read_text(path).text
             if text is None:
                 continue
             environment = _environment_overrides(text)
             for key in _CONFIG_HOME_ENV_KEYS:
                 if key in environment:
-                    return key
+                    return path, key
         return None
 
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
@@ -3285,19 +3344,32 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if not read:
             return RomPlacement(caveats=(*findings, *self._catalogue_unread_caveat(system))), version
 
-        sources = (self._CATALOGUE_SOURCE, self._ROM_DIRECTORY_SOURCE)
+        # A source names a reading this answer rests on, so the settings file
+        # joins the list only once it has been read: the branch below returns
+        # before opening it, and the branch after that opens it and fails.
         declaration = by_system.get(system)
         if declaration is None or declaration.rom_path is None:
             return (
                 RomPlacement(
                     extensions=() if declaration is None else declaration.extensions,
-                    sources=sources,
+                    sources=(self._CATALOGUE_SOURCE,),
                     caveats=(*findings, *self._rom_path_undeclared_caveat(system, declaration)),
                 ),
                 version,
             )
 
-        rom_directory = self._rom_directory()
+        rom_directory, unreadable = self._rom_directory(system)
+        if unreadable:
+            return (
+                RomPlacement(
+                    extensions=declaration.extensions,
+                    sources=(self._CATALOGUE_SOURCE,),
+                    caveats=(*findings, *unreadable),
+                ),
+                version,
+            )
+
+        sources = (self._CATALOGUE_SOURCE, self._ROM_DIRECTORY_SOURCE)
         if rom_directory is None:
             # Unset is the DEFAULT case, not a dead end — unless something moved
             # the home that default is relative to, which is the one thing that
@@ -3310,13 +3382,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                         sources=sources,
                         caveats=(
                             *findings,
-                            *self._rom_path_unresolved_caveat(
-                                system,
-                                declaration.rom_path,
-                                f"a Flatpak override redefines {moved} for this app, so where the "
-                                "frontend's own home-relative default lands is not something atlas "
-                                "read — and the settings it did read may not be the ones in force",
-                            ),
+                            *self._config_home_relocated_caveat(system, declaration.rom_path, *moved),
                         ),
                     ),
                     version,
@@ -3328,14 +3394,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 RomPlacement(
                     extensions=declaration.extensions,
                     sources=sources,
-                    caveats=(
-                        *findings,
-                        *self._rom_path_unresolved_caveat(
-                            system,
-                            declaration.rom_path,
-                            f"ES-DE's ROMDirectory is {rom_directory!r}, which is not an absolute path",
-                        ),
-                    ),
+                    caveats=(*findings, *self._rom_path_unresolved_caveat(system, declaration.rom_path, rom_directory)),
                 ),
                 version,
             )
@@ -3381,24 +3440,51 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     @staticmethod
-    def _rom_path_unresolved_caveat(system: str, declared: str, reason: str) -> tuple[Caveat, ...]:
-        """A declared path whose ``%ROMPATH%`` nothing here resolves, and why.
+    def _rom_path_unresolved_caveat(system: str, declared: str, rom_directory: str) -> tuple[Caveat, ...]:
+        """A configured ROM directory that is not a path a ``%ROMPATH%`` can be resolved against.
 
-        Two ways remain now that an unset setting resolves to the frontend's
-        own default: a configured value that is not an absolute path, and an
-        environment atlas cannot follow. Both mean the same thing to a client —
-        no directory, and do not invent one — so they are one code, and the
-        *reason* is prose. The declaration travels in the data either way: it is
-        the fact atlas did establish, and a caller who knows their own setup can
-        finish the substitution atlas refused to guess at.
+        One fact and one code, now that the other reasons have theirs: the
+        frontend's setting holds something relative or ``~``-prefixed, and what
+        those resolve against is the ES-DE process's own environment inside its
+        sandbox. A fact about the machine, and the thing to do about it is to
+        fix the setting.
+
+        The declaration travels in the data: it is the fact atlas *did*
+        establish, and a caller who knows their own setup can finish the
+        substitution atlas refused to guess at.
         """
         return (
             Caveat(
                 CAVEAT_ROM_PATH_UNRESOLVED,
-                f"the catalogue declares {system!r} at {declared!r}, and {reason} — atlas states no "
-                "directory rather than guessing one, because a ROM directory guessed wrong is a real "
-                "directory the caller would go looking in",
-                {"system": system, "declared": declared},
+                f"the catalogue declares {system!r} at {declared!r}, and ES-DE's ROMDirectory is "
+                f"{rom_directory!r}, which is not an absolute path — atlas states no directory rather "
+                "than guessing one, because a ROM directory guessed wrong is a real directory the "
+                "caller would go looking in",
+                {"system": system, "declared": declared, "configured": rom_directory},
+            ),
+        )
+
+    @staticmethod
+    def _config_home_relocated_caveat(
+        system: str, declared: str, path: str, key: str
+    ) -> tuple[Caveat, ...]:
+        """A Flatpak override moved the tree the frontend's own default is relative to.
+
+        Its own code rather than the unresolved one, because it is a different
+        claim with a different remedy: nothing about this machine is wrong, and
+        atlas is the one that cannot follow. It is also wider than this answer —
+        the settings file atlas read lives in that same tree, so where an
+        override moved it, other readings from this handle may rest on a file
+        that is not the one in force. A client cannot learn that from prose.
+        """
+        return (
+            Caveat(
+                CAVEAT_CONFIG_HOME_RELOCATED,
+                f"the catalogue declares {system!r} at {declared!r}, and the Flatpak overrides at "
+                f"{path} redefine {key} for this app — so where the frontend's own home-relative "
+                "default lands is not something atlas read, and the settings it did read may not be "
+                "the ones in force either",
+                {"system": system, "declared": declared, "path": path, "key": key},
             ),
         )
 

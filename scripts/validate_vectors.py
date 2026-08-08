@@ -196,6 +196,8 @@ KNOWN_CAVEAT_CODES = {
     "system-unknown",
     "rom-path-undeclared",
     "rom-path-unresolved",
+    "frontend-settings-unreadable",
+    "config-home-relocated",
     "system-assignment-derived",
     "core-without-systemname",
     "system-assignment-may-hide-cores",
@@ -1007,6 +1009,17 @@ def _validate_rom_location(name: str, placement: Any) -> None:
     ):
         fail(f"{name}: expected.rom_location.extensions must be a list of non-empty strings")
     _validate_caveats(name, placement["caveats"])
+    # Both facts come out of the same <system> element, so a catalogue nobody
+    # read yields neither — an expectation stating either alongside one of those
+    # codes locks in an answer no resolver can produce.
+    unread = _no_catalogue_codes_in(placement["caveats"])
+    if unread and (placement["dir"] or placement["extensions"]):
+        fail(f"{name}: expected.rom_location states an answer and {unread}")
+    if not any((placement["dir"], placement["extensions"], placement["caveats"])):
+        fail(
+            f"{name}: expected.rom_location is empty in every field — no resolver answers a "
+            "placement with nothing resolved and nothing said about why"
+        )
 
 
 def _validate_catalogue(name: str, catalogue: Any) -> None:

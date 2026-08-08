@@ -151,8 +151,8 @@ def merge_layers(
 ROMPATH_TOKEN = "%ROMPATH%"
 
 
-def parse_es_settings(text: str) -> dict[str, str]:
-    """The ``<string name= value=>`` settings of an ``es_settings.xml``.
+def parse_es_settings(text: str) -> dict[str, str] | None:
+    """The ``<string name= value=>`` settings of an ``es_settings.xml``, or ``None``.
 
     **The file is not well-formed XML**, and that is not a defect to route
     around: ES-DE writes a bare sequence of sibling elements with no root, and
@@ -163,16 +163,25 @@ def parse_es_settings(text: str) -> dict[str, str]:
     directory unresolvable everywhere. The document is wrapped in a synthetic
     root to read the fragments the way the writer meant them.
 
-    Unparseable even then yields ``{}`` — a layer that could not be read, which
-    the caller must not confuse with one that set nothing.
+    A leading UTF-8 BOM is stripped for the same reason, not as a courtesy:
+    pugixml detects the encoding from it and reads such a file normally, so the
+    settings in it are the settings *in force*, and refusing them would make
+    atlas answer about a configuration the frontend is not using. It has to go
+    before the wrap either way — inside one it would push the XML declaration
+    off the front of the document.
+
+    ``None`` is *unparseable even then*, and is why this does not simply answer
+    ``{}``: a file that could not be read and a file that sets nothing are the
+    same empty mapping and opposite facts, and only one of them means the
+    frontend's own defaults apply.
     """
-    body = text.lstrip()
+    body = text.removeprefix("\ufeff").lstrip()
     if body.startswith("<?"):
         _, _, body = body.partition("?>")
     try:
         root = ET.fromstring(f"<es-settings>{body}</es-settings>")
     except ET.ParseError:
-        return {}
+        return None
     settings: dict[str, str] = {}
     for element in root:
         if element.tag != "string":
@@ -183,14 +192,40 @@ def parse_es_settings(text: str) -> dict[str, str]:
     return settings
 
 
+def _collapse_separators(path: str) -> str:
+    """ES-DE's ``//`` collapse — the loop, not one pass.
+
+    ``Utils::String::replace`` re-scans until the pattern is gone
+    (``es-core/src/utils/StringUtil.cpp``, ES-DE 3.4.1), so ``a///b`` reaches
+    ``a/b`` there. Python's ``str.replace`` is one pass over non-overlapping
+    matches and would leave ``a//b`` behind, which is a different directory
+    string for anything comparing paths textually.
+    """
+    while "//" in path:
+        path = path.replace("//", "/")
+    return path
+
+
 def resolve_rom_path(declared: str, rom_directory: str | None) -> str | None:
     """A system's declared ``<path>`` with ``%ROMPATH%`` substituted, or ``None``.
 
-    Follows ES-DE: an unconditional string replace of the token, then the
-    ``//`` collapse that absorbs the directory's trailing separator. A declared
-    path carrying no token needs no directory and resolves to itself — ES-DE
-    only insists on the token when generating placeholder directories, not when
-    loading the catalogue, so a path without one is a real path here too.
+    Follows ``SystemData::loadConfig()`` (``es-app/src/SystemData.cpp``, ES-DE
+    3.4.1, ~L859-861, line numbers read from the tagged source over the web):
+    the token is replaced with the ROM directory, then ``//`` is collapsed —
+    **unconditionally**, on a path that carried no token just the same, which is
+    why the collapse here is not inside the substitution branch.
+
+    The directory is normalized to exactly one trailing separator first, because
+    that is the shape ES-DE substitutes: ``FileData::getROMDirectory()``
+    (``es-app/src/FileData.cpp``, ES-DE 3.4.1, ~L313-345) appends one where the
+    configured value lacks it and returns the empty-setting default with one
+    already on. Doing it here rather than appending unconditionally keeps a
+    configured ``…/roms/`` from spelling the answer ``…/roms//n64``.
+
+    A declared path carrying no token needs no directory and resolves to
+    itself: ES-DE insists on the token only in ``createSystemDirectories()``
+    (~L1366, the placeholder-generation path), never when loading the
+    catalogue, so a literal ``<path>`` is a real path here too.
 
     ``None`` when the token is present and *rom_directory* cannot stand in for
     it: unset, or not absolute. A relative or ``~``-prefixed value is refused
@@ -200,10 +235,10 @@ def resolve_rom_path(declared: str, rom_directory: str | None) -> str | None:
     would go looking in.
     """
     if ROMPATH_TOKEN not in declared:
-        return declared or None
+        return _collapse_separators(declared) or None
     if not rom_directory or not rom_directory.startswith("/"):
         return None
-    return declared.replace(ROMPATH_TOKEN, f"{rom_directory}/").replace("//", "/")
+    return _collapse_separators(declared.replace(ROMPATH_TOKEN, f"{rom_directory.rstrip('/')}/"))
 
 
 @dataclass(frozen=True, slots=True)
