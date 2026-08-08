@@ -1015,11 +1015,12 @@ def _validate_rom_location(name: str, placement: Any) -> None:
     unread = _no_catalogue_codes_in(placement["caveats"])
     if unread and (placement["dir"] or placement["extensions"]):
         fail(f"{name}: expected.rom_location states an answer and {unread}")
-    if not any((placement["dir"], placement["extensions"], placement["caveats"])):
-        fail(
-            f"{name}: expected.rom_location is empty in every field — no resolver answers a "
-            "placement with nothing resolved and nothing said about why"
-        )
+    # No directory is never the whole answer: every branch that resolves none
+    # says which kind of none it is, and a vector asserting silence would lock
+    # in the one shape the caveats exist to prevent — a client reading null as
+    # "look in the default place".
+    if placement["dir"] is None and not placement["caveats"]:
+        fail(f"{name}: expected.rom_location resolved no dir and states no caveat saying why")
 
 
 def _validate_catalogue(name: str, catalogue: Any) -> None:
