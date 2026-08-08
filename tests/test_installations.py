@@ -15,6 +15,7 @@ HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
 RETRODECK_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
 RETRODECK_OVERRIDES = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config"
+ESDE_SETTINGS = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml"
 EMUDECK_SETTINGS = f"{HOME}/.config/EmuDeck/settings.sh"
 STANDALONE_CFG = f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg"
 
@@ -64,9 +65,14 @@ class TestMarkerPathValuesMustBeStrings:
     def test_health_does_not_raise_and_roots_stay_strings(self):
         rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": 123, "saves_path": {"a": 1}}}'})
         assert rd.health().codes[0] == atlas.HEALTH_ISSUE_MARKER_INVALID
-        for value in (rd.root(), rd.saves_root(), rd.bios_dir(), rd.roms_dir()):
+        for value in (rd.root(), rd.saves_root(), rd.bios_dir()):
             assert isinstance(value, str)
         assert rd.root() == f"{HOME}/retrodeck"
+        # roms_dir() is not in that list any more: it answers off ES-DE's
+        # settings, which a broken marker says nothing about, and None is a
+        # refusal it is allowed to give. Here nothing refuses — no settings
+        # file means the frontend's own default applies.
+        assert rd.roms_dir() == f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ROMs"
 
     def test_a_paths_section_of_the_wrong_type_is_invalid_too(self):
         rd = _retrodeck({RETRODECK_JSON: '{"paths": ["/mnt/sd/retrodeck"]}'})
@@ -92,9 +98,12 @@ class TestMarkerPathValuesMustBeStrings:
         assert issue.data["key"] == "paths"
 
     def test_every_path_key_atlas_reads_is_checked(self):
-        # Keeps the checked set honest against the read set: root(), saves_root(),
-        # bios_dir() and roms_dir() are the four reads, so all four are validated.
-        for key in ("rd_home_path", "saves_path", "bios_path", "roms_path"):
+        # Keeps the checked set honest against the read set: root(), saves_root()
+        # and bios_dir() are the reads through _config_path, so those three are
+        # validated. roms_path left the set when the ROM root moved to ES-DE's
+        # own ROMDirectory — nothing reads it now, and the test below holds that
+        # other half.
+        for key in ("rd_home_path", "saves_path", "bios_path"):
             rd = _retrodeck({RETRODECK_JSON: json.dumps({"paths": {key: 5}})}, dirs=self.FALLBACK_DIRS)
             assert rd.health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,), key
 
@@ -114,6 +123,21 @@ class TestMarkerPathValuesMustBeStrings:
         )
         assert rd.health() == atlas.Health()
         assert rd.root() == "/mnt/sd/retrodeck"
+
+    def test_roms_path_is_now_such_a_key(self):
+        # The scoping rule applied to the key that just left the read set: the
+        # ROM root comes off ES-DE's ROMDirectory now, so a roms_path atlas
+        # never opens cannot make this installation unhealthy.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: (
+                    '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+                    '"saves_path": "/mnt/sd/retrodeck/saves", "roms_path": 5}}'
+                )
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        assert rd.health() == atlas.Health()
 
     def test_placement_carries_the_marker_issue_instead_of_crashing(self):
         rd = _retrodeck(
@@ -1683,6 +1707,11 @@ class TestOneReadPerSourcePerQuery:
     )
     ES_SYSTEMS = (
         '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>\n'
+        # A real catalogue always declares <path>; without one there is no ROM
+        # directory for a gamelist entry to hang off, so the anchor never
+        # resolves and this fixture would never reach the settings read it is
+        # here to count.
+        "    <path>%ROMPATH%/n64</path>\n"
         '    <command label="Mupen64Plus-Next">retroarch -L '
         "/app/cores/mupen64plus_next_libretro.so %ROM%</command>\n"
         '    <command label="ParaLLEl N64">retroarch -L '
@@ -1714,6 +1743,9 @@ class TestOneReadPerSourcePerQuery:
         "/mnt/sd/retrodeck/bios/pifdata.bin": "rom",
         "/mnt/sd/retrodeck/saves/.keep": "",
         "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+        ESDE_SETTINGS: (
+            '<?xml version="1.0"?>\n<string name="ROMDirectory" value="/mnt/sd/retrodeck/roms" />\n'
+        ),
     }
     CORES = {
         f"{RD_DEPLOY_CORES}/mupen64plus_next_libretro.so": {"library_name": "Mupen64Plus-Next"},
@@ -1739,6 +1771,23 @@ class TestOneReadPerSourcePerQuery:
     def test_emulators_for_reads_each_source_once(self):
         machine = self._query(lambda rd: rd.emulators_for("n64", content_path=self.CONTENT))
         assert machine.repeats() == {}
+        # The anchor's own source, read once like the rest — naming content is
+        # what makes this query resolve where ES-DE would launch from.
+        assert ESDE_SETTINGS in machine.reads
+
+    def test_emulators_for_without_content_never_opens_the_settings(self):
+        # Nothing to anchor, so nothing to anchor against: the query that
+        # cannot match a per-game entry does not pay for the directory it
+        # would have matched in.
+        machine = self._query(lambda rd: rd.emulators_for("n64"))
+        assert machine.repeats() == {}
+        assert ESDE_SETTINGS not in machine.reads
+
+    def test_firmware_for_system_never_opens_the_settings(self):
+        # This route names no content either, and gaining a read it cannot use
+        # is exactly the cost the anchor rework had to avoid.
+        machine = self._query(lambda rd: rd.firmware_for_system(system="n64"))
+        assert ESDE_SETTINGS not in machine.reads
 
     def test_entry_save_location_reads_each_source_once(self):
         # The catalogue ask that produced the entry is its own query; the
@@ -1748,6 +1797,11 @@ class TestOneReadPerSourcePerQuery:
         machine.reads.clear()
         entry.save_location(content_path=self.CONTENT)
         assert machine.repeats() == {}
+        # This route gained the catalogue and the settings when the anchor
+        # moved off the marker: the per-game check needs the system's <path>,
+        # and only the catalogue declares one. Once each, like everything else.
+        assert self.DEPLOY_ESDE in machine.reads
+        assert ESDE_SETTINGS in machine.reads
 
     def test_firmware_for_core_reads_each_source_once(self):
         machine = self._query(lambda rd: rd.firmware_for_core(core_so="parallel_n64_libretro.so"))
@@ -2011,7 +2065,7 @@ class TestTheRomDirectorySettingIsReadOrRefused:
         '    <command label="Mupen64Plus-Next">retroarch -L '
         "/app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
     )
-    SETTINGS = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml"
+    SETTINGS = ESDE_SETTINGS
     CONFIG_HOME = f"{HOME}/.var/app/net.retrodeck.retrodeck/config"
     DEFAULT_DIR = f"{CONFIG_HOME}/ROMs/n64"
     UNREADABLE = {"status": "unreadable"}
@@ -2103,6 +2157,36 @@ class TestTheRomDirectorySettingIsReadOrRefused:
         caveat = self._placement(self.NOT_ABSOLUTE_SETTINGS).caveats[0]
         assert self.NOT_ABSOLUTE in caveat.message
         assert "not an absolute path" in caveat.message
+
+    def test_roms_dir_answers_the_root_es_de_substitutes(self):
+        # The root, not a system's directory — no <path> is applied to it.
+        machine = FixtureMachine(
+            {RETRODECK_JSON: RD_JSON, ESDE_SETTINGS: '<string name="ROMDirectory" value="/r" />'},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        assert atlas.RetroDeck(HOME, machine).roms_dir() == "/r"
+
+    def test_roms_dir_no_longer_follows_the_markers_roms_path(self):
+        machine = FixtureMachine(
+            {
+                RETRODECK_JSON: (
+                    '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+                    '"saves_path": "/mnt/sd/retrodeck/saves", "roms_path": "/mnt/sd/games"}}'
+                ),
+                ESDE_SETTINGS: '<string name="ROMDirectory" value="/mnt/sd/es-de-roms" />',
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        assert atlas.RetroDeck(HOME, machine).roms_dir() == "/mnt/sd/es-de-roms"
+
+    def test_roms_dir_refuses_rather_than_inventing_a_root(self):
+        # A bare string cannot carry which of the three ways it refused, so it
+        # answers None and the caveated route is rom_location(system).
+        machine = FixtureMachine(
+            {RETRODECK_JSON: RD_JSON, ESDE_SETTINGS: {"status": "unreadable"}},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        assert atlas.RetroDeck(HOME, machine).roms_dir() is None
 
     def test_the_undeclared_branch_never_opens_the_settings_file(self):
         # Fixed with the sources: this answer returns before reading them, so

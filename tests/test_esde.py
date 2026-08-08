@@ -227,8 +227,22 @@ def _retrodeck(files, **kwargs):
 CATALOGUE_ROOTS = ["/mnt/sd/retrodeck", "/mnt/sd/retrodeck/saves"]
 
 
+ESDE_SETTINGS = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml"
+# The ROM root ES-DE actually substitutes, and the value RetroDECK's own
+# component_prepare.sh seds into it from roms_path. A catalogue fixture without
+# this file models a machine that cannot exist: the frontend would be looking
+# in its own <config home>/ROMs while the ROM tree sits under rd_home.
+ESDE_SETTINGS_XML = (
+    '<?xml version="1.0"?>\n<string name="ROMDirectory" value="/mnt/sd/retrodeck/roms" />\n'
+)
+
+
 def _catalogue_fixture(extra_files=None, **kwargs):
-    files = {RETRODECK_JSON: RD_JSON, BUNDLED_ESDE: BUNDLED_XML}
+    files = {
+        RETRODECK_JSON: RD_JSON,
+        BUNDLED_ESDE: BUNDLED_XML,
+        ESDE_SETTINGS: ESDE_SETTINGS_XML,
+    }
     files.update(extra_files or {})
     kwargs.setdefault("dirs", CATALOGUE_ROOTS)
     return _retrodeck(files, **kwargs)
@@ -574,23 +588,49 @@ class TestPerGameMatchIsAnchored:
         entries = _entries(rd.emulators_for("n64", content_path="/mnt/sd/link-to-roms/n64/Game.m3u"))
         assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
 
-    def test_the_anchor_follows_a_configured_roms_path(self):
-        rd = _retrodeck(
+    # The two ROM paths a machine can carry, pointed at different trees. Only
+    # one of them is the one ES-DE launches from.
+    MARKER_ROMS = "/mnt/sd/games"
+    SETTINGS_ROMS = "/mnt/sd/es-de-roms"
+
+    def _diverged(self):
+        """A machine whose marker and whose frontend settings disagree about the ROM root."""
+        return _retrodeck(
             {
                 RETRODECK_JSON: (
                     '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", '
-                    '"saves_path": "/mnt/sd/retrodeck/saves", "roms_path": "/mnt/sd/games"}}'
+                    f'"saves_path": "/mnt/sd/retrodeck/saves", "roms_path": "{self.MARKER_ROMS}"}}}}'
                 ),
                 BUNDLED_ESDE: BUNDLED_XML,
+                ESDE_SETTINGS: (
+                    '<?xml version="1.0"?>\n'
+                    f'<string name="ROMDirectory" value="{self.SETTINGS_ROMS}" />\n'
+                ),
                 **self.FILES,
             },
             dirs=CATALOGUE_ROOTS,
         )
-        configured = _entries(rd.emulators_for("n64", content_path="/mnt/sd/games/n64/Game.m3u"))
-        assert configured[0].label == "ParaLLEl N64"
-        # The default location is no longer the system's ROM directory.
-        old_default = _entries(rd.emulators_for("n64", content_path=f"{self.ROMS}/Game.m3u"))
-        assert old_default[0].label == "Mupen64Plus-Next"
+
+    def test_the_anchor_follows_es_des_own_setting(self):
+        # The rule this replaces read retrodeck.json's roms_path. That is only
+        # the value RetroDECK seds INTO ES-DE's setting — the frontend reads its
+        # own, so where the two have drifted apart the override belongs to the
+        # game under ROMDirectory.
+        entries = _entries(
+            self._diverged().emulators_for(
+                "n64", content_path=f"{self.SETTINGS_ROMS}/n64/Game.m3u"
+            )
+        )
+        assert entries[0].label == "ParaLLEl N64"
+
+    def test_the_anchor_does_not_follow_the_markers_roms_path(self):
+        # The other half, and the actual regression guard: the game sitting
+        # where RetroDECK's bookkeeping says carries no override, because ES-DE
+        # would never launch it from there.
+        entries = _entries(
+            self._diverged().emulators_for("n64", content_path=f"{self.MARKER_ROMS}/n64/Game.m3u")
+        )
+        assert entries[0].label == "Mupen64Plus-Next"
 
     def test_the_entry_route_attaches_no_override_caveat_to_the_wrong_game(self):
         rd = _catalogue_fixture(
@@ -606,3 +646,59 @@ class TestPerGameMatchIsAnchored:
         assert [c.data["label"] for c in owner.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE] == [
             "ParaLLEl N64"
         ]
+
+
+class TestAnAnchorThatCannotBeResolvedSaysSo:
+    """The anchor can now refuse, and a skipped override must never be silent.
+
+    Reading the marker always produced a string, so per-game matching always
+    had something to match against. ES-DE's own setting can refuse — the file
+    is unreadable, an override moved the tree it lives in — and then the
+    override the frontend *would* apply is not applied here. That is a
+    degradation, so it travels as the caveat that names which one, reusing the
+    codes the ROM question already answers with rather than inventing a
+    category code with the reason buried in its data.
+    """
+
+    CONTENT = "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip"
+    GAMELIST = (
+        '<?xml version="1.0"?>\n<gameList>\n'
+        "\t<game>\n\t\t<path>./Paper Mario (USA).zip</path>\n"
+        "\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n"
+    )
+    FILES = {"/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": GAMELIST}
+
+    def _unreadable_settings(self):
+        return _catalogue_fixture({**self.FILES, ESDE_SETTINGS: {"status": "unreadable"}})
+
+    def test_the_override_still_applies_when_the_anchor_resolves(self):
+        # The counterpart the assertions below would be vacuous without.
+        answer = _catalogue_fixture(self.FILES).emulators_for("n64", content_path=self.CONTENT)
+        assert answer.entries[0].label == "ParaLLEl N64"
+        assert answer.caveats == ()
+
+    def test_settings_nobody_could_read_leave_the_override_unapplied(self):
+        answer = self._unreadable_settings().emulators_for("n64", content_path=self.CONTENT)
+        assert answer.entries[0].label == "Mupen64Plus-Next"
+
+    def test_and_the_answer_says_why_rather_than_going_quiet(self):
+        answer = self._unreadable_settings().emulators_for("n64", content_path=self.CONTENT)
+        assert [c.code for c in answer.caveats] == [atlas.CAVEAT_FRONTEND_SETTINGS_UNREADABLE]
+
+    def test_the_entry_route_states_it_too(self):
+        rd = _catalogue_fixture(
+            {
+                **self.FILES,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+                ESDE_SETTINGS: {"status": "unreadable"},
+            }
+        )
+        placement = _entries(rd.emulators_for("n64"))[0].save_location(content_path=self.CONTENT)
+        assert isinstance(placement, atlas.SavePlacement)
+        assert atlas.CAVEAT_FRONTEND_SETTINGS_UNREADABLE in [c.code for c in placement.caveats]
+
+    def test_a_query_without_content_is_not_caveated_for_an_anchor_it_never_wanted(self):
+        # Nothing to anchor means nothing failed: the settings are not even
+        # opened, so complaining about them would be noise.
+        answer = self._unreadable_settings().emulators_for("n64")
+        assert [c.code for c in answer.caveats] == []
