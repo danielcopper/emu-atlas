@@ -186,6 +186,7 @@ classDiagram
 | writing a test or a fixture     | `from atlas.machine import FixtureMachine`                                     |
 | porting the resolver            | the Tier-2 modules, as the reference for what each parser reads                |
 | reading a cfg / catalogue alone | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems` |
+| validating your own system map  | `import atlas` — `from_esde_system`, `known_systems`                           |
 | checking packaged knowledge     | `from atlas.oddities import lookup_card`, `from atlas.evidence import …`       |
 
 The rule behind the table: if a client acts on it, it is in `atlas`; if it exists so a port or a test can reproduce the

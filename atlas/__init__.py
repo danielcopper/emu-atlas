@@ -44,6 +44,12 @@ from __future__ import annotations
 from atlas.detect import detect
 from atlas.every_installation import EveryInstallation, InstallationAnswer, every_installation
 
+# --- The vocabulary those questions take -------------------------------------
+# ES-DE's system names, and the two ways to check a name against them. A
+# consumer holding some other product's identifiers owns that mapping and
+# validates it here — atlas carries no foreign vocabulary (atlas/systems.py).
+from atlas.systems import from_esde_system, known_systems
+
 # --- The handles every question is asked of ----------------------------------
 from atlas.installations import (
     EmuDeck,
@@ -206,6 +212,9 @@ __all__ = [
     # Entry points
     "detect",
     "every_installation",
+    # The vocabulary the questions take, and how to check a name against it
+    "from_esde_system",
+    "known_systems",
     # The aggregate over detect
     "EveryInstallation",
     "InstallationAnswer",

@@ -212,6 +212,40 @@ rather than claiming a comparison nobody made. (Where a missing live version doe
 to one — `unverified-version` says so at that point.) Nothing above applies to an arrangement that was never verified at
 all: with no pin there is nothing to drift from, and `arrangement-unverified` is already the more general statement.
 
+## Validating your own platform map
+
+Every question about a system — `emulators_for`, `firmware_for_system` — takes an id in **ES-DE's vocabulary**: `gb`,
+`n64`, `dreamcast`. That is what a frontend catalogue on the machine declares, so it is what an answer can be about.
+
+If your library speaks some other vocabulary, the map from it into these ids is **yours**. atlas does not carry one and
+will not: another product's platform identifiers are versioned by that product, they change without telling atlas, and
+they would reach you two releases late. What atlas gives you is the target set, so you can check your map against it:
+
+```python
+atlas.from_esde_system("dreamcast")       # 'dreamcast' — a name that IS an id, echoed back
+atlas.from_esde_system("sega-dreamcast")  # None — not an id, whatever it looks like
+atlas.known_systems()                     # every id, sorted — the whole vocabulary
+```
+
+**Make that check a test in your own suite**, over every target your map can produce:
+
+```python
+def test_every_platform_maps_to_a_system_atlas_knows():
+    unknown = sorted(t for t in MY_PLATFORM_MAP.values() if atlas.from_esde_system(t) is None)
+    assert unknown == []
+```
+
+That test is worth writing because of one specific failure, and it is quiet. Suppose your map sends a platform to a name
+that _looks_ like the right id but is not the one the frontend declares — an abbreviation where the catalogue spells the
+machine out, or a name from a different frontend's naming scheme. Nothing raises. `emulators_for` answers with **no
+entries**, which the section below tells you to read as "the frontend knows no emulator for this system" — so one wrong
+table entry becomes a claim about the user's machine, and every game of that platform silently syncs nowhere. The check
+above turns that into a red test on the side that can fix it.
+
+The id set is packaged data (`atlas/data/system_ids.json`), cited to the `es_systems.xml` of a pinned build and guarded
+by a test that parses that build's own file. It moves with atlas releases, not with your code — so pin your atlas
+version and re-run your check when you bump it.
+
 ## Where does this save live?
 
 The direct route — you name the core:
@@ -621,7 +655,7 @@ inst = pick_installation(installations)          # your policy — every handle 
 if not inst.health().ok:
     return surface_health(inst.health())         # don't sync against a broken installation
 
-system = my_slug_map[rom.platform_slug]          # RomM slug → system id is YOUR table today (see "Boundaries")
+system = my_platform_map[rom.platform_slug]      # your table, checked against known_systems() in your own suite
 catalogue = inst.emulators_for(system, content_path=rom.file_path)
 if not catalogue.entries:                        # no entries is four facts — the caveat says which
     return needs_a_core_from_you(catalogue.caveats)
@@ -701,9 +735,13 @@ if placement.dir != last_seen_dir(rom):
 
 Honest limits you must cover yourself today (roadmap: `ROADMAP.md`):
 
-- **Vocabulary translation.** Atlas speaks the frontend's system names (ES-DE) where a catalogue exists and an atlas
-  slug where none does — `firmware_for_system` states that switch with the `emulator-catalogue-unavailable` caveat
-  rather than translating. RomM `platform_slug` → system id is your mapping table until the canonical vocabulary lands.
+- **Vocabulary translation.** Mapping your library's platform identifiers to atlas's system ids is **yours, by design**
+  and not on the roadmap — atlas carries no foreign product's vocabulary (`DESIGN.md`, Vocabulary). What it gives you is
+  the target set to validate that map against; see
+  [Validating your own platform map](#validating-your-own-platform-map). Separately, atlas itself speaks the frontend's
+  system names (ES-DE) where a catalogue exists and an atlas slug where none does — `firmware_for_system` states that
+  switch with the `emulator-catalogue-unavailable` caveat rather than translating, and closing that seam is atlas's own
+  open work.
 - **Savestates.** Only savefiles are resolved; `savestate_directory` and the `sort_savestates_*` keys are unread.
 - **Standalone emulators.** Catalogued, but placements answer `Unresolved` until the standalone block lands.
 - **Reverse lookup.** Atlas is forward-only (ROM → placement); "which ROM owns this save path" is yours.

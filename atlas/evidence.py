@@ -63,6 +63,12 @@ CAVEAT_ARRANGEMENT_UNVERIFIED = "arrangement-unverified"
 CAVEAT_ARRANGEMENT_VERSION_DRIFTED = "arrangement-version-drifted"
 
 
+# This check exists verbatim three times, one per packaged-data loader
+# (:func:`atlas.oddities._expect_str`, :func:`atlas.systems._expect_str`). The
+# triplication is the deliberate cost of keeping the loaders independent of each
+# other: each reads its one file and shares no machinery with the other two, so
+# a defect in one table can never fail the load of another — and a fidelity
+# finding about what counts as a string belongs in all three.
 def _expect_str(value: object, where: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{where}: expected a non-empty string, got {value!r}")

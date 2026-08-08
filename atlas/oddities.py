@@ -46,6 +46,12 @@ _KNOWN_GRANULARITIES = set(GRANULARITIES)
 _KNOWN_FILE_TEMPLATES = (TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID)
 
 
+# This check exists verbatim three times, one per packaged-data loader
+# (:func:`atlas.evidence._expect_str`, :func:`atlas.systems._expect_str`). The
+# triplication is the deliberate cost of keeping the loaders independent of each
+# other: each reads its one file and shares no machinery with the other two, so
+# a defect in one table can never fail the load of another — and a fidelity
+# finding about what counts as a string belongs in all three.
 def _expect_str(value: object, where: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{where}: expected a non-empty string, got {value!r}")
