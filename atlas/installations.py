@@ -3224,9 +3224,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return os.path.join(self._esde_config_home(), "ROMs")
 
     # Flatpak's overrides directories, one per installation. Both hold a file
-    # per app id and a file named "global" that applies to every app — observed
-    # live: `flatpak override --show [APP]` (flatpak 1.16.6) opens exactly these
-    # four paths, `strace`d on the reference machine 2026-08-08.
+    # per app id and a file named "global" that applies to every app. Each of
+    # the four spellings was observed live under `strace` (flatpak 1.16.6,
+    # reference machine 2026-08-08): one `flatpak override --show` invocation
+    # opens exactly one file, and the four flag combinations — plain,
+    # `--user`, `<app id>`, `--user <app id>` — open these four in turn.
     _FLATPAK_OVERRIDES_USER = os.path.join(".local", "share", "flatpak", "overrides")
     _FLATPAK_OVERRIDES_SYSTEM = os.path.join("/var", "lib", "flatpak", "overrides")
     _FLATPAK_OVERRIDES_GLOBAL = "global"
