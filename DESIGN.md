@@ -104,6 +104,13 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 #    "absent" is a claim about the machine (no such core here), "unsupported"
 #    one about atlas (the emulator is here, its rules are outside coverage) —
 #    the same fact, and the same word, the placement route answers with.
+#    A declaration is display knowledge, never a launch gate: at the RetroArch
+#    pin (a79435a) the .info firmware list is evaluated only by display
+#    surfaces — menu_displaylist.c:880 and ui_qt.cpp:1238, of which the
+#    Qt-less binary RetroDECK ships reaches only the first — while
+#    task_content.c/runloop.c reference none of it. So an answer says which
+#    system's firmware a file is and where it goes, never that a launch will
+#    check for it.
 ```
 
 - **Installations are handles.** Every question is asked _of an installation_, never of a global "the system". A machine
@@ -355,11 +362,16 @@ silent miss into a failing test on the side that can fix it. The failure being p
 identifier no catalogue declares reaches a question, the question answers "no emulator for that system", and a
 vocabulary mistake has been read as a fact about the machine.
 
-_Still open (item 20b):_ the firmware route derives a system from a core's own `systemname` where no catalogue
-enumerates one (`SOURCE_SLUG`), and that derivation speaks **atlas slugs, not ES-DE names** — 13 of the 55 it can
-produce (`dc`, `gg`, `pce`, `sms`, `lynx`, …) are not ids. `firmware_for_system` states that switch as a caveat rather
-than translating. That one is atlas's own seam, not a foreign vocabulary, so it is atlas's to close — but per name, from
-what the machine declares, never assumed from the spelling.
+_Settled (item 20b):_ the firmware route speaks the same ids everywhere. The `systemname` map's values are ES-DE ids
+(map version 2, `atlas/firmware.py` — per-entry citations into the deployed `es_systems.xml` and the shipped `.info`
+files), so a catalogue-less arrangement answers `firmware_for_system("dreamcast")` exactly like a catalogued one, and
+the libretro-derived slugs (`dc`, `pce`, …) are internal history. What remains is a fact about the world, not a seam: a
+handful of systems exist on supported machines and in no ES-DE build (`SYSTEMS_WITHOUT_CATALOGUE_ID` — `bk`, `ti83`,
+`ep128`), and those answer atlas's own spelling marked with `system-not-in-catalogue`, the same form `_unknown` takes —
+a token no catalogue declares, plus a structured caveat saying why. Two guards hold the map to its word: every value
+must be an id or a declared own spelling, and the recorded evidence joins (fullname, catalogue-launches-core) are re-run
+against the deployed `es_systems.xml`. A systemname the map does not know still files mechanically (`SOURCE_SLUG`) —
+visible in `system_source`, and marked as derived where the core spans systems.
 
 ## Settled decisions
 
@@ -488,9 +500,6 @@ what the machine declares, never assumed from the spelling.
 ## Open questions
 
 - The catalogue API when multiple frontends coexist on one EmuDeck install.
-- The derived-slug switch on catalogue-less arrangements (item 20b): `firmware_for_system` speaks the frontend's system
-  name where a catalogue exists and an atlas slug derived from the core's own `systemname` where none does (`dreamcast`
-  vs `dc`), and states which via a caveat rather than translating. The id set itself is settled — see Vocabulary.
 - Whether `checked` needs a fifth value for artifacts whose whole-file hash is not a meaningful identity — MAME-style
   romset zips hash differently per romset version and merge mode. 21 of the 388 packaged identities are archives or data
   packs; deciding this needs per-entry provenance in the table, not an extension heuristic.

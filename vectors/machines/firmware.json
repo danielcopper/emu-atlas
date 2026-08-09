@@ -489,7 +489,7 @@
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
-                  "system": "dc",
+                  "system": "dreamcast",
                   "system_source": "systemname",
                   "need": "required",
                   "file_name": "dc_boot.bin",
@@ -576,7 +576,7 @@
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
-                  "system": "dc",
+                  "system": "dreamcast",
                   "system_source": "systemname",
                   "need": "required",
                   "file_name": "dc_boot.bin",
@@ -960,7 +960,7 @@
                     "systemname": "Game Boy/Game Boy Color/Game Boy Advance",
                     "files": "gba_bios.bin",
                     "database": "Nintendo - Game Boy|Nintendo - Game Boy Color|Nintendo - Game Boy Advance",
-                    "table_version": "2"
+                    "table_version": "3"
                   }
                 }
               ]
@@ -1172,7 +1172,7 @@
                     "core_so": "skyemu_libretro.so",
                     "files": "gba_bios.bin, nds7.bin",
                     "database": "Nintendo - Nintendo DS|Nintendo - Game Boy|Nintendo - Game Boy Advance",
-                    "table_version": "2"
+                    "table_version": "3"
                   }
                 }
               ]
@@ -2773,7 +2773,7 @@
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
-                  "system": "dc",
+                  "system": "dreamcast",
                   "system_source": "systemname",
                   "need": "required",
                   "file_name": "dc_boot.bin",
@@ -3526,7 +3526,7 @@
               "requirements": [
                 {
                   "core_so": "trailing_libretro.so",
-                  "system": "dc",
+                  "system": "dreamcast",
                   "system_source": "systemname",
                   "need": "required",
                   "file_name": "dc_boot.bin",
@@ -4473,13 +4473,1250 @@
                 "count": "1",
                 "cores": "fictional_libretro.so",
                 "system": "atari5200",
-                "table_version": "2"
+                "table_version": "3"
               }
             },
             {
               "code": "system-unknown",
               "data": {
                 "system": "atari5200"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-system-no-catalogue-names-keeps-atlas-spelling-marked",
+      "rationale": "The no-catalogue-word family: the TI-83 calculators exist on the machine and in no ES-DE build, so there is no catalogue id to map 'ti83' onto. Refusing to answer would hide real firmware, so the requirement keeps atlas's own spelling and the core carries system-not-in-catalogue naming the files filed under it — a consumer validating identifiers against known_systems() reads a marked word, not a membership mistake.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/numero_libretro.info": "display_name = \"TI-83 (Numero)\"\nsystemname = \"TI83\"\nfirmware_count = 1\nfirmware0_desc = \"ti83.rom (TI-83)\"\nfirmware0_path = \"ti83.rom\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/numero_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "numero_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "numero_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "numero_libretro.so",
+                  "system": "ti83",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "ti83.rom",
+                  "path": "/home/deck/.config/retroarch/system/ti83.rom",
+                  "declared": "ti83.rom",
+                  "identity": {
+                    "md5": "d4448d09bbfde687c04f9e3310e023ab",
+                    "sha1": "ef66dad3e7b2b6a86f326765e7dfd7d1a308ad8f",
+                    "size": 262144
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-not-in-catalogue",
+                  "data": {
+                    "core_so": "numero_libretro.so",
+                    "files": "ti83.rom",
+                    "map_version": "2",
+                    "system": "ti83"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-the-enterprise-128-is-not-a-commodore",
+      "rationale": "ep128emu's systemname is the bare string '128', and its own firmware descriptions say what the machine is: the Enterprise 64/128. Map version 1 misfiled it under the Commodore c128; version 2 splits the pair — 'C128' goes to c64, and this one gets atlas's own spelling 'ep128' plus the system-not-in-catalogue mark, because no ES-DE build declares an Enterprise id.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/ep128emu_core_libretro.info": "display_name = \"Enterprise 64/128 (ep128emu)\"\nsystemname = \"128\"\nfirmware_count = 1\nfirmware0_desc = \"exos21.rom (Enterprise 128 Expandible OS 2.1)\"\nfirmware0_path = \"ep128emu/roms/exos21.rom\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/ep128emu_core_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "ep128emu_core_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "ep128emu_core_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "ep128emu_core_libretro.so",
+                  "system": "ep128",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "exos21.rom",
+                  "path": "/home/deck/.config/retroarch/system/ep128emu/roms/exos21.rom",
+                  "declared": "ep128emu/roms/exos21.rom",
+                  "identity": {
+                    "md5": "f36f24cbb87745fbd2714e4df881db09",
+                    "sha1": "55315b20fecb4441a07ee4bc5dc7153f396e0a2e",
+                    "size": 32768
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-not-in-catalogue",
+                  "data": {
+                    "core_so": "ep128emu_core_libretro.so",
+                    "files": "exos21.rom",
+                    "map_version": "2",
+                    "system": "ep128"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-the-c128-files-under-c64-the-way-the-catalogue-does",
+      "rationale": "The other half of the split: no ES-DE build declares a c128 id, and the deployed catalogue's own c64 entry launches vice_x128 — so 'C128' files under c64, and a c64 system query reaches the core's JiffyDOS declarations. The database ('Commodore - 64') concurs, so the old disagreement evidence is gone and the core states no assignment caveat.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/vice_x128_libretro.info": "display_name = \"Commodore - C128 (VICE x128)\"\nsystemname = \"C128\"\ndatabase = \"Commodore - 64\"\nfirmware_count = 1\nfirmware0_desc = \"vice/JiffyDOS_C128.bin (JiffyDOS C128 Kernal)\"\nfirmware0_path = \"vice/JiffyDOS_C128.bin\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/vice_x128_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "c64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "vice_x128_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "vice_x128_libretro.so",
+                  "system": "c64",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "JiffyDOS_C128.bin",
+                  "path": "/home/deck/.config/retroarch/system/vice/JiffyDOS_C128.bin",
+                  "declared": "vice/JiffyDOS_C128.bin",
+                  "identity": {
+                    "md5": "cbbd1bbcb5e4fd8046b6030ab71fc021",
+                    "sha1": "7d1898f32beae4b2ae610d469ce578a588efaa7c",
+                    "size": 16384
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "c64"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-flycast-arcade-boards-file-under-their-boards",
+      "rationale": "The per-file tranche: Flycast declares everything under systemname 'Sega Dreamcast', but naomi.zip and awbios.zip are arcade-board BIOS packs whose own descriptions name their boards, so the override files them under naomi and atomiswave — and a naomi query reaches Flycast through them. The core answers with its whole declaration set, dc_boot.bin included, and the derived caveat now names only dc_boot.bin: the board files carry a per-file source, the boot ROM still inherits from the systemname.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/flycast_libretro.info": "display_name = \"Sega - Dreamcast/NAOMI (Flycast)\"\nsystemname = \"Sega Dreamcast\"\ndatabase = \"Sega - Dreamcast|Sega - Naomi|Sega - Naomi 2|Atomiswave\"\nfirmware_count = 3\nfirmware0_desc = \"dc/dc_boot.bin (Dreamcast BIOS)\"\nfirmware0_path = \"dc/dc_boot.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"dc/naomi.zip (Naomi Bios from MAME)\"\nfirmware1_path = \"dc/naomi.zip\"\nfirmware1_opt = \"true\"\nfirmware2_desc = \"dc/awbios.zip (Atomiswave BIOS from MAME)\"\nfirmware2_path = \"dc/awbios.zip\"\nfirmware2_opt = \"true\"\n",
+          "/usr/lib/libretro/flycast_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "naomi"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "flycast_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "flycast_libretro.so",
+                  "system": "atomiswave",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "awbios.zip",
+                  "path": "/home/deck/.config/retroarch/system/dc/awbios.zip",
+                  "declared": "dc/awbios.zip",
+                  "identity": {
+                    "md5": "85254fbe320ca82a768ec2c26bb08def",
+                    "sha1": "7940c7bf29eee85a5b2fdec78750b19aa22895dc",
+                    "size": 42296
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": "flycast_libretro.so",
+                  "system": "dreamcast",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "dc_boot.bin",
+                  "path": "/home/deck/.config/retroarch/system/dc/dc_boot.bin",
+                  "declared": "dc/dc_boot.bin",
+                  "identity": {
+                    "md5": "e10c53c2f8b90bab96ead2d368858623",
+                    "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
+                    "size": 2097152
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": "flycast_libretro.so",
+                  "system": "naomi",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "naomi.zip",
+                  "path": "/home/deck/.config/retroarch/system/dc/naomi.zip",
+                  "declared": "dc/naomi.zip",
+                  "identity": {
+                    "md5": "526eda1e2a7920c92c88178789d71d84",
+                    "sha1": "c96711c01c0158f161791d6fbe75d88329e8ac0a",
+                    "size": 9321533
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "flycast_libretro.so",
+                    "systemname": "Sega Dreamcast",
+                    "files": "dc_boot.bin",
+                    "database": "Sega - Dreamcast|Sega - Naomi|Sega - Naomi 2|Atomiswave",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "naomi"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-the-master-system-family-answers-mastersystem",
+      "rationale": "The sms slug became the catalogue's word: every Master-System systemname files under mastersystem (ruled over mark3 — one id for the hardware, the J dump included). smsplus also declares BIOS.col, a ColecoVision BIOS by its own description, which the override files under colecovision — so the mastersystem answer carries it as what it is, and the derived caveat names only bios.sms.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/smsplus_libretro.info": "display_name = \"Sega - MS/GG (SMS Plus GX)\"\nsystemname = \"Sega 8-bit\"\ndatabase = \"Sega - Game Gear|Sega - Master System - Mark III\"\nfirmware_count = 2\nfirmware0_desc = \"bios.sms (Master System BIOS)\"\nfirmware0_path = \"bios.sms\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"BIOS.col (Colecovision BIOS)\"\nfirmware1_path = \"BIOS.col\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/smsplus_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "mastersystem"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "smsplus_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "smsplus_libretro.so",
+                  "system": "colecovision",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "BIOS.col",
+                  "path": "/home/deck/.config/retroarch/system/BIOS.col",
+                  "declared": "BIOS.col",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": "smsplus_libretro.so",
+                  "system": "mastersystem",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "bios.sms",
+                  "path": "/home/deck/.config/retroarch/system/bios.sms",
+                  "declared": "bios.sms",
+                  "identity": {
+                    "md5": "840481177270d5642a14ca71ee72844c",
+                    "sha1": "c315672807d8ddb8d91443729405c766dd95cae7",
+                    "size": 8192
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "smsplus_libretro.so",
+                    "systemname": "Sega 8-bit",
+                    "files": "bios.sms",
+                    "database": "Sega - Game Gear|Sega - Master System - Mark III",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "mastersystem"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-the-arcade-umbrella-is-the-catalogues-own-word",
+      "rationale": "'Arcade (various)' files under arcade — the id the deployed catalogue itself launches these cores under — instead of the old private marker _arcade. A query for arcade therefore reaches FBNeo's board packs on every arrangement; refining neogeo.zip to its own board id is later per-file override work.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/fbneo_libretro.info": "display_name = \"Arcade (FinalBurn Neo)\"\nsystemname = \"Arcade (various)\"\nfirmware_count = 1\nfirmware0_desc = \"fbneo/neogeo.zip (NeoGeo BIOS - Mandatory for NeoGeo games)\"\nfirmware0_path = \"fbneo/neogeo.zip\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/fbneo_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "arcade"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "fbneo_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "fbneo_libretro.so",
+                  "system": "arcade",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "neogeo.zip",
+                  "path": "/home/deck/.config/retroarch/system/fbneo/neogeo.zip",
+                  "declared": "fbneo/neogeo.zip",
+                  "identity": {
+                    "md5": "00dad01abdbf8ea9e79ad2fe11bdb182",
+                    "sha1": "deb62b0074b8cae4f162c257662136733cfc76ad",
+                    "size": 1859335
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "arcade"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-the-engine-split-follows-the-catalogue-ports-half",
+      "rationale": "The _engine marker split per systemname, the way the deployed catalogue files the cores: ECWolf launches under ports, so 'Wolfenstein 3D Game Engine' maps there, and a ports query selects ECWolf alone — the ScummVM and RPG-Maker cores on the same machine stay out of the answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/ecwolf_libretro.info": "display_name = \"Wolfenstein 3D (ECWolf)\"\nsystemname = \"Wolfenstein 3D Game Engine\"\ndatabase = \"Wolfenstein 3D\"\nfirmware_count = 1\nfirmware0_desc = \"ecwolf.pk3 (ECWolf System File)\"\nfirmware0_path = \"ecwolf.pk3\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/ecwolf_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/scummvm_libretro.info": "display_name = \"ScummVM\"\nsystemname = \"Game engine\"\nfirmware_count = 1\nfirmware0_desc = \"scummvm.zip (ScummVM data pack)\"\nfirmware0_path = \"scummvm.zip\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/scummvm_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/mkxp_libretro.info": "display_name = \"RPG Maker XP/VX/VX Ace (mkxp-z)\"\nsystemname = \"RPG Maker XP/VX/VX Ace Game Engine\"\nfirmware_count = 1\nfirmware0_desc = \"mkxp-z/RTP (Run Time Packages)\"\nfirmware0_path = \"mkxp-z/soundfont.sf2\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/mkxp_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "ecwolf_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "ecwolf_libretro.so",
+                  "system": "ports",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "ecwolf.pk3",
+                  "path": "/home/deck/.config/retroarch/system/ecwolf.pk3",
+                  "declared": "ecwolf.pk3",
+                  "identity": {
+                    "md5": "c011b428819eea4a80b455c245a5a04d",
+                    "sha1": "9259b87edfe9b9f6d0749788a75a6ccf158f50aa",
+                    "size": 178755
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "ports"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-the-engine-split-follows-the-catalogue-scummvm-half",
+      "rationale": "The scummvm half of the split: 'Game engine' is scummvm_libretro's systemname and nobody else's, and the catalogue launches that core under its own scummvm id. Same machine as the ports half; only the question differs, and only the ScummVM core answers it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/ecwolf_libretro.info": "display_name = \"Wolfenstein 3D (ECWolf)\"\nsystemname = \"Wolfenstein 3D Game Engine\"\ndatabase = \"Wolfenstein 3D\"\nfirmware_count = 1\nfirmware0_desc = \"ecwolf.pk3 (ECWolf System File)\"\nfirmware0_path = \"ecwolf.pk3\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/ecwolf_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/scummvm_libretro.info": "display_name = \"ScummVM\"\nsystemname = \"Game engine\"\nfirmware_count = 1\nfirmware0_desc = \"scummvm.zip (ScummVM data pack)\"\nfirmware0_path = \"scummvm.zip\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/scummvm_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/mkxp_libretro.info": "display_name = \"RPG Maker XP/VX/VX Ace (mkxp-z)\"\nsystemname = \"RPG Maker XP/VX/VX Ace Game Engine\"\nfirmware_count = 1\nfirmware0_desc = \"mkxp-z/RTP (Run Time Packages)\"\nfirmware0_path = \"mkxp-z/soundfont.sf2\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/mkxp_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "scummvm"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "scummvm_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "scummvm_libretro.so",
+                  "system": "scummvm",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scummvm.zip",
+                  "path": "/home/deck/.config/retroarch/system/scummvm.zip",
+                  "declared": "scummvm.zip",
+                  "identity": {
+                    "md5": "a17e0e0150155400d8cced329563d9c8",
+                    "sha1": "718c1a00d38e0810a1ad0ffde79f73447f846f01",
+                    "size": 9523360
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "scummvm"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-the-rpg-maker-xp-systemname-files-mechanically",
+      "rationale": "The dropped map entry: no shipped .info carries 'RPG Maker XP/VX/VX Ace Game Engine', so the map no longer rules it and the systemname files mechanically like any other unknown one — reachable under its mechanical spelling, with the derived-assignment caveat stating that the filing inherits from a systemname naming several engines.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/ecwolf_libretro.info": "display_name = \"Wolfenstein 3D (ECWolf)\"\nsystemname = \"Wolfenstein 3D Game Engine\"\ndatabase = \"Wolfenstein 3D\"\nfirmware_count = 1\nfirmware0_desc = \"ecwolf.pk3 (ECWolf System File)\"\nfirmware0_path = \"ecwolf.pk3\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/ecwolf_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/scummvm_libretro.info": "display_name = \"ScummVM\"\nsystemname = \"Game engine\"\nfirmware_count = 1\nfirmware0_desc = \"scummvm.zip (ScummVM data pack)\"\nfirmware0_path = \"scummvm.zip\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/scummvm_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/mkxp_libretro.info": "display_name = \"RPG Maker XP/VX/VX Ace (mkxp-z)\"\nsystemname = \"RPG Maker XP/VX/VX Ace Game Engine\"\nfirmware_count = 1\nfirmware0_desc = \"mkxp-z/RTP (Run Time Packages)\"\nfirmware0_path = \"mkxp-z/soundfont.sf2\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/mkxp_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mkxp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mkxp_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "mkxp_libretro.so",
+                  "system": "rpg-maker-xp-vx-vx-ace-game-engine",
+                  "system_source": "slug",
+                  "need": "optional",
+                  "file_name": "soundfont.sf2",
+                  "path": "/home/deck/.config/retroarch/system/mkxp-z/soundfont.sf2",
+                  "declared": "mkxp-z/soundfont.sf2",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "mkxp_libretro.so",
+                    "systemname": "RPG Maker XP/VX/VX Ace Game Engine",
+                    "files": "soundfont.sf2",
+                    "database": "",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-the-pce-family-answers-pcenginecd",
+      "rationale": "Every carrier of the PC-Engine systemnames declares exactly the CD system cards, so the ruled id is what the files are for: pcenginecd. The one declared file inherits its system from the core's own systemname, and the caveat says so — the core is launched under several catalogue systems and no per-file source is established yet.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_pce_libretro.info": "display_name = \"NEC - PC Engine (Beetle PCE)\"\nsystemname = \"PC Engine/SuperGrafx/CD\"\ndatabase = \"NEC - PC Engine SuperGrafx|NEC - PC Engine - TurboGrafx 16|NEC - PC Engine CD - TurboGrafx-CD\"\nfirmware_count = 1\nfirmware0_desc = \"syscard3.pce (Super CD-ROM2 System V3.xx)\"\nfirmware0_path = \"syscard3.pce\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/mednafen_pce_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "pcenginecd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mednafen_pce_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "mednafen_pce_libretro.so",
+                  "system": "pcenginecd",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "syscard3.pce",
+                  "path": "/home/deck/.config/retroarch/system/syscard3.pce",
+                  "declared": "syscard3.pce",
+                  "identity": {
+                    "md5": "38179df8f4ac870017db21ebcbf53114",
+                    "sha1": "79f5ff55dd10187c7fd7b8daab0b3ffbd1f56a2c",
+                    "size": 262144
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "mednafen_pce_libretro.so",
+                    "systemname": "PC Engine/SuperGrafx/CD",
+                    "files": "syscard3.pce",
+                    "database": "NEC - PC Engine SuperGrafx|NEC - PC Engine - TurboGrafx 16|NEC - PC Engine CD - TurboGrafx-CD",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "pcenginecd"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-an-own-spelling-answers-on-the-catalogue-route",
+      "rationale": "The own spellings are question words on EVERY route. A catalogue can neither enumerate nor deny a word no build declares, so asking a catalogued arrangement for ti83 must not manufacture system-unknown out of a word atlas itself publishes: the cores' own declarations are the enumeration, exactly as on a catalogue-less arrangement, and the answer-level system-not-in-catalogue says why — the word, not the machine, is what no catalogue has. The core-level mark rides too, naming the files.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 1\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/numero_libretro.info": "display_name = \"TI-83 (Numero)\"\nsystemname = \"TI83\"\nfirmware_count = 1\nfirmware0_desc = \"ti83.rom (TI-83)\"\nfirmware0_path = \"ti83.rom\"\nfirmware0_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/numero_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ti83"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "numero_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "numero_libretro.so",
+                  "system": "ti83",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "ti83.rom",
+                  "path": "/mnt/sd/retrodeck/bios/ti83.rom",
+                  "declared": "ti83.rom",
+                  "identity": {
+                    "md5": "d4448d09bbfde687c04f9e3310e023ab",
+                    "sha1": "ef66dad3e7b2b6a86f326765e7dfd7d1a308ad8f",
+                    "size": 262144
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-not-in-catalogue",
+                  "data": {
+                    "core_so": "numero_libretro.so",
+                    "system": "ti83",
+                    "files": "ti83.rom",
+                    "map_version": "2"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "system-not-in-catalogue",
+              "data": {
+                "system": "ti83",
+                "map_version": "2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-a-word-outside-the-vocabulary-stays-unknown",
+      "rationale": "The discriminating direction: the retired slug 'dc' is neither an ES-DE id nor a published own spelling, so the catalogued route reads its catalogue, finds no such system, and answers empty with system-unknown — the same machine that answers 'ti83' with rows. Only membership in the published set makes a non-catalogue word answerable; anything else stays a vocabulary mistake the caller must see.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 1\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/numero_libretro.info": "display_name = \"TI-83 (Numero)\"\nsystemname = \"TI83\"\nfirmware_count = 1\nfirmware0_desc = \"ti83.rom (TI-83)\"\nfirmware0_path = \"ti83.rom\"\nfirmware0_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/numero_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "dc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "system-unknown",
+              "data": {
+                "system": "dc"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-own-spelling-is-marked-by-the-word-not-the-machine",
+      "rationale": "The catalogue-less half of the same guarantee: a ti83 question answers the filed rows led by system-not-in-catalogue, NOT by emulator-catalogue-unavailable — this machine indeed ships no catalogue, but that is not why the list is derived; no catalogue anywhere could enumerate the word, and stating the machine-shaped reason would let a catalogued arrangement answer differently. Both routes carry the identical mark for the identical fact.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/numero_libretro.info": "display_name = \"TI-83 (Numero)\"\nsystemname = \"TI83\"\nfirmware_count = 1\nfirmware0_desc = \"ti83.rom (TI-83)\"\nfirmware0_path = \"ti83.rom\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/numero_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ti83"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "numero_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "numero_libretro.so",
+                  "system": "ti83",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "ti83.rom",
+                  "path": "/home/deck/.config/retroarch/system/ti83.rom",
+                  "declared": "ti83.rom",
+                  "identity": {
+                    "md5": "d4448d09bbfde687c04f9e3310e023ab",
+                    "sha1": "ef66dad3e7b2b6a86f326765e7dfd7d1a308ad8f",
+                    "size": 262144
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-not-in-catalogue",
+                  "data": {
+                    "core_so": "numero_libretro.so",
+                    "system": "ti83",
+                    "files": "ti83.rom",
+                    "map_version": "2"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "system-not-in-catalogue",
+              "data": {
+                "system": "ti83",
+                "map_version": "2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-own-spelling-with-nothing-filed-is-empty-not-unknown",
+      "rationale": "The suppress rule: a published own spelling is vocabulary, so a machine where nothing files under it answers EMPTY and marked — system-not-in-catalogue for the word, plus no-firmware-declaration for the established absence, stated at answer level because with zero cores there is no entry to say it per emulator (the id-with-declaration-less-emulators shape this mirrors carries the same fact on its read cores instead). system-unknown would blame the identifier for the machine; it fires only for words in neither vocabulary, which the word-outside-the-set vector pins.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/snes9x_libretro.info": "display_name = \"Nintendo - SNES (Snes9x)\"\nsystemname = \"Super Nintendo Entertainment System\"\n",
+          "/usr/lib/libretro/snes9x_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ti83"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "system-not-in-catalogue",
+              "data": {
+                "system": "ti83",
+                "map_version": "2"
+              }
+            },
+            {
+              "code": "no-firmware-declaration",
+              "data": {
+                "system": "ti83"
               }
             }
           ]
