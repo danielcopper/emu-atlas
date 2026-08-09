@@ -46,6 +46,7 @@ from atlas.firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
     CAVEAT_CORE_INFO_UNREADABLE,
+    CAVEAT_EMULATOR_CATALOGUE_SEALED,
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
@@ -3028,6 +3029,168 @@ CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
 _SETTINGS_UNPARSEABLE = "unparseable"
 
 
+# The catalogue file's own name, spelled once: ES-DE uses it for the bundled
+# layer, the custom_systems overlay and the resource-override shadow alike,
+# and the three probes below must never drift apart on it.
+_ES_SYSTEMS_XML = "es_systems.xml"
+
+
+def _catalogue_unread_caveat(system: str | None = None) -> tuple[Caveat, ...]:
+    """The caveat for a catalogue that could not be read — the same fact as the firmware route's.
+
+    One fact, one code: ``firmware_for_system`` already states this exact
+    thing when its catalogue comes back unread, and an answer that is empty
+    because nobody could look is the same answer whichever door it left by.
+    Module-level because it is the same fact on every catalogued arrangement —
+    RetroDECK's bundled layer and EmuDeck's on-disk one degrade through the
+    one builder, so the two can never spell the claim apart.
+    """
+    return (
+        Caveat(
+            CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
+            "the frontend's emulator catalogue could not be read, so which emulators this "
+            "installation knows is unknown — this answer is empty because atlas could not look, "
+            "not because nothing is there",
+            {"system": system} if system is not None else {},
+        ),
+    )
+
+
+def _rom_path_undeclared_caveat(
+    system: str, declaration: SystemDeclaration | None
+) -> tuple[Caveat, ...]:
+    """A read catalogue that names no directory for this system.
+
+    The two ways it happens — no such system, or a system declared without
+    a ``<path>`` — are one code and one thing to do about it, so they
+    differ in the message and not in the data. What a client acts on is
+    that this catalogue states no directory.
+    """
+    subject = (
+        f"declares no system {system!r}"
+        if declaration is None
+        else f"declares {system!r} without a <path>"
+    )
+    return (
+        Caveat(
+            CAVEAT_ROM_PATH_UNDECLARED,
+            f"the frontend's catalogue was read and {subject}, so where its ROMs live is not "
+            "something this machine states — the answer is empty because the declaration is, "
+            "not because atlas could not look",
+            {"system": system},
+        ),
+    )
+
+
+def _rom_path_unresolved_caveat(system: str, declared: str, rom_directory: str) -> tuple[Caveat, ...]:
+    """A configured ROM directory that is not a path a ``%ROMPATH%`` can be resolved against.
+
+    One fact and one code, now that the other reasons have theirs: the
+    frontend's setting holds something relative or ``~``-prefixed, and what
+    those resolve against is the ES-DE process's own environment. A fact
+    about the machine, and the thing to do about it is to fix the setting.
+
+    The declaration travels in the data: it is the fact atlas *did*
+    establish, and a caller who knows their own setup can finish the
+    substitution atlas refused to guess at.
+    """
+    return (
+        Caveat(
+            CAVEAT_ROM_PATH_UNRESOLVED,
+            f"the catalogue declares {system!r} at {declared!r}, and ES-DE's ROMDirectory is "
+            f"{rom_directory!r}, which is not an absolute path — atlas states no directory rather "
+            "than guessing one, because a ROM directory guessed wrong is a real directory the "
+            "caller would go looking in",
+            {"system": system, "declared": declared, "configured": rom_directory},
+        ),
+    )
+
+
+def _settings_unreadable_caveat(system: str, path: str, status: str) -> tuple[Caveat, ...]:
+    """The frontend's settings are there and atlas could not read them.
+
+    A statement about atlas, not about the machine, and the reason it is
+    not the unset case: the frontend reads this file, so the ROM directory
+    it names is the one in force — and falling back on the default here
+    would state a directory belonging to a configuration nobody established.
+    """
+    return (
+        Caveat(
+            CAVEAT_FRONTEND_SETTINGS_UNREADABLE,
+            f"the frontend's settings at {path} exist and could not be read ({status}), so what "
+            f"they say about {system!r}'s ROM directory is unknown — atlas states none rather "
+            "than the default, which only applies to a file that sets nothing",
+            {"system": system, "path": path, "status": status},
+        ),
+    )
+
+
+def _per_game_override_caveat(override_label: str, spec: EmulatorSpec) -> Caveat:
+    """This game's gamelist entry selects a different emulator than *spec*.
+
+    One statement on both arrangements' entry routes: which emulator ES-DE
+    would actually launch decides the placement, and an entry that would not
+    launch this game says so instead of answering as if it would.
+    """
+    return Caveat(
+        CAVEAT_PER_GAME_OVERRIDE,
+        f"this game carries a per-game altemulator override selecting "
+        f"{override_label!r} — ES-DE would launch that emulator, not "
+        f"{spec.label!r}; ask emulators_for with content_path",
+        {"label": override_label},
+    )
+
+
+def _entries_from(
+    host: "_CatalogueHost",
+    specs: tuple[EmulatorSpec, ...],
+    selections: GamelistSelections,
+    *,
+    system_roms_dir: str | None,
+    content_path: str | None,
+) -> tuple[EmulatorEntry, ...]:
+    """Apply ES-DE's selection hierarchy to one already-read catalogue snapshot.
+
+    Module-level and host-parameterized: the hierarchy is ES-DE's, not one
+    arrangement's, so the catalogue answer and the firmware route of every
+    ES-DE-driven handle assemble their entries here instead of re-reading the
+    sources — or worse, growing a second copy of the promotion rule.
+
+    ``system_roms_dir`` is ``None`` where there is no anchor to match
+    against — either nothing named content, or the directory could not be
+    resolved. Per-game matching is skipped either way; the caller that
+    asked for it is the one holding the caveat that says why.
+    """
+    chosen_label: str | None = None
+    chosen_source: str | None = None
+    if content_path is not None and system_roms_dir is not None:
+        per_game = _match_per_game(selections, content_path, system_roms_dir=system_roms_dir)
+        if per_game is not None:
+            chosen_label = per_game
+            chosen_source = f'gamelist.xml: altemulator = "{per_game}" (per-game)'
+    if chosen_label is None and selections.system_label is not None:
+        chosen_label = selections.system_label
+        chosen_source = f'gamelist.xml: alternativeEmulator = "{selections.system_label}"'
+    if specs and chosen_label is not None:
+        for index, spec in enumerate(specs):
+            if spec.label == chosen_label:
+                promoted = _dc_replace(spec, selection=chosen_source)
+                specs = (promoted, *specs[:index], *specs[index + 1 :])
+                break
+    entry_caveats: tuple[Caveat, ...] = ()
+    if content_path is None and selections.per_game:
+        entry_caveats = (
+            Caveat(
+                CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+                f"{len(selections.per_game)} game(s) of this system carry per-game altemulator "
+                "overrides — this system-level order may be wrong for exactly those games; "
+                "ask emulators_for with content_path",
+                {"count": str(len(selections.per_game))},
+            ),
+        )
+    return tuple(EmulatorEntry(host, spec, entry_caveats) for spec in specs)
+
+
 @dataclass(frozen=True, slots=True)
 class _RomRoot:
     """What ES-DE substitutes for ``%ROMPATH%``, or which way it could not be established.
@@ -3085,7 +3248,8 @@ class RomPlacement:
     partial path: a caller acts on this by looking in a directory, so a
     half-resolved string would send it somewhere real and wrong. Which kind of
     ``None`` it is — an arrangement with no catalogue, one whose catalogue atlas
-    has not located, one whose catalogue could not be read, a system the
+    has not located, one whose catalogue could not be read, one whose readable
+    layers declare nothing while the rest is sealed away, a system the
     catalogue declares no path for, a setting that is not a path, settings
     nobody could read, or a relocated config home — is a caveat, exactly as an
     empty :class:`CatalogueAnswer` is.
@@ -3218,16 +3382,20 @@ class _CatalogueQueries:
     """The catalogue entry points, answered by every handle — including with a refusal.
 
     "Which emulator would launch this?" is a question about an arrangement, not
-    a RetroDECK feature, so every handle answers it. Only RetroDECK answers it
-    *from a catalogue*; the others state why they cannot, and those reasons are
-    different claims that must not collapse into one empty tuple:
+    a RetroDECK feature, so every handle answers it. RetroDECK answers it from
+    its ES-DE's full catalogue; EmuDeck answers it from its ES-DE's on-disk
+    layers where an ES-DE is present — stated as incomplete, because the
+    bundled layer is sealed inside the AppImage. The rest state why they
+    cannot, and those reasons are different claims that must not collapse into
+    one empty tuple:
 
     - a bare RetroArch has no frontend catalogue at all — a fact about the
       arrangement, and a settled one;
-    - an EmuDeck arrangement may well have one (it can be driven by ES-DE,
-      Pegasus or Steam ROM Manager), and atlas has not established where. That
-      is a statement about atlas, not about the machine, and a client that read
-      it as "no emulators" would be told something nobody checked.
+    - an EmuDeck arrangement with no ES-DE on disk may still have a catalogue
+      (Pegasus, Steam ROM Manager), and atlas has not established where those
+      keep one. That is a statement about atlas, not about the machine, and a
+      client that read it as "no emulators" would be told something nobody
+      checked.
     """
 
     kind: str
@@ -3250,9 +3418,10 @@ class _CatalogueQueries:
         are read from it live — a client that recomputes either from a table of
         its own is answering from somewhere the machine cannot contradict.
 
-        No directory is four different facts, and the codes tell them apart the
+        No directory is five different facts, and the codes tell them apart the
         way the catalogue question's do: the arrangement ships no catalogue, it
-        has one atlas has not established, its catalogue could not be read, or
+        has one atlas has not established, its catalogue could not be read, the
+        readable part of it declares nothing while the rest is sealed away, or
         the catalogue was read and this is what it says — no such system, or a
         ``%ROMPATH%`` nothing here resolves.
         """
@@ -3276,13 +3445,17 @@ class _CatalogueQueries:
         overrides, every returned entry states that as a catalogue caveat: the
         system-level answer may be wrong for exactly those games.
 
-        No entries is four different facts, and the three
-        ``emulator-catalogue-*`` codes tell them apart. None of the three means
+        No entries is five different facts, and the four
+        ``emulator-catalogue-*`` codes tell them apart. None of the four means
         the catalogue was read and the frontend knows no emulator for this
-        system — the only one of the four that is a statement about the
-        machine. The other three say why nobody could answer from a catalogue
-        at all: the arrangement ships none, atlas has not established where it
-        keeps one, or the one it has could not be read.
+        system — the only one of the five that is a statement about the
+        machine. Three say why nobody could answer from a catalogue at all:
+        the arrangement ships none, atlas has not established where it keeps
+        one, or the one it has could not be read. The fourth (``sealed``) says
+        the answer came from the readable part of a catalogue whose rest atlas
+        cannot open — it is the one that may also accompany real entries, and
+        an empty list under it means "nothing readable declares this", never
+        "the frontend knows none".
 
         The test is those codes, not an empty ``caveats``: a broken
         installation states its health findings on this answer as on every
@@ -3535,28 +3708,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 # design and can never stand in for this.
                 read = bool(bundled)
         custom: dict[str, SystemDeclaration] = {}
-        custom_path = os.path.join(root, "ES-DE", "custom_systems", "es_systems.xml")
+        custom_path = os.path.join(root, "ES-DE", "custom_systems", _ES_SYSTEMS_XML)
         custom_text = self._machine.read_text(custom_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, provenance="es_systems.xml (custom_systems overlay)")
         return merge_layers(bundled, custom), read
-
-    def _catalogue_unread_caveat(self, system: str | None = None) -> tuple[Caveat, ...]:
-        """The caveat for a catalogue that could not be read — the same fact as the firmware route's.
-
-        One fact, one code: ``firmware_for_system`` already states this exact
-        thing when its catalogue comes back unread, and an answer that is empty
-        because nobody could look is the same answer whichever door it left by.
-        """
-        return (
-            Caveat(
-                CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
-                "the frontend's emulator catalogue could not be read, so which emulators this "
-                "installation knows is unknown — this answer is empty because atlas could not look, "
-                "not because nothing is there",
-                {"system": system} if system is not None else {},
-            ),
-        )
 
     _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, bundled + custom_systems overlay)"
     _ROM_DIRECTORY_SOURCE = "ES-DE ROMDirectory read live (es_settings.xml)"
@@ -3657,12 +3813,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         declaration = by_system.get(system)
         if declaration is None or declaration.rom_path is None:
-            return _RomDirectory(caveats=self._rom_path_undeclared_caveat(system, declaration))
+            return _RomDirectory(caveats=_rom_path_undeclared_caveat(system, declaration))
         declared = declaration.rom_path
         root = self._rom_root()
         if root.unreadable is not None:
             return _RomDirectory(
-                caveats=self._settings_unreadable_caveat(
+                caveats=_settings_unreadable_caveat(
                     system, self._esde_settings_path(), root.unreadable
                 )
             )
@@ -3674,7 +3830,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if root.not_absolute is not None:
             return _RomDirectory(
                 sources=root.sources,
-                caveats=self._rom_path_unresolved_caveat(system, declared, root.not_absolute),
+                caveats=_rom_path_unresolved_caveat(system, declared, root.not_absolute),
             )
         resolved = resolve_rom_path(declared, root.directory)
         if resolved is None:
@@ -3685,37 +3841,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             # question must never give.
             return _RomDirectory(
                 sources=root.sources,
-                caveats=self._rom_path_unresolved_caveat(system, declared, root.directory or ""),
+                caveats=_rom_path_unresolved_caveat(system, declared, root.directory or ""),
             )
         return _RomDirectory(directory=resolved, sources=root.sources)
-
-    @staticmethod
-    def _settings_unreadable_caveat(system: str, path: str, status: str) -> tuple[Caveat, ...]:
-        """The frontend's settings are there and atlas could not read them.
-
-        A statement about atlas, not about the machine, and the reason it is
-        not the unset case: the frontend reads this file, so the ROM directory
-        it names is the one in force — and falling back on the default here
-        would state a directory belonging to a configuration nobody established.
-        """
-        return (
-            Caveat(
-                CAVEAT_FRONTEND_SETTINGS_UNREADABLE,
-                f"the frontend's settings at {path} exist and could not be read ({status}), so what "
-                f"they say about {system!r}'s ROM directory is unknown — atlas states none rather "
-                "than the default, which only applies to a file that sets nothing",
-                {"system": system, "path": path, "status": status},
-            ),
-        )
 
     def _default_rom_directory(self) -> str:
         """Where the frontend looks when ``ROMDirectory`` is unset — resolved, not asserted.
 
         ES-DE falls back on ``<home>/ROMs/`` when the setting is empty
-        (``es-app/src/FileData.cpp::getROMDirectory()``, ES-DE 3.4.1, ~L313-345,
-        line numbers read from the tagged source over the web; RetroDECK ships
-        the ``RetroDECK/ES-DE`` fork with that function unmodified at the pinned
-        build), and its home is not the user's: the launcher passes
+        (``es-app/src/FileData.cpp::getROMDirectory()``, ES-DE 3.4.1,
+        ``:271-305`` with the empty-setting branch at ``:283-284``; RetroDECK
+        ships the ``RetroDECK/ES-DE`` fork with that function unmodified at the
+        pinned build), and its home is not the user's: the launcher passes
         ``--home "${XDG_CONFIG_HOME}"`` unconditionally, which outranks both
         ``portable.txt`` and ``$HOME``. That makes the branch reachable and its
         value knowable, which is the whole difference between resolving and
@@ -3794,7 +3931,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
         version = _marker_version(config)
         if not read:
-            return SystemsAnswer(caveats=(*findings, *self._catalogue_unread_caveat())), version
+            return SystemsAnswer(caveats=(*findings, *_catalogue_unread_caveat())), version
         return SystemsAnswer(tuple(sorted(by_system)), (self._CATALOGUE_SOURCE,), findings), version
 
     def _gamelist_selections_at(self, root: str, system: str) -> GamelistSelections:
@@ -3826,7 +3963,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         by_system, read = self._read_catalogue(root)
         version = _marker_version(config)
         if not read:
-            return CatalogueAnswer(caveats=(*findings, *self._catalogue_unread_caveat(system))), version
+            return CatalogueAnswer(caveats=(*findings, *_catalogue_unread_caveat(system))), version
         # The anchor is only consulted where a content path was named, so only
         # that query pays ES-DE's settings read — and only that query can be
         # told the anchor failed, which is the whole reason its caveats join.
@@ -3837,7 +3974,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
         return (
             CatalogueAnswer(
-                self._entries_from(
+                _entries_from(
+                    self,
                     _declared_entries(by_system, system),
                     self._gamelist_selections_at(root, system),
                     system_roms_dir=anchor.directory,
@@ -3863,7 +4001,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
         version = _marker_version(config)
         if not read:
-            return RomPlacement(caveats=(*findings, *self._catalogue_unread_caveat(system))), version
+            return RomPlacement(caveats=(*findings, *_catalogue_unread_caveat(system))), version
 
         # A source names a reading this answer rests on, so the settings file
         # joins the list only where the resolution actually read it — which is
@@ -3898,57 +4036,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     @staticmethod
-    def _rom_path_undeclared_caveat(
-        system: str, declaration: SystemDeclaration | None
-    ) -> tuple[Caveat, ...]:
-        """A read catalogue that names no directory for this system.
-
-        The two ways it happens — no such system, or a system declared without
-        a ``<path>`` — are one code and one thing to do about it, so they
-        differ in the message and not in the data. What a client acts on is
-        that this catalogue states no directory.
-        """
-        subject = (
-            f"declares no system {system!r}"
-            if declaration is None
-            else f"declares {system!r} without a <path>"
-        )
-        return (
-            Caveat(
-                CAVEAT_ROM_PATH_UNDECLARED,
-                f"the frontend's catalogue was read and {subject}, so where its ROMs live is not "
-                "something this machine states — the answer is empty because the declaration is, "
-                "not because atlas could not look",
-                {"system": system},
-            ),
-        )
-
-    @staticmethod
-    def _rom_path_unresolved_caveat(system: str, declared: str, rom_directory: str) -> tuple[Caveat, ...]:
-        """A configured ROM directory that is not a path a ``%ROMPATH%`` can be resolved against.
-
-        One fact and one code, now that the other reasons have theirs: the
-        frontend's setting holds something relative or ``~``-prefixed, and what
-        those resolve against is the ES-DE process's own environment inside its
-        sandbox. A fact about the machine, and the thing to do about it is to
-        fix the setting.
-
-        The declaration travels in the data: it is the fact atlas *did*
-        establish, and a caller who knows their own setup can finish the
-        substitution atlas refused to guess at.
-        """
-        return (
-            Caveat(
-                CAVEAT_ROM_PATH_UNRESOLVED,
-                f"the catalogue declares {system!r} at {declared!r}, and ES-DE's ROMDirectory is "
-                f"{rom_directory!r}, which is not an absolute path — atlas states no directory rather "
-                "than guessing one, because a ROM directory guessed wrong is a real directory the "
-                "caller would go looking in",
-                {"system": system, "declared": declared, "configured": rom_directory},
-            ),
-        )
-
-    @staticmethod
     def _config_home_relocated_caveat(
         system: str, declared: str, path: str, key: str
     ) -> tuple[Caveat, ...]:
@@ -3971,54 +4058,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 {"system": system, "declared": declared, "path": path, "key": key},
             ),
         )
-
-    def _entries_from(
-        self,
-        specs: tuple[EmulatorSpec, ...],
-        selections: GamelistSelections,
-        *,
-        system_roms_dir: str | None,
-        content_path: str | None,
-    ) -> tuple[EmulatorEntry, ...]:
-        """Apply ES-DE's selection hierarchy to one already-read catalogue snapshot.
-
-        Split out from :meth:`emulators_for` so the firmware route can ask the
-        same question of the sources it has already read, instead of reading
-        the marker and both catalogue layers a second time.
-
-        ``system_roms_dir`` is ``None`` where there is no anchor to match
-        against — either nothing named content, or the directory could not be
-        resolved. Per-game matching is skipped either way; the caller that
-        asked for it is the one holding the caveat that says why.
-        """
-        chosen_label: str | None = None
-        chosen_source: str | None = None
-        if content_path is not None and system_roms_dir is not None:
-            per_game = _match_per_game(selections, content_path, system_roms_dir=system_roms_dir)
-            if per_game is not None:
-                chosen_label = per_game
-                chosen_source = f'gamelist.xml: altemulator = "{per_game}" (per-game)'
-        if chosen_label is None and selections.system_label is not None:
-            chosen_label = selections.system_label
-            chosen_source = f'gamelist.xml: alternativeEmulator = "{selections.system_label}"'
-        if specs and chosen_label is not None:
-            for index, spec in enumerate(specs):
-                if spec.label == chosen_label:
-                    promoted = _dc_replace(spec, selection=chosen_source)
-                    specs = (promoted, *specs[:index], *specs[index + 1 :])
-                    break
-        entry_caveats: tuple[Caveat, ...] = ()
-        if content_path is None and selections.per_game:
-            entry_caveats = (
-                Caveat(
-                    CAVEAT_PER_GAME_OVERRIDES_PRESENT,
-                    f"{len(selections.per_game)} game(s) of this system carry per-game altemulator "
-                    "overrides — this system-level order may be wrong for exactly those games; "
-                    "ask emulators_for with content_path",
-                    {"count": str(len(selections.per_game))},
-                ),
-            )
-        return tuple(EmulatorEntry(self, spec, entry_caveats) for spec in specs)
 
     def _query_from(
         self,
@@ -4160,7 +4199,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, marker_issues = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read = self._read_catalogue(root)
-        entries = self._entries_from(
+        entries = _entries_from(
+            self,
             _declared_entries(by_system, system),
             self._gamelist_selections_at(root, system),
             # No content is named on this route, so no per-game entry can match
@@ -4208,7 +4248,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         anchor = (
             self._esde_system_dir(by_system, spec.system)
             if read
-            else _RomDirectory(caveats=self._catalogue_unread_caveat(spec.system))
+            else _RomDirectory(caveats=_catalogue_unread_caveat(spec.system))
         )
         override_label = (
             None
@@ -4217,16 +4257,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
         if override_label is None or override_label == spec.label:
             return anchor.caveats
-        return (
-            *anchor.caveats,
-            Caveat(
-                CAVEAT_PER_GAME_OVERRIDE,
-                f"this game carries a per-game altemulator override selecting "
-                f"{override_label!r} — ES-DE would launch that emulator, not "
-                f"{spec.label!r}; ask emulators_for with content_path",
-                {"label": override_label},
-            ),
-        )
+        return (*anchor.caveats, _per_game_override_caveat(override_label, spec))
 
     def entry_savefile_location(
         self,
@@ -4304,6 +4335,39 @@ def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
     return result
 
 
+# EmuDeck's settings.sh records which frontends its installer was told to set
+# up — ``jsonToBashVars.sh:71`` writes ``doInstallESDE`` as a plain key=value
+# line (upstream ``dragoonDorise/EmuDeck`` @ ``863ab69``). The disk decides
+# whether ES-DE is answered from — EmuDeck's own presence test is the AppImage
+# stat (``ESDE_IsInstalled``, ``emuDeckESDE.sh:488-494``) — and when the
+# record and the disk disagree, the answer states the disagreement instead of
+# silently following either side.
+CAVEAT_FRONTEND_MARKER_MISMATCH = "frontend-marker-mismatch"
+
+
+@dataclass(frozen=True, slots=True)
+class _EsdeSnapshot:
+    """One catalogue query's reading of EmuDeck's ES-DE side.
+
+    ``refusal`` set means the answer is over: it is the complete caveat list
+    of an answer that enumerates nothing — no ES-DE on disk, or a broken
+    resource-override shadow — findings, reason and cross-check already in
+    answer order. ``refusal`` ``None`` means the layers were read:
+    ``by_system`` holds the merge, ``bundled_read`` whether the shadow stood
+    in for the bundled layer, ``relocated`` whether a ``portable.txt`` casts
+    doubt on the reads, and ``tail`` the caveats every enumerating answer
+    states after its findings (sealed, relocation, marker cross-check — the
+    pinned order).
+    """
+
+    findings: tuple[Caveat, ...]
+    refusal: tuple[Caveat, ...] | None
+    by_system: Mapping[str, SystemDeclaration]
+    bundled_read: bool
+    relocated: bool
+    tail: tuple[Caveat, ...]
+
+
 class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     """An EmuDeck arrangement — ``settings.sh`` is its truth, the bare
     ``org.libretro.RetroArch`` Flatpak is its RetroArch.
@@ -4314,6 +4378,19 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     (REVIEW M4) — and its health covers the claimed companion RetroArch config,
     so a stale ``settings.sh`` next to a vanished Flatpak is visible instead of
     silently suppressing the bare handle (REVIEW H10).
+
+    Its frontend side: EmuDeck deploys **upstream ES-DE as an AppImage** at
+    ``~/Applications/ES-DE.AppImage`` (``vars.sh:4-6``, ``emuDeckESDE.sh:9-10``,
+    upstream ``dragoonDorise/EmuDeck`` @ ``863ab69``; the stable
+    ``LinuxSteamDeckAppImage`` package from ES-DE's own ``latest_release.json``,
+    ``emuDeckESDE.sh:15,91-98``) and wires it through plain files under
+    ``~/ES-DE`` — the application data directory ES-DE resolves when launched
+    with no ``--home`` and no ``ESDE_APPDATA_DIR``, which is how EmuDeck's
+    launcher runs it (``tools/launchers/es-de/es-de.sh:5``; ES-DE v3.4.1
+    ``FileSystemUtil.cpp:259-285``). The catalogue answers read those files;
+    what stays out of reach is the **bundled** ``es_systems.xml``, which the
+    AppImage embeds (ES-DE ``INSTALL.md`` v3.4.1:1470) — see
+    :meth:`_read_esde_catalogue`.
     """
 
     kind = "emudeck"
@@ -4321,15 +4398,16 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     _RA_APP_ID = RETROARCH_FLATPAK_APP_ID
 
     def _catalogue_absence(self) -> Caveat:
-        # Not "there is none": EmuDeck installs a frontend, and which one — and
-        # where it keeps its catalogue — is what atlas has not established. The
-        # honest answer is about atlas, so the code says unestablished and the
-        # message does not describe the machine.
+        # Not "there is none": this EmuDeck runs no ES-DE atlas can find, and
+        # what its frontend is instead — Pegasus, Steam ROM Manager — is what
+        # atlas has not established. The honest answer is about atlas, so the
+        # code says unestablished and the message does not claim an absence.
         return Caveat(
             CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
-            "atlas has not established where an EmuDeck arrangement keeps its frontend catalogue — "
-            "EmuDeck can be driven by ES-DE, Pegasus or Steam ROM Manager — so which emulators run a "
-            "system is unknown here; name the core yourself with savefile_location(core_so=...)",
+            "no ES-DE is present on this EmuDeck arrangement (no ~/Applications/ES-DE.AppImage, no "
+            "~/ES-DE tree) — EmuDeck can also be driven by Pegasus or Steam ROM Manager, and atlas "
+            "has not established where those keep a catalogue, so which emulators run a system is "
+            "unknown here; name the core yourself with savefile_location(core_so=...)",
             {"arrangement": "emudeck"},
         )
 
@@ -4417,6 +4495,492 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         companion_status = self._machine.read_text(self._companion_cfg_path()).status
         return self._health_from(settings, marker_issues, companion_status)
 
+    # ── EmuDeck's ES-DE ─────────────────────────────────────────────────
+    # Every path below is EmuDeck's shipped wiring, read from the installer at
+    # the pinned revision (dragoonDorise/EmuDeck @ 863ab69) and from ES-DE's
+    # own source at v3.4.1 — docs/research/retrodeck-save-placement.md §13
+    # holds the evidence.
+
+    _ESDE_APPIMAGE_SUFFIX = os.path.join("Applications", "ES-DE.AppImage")
+    _ESDE_PORTABLE_SUFFIX = os.path.join("Applications", "portable.txt")
+    _ESDE_APPDATA_DIRNAME = "ES-DE"
+    _ESDE_SHADOW_SUFFIX = os.path.join("resources", "systems", "linux", _ES_SYSTEMS_XML)
+    _ESDE_OVERLAY_SUFFIX = os.path.join("custom_systems", _ES_SYSTEMS_XML)
+    _ESDE_SETTINGS_SUFFIX = os.path.join("settings", "es_settings.xml")
+    _ROM_DIRECTORY_SETTING = "ROMDirectory"
+    _FRONTEND_MARKER_KEY = "doInstallESDE"
+    _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, on-disk layers under ~/ES-DE)"
+    _ROM_DIRECTORY_SOURCE = "ES-DE ROMDirectory read live (es_settings.xml)"
+
+    def _esde_appdata_dir(self) -> str:
+        """ES-DE's application data directory — plain ``~/ES-DE``.
+
+        EmuDeck's launcher runs the AppImage with no ``--home`` and no
+        ``ESDE_APPDATA_DIR`` (``tools/launchers/es-de/es-de.sh:5``), so the
+        upstream resolution lands on ``<home>/ES-DE`` (ES-DE v3.4.1
+        ``FileSystemUtil.cpp:259-285``). A user-set ``ESDE_APPDATA_DIR`` in the
+        launch environment would move it and is written nowhere on disk — that
+        residual is documented, not probed; the on-disk relocation
+        (``portable.txt``) is (:meth:`_relocation_caveat`).
+        """
+        return os.path.join(self._home, self._ESDE_APPDATA_DIRNAME)
+
+    def _esde_appimage_path(self) -> str:
+        return os.path.join(self._home, self._ESDE_APPIMAGE_SUFFIX)
+
+    def _esde_present(self) -> bool:
+        """Whether ES-DE is on this disk — the AppImage, or its appdata tree.
+
+        The AppImage stat is EmuDeck's own installed-test
+        (``ESDE_IsInstalled``, ``emuDeckESDE.sh:488-494``: ``[ -e
+        "$ESDE_toolPath" ]``); the ``~/ES-DE`` tree covers an AppImage moved
+        or renamed out from under a configuration that still runs. Disk
+        decides — ``settings.sh``'s own record is a cross-check
+        (:meth:`_frontend_marker_caveat`), never the decision.
+        """
+        if self._machine.path_kind(self._esde_appimage_path()) != KIND_MISSING:
+            return True
+        return self._machine.path_kind(self._esde_appdata_dir()) == KIND_DIRECTORY
+
+    def _relocation_caveat(self) -> Caveat | None:
+        """The ``portable.txt`` statement, when one sits next to the AppImage — else ``None``.
+
+        ES-DE reads ``portable.txt`` from its executable directory and moves
+        its home by it — but only after validating the target: a path that
+        does not exist or is a regular file is rejected and the default home
+        stays (ES-DE v3.4.1 ``main.cpp:149-192``; the validation block is
+        ``:174-192``). EmuDeck writes none; a user can. Atlas stats only the
+        file's presence, so the honest claim is *may*: when one is there,
+        every ``~/ES-DE`` read this handle makes may be reading files the
+        frontend is not using — the answers still state what the on-disk tree
+        says, and this caveat states the suspicion, never silently. Reading
+        the file and validating its target the way ES-DE does is a possible
+        refinement; presence alone is what is stated today.
+        """
+        path = os.path.join(self._home, self._ESDE_PORTABLE_SUFFIX)
+        if self._machine.path_kind(path) == KIND_MISSING:
+            return None
+        return Caveat(
+            CAVEAT_CONFIG_HOME_RELOCATED,
+            f"a portable.txt sits next to the ES-DE AppImage at {path}, which may relocate "
+            "ES-DE's application data directory away from ~/ES-DE (ES-DE ignores it when its "
+            "target is missing or a file) — the on-disk files this answer was read from may "
+            "not be the ones the frontend is using",
+            {"path": path},
+        )
+
+    def _frontend_marker_caveat(self, settings: dict[str, str], present: bool) -> Caveat | None:
+        """The cross-check: ``settings.sh``'s ES-DE record against the disk — ``None`` in agreement.
+
+        ``doInstallESDE`` records the installer's choice
+        (``jsonToBashVars.sh:71``); the disk records what is actually here.
+        The disk decides the answer either way — this caveat exists so a stale
+        record is stated rather than discovered. A marker that writes neither
+        ``true`` nor ``false`` states nothing, and no disagreement can be
+        manufactured from silence.
+        """
+        stated = settings.get(self._FRONTEND_MARKER_KEY)
+        if stated not in ("true", "false"):
+            return None
+        if (stated == "true") == present:
+            return None
+        observed = "present" if present else "absent"
+        consequence = (
+            "the answer is read from the ES-DE on disk"
+            if present
+            else "no ES-DE answers here"
+        )
+        return Caveat(
+            CAVEAT_FRONTEND_MARKER_MISMATCH,
+            f"settings.sh states {self._FRONTEND_MARKER_KEY}={stated} while ES-DE is {observed} "
+            f"on disk — the marker's record is stale or the frontend changed hands; {consequence}, "
+            "because the disk is what runs",
+            {"key": self._FRONTEND_MARKER_KEY, "stated": stated, "observed": observed},
+        )
+
+    def _catalogue_sealed_caveat(self, system: str | None = None) -> Caveat:
+        # Reading the sealed layer itself (extracting the AppImage's squashfs)
+        # is tracked as issue #65; until then the on-disk layers are the whole
+        # readable catalogue and every catalogue answer says so.
+        return Caveat(
+            CAVEAT_EMULATOR_CATALOGUE_SEALED,
+            "ES-DE's bundled es_systems.xml is sealed inside the AppImage, which atlas does not "
+            "open — only the on-disk layers under ~/ES-DE were read, so this enumeration is "
+            "incomplete: a system or emulator this answer does not name may still be declared by "
+            "the frontend",
+            {"system": system} if system is not None else {},
+        )
+
+    def _read_esde_catalogue(self) -> tuple[dict[str, SystemDeclaration], bool, bool]:
+        """The readable ES-DE layers, merged → ``(by_system, bundled_read, shadow_broken)``.
+
+        The bundled ``es_systems.xml`` is embedded in the AppImage (ES-DE
+        ``INSTALL.md`` v3.4.1:1470) and atlas does not open AppImages, so the
+        bundled layer is ordinarily not readable — that is the ``sealed``
+        state, and ``bundled_read`` is ``False``. The one exception is ES-DE's
+        own per-file resource override (``INSTALL.md`` v3.4.1:1125): a file at
+        ``~/ES-DE/resources/systems/linux/es_systems.xml`` shadows the
+        embedded one for ES-DE itself, so where it exists and parses it *is*
+        the bundled layer, on disk — ``bundled_read`` is ``True`` and nothing
+        is sealed away. A shadow that exists and cannot be read or parsed is
+        the third state (``shadow_broken``): ES-DE loads that file, atlas
+        could not, and what the catalogue says is then unknown — the same
+        claim RetroDECK's unreadable bundled layer makes.
+
+        The overlay is EmuDeck's own write (``emuDeckESDE.sh:18,127``,
+        deployed from ``configs/emulationstation/custom_systems/`` and
+        path-rewritten at ``:144-145``): unlike RetroDECK's commented-out
+        stub, it declares real systems, and per ES-DE's merge semantics a
+        system it declares is *exactly* the one the frontend uses — the
+        sealed layer cannot contradict a same-name overlay system.
+        """
+        appdata = self._esde_appdata_dir()
+        bundled: dict[str, SystemDeclaration] = {}
+        bundled_read = False
+        shadow = self._machine.read_text(os.path.join(appdata, self._ESDE_SHADOW_SUFFIX))
+        if shadow.status != READ_MISSING:
+            if shadow.text is not None:
+                bundled = parse_es_systems(
+                    shadow.text, provenance="es_systems.xml (resource-override shadow)"
+                )
+                # Read AND parsed, the same rule RetroDECK's bundled layer
+                # holds to: an enumeration that came back empty because the
+                # file is broken is not an enumeration.
+                bundled_read = bool(bundled)
+            if not bundled_read:
+                return {}, False, True
+        custom: dict[str, SystemDeclaration] = {}
+        custom_text = self._machine.read_text(os.path.join(appdata, self._ESDE_OVERLAY_SUFFIX)).text
+        if custom_text is not None:
+            custom = parse_es_systems(custom_text, provenance="es_systems.xml (custom_systems overlay)")
+        return merge_layers(bundled, custom), bundled_read, False
+
+    def _gamelist_selections(self, system: str) -> GamelistSelections:
+        """The gamelist's emulator selections — EmuDeck seeds these itself.
+
+        ``~/ES-DE/gamelists/<system>/gamelist.xml`` is upstream's location
+        (ES-DE ``INSTALL.md`` v3.4.1:2145), and EmuDeck writes per-system
+        ``<alternativeEmulator>`` defaults into it (``ESDE_setEmu``,
+        ``emuDeckESDE.sh:427-480``) — the standalone-heavy selections are the
+        arrangement's normal state, not a user customization.
+        """
+        path = os.path.join(self._esde_appdata_dir(), "gamelists", system, "gamelist.xml")
+        text = self._machine.read_text(path).text
+        if text is None:
+            return GamelistSelections(system_label=None, per_game={})
+        return parse_gamelist(text)
+
+    def _esde_settings_path(self) -> str:
+        return os.path.join(self._esde_appdata_dir(), self._ESDE_SETTINGS_SUFFIX)
+
+    def _rom_directory(self) -> tuple[str | None, str | None]:
+        """The configured ``ROMDirectory``, and the status that stopped the reading.
+
+        The same three-outcome rule as RetroDECK's reading of the same file
+        (one grammar, one settings format): missing or set-nothing answers
+        ``(None, None)`` and the frontend's default applies; a file that is
+        there and could not be read or parsed answers the status, and no
+        directory. EmuDeck writes the value itself — ``ESDE_setDefaultSettings``
+        seds ``${romsPath}`` into it (``emuDeckESDE.sh:407-409``) — so on a
+        stock machine it is configured and absolute.
+        """
+        result = self._machine.read_text(self._esde_settings_path())
+        if result.status == READ_MISSING:
+            return None, None
+        if result.text is None:
+            return None, result.status
+        settings = parse_es_settings(result.text)
+        if settings is None:
+            return None, _SETTINGS_UNPARSEABLE
+        return settings.get(self._ROM_DIRECTORY_SETTING) or None, None
+
+    def _esde_rom_root(self, *, relocated: bool) -> _RomRoot:
+        """What this ES-DE substitutes for ``%ROMPATH%`` — or which way it could not be established.
+
+        The unset default is ``~/ROMs``: ES-DE falls back on ``<home>/ROMs``
+        (``FileData.cpp::getROMDirectory()``, ES-DE v3.4.1, ``:271-305``, the
+        empty-setting branch at ``:283-284``), and this ES-DE's home is the
+        user's own — the launcher passes no ``--home`` (``es-de.sh:5``). That
+        derivation is exactly what a ``portable.txt`` may move, so with one
+        present the default branch stops resolving (*relocated*) — a
+        configured absolute value is still answered, with the answer-level
+        relocation caveat riding.
+        """
+        configured, unreadable = self._rom_directory()
+        if unreadable is not None:
+            return _RomRoot(unreadable=unreadable)
+        sources = (self._ROM_DIRECTORY_SOURCE,)
+        if configured is None:
+            if relocated:
+                return _RomRoot(
+                    relocated=(os.path.join(self._home, self._ESDE_PORTABLE_SUFFIX), "portable.txt"),
+                    sources=sources,
+                )
+            return _RomRoot(directory=os.path.join(self._home, "ROMs"), sources=sources)
+        if not configured.startswith("/"):
+            return _RomRoot(not_absolute=configured, sources=sources)
+        return _RomRoot(directory=configured, sources=sources)
+
+    def _esde_system_dir(
+        self,
+        by_system: Mapping[str, SystemDeclaration],
+        system: str,
+        *,
+        bundled_read: bool,
+        relocated: bool,
+    ) -> _RomDirectory:
+        """Where this ES-DE puts *system*'s ROMs — the root with the declared ``<path>`` applied.
+
+        The same chain as RetroDECK's, with one branch that is EmuDeck's own:
+        a system the readable layers do not declare is ``rom-path-undeclared``
+        only when the bundled layer was read (the on-disk shadow) — in the
+        sealed state the declaration may sit in the layer nobody could read,
+        and the caller's answer-level sealed caveat is that statement, so this
+        branch adds nothing on top of it. The relocated branch is silent here
+        for the same reason: the answer-level ``config-home-relocated`` caveat
+        is the stated reason.
+        """
+        declaration = by_system.get(system)
+        if declaration is None or declaration.rom_path is None:
+            if bundled_read:
+                return _RomDirectory(caveats=_rom_path_undeclared_caveat(system, declaration))
+            return _RomDirectory()
+        declared = declaration.rom_path
+        root = self._esde_rom_root(relocated=relocated)
+        if root.unreadable is not None:
+            return _RomDirectory(
+                caveats=_settings_unreadable_caveat(system, self._esde_settings_path(), root.unreadable)
+            )
+        if root.relocated is not None:
+            return _RomDirectory(sources=root.sources)
+        if root.not_absolute is not None:
+            return _RomDirectory(
+                sources=root.sources,
+                caveats=_rom_path_unresolved_caveat(system, declared, root.not_absolute),
+            )
+        resolved = resolve_rom_path(declared, root.directory)
+        if resolved is None:
+            # Unreachable as the branches above stand — same guard, same
+            # reason as RetroDECK's: a directory that silently became None is
+            # the one answer this question must never give.
+            return _RomDirectory(
+                sources=root.sources,
+                caveats=_rom_path_unresolved_caveat(system, declared, root.directory or ""),
+            )
+        return _RomDirectory(directory=resolved, sources=root.sources)
+
+    def _esde_snapshot(self, system: str | None = None) -> _EsdeSnapshot:
+        """One read of every ES-DE-side source, in the pinned caveat order.
+
+        The findings an answer states, the presence it decided and the layers
+        it enumerates come from one revision of each file — a second read for
+        any of them could see a different machine than the answer did (REVIEW
+        M4). The caveat order every catalogue-shaped answer states is pinned
+        here and only here: health findings lead (they qualify the
+        installation), then the catalogue-status statement (sealed,
+        unreadable, or the unestablished refusal), then the relocation
+        suspicion, then the marker cross-check, then whatever the
+        per-question resolution has to say — and the evidence caveat the
+        template method appends closes the list.
+        """
+        settings, marker_issues = self._read_marker()
+        companion_status = self._machine.read_text(self._companion_cfg_path()).status
+        findings = self._health_from(settings, marker_issues, companion_status).issues
+        present = self._esde_present()
+        cross_check = self._frontend_marker_caveat(settings, present)
+        mismatch = () if cross_check is None else (cross_check,)
+        if not present:
+            return _EsdeSnapshot(
+                findings, (*findings, self._catalogue_absence(), *mismatch), {}, False, False, ()
+            )
+        portable = self._relocation_caveat()
+        relocation = () if portable is None else (portable,)
+        by_system, bundled_read, shadow_broken = self._read_esde_catalogue()
+        if shadow_broken:
+            return _EsdeSnapshot(
+                findings,
+                (*findings, *_catalogue_unread_caveat(system), *relocation, *mismatch),
+                {},
+                False,
+                bool(relocation),
+                (),
+            )
+        sealed = () if bundled_read else (self._catalogue_sealed_caveat(system),)
+        return _EsdeSnapshot(
+            findings, None, by_system, bundled_read, bool(relocation), (*sealed, *relocation, *mismatch)
+        )
+
+    def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
+        """Every system the readable layers declare — stated as incomplete while sealed.
+
+        No version travels back: ``settings.sh`` names none, and an
+        arrangement nobody verified has no pin a version could drift from.
+        """
+        snapshot = self._esde_snapshot()
+        if snapshot.refusal is not None:
+            return SystemsAnswer(caveats=snapshot.refusal), None
+        return (
+            SystemsAnswer(
+                tuple(sorted(snapshot.by_system)),
+                (self._CATALOGUE_SOURCE,),
+                (*snapshot.findings, *snapshot.tail),
+            ),
+            None,
+        )
+
+    def _catalogue_answer(
+        self, system: str, *, content_path: str | None = None
+    ) -> tuple[CatalogueAnswer, str | None]:
+        """EmuDeck's own catalogue answer — one snapshot of the ES-DE sources.
+
+        The contract this fills in is on
+        :meth:`_CatalogueQueries.emulators_for`; what is EmuDeck's alone is
+        where the answer comes from: the marker, the on-disk ES-DE layers and
+        the system's gamelist, each read once here. An empty entry list in the
+        sealed state is **not** "the frontend knows none" — the sealed caveat
+        is the code that keeps those apart.
+        """
+        snapshot = self._esde_snapshot(system)
+        if snapshot.refusal is not None:
+            return CatalogueAnswer(caveats=snapshot.refusal), None
+        anchor = (
+            self._esde_system_dir(
+                snapshot.by_system, system, bundled_read=snapshot.bundled_read, relocated=snapshot.relocated
+            )
+            if content_path is not None
+            else _NO_ANCHOR_NEEDED
+        )
+        return (
+            CatalogueAnswer(
+                _entries_from(
+                    self,
+                    _declared_entries(snapshot.by_system, system),
+                    self._gamelist_selections(system),
+                    system_roms_dir=anchor.directory,
+                    content_path=content_path,
+                ),
+                (self._CATALOGUE_SOURCE,),
+                (*snapshot.findings, *snapshot.tail, *anchor.caveats),
+            ),
+            None,
+        )
+
+    def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
+        """EmuDeck's ROM placement — the overlay's declaration, resolved ES-DE's way.
+
+        An overlay-declared system answers fully: per ES-DE's merge semantics
+        the overlay replaces a same-name bundled system entirely, so its
+        ``<path>`` and ``<extension>`` are exactly what the frontend uses. A
+        system the readable layers do not declare answers nothing *carrying
+        the sealed caveat* — the declaration may sit in the sealed layer,
+        which is a different claim from ``rom-path-undeclared``'s "the
+        catalogue was read and declares none".
+        """
+        snapshot = self._esde_snapshot(system)
+        if snapshot.refusal is not None:
+            return RomPlacement(caveats=snapshot.refusal), None
+        declaration = snapshot.by_system.get(system)
+        resolved = self._esde_system_dir(
+            snapshot.by_system, system, bundled_read=snapshot.bundled_read, relocated=snapshot.relocated
+        )
+        placement = RomPlacement(
+            extensions=() if declaration is None else declaration.extensions,
+            sources=(self._CATALOGUE_SOURCE, *resolved.sources),
+            caveats=(*snapshot.findings, *snapshot.tail, *resolved.caveats),
+        )
+        if resolved.directory is None:
+            return placement, None
+        # Same rule as RetroDECK's: every resolution branch that carries a
+        # caveat also answers directory=None, so a resolved directory has
+        # nothing to drop here — and the same shared link view backs it.
+        physical_dir, link_caveats = _link_view(self._machine, resolved.directory)
+        return (
+            _dc_replace(
+                placement,
+                dir=resolved.directory,
+                physical_dir=physical_dir,
+                caveats=(*snapshot.findings, *snapshot.tail, *link_caveats),
+            ),
+            None,
+        )
+
+    def _entry_caveats_for(self, spec: EmulatorSpec, content_path: str) -> tuple[Caveat, ...]:
+        """What the ES-DE side says about *this* game being launched by *this* entry.
+
+        The same question RetroDECK's entry route asks, over EmuDeck's
+        sources, and it re-reads them — the handle is live, and the machine
+        may have changed since the catalogue handed the entry out. The sealed
+        caveat rides whenever the bundled layer stayed sealed: the entry came
+        out of that partly-sealed catalogue, and the anchor the per-game check
+        needs may be declared in the part nobody could read.
+
+        Deliberately **not** :meth:`_esde_snapshot`: that would read the
+        marker and the companion cfg a second time inside one placement query
+        (:meth:`_query` already read both), and its refusal shapes carry the
+        health findings this placement already states. Only the ES-DE files
+        this check itself needs are read here.
+        """
+        if not self._esde_present():
+            return (self._catalogue_absence(),)
+        portable = self._relocation_caveat()
+        relocation = () if portable is None else (portable,)
+        by_system, bundled_read, shadow_broken = self._read_esde_catalogue()
+        if shadow_broken:
+            return (*_catalogue_unread_caveat(spec.system), *relocation)
+        sealed = () if bundled_read else (self._catalogue_sealed_caveat(spec.system),)
+        anchor = self._esde_system_dir(
+            by_system, spec.system, bundled_read=bundled_read, relocated=bool(relocation)
+        )
+        override_label = (
+            None
+            if anchor.directory is None
+            else _match_per_game(
+                self._gamelist_selections(spec.system), content_path, system_roms_dir=anchor.directory
+            )
+        )
+        if override_label is None or override_label == spec.label:
+            return (*sealed, *relocation, *anchor.caveats)
+        return (*sealed, *relocation, *anchor.caveats, _per_game_override_caveat(override_label, spec))
+
+    def entry_savefile_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> SavefilePlacement:
+        """The entry route behind :meth:`EmulatorEntry.savefile_location` — EmuDeck's wiring.
+
+        The placement itself is the companion RetroArch's, exactly as the
+        direct question answers it; what the entry adds is its own catalogue
+        caveats and, when content is named, the per-game override check.
+        """
+        placement = _retroarch_savefile_location(
+            self._machine,
+            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+        )
+        if content_path is None:
+            return placement
+        extra = self._entry_caveats_for(spec, content_path)
+        return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
+
+    def entry_savestate_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> SavestatePlacement:
+        """The savefile entry route's twin — same sources, the savestate keys."""
+        placement = _retroarch_savestate_location(
+            self._machine,
+            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+        )
+        if content_path is None:
+            return placement
+        extra = self._entry_caveats_for(spec, content_path)
+        return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
+
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
 
@@ -4431,7 +4995,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return None
         return os.path.join(cores_dir, core_so)
 
-    def _query(self, *, content_path: str | None, core_so: str | None) -> _SaveQuery:
+    def _query(
+        self,
+        *,
+        content_path: str | None,
+        core_so: str | None,
+        extra_caveats: tuple[Caveat, ...] = (),
+    ) -> _SaveQuery:
         """The placement question, over one read of the companion cfg."""
         settings, marker_issues = self._read_marker()
         global_cfg_path = self._companion_cfg_path()
@@ -4449,7 +5019,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
             arrangement="emudeck",
             arrangement_version=None,
-            extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
+            extra_caveats=(*extra_caveats, *health.issues, *arrangement_caveats(self.kind)),
         )
 
     def savefile_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavefilePlacement:
@@ -4463,11 +5033,18 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     ) -> SavestatePlacement:
         """Where EmuDeck's RetroArch keeps the savestates — the same cfg, the state keys.
 
-        EmuDeck writes all four of them (``RetroArch_maincfg.sh:3053``,
-        ``:3057``, ``:3091-3092``), and unlike the saves root its
-        ``savestate_directory`` is a fixed path under the RetroArch Flatpak's
-        own config tree rather than one derived from ``savesPath`` — which is a
-        fact about that installer, read here like any other.
+        At the current pin both directions derive from ``savesPath``:
+        ``RetroArch_setupSaves`` writes ``savestate_directory`` and
+        ``savefile_directory`` as ``$savesPath/retroarch/{states,saves}`` into
+        the global cfg (``emuDeckRetroArch.sh:222-230`` @ ``863ab69``), after
+        symlinking those very paths into the Flatpak's own config tree — the
+        cfg names the symlink, the bytes live behind it, and the placement's
+        ``dir``/``physical_dir`` pair carries both truthfully. A prior
+        generation (@ ``acc45fc``) hardcoded the states path into the Flatpak
+        tree via ``RetroArch_maincfg.sh:3053`` — a writer that at the current
+        pin has no caller in the Linux backend and targets an override file no
+        launch path reads. The handle reads the live cfg either way; the
+        installer history is context, not an input.
         """
         return _retroarch_savestate_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)

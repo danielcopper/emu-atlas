@@ -138,12 +138,19 @@ CAVEAT_CORE_WITHOUT_SYSTEMNAME = "core-without-systemname"
 CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES = "system-assignment-may-hide-cores"
 CAVEAT_CORE_INFO_UNREADABLE = "core-info-unreadable"
 CAVEAT_EMULATOR_CATALOGUE_UNREADABLE = "emulator-catalogue-unreadable"
-# Three ways to answer no catalogue entries, and they are three different
+# Four ways to answer from no full catalogue, and they are four different
 # claims: the arrangement has none (unavailable), it has one that could not be
-# read (unreadable), and atlas has not established where this arrangement keeps
-# one (unestablished). Only the first two say anything about the machine; the
-# third is about atlas, and a client must not read it as an absence.
+# read (unreadable), atlas has not established where this arrangement keeps
+# one (unestablished), and part of its catalogue sits where atlas does not
+# open — EmuDeck's ES-DE bundles its es_systems.xml inside the AppImage
+# (ES-DE INSTALL.md v3.4.1:1470), so only the on-disk layers were read and
+# the enumeration is incomplete (sealed). Only unavailable and unreadable say
+# anything about the machine; the other two are about atlas, and a client
+# must not read either as an absence. Sealed is also the one of the four that
+# may accompany real entries: what the readable layers declare is stated, and
+# the caveat says the frontend may declare more.
 CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED = "emulator-catalogue-unestablished"
+CAVEAT_EMULATOR_CATALOGUE_SEALED = "emulator-catalogue-sealed"
 CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
 CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
 CAVEAT_FIRMWARE_SCAN_INCOMPLETE = "firmware-scan-incomplete"
