@@ -139,6 +139,7 @@ from atlas.firmware import (
     CAVEAT_STANDALONE_UNSUPPORTED,
     CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
     CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
+    CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
     CAVEAT_SYSTEM_UNKNOWN,
     CHECKED_MISMATCH,
     CHECKED_UNCHECKED,
@@ -154,6 +155,7 @@ from atlas.firmware import (
     SOURCE_OVERRIDE,
     SOURCE_SLUG,
     SOURCE_SYSTEMNAME,
+    SYSTEMS_WITHOUT_CATALOGUE_ID,
     CoreDeclarationState,
     FirmwareChecked,
     FirmwareNeed,
@@ -324,6 +326,7 @@ __all__ = [
     "SOURCE_SYSTEMNAME",
     "SOURCE_SLUG",
     "SOURCE_NONE",
+    "SYSTEMS_WITHOUT_CATALOGUE_ID",
     # Vocabulary values — the holes a caller fills, and the closed sets the
     # contract serializes them beside. A client branches on `needs` and reads
     # `granularity.value` / `root_kind`, so by the tiering rule (a name a client
@@ -407,6 +410,7 @@ __all__ = [
     "CAVEAT_STANDALONE_UNSUPPORTED",
     "CAVEAT_SYMLINK_LOOP",
     "CAVEAT_SYSTEM_ASSIGNMENT_DERIVED",
+    "CAVEAT_SYSTEM_NOT_IN_CATALOGUE",
     "CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES",
     "CAVEAT_SYSTEM_DIRECTORY_CLEARED",
     "CAVEAT_SYSTEM_UNKNOWN",

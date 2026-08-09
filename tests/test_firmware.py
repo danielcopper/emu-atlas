@@ -13,7 +13,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+from pathlib import Path
 from typing import Mapping
+from xml.etree import ElementTree as ET
 
 import pytest
 
@@ -40,6 +43,7 @@ from atlas.firmware import (
     CAVEAT_NO_FIRMWARE_REQUIREMENT,
     CAVEAT_STANDALONE_UNSUPPORTED,
     CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
+    CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
     CAVEAT_SYSTEM_UNKNOWN,
     CHECKED_MISMATCH,
     CHECKED_UNKNOWN,
@@ -47,7 +51,11 @@ from atlas.firmware import (
     DECLARATION_UNSUPPORTED,
     DECLARATION_READ,
     DECLARATION_UNREADABLE,
+    FIRMWARE_SYSTEM_OVERRIDE,
     NEED_REQUIRED,
+    SYSTEMNAME_MAP_VERSION,
+    SYSTEMNAME_TO_SLUG,
+    SYSTEMS_WITHOUT_CATALOGUE_ID,
     Catalogue,
     CatalogueEntry,
     CoreDeclarations,
@@ -78,6 +86,7 @@ from atlas.machine import (
     ReadResult,
 )
 from atlas.placement import CAVEAT_SYSTEM_DIRECTORY_CLEARED, Caveat
+from atlas.systems import known_systems
 
 INFO_DIR = "/cores"
 BIOS_DIR = "/bios"
@@ -326,7 +335,7 @@ class TestSystemSlug:
         assert system_for("gb_bios.bin", "Game Boy/Game Boy Color/Game Boy Advance") == "gb"
 
     def test_a_known_systemname_maps(self):
-        assert system_for("dc/dc_boot.bin", "Sega - Dreamcast") == "dc"
+        assert system_for("dc/dc_boot.bin", "Sega - Dreamcast") == "dreamcast"
 
     def test_an_unknown_systemname_is_slugified_not_dropped(self):
         assert system_for("weird.bin", "Some New Machine") == "some-new-machine"
@@ -1013,8 +1022,26 @@ class TestSystemAssignmentIsVisible:
 
     def test_two_disagreeing_sources_are_evidence_too(self):
         # One entry each, and they name different machines — a reason to trust
-        # neither blindly. This is the vice_x128 shape (systemname "C128",
-        # database naming a C64).
+        # neither blindly. No shipped core trips this since map version 2
+        # turned the vice_x128 pair into agreement, so the pair here is
+        # synthetic; the reading is kept because the next info set can
+        # disagree again.
+        info = (
+            'systemname = "Sega Master System"\n'
+            'database = "Sega - Game Gear"\n'
+            "firmware_count = 1\n"
+            'firmware0_path = "bios.sms"\n'
+        )
+        machine = _machine({f"{INFO_DIR}/disagree_libretro.info": info,
+                            f"{INFO_DIR}/disagree_libretro.so": {"status": "invalid-text"}})
+        core = firmware_for_core(machine, _context(machine), core_so="disagree_libretro.so").cores[0]
+        assert [c.code for c in core.caveats] == [CAVEAT_SYSTEM_ASSIGNMENT_DERIVED]
+
+    def test_the_c128_pair_agrees_since_the_catalogue_files_it_under_c64(self):
+        # The historical disagreement example: systemname "C128" against a
+        # database naming the C64. The deployed catalogue's own c64 entry
+        # launches vice_x128, so map version 2 files "C128" under c64 — and
+        # the two sources now agree, which is the correct silence.
         info = (
             'systemname = "C128"\n'
             'database = "C64"\n'
@@ -1023,8 +1050,10 @@ class TestSystemAssignmentIsVisible:
         )
         machine = _machine({f"{INFO_DIR}/vice_x128_libretro.info": info,
                             f"{INFO_DIR}/vice_x128_libretro.so": {"status": "invalid-text"}})
-        core = firmware_for_core(machine, _context(machine), core_so="vice_x128_libretro.so").cores[0]
-        assert [c.code for c in core.caveats] == [CAVEAT_SYSTEM_ASSIGNMENT_DERIVED]
+        answer = firmware_for_core(machine, _context(machine), core_so="vice_x128_libretro.so")
+        core = answer.cores[0]
+        assert core.caveats == ()
+        assert core.requirements[0].system == "c64"
 
     def test_the_disagreement_check_needs_both_names_to_be_mappable(self):
         """The known limit of that reading, pinned rather than glossed over.
@@ -1084,7 +1113,7 @@ class TestSystemAssignmentIsVisible:
 
     def test_the_source_of_every_assignment_is_recorded(self):
         assert system_decision("gb_bios.bin", "Game Boy/Game Boy Color") == ("gb", "override")
-        assert system_decision("x.bin", "Sega - Dreamcast") == ("dc", "systemname")
+        assert system_decision("x.bin", "Sega - Dreamcast") == ("dreamcast", "systemname")
         assert system_decision("x.bin", "Some New Machine") == ("some-new-machine", "slug")
         assert system_decision("x.bin", "") == ("_unknown", "none")
 
@@ -1985,3 +2014,308 @@ class TestBothRoutesCarryWhatWasDeclaredButNotRequired:
 
     def test_neither_route_invents_a_requirement(self):
         assert [c.requirements for c in self._answer(through_catalogue=True).cores] == [()]
+
+
+class TestASystemTheCatalogueDoesNotNameIsMarked:
+    """The no-catalogue-word family: atlas's own spelling, and never unmarked."""
+
+    def _core(self, info: str, stem: str):
+        machine = _machine(
+            {
+                f"{INFO_DIR}/{stem}.info": info,
+                f"{INFO_DIR}/{stem}.so": {"status": "invalid-text"},
+            }
+        )
+        return firmware_for_core(machine, _context(machine), core_so=f"{stem}.so").cores[0]
+
+    def test_the_own_spelling_carries_the_caveat(self):
+        info = 'systemname = "TI83"\nfirmware_count = 1\nfirmware0_path = "ti83.rom"\n'
+        core = self._core(info, "numero_libretro")
+        assert core.requirements[0].system == "ti83"
+        caveat = next(c for c in core.caveats if c.code == CAVEAT_SYSTEM_NOT_IN_CATALOGUE)
+        assert caveat.data == {
+            "core_so": "numero_libretro.so",
+            "system": "ti83",
+            "files": "ti83.rom",
+            "map_version": SYSTEMNAME_MAP_VERSION,
+        }
+
+    def test_the_enterprise_128_is_split_off_the_commodore(self):
+        # Map version 1 misfiled ep128emu's "128" under the Commodore c128;
+        # the split gives the Enterprise its own spelling, marked.
+        info = (
+            'systemname = "128"\n'
+            "firmware_count = 1\n"
+            'firmware0_path = "ep128emu/roms/exos21.rom"\n'
+        )
+        core = self._core(info, "ep128emu_core_libretro")
+        assert core.requirements[0].system == "ep128"
+        assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE in [c.code for c in core.caveats]
+
+    def test_a_catalogue_id_is_never_marked(self):
+        info = 'systemname = "Sega - Dreamcast"\nfirmware_count = 1\nfirmware0_path = "dc/dc_boot.bin"\n'
+        core = self._core(info, "flycast_libretro")
+        assert core.requirements[0].system == "dreamcast"
+        assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE not in [c.code for c in core.caveats]
+
+    def _ti83_machine(self):
+        return _machine(
+            {
+                f"{INFO_DIR}/numero_libretro.info": (
+                    'systemname = "TI83"\nfirmware_count = 1\nfirmware0_path = "ti83.rom"\n'
+                ),
+                f"{INFO_DIR}/numero_libretro.so": {"status": "invalid-text"},
+            }
+        )
+
+    def test_the_own_spelling_is_a_question_word_on_the_catalogue_route_too(self):
+        # A catalogue can neither enumerate nor deny a word no build declares,
+        # so the same question answers the same rows with the same mark on a
+        # catalogued arrangement — not system-unknown, and not a claim that
+        # this machine lacks a catalogue.
+        machine = self._ti83_machine()
+        answer = firmware_for_system(
+            machine,
+            _context(machine),
+            system="ti83",
+            catalogue=Catalogue(entries=(), read=True),
+        )
+        assert [c.core_so for c in answer.cores] == ["numero_libretro.so"]
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE in codes
+        assert CAVEAT_SYSTEM_UNKNOWN not in codes
+        assert CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE not in codes
+
+    def test_the_catalogue_less_route_marks_the_word_the_same_way(self):
+        # Same rows, same answer-level mark — and not the no-catalogue caveat:
+        # the reason this list is derived is the word, not the machine.
+        machine = self._ti83_machine()
+        answer = firmware_for_system(machine, _context(machine), system="ti83")
+        assert [c.core_so for c in answer.cores] == ["numero_libretro.so"]
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE in codes
+        assert CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE not in codes
+
+    def test_a_word_outside_the_set_is_still_unknown_on_the_catalogue_route(self):
+        # The discriminating direction: the retired slug "dc" is neither an id
+        # nor a published own spelling, so a catalogued arrangement whose
+        # catalogue declares no such system answers system-unknown.
+        machine = self._ti83_machine()
+        answer = firmware_for_system(
+            machine,
+            _context(machine),
+            system="dc",
+            catalogue=Catalogue(entries=(), read=True),
+        )
+        assert answer.cores == ()
+        assert CAVEAT_SYSTEM_UNKNOWN in [c.code for c in answer.caveats]
+
+    def test_an_own_spelling_with_nothing_filed_is_empty_not_unknown(self):
+        # The word is published vocabulary, so nothing filing under it is a
+        # machine fact: the answer keeps the own-spelling mark and states the
+        # established absence (no-firmware-declaration) at answer level —
+        # with zero cores there is no entry to say it per emulator, unlike
+        # the id-with-declaration-less-emulators shape this mirrors.
+        # system-unknown would blame the identifier for the machine; it
+        # fires only for words in neither vocabulary.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
+                f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        for catalogue in (None, Catalogue(entries=(), read=True)):
+            answer = firmware_for_system(
+                machine, _context(machine), system="ti83", catalogue=catalogue
+            )
+            assert answer.cores == ()
+            assert [c.code for c in answer.caveats] == [
+                CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
+                CAVEAT_NO_FIRMWARE_DECLARATION,
+            ]
+
+
+class TestTheMapSpeaksTheCatalogueVocabulary:
+    """The packaged map's target set is the packaged id set — guarded, not assumed.
+
+    The map is world knowledge, so what holds it to its own account is tests:
+    every value must be an id a question can take or a declared own spelling,
+    and the day one stops being either, the suite says so instead of a query
+    for a system that is right there coming back ``system-unknown``.
+    """
+
+    def test_every_systemname_maps_into_the_vocabulary_or_the_declared_markers(self):
+        ids = set(known_systems())
+        strays = {
+            name: value
+            for name, value in SYSTEMNAME_TO_SLUG.items()
+            if value not in ids and value not in SYSTEMS_WITHOUT_CATALOGUE_ID
+        }
+        assert strays == {}
+
+    def test_every_override_files_under_a_catalogue_id(self):
+        # The override table names concrete dumps, and every one of them has a
+        # catalogue system: a file worth a per-file rule is a file whose
+        # machine is not in question.
+        ids = set(known_systems())
+        strays = {
+            name: value for name, value in FIRMWARE_SYSTEM_OVERRIDE.items() if value not in ids
+        }
+        assert strays == {}
+
+    def test_the_own_spellings_are_not_catalogue_ids(self):
+        # The family exists because the catalogue lacks these words. One of
+        # them turning up as an id is the family entry's retirement notice,
+        # and this is the test that serves it.
+        assert set(SYSTEMS_WITHOUT_CATALOGUE_ID) & set(known_systems()) == set()
+
+    def test_the_ruled_values_hold(self):
+        # The map-version-2 re-pointings, pinned one by one: the map is world
+        # knowledge, and this is its reviewable shape — a value drifting under
+        # a later edit fails here by name.
+        ruled = {
+            "Sega - Dreamcast": "dreamcast",
+            "Sega Dreamcast": "dreamcast",
+            "Sega - Game Gear": "gamegear",
+            "Atari - Lynx": "atarilynx",
+            "Lynx": "atarilynx",
+            "CD-i": "cdimono1",
+            "CDi": "cdimono1",
+            "Palm OS": "palm",
+            "Mac68k": "macintosh",
+            "Sega - Master System - Mark III": "mastersystem",
+            "Sega Master System": "mastersystem",
+            "Sega 8-bit": "mastersystem",
+            "Sega 8-bit (MS/GG/SG-1000)": "mastersystem",
+            "NEC - PC Engine - TurboGrafx 16": "pcenginecd",
+            "PC Engine/PCE-CD": "pcenginecd",
+            "PC Engine SuperGrafx": "pcenginecd",
+            "PC Engine/SuperGrafx": "pcenginecd",
+            "PC Engine/SuperGrafx/CD": "pcenginecd",
+            "C128": "c64",
+            "128": "ep128",
+            "BK-0010/BK-0011(M)": "bk",
+            "TI83": "ti83",
+            "Arcade (various)": "arcade",
+            "Game engine": "scummvm",
+            "Wolfenstein 3D Game Engine": "ports",
+        }
+        assert {name: SYSTEMNAME_TO_SLUG.get(name) for name in ruled} == ruled
+
+    def test_the_rpg_maker_xp_entry_is_gone(self):
+        # Deliberately unmapped: no shipped .info carries it, so it files
+        # mechanically like any other systemname the map does not know.
+        assert "RPG Maker XP/VX/VX Ace Game Engine" not in SYSTEMNAME_TO_SLUG
+
+    def test_the_ruled_override_rows_hold(self):
+        # The user-ruled per-file rows, pinned like the map values above.
+        # Necessary even where vectors touch a row: a value here can flip to
+        # another *real* id (bios_J.sms to mark3) with the membership guard
+        # and most vectors still green, so belt and braces.
+        ruled = {
+            "bios_E.sms": "mastersystem",
+            "bios_U.sms": "mastersystem",
+            "bios_J.sms": "mastersystem",
+            "bios.gg": "gamegear",
+            "BIOS.col": "colecovision",
+            "naomi.zip": "naomi",
+            "naomi2.zip": "naomi2",
+            "hod2bios.zip": "naomi",
+            "f355dlx.zip": "naomi",
+            "f355bios.zip": "naomi",
+            "airlbios.zip": "naomi",
+            "awbios.zip": "atomiswave",
+        }
+        assert {name: FIRMWARE_SYSTEM_OVERRIDE.get(name) for name in ruled} == ruled
+
+
+# The build the map's evidence joins are cited to, where RetroDECK deploys it.
+# The same constant lives in tests/test_systems.py for the id-set guard —
+# duplicated deliberately, like the packaged-data loaders: each guard reads
+# its one file and shares no machinery, so a defect in one can never mute the
+# other.
+DEPLOYED_ES_SYSTEMS = Path(
+    "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
+    "/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+)
+
+# The evidence joins behind the map's version-2 values: which deployed
+# catalogue system witnesses each id (by fullname), and which of the cores
+# carrying the mapped systemnames its <command> lines launch. An empty core
+# tuple is a derived join — the id's meaning matched and no launching-core
+# witness exists (macintosh runs standalone MAME; colecovision's witness is
+# BIOS.col's own description). Re-run live below, so drift in the deployed
+# build fails the suite loudly instead of silently outdating the citations
+# in atlas/firmware.py.
+RECORDED_JOINS = (
+    ("dreamcast", "Sega Dreamcast", ("flycast_libretro",)),
+    ("mastersystem", "Sega Master System", ("gearsystem_libretro", "smsplus_libretro")),
+    ("gamegear", "Sega Game Gear", ("genesis_plus_gx_libretro",)),
+    ("atarilynx", "Atari Lynx", ("handy_libretro", "holani_libretro", "mednafen_lynx_libretro")),
+    ("pcenginecd", "NEC PC Engine CD", ("mednafen_pce_libretro", "mednafen_pce_fast_libretro")),
+    ("cdimono1", "Philips CD-i", ("same_cdi_libretro", "cdi2015_libretro")),
+    ("palm", "Palm OS", ("mu_libretro",)),
+    ("macintosh", "Apple Macintosh", ()),
+    ("c64", "Commodore 64", ("vice_x128_libretro",)),
+    ("arcade", "Arcade", ("fbneo_libretro", "mame_libretro")),
+    ("scummvm", "ScummVM Game Engine", ("scummvm_libretro",)),
+    ("ports", "Ports", ("ecwolf_libretro",)),
+    ("naomi", "Sega NAOMI", ("flycast_libretro",)),
+    ("naomi2", "Sega NAOMI 2", ("flycast_libretro",)),
+    ("atomiswave", "Sammy Corporation Atomiswave", ("flycast_libretro",)),
+    ("colecovision", "Coleco ColecoVision", ()),
+)
+
+
+class TestTheRecordedJoinsStillHoldOnTheDeployedBuild:
+    """The map's citations, re-run live — the 16d pattern for world knowledge.
+
+    A citation proves what a file said the day it was read; the deployed file
+    moves with RetroDECK updates. Re-running the joins — fullname equality and
+    catalogue-launches-core — turns that drift into a loud failure naming the
+    entry to re-establish, instead of a table quietly citing a build that no
+    longer says what it did. Skipped where the deployment is absent: the
+    Flatpak is not a build dependency, and the packaged map ships either way.
+    """
+
+    def _systems(self) -> dict[str, tuple[str, set[str]]]:
+        if not DEPLOYED_ES_SYSTEMS.exists():
+            pytest.skip(f"RetroDECK's ES-DE is not deployed at {DEPLOYED_ES_SYSTEMS}")
+        # ElementTree drops comments, and that is the point of parsing rather
+        # than grepping: a commented-out <system> or <command> is not a
+        # declaration and must not witness anything.
+        root = ET.fromstring(DEPLOYED_ES_SYSTEMS.read_text(encoding="utf-8"))
+        systems: dict[str, tuple[str, set[str]]] = {}
+        for system in root.findall("system"):
+            name = (system.findtext("name") or "").strip()
+            fullname = (system.findtext("fullname") or "").strip()
+            cores = {
+                match.group(1)
+                for command in system.findall("command")
+                for match in re.finditer(r"([A-Za-z0-9_.-]+_libretro)\.so", command.text or "")
+            }
+            systems[name] = (fullname, cores)
+        return systems
+
+    def test_every_recorded_join_still_holds(self):
+        systems = self._systems()
+        failures: list[str] = []
+        for name, fullname, cores in RECORDED_JOINS:
+            if name not in systems:
+                failures.append(f"{name}: no longer declared at all")
+                continue
+            declared_fullname, declared_cores = systems[name]
+            if declared_fullname != fullname:
+                failures.append(f"{name}: fullname {declared_fullname!r}, recorded {fullname!r}")
+            missing = set(cores) - declared_cores
+            if missing:
+                failures.append(f"{name}: commands no longer launch {sorted(missing)}")
+        assert failures == []
+
+    def test_the_own_spellings_are_still_absent_from_the_build(self):
+        # The other half of the family's evidence: bk, ti83 and ep128 are own
+        # spellings because the build declares no such system — and neither a
+        # c128 nor a cdimono2, which is what files the C128 under c64 and
+        # same_cdi's cdimono2.zip under cdimono1.
+        declared = set(self._systems())
+        assert declared & (set(SYSTEMS_WITHOUT_CATALOGUE_ID) | {"c128", "cdimono2"}) == set()

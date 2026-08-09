@@ -18,7 +18,7 @@ is where the split is made visible:
 The model is **emulator-centric**, because a firmware requirement is a property
 of an emulator and of nothing else::
 
-    System            snes, dc, gb
+    System            snes, dreamcast, gb
       └─ Emulator     mgba, sameboy, flycast   ← decides BOTH the demand AND the place
            ├─ need         required | optional
            ├─ path         absolute destination + expected file name
@@ -126,6 +126,13 @@ CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE = "emulator-catalogue-unavailable"
 CAVEAT_FIRMWARE_UNREADABLE = "firmware-unreadable"
 CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
 CAVEAT_SYSTEM_UNKNOWN = "system-unknown"
+# The marked-word code: a requirement's ``system`` is one of atlas's own
+# spellings (:data:`SYSTEMS_WITHOUT_CATALOGUE_ID`) because no ES-DE build
+# declares an id for that machine. The word is exported anyway — refusing to
+# answer would hide real firmware — and this code is what keeps it from being
+# read as a catalogue id. Same form as ``_unknown``: a token no catalogue
+# declares, plus a structured caveat saying why.
+CAVEAT_SYSTEM_NOT_IN_CATALOGUE = "system-not-in-catalogue"
 CAVEAT_SYSTEM_ASSIGNMENT_DERIVED = "system-assignment-derived"
 CAVEAT_CORE_WITHOUT_SYSTEMNAME = "core-without-systemname"
 CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES = "system-assignment-may-hide-cores"
@@ -319,27 +326,59 @@ def load_hashes(text: str | None = None) -> FirmwareHashes:
     return FirmwareHashes(files, data.get("_meta", {}))
 
 
-# Libretro ``systemname`` strings mapped to atlas system slugs. World
-# knowledge: the strings are read live from the machine, but what they *mean*
-# in atlas's vocabulary is not written anywhere on it. Multiple variants map to
-# one slug because libretro's naming changed over the years.
+# Libretro ``systemname`` strings mapped into atlas's one system vocabulary —
+# ES-DE's ids, the same names every other question takes (``atlas.systems``,
+# pinned to RetroDECK 0.10.9b's linux ``es_systems.xml``). World knowledge: the
+# strings are read live from the machine, but what they *mean* is written
+# nowhere on it, so the table is versioned and source-cited like the packaged
+# data files it stands beside. Multiple variants map to one id because
+# libretro's naming changed over the years.
+#
+# Two guards hold the table to its target: every value is an ES-DE id or a
+# declared entry of :data:`SYSTEMS_WITHOUT_CATALOGUE_ID`, and the evidence
+# joins recorded for the re-pointed entries are re-run against the deployed
+# ``es_systems.xml`` (tests/test_firmware.py). Citations below name that file
+# by line and the shipped ``.info`` files under the Flatpak's
+# ``retroarch/rd_extras/cores/``.
+#
+# One thing this table never claims is a launch: a core's ``.info`` firmware
+# list is display knowledge — at the RetroArch pin (``a79435a``, see
+# docs/research/retrodeck-save-placement.md) it is evaluated only by display
+# surfaces (``menu_displaylist.c:880`` and ``ui_qt.cpp:1238``, of which the
+# Qt-less binary RetroDECK ships reaches only the first), and
+# ``task_content.c``/``runloop.c`` reference none of it — so filing a file
+# under an id says which system's firmware it is, never that some launch
+# checks for it.
+SYSTEMNAME_MAP_VERSION = "2"  # "1" was the unversioned libretro-slug generation
+SYSTEMNAME_MAP_REVIEWED = "2026-08-09"
+
 SYSTEMNAME_TO_SLUG: Mapping[str, str] = {
     # PlayStation
     "Sony - PlayStation": "psx",
     "PlayStation": "psx",
     "Sony PlayStation 2": "ps2",
     "PSP": "psp",
-    # Sega
-    "Sega - Dreamcast": "dc",
-    "Sega Dreamcast": "dc",
+    # Sega. es_systems.xml:616 "dreamcast" (Sega Dreamcast) launches
+    # flycast_libretro (:620); flycast_gles2 and retrodream carry the same
+    # systemname without a catalogue launch under it.
+    "Sega - Dreamcast": "dreamcast",
+    "Sega Dreamcast": "dreamcast",
     "Sega - Saturn": "saturn",
     "Saturn": "saturn",
     "Sega - Mega-CD - Sega CD": "segacd",
-    "Sega - Master System - Mark III": "sms",
-    "Sega Master System": "sms",
-    "Sega 8-bit": "sms",
-    "Sega 8-bit (MS/GG/SG-1000)": "sms",
-    "Sega - Game Gear": "gg",
+    # es_systems.xml:1102 "mastersystem" (Sega Master System) launches
+    # gearsystem_libretro and smsplus_libretro; emux_sms carries "Sega Master
+    # System" too, without a catalogue launch under it. Ruled over "mark3"
+    # (:1085), the same hardware's JP id — one id for the hardware, the J
+    # BIOS dump included.
+    "Sega - Master System - Mark III": "mastersystem",
+    "Sega Master System": "mastersystem",
+    "Sega 8-bit": "mastersystem",
+    "Sega 8-bit (MS/GG/SG-1000)": "mastersystem",
+    # es_systems.xml:810 "gamegear" (Sega Game Gear); its command :814
+    # launches genesis_plus_gx — the core whose bios.gg the override files
+    # here — alongside gearsystem (:816) and smsplus (:817).
+    "Sega - Game Gear": "gamegear",
     "Sega - Mega Drive - Genesis": "genesis",
     "Sega Genesis": "genesis",
     "Sega 8/16-bit (Various)": "genesis",
@@ -360,9 +399,10 @@ SYSTEMNAME_TO_SLUG: Mapping[str, str] = {
     "Super Nintendo Entertainment System": "snes",
     "Super Nintendo Entertainment System / Game Boy / Game Boy Color": "snes",
     "GameCube / Wii": "gc",
-    # Atari
-    "Atari - Lynx": "lynx",
-    "Lynx": "lynx",
+    # Atari. es_systems.xml:301 "atarilynx" (Atari Lynx) launches all three
+    # shipped carriers of "Lynx" (handy, holani, mednafen_lynx).
+    "Atari - Lynx": "atarilynx",
+    "Lynx": "atarilynx",
     "Atari - 5200": "atari5200",
     "Atari 5200": "atari5200",
     "Atari - 7800": "atari7800",
@@ -371,12 +411,20 @@ SYSTEMNAME_TO_SLUG: Mapping[str, str] = {
     "Atari 8-bit Family": "atari800",
     "Atari - ST": "atarist",
     "Atari ST/STE/TT/Falcon": "atarist",
-    # NEC
-    "NEC - PC Engine - TurboGrafx 16": "pce",
-    "PC Engine/PCE-CD": "pce",
-    "PC Engine SuperGrafx": "pce",
-    "PC Engine/SuperGrafx": "pce",
-    "PC Engine/SuperGrafx/CD": "pce",
+    # NEC. Every carrier of these systemnames that declares firmware declares
+    # exactly the CD system cards (syscard*.pce, gexpress.pce — the
+    # mednafen_pce, mednafen_pce_fast and mednafen_supergrafx .info files;
+    # geargrafx carries "PC Engine/SuperGrafx" and declares none), so the
+    # ruled id is what the files are for: es_systems.xml:1600 "pcenginecd"
+    # (NEC PC Engine CD), launching mednafen_pce and mednafen_pce_fast.
+    # supergrafx launches mednafen_supergrafx (:2071), mednafen_pce (:2072)
+    # and geargrafx (:2073); tg16 launches mednafen_pce (:2142),
+    # mednafen_pce_fast (:2143) and mednafen_supergrafx (:2144).
+    "NEC - PC Engine - TurboGrafx 16": "pcenginecd",
+    "PC Engine/PCE-CD": "pcenginecd",
+    "PC Engine SuperGrafx": "pcenginecd",
+    "PC Engine/SuperGrafx": "pcenginecd",
+    "PC Engine/SuperGrafx/CD": "pcenginecd",
     "PC-FX": "pcfx",
     "PC-98": "pc98",
     # SNK
@@ -389,8 +437,14 @@ SYSTEMNAME_TO_SLUG: Mapping[str, str] = {
     "C64": "c64",
     "C64 SuperCPU": "c64",
     "C64DTV": "c64",
-    "C128": "c128",
-    "128": "c128",
+    # No ES-DE build declares a c128 id; the catalogue files the C128 under
+    # c64 itself — es_systems.xml:354 "c64" launches vice_x128 (:362) — and
+    # vice_x128's own database says "Commodore - 64".
+    "C128": "c64",
+    # NOT the Commodore: ep128emu_core's systemname, and its firmware descs
+    # say what it is ("exos21.rom (Enterprise 128 Expandible OS 2.1)", …).
+    # No catalogue id exists — SYSTEMS_WITHOUT_CATALOGUE_ID entry "ep128".
+    "128": "ep128",
     # Other
     "Coleco - ColecoVision": "colecovision",
     "ColecoVision": "colecovision",
@@ -403,30 +457,74 @@ SYSTEMNAME_TO_SLUG: Mapping[str, str] = {
     "3DO": "3do",
     "Magnavox - Odyssey2": "odyssey2",
     "Magnavox Odyssey2 / Philips Videopac+": "odyssey2",
-    "CD-i": "cdi",
-    "CDi": "cdi",
+    # es_systems.xml:368 "cdimono1" (Philips CD-i) launches both shipped
+    # carriers, same_cdi (:372) and cdi2015 (:373) — whose required file is
+    # literally cdimono1.zip.
+    "CD-i": "cdimono1",
+    "CDi": "cdimono1",
     "Intellivision": "intellivision",
     "DOS": "dos",
     "PC-8000 / PC-8800 series": "pc88",
     "Sharp X1": "x1",
     "Sharp X68000": "x68000",
     "Pokemon Mini": "pokemini",
-    "Mac68k": "mac68k",
+    # [D] — the one semantic join: es_systems.xml:1032 "macintosh" (Apple
+    # Macintosh) launches standalone MAME macse/macplus, not minivmac, but
+    # both sides are the 68k Macintosh line (minivmac_libretro.info requires
+    # MacII.ROM). Only plausible id; no launching-core witness.
+    "Mac68k": "macintosh",
+    # Elektronika BK-0010/0011M — no catalogue id exists;
+    # SYSTEMS_WITHOUT_CATALOGUE_ID entry "bk" (bk_libretro.info).
     "BK-0010/BK-0011(M)": "bk",
+    # TI-83 calculators (numero_libretro.info: ti83.rom/ti83plus.rom/
+    # ti83se.rom) — no catalogue id exists; ES-DE's "ti99" is the TI-99/4A
+    # home computer, a different machine. SYSTEMS_WITHOUT_CATALOGUE_ID "ti83".
     "TI83": "ti83",
     "Super Cassette Vision": "scv",
     "FreeChaF": "channelf",
     "Vircon32": "vircon32",
-    "Palm OS": "palmos",
+    # es_systems.xml:1526 "palm" (Palm OS) launches mu_libretro (:1530), the
+    # sole shipped carrier.
+    "Palm OS": "palm",
     "CP System I/II": "cps",
-    # Multi-system / game engines
-    "Arcade (various)": "_arcade",
-    "Game engine": "_engine",
-    "RPG Maker XP/VX/VX Ace Game Engine": "_engine",
-    "Wolfenstein 3D Game Engine": "_engine",
+    # Multi-system / game engines. es_systems.xml:155 "arcade" launches the
+    # carriers of "Arcade (various)" (fbneo, the mame variants, dice) — the
+    # umbrella id the catalogue itself files these cores under; per-board
+    # refinements are per-file override work.
+    "Arcade (various)": "arcade",
+    # "Game engine" is scummvm_libretro's systemname and nothing else's;
+    # es_systems.xml:1848 "scummvm" launches it (:1852).
+    "Game engine": "scummvm",
+    # es_systems.xml:1653 "ports" launches ecwolf_libretro (:1659) — the
+    # catalogue's own filing, bucket though it is.
+    "Wolfenstein 3D Game Engine": "ports",
+    # "RPG Maker XP/VX/VX Ace Game Engine" is deliberately unmapped: no
+    # shipped .info carries it, so it files mechanically like any other
+    # systemname this table does not know.
     "J2ME": "j2me",
     "Java ME": "j2me",
     "ZX Spectrum (various)": "zxspectrum",
+}
+
+# Systems that are real on the machine and absent from the catalogue: the
+# pinned ES-DE build declares no id for them (guard-tested against the
+# deployed es_systems.xml — nothing there spells them, commented blocks
+# included). atlas answers with its own spelling rather than hiding real
+# firmware, and every answer that uses one carries
+# :data:`CAVEAT_SYSTEM_NOT_IN_CATALOGUE` so the word cannot be read as a
+# catalogue id. Keys are the spellings; values name the machine for the
+# caveat's prose. Same output form as ``_unknown``: a token no catalogue
+# declares, plus a structured caveat saying why — only the fact differs
+# (here the catalogue lacks the word; there the core states no systemname).
+SYSTEMS_WITHOUT_CATALOGUE_ID: Mapping[str, str] = {
+    # bk_libretro.info: systemname "BK-0010/BK-0011(M)", eight bk/*.ROM dumps.
+    "bk": "Elektronika BK-0010/0011M",
+    # numero_libretro.info: ti83.rom / ti83plus.rom / ti83se.rom.
+    "ti83": "Texas Instruments TI-83 calculators",
+    # ep128emu_core_libretro.info: systemname "128", firmware descs
+    # "Enterprise 128 Expandible OS", "Enterprise 64 BASIC", … — the spelling
+    # follows the emulator family's own name (ep128emu).
+    "ep128": "Enterprise 64/128",
 }
 
 # Per-file system overrides for multi-system cores. A core covering several
@@ -454,8 +552,8 @@ SYSTEMNAME_TO_SLUG: Mapping[str, str] = {
 # Entries are added only where the file's machine is not in question, and each
 # addition shrinks how often that caveat has to fire. Versioned like the
 # packaged data files it stands beside.
-FIRMWARE_SYSTEM_OVERRIDE_VERSION = "2"
-FIRMWARE_SYSTEM_OVERRIDE_REVIEWED = "2026-08-04"
+FIRMWARE_SYSTEM_OVERRIDE_VERSION = "3"
+FIRMWARE_SYSTEM_OVERRIDE_REVIEWED = "2026-08-09"
 
 FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
     # Game Boy family (mGBA, VBA-M, Mesen-S, Gambatte, SameBoy, …)
@@ -472,12 +570,28 @@ FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
     "bios_CD_E.bin": "segacd",
     "bios_CD_U.bin": "segacd",
     "bios_CD_J.bin": "segacd",
-    # Master System (Genesis Plus GX)
-    "bios_E.sms": "sms",
-    "bios_U.sms": "sms",
-    "bios_J.sms": "sms",
-    # Game Gear (Genesis Plus GX)
-    "bios.gg": "gg",
+    # Master System (Genesis Plus GX). One id for the hardware, the J dump
+    # included — ruled mastersystem, not mark3.
+    "bios_E.sms": "mastersystem",
+    "bios_U.sms": "mastersystem",
+    "bios_J.sms": "mastersystem",
+    # Game Gear (Genesis Plus GX): "bios.gg (GameGear BIOS)" by its own desc.
+    "bios.gg": "gamegear",
+    # ColecoVision BIOS declared by smsplus under systemname "Sega 8-bit"
+    # (smsplus_libretro.info firmware1: "BIOS.col (Colecovision BIOS)") —
+    # without this rule it files under mastersystem.
+    "BIOS.col": "colecovision",
+    # Flycast's arcade boards. The .info files all of these under systemname
+    # "Sega Dreamcast", but each desc names its board (flycast_libretro.info
+    # firmware1-7), and the catalogue launches Flycast under the boards' own
+    # ids (es_systems.xml:1349 naomi, :1360 naomi2, :333 atomiswave).
+    "naomi.zip": "naomi",  # "dc/naomi.zip (Naomi Bios from MAME)"
+    "naomi2.zip": "naomi2",  # "dc/naomi2.zip (Naomi2 Bios from MAME)"
+    "hod2bios.zip": "naomi",  # "(Naomi The House of the Dead 2 Bios from MAME)"
+    "f355dlx.zip": "naomi",  # "(Naomi Ferrari F355 Challenge deluxe Bios from MAME)"
+    "f355bios.zip": "naomi",  # "(Naomi Ferrari F355 Challenge twin/deluxe Bios from MAME)"
+    "airlbios.zip": "naomi",  # "(Naomi Airline Pilots deluxe Bios from MAME)"
+    "awbios.zip": "atomiswave",  # "dc/awbios.zip (Atomiswave BIOS from MAME)"
     # SNES enhancement chips, declared by every bsnes variant and by Snes9x.
     # These are cartridge coprocessor ROMs — they exist only inside SNES
     # cartridges, so the machine is not in question. Ten installed bsnes
@@ -544,12 +658,14 @@ SOURCE_NONE: SystemSource = "none"
 
 
 def system_decision(file_name: str, systemname: str) -> tuple[str, SystemSource]:
-    """The system slug for a declared file, *and how it was arrived at*.
+    """The system a declared file belongs to, *and how it was arrived at*.
 
     Four ways, in order: the per-file override (the only one that knows which
-    machine a dump belongs to), the ``systemname`` map, a mechanical slug of an
-    unmapped ``systemname`` (so every declaration stays reachable by some slug),
-    and — when the ``.info`` states no ``systemname`` at all — ``_unknown``.
+    machine a dump belongs to), the ``systemname`` map — both speaking ES-DE
+    ids, or a declared own spelling where no id exists — then a mechanical
+    slug of an unmapped ``systemname`` (so every declaration stays reachable
+    by some word), and — when the ``.info`` states no ``systemname`` at all —
+    ``_unknown``.
 
     The *source* is the point. Everything but ``override`` assigns a file by
     what its whole core is called, which is only sound while the core covers one
@@ -567,7 +683,7 @@ def system_decision(file_name: str, systemname: str) -> tuple[str, SystemSource]
 
 
 def system_for(file_name: str, systemname: str) -> str:
-    """The atlas system slug a declared file belongs to."""
+    """The system a declared file belongs to, in atlas's vocabulary."""
     return system_decision(file_name, systemname)[0]
 
 
@@ -642,9 +758,13 @@ class CoreDeclarations:
         - ``systemname`` itself names several (``ColecoVision/CreatiVision/My
           Vision``, ``GameCube / Wii``) — the same separator
           :data:`SYSTEMNAME_TO_SLUG` is already keyed on;
-        - the two disagree where both are mappable (vice_x128 says ``C128``
-          while its database says ``Commodore - 64``): one source contradicting
-          the other is exactly a reason not to trust either blindly.
+        - the two disagree where both are mappable: one source contradicting
+          the other is exactly a reason not to trust either blindly. No
+          shipped core trips this today — vice_x128 was the case (systemname
+          ``C128``, database ``Commodore - 64``) until map version 2 filed the
+          C128 under ``c64`` the way the catalogue itself does, turning the
+          disagreement into agreement — but a reading that exists is kept:
+          the next info set can disagree again.
 
         Over-firing says "this could be derived" when it is not; staying silent
         says nothing when it is. The first is recoverable, so the reading is
@@ -839,9 +959,9 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
             caveats.append(
                 Caveat(
                     CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
-                    f"{core.core_so} covers more than one system but states one systemname "
-                    f"({core.systemname!r}); these files carry no per-file rule and were filed by it, so their "
-                    f"system is derived and may be wrong: {files}",
+                    f"these files' system is inherited from {core.core_so}'s own systemname "
+                    f"({core.systemname!r}); the core covers more than one system, and no per-file "
+                    f"source is established yet, so the filing may be wrong: {files}",
                     {
                         "core_so": core.core_so,
                         "systemname": core.systemname,
@@ -851,6 +971,44 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
                     },
                 )
             )
+    return tuple(caveats)
+
+
+def catalogue_vocabulary_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
+    """State it when a core's firmware is filed under a word no catalogue declares.
+
+    A handful of systems exist on the machines atlas supports and in no ES-DE
+    build (:data:`SYSTEMS_WITHOUT_CATALOGUE_ID`). Refusing to answer would
+    hide real firmware, so the answer keeps atlas's own spelling — and this
+    caveat marks every use of one, so a consumer validating identifiers
+    against ``known_systems()`` reads a marked word rather than a membership
+    mistake. One caveat per spelling used, naming the files filed under it.
+    """
+    caveats: list[Caveat] = []
+    filed: dict[str, list[str]] = {}
+    for declaration in core.firmware:
+        if declaration.system in SYSTEMS_WITHOUT_CATALOGUE_ID and declaration.file_name:
+            filed.setdefault(declaration.system, []).append(declaration.file_name)
+    for system in sorted(filed):
+        files = ", ".join(sorted(set(filed[system])))
+        caveats.append(
+            Caveat(
+                CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
+                f"no ES-DE system id exists for this system "
+                f"({SYSTEMS_WITHOUT_CATALOGUE_ID[system]}); {system!r} is atlas's own spelling — "
+                f"{core.core_so} files under it: {files}",
+                {
+                    "core_so": core.core_so,
+                    "system": system,
+                    "files": files,
+                    # Deliberately not "table_version": the assignment caveats
+                    # cite the override table under that key, and this one
+                    # cites the systemname map — one key per governing table,
+                    # so a consumer reading the number knows what it versions.
+                    "map_version": SYSTEMNAME_MAP_VERSION,
+                },
+            )
+        )
     return tuple(caveats)
 
 
@@ -1712,7 +1870,12 @@ def _core_caveats(core: CoreDeclarations, refusals: tuple[Caveat, ...]) -> tuple
     same core, or the answer a consumer gets depends on which question it
     asked.
     """
-    return (*refusals, *_unread_declaration_caveats(core), *system_assignment_caveats(core))
+    return (
+        *refusals,
+        *_unread_declaration_caveats(core),
+        *system_assignment_caveats(core),
+        *catalogue_vocabulary_caveats(core),
+    )
 
 
 def _read_core(
@@ -1879,24 +2042,21 @@ def firmware_for_core(
     )
 
 
-def _cores_by_systemname(
+def _derived_enumeration(
     machine: Machine, context: FirmwareContext, system: str, *, verify: bool
 ) -> tuple[list[CoreFirmware], list[Caveat]]:
-    """The emulators for *system* where no frontend catalogue exists.
+    """The emulators filed under *system* by the installed cores' own declarations.
 
-    The installed cores' own ``systemname`` is then the only enumeration there
-    is, so the identifier is an atlas slug rather than a frontend system name —
-    stated, because the two are different vocabularies.
+    The selection every catalogue-less answer shares: a core answers for
+    *system* when the map files the core itself there, or any one of its
+    declared files (the per-file overrides put Flycast under ``naomi``).
+    Observation caveats and the may-hide statement ride along. What does
+    *not* ride along is the lead caveat framing the list — *why* the
+    enumeration is derived differs between the two callers (an arrangement
+    with no catalogue at all, and a word no catalogue can declare), and each
+    states its own reason.
     """
-    caveats = [
-        Caveat(
-            CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
-            "this installation ships no emulator catalogue, so the emulators for a system are derived "
-            "from the installed cores' own systemname — the identifier is an atlas system slug, not a "
-            "frontend system name",
-            {"system": system},
-        )
-    ]
+    caveats: list[Caveat] = []
     selected = tuple(
         core
         for core in context.cores
@@ -1922,6 +2082,48 @@ def _cores_by_systemname(
             )
         )
     return list(cores), caveats
+
+
+def _cores_by_systemname(
+    machine: Machine, context: FirmwareContext, system: str, *, verify: bool
+) -> tuple[list[CoreFirmware], list[Caveat]]:
+    """The emulators for *system* where no frontend catalogue exists.
+
+    The installed cores' own ``systemname`` is then the only enumeration there
+    is. The identifier is the same vocabulary as everywhere else — ES-DE ids,
+    which the systemname map speaks since its version 2 — but *which emulators
+    carry it* was derived from the cores rather than read from a frontend, and
+    the caveat states that: an enumeration a catalogue would disagree with is
+    a real possibility, an identifier mismatch is not.
+    """
+    cores, caveats = _derived_enumeration(machine, context, system, verify=verify)
+    lead = Caveat(
+        CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
+        "this installation ships no emulator catalogue, so the emulators for this system are derived "
+        "from the installed cores' own systemname — the identifier is atlas's one system vocabulary "
+        "either way; what a catalogue would have said about the emulator list is unknown",
+        {"system": system},
+    )
+    return cores, [lead, *caveats]
+
+
+def _uncatalogued_word_caveat(system: str) -> Caveat:
+    """The answer-level mark on a question asked in one of atlas's own spellings.
+
+    Not :data:`CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE`, however similar the
+    consequence: that code claims the *machine* ships no catalogue, which is
+    false on a catalogued arrangement. The true fact is about the word — no
+    build declares it, so no catalogue anywhere could enumerate or deny its
+    emulators — and it holds identically on every arrangement, which is what
+    makes the own spellings one vocabulary rather than a per-route dialect.
+    """
+    return Caveat(
+        CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
+        f"no ES-DE system id exists for this system ({SYSTEMS_WITHOUT_CATALOGUE_ID[system]}); "
+        f"{system!r} is atlas's own spelling — no frontend catalogue can enumerate its emulators, "
+        "so this list is derived from the installed cores' own systemname on every arrangement",
+        {"system": system, "map_version": SYSTEMNAME_MAP_VERSION},
+    )
 
 
 def _catalogue_entry_core(
@@ -1999,13 +2201,31 @@ def firmware_for_system(
 ) -> FirmwareAnswer:
     """Which emulators can run *system*, and what each of them wants.
 
-    With a frontend *catalogue* (ES-DE, on the installs that ship it) the
-    emulator list is the frontend's — including entries whose core is not
-    installed and standalone emulators, both stated as such rather than
-    dropped, and *system* is the frontend's system name. Without one the list
-    is derived from the installed cores' own ``systemname`` and *system* is an
-    atlas slug; :data:`CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE` states that switch,
-    because the two are different vocabularies.
+    *system* is one vocabulary on every route: ES-DE's system names, the same
+    ids every other question takes (``atlas.systems``), plus the published own
+    spellings (:data:`SYSTEMS_WITHOUT_CATALOGUE_ID`) for the systems no ES-DE
+    build declares. With a frontend *catalogue* (ES-DE, on the installs that
+    ship it) an id's emulator list is the frontend's — including entries whose
+    core is not installed and standalone emulators, both stated as such rather
+    than dropped. Without one the list is derived from the installed cores'
+    own ``systemname`` through the packaged map;
+    :data:`CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE` states that the
+    *enumeration* is derived — the identifier means the same thing either way.
+
+    An own spelling is answered identically on **every** arrangement: no
+    catalogue can enumerate or deny a word no build declares, so the cores'
+    own declarations are the only enumeration there is, catalogued or not,
+    and the answer carries :data:`CAVEAT_SYSTEM_NOT_IN_CATALOGUE` — at answer
+    level for the word asked about, and on each core for the files filed
+    under one. An own spelling nothing files under answers **empty, marked
+    and established**: the word is vocabulary, so the emptiness is a machine
+    fact — the mark plus :data:`CAVEAT_NO_FIRMWARE_DECLARATION`, the same
+    established absence an id's declaration-less emulators state per entry,
+    said at answer level here because there is no entry to say it. And
+    :data:`CAVEAT_SYSTEM_UNKNOWN` fires only for words in neither vocabulary.
+    (``_unknown`` is deliberately not such a word: it marks cores that state
+    no systemname at all, a fact about those cores rather than about a
+    system, and it keeps its route-dependent behavior.)
 
     Each emulator answers with its **whole** declaration set, every requirement
     carrying its own ``system``: a multi-system core (mGBA declares Game Boy
@@ -2022,7 +2242,17 @@ def firmware_for_system(
     # say anything about the machine when it comes back empty.
     enumerated = context.cores_read if catalogue is None else catalogue.read
 
-    if catalogue is None:
+    if system in SYSTEMS_WITHOUT_CATALOGUE_ID:
+        # A word no build declares is answered from the cores on every
+        # arrangement — a catalogue can neither enumerate nor deny it, so
+        # consulting one would only ever manufacture "unknown identifier"
+        # out of a word this module itself publishes. The cores are the
+        # enumeration here even when a catalogue exists, so whether *they*
+        # were read is what an empty answer hangs on.
+        enumerated = context.cores_read
+        resolved, caveats = _derived_enumeration(machine, context, system, verify=verify)
+        caveats.insert(0, _uncatalogued_word_caveat(system))
+    elif catalogue is None:
         resolved, caveats = _cores_by_systemname(machine, context, system, verify=verify)
     elif not catalogue.read:
         caveats.append(
@@ -2040,12 +2270,16 @@ def firmware_for_system(
             resolved.append(core)
             caveats.extend(observed)
 
-    if not resolved and enumerated:
+    if not resolved and enumerated and system not in SYSTEMS_WITHOUT_CATALOGUE_ID:
         # Nothing here covers that identifier — a different answer from "nobody
         # declares firmware for it", and a different thing for a client to do.
         # A consumer working in RomM slugs that forgets to translate ("dc" for
         # ES-DE's "dreamcast") lands exactly here, and must not read it as
-        # "nothing needed".
+        # "nothing needed". A published own spelling is exempt: the word IS
+        # vocabulary, so nothing filing under it is a machine fact, not an
+        # identifier mistake — it answers empty carrying only its mark, the
+        # same shape an id whose emulators declare nothing answers with.
+        # system-unknown fires only for words in neither vocabulary.
         caveats.append(
             Caveat(
                 CAVEAT_SYSTEM_UNKNOWN,
@@ -2070,7 +2304,11 @@ def firmware_for_system(
         # would add nothing while reading as a degradation. What the entries
         # cannot say is the other two: that firmware was declared here and
         # never became a requirement, or that nothing could be read at all.
-        if empty.code != CAVEAT_NO_FIRMWARE_DECLARATION:
+        # And only entries that exist can say anything: an own spelling
+        # nothing files under reaches here with no cores at all (its
+        # ``system-unknown`` is deliberately suppressed above), so the
+        # established absence is stated here or nowhere.
+        if empty.code != CAVEAT_NO_FIRMWARE_DECLARATION or not cores:
             caveats.append(empty)
 
     return FirmwareAnswer(

@@ -93,21 +93,17 @@ The four firmware entry points ship: live `.info` declarations from the installe
   be structurally meaningless — and `neogeo.zip` is one of the mandatory files this work exists to surface. The fix
   belongs in the table (a per-entry statement of what kind of identity it is, with provenance), not in a file-extension
   heuristic; only then can `checked` grow a fifth value that means something.
-- **Atlas's own vocabulary is not yet one vocabulary (item 20b).** `firmware_for_system` speaks ES-DE's system name
-  where a catalogue exists and an atlas slug derived from the core's own `systemname` where none does, and says which
-  via a caveat. 13 of the 55 slugs that derivation can produce (`dc`, `gg`, `pce`, `sms`, `lynx`, …) are not ids, so the
-  fix is to unify the derived names toward the ES-DE ids — per name, from what the machine declares, never assumed from
-  the spelling. Translating _foreign_ vocabularies is not on this list and never will be: a client's naming dialect is
-  the client's to map (`DESIGN.md`, Vocabulary).
 - **Per-file system assignment.** `FIRMWARE_SYSTEM_OVERRIDE` is `[D]` and deliberately incomplete: it is atlas's own
   reading, cross-read against RomM's `known_bios_files.json`, and the two disagree (the Super Game Boy dumps are `snes`
-  here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it — 33 of the 96
-  declaring cores on a real RetroDECK, plus 2 cores that ship no `systemname` at all. Growing the table by hand is a
-  race lost to every core release; a real fix needs a per-file source of truth, and none exists upstream today (`.info`
-  has one `systemname` per core, `System.dat` keys by name without a system). Two known limits of the signal: a core
-  with a `systemname` and no `database` has only one source and is taken at its word, and the "two sources disagree"
-  reading needs both names mapped, which the largely-unmapped database vocabulary often prevents (vice_x128 says `C128`
-  while its database says `Commodore - 64`, and atlas cannot compare them).
+  here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it. The vocabulary
+  itself is settled (item 20b shipped: the map's values are ES-DE ids, `DESIGN.md` Vocabulary); what remains is evidence
+  per file, and the standing list is `docs/tasks/firmware-system-evidence.md` — 173 inherited declarations across 42
+  uncertain cores at the current snapshot. Growing the table by hand is a race lost to every core release; a real fix
+  needs a per-file source of truth, and none exists upstream today (`.info` has one `systemname` per core, `System.dat`
+  keys by name without a system). Two known limits of the signal: a core with a `systemname` and no `database` has only
+  one source and is taken at its word, and the "two sources disagree" reading needs both names mapped, which the
+  largely-unmapped database vocabulary often prevents (vice_x128's database says `Commodore - 64`, a name the systemname
+  map does not carry, so atlas cannot compare the pair).
 - **The unclaimed bucket has substructure.** It currently mixes genuine alternative BIOS revisions with core runtime
   data (blueMSX machine ROMs, PPSSPP assets, Dolphin `Sys`). Save artifacts are already excluded via the rule cards;
   runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save

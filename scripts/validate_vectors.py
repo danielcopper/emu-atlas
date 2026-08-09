@@ -210,6 +210,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-unreadable",
     "firmware-content-unidentified",
     "system-unknown",
+    "system-not-in-catalogue",
     "rom-path-undeclared",
     "rom-path-unresolved",
     "frontend-settings-unreadable",
