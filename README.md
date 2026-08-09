@@ -64,8 +64,7 @@ Map of the surface — layers, handles, answer types, and what to import from wh
 
 1. **RetroArch knowledge** — interpretation of `retroarch.cfg` (the three save-layout keys and their override
    semantics), the save-directory math (`sort_by_content` / `sort_by_core`), core `.info` parsing, and the probe
-   locations per install flavor (flatpak, native, RetroDECK; EmuDeck is planned — no production knowledge exists for it
-   yet) as data.
+   locations per install flavor (flatpak, native, RetroDECK, EmuDeck) as data.
 2. **Firmware** — split at the boundary rule. _Which_ files a core wants is read live off the machine, from the `.info`
    files RetroArch ships next to its cores, so it can never drift against the cores an installation actually has. _What
    a correct file's bytes are_ — the `md5` / `sha1` / `size` triple — is world knowledge and ships as a packaged,
@@ -137,12 +136,15 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   is stated as a caveat rather than left to be discovered.
 - `installation.emulators_for(system, content_path=...)` — on every handle — answers which emulators can launch a
   system. On RetroDECK it reads the ES-DE catalogue live (bundled + custom overlay) and resolves the effective default
-  through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. Entries carry
-  their core, so placement answers on that path need no core argument; a standalone entry answers with a typed
-  `Unresolved` outcome instead of raising. Where there are no entries the answer says which kind of none: a bare
-  RetroArch ships no catalogue at all, an EmuDeck arrangement may have one atlas has not established the location of,
-  and a catalogue atlas could not read — missing, unreadable, or empty — is not an empty one; three codes, because a
-  client must not read the last two as "nothing here".
+  through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. On EmuDeck it
+  reads the same hierarchy from its ES-DE's on-disk layers (EmuDeck's own `custom_systems` overlay, the gamelists,
+  `es_settings.xml`) where an ES-DE is present — stated as incomplete with `emulator-catalogue-sealed`, because the
+  bundled `es_systems.xml` is embedded in the AppImage. Entries carry their core, so placement answers on that path need
+  no core argument; a standalone entry answers with a typed `Unresolved` outcome instead of raising. Where there are no
+  entries the answer says which kind of none: a bare RetroArch ships no catalogue at all, an EmuDeck arrangement with no
+  ES-DE on disk may have one atlas has not established the location of, a catalogue atlas could not read — missing,
+  unreadable, or empty — is not an empty one, and a sealed catalogue's readable layers may simply not declare the
+  system; four codes, because a client must not read the last three as "nothing here".
 - `installation.rom_location(system)` — on every handle — answers where that system's ROMs live and which file
   extensions the frontend will launch, both off the same `<system>` declaration, so neither has to be recomputed from a
   table that cannot follow a user who moved their library. The directory is the declared `<path>` with `%ROMPATH%`
@@ -150,9 +152,10 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   including its own home-relative default where that setting is genuinely unset, because on this arrangement the home
   behind it is read rather than assumed. A `dir` reached through symlinks reports its `physical_dir` beside it, as a
   save placement does. Where nothing was resolved the answer says which kind of nothing: no catalogue, an unread one, a
-  system declared without a path, a setting that is not an absolute path, a settings file that exists and could not be
-  read, or a Flatpak override that moved the tree those settings live in. The extensions are the declaration verbatim —
-  both cases where the file lists both, mistakes included — because which of them to act on is the frontend's business.
+  sealed one whose readable layers declare no such system, a system declared without a path, a setting that is not an
+  absolute path, a settings file that exists and could not be read, or a relocated config home (a Flatpak override on
+  RetroDECK, a `portable.txt` next to the AppImage on EmuDeck). The extensions are the declaration verbatim — both cases
+  where the file lists both, mistakes included — because which of them to act on is the frontend's business.
 - The audit trail: `docs/research/coverage-matrix.md` (generated, with full source identity) tracks every referenced
   emulator's verdict and per-arrangement verification; `atlas/data/core_audit.json` enforces card maintenance by test;
   verification fails closed — drifted **and** unverifiable live versions raise an `unverified-version` caveat at answer

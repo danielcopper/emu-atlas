@@ -217,9 +217,9 @@ def resolve_rom_path(declared: str, rom_directory: str | None) -> str | None:
 
     The directory is normalized to exactly one trailing separator first, because
     that is the shape ES-DE substitutes: ``FileData::getROMDirectory()``
-    (``es-app/src/FileData.cpp``, ES-DE 3.4.1, ~L313-345) appends one where the
-    configured value lacks it and returns the empty-setting default with one
-    already on. Doing it here rather than appending unconditionally keeps a
+    (``es-app/src/FileData.cpp:271-305``, ES-DE 3.4.1) appends one where the
+    configured value lacks it (``:291-297``) and returns the empty-setting
+    default with one already on (``:283-284``). Doing it here rather than appending unconditionally keeps a
     configured ``…/roms/`` from spelling the answer ``…/roms//n64``.
 
     A declared path carrying no token needs no directory and resolves to

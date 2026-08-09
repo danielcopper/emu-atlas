@@ -1033,6 +1033,147 @@ class TestEmuDeck:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
 
 
+class TestEmuDeckEsdeCatalogue:
+    """The edges of the ES-DE side the vectors do not pin: presence decisions,
+    the marker cross-check's silence, and the per-branch refusals of the ROM
+    resolution in the sealed state. The stock shapes live in the vectors."""
+
+    OVERLAY = (
+        '<?xml version="1.0"?><systemList><system><name>atarijaguar</name>'
+        "<path>%ROMPATH%/atarijaguar</path><extension>.j64 .J64</extension>"
+        '<command label="Virtual Jaguar">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>'
+        "</system></systemList>"
+    )
+    MARKER = 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n'
+    APPIMAGE = f"{HOME}/Applications/ES-DE.AppImage"
+
+    def _emudeck(self, files, **kwargs):
+        base = {
+            EMUDECK_SETTINGS: self.MARKER,
+            STANDALONE_CFG: 'savefile_directory = "/home/deck/Emulation/saves"\n',
+            f"{HOME}/Emulation/saves/.keep": "",
+        }
+        base.update(files)
+        return atlas.EmuDeck(HOME, FixtureMachine(base, **kwargs))
+
+    def _codes(self, answer):
+        return [c.code for c in answer.caveats]
+
+    def test_the_appdata_tree_alone_is_presence(self):
+        # An AppImage moved away from a configuration that still runs: the
+        # ~/ES-DE tree decides presence on its own.
+        ed = self._emudeck({f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY})
+        answer = ed.emulators_for("atarijaguar")
+        assert [e.label for e in answer.entries] == ["Virtual Jaguar"]
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in self._codes(answer)
+
+    def test_the_appimage_alone_is_presence(self):
+        # The reverse: EmuDeck's own installed-test (the AppImage stat) with no
+        # appdata tree yet — sealed and empty, never the unestablished refusal.
+        ed = self._emudeck({self.APPIMAGE: {"status": "invalid-text"}})
+        codes = self._codes(ed.emulators_for("atarijaguar"))
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED not in codes
+
+    def test_a_quoted_marker_value_is_the_same_statement(self):
+        # setSetting writes bare values; a hand-edited quoted one parses the
+        # same (the parser quote-strips), so agreement stays silent.
+        ed = self._emudeck(
+            {
+                EMUDECK_SETTINGS: self.MARKER + 'doInstallESDE="true"\n',
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+            }
+        )
+        assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in self._codes(ed.emulators_for("atarijaguar"))
+
+    def test_a_marker_that_states_neither_true_nor_false_stays_silent(self):
+        # No doInstallESDE key: nothing is stated, so no disagreement can be
+        # manufactured — in either presence state.
+        with_esde = self._emudeck({f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY})
+        without = self._emudeck({})
+        assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in self._codes(with_esde.emulators_for("gb"))
+        assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in self._codes(without.emulators_for("gb"))
+
+    def test_a_marker_value_that_is_neither_true_nor_false_stays_silent(self):
+        # The value case, not only the absent key: jq emits `null` for a
+        # missing installFrontends key (jsonToBashVars.sh:71), so
+        # doInstallESDE=null is a real marker state — and it states nothing.
+        # With ES-DE present, treating "not true" as "stated false" would
+        # manufacture a disagreement out of silence; these pin that it cannot.
+        for value in ("null", "yes"):
+            ed = self._emudeck(
+                {
+                    EMUDECK_SETTINGS: self.MARKER + f"doInstallESDE={value}\n",
+                    f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                }
+            )
+            assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in self._codes(
+                ed.emulators_for("atarijaguar")
+            ), value
+
+    def test_unreadable_settings_refuse_the_rom_directory(self):
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": {"status": "unreadable"},
+            }
+        )
+        placement = ed.rom_location("atarijaguar")
+        assert placement.dir is None
+        assert placement.extensions == (".j64", ".J64")
+        codes = self._codes(placement)
+        assert atlas.CAVEAT_FRONTEND_SETTINGS_UNREADABLE in codes
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
+
+    def test_a_relative_rom_directory_is_refused_not_guessed(self):
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": '<string name="ROMDirectory" value="~/Emulation/roms" />',
+            }
+        )
+        placement = ed.rom_location("atarijaguar")
+        assert placement.dir is None
+        assert atlas.CAVEAT_ROM_PATH_UNRESOLVED in self._codes(placement)
+
+    def test_an_unset_rom_directory_resolves_the_upstream_default(self):
+        # No es_settings.xml at all: ES-DE's own <home>/ROMs default applies —
+        # against the user's real home, because EmuDeck launches with no --home.
+        ed = self._emudeck({f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY})
+        assert ed.rom_location("atarijaguar").dir == f"{HOME}/ROMs/atarijaguar"
+
+    def test_an_unreadable_overlay_answers_empty_and_sealed(self):
+        # The overlay is skipped like any malformed layer; with the bundled
+        # layer sealed the enumeration is then empty — and says sealed, never
+        # unreadable (the shadow is the only file whose failure means that).
+        ed = self._emudeck(
+            {f"{HOME}/ES-DE/custom_systems/es_systems.xml": {"status": "unreadable"}}
+        )
+        answer = ed.emulators_for("atarijaguar")
+        assert answer.entries == ()
+        codes = self._codes(answer)
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE not in codes
+
+    def test_the_entry_route_states_absence_when_esde_vanished(self):
+        # A live handle re-reads per query: an entry answered while ES-DE was
+        # present can be asked again after it is gone, and the per-game check
+        # then states the refusal instead of silently skipping.
+        present = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/Emulation/roms/atarijaguar/Game.j64": "",
+            }
+        )
+        entry = present.emulators_for("atarijaguar").entries[0]
+        vanished = self._emudeck({f"{HOME}/Emulation/roms/atarijaguar/Game.j64": ""})
+        placement = vanished.entry_savefile_location(
+            entry._spec,  # pyright: ignore[reportPrivateUsage] - the spec survives the machine change
+            content_path=f"{HOME}/Emulation/roms/atarijaguar/Game.j64",
+        )
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED in self._codes(placement)
+
+
 class TestFlatpakSandboxPaths:
     """A Flatpak app writes its config from inside its sandbox, so the paths in
     it are sandbox paths: the live RetroDECK cfg spells its override directory

@@ -15,7 +15,7 @@
     "emudeck": {
       "label": "an EmuDeck arrangement",
       "verified": null,
-      "note": "[D] Read from EmuDeck's shipped configuration upstream (settings.sh, its org.libretro.RetroArch cfg); no EmuDeck machine has been observed. Which frontend it runs is a separate open question (emulator-catalogue-unestablished)."
+      "note": "[D] Read from EmuDeck's shipped configuration upstream (settings.sh, its org.libretro.RetroArch cfg, the ES-DE wiring under ~/ES-DE — dragoonDorise/EmuDeck @ 863ab69, ES-DE v3.4.1); no EmuDeck machine has been observed. ES-DE presence is decided from the disk; a machine driven by Pegasus or Steam ROM Manager instead keeps the emulator-catalogue-unestablished refusal."
     },
     "bare_retroarch_flatpak": {
       "label": "the bare RetroArch Flatpak",

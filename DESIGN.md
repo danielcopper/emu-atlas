@@ -151,13 +151,17 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   playlists — which core actually launched a ROM). When no catalogue exists, the caller names the core; atlas does not
   invent a default.
 - **Absent is not one answer, so the question is on the protocol.** Every handle answers `emulators_for` / `systems` /
-  `rom_location`; only RetroDECK answers from a catalogue, and the others say why in a caveat rather than leaving the
-  caller to `isinstance`-narrow and guess. The reasons are three distinct codes because they are three distinct claims:
-  a bare RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement), an EmuDeck
-  arrangement may have one whose location atlas has not established (`emulator-catalogue-unestablished`, a statement
-  about atlas — never to be read as an absence), and a catalogue atlas could not read — missing, unreadable, or empty —
-  says nothing at all (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware
-  route already states.
+  `rom_location`; the ES-DE-driven handles answer from a catalogue, and the others say why they cannot in a caveat
+  rather than leaving the caller to `isinstance`-narrow and guess. The reasons are distinct codes because they are
+  distinct claims: a bare RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement),
+  an EmuDeck arrangement with no ES-DE on disk may have a catalogue whose location atlas has not established
+  (`emulator-catalogue-unestablished`, a statement about atlas — never to be read as an absence), and a catalogue atlas
+  could not read — missing, unreadable, or empty — says nothing at all (`emulator-catalogue-unreadable`). The third is
+  the same code, and the same fact, the firmware route already states. The fourth claim is partial: EmuDeck's ES-DE
+  embeds its bundled `es_systems.xml` inside the AppImage, so its handle answers from the on-disk layers — EmuDeck's own
+  `custom_systems` overlay, the gamelists, `es_settings.xml` — and every such answer carries
+  `emulator-catalogue-sealed`, the one code of the family that legitimately accompanies real entries: what the readable
+  layers declare is stated, and the frontend may declare more.
 - **A directory read out of a config atlas could not read is not a directory.** `rom_location` resolves the frontend's
   own documented default where the ROM-directory setting is genuinely unset, because on this arrangement the home that
   default hangs off is read rather than assumed. It refuses where the settings file exists and cannot be read

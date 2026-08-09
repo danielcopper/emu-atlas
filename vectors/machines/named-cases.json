@@ -7229,6 +7229,688 @@
           ]
         }
       }
+    },
+    {
+      "name": "emudeck-esde-answers-from-the-on-disk-layers",
+      "rationale": "EmuDeck deploys upstream ES-DE as an AppImage and wires it through plain files under ~/ES-DE (dragoonDorise/EmuDeck @ 863ab69; ES-DE v3.4.1). The catalogue answers come from the readable layers — the custom_systems overlay EmuDeck writes, the gamelist selections it seeds, es_settings.xml's ROMDirectory — and every one carries emulator-catalogue-sealed, because the bundled es_systems.xml is embedded in the AppImage (INSTALL.md v3.4.1:1470) and atlas does not open it. An overlay system answers fully (ES-DE's merge replaces a same-name bundled system entirely), the gamelist's alternativeEmulator promotes Virtual Jaguar over the declared order, and %ROMPATH% resolves against the ROMDirectory EmuDeck itself wrote (emuDeckESDE.sh:407-409).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "systems_query": {
+          "installation": "emudeck"
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar"
+        },
+        "rom_location_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "atarijaguar"
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {}
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        },
+        "catalogue": {
+          "entries": [
+            {
+              "system": "atarijaguar",
+              "label": "Virtual Jaguar",
+              "kind": "libretro",
+              "core_so": "virtualjaguar_libretro.so",
+              "selection": "gamelist.xml: alternativeEmulator = \"Virtual Jaguar\"",
+              "caveats": []
+            },
+            {
+              "system": "atarijaguar",
+              "label": "BigPEmu (Proton)",
+              "kind": "standalone",
+              "core_so": null,
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        },
+        "rom_location": {
+          "dir": "/home/deck/Emulation/roms/atarijaguar",
+          "physical_dir": null,
+          "extensions": [
+            ".j64",
+            ".J64",
+            ".rom",
+            ".ROM",
+            ".zip",
+            ".ZIP"
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-esde-sealed-is-not-declares-none",
+      "rationale": "The discriminating direction of the sealed caveat: gb is not in EmuDeck's overlay, and the bundled layer that almost certainly declares it is sealed inside the AppImage. The empty answer carries emulator-catalogue-sealed — 'nothing readable declares this', a statement about atlas — and never reads as 'the frontend knows no emulator for gb'. Same for the ROM placement: no rom-path-undeclared, because that code claims the catalogue WAS read and declares nothing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "gb"
+        },
+        "rom_location_query": {
+          "installation": "emudeck",
+          "system": "gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gb"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        },
+        "rom_location": {
+          "dir": null,
+          "physical_dir": null,
+          "extensions": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gb"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-esde-on-disk-outranks-a-marker-that-says-no",
+      "rationale": "settings.sh records the installer's frontend choice (jsonToBashVars.sh:71 writes doInstallESDE), and the disk records what is actually here — EmuDeck's own installed-test is the AppImage stat (ESDE_IsInstalled, emuDeckESDE.sh:488-494). The disk decides: the catalogue answers from the ES-DE that is present, and frontend-marker-mismatch states the stale record instead of following it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=false\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "atarijaguar",
+              "label": "Virtual Jaguar",
+              "kind": "libretro",
+              "core_so": "virtualjaguar_libretro.so",
+              "selection": "gamelist.xml: alternativeEmulator = \"Virtual Jaguar\"",
+              "caveats": []
+            },
+            {
+              "system": "atarijaguar",
+              "label": "BigPEmu (Proton)",
+              "kind": "standalone",
+              "core_so": null,
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "frontend-marker-mismatch",
+              "data": {
+                "key": "doInstallESDE",
+                "stated": "false",
+                "observed": "present"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-marker-promises-an-esde-the-disk-does-not-have",
+      "rationale": "doInstallESDE=true with no AppImage and no ~/ES-DE tree: the refusal stays the unestablished one — no ES-DE answers here, and where Pegasus or Steam ROM Manager would keep a catalogue is not established — while frontend-marker-mismatch states that the marker's record and the disk disagree. The disk decides; the record is stated, never followed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unestablished",
+              "data": {
+                "arrangement": "emudeck"
+              }
+            },
+            {
+              "code": "frontend-marker-mismatch",
+              "data": {
+                "key": "doInstallESDE",
+                "stated": "true",
+                "observed": "absent"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-esde-portable-txt-makes-the-tree-suspect",
+      "rationale": "A portable.txt next to the AppImage may relocate ES-DE's application data directory (ES-DE v3.4.1 main.cpp:149-192 — ES-DE validates the target and ignores the file when it points nowhere, so presence alone states a suspicion); EmuDeck writes none, a user can. Every answer read from ~/ES-DE then carries config-home-relocated — the files atlas read may not be the ones in force — and the home-derived ROMDirectory default (~/ROMs, FileData.cpp:283-284) is refused rather than resolved, because the home it derives from is exactly what the portable.txt may have moved. The enumeration itself is still stated: what the on-disk tree declares is a fact, and the caveat carries the doubt.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/home/deck/Applications/portable.txt": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "systems_query": {
+          "installation": "emudeck"
+        },
+        "rom_location_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "atarijaguar"
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {}
+            },
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/Applications/portable.txt"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        },
+        "rom_location": {
+          "dir": null,
+          "physical_dir": null,
+          "extensions": [
+            ".j64",
+            ".J64",
+            ".rom",
+            ".ROM",
+            ".zip",
+            ".ZIP"
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/Applications/portable.txt"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-esde-resource-shadow-is-the-bundled-layer",
+      "rationale": "ES-DE's per-file resource override (INSTALL.md v3.4.1:1125): a file at ~/ES-DE/resources/systems/linux/es_systems.xml shadows the embedded es_systems.xml for ES-DE itself, so where one exists and parses it IS the bundled layer, on disk. Nothing is sealed away: no sealed caveat, the shadow and the overlay merge the way RetroDECK's two layers do, and a system neither layer declares is now the read-and-declares-none fact rom-path-undeclared states.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/home/deck/ES-DE/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gb</name>\n    <fullname>Nintendo Game Boy</fullname>\n    <path>%ROMPATH%/gb</path>\n    <extension>.gb .GB .zip .ZIP</extension>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "systems_query": {
+          "installation": "emudeck"
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "gb"
+        },
+        "rom_location_query": {
+          "installation": "emudeck",
+          "system": "gba"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "atarijaguar",
+            "gb"
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        },
+        "catalogue": {
+          "entries": [
+            {
+              "system": "gb",
+              "label": "Gambatte",
+              "kind": "libretro",
+              "core_so": "gambatte_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        },
+        "rom_location": {
+          "dir": null,
+          "physical_dir": null,
+          "extensions": [],
+          "caveats": [
+            {
+              "code": "rom-path-undeclared",
+              "data": {
+                "system": "gba"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-esde-broken-shadow-is-an-unreadable-catalogue",
+      "rationale": "The shadow is the file ES-DE loads instead of the embedded copy, so a shadow that exists and cannot be read means what the catalogue says is unknown — emulator-catalogue-unreadable, the same claim RetroDECK's unreadable bundled layer makes, never sealed (sealed says the readable part answered) and never an enumeration from the overlay alone.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/home/deck/ES-DE/resources/systems/linux/es_systems.xml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "systems_query": {
+          "installation": "emudeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {}
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-entry-route-carries-the-sealed-catalogue-with-it",
+      "rationale": "The placement asked through an EmuDeck catalogue entry: the core comes from the entry, the placement from the companion RetroArch cfg, and the ES-DE side rides as caveats — the sealed statement (the entry came out of a partly-sealed catalogue) and the per-game check: this game's gamelist entry selects BigPEmu (Proton), so the Virtual Jaguar entry answers its placement while stating that ES-DE would launch the other emulator.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList>\n    <game>\n        <path>./Tempest 2000.j64</path>\n        <altemulator>BigPEmu (Proton)</altemulator>\n    </game>\n</gameList>",
+          "/home/deck/Emulation/roms/atarijaguar/Tempest 2000.j64": {
+            "status": "invalid-text",
+            "size": 4194304
+          }
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "cores": {
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/virtualjaguar_libretro.so": {
+            "library_name": "Virtual Jaguar"
+          }
+        },
+        "entry_savefile_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar",
+          "label": "Virtual Jaguar",
+          "content_path": "/home/deck/Emulation/roms/atarijaguar/Tempest 2000.j64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "virtualjaguar"
+              }
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "per-game-override",
+              "data": {
+                "label": "BigPEmu (Proton)"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
     }
   ]
 }

@@ -489,39 +489,47 @@ entry.provenance                   # which catalogue layer declared it (prose, f
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
 
-An empty `entries` is four different facts, and the three `emulator-catalogue-*` codes are how you tell them apart —
+An empty `entries` is five different facts, and the four `emulator-catalogue-*` codes are how you tell them apart —
 **none of them present** means the catalogue was read and declares no emulator for that system, an answer about the
-machine and the only one of the four you may act on as "nothing here":
+machine and the only one of the five you may act on as "nothing here":
 
-| caveat code                        | what it means                                                         | what to do                                   |
-| ---------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- |
-| _(none of the three)_              | read, and the frontend knows no emulator for this system              | trust it                                     |
-| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                   | name the core: `savefile_location(core_so=)` |
-| `emulator-catalogue-unestablished` | it may have one; atlas has not established where                      | same — but do not report "no emulators"      |
-| `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty | surface it; the machine may be broken        |
+| caveat code                        | what it means                                                                                                      | what to do                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| _(none of the four)_               | read, and the frontend knows no emulator for this system                                                           | trust it                                                                                 |
+| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                                                                | name the core: `savefile_location(core_so=)`                                             |
+| `emulator-catalogue-unestablished` | it may have one; atlas has not established where                                                                   | same — but do not report "no emulators"                                                  |
+| `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty                                              | surface it; the machine may be broken                                                    |
+| `emulator-catalogue-sealed`        | part of the catalogue is sealed away (EmuDeck's AppImage-embedded bundled layer); only the on-disk layers answered | use the entries you got; an empty list is "nothing readable declares this", never "none" |
 
-Read the three codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
-these four, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken
-installation. Filter to the three codes (or ask `health()` separately, which is the same question asked directly).
+`sealed` is the one of the four that also accompanies real entries: on an EmuDeck machine with ES-DE, a system EmuDeck's
+own `custom_systems` overlay declares answers fully (ES-DE's merge replaces a same-name bundled system entirely), and
+the caveat says the frontend may declare more systems than the answer can list.
+
+Read the four codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
+these, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken
+installation. Filter to the codes (or ask `health()` separately, which is the same question asked directly).
 
 ```python
 refusals = {c.code for c in answer.caveats} & {
     "emulator-catalogue-unavailable", "emulator-catalogue-unestablished", "emulator-catalogue-unreadable",
+    "emulator-catalogue-sealed",
 }
 if not answer.entries and not refusals:
     nothing_here(system)          # the frontend genuinely knows no emulator for it
 ```
 
-The middle two both mean "ask the user or use your own mapping", but only the first is a statement about the machine.
-`unestablished` is a statement about atlas, and a client that renders it as an absence is telling its user something
-nobody checked.
+`unavailable` is a statement about the machine; `unestablished` and `sealed` are statements about atlas, and a client
+that renders either as an absence is telling its user something nobody checked. On an EmuDeck handle two more codes can
+ride along without being refusals: `frontend-marker-mismatch` (the disk and `settings.sh`'s `doInstallESDE` record
+disagree about ES-DE being installed — the disk decided the answer) and `config-home-relocated` (a `portable.txt` next
+to the AppImage may have moved ES-DE's data directory out from under the files atlas read).
 
-The per-game step is ES-DE's, so it happens on the RetroDECK handle only, and it matches on the path: pass the ROM the
-way it lies under the system's ROM directory — which is exactly `rom_location(system).dir`, the same directory the ROM
-question answers. Gamelist entries are relative to that directory and are resolved against it, and a folder entry covers
-the files directly inside it. A path somewhere else — a copy, a staging directory — matches no game, and the answer is
-then the per-system one. Two files of the same name at different depths are two different games, and only the one the
-gamelist names carries the override.
+The per-game step is ES-DE's, so it happens on the ES-DE-driven handles (RetroDECK, and EmuDeck where an ES-DE is
+present), and it matches on the path: pass the ROM the way it lies under the system's ROM directory — which is exactly
+`rom_location(system).dir`, the same directory the ROM question answers. Gamelist entries are relative to that directory
+and are resolved against it, and a folder entry covers the files directly inside it. A path somewhere else — a copy, a
+staging directory — matches no game, and the answer is then the per-system one. Two files of the same name at different
+depths are two different games, and only the one the gamelist names carries the override.
 
 That comparison is **lexical** — `.`, `..` and repeated slashes are folded, symlinks are not followed. RetroDECK's tree
 uses symlinks liberally, so a ROM spelled through one (or through any other route to the same file) will not match its
@@ -588,11 +596,12 @@ resolution refuses, for the three of the reasons below that belong to the root; 
 in your code does not, and it is wrong silently. The extensions are the declaration verbatim — both cases where the file
 lists both cases — because which of them to act on is the frontend's business and not something atlas filters for you.
 
-**`dir` is `None` whenever atlas resolved no directory, and the caveat says which of seven reasons.** Three are the ones
+**`dir` is `None` whenever atlas resolved no directory, and the caveat says which of eight reasons.** Four are the ones
 the catalogue question already has — the arrangement ships no catalogue (`emulator-catalogue-unavailable`), atlas has
-not established where it keeps one (`emulator-catalogue-unestablished`), or it could not be read
-(`emulator-catalogue-unreadable`). Four belong to this question, and they split along the line that decides what you can
-do about them — the first two are facts about the machine, the last two statements about atlas:
+not established where it keeps one (`emulator-catalogue-unestablished`), it could not be read
+(`emulator-catalogue-unreadable`), or the readable layers declare nothing for this system while the rest is sealed away
+(`emulator-catalogue-sealed`). Four belong to this question, and they split along the line that decides what you can do
+about them — the first two are facts about the machine, the last two statements about atlas:
 
 | caveat                         | what it means                                                                         |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
@@ -613,15 +622,17 @@ reads that file without trouble, so whatever it says is the configuration in for
 a directory belonging to a configuration nobody established. That is what `frontend-settings-unreadable` says, and it
 carries the read status in `data["status"]` (`unreadable`, `invalid-text`, or `unparseable`).
 
-`config-home-relocated` is worth handling on its own rather than as one more "no directory". It fires when a Flatpak
-override redefines `XDG_CONFIG_HOME` or `HOME` for the app — which moves the tree the frontend's default is relative to,
-and moves the settings file atlas read along with it. So the caveat is a warning about **this handle's other answers**
-too, not only about this one: they may rest on a settings file that is not the one in force. `data` names the override
-file and the key.
+`config-home-relocated` is worth handling on its own rather than as one more "no directory". It fires when something on
+the machine moved the tree the frontend's default is relative to out from under the files atlas read: on RetroDECK, a
+Flatpak override redefining `XDG_CONFIG_HOME` or `HOME` for the app (`data` names the override file and the key); on
+EmuDeck, a `portable.txt` sitting next to the ES-DE AppImage (`data` names it in `path`). Either way the caveat is a
+warning about **this handle's other answers** too, not only about this one: they may rest on files that are not the ones
+in force — which is why EmuDeck states it on every catalogue-shaped answer while one is present, next to whatever the
+answer still established.
 
 Never read `None` as "look in the default place" — where there is a default worth standing behind, atlas has already
-applied it. `rom-path-unresolved` and `config-home-relocated` both carry the declared path in `data["declared"]`, so a
-client that knows its own setup can finish the substitution atlas refused to guess at.
+applied it. `rom-path-unresolved` (and RetroDECK's `config-home-relocated`) carry the declared path in
+`data["declared"]`, so a client that knows its own setup can finish the substitution atlas refused to guess at.
 
 Extensions survive an unresolved directory: which files launch is declared in the same element and does not depend on
 where they sit.

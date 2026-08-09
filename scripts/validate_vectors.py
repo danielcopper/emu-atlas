@@ -138,6 +138,10 @@ EMULATOR_FIELDS = {"system", "label", "kind", "core_so", "selection", "caveats"}
 # The three ways a catalogue answer carries no entries, each a different claim:
 # the arrangement has none, its one could not be read, or atlas has not
 # established where it keeps one. None of them can accompany actual entries.
+# The fourth family member, "emulator-catalogue-sealed", is deliberately NOT
+# here: it states that part of the catalogue could not be opened while the
+# readable part answered, so it accompanies real entries as legitimately as an
+# empty list.
 NO_CATALOGUE_CODES = {
     "emulator-catalogue-unavailable",
     "emulator-catalogue-unreadable",
@@ -221,6 +225,8 @@ KNOWN_CAVEAT_CODES = {
     "core-info-unreadable",
     "emulator-catalogue-unreadable",
     "emulator-catalogue-unestablished",
+    "emulator-catalogue-sealed",
+    "frontend-marker-mismatch",
     "firmware-path-obstructed",
     "firmware-path-inaccessible",
     "firmware-path-escapes-root",

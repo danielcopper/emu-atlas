@@ -13,7 +13,10 @@ Every claim carries an evidence level:
 
 Sources are cited as `file:line`. RetroArch refers to upstream at `a79435a`; RetroDECK to `0.10.9b`, whose components
 live in the Flatpak at `/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/`,
-**not** in the RetroDECK Git repository; EmuDeck to upstream `dragoonDorise/EmuDeck` at clone time (2026-07-23).
+**not** in the RetroDECK Git repository. EmuDeck has two pinned generations: `acc45fc` (clone of 2026-07-23, the pin
+§13's original findings were read at) and `863ab69` (default branch `main`, fetched 2026-08-09, the pin behind §13b and
+the corrections marked in §13); ES-DE upstream facts cite the `v3.4.1` tag — the current stable, and the same revision
+RetroDECK's shipped fork derives from.
 
 ## 1. The target matrix
 
@@ -542,8 +545,11 @@ worth establishing separately — with the same game, so only one variable chang
 ## 13. EmuDeck — same rules, different inputs
 
 **[V]** EmuDeck (upstream `dragoonDorise/EmuDeck`) sets **exactly the same four RetroArch keys**, with different values,
-against the **standalone** `org.libretro.RetroArch` Flatpak (`functions/EmuScripts/RetroArch_maincfg.sh:3048-3090`,
-`functions/EmuScripts/emuDeckRetroArch.sh:228`):
+against the **standalone** `org.libretro.RetroArch` Flatpak. At `863ab69` the live writer is `RetroArch_setupSaves`
+(`functions/EmuScripts/emuDeckRetroArch.sh:222-230`), which patches the global cfg the Flatpak reads
+(`emuDeckRetroArch.sh:8`) after seeding it from a shipped 3303-line template
+(`configs/org.libretro.RetroArch/config/retroarch/retroarch.cfg`, rsynced by `configEmuFP`); the template carries all
+four sort flags `false` (`:3176-3179`):
 
 | Key                                | RetroDECK         | EmuDeck                       |
 | ---------------------------------- | ----------------- | ----------------------------- |
@@ -555,20 +561,39 @@ against the **standalone** `org.libretro.RetroArch` Flatpak (`functions/EmuScrip
 EmuDeck's libretro layout is therefore **flat**: `<savesPath>/retroarch/saves/<rom_stem>.srm`. The entire RetroArch
 knowledge (directory math, override chain, `library_name`) transfers unchanged; only roots and values differ.
 
+**[V]** **The cfg names a symlink.** Before writing the keys, `RetroArch_setupSaves` links
+`<savesPath>/retroarch/{saves,states}` → `~/.var/app/org.libretro.RetroArch/config/retroarch/{saves,states}`
+(`emuDeckRetroArch.sh:224-225`, `linkToSaveFolder` at `helperFunctions.sh:449`): the configured directory is the
+`savesPath` spelling, the bytes live in the Flatpak tree — the placement's `dir`/`physical_dir` pair, on EmuDeck's own
+stock layout.
+
+**[V]** **Correction to the original citation** (which read `RetroArch_maincfg.sh:3048-3090` as a co-writer, at
+`acc45fc`): at `863ab69` `RetroArch_maincfg()` has **no caller anywhere in the Linux shell tree**, and what it writes
+goes through `RetroArch_setOverride` (`emuDeckRetroArch.sh:394-409`) into `config/retroarch/retroarch.cfg` under the
+override directory — a file no launch path reads (the launcher `tools/launchers/retroarch.sh:4` passes no
+`--appendconfig`, and no core is named "retroarch"). The values it would write are history, not configuration; the
+code-real-vs-reachable rule applies.
+
 **[V]** EmuDeck's own truth is a **shell settings file**, not JSON: `$emudeckFolder/settings.sh`, `key=value` lines
-(`functions/helperFunctions.sh:4`). Defaults: `$HOME/Emulation/{roms,tools,bios,saves,storage}`
-(`helperFunctions.sh:337-341`).
+(`functions/helperFunctions.sh:4`, `emudeckFolder="$HOME/.config/EmuDeck"` at `vars.sh:2`). Defaults:
+`$HOME/Emulation/{roms,tools,bios,saves,storage}` (`helperFunctions.sh:336-341`, re-confirmed at `863ab69`).
 
-**[V]** **Reset behaviour differs.** EmuDeck's `functions/autofix.sh:72` forces `sort_savefiles_by_content_enable` back
-to `false` — user drift is corrected on EmuDeck, while RetroDECK leaves it standing (§9). A deviation warning means
-different things on the two.
+**[V→O]** **Reset behaviour downgraded to reachability-unverified.** The enforcement exists — `autofix_raSavesFolders()`
+(`functions/autofix.sh:47`) forces all four sort flags back to `false` (`:72-75`) and even flattens already-sorted save
+subdirectories (rsync-up-and-delete, `:55-70`) — but at `863ab69` **no Linux shell file calls any autofix function**.
+The plausible dispatcher is the Electron app calling backend functions by name (`RunFunc.sh` is a
+`source all.sh &&
+"@a"` template), which no shell reading can confirm: a code path being real is not the same as it
+being reachable, so "user drift is corrected on EmuDeck" is not established. RetroDECK leaves drift standing either way
+(§9).
 
-**[O]** The adjacent line `autofix.sh:73` looks broken in upstream source (key and value appear swapped:
-`"sort_savefiles_enable" "false = "`). Recorded as an observation about the code, not about behaviour; untested.
+**[O]** `autofix.sh:73` remains broken at `863ab69` (key and value swapped: `"sort_savefiles_enable" "false = "`).
+Recorded as an observation about the code, not about behaviour; untested.
 
-**[V]** **The frontend is not guaranteed.** RetroDECK always ships ES-DE; EmuDeck installs ES-DE _or_ Pegasus _or_ Steam
-Rom Manager (`functions/ToolScripts/emuDeckESDE.sh`, `emuDeckPegasus.sh`, `emuDeckSRM.sh`). An emulator catalogue may be
-absent entirely.
+**[V]** **The frontend is not guaranteed, but it is recorded.** RetroDECK always ships ES-DE; EmuDeck installs ES-DE
+_or_ Pegasus _or_ Steam Rom Manager (`functions/ToolScripts/emuDeckESDE.sh`, `emuDeckPegasus.sh`, `emuDeckSRM.sh`) — and
+`settings.sh` records the choice: `jsonToBashVars.sh:69-74` writes `doInstallESDE`, `doInstallPegasus`, `doInstallSRM`
+(and more) as ordinary marker keys. The record is install-time state, not the disk; §13b's presence test is the disk.
 
 **[V]** **Identity overlap:** EmuDeck configures the standalone RetroArch Flatpak, so "EmuDeck installed" and
 "standalone RetroArch installed" are both true on the same machine — the same RetroArch under two descriptions.
@@ -577,6 +602,63 @@ descriptions.
 
 **[V]** An Android tree exists with its own paths (`/storage/emulated/0/Emulation/…`,
 `android/configs/.../retroarch.cfg`). Relevant for argosy later.
+
+## 13b. EmuDeck's ES-DE — the catalogue side (item 21b)
+
+All at `dragoonDorise/EmuDeck` @ `863ab69` and ES-DE `v3.4.1` unless marked.
+
+**[V]** **Build and location.** EmuDeck installs upstream ES-DE — no fork — as the stable `LinuxSteamDeckAppImage`
+package from ES-DE's own `latest_release.json` (`emuDeckESDE.sh:15,23-29,91-98`), saved as
+`~/Applications/ES-DE.AppImage` (`vars.sh:4-6` `esdeFolder="$HOME/Applications"`, `emuDeckESDE.sh:9-10`; legacy
+`EmulationStation-DE*` names become symlinks to it, `:44-55`). AppImage is the only Linux install mode
+(`ESDE_toolType="AppImage"`, `:6`; no ES-DE Flatpak reference in the Linux tree). EmuDeck's own installed-test is the
+AppImage stat (`ESDE_IsInstalled`, `:488-494`). The version floats with upstream stable — EmuDeck pins nothing, and the
+backend itself is rolling (`emulatorInit` runs `git reset --hard && git pull` in `~/.config/EmuDeck/backend` on every
+launch, `helperFunctions.sh:1046-1048`).
+
+**[V]** **Config home.** Plain `~/ES-DE`: the launcher runs the AppImage with no `--home` and no `ESDE_APPDATA_DIR`
+(`tools/launchers/es-de/es-de.sh:5`), and upstream resolution is `ESDE_APPDATA_DIR` env → else `<home>/ES-DE`
+(`FileSystemUtil.cpp:259-285`). A `portable.txt` in the executable directory **may** relocate the home
+(`main.cpp:149-192`): ES-DE validates the resolved target and keeps the default when it is missing or a regular file
+(`:174-192`), so presence alone does not establish the relocation; EmuDeck writes none. Contrast RetroDECK:
+`--home "${XDG_CONFIG_HOME}"` puts the appdata under the Flatpak config tree.
+
+**[V]** **The bundled catalogue is sealed.** "If you're using the AppImage release of ES-DE then the bundled
+es_systems.xml file is embedded in the AppImage together with the rest of the resources" (ES-DE `INSTALL.md`
+v3.4.1:1470) — not on-disk readable, and the AppImage squashfs is zstd (outside a zero-dependency reader). The one
+on-disk exception is ES-DE's per-file resource override (`INSTALL.md`:1125):
+`~/ES-DE/resources/systems/linux/
+es_systems.xml` shadows the embedded file for ES-DE itself. Reading the sealed layer
+is tracked as issue #65.
+
+**[V]** **The overlays EmuDeck writes.** `~/ES-DE/custom_systems/es_systems.xml` (`emuDeckESDE.sh:18`, deployed
+`:127/:175/:217`, path-rewritten `sed s|/run/media/mmcblk0p1/Emulation|${emulationPath}|` at `:144-145`) — 8 real
+systems at the pin (atarijaguar, atarijaguarcd, model2, switch, wiiu, xbox360, ps4, n3ds), mixing standalone launcher
+commands and libretro ones, plus `xmlstarlet` command edits (`:255-398`). `~/ES-DE/custom_systems/es_find_rules.xml`
+(`:20`) — deployed from the **chimeraOS** variant on every platform (`:125/:174/:519`); complements the bundled rules
+(`INSTALL.md`:1208). Custom es_systems merge semantics: a same-name system **replaces** the bundled one entirely
+(`INSTALL.md`:1466), which is what makes an overlay-declared system's answer complete even while the bundled layer is
+sealed.
+
+**[V]** **Settings and gamelists.** `~/ES-DE/settings/es_settings.xml` (`emuDeckESDE.sh:19`; upstream
+`INSTALL.md`:1010-1012): `ROMDirectory` is written by EmuDeck with `${romsPath}` verbatim (`ESDE_setDefaultSettings`,
+`:407-409`), `MediaDirectory` with `${ESDEscrapData}` (`:412-423`, default `$HOME/Emulation/tools/downloaded_media`,
+`helperFunctions.sh:342`). Unset `ROMDirectory` falls back on `<home>/ROMs` (`FileData.cpp::getROMDirectory()`,
+`:271-305`, the empty-setting branch at `:283-284`) — here against the user's real home, so `~/ROMs`. Gamelists:
+`~/ES-DE/gamelists/<system>/gamelist.xml` (`INSTALL.md`:2145), where EmuDeck seeds per-system `<alternativeEmulator>`
+defaults for 11 systems (`ESDE_setDefaultEmulators`, `emuDeckESDE.sh:427-441` — standalone-heavy: Dolphin, PPSSPP,
+PCSX2, DuckStation, Ryujinx, ScummVM, Azahar standalone; melonDS DS; Beetle Lynx/Saturn), and symlinks the tree into the
+saves folder for cloud sync (`ESDE_symlinkGamelists`, `:496-498` → `<savesPath>/es-de/gamelists`).
+
+**[V]** **ES-DE stores no version on disk in settings** (no `ApplicationVersion` in `Settings.cpp` at v3.4.1); the
+startup log `~/ES-DE/logs/es_log.txt` carries `ES-DE <version>` (`main.cpp:721,733`, `Log.cpp:28`). Reading it as a
+version anchor is **deferred** (decided 2026-08-09) — every EmuDeck answer keeps `arrangement-unverified`
+unconditionally until a live EmuDeck machine is observed.
+
+**[O]** `all.sh:24-30` falls back to `$HOME/emudeck/settings.sh` when `~/.config/EmuDeck/settings.sh` is missing **or a
+symlink** — whether any live Linux installation keeps its only real marker there is unestablished; atlas's marker stays
+`~/.config/EmuDeck/settings.sh` (a live symlink resolves through `stat` either way; only a dead one reads as missing,
+which is then the truthful state of a removed installation).
 
 ## 14. The machine is not just its config files
 
@@ -650,10 +732,11 @@ a local checkout — the shipped component is a binary. Two details a reimplemen
   `a/b`. Python's single-pass `str.replace` leaves `a//b`.
 - The collapse runs on paths that carried no token too, because it is not inside the substitution branch.
 
-**[V]** `FileData::getROMDirectory()` (`es-app/src/FileData.cpp` ~L313-345, ES-DE 3.4.1) returns `<home>/ROMs/` when the
-`ROMDirectory` setting is empty, and otherwise the configured value with **one** trailing separator appended where it is
-missing. So the directory ES-DE substitutes always ends in a separator, which is what the `//` collapse then absorbs — a
-configured `…/roms/` must not spell the answer `…/roms//n64`.
+**[V]** `FileData::getROMDirectory()` (`es-app/src/FileData.cpp:271-305`, ES-DE 3.4.1; the empty-setting branch at
+`:283-284`, the separator append at `:291-297`) returns `<home>/ROMs/` when the `ROMDirectory` setting is empty, and
+otherwise the configured value with **one** trailing separator appended where it is missing. So the directory ES-DE
+substitutes always ends in a separator, which is what the `//` collapse then absorbs — a configured `…/roms/` must not
+spell the answer `…/roms//n64`.
 
 **[V]** The token is _required_ only in `createSystemDirectories()` (~L1214), whose guard at ~L1366 skips any system
 whose `<path>` does not start with it, with a warning. That is the placeholder-generation path. `loadConfig()` has no
@@ -881,8 +964,12 @@ saves go flat: the shipped override splits the two families apart.
 
 ### EmuDeck
 
-**[V]** EmuDeck sets all four state keys (`functions/EmuScripts/RetroArch_maincfg.sh:3053`, `:3057`, `:3091-3092`,
-upstream `acc45fc`), with one asymmetry worth recording: `savestate_directory` is the hardcoded
-`~/.var/app/org.libretro.RetroArch/config/retroarch/states`, where the saves root is derived from `savesPath`.
-`functions/autofix.sh:74-75` forces both state sort flags back to false, and unlike the savefile line at `:73` — the
-broken one §13 flagged — those two are correctly written.
+**[V]** EmuDeck sets all four state keys. At `863ab69` **both** directories derive from `savesPath`:
+`RetroArch_setupSaves` writes `savestate_directory = "$savesPath/retroarch/states"` next to the savefile key
+(`emuDeckRetroArch.sh:227-228`), each the `savesPath` spelling of a symlink into the Flatpak's own config tree
+(`:224-225`); the shipped cfg template seeds both `in_content_dir` keys and all four sort flags `false` (template
+`:3134-3179`). A **prior generation** (`acc45fc`) recorded an asymmetry — `savestate_directory` hardcoded to
+`~/.var/app/org.libretro.RetroArch/config/retroarch/states` via `RetroArch_maincfg.sh:3053`, `:3057`, `:3091-3092` —
+whose writer at `863ab69` has no Linux caller and targets a file no launch path reads (§13's correction). The
+`autofix.sh:74-75` state-flag resets are written correctly, unlike the savefile line at `:73`, but carry §13's
+reachability downgrade all the same.
