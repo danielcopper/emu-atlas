@@ -3032,6 +3032,17 @@ CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
 _SETTINGS_UNPARSEABLE = "unparseable"
 
 
+def _relocation_stated(caveats: tuple[Caveat, ...]) -> bool:
+    """Whether *caveats* already state the relocated config home — the rider's dedup test.
+
+    One fact, one code, once per answer: where the ROM machinery's own
+    relocation refusal already stands (it carries the system and declaration
+    the general rider does not), adding the rider would state the same fact a
+    second time on the same answer.
+    """
+    return any(caveat.code == CAVEAT_CONFIG_HOME_RELOCATED for caveat in caveats)
+
+
 # The catalogue file's own name, spelled once: ES-DE uses it for the bundled
 # layer, the custom_systems overlay and the resource-override shadow alike,
 # and the three probes below must never drift apart on it.
@@ -3699,7 +3710,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         this domain's grammar, so a caller who needs the reason asks
         ``rom_location(system)`` and reads its caveats.
         """
-        return self._rom_root().directory
+        return self._rom_root(self._config_home_override()).directory
 
     def _health_from(self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]) -> Health:
         issues = list(marker_issues)
@@ -3839,7 +3850,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             return None, _SETTINGS_UNPARSEABLE
         return settings.get(self._ROM_DIRECTORY_SETTING) or None, None
 
-    def _rom_root(self) -> _RomRoot:
+    def _rom_root(self, moved: tuple[str, str] | None) -> _RomRoot:
         """What ES-DE substitutes for ``%ROMPATH%`` — the ROM root, before any ``<path>``.
 
         The one chain every ROM-directory answer on this handle resolves
@@ -3859,19 +3870,22 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         becomes then is a tree atlas cannot follow. The absoluteness check
         runs on the *expanded* value — the raw one is what a refusal names,
         because the setting's own text is what a user edits.
+
+        *moved* is :meth:`_config_home_override`'s answer, read once by the
+        query this resolution serves — taking it rather than reading it keeps
+        the query's one arrangement-level check its only read of the override
+        files, however many resolutions the answer assembles.
         """
         configured, unreadable = self._rom_directory()
         if unreadable is not None:
             return _RomRoot(unreadable=unreadable)
         sources = (self._ROM_DIRECTORY_SOURCE,)
         if configured is None:
-            moved = self._config_home_override()
             if moved is not None:
                 return _RomRoot(relocated=moved, sources=sources)
             return _RomRoot(directory=self._default_rom_directory(), sources=sources)
         expanded = configured
         if "~" in configured:
-            moved = self._config_home_override()
             if moved is not None:
                 return _RomRoot(relocated=moved, sources=sources)
             expanded = expand_home_path(configured, self._esde_config_home())
@@ -3880,7 +3894,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return _RomRoot(directory=expanded, sources=sources)
 
     def _esde_system_dir(
-        self, by_system: Mapping[str, SystemDeclaration], system: str
+        self, by_system: Mapping[str, SystemDeclaration], system: str, *, moved: tuple[str, str] | None
     ) -> _RomDirectory:
         """Where ES-DE puts *system*'s ROMs: the root with the catalogue's ``<path>`` applied.
 
@@ -3891,12 +3905,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         matching overrides against a directory the frontend does not launch
         from, which is how an override goes missing on a machine whose two ROM
         paths have drifted apart.
+
+        *moved* travels through to :meth:`_rom_root` — the caller's one read
+        of the override files serves the resolution and the answer-level
+        rider alike.
         """
         declaration = by_system.get(system)
         if declaration is None or declaration.rom_path is None:
             return _RomDirectory(caveats=_rom_path_undeclared_caveat(system, declaration))
         declared = declaration.rom_path
-        root = self._rom_root()
+        root = self._rom_root(moved)
         if root.unreadable is not None:
             return _RomDirectory(
                 caveats=_settings_unreadable_caveat(
@@ -3980,13 +3998,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     def _config_home_override(self) -> tuple[str, str] | None:
         """The overrides file and key that move the app's config home, if one does.
 
-        The default above holds only while the frontend's ``--home`` expands to
-        the tree atlas read the settings from. A Flatpak overrides file can
-        redefine that environment, and then atlas resolved against a directory
-        the frontend is not using — quite possibly having missed the settings
-        file itself for the same reason, which is how the answer lands on the
-        default branch in the first place. Either way the honest answer is to
-        stop resolving and say why, not to state a plausible directory.
+        The arrangement-level check every query on this handle makes exactly
+        once: the config home is what *all* of this handle's reads are
+        expressed relative to — the marker, the cfg, the override chain,
+        ES-DE's settings all live under the per-app config tree, and every
+        root below them is resolved out of those files — so an environment
+        that moves it invalidates potentially every file atlas read. Two
+        consequences, stated two ways: the ROM question's home-*derived*
+        resolutions stop (the unset default and a ``~`` expansion compute a
+        directory straight from the moved home — :meth:`_rom_root` refuses
+        those rather than stating them), and every other answer keeps
+        answering what the on-disk tree says with the answer-level rider
+        (:meth:`_relocation_caveat`) carrying the doubt.
 
         Returns ``(path, key)``, or ``None`` when nothing moved it.
         """
@@ -4000,20 +4023,54 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     return path, key
         return None
 
+    def _relocation_caveat(self, moved: tuple[str, str] | None) -> Caveat | None:
+        """The answer-level relocation statement — ``None`` while nothing moved the home.
+
+        The same code the ROM question's refusal carries, because it is the
+        same fact (a Flatpak override redefined the app's config home); what
+        differs is the consequence stated. The refusal stops a home-derived
+        computation and names the system it stops; this rider rides an answer
+        that still says what the on-disk files say, and states that those
+        files may not be the ones in force. The message names what was read
+        (the overrides file and key) and what it implies (which tree the
+        answer's reads came from), so a client learns both without prose
+        archaeology. One shape either way — the caveat or ``None`` — and the
+        call sites wrap it, the same convention EmuDeck's twin keeps.
+        """
+        if moved is None:
+            return None
+        path, key = moved
+        return Caveat(
+            CAVEAT_CONFIG_HOME_RELOCATED,
+            f"the Flatpak overrides at {path} redefine {key} for this app — the app and the "
+            "emulators it launches resolve their config home through that environment, so the "
+            f"per-app config tree this answer was read from ({self._esde_config_home()}: "
+            "retrodeck.json, retroarch.cfg, ES-DE's settings) and every root resolved out of "
+            "those files may not be the ones in force",
+            {"path": path, "key": key},
+        )
+
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
         """Every system the catalogue declares, sorted — and the version that read stated.
 
         The findings come from the marker snapshot this query already read, so
         the answer's health, its roots and the version its evidence is weighed
-        against are one revision of the file.
+        against are one revision of the file. The relocation rider follows the
+        catalogue-status statement where one stands, the same order EmuDeck's
+        riders keep.
         """
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
+        rider = self._relocation_caveat(self._config_home_override())
+        riding = () if rider is None else (rider,)
         by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
         version = _marker_version(config)
         if not read:
-            return SystemsAnswer(caveats=(*findings, *_catalogue_unread_caveat())), version
-        return SystemsAnswer(tuple(sorted(by_system)), (self._CATALOGUE_SOURCE,), findings), version
+            return SystemsAnswer(caveats=(*findings, *_catalogue_unread_caveat(), *riding)), version
+        return (
+            SystemsAnswer(tuple(sorted(by_system)), (self._CATALOGUE_SOURCE,), (*findings, *riding)),
+            version,
+        )
 
     def _gamelist_selections_at(self, root: str, system: str) -> GamelistSelections:
         gamelist_path = os.path.join(root, "ES-DE", "gamelists", system, "gamelist.xml")
@@ -4040,19 +4097,30 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
+        moved = self._config_home_override()
+        rider = self._relocation_caveat(moved)
+        riding = () if rider is None else (rider,)
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read = self._read_catalogue(root)
         version = _marker_version(config)
         if not read:
-            return CatalogueAnswer(caveats=(*findings, *_catalogue_unread_caveat(system))), version
+            return (
+                CatalogueAnswer(caveats=(*findings, *_catalogue_unread_caveat(system), *riding)),
+                version,
+            )
         # The anchor is only consulted where a content path was named, so only
         # that query pays ES-DE's settings read — and only that query can be
         # told the anchor failed, which is the whole reason its caveats join.
         anchor = (
-            self._esde_system_dir(by_system, system)
+            self._esde_system_dir(by_system, system, moved=moved)
             if content_path is not None
             else _NO_ANCHOR_NEEDED
         )
+        # An anchor that stopped at the relocation already states the fact,
+        # with the system and declaration the rider does not carry — one fact,
+        # one code, once per answer.
+        if _relocation_stated(anchor.caveats):
+            riding = ()
         return (
             CatalogueAnswer(
                 _entries_from(
@@ -4063,7 +4131,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     content_path=content_path,
                 ),
                 (self._CATALOGUE_SOURCE,),
-                (*findings, *anchor.caveats),
+                (*findings, *riding, *anchor.caveats),
             ),
             version,
         )
@@ -4079,21 +4147,32 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
+        moved = self._config_home_override()
+        rider = self._relocation_caveat(moved)
+        riding = () if rider is None else (rider,)
         by_system, read = self._read_catalogue(self._config_path(config, "rd_home_path", "")[0])
         version = _marker_version(config)
         if not read:
-            return RomPlacement(caveats=(*findings, *_catalogue_unread_caveat(system))), version
+            return (
+                RomPlacement(caveats=(*findings, *_catalogue_unread_caveat(system), *riding)),
+                version,
+            )
 
         # A source names a reading this answer rests on, so the settings file
         # joins the list only where the resolution actually read it — which is
         # every outcome except the two that never opened it or opened it and
         # failed. The resolution reports that itself rather than being asked.
         declaration = by_system.get(system)
-        resolved = self._esde_system_dir(by_system, system)
+        resolved = self._esde_system_dir(by_system, system, moved=moved)
+        # The home-derived refusal is this question's own relocation statement
+        # — richer than the rider by the system and declaration it names — so
+        # the rider stands down exactly there: one fact, one code, once.
+        if _relocation_stated(resolved.caveats):
+            riding = ()
         placement = RomPlacement(
             extensions=() if declaration is None else declaration.extensions,
             sources=(self._CATALOGUE_SOURCE, *resolved.sources),
-            caveats=(*findings, *resolved.caveats),
+            caveats=(*findings, *riding, *resolved.caveats),
         )
         if resolved.directory is None:
             return placement, version
@@ -4111,7 +4190,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 placement,
                 dir=resolved.directory,
                 physical_dir=physical_dir,
-                caveats=(*findings, *link_caveats),
+                caveats=(*findings, *riding, *link_caveats),
             ),
             version,
         )
@@ -4126,11 +4205,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         ``~`` in the configured value — because they expand against the same
         moved home. Its own code rather than the unresolved one, because it is
         a different claim with a different remedy: nothing about this machine
-        is wrong, and atlas is the one that cannot follow. It is also wider
-        than this answer — the settings file atlas read lives in that same
-        tree, so where an override moved it, other readings from this handle
-        may rest on a file that is not the one in force. A client cannot learn
-        that from prose.
+        is wrong, and atlas is the one that cannot follow. The fact is wider
+        than this answer — every file this handle reads lives under or is
+        resolved out of that same tree — and the wider statement is
+        :meth:`_relocation_caveat`'s, riding every answer; this refusal is the
+        ROM question's own, naming the system and declaration it stops, and
+        where it stands the rider stands down (one fact, one code, once).
         """
         return (
             Caveat(
@@ -4151,12 +4231,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
+        relocation: tuple[Caveat, ...] = (),
     ) -> _SaveQuery:
         """The placement question over a marker snapshot this query already read.
 
         Which family it is asked about is the resolver's business, not the
         query's: savefiles and savestates are governed by the same cfg, the same
         override chain and the same core, so one question object serves both.
+
+        *relocation* is the caller's rider — passed in rather than read here,
+        because the entry routes decide it against their own per-game check
+        (whose anchor may already state the same fact), and reading the
+        override files here would read them a second time inside one query.
         """
         health = self._health_from(config, marker_issues)
         global_cfg_path = os.path.join(self._home, RETRODECK_CFG_SUFFIX)
@@ -4177,6 +4263,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             extra_caveats=(
                 *extra_caveats,
                 *health.issues,
+                *relocation,
                 *arrangement_caveats(self.kind, observed_version=version),
             ),
         )
@@ -4189,6 +4276,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
+        relocation: tuple[Caveat, ...] = (),
     ) -> SavefilePlacement:
         return _retroarch_savefile_location(
             self._machine,
@@ -4198,6 +4286,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
                 core_so=core_so,
                 extra_caveats=extra_caveats,
+                relocation=relocation,
             ),
         )
 
@@ -4209,6 +4298,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
+        relocation: tuple[Caveat, ...] = (),
     ) -> SavestatePlacement:
         return _retroarch_savestate_location(
             self._machine,
@@ -4218,6 +4308,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
                 core_so=core_so,
                 extra_caveats=extra_caveats,
+                relocation=relocation,
             ),
         )
 
@@ -4230,7 +4321,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         ones leave holes and stated caveats, never guesses.
         """
         config, marker_issues = self._read_marker()
-        return self._savefile_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
+        rider = self._relocation_caveat(self._config_home_override())
+        return self._savefile_location_from(
+            config,
+            marker_issues,
+            content_path=content_path,
+            core_so=core_so,
+            relocation=() if rider is None else (rider,),
+        )
 
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
@@ -4242,28 +4340,50 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         instead of the savefile one.
         """
         config, marker_issues = self._read_marker()
-        return self._savestate_location_from(config, marker_issues, content_path=content_path, core_so=core_so)
+        rider = self._relocation_caveat(self._config_home_override())
+        return self._savestate_location_from(
+            config,
+            marker_issues,
+            content_path=content_path,
+            core_so=core_so,
+            relocation=() if rider is None else (rider,),
+        )
 
     def _firmware_context_from(
-        self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]
+        self,
+        config: dict[str, Any],
+        marker_issues: tuple[Caveat, ...],
+        relocation: tuple[Caveat, ...],
     ) -> FirmwareContext:
         """The firmware context over a marker snapshot this query already read.
 
         Health comes from that same snapshot rather than from a fresh
         :meth:`health` call, so the findings an answer states and the roots it
         resolved were read from one revision of ``retrodeck.json``.
+
+        The relocation rider joins the findings the context carries: the cfg
+        this context is read from lives in the very tree the override moved,
+        so the doubt is the context's — every firmware answer copies the
+        context's caveats, and all four questions state it through this one
+        seam. *relocation* arrives read rather than being read here, so the
+        callers that read other sources of their own still make one
+        arrangement-level check per query.
         """
         return _retroarch_firmware_context(
             sandbox=self._sandbox(),
             global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self._retroarch_config_dir(),
-            findings=self._health_from(config, marker_issues).issues,
+            findings=(*self._health_from(config, marker_issues).issues, *relocation),
             arrangement_version=_marker_version(config),
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
-        return self._firmware_context_from(*self._read_marker())
+        config, marker_issues = self._read_marker()
+        rider = self._relocation_caveat(self._config_home_override())
+        return self._firmware_context_from(
+            config, marker_issues, () if rider is None else (rider,)
+        )
 
     def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
         """Which emulators RetroDECK offers for *system*, and what each of them wants.
@@ -4291,13 +4411,25 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
         # The marker this query already read builds the context too — asking
         # for a fresh one would read retrodeck.json twice inside one answer.
-        context = self._stated(self._firmware_context_from(config, marker_issues))
+        # The override files follow the same rule: read once here, stated
+        # through the context.
+        rider = self._relocation_caveat(self._config_home_override())
+        context = self._stated(
+            self._firmware_context_from(
+                config, marker_issues, () if rider is None else (rider,)
+            )
+        )
         return _resolve_for_system(
             self._machine, context, system=system, catalogue=catalogue, verify=verify
         )
 
     def _entry_caveats_for(
-        self, config: dict[str, Any], spec: EmulatorSpec, content_path: str
+        self,
+        config: dict[str, Any],
+        spec: EmulatorSpec,
+        content_path: str,
+        *,
+        moved: tuple[str, str] | None,
     ) -> tuple[Caveat, ...]:
         """What the gamelist says about *this* game being launched by *this* entry.
 
@@ -4319,7 +4451,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # this system — and handing the empty snapshot straight to the
         # resolution would spell the first as the second.
         anchor = (
-            self._esde_system_dir(by_system, spec.system)
+            self._esde_system_dir(by_system, spec.system, moved=moved)
             if read
             else _RomDirectory(caveats=_catalogue_unread_caveat(spec.system))
         )
@@ -4343,19 +4475,27 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         Resolves the placement for a catalogue entry and, when *content_path*
         is given, checks the gamelist for a per-game override that would launch
-        a different emulator — all from one snapshot of the governing sources.
+        a different emulator — all from one snapshot of the governing sources,
+        the override files included: the per-game check's anchor and the
+        answer-level relocation rider are decided off one read, and where the
+        anchor's own refusal states the relocation, the rider stands down.
         """
         config, marker_issues = self._read_marker()
+        moved = self._config_home_override()
+        rider = self._relocation_caveat(moved)
+        extra = (
+            self._entry_caveats_for(config, spec, content_path, moved=moved)
+            if content_path is not None
+            else ()
+        )
         placement = self._savefile_location_from(
             config,
             marker_issues,
             content_path=content_path,
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
+            relocation=() if rider is None or _relocation_stated(extra) else (rider,),
         )
-        if content_path is None:
-            return placement
-        extra = self._entry_caveats_for(config, spec, content_path)
         return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
 
     def entry_savestate_location(
@@ -4372,16 +4512,21 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         that would not launch says so on both.
         """
         config, marker_issues = self._read_marker()
+        moved = self._config_home_override()
+        rider = self._relocation_caveat(moved)
+        extra = (
+            self._entry_caveats_for(config, spec, content_path, moved=moved)
+            if content_path is not None
+            else ()
+        )
         placement = self._savestate_location_from(
             config,
             marker_issues,
             content_path=content_path,
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
+            relocation=() if rider is None or _relocation_stated(extra) else (rider,),
         )
-        if content_path is None:
-            return placement
-        extra = self._entry_caveats_for(config, spec, content_path)
         return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
 
 

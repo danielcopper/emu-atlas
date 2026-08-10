@@ -7342,6 +7342,288 @@
       }
     },
     {
+      "name": "the-relocation-guard-rides-every-retrodeck-answer",
+      "rationale": "A Flatpak override that redefines XDG_CONFIG_HOME (or HOME) for this app moves the config home every file this handle reads is expressed relative to — retrodeck.json, retroarch.cfg, the override chain, ES-DE's settings — and every root resolved out of those files inherits the doubt. The guard is one arrangement-level check per query: every question keeps answering what the on-disk tree says, and config-home-relocated rides each answer exactly once, naming the overrides file and the key. Nothing new refuses — the configured absolute ROMDirectory, savefile_directory and savestate_directory resolve exactly as on an unmoved machine, because the caveat carries the doubt and the answer carries the reading; only the ROM question's home-derived resolutions refuse, and this fixture is not in that state.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=host;\n\n[Environment]\nXDG_CONFIG_HOME=/mnt/elsewhere/config\n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "systems_query": {},
+        "catalogue_query": {
+          "system": "n64"
+        },
+        "rom_location_query": {
+          "system": "n64"
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        },
+        "savestate_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        },
+        "firmware_query": {
+          "kind": "system",
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+                "key": "XDG_CONFIG_HOME"
+              }
+            }
+          ]
+        },
+        "catalogue": {
+          "entries": [
+            {
+              "system": "n64",
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+                "key": "XDG_CONFIG_HOME"
+              }
+            }
+          ]
+        },
+        "rom_location": {
+          "dir": "/mnt/sd/retrodeck/roms/n64",
+          "physical_dir": null,
+          "extensions": [
+            ".n64",
+            ".N64",
+            ".z64",
+            ".Z64",
+            ".zip",
+            ".ZIP"
+          ],
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+                "key": "XDG_CONFIG_HOME"
+              }
+            }
+          ]
+        },
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+                "key": "XDG_CONFIG_HOME"
+              }
+            }
+          ],
+          "granularity": null
+        },
+        "savestate_location": {
+          "dir": "/mnt/sd/retrodeck/states",
+          "root_kind": "savestate_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+                "key": "XDG_CONFIG_HOME"
+              }
+            }
+          ]
+        },
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mupen64plus_next_libretro.so",
+              "label": "Mupen64Plus-Next",
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+                "key": "XDG_CONFIG_HOME"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "the-rom-refusal-stands-and-the-rider-stands-down",
+      "rationale": "The same relocated machine answers the ROM question and the rest differently, and the fact is one code stated once per answer either way. ROMDirectory is unset, so the ROM directory would be computed straight from the moved home — that refusal predates the guard and stays exactly as it was, carrying the system and declaration the general rider does not; where it stands the rider stands down. Every other answer keeps resolving what the cfg says and carries the general rider instead. The relocation arrives through the global overrides file redefining HOME — the file that applies to every app, and the key that moves the config home just as surely as the per-app XDG_CONFIG_HOME does.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"MediaDirectory\" value=\"\" />\n<string name=\"ROMDirectory\" value=\"\" />\n",
+          "/var/lib/flatpak/overrides/global": "[Environment]\nHOME=/mnt/elsewhere\n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "systems_query": {},
+        "rom_location_query": {
+          "system": "n64"
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/var/lib/flatpak/overrides/global",
+                "key": "HOME"
+              }
+            }
+          ]
+        },
+        "rom_location": {
+          "dir": null,
+          "physical_dir": null,
+          "extensions": [
+            ".n64",
+            ".N64",
+            ".z64",
+            ".Z64",
+            ".zip",
+            ".ZIP"
+          ],
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "system": "n64",
+                "declared": "%ROMPATH%/n64",
+                "path": "/var/lib/flatpak/overrides/global",
+                "key": "HOME"
+              }
+            }
+          ]
+        },
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/var/lib/flatpak/overrides/global",
+                "key": "HOME"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
       "name": "emudeck-rom-location-expands-a-tilde-romdirectory-against-the-plain-home",
       "rationale": "The same expansion against the other arrangement's home: EmuDeck's ES-DE runs with no --home, so getHomePath() is the user's own $HOME, and ~/Emulation/roms lands exactly where EmuDeck's own sed of the absolute value would have put it. Together with the RetroDECK vector this pins that the home is per arrangement — one tilde answer lands under the per-app config home, this one under /home/deck — and the sealed and unverified statements ride unchanged, because expanding the root says nothing about the catalogue layer nobody could read.",
       "input": {
