@@ -5722,6 +5722,447 @@
           ]
         }
       }
+    },
+    {
+      "name": "emudeck-firmware-the-sealed-catalogue-is-the-enumeration",
+      "rationale": "The catalogue-informed half of the EmuDeck firmware route: with ES-DE on disk the enumeration is the frontend's own — an overlay-declared system answers its full emulator list (per ES-DE's merge a same-name overlay system replaces the bundled one entirely), the standalone entry stated as unsupported rather than dropped. The bundled layer stays sealed inside the AppImage, so the answer says so with emulator-catalogue-sealed — the statement every catalogue answer on this arrangement carries — and never the machine-shaped emulator-catalogue-unavailable, which claims an absence this disk disproves.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/Emulation/bios\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/Emulation/bios/gb_bios.bin": {
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+            "size": 256
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"SameBoy (Standalone)\">%EMULATOR_SAMEBOY% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves"
+        ],
+        "firmware_query": {
+          "installation": "emudeck",
+          "kind": "system",
+          "system": "gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "gambatte_libretro.so",
+              "label": "Gambatte",
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "gambatte_libretro.so",
+                  "system": "gb",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "gb_bios.bin",
+                  "path": "/home/deck/Emulation/bios/gb_bios.bin",
+                  "declared": "gb_bios.bin",
+                  "identity": {
+                    "md5": "32fbbd84168d3482956eb3c5051637f5",
+                    "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+                    "size": 256
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null
+                },
+                {
+                  "core_so": "gambatte_libretro.so",
+                  "system": "gbc",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "gbc_bios.bin",
+                  "path": "/home/deck/Emulation/bios/gbc_bios.bin",
+                  "declared": "gbc_bios.bin",
+                  "identity": {
+                    "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+                    "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
+                    "size": 2304
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            },
+            {
+              "core_so": null,
+              "label": "SameBoy (Standalone)",
+              "declaration": "unsupported",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "standalone-unsupported",
+                  "data": {
+                    "label": "SameBoy (Standalone)"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gb"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-firmware-sealed-and-undeclared-is-a-failed-look-not-an-unknown-system",
+      "rationale": "The discriminating direction of the sealed hole: gambatte is installed and its systemname would derive gb on the catalogue-less route, yet with ES-DE here the catalogue is the enumeration, and its readable layers do not declare gb — the declaration may sit in the sealed layer, so the answer is empty as a look that failed (firmware-declaration-unknown), never system-unknown, which would claim no emulator on this machine covers gb while Gambatte sits right there.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/Emulation/bios\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/Emulation/bios/gb_bios.bin": {
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+            "size": 256
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>atarijaguar</name><path>%ROMPATH%/atarijaguar</path>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves"
+        ],
+        "firmware_query": {
+          "installation": "emudeck",
+          "kind": "system",
+          "system": "gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gb"
+              }
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "gb"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-firmware-no-es-de-keeps-the-derived-route",
+      "rationale": "The same cores and the same question with no ES-DE on disk: the catalogue-less behavior stands unchanged — the enumeration is derived from the installed cores' own systemname and emulator-catalogue-unavailable states exactly that. The contrast with the sealed vectors is the point: what flips the enumeration source is the frontend's presence on disk, never a table.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/Emulation/bios\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/Emulation/bios/gb_bios.bin": {
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+            "size": 256
+          }
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves"
+        ],
+        "firmware_query": {
+          "installation": "emudeck",
+          "kind": "system",
+          "system": "gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "gambatte_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "gambatte_libretro.so",
+                  "system": "gb",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "gb_bios.bin",
+                  "path": "/home/deck/Emulation/bios/gb_bios.bin",
+                  "declared": "gb_bios.bin",
+                  "identity": {
+                    "md5": "32fbbd84168d3482956eb3c5051637f5",
+                    "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+                    "size": 256
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null
+                },
+                {
+                  "core_so": "gambatte_libretro.so",
+                  "system": "gbc",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "gbc_bios.bin",
+                  "path": "/home/deck/Emulation/bios/gbc_bios.bin",
+                  "declared": "gbc_bios.bin",
+                  "identity": {
+                    "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+                    "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
+                    "size": 2304
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            },
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "gb"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-firmware-relocation-and-marker-riders-join-the-sealed-statement",
+      "rationale": "The riding statements on a catalogue-informed firmware answer: a portable.txt beside the AppImage casts doubt on every ~/ES-DE read (config-home-relocated), and settings.sh's doInstallESDE=false disagrees with the ES-DE on disk (frontend-marker-mismatch) — both ride adjacent to the sealed statement, in the order every catalogue answer pins, because the firmware enumeration now rests on the same reads those caveats qualify.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=false\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/Emulation/bios\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/Emulation/bios/gb_bios.bin": {
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+            "size": 256
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"SameBoy (Standalone)\">%EMULATOR_SAMEBOY% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/portable.txt": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves"
+        ],
+        "firmware_query": {
+          "installation": "emudeck",
+          "kind": "system",
+          "system": "gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "gambatte_libretro.so",
+              "label": "Gambatte",
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "gambatte_libretro.so",
+                  "system": "gb",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "gb_bios.bin",
+                  "path": "/home/deck/Emulation/bios/gb_bios.bin",
+                  "declared": "gb_bios.bin",
+                  "identity": {
+                    "md5": "32fbbd84168d3482956eb3c5051637f5",
+                    "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+                    "size": 256
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null
+                },
+                {
+                  "core_so": "gambatte_libretro.so",
+                  "system": "gbc",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "gbc_bios.bin",
+                  "path": "/home/deck/Emulation/bios/gbc_bios.bin",
+                  "declared": "gbc_bios.bin",
+                  "identity": {
+                    "md5": "dbfce9db9deaa2567f6a84fde55f9680",
+                    "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
+                    "size": 2304
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            },
+            {
+              "core_so": null,
+              "label": "SameBoy (Standalone)",
+              "declaration": "unsupported",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "standalone-unsupported",
+                  "data": {
+                    "label": "SameBoy (Standalone)"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
+              }
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gb"
+              }
+            },
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/Applications/portable.txt"
+              }
+            },
+            {
+              "code": "frontend-marker-mismatch",
+              "data": {
+                "key": "doInstallESDE",
+                "stated": "false",
+                "observed": "present"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

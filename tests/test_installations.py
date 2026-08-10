@@ -1035,8 +1035,9 @@ class TestEmuDeck:
 
 class TestEmuDeckEsdeCatalogue:
     """The edges of the ES-DE side the vectors do not pin: presence decisions,
-    the marker cross-check's silence, and the per-branch refusals of the ROM
-    resolution in the sealed state. The stock shapes live in the vectors."""
+    the marker cross-check's silence, the per-branch refusals of the ROM
+    resolution in the sealed state, and the roms_dir root question. The stock
+    shapes live in the vectors."""
 
     OVERLAY = (
         '<?xml version="1.0"?><systemList><system><name>atarijaguar</name>'
@@ -1154,6 +1155,166 @@ class TestEmuDeckEsdeCatalogue:
         codes = self._codes(answer)
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE not in codes
+
+    def test_the_firmware_route_reads_the_broken_shadow_as_unreadable(self):
+        # The bundled layer on disk that cannot be read is the unreadable
+        # catalogue on the firmware route too — never sealed, never the
+        # machine-shaped unavailable — and the riders join that statement.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/resources/systems/linux/es_systems.xml": {"status": "unreadable"},
+                f"{HOME}/Applications/portable.txt": "",
+            }
+        )
+        codes = self._codes(ed.firmware_for_system("gb"))
+        status = codes.index(atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE)
+        assert codes[status + 1] == atlas.CAVEAT_CONFIG_HOME_RELOCATED
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE not in codes
+
+    def test_the_firmware_route_reads_the_readable_shadow_as_the_whole_catalogue(self):
+        # A readable resource shadow IS the bundled layer, on disk: nothing is
+        # sealed away, and a system it does not declare is genuinely not the
+        # frontend's — with no catalogue-status statement to sit behind, the
+        # riders LEAD the resolver's own caveats instead of following one.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/resources/systems/linux/es_systems.xml": self.OVERLAY,
+                f"{HOME}/Applications/portable.txt": "",
+            }
+        )
+        codes = self._codes(ed.firmware_for_system("gb"))
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
+        assert codes.index(atlas.CAVEAT_CONFIG_HOME_RELOCATED) + 1 == codes.index(
+            atlas.CAVEAT_SYSTEM_UNKNOWN
+        )
+
+    def test_an_own_spelling_firmware_answer_is_not_catalogue_informed(self):
+        # A word no build declares is answered from the cores on every
+        # arrangement — the catalogue is never consulted, so neither its
+        # sealed statement nor the riders have anything to qualify.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/Applications/portable.txt": "",
+            }
+        )
+        codes = self._codes(ed.firmware_for_system("ti83"))
+        assert atlas.CAVEAT_SYSTEM_NOT_IN_CATALOGUE in codes
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
+        assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in codes
+
+    def test_a_cleared_system_directory_refuses_before_the_catalogue(self):
+        # root None: the resolver refused before consulting the catalogue, so
+        # the answer carries neither the sealed statement nor the riders —
+        # the same empty answer the route gave before the catalogue wiring.
+        ed = self._emudeck(
+            {
+                STANDALONE_CFG: 'system_directory = ""\n',
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/Applications/portable.txt": "",
+            }
+        )
+        answer = ed.firmware_for_system("atarijaguar")
+        assert answer.root is None
+        codes = self._codes(answer)
+        assert atlas.CAVEAT_SYSTEM_DIRECTORY_CLEARED in codes
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
+        assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in codes
+
+    def test_roms_dir_answers_the_root_es_de_substitutes(self):
+        # The root, not a system's directory — no <path> is applied to it.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": '<string name="ROMDirectory" value="/r" />',
+            }
+        )
+        assert ed.roms_dir() == "/r"
+
+    def test_roms_dir_does_not_follow_the_markers_roms_path(self):
+        # settings.sh's romsPath is EmuDeck's bookkeeping; ES-DE's ROMDirectory
+        # is what the frontend substitutes — the same cfg-over-marker rule as
+        # RetroDECK's roms_dir, over this arrangement's files.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": (
+                    '<string name="ROMDirectory" value="/mnt/sd/es-de-roms" />'
+                ),
+            }
+        )
+        assert ed.roms_dir() == "/mnt/sd/es-de-roms"
+
+    def test_roms_dir_resolves_the_upstream_default_when_unset(self):
+        # No es_settings.xml at all: ES-DE's own <home>/ROMs default applies —
+        # the user's real home, because EmuDeck launches with no --home.
+        ed = self._emudeck({f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY})
+        assert ed.roms_dir() == f"{HOME}/ROMs"
+
+    def test_roms_dir_refuses_without_es_de_on_disk(self):
+        # No AppImage, no ~/ES-DE tree: there is no frontend whose %ROMPATH%
+        # substitution this could be, so the default must not resolve either.
+        assert self._emudeck({}).roms_dir() is None
+
+    def test_roms_dir_refuses_rather_than_inventing_a_root(self):
+        # A bare string cannot carry which way it refused, so it answers None
+        # and the caveated route is rom_location(system).
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": {"status": "unreadable"},
+            }
+        )
+        assert ed.roms_dir() is None
+
+    def test_roms_dir_refuses_the_default_under_a_portable_txt(self):
+        # portable.txt may move the very home the <home>/ROMs default derives
+        # from, so the default branch stops resolving...
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/Applications/portable.txt": "",
+            }
+        )
+        assert ed.roms_dir() is None
+
+    def test_roms_dir_still_answers_a_configured_root_under_a_portable_txt(self):
+        # ...while a configured absolute value is still answered — the
+        # relocation suspicion rides rom_location's caveats, which a bare
+        # string cannot carry.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/Applications/portable.txt": "",
+                f"{HOME}/ES-DE/settings/es_settings.xml": '<string name="ROMDirectory" value="/r" />',
+            }
+        )
+        assert ed.roms_dir() == "/r"
+
+    def test_roms_dir_refuses_a_relative_setting(self):
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": (
+                    '<string name="ROMDirectory" value="~/Emulation/roms" />'
+                ),
+            }
+        )
+        assert ed.roms_dir() is None
+
+    def test_roms_dir_does_not_need_the_catalogue(self):
+        # A broken resource shadow refuses every catalogue-shaped answer, but
+        # the root question reads es_settings.xml, not es_systems.xml — the
+        # same split as RetroDECK, whose roms_dir answers under an unreadable
+        # bundled layer.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/resources/systems/linux/es_systems.xml": {"status": "unreadable"},
+                f"{HOME}/ES-DE/settings/es_settings.xml": '<string name="ROMDirectory" value="/r" />',
+            }
+        )
+        assert ed.roms_dir() == "/r"
 
     def test_the_entry_route_states_absence_when_esde_vanished(self):
         # A live handle re-reads per query: an entry answered while ES-DE was

@@ -59,7 +59,7 @@ inst.health()                        # structured: a tuple of finding caveats wi
 inst.savefile_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
                    core_so="mupen64plus_next_libretro.so")
 # -> the primary route: the caller names the core. It is the only save route on the handles
-#    with no frontend catalogue — EmuDeck and the two bare RetroArch installs.
+#    with no frontend catalogue — the two bare RetroArch installs, and EmuDeck where no ES-DE is on its disk.
 
 inst.savestate_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
                     core_so="mupen64plus_next_libretro.so")

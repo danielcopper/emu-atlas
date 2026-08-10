@@ -80,7 +80,9 @@ classDiagram
         +saves_root() str
         +gamelist_selections(system)
     }
-    class EmuDeck
+    class EmuDeck {
+        +roms_dir() str|None
+    }
     class BareRetroArchFlatpak
     class BareRetroArchNative
     class EveryInstallation {
@@ -101,9 +103,10 @@ classDiagram
     InstallationAnswer --> Installation : labelled by
 ```
 
-RetroDECK is the arrangement with a frontend catalogue; the other three answer the catalogue question with a stated
-refusal rather than an empty list. "Bare" is the arrangement axis (a RetroArch nobody configured for a frontend);
-"standalone" is the emulator axis (an emulator without a libretro core) — the two never mix.
+RetroDECK always answers from a frontend catalogue, and EmuDeck does while an ES-DE is on its disk (the bundled layer
+sealed inside the AppImage, and stated so); the handles without one answer the catalogue question with a stated refusal
+rather than an empty list. "Bare" is the arrangement axis (a RetroArch nobody configured for a frontend); "standalone"
+is the emulator axis (an emulator without a libretro core) — the two never mix.
 
 ## The answers
 
