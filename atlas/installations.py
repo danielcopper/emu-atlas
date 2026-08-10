@@ -35,6 +35,7 @@ from atlas.esde import (
     EmulatorSpec,
     GamelistSelections,
     SystemDeclaration,
+    expand_home_path,
     merge_layers,
     parse_es_settings,
     parse_es_systems,
@@ -3088,13 +3089,18 @@ def _rom_path_unresolved_caveat(system: str, declared: str, rom_directory: str) 
     """A configured ROM directory that is not a path a ``%ROMPATH%`` can be resolved against.
 
     One fact and one code, now that the other reasons have theirs: the
-    frontend's setting holds something relative or ``~``-prefixed, and what
-    those resolve against is the ES-DE process's own environment. A fact
-    about the machine, and the thing to do about it is to fix the setting.
+    frontend's setting holds something that is not absolute even after the
+    frontend's own ``~`` expansion (``atlas.esde.expand_home_path``) — a
+    relative path, whose base is the ES-DE process's working directory, or a
+    ``%ESPATH%`` spelling, whose base is the frontend's binary directory
+    (``FileData.cpp:300-302``, v3.4.1) — and neither base is something atlas
+    has established. A fact about the machine, and the thing to do about it
+    is to fix the setting.
 
     The declaration travels in the data: it is the fact atlas *did*
     establish, and a caller who knows their own setup can finish the
-    substitution atlas refused to guess at.
+    substitution atlas refused to guess at. ``configured`` is the setting's
+    own text, unexpanded — the value whose remedy is an edit.
     """
     return (
         Caveat(
@@ -3688,9 +3694,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         :meth:`rom_location` states — for three of its reasons, the ones that
         belong to the root: ES-DE's settings exist and could not be read, a
         Flatpak override moved the config home out from under them, or the
-        configured value is not an absolute path. A bare string cannot carry
-        which, and raising is not this domain's grammar, so a caller who needs
-        the reason asks ``rom_location(system)`` and reads its caveats.
+        configured value is not an absolute path even after the frontend's own
+        ``~`` expansion. A bare string cannot carry which, and raising is not
+        this domain's grammar, so a caller who needs the reason asks
+        ``rom_location(system)`` and reads its caveats.
         """
         return self._rom_root().directory
 
@@ -3840,6 +3847,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         is this root with the catalogue's declaration applied. Keeping them one
         chain is the point — two would be two rules about the same tree, and
         the day they disagreed atlas would be contradicting itself.
+
+        A configured value carrying ``~`` is expanded the way the frontend
+        expands it — every occurrence, as text
+        (:func:`atlas.esde.expand_home_path`; the call is
+        ``FileData.cpp:289``, ES-DE v3.4.1) — against ES-DE's own home, which
+        on this arrangement is the launcher's ``--home "${XDG_CONFIG_HOME}"``
+        (:meth:`_esde_config_home`), not the user's. That is the same home
+        the unset default derives from, so the same Flatpak override that
+        stops the default from resolving stops the expansion too: what ``~``
+        becomes then is a tree atlas cannot follow. The absoluteness check
+        runs on the *expanded* value — the raw one is what a refusal names,
+        because the setting's own text is what a user edits.
         """
         configured, unreadable = self._rom_directory()
         if unreadable is not None:
@@ -3850,9 +3869,15 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             if moved is not None:
                 return _RomRoot(relocated=moved, sources=sources)
             return _RomRoot(directory=self._default_rom_directory(), sources=sources)
-        if not configured.startswith("/"):
+        expanded = configured
+        if "~" in configured:
+            moved = self._config_home_override()
+            if moved is not None:
+                return _RomRoot(relocated=moved, sources=sources)
+            expanded = expand_home_path(configured, self._esde_config_home())
+        if not expanded.startswith("/"):
             return _RomRoot(not_absolute=configured, sources=sources)
-        return _RomRoot(directory=configured, sources=sources)
+        return _RomRoot(directory=expanded, sources=sources)
 
     def _esde_system_dir(
         self, by_system: Mapping[str, SystemDeclaration], system: str
@@ -4095,22 +4120,25 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     def _config_home_relocated_caveat(
         system: str, declared: str, path: str, key: str
     ) -> tuple[Caveat, ...]:
-        """A Flatpak override moved the tree the frontend's own default is relative to.
+        """A Flatpak override moved the tree the frontend's home-relative answers derive from.
 
-        Its own code rather than the unresolved one, because it is a different
-        claim with a different remedy: nothing about this machine is wrong, and
-        atlas is the one that cannot follow. It is also wider than this answer —
-        the settings file atlas read lives in that same tree, so where an
-        override moved it, other readings from this handle may rest on a file
-        that is not the one in force. A client cannot learn that from prose.
+        Both home-derived resolutions land here — the unset default and a
+        ``~`` in the configured value — because they expand against the same
+        moved home. Its own code rather than the unresolved one, because it is
+        a different claim with a different remedy: nothing about this machine
+        is wrong, and atlas is the one that cannot follow. It is also wider
+        than this answer — the settings file atlas read lives in that same
+        tree, so where an override moved it, other readings from this handle
+        may rest on a file that is not the one in force. A client cannot learn
+        that from prose.
         """
         return (
             Caveat(
                 CAVEAT_CONFIG_HOME_RELOCATED,
                 f"the catalogue declares {system!r} at {declared!r}, and the Flatpak overrides at "
-                f"{path} redefine {key} for this app — so where the frontend's own home-relative "
-                "default lands is not something atlas read, and the settings it did read may not be "
-                "the ones in force either",
+                f"{path} redefine {key} for this app — so where the frontend's home-relative "
+                "resolution lands (its own default, or a ~ in its setting) is not something atlas "
+                "read, and the settings it did read may not be the ones in force either",
                 {"system": system, "declared": declared, "path": path, "key": key},
             ),
         )
@@ -4519,10 +4547,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         no ES-DE is on this disk at all (so there is no frontend whose
         substitution this could be), ES-DE's settings exist and could not be
         read, a ``portable.txt`` may have moved the tree the frontend's own
-        default is relative to, or the configured value is not an absolute
-        path. A bare string cannot carry which, and raising is not this
-        domain's grammar, so a caller who needs the reason asks
-        ``rom_location(system)`` and reads its caveats.
+        home-derived answers come from — the unset default and a ``~`` in the
+        setting alike — or the configured value is not an absolute path even
+        after the frontend's own ``~`` expansion. A bare string cannot carry
+        which, and raising is not this domain's grammar, so a caller who needs
+        the reason asks ``rom_location(system)`` and reads its caveats.
         """
         if not self._esde_present():
             return None
@@ -4792,26 +4821,34 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         The unset default is ``~/ROMs``: ES-DE falls back on ``<home>/ROMs``
         (``FileData.cpp::getROMDirectory()``, ES-DE v3.4.1, ``:271-305``, the
         empty-setting branch at ``:283-284``), and this ES-DE's home is the
-        user's own — the launcher passes no ``--home`` (``es-de.sh:5``). That
-        derivation is exactly what a ``portable.txt`` may move, so with one
-        present the default branch stops resolving (*relocated*) — a
-        configured absolute value is still answered, with the answer-level
-        relocation caveat riding.
+        user's own — the launcher passes no ``--home`` (``es-de.sh:5``). A
+        configured value carrying ``~`` expands against that same home, as
+        text (:func:`atlas.esde.expand_home_path`; the call is
+        ``FileData.cpp:289``). Both derivations are exactly what a
+        ``portable.txt`` may move, so with one present both home-derived
+        branches stop resolving (*relocated*) — a configured absolute value
+        is still answered, with the answer-level relocation caveat riding.
+        The absoluteness check runs on the *expanded* value; the raw one is
+        what a refusal names, because the setting's own text is what a user
+        edits.
         """
         configured, unreadable = self._rom_directory()
         if unreadable is not None:
             return _RomRoot(unreadable=unreadable)
         sources = (self._ROM_DIRECTORY_SOURCE,)
+        portable = (os.path.join(self._home, self._ESDE_PORTABLE_SUFFIX), "portable.txt")
         if configured is None:
             if relocated:
-                return _RomRoot(
-                    relocated=(os.path.join(self._home, self._ESDE_PORTABLE_SUFFIX), "portable.txt"),
-                    sources=sources,
-                )
+                return _RomRoot(relocated=portable, sources=sources)
             return _RomRoot(directory=os.path.join(self._home, "ROMs"), sources=sources)
-        if not configured.startswith("/"):
+        expanded = configured
+        if "~" in configured:
+            if relocated:
+                return _RomRoot(relocated=portable, sources=sources)
+            expanded = expand_home_path(configured, self._home)
+        if not expanded.startswith("/"):
             return _RomRoot(not_absolute=configured, sources=sources)
-        return _RomRoot(directory=configured, sources=sources)
+        return _RomRoot(directory=expanded, sources=sources)
 
     def _esde_system_dir(
         self,

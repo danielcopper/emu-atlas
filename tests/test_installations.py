@@ -1134,6 +1134,38 @@ class TestEmuDeckEsdeCatalogue:
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
 
     def test_a_relative_rom_directory_is_refused_not_guessed(self):
+        # Relative resolves against the ES-DE process's working directory,
+        # which atlas has not established — unlike ~, which the frontend
+        # expands against a home this handle knows.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": '<string name="ROMDirectory" value="Emulation/roms" />',
+            }
+        )
+        placement = ed.rom_location("atarijaguar")
+        assert placement.dir is None
+        assert atlas.CAVEAT_ROM_PATH_UNRESOLVED in self._codes(placement)
+
+    def test_a_refusal_names_the_raw_text_even_when_a_tilde_expanded(self):
+        # Emulation/~/roms expands and is still relative: the refusal must
+        # carry the setting's own text — the value whose remedy is an edit —
+        # never the half-expanded string.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": '<string name="ROMDirectory" value="Emulation/~/roms" />',
+            }
+        )
+        placement = ed.rom_location("atarijaguar")
+        assert placement.dir is None
+        caveat = next(c for c in placement.caveats if c.code == atlas.CAVEAT_ROM_PATH_UNRESOLVED)
+        assert caveat.data["configured"] == "Emulation/~/roms"
+
+    def test_a_tilde_rom_directory_expands_against_the_users_home(self):
+        # ES-DE expands every ~ in the setting (FileData.cpp:289 via
+        # expandHomePath), and this ES-DE's home is the user's own — the
+        # launcher passes no --home.
         ed = self._emudeck(
             {
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
@@ -1141,8 +1173,8 @@ class TestEmuDeckEsdeCatalogue:
             }
         )
         placement = ed.rom_location("atarijaguar")
-        assert placement.dir is None
-        assert atlas.CAVEAT_ROM_PATH_UNRESOLVED in self._codes(placement)
+        assert placement.dir == f"{HOME}/Emulation/roms/atarijaguar"
+        assert atlas.CAVEAT_ROM_PATH_UNRESOLVED not in self._codes(placement)
 
     def test_an_unset_rom_directory_resolves_the_upstream_default(self):
         # No es_settings.xml at all: ES-DE's own <home>/ROMs default applies —
@@ -1303,6 +1335,32 @@ class TestEmuDeckEsdeCatalogue:
         ed = self._emudeck(
             {
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": (
+                    '<string name="ROMDirectory" value="Emulation/roms" />'
+                ),
+            }
+        )
+        assert ed.roms_dir() is None
+
+    def test_roms_dir_expands_a_tilde_setting_against_the_users_home(self):
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/ES-DE/settings/es_settings.xml": (
+                    '<string name="ROMDirectory" value="~/Emulation/roms" />'
+                ),
+            }
+        )
+        assert ed.roms_dir() == f"{HOME}/Emulation/roms"
+
+    def test_roms_dir_refuses_a_tilde_setting_under_a_portable_txt(self):
+        # portable.txt moves the very home the ~ would expand against — the
+        # same reason the unset default stops resolving, on the configured
+        # branch that shares its derivation.
+        ed = self._emudeck(
+            {
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/Applications/portable.txt": "",
                 f"{HOME}/ES-DE/settings/es_settings.xml": (
                     '<string name="ROMDirectory" value="~/Emulation/roms" />'
                 ),
@@ -2398,8 +2456,9 @@ class TestTheRomDirectorySettingIsReadOrRefused:
     CONFIG_HOME = f"{HOME}/.var/app/net.retrodeck.retrodeck/config"
     DEFAULT_DIR = f"{CONFIG_HOME}/ROMs/n64"
     UNREADABLE = {"status": "unreadable"}
-    NOT_ABSOLUTE = "~/Emulation/roms"
+    NOT_ABSOLUTE = "Emulation/roms"
     NOT_ABSOLUTE_SETTINGS = f'<string name="ROMDirectory" value="{NOT_ABSOLUTE}" />'
+    TILDE_SETTINGS = '<string name="ROMDirectory" value="~/Emulation/roms" />'
 
     def _placement(self, settings=None, system="n64"):
         files = {RETRODECK_JSON: RD_JSON, self.DEPLOY_ESDE: self.ES_SYSTEMS}
@@ -2467,10 +2526,64 @@ class TestTheRomDirectorySettingIsReadOrRefused:
         # the failure — which the caveat states instead.
         assert not self._cites_the_settings(self._placement(self.UNREADABLE))
 
-    def test_a_non_absolute_setting_is_refused_rather_than_expanded(self):
+    def test_a_relative_setting_is_refused_rather_than_guessed(self):
+        # Relative resolves against the ES-DE process's working directory,
+        # which atlas has not established. ~ is not this case: the frontend
+        # expands it against a home this handle reads (below).
         placement = self._placement(self.NOT_ABSOLUTE_SETTINGS)
         assert placement.dir is None
         assert [c.code for c in placement.caveats] == [atlas.CAVEAT_ROM_PATH_UNRESOLVED]
+
+    def test_a_tilde_setting_expands_against_the_frontends_own_home(self):
+        # ES-DE expands every ~ in the setting (FileData.cpp:289 via
+        # expandHomePath), and this frontend's home is the launcher's
+        # --home "${XDG_CONFIG_HOME}" — the per-app config home, not the
+        # user's: the same home the empty-setting default derives from.
+        placement = self._placement(self.TILDE_SETTINGS)
+        assert placement.dir == f"{self.CONFIG_HOME}/Emulation/roms/n64"
+        assert placement.caveats == ()
+
+    def test_the_expansion_home_is_not_the_users(self):
+        # The discriminating direction: a naive expansion against $HOME names
+        # a real directory ES-DE never launches from.
+        assert self._placement(self.TILDE_SETTINGS).dir != f"{HOME}/Emulation/roms/n64"
+
+    def test_a_tilde_anywhere_is_replaced_as_text(self):
+        # Not a shell's tilde grammar: expandHomePath is a plain replace of
+        # every ~, so ~roms is the home with "roms" glued on — and that
+        # directory, odd or not, is the one the frontend launches from.
+        placement = self._placement('<string name="ROMDirectory" value="~roms" />')
+        assert placement.dir == f"{self.CONFIG_HOME}roms/n64"
+
+    def test_a_refusal_names_the_raw_text_even_when_a_tilde_expanded(self):
+        # Emulation/~/roms expands and is still relative: the refusal must
+        # carry the setting's own text — the value whose remedy is an edit —
+        # never the half-expanded string.
+        placement = self._placement('<string name="ROMDirectory" value="Emulation/~/roms" />')
+        assert placement.dir is None
+        caveat = placement.caveats[0]
+        assert caveat.code == atlas.CAVEAT_ROM_PATH_UNRESOLVED
+        assert caveat.data["configured"] == "Emulation/~/roms"
+
+    def test_a_tilde_setting_stops_resolving_when_an_override_moves_the_home(self):
+        # The same Flatpak override that stops the unset default: what ~
+        # becomes is the moved home, which atlas cannot follow — and nothing
+        # about the setting is wrong, so the code is the relocation, not the
+        # unresolved refusal.
+        machine = FixtureMachine(
+            {
+                RETRODECK_JSON: RD_JSON,
+                self.DEPLOY_ESDE: self.ES_SYSTEMS,
+                self.SETTINGS: self.TILDE_SETTINGS,
+                f"{HOME}/.local/share/flatpak/overrides/net.retrodeck.retrodeck": (
+                    "[Environment]\nXDG_CONFIG_HOME=/mnt/elsewhere/config\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        placement = atlas.RetroDeck(HOME, machine).rom_location("n64")
+        assert placement.dir is None
+        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_CONFIG_HOME_RELOCATED]
 
     def test_the_refusal_names_the_declaration_and_the_configured_value(self):
         caveat = self._placement(self.NOT_ABSOLUTE_SETTINGS).caveats[0]

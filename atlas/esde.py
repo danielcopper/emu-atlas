@@ -206,6 +206,38 @@ def _collapse_separators(path: str) -> str:
     return path
 
 
+def expand_home_path(path: str, home: str) -> str:
+    """ES-DE's ``expandHomePath``: every ``~`` in *path* replaced with *home*.
+
+    Mirrors ``Utils::FileSystem::expandHomePath``
+    (``es-core/src/utils/FileSystemUtil.cpp:663-675``, ES-DE v3.4.1), whose
+    whole body for this call is ``Utils::String::replace(path, "~",
+    getHomePath())`` — the ``systemHome`` parameter defaults ``false``
+    (``FileSystemUtil.h:55``) and the ROMDirectory call site passes one
+    argument (``es-app/src/FileData.cpp:289``). That is plain text
+    substitution, not a shell's tilde grammar: a bare ``~`` becomes the home,
+    ``~user`` looks no user up and becomes the home with ``user`` glued on,
+    and a ``~`` in the middle of the value is replaced just the same.
+    Mirroring it exactly is the point — for these spellings the substituted
+    string *is* the directory the frontend launches from, odd or not, and a
+    stricter atlas would refuse a machine ES-DE runs fine on.
+
+    One pass, not the collapse loop: ``Utils::String::replace``
+    (``es-core/src/utils/StringUtil.cpp:267-297``) rewrites every occurrence
+    left to right, and its outer loop cannot rescan this call — after one
+    pass no ``~`` from the input remains, and a *home* that itself carried
+    one would hit the endless-loop break (``:293-294``). Python's
+    ``str.replace`` has exactly that shape, where the ``//`` collapse above
+    needed the loop spelled out.
+
+    The *home* is an argument because establishing it is the caller's work,
+    per arrangement: ``getHomePath()`` (``FileSystemUtil.cpp:183-229``)
+    answers the ``--home`` a launcher passed (RetroDECK's relocated config
+    home) or ``$HOME`` (EmuDeck's plain one), and this module does no I/O.
+    """
+    return path.replace("~", home)
+
+
 def resolve_rom_path(declared: str, rom_directory: str | None) -> str | None:
     """A system's declared ``<path>`` with ``%ROMPATH%`` substituted, or ``None``.
 
@@ -228,11 +260,13 @@ def resolve_rom_path(declared: str, rom_directory: str | None) -> str | None:
     catalogue, so a literal ``<path>`` is a real path here too.
 
     ``None`` when the token is present and *rom_directory* cannot stand in for
-    it: unset, or not absolute. A relative or ``~``-prefixed value is refused
-    rather than expanded, because what those resolve against is the ES-DE
-    process's own environment inside its sandbox, which atlas has not
-    established — and a ROM directory guessed wrong is a directory the caller
-    would go looking in.
+    it: unset, or not absolute. ``~`` expansion is deliberately not this
+    function's job — what a ``~`` becomes is ES-DE's own home, which only the
+    caller has established, so the handles expand first
+    (:func:`expand_home_path`) and a value still carrying one here was never
+    expanded. It is refused with the rest of the relative shapes rather than
+    guessed at, because a ROM directory guessed wrong is a directory the
+    caller would go looking in.
     """
     if ROMPATH_TOKEN not in declared:
         return _collapse_separators(declared) or None
