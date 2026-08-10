@@ -9,6 +9,13 @@ are read live through the machine seam and merged:
    defined there **replaces** the bundled system of the same name (ES-DE
    USERGUIDE, "Game System Customizations"); new names are added.
 
+Unless the overlay opts out of the merge altogether: a document-level
+``<loadExclusive/>`` in the custom file makes ES-DE skip the bundled file
+wholesale (``SystemData::loadConfig``, ``es-app/src/SystemData.cpp:858-895``,
+ES-DE v3.4.1), so the custom layer *is* the catalogue then. The parser states
+the tag's presence on the layer (:class:`CatalogueLayer`); honoring it — only
+ever for the custom layer, exactly as ES-DE does — is the callers' work.
+
 A command containing ``*_libretro.so`` is a libretro entry (the ``.so`` basename
 is extracted); anything else is a standalone entry. Classification only — no
 path knowledge is derived from the command text.
@@ -106,32 +113,83 @@ class SystemDeclaration:
     extensions: tuple[str, ...] = ()
 
 
-def parse_es_systems(text: str, *, provenance: str) -> dict[str, SystemDeclaration]:
-    """Parse one ``es_systems.xml`` layer into ``{system: declaration}``.
+@dataclass(frozen=True, slots=True)
+class CatalogueLayer:
+    """One ``es_systems.xml`` layer as its document declares it.
 
-    Malformed XML yields ``{}`` — the layer is skipped, never guessed at.
+    ``systems`` is the layer's ``{system: declaration}``; ``load_exclusive``
+    whether a document-level ``<loadExclusive/>`` is present. The flag is a
+    *statement about this layer*, not a decision: ES-DE acts on it only when
+    the layer is the custom file, and ignores it in the bundled one with a
+    LogWarning (``SystemData.cpp:884-895``, v3.4.1) — so the caller that
+    knows which layer it read is the one that honors it.
     """
+
+    systems: Mapping[str, SystemDeclaration]
+    load_exclusive: bool = False
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "systems", MappingProxyType(dict(self.systems)))
+
+
+def parse_es_systems(text: str, *, provenance: str) -> CatalogueLayer:
+    """Parse one ``es_systems.xml`` layer the way ES-DE's own read sees it.
+
+    ES-DE reads the file at the **document** level, not the root-element
+    level: ``loadConfig`` asks pugixml for document children
+    (``doc.child("loadExclusive")``, ``doc.child("systemList")`` —
+    ``es-app/src/SystemData.cpp:884,898``, v3.4.1), and pugixml does not
+    enforce XML's single-root rule. The documented ``<loadExclusive/>``
+    placement (INSTALL.md v3.4.1:1722-1737) is therefore a *second
+    document-level element* beside ``<systemList>`` — a file ``xml.etree``
+    refuses outright. Wrapping in a synthetic root (the ``parse_es_settings``
+    / ``parse_gamelist`` pattern) reads it the way the frontend does; the
+    XML declaration is stripped first because inside a wrapper it would sit
+    mid-document.
+
+    Mirroring ``doc.child`` exactly is the point twice over: the systems come
+    from the **first** document-level ``<systemList>`` (``doc.child`` returns
+    the first match, so a second list is invisible to the frontend and stays
+    invisible here), and ``load_exclusive`` states a *document-level*
+    ``<loadExclusive/>`` in any position — inside ``<systemList>`` it is not
+    a document child, has no effect on ES-DE, and is not stated.
+
+    A leading UTF-8 BOM is stripped for :func:`parse_es_settings`'s reason,
+    not as a courtesy: pugixml detects the encoding from it and reads such a
+    file normally, so its catalogue is the catalogue *in force* — and inside
+    the wrapper the mark would sit mid-document and fail a file the frontend
+    reads fine.
+
+    Malformed XML yields the empty layer — skipped, never guessed at.
+    """
+    stripped = text.removeprefix("\ufeff").strip()
+    if stripped.startswith("<?"):
+        end = stripped.find("?>")
+        if end != -1:
+            stripped = stripped[end + 2 :]
     try:
-        root = ET.fromstring(text)
+        root = ET.fromstring(f"<atlas-wrapper>{stripped}</atlas-wrapper>")
     except ET.ParseError:
-        return {}
+        return CatalogueLayer(systems={})
     result: dict[str, SystemDeclaration] = {}
-    for system_el in root.findall("system"):
-        name = (system_el.findtext("name") or "").strip()
-        if not name:
-            continue
-        declared_path = (system_el.findtext("path") or "").strip()
-        result[name] = SystemDeclaration(
-            entries=_launch_entries(system_el, system=name, provenance=provenance),
-            rom_path=declared_path or None,
-            extensions=tuple((system_el.findtext("extension") or "").split()),
-        )
-    return result
+    system_list = root.find("systemList")
+    if system_list is not None:
+        for system_el in system_list.findall("system"):
+            name = (system_el.findtext("name") or "").strip()
+            if not name:
+                continue
+            declared_path = (system_el.findtext("path") or "").strip()
+            result[name] = SystemDeclaration(
+                entries=_launch_entries(system_el, system=name, provenance=provenance),
+                rom_path=declared_path or None,
+                extensions=tuple((system_el.findtext("extension") or "").split()),
+            )
+    return CatalogueLayer(systems=result, load_exclusive=root.find("loadExclusive") is not None)
 
 
 def merge_layers(
-    bundled: dict[str, SystemDeclaration],
-    custom: dict[str, SystemDeclaration],
+    bundled: Mapping[str, SystemDeclaration],
+    custom: Mapping[str, SystemDeclaration],
 ) -> dict[str, SystemDeclaration]:
     """Merge the custom overlay over the bundled catalogue.
 
@@ -140,6 +198,12 @@ def merge_layers(
     declaration — an overlay system brings its own path and extensions along
     with its commands, because that is the ``<system>`` element ES-DE ends up
     with.
+
+    The exclusive case never reaches this function: a custom layer carrying a
+    document-level ``<loadExclusive/>`` makes ES-DE skip the bundled file
+    wholesale (``SystemData.cpp:858-895``, v3.4.1), so the callers honor
+    :attr:`CatalogueLayer.load_exclusive` before ever reading a bundled layer
+    to merge.
     """
     merged = dict(bundled)
     merged.update(custom)
@@ -318,9 +382,12 @@ def parse_gamelist(text: str) -> GamelistSelections:
     lookup stays depth-bounded instead of searching the whole document.
 
     Wrapping in a synthetic root parses the two-root quirk and well-formed
-    variants alike; anything unparseable yields empty selections, never a guess.
+    variants alike; a leading UTF-8 BOM is stripped first, because pugixml
+    reads a BOM'd gamelist normally and inside the wrapper the mark would
+    fail the whole file — selections ES-DE honors would read as none set.
+    Anything unparseable yields empty selections, never a guess.
     """
-    stripped = text.strip()
+    stripped = text.removeprefix("\ufeff").strip()
     if stripped.startswith("<?"):
         end = stripped.find("?>")
         if end != -1:

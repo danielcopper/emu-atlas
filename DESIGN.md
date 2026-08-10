@@ -160,8 +160,12 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   the same code, and the same fact, the firmware route already states. The fourth claim is partial: EmuDeck's ES-DE
   embeds its bundled `es_systems.xml` inside the AppImage, so its handle answers from the on-disk layers — EmuDeck's own
   `custom_systems` overlay, the gamelists, `es_settings.xml` — and every such answer carries
-  `emulator-catalogue-sealed`, the one code of the family that legitimately accompanies real entries: what the readable
-  layers declare is stated, and the frontend may declare more.
+  `emulator-catalogue-sealed`, a code that legitimately accompanies real entries: what the readable layers declare is
+  stated, and the frontend may declare more. The fifth claim is no refusal at all: the custom `es_systems.xml` can
+  declare itself the whole catalogue with a document-level `<loadExclusive/>` — ES-DE honors it only there and then
+  never opens the bundled file — and every catalogue-derived answer of such a machine carries
+  `emulator-catalogue-exclusive`: the enumeration is the custom layer alone, and it is complete, so its empty is a real
+  "none" where sealed's empty is a failed look.
 - **A directory read out of a config atlas could not read is not a directory.** `rom_location` resolves the frontend's
   own documented default where the ROM-directory setting is genuinely unset, because on this arrangement the home that
   default hangs off is read rather than assumed. It refuses where the settings file exists and cannot be read

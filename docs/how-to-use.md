@@ -490,21 +490,25 @@ entry.provenance                   # which catalogue layer declared it (prose, f
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
 
-An empty `entries` is five different facts, and the four `emulator-catalogue-*` codes are how you tell them apart —
+An empty `entries` is six different facts, and the five `emulator-catalogue-*` codes are how you tell them apart —
 **none of them present** means the catalogue was read and declares no emulator for that system, an answer about the
-machine and the only one of the five you may act on as "nothing here":
+machine and one of the two you may act on as "nothing here":
 
-| caveat code                        | what it means                                                                                                      | what to do                                                                               |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| _(none of the four)_               | read, and the frontend knows no emulator for this system                                                           | trust it                                                                                 |
-| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                                                                | name the core: `savefile_location(core_so=)`                                             |
-| `emulator-catalogue-unestablished` | it may have one; atlas has not established where                                                                   | same — but do not report "no emulators"                                                  |
-| `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty                                              | surface it; the machine may be broken                                                    |
-| `emulator-catalogue-sealed`        | part of the catalogue is sealed away (EmuDeck's AppImage-embedded bundled layer); only the on-disk layers answered | use the entries you got; an empty list is "nothing readable declares this", never "none" |
+| caveat code                        | what it means                                                                                                                                       | what to do                                                                               |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| _(none of the five)_               | read, and the frontend knows no emulator for this system                                                                                            | trust it                                                                                 |
+| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                                                                                                 | name the core: `savefile_location(core_so=)`                                             |
+| `emulator-catalogue-unestablished` | it may have one; atlas has not established where                                                                                                    | same — but do not report "no emulators"                                                  |
+| `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty                                                                               | surface it; the machine may be broken                                                    |
+| `emulator-catalogue-sealed`        | part of the catalogue is sealed away (EmuDeck's AppImage-embedded bundled layer); only the on-disk layers answered                                  | use the entries you got; an empty list is "nothing readable declares this", never "none" |
+| `emulator-catalogue-exclusive`     | the custom `es_systems.xml` declares itself the whole catalogue (`<loadExclusive/>`); the bundled layer is not loaded — by the frontend or by atlas | trust it like a read catalogue; an empty list is a real "none"                           |
 
-`sealed` is the one of the four that also accompanies real entries: on an EmuDeck machine with ES-DE, a system EmuDeck's
-own `custom_systems` overlay declares answers fully (ES-DE's merge replaces a same-name bundled system entirely), and
-the caveat says the frontend may declare more systems than the answer can list.
+`sealed` and `exclusive` are the two of the five that also accompany real entries, and they hedge in opposite
+directions. On an EmuDeck machine with ES-DE, a system EmuDeck's own `custom_systems` overlay declares answers fully
+(ES-DE's merge replaces a same-name bundled system entirely), and `sealed` says the frontend may declare more systems
+than the answer can list. `exclusive` says the opposite: a document-level `<loadExclusive/>` in the custom
+`es_systems.xml` makes ES-DE skip the bundled file wholesale, so the enumeration you got is the complete catalogue in
+force — on EmuDeck it replaces `sealed`, because nothing sealed away applies.
 
 Read the four codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
 these, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken
@@ -520,9 +524,11 @@ if not answer.entries and not refusals:
 ```
 
 `unavailable` is a statement about the machine; `unestablished` and `sealed` are statements about atlas, and a client
-that renders either as an absence is telling its user something nobody checked. Two more codes can ride along without
-being refusals: `config-home-relocated` (something moved the tree the handle reads out from under it — on RetroDECK a
-Flatpak override redefining the app's config home, and the caveat then rides every answer of that handle; on EmuDeck a
+that renders either as an absence is telling its user something nobody checked. `exclusive` is a statement about the
+machine and deliberately **not** in the refusal set above: with it riding, an empty list is the frontend's real answer,
+so the snippet's `nothing_here` branch is exactly where it should land. Two more codes can ride along without being
+refusals: `config-home-relocated` (something moved the tree the handle reads out from under it — on RetroDECK a Flatpak
+override redefining the app's config home, and the caveat then rides every answer of that handle; on EmuDeck a
 `portable.txt` next to the AppImage that may have moved ES-DE's data directory) and, on EmuDeck,
 `frontend-marker-mismatch` (the disk and `settings.sh`'s `doInstallESDE` record disagree about ES-DE being installed —
 the disk decided the answer).
