@@ -1095,6 +1095,13 @@ class TestEmuDeckEsdeCatalogue:
         assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in self._codes(with_esde.emulators_for("gb"))
         assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in self._codes(without.emulators_for("gb"))
 
+    def test_no_es_de_means_no_relocation_statement(self):
+        # A stray portable.txt on a machine with no ES-DE stays silent: with
+        # no ES-DE on this disk there is nothing it could have moved, so the
+        # absence refusal never reads it.
+        without = self._emudeck({f"{HOME}/Applications/portable.txt": ""})
+        assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in self._codes(without.emulators_for("gb"))
+
     def test_a_marker_value_that_is_neither_true_nor_false_stays_silent(self):
         # The value case, not only the absent key: jq emits `null` for a
         # missing installFrontends key (jsonToBashVars.sh:71), so
