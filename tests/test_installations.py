@@ -2265,9 +2265,8 @@ class TestOneReadPerSourcePerQuery:
         assert self.INFO in machine.reads
 
     def test_rom_location_reads_each_source_once(self):
-        # This one reaches furthest: the marker, both catalogue layers, ES-DE's
-        # settings, and all four Flatpak overrides files — the arrangement-level
-        # relocation check every question on this handle now makes.
+        # This one reaches furthest: the marker, both catalogue layers, and
+        # ES-DE's settings.
         machine = self._query(lambda rd: rd.rom_location("n64"))
         assert machine.repeats() == {}
         assert self.DEPLOY_ESDE in machine.reads
@@ -2328,30 +2327,29 @@ class TestOneReadPerSourcePerQuery:
             e.core_so for e in rd.emulators_for("n64").entries
         ]
 
-    # The four Flatpak overrides files, in the order _override_files probes
-    # them — the relocation guard's arrangement-level check.
+    # The four Flatpak overrides files, in the order _override_files composes
+    # them for a system-deployed app — flatpak's own merge order: the global
+    # file before the per-app one within an installation, the system
+    # installation before the user one (flatpak-dir.c:1518-1567).
     OVERRIDE_FILES = (
-        f"{HOME}/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+        "/var/lib/flatpak/overrides/global",
         "/var/lib/flatpak/overrides/net.retrodeck.retrodeck",
         f"{HOME}/.local/share/flatpak/overrides/global",
-        "/var/lib/flatpak/overrides/global",
+        f"{HOME}/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
     )
 
-    def test_every_question_reads_the_overrides_files_once(self):
-        # The relocation guard is one arrangement-level check per query: every
-        # question on this handle consults the four Flatpak overrides files —
-        # exactly once each, which is what repeats() == {} adds on top of the
-        # membership check. On this unrelocated fixture all four are probed
-        # (a hit would short-circuit the rest).
+    def test_the_cfg_reading_questions_read_the_overrides_files_once(self):
+        # Since the XDG pin made the config home unmovable, the override
+        # files decide exactly one thing on this handle: what a ~ in a cfg
+        # value expands against (the sandbox's HOME). So the questions that
+        # read retroarch.cfg compose them — once each per query, which is
+        # what repeats() == {} adds on top of the membership check. This
+        # fixture deploys the app in the system installation, so all four
+        # files apply.
         content, core = self.CONTENT, "parallel_n64_libretro.so"
         questions = {
             "savefile_location": lambda rd: rd.savefile_location(content_path=content, core_so=core),
             "savestate_location": lambda rd: rd.savestate_location(content_path=content, core_so=core),
-            "systems": lambda rd: rd.systems(),
-            "emulators_for": lambda rd: rd.emulators_for("n64"),
-            "emulators_for_content": lambda rd: rd.emulators_for("n64", content_path=content),
-            "rom_location": lambda rd: rd.rom_location("n64"),
-            "roms_dir": lambda rd: rd.roms_dir(),
             "firmware_for_core": lambda rd: rd.firmware_for_core(core_so=core),
             "firmware_for_system": lambda rd: rd.firmware_for_system(system="n64"),
             "firmware_inventory": lambda rd: rd.firmware_inventory(),
@@ -2363,10 +2361,28 @@ class TestOneReadPerSourcePerQuery:
             for path in self.OVERRIDE_FILES:
                 assert path in machine.reads, f"{question} did not read {path}"
 
+    def test_the_catalogue_questions_do_not_read_the_overrides_files(self):
+        # The other half of the same fact: ES-DE's --home is the pinned
+        # XDG_CONFIG_HOME, no cfg is read, and an environment that cannot
+        # move anything these answers rest on is not a source of theirs.
+        content = self.CONTENT
+        questions = {
+            "systems": lambda rd: rd.systems(),
+            "emulators_for": lambda rd: rd.emulators_for("n64"),
+            "emulators_for_content": lambda rd: rd.emulators_for("n64", content_path=content),
+            "rom_location": lambda rd: rd.rom_location("n64"),
+            "roms_dir": lambda rd: rd.roms_dir(),
+        }
+        for question, ask in questions.items():
+            machine = self._query(ask)
+            assert machine.repeats() == {}, question
+            for path in self.OVERRIDE_FILES:
+                assert path not in machine.reads, f"{question} read {path}"
+
     def test_the_entry_routes_read_the_overrides_files_once(self):
-        # The composed path again: the entry's own query makes the same one
-        # arrangement-level check — one read serves the per-game check's
-        # anchor and the answer-level rider.
+        # The composed path: the entry's placement query reads the cfg, so it
+        # composes the override files — once, however many resolutions the
+        # answer assembles.
         for ask in (
             lambda entry: entry.savefile_location(content_path=self.CONTENT),
             lambda entry: entry.savestate_location(content_path=self.CONTENT),
@@ -2667,11 +2683,13 @@ class TestTheRomDirectorySettingIsReadOrRefused:
         assert caveat.code == atlas.CAVEAT_ROM_PATH_UNRESOLVED
         assert caveat.data["configured"] == "Emulation/~/roms"
 
-    def test_a_tilde_setting_stops_resolving_when_an_override_moves_the_home(self):
-        # The same Flatpak override that stops the unset default: what ~
-        # becomes is the moved home, which atlas cannot follow — and nothing
-        # about the setting is wrong, so the code is the relocation, not the
-        # unresolved refusal.
+    def test_a_tilde_setting_expands_the_same_under_an_xdg_override(self):
+        # A Flatpak override redefining XDG_CONFIG_HOME never reaches the
+        # app: flatpak force-pins the XDG_*_HOME variables to the per-app
+        # directories after applying every override (flatpak-context.c:
+        # 3158-3187 via flatpak-run.c:3574, at 1.16.6), so the frontend's
+        # --home — and with it both the unset default and this expansion —
+        # stays exactly where atlas read it.
         machine = FixtureMachine(
             {
                 RETRODECK_JSON: RD_JSON,
@@ -2684,8 +2702,8 @@ class TestTheRomDirectorySettingIsReadOrRefused:
             dirs=["/mnt/sd/retrodeck/saves"],
         )
         placement = atlas.RetroDeck(HOME, machine).rom_location("n64")
-        assert placement.dir is None
-        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_CONFIG_HOME_RELOCATED]
+        assert placement.dir == f"{self.CONFIG_HOME}/Emulation/roms/n64"
+        assert placement.caveats == ()
 
     def test_the_refusal_names_the_declaration_and_the_configured_value(self):
         caveat = self._placement(self.NOT_ABSOLUTE_SETTINGS).caveats[0]
@@ -2837,18 +2855,19 @@ class TestEveryAnswerStatesTheInstallationsHealth:
         assert carried[: len(rd.health().codes)] == list(rd.health().codes)
 
 
-class TestTheRelocationGuardRidesEveryRetroDeckAnswer:
-    """A Flatpak override that moves the config home is stated on every answer.
+class TestAFlatpakOverrideCannotMoveTheConfigHome:
+    """An XDG override is inert: the config home a RetroDECK answer reads is the one in force.
 
-    Every file this handle reads lives under, or is resolved out of, the
-    per-app config tree — the marker, the cfg, the override chain, ES-DE's
-    settings — so an ``[Environment]`` override redefining ``XDG_CONFIG_HOME``
-    or ``HOME`` invalidates potentially every read. The guard is one
-    arrangement-level check per query (the read-log class above counts it),
-    and the answers keep answering what the on-disk tree says — the rider
-    carries the doubt. The ROM question's home-derived refusal predates the
-    guard and stays exactly as it was: where it stands, the rider stands down,
-    so the fact is stated once per answer whichever machinery states it.
+    flatpak force-pins the ``XDG_*_HOME`` variables to the per-app
+    directories AFTER applying every override and ``--env``
+    (flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the
+    override env applied at :3352, both with overwrite; flatpak 1.16.6;
+    flatpak-run(1) documents the pin, flatpak/flatpak#4529 closed the request
+    to lift it). So an ``[Environment]`` override naming ``XDG_CONFIG_HOME``
+    never reaches the app, the tree atlas reads is exactly the tree the
+    frontend and its emulators use, and no answer carries doubt about it —
+    the old relocation refusals and riders were stating doubt the pinned
+    source refutes.
     """
 
     DEPLOY_ESDE = (
@@ -2885,115 +2904,282 @@ class TestTheRelocationGuardRidesEveryRetroDeckAnswer:
     # default applies to, which is the state the ROM refusal guards.
     UNSET_SETTINGS = '<string name="ROMDirectory" value="" />'
 
+    # The pinned default config home — where the XDG pin keeps every read.
+    CONFIG_HOME = f"{HOME}/.var/app/net.retrodeck.retrodeck/config"
+
     def _rd(self, extra=None):
         return _retrodeck({**self.FILES, **(extra or {})}, cores=self.CORES)
 
     def _relocated(self, extra=None):
         return self._rd({self.OVERRIDE: self.MOVED, **(extra or {})})
 
-    @staticmethod
-    def _riders(caveats):
-        return [c for c in caveats if c.code == atlas.CAVEAT_CONFIG_HOME_RELOCATED]
-
-    def _answers(self, rd) -> dict[str, tuple[atlas.Caveat, ...]]:
+    def _questions(self, rd):
         return {
-            "savefile_location": rd.savefile_location(
-                content_path=self.CONTENT, core_so=self.CORE
-            ).caveats,
-            "savestate_location": rd.savestate_location(
-                content_path=self.CONTENT, core_so=self.CORE
-            ).caveats,
-            "systems": rd.systems().caveats,
-            "emulators_for": rd.emulators_for("n64").caveats,
-            "emulators_for_content": rd.emulators_for("n64", content_path=self.CONTENT).caveats,
-            "rom_location": rd.rom_location("n64").caveats,
-            "firmware_for_core": rd.firmware_for_core(core_so=self.CORE).caveats,
-            "firmware_for_system": rd.firmware_for_system(system="n64").caveats,
-            "firmware_inventory": rd.firmware_inventory().caveats,
-            "identify_firmware": rd.identify_firmware(md5="0" * 32).caveats,
+            "savefile_location": rd.savefile_location(content_path=self.CONTENT, core_so=self.CORE),
+            "savestate_location": rd.savestate_location(content_path=self.CONTENT, core_so=self.CORE),
+            "systems": rd.systems(),
+            "emulators_for": rd.emulators_for("n64"),
+            "emulators_for_content": rd.emulators_for("n64", content_path=self.CONTENT),
+            "rom_location": rd.rom_location("n64"),
+            "firmware_for_core": rd.firmware_for_core(core_so=self.CORE),
+            "firmware_for_system": rd.firmware_for_system(system="n64"),
+            "firmware_inventory": rd.firmware_inventory(),
+            "identify_firmware": rd.identify_firmware(md5="0" * 32),
         }
 
-    def test_every_answer_carries_the_rider_exactly_once(self):
-        rd = self._relocated()
-        counted = {q: len(self._riders(caveats)) for q, caveats in self._answers(rd).items()}
-        assert counted == {question: 1 for question in counted}
+    def _answers(self, rd):
+        """Contract serializations plus the placements' sources — entry objects hold their handle, so raw equality cannot compare two handles' answers."""
+        from atlas.contract import (
+            catalogue_contract,
+            firmware_contract,
+            identification_contract,
+            rom_placement_contract,
+            savefile_placement_contract,
+            savestate_placement_contract,
+            systems_contract,
+        )
 
-    def test_an_unrelocated_machine_carries_none(self):
-        rd = self._rd()
-        stated = {q: self._riders(caveats) for q, caveats in self._answers(rd).items()}
-        assert {q: r for q, r in stated.items() if r} == {}
+        serializers = {
+            "savefile_location": savefile_placement_contract,
+            "savestate_location": savestate_placement_contract,
+            "systems": systems_contract,
+            "emulators_for": catalogue_contract,
+            "emulators_for_content": catalogue_contract,
+            "rom_location": rom_placement_contract,
+            "firmware_for_core": firmware_contract,
+            "firmware_for_system": firmware_contract,
+            "firmware_inventory": firmware_contract,
+            "identify_firmware": identification_contract,
+        }
+        return {
+            question: (serializers[question](answer), answer.sources)
+            for question, answer in self._questions(rd).items()
+        }
 
-    def test_the_rider_names_the_file_and_the_key(self):
-        caveat = self._riders(self._relocated().savefile_location().caveats)[0]
-        assert dict(caveat.data) == {"path": self.OVERRIDE, "key": "XDG_CONFIG_HOME"}
-        assert self.OVERRIDE in caveat.message
-        assert "XDG_CONFIG_HOME" in caveat.message
+    def test_an_xdg_override_changes_no_answer_at_all(self):
+        # Not merely "no caveat": every answer, sources and all, is the one
+        # the unrelocated machine gives — the override never reaches the app,
+        # so nothing about the machine's behavior differs.
+        assert self._answers(self._relocated()) == self._answers(self._rd())
 
-    def test_the_answers_still_answer(self):
-        # The rider rides; nothing new turns into a refusal. A configured
-        # absolute ROMDirectory and savefile_directory resolve exactly as on
-        # an unmoved machine — the caveat carries the doubt, the answer the
-        # reading.
-        rd = self._relocated()
-        assert rd.rom_location("n64").dir == "/mnt/sd/retrodeck/roms/n64"
-        placement = rd.savefile_location(content_path=self.CONTENT, core_so=self.CORE)
-        assert placement.dir == "/mnt/sd/retrodeck/saves"
+    def test_an_xdg_unset_changes_no_answer_either(self):
+        # unset-environment=XDG_CONFIG_HOME is applied and then overwritten by
+        # the same pin (flatpak_run_apply_env_vars runs before
+        # flatpak_context_apply_env_appid) — inert the same way.
+        unset = "[Context]\nunset-environment=XDG_CONFIG_HOME;\n"
+        assert self._answers(self._rd({self.OVERRIDE: unset})) == self._answers(self._rd())
 
-    def test_health_does_not_carry_the_rider(self):
-        # Health answers whether the installation is broken; the relocation is
-        # a statement about atlas, and it stays out of health the same way the
-        # arrangement-evidence caveat does — and EmuDeck's portable.txt guard.
+    def test_no_answer_carries_the_relocation_code(self):
+        rd = self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS})
+        for question, answer in self._questions(rd).items():
+            assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in [c.code for c in answer.caveats], question
+
+    def test_the_unset_default_resolves_under_an_override(self):
+        # ROMDirectory unset used to be the refusal branch: the default
+        # derives from ES-DE's --home "${XDG_CONFIG_HOME}", which the pin
+        # keeps exactly where atlas resolves it.
+        placement = self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS}).rom_location("n64")
+        assert placement.dir == f"{self.CONFIG_HOME}/ROMs/n64"
+        assert placement.caveats == ()
+
+    def test_roms_dir_resolves_the_default_under_an_override(self):
+        assert self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS}).roms_dir() == f"{self.CONFIG_HOME}/ROMs"
+        assert self._relocated().roms_dir() == "/mnt/sd/retrodeck/roms"
+
+    def test_health_is_untouched(self):
         assert self._relocated().health().ok
 
-    def test_the_rom_refusal_stands_and_the_rider_stands_down(self):
-        # Home-derived resolution (ROMDirectory unset): the refusal is this
-        # question's own relocation statement, carrying the system and
-        # declaration the rider does not — and it stays the only one, so the
-        # pre-guard contract of this answer is byte-identical.
-        placement = self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS}).rom_location("n64")
-        assert placement.dir is None
-        riders = self._riders(placement.caveats)
-        assert len(riders) == 1
-        assert dict(riders[0].data) == {
-            "system": "n64",
-            "declared": "%ROMPATH%/n64",
-            "path": self.OVERRIDE,
-            "key": "XDG_CONFIG_HOME",
+
+class TestAHomeOverrideMovesOnlyTheCfgTildeBase:
+    """The one consequence a Flatpak override still has: what a cfg ``~`` expands against.
+
+    ``HOME`` does reach the app — the host value passes into the sandbox and
+    an override lands on top of it with nothing reapplied after
+    (flatpak-run.c:3055, :3352) — and the only file this handle reads that
+    resolves anything against it is ``retroarch.cfg``: RetroArch substitutes
+    ``getenv("HOME")`` for a leading ``~`` (file_path.c:1066-1101,
+    :1457-1468 @ a79435a). Everything else is keyed off the pinned
+    ``XDG_CONFIG_HOME`` (``all_vars.sh:4``, ``component_functions.sh:3``,
+    ``component_launcher.sh:10``), ES-DE's own ``~`` expansion included. The
+    override value is literal — flatpak expands no ``$`` — and a value that
+    leaves the expansion non-absolute or sandbox-only earns exactly the
+    statements those shapes always earned.
+    """
+
+    DEPLOY_ESDE = TestAFlatpakOverrideCannotMoveTheConfigHome.DEPLOY_ESDE
+    ES_SYSTEMS = TestAFlatpakOverrideCannotMoveTheConfigHome.ES_SYSTEMS
+    CORES = TestAFlatpakOverrideCannotMoveTheConfigHome.CORES
+    CORE = TestAFlatpakOverrideCannotMoveTheConfigHome.CORE
+    CONTENT = TestAFlatpakOverrideCannotMoveTheConfigHome.CONTENT
+    USER_APP = f"{HOME}/.local/share/flatpak/overrides/net.retrodeck.retrodeck"
+    USER_GLOBAL = f"{HOME}/.local/share/flatpak/overrides/global"
+    SYSTEM_GLOBAL = "/var/lib/flatpak/overrides/global"
+    PLATFORM_DEFAULT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
+    TILDE_CFG = (
+        'savefile_directory = "~/saves"\n'
+        'system_directory = "/mnt/sd/retrodeck/bios"\n'
+        'libretro_info_path = "/app/cores"\nlibretro_directory = "/app/cores"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+    )
+
+    def _files(self, overrides=None):
+        base = dict(TestAFlatpakOverrideCannotMoveTheConfigHome.FILES)
+        base[RETRODECK_CFG] = self.TILDE_CFG
+        base.update(overrides or {})
+        return base
+
+    def _savefile(self, overrides=None, dirs=None):
+        machine = FixtureMachine(self._files(overrides), cores=self.CORES, dirs=dirs)
+        return atlas.RetroDeck(HOME, machine).savefile_location(
+            content_path=self.CONTENT, core_so=self.CORE
+        )
+
+    HOME_DIRS = ["/mnt/elsewhere/saves", f"{HOME}/saves"]
+
+    def test_an_absolute_home_override_moves_the_expansion(self):
+        placement = self._savefile(
+            {self.USER_APP: "[Environment]\nHOME=/mnt/elsewhere\n"}, dirs=self.HOME_DIRS
+        )
+        assert placement.dir == "/mnt/elsewhere/saves"
+        assert any("Flatpak overrides read live" in source for source in placement.sources)
+
+    def test_without_an_override_the_tilde_expands_against_the_machine_home(self):
+        # The discriminating direction of the test above.
+        placement = self._savefile(dirs=self.HOME_DIRS)
+        assert placement.dir == f"{HOME}/saves"
+        assert not any("Flatpak overrides read live" in source for source in placement.sources)
+
+    def test_the_last_applicable_file_wins_per_key(self):
+        # flatpak's merge order: system-global → system-app → user-global →
+        # user-app, later files overwriting per key (flatpak-dir.c:1518-1567).
+        placement = self._savefile(
+            {
+                self.SYSTEM_GLOBAL: "[Environment]\nHOME=/mnt/sysglobal\n",
+                self.USER_GLOBAL: "[Environment]\nHOME=/mnt/userglobal\n",
+                self.USER_APP: "[Environment]\nHOME=/mnt/elsewhere\n",
+            },
+            dirs=["/mnt/sysglobal/saves", "/mnt/userglobal/saves", *self.HOME_DIRS],
+        )
+        assert placement.dir == "/mnt/elsewhere/saves"
+
+    def test_an_unset_home_leaves_the_tilde_verbatim(self):
+        # getenv("HOME") NULL: fill_pathname_home_dir leaves the buffer empty
+        # and the substitution block is skipped — the value stays "~/saves",
+        # which RetroArch's own directory test then refuses, and the root that
+        # stood before it stands (the platform default here).
+        placement = self._savefile(
+            {self.USER_APP: "[Context]\nunset-environment=HOME;\n"}, dirs=self.HOME_DIRS
+        )
+        assert placement.dir == self.PLATFORM_DEFAULT
+        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY in [c.code for c in placement.caveats]
+
+    def test_an_empty_home_behaves_like_an_unset_one(self):
+        # HOME= (the empty string) is set-but-empty; fill_pathname_home_dir
+        # copies it and the substitution block is skipped just the same.
+        placement = self._savefile(
+            {self.USER_APP: "[Environment]\nHOME=\n"}, dirs=self.HOME_DIRS
+        )
+        assert placement.dir == self.PLATFORM_DEFAULT
+
+    def test_a_dollar_carrying_home_is_literal_and_refused(self):
+        # flatpak expands no $VAR — the value is the literal string, the
+        # expansion is not absolute, and RetroArch's directory test refuses it.
+        placement = self._savefile(
+            {self.USER_APP: "[Environment]\nHOME=$HOME/elsewhere\n"}, dirs=self.HOME_DIRS
+        )
+        assert placement.dir == self.PLATFORM_DEFAULT
+        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY in [c.code for c in placement.caveats]
+
+    def test_a_sandbox_only_home_earns_the_untranslated_statement(self):
+        # /var/elsewhere exists only inside the sandbox; the expansion is
+        # where the emulator writes, in the only namespace that names it, and
+        # the caveat states that atlas cannot follow it there — the way that
+        # shape is always stated.
+        placement = self._savefile(
+            {self.USER_APP: "[Environment]\nHOME=/var/elsewhere\n"}, dirs=self.HOME_DIRS
+        )
+        assert placement.dir == "/var/elsewhere/saves"
+        assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED in [c.code for c in placement.caveats]
+
+    def test_esdes_own_tilde_is_not_moved(self):
+        # ES-DE expands against its --home "${XDG_CONFIG_HOME}" — pinned —
+        # not against the sandbox's HOME, so the same override that moves the
+        # cfg tilde moves nothing here.
+        files = self._files({self.USER_APP: "[Environment]\nHOME=/mnt/elsewhere\n"})
+        files[ESDE_SETTINGS] = '<string name="ROMDirectory" value="~/Emulation/roms" />'
+        machine = FixtureMachine(files, cores=self.CORES, dirs=self.HOME_DIRS)
+        placement = atlas.RetroDeck(HOME, machine).rom_location("n64")
+        config_home = TestAFlatpakOverrideCannotMoveTheConfigHome.CONFIG_HOME
+        assert placement.dir == f"{config_home}/Emulation/roms/n64"
+
+    def test_a_system_file_does_not_speak_for_a_user_deployed_app(self):
+        # The deploy search finds the user installation first
+        # (flatpak-dir-utils.c:294-317), and system overrides load only for a
+        # system deploy (flatpak-dir.c:3053-3083) — so the same file that
+        # moves the expansion on a system deploy moves nothing here.
+        user_deploy = self.DEPLOY_ESDE.replace(
+            "/var/lib/flatpak/app", f"{HOME}/.local/share/flatpak/app"
+        )
+        files = {
+            key: value for key, value in self._files().items() if key != self.DEPLOY_ESDE
         }
+        files[user_deploy] = self.ES_SYSTEMS
+        files[self.SYSTEM_GLOBAL] = "[Environment]\nHOME=/mnt/elsewhere\n"
+        cores = {
+            so.replace("/var/lib/flatpak/app", f"{HOME}/.local/share/flatpak/app"): answer
+            for so, answer in self.CORES.items()
+        }
+        machine = FixtureMachine(files, cores=cores, dirs=self.HOME_DIRS)
+        placement = atlas.RetroDeck(HOME, machine).savefile_location(
+            content_path=self.CONTENT, core_so=self.CORE
+        )
+        assert placement.dir == f"{HOME}/saves"
 
-    def test_the_anchor_refusal_dedups_on_the_content_routes_too(self):
-        # The per-game check anchors on the same home-derived root; where its
-        # anchor states the relocation, one statement per answer still holds —
-        # on the catalogue answer and on the entry placements behind it.
-        rd = self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS})
-        answer = rd.emulators_for("n64", content_path=self.CONTENT)
-        assert len(self._riders(answer.caveats)) == 1
-        placement = answer.entries[0].savefile_location(content_path=self.CONTENT)
-        assert not isinstance(placement, atlas.Unresolved)
-        assert len(self._riders(placement.caveats)) == 1
+    def test_the_same_file_speaks_for_the_system_deployed_app(self):
+        # The counterpart that keeps the scoping test honest.
+        placement = self._savefile(
+            {self.SYSTEM_GLOBAL: "[Environment]\nHOME=/mnt/elsewhere\n"}, dirs=self.HOME_DIRS
+        )
+        assert placement.dir == "/mnt/elsewhere/saves"
 
-    def test_the_entry_route_carries_the_rider(self):
-        entry = self._relocated().emulators_for("n64").entries[0]
-        for placement in (
-            entry.savefile_location(content_path=self.CONTENT),
-            entry.savestate_location(content_path=self.CONTENT),
-        ):
-            assert not isinstance(placement, atlas.Unresolved)
-            assert len(self._riders(placement.caveats)) == 1
 
-    def test_the_aggregate_relays_it(self):
-        # Nothing aggregate-specific to build: the fan-out asks the same
-        # handle methods, so the rider arrives labeled with its installation.
-        machine = FixtureMachine({**self.FILES, self.OVERRIDE: self.MOVED}, cores=self.CORES)
-        every = atlas.EveryInstallation(atlas.detect(HOME, machine))
-        answers = every.savefile_location(content_path=self.CONTENT, core_so=self.CORE)
-        assert [len(self._riders(a.answer.caveats)) for a in answers] == [1]
+class TestTheOverridesFileReadsTheWayGKeyFileDoes:
+    """The parser's value semantics are g_key_file_get_string's, because flatpak's are."""
 
-    def test_roms_dir_still_refuses_the_home_derived_root(self):
-        # The bare-string surface keeps its refusal — the same one
-        # rom_location states with the caveat attached.
-        assert self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS}).roms_dir() is None
-        assert self._relocated().roms_dir() == "/mnt/sd/retrodeck/roms"
+    def _env(self, text):
+        from atlas.installations import (
+            _environment_overrides,  # pyright: ignore[reportPrivateUsage] - the parser is the unit under test
+        )
+
+        return _environment_overrides(text)
+
+    def test_escapes_decode(self):
+        env = self._env("[Environment]\nHOME=/with\\sspace\\ttab\\\\slash\n")
+        assert env == {"HOME": "/with space\ttab\\slash"}
+
+    def test_an_invalid_escape_is_an_unset(self):
+        # flatpak reads the value with a NULL GError and hands NULL on, and a
+        # NULL value unsets (flatpak-context.c:1944-1946, flatpak-run.c:752-755).
+        assert self._env("[Environment]\nHOME=/bad\\qescape\n") == {"HOME": None}
+
+    def test_a_trailing_backslash_is_an_unset_too(self):
+        assert self._env("[Environment]\nHOME=/bad\\\n") == {"HOME": None}
+
+    def test_unset_environment_beats_the_environment_group_in_one_file(self):
+        env = self._env("[Environment]\nHOME=/kept\n\n[Context]\nunset-environment=HOME;\n")
+        assert env == {"HOME": None}
+
+    def test_the_unset_list_splits_on_semicolons_and_drops_the_trailing_one(self):
+        env = self._env("[Context]\nunset-environment=HOME;XDG_DATA_HOME;\n")
+        assert env == {"HOME": None, "XDG_DATA_HOME": None}
+
+    def test_group_names_match_exactly(self):
+        # GKeyFile does not trim inside the brackets: "[ Environment ]" names
+        # a different group, and flatpak reads nothing out of it.
+        assert self._env("[ Environment ]\nHOME=/elsewhere\n") == {}
+
+    def test_value_leading_whitespace_is_skipped_and_trailing_kept(self):
+        assert self._env("[Environment]\nHOME=  /padded  \n") == {"HOME": "/padded  "}
 
 
 class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
