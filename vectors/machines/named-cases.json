@@ -826,6 +826,31 @@
       }
     },
     {
+      "name": "emudeck-marker-paths-partially-quoted",
+      "rationale": "What the app-driven installer actually writes: every path key quotes only its jq-read prefix (jsonToBashVars.sh:116-123 @ 863ab69) and source concatenates the segments into one word. The marker-derived root comes out quote-free and health does not false-alarm root-missing on a healthy machine — observed on a live EmuDeck installation.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"/run/media/deck/Emulation\"/Emulation/roms\nsavesPath=\"/run/media/deck/Emulation\"/Emulation/saves\nbiosPath=\"/run/media/deck/Emulation\"/Emulation/bios\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/run/media/deck/Emulation/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\n",
+          "/run/media/deck/Emulation/Emulation/saves/retroarch/saves/.keep": ""
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/run/media/deck/Emulation/Emulation",
+            "health": []
+          }
+        ]
+      }
+    },
+    {
       "name": "nothing-installed",
       "rationale": "An empty machine detects nothing; an empty list is the truthful answer.",
       "input": {

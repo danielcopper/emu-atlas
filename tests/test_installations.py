@@ -1014,6 +1014,58 @@ class TestEmuDeck:
         # the only one — roots are fine.
         assert ed.health().codes == (atlas.HEALTH_ISSUE_COMPANION_CONFIG_MISSING,)
 
+    def test_partially_quoted_marker_paths_read_the_way_source_reads_them(self):
+        # What the app-driven installer actually writes: every path key quotes
+        # only its jq-read prefix (jsonToBashVars.sh:116-123 @ 863ab69), and
+        # bash concatenates the segments into one word. The parse must too, or
+        # every marker-derived root is a path that exists nowhere and health
+        # false-alarms root-missing on a healthy machine.
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: (
+                    'romsPath="/run/media/deck/Emulation"/Emulation/roms\n'
+                    'savesPath="/run/media/deck/Emulation"/Emulation/saves\n'
+                    'biosPath="/run/media/deck/Emulation"/Emulation/bios\n'
+                ),
+                STANDALONE_CFG: (
+                    'savefile_directory = "/run/media/deck/Emulation/Emulation/saves/retroarch/saves"\n'
+                ),
+                "/run/media/deck/Emulation/Emulation/saves/retroarch/saves/.keep": "",
+            }
+        )
+        ed = atlas.EmuDeck(HOME, machine)
+        assert ed.root() == "/run/media/deck/Emulation/Emulation"
+        assert ed.saves_root() == "/run/media/deck/Emulation/Emulation/saves"
+        assert ed.bios_dir() == "/run/media/deck/Emulation/Emulation/bios"
+        assert ed.health().codes == ()
+
+    def test_single_quoted_and_bare_marker_values_dequote_alike(self):
+        # The other shapes a real marker carries: a whole-single-quoted value
+        # and a bare one read the same as the double-quoted stock shape.
+        for marker in (
+            "romsPath='/x/Emulation/roms'\n",
+            "romsPath=/x/Emulation/roms\n",
+            'romsPath="/x"/Emulation/roms\n',
+        ):
+            ed = atlas.EmuDeck(HOME, FixtureMachine({EMUDECK_SETTINGS: marker}))
+            assert ed.root() == "/x/Emulation", marker
+
+    def test_home_expands_after_the_quotes_come_off(self):
+        # A $HOME inside a quoted segment concatenated with a bare one: the
+        # dequoting yields the word bash would, and the expansion runs on it.
+        machine = FixtureMachine({EMUDECK_SETTINGS: 'romsPath="$HOME"/Emulation/roms\n'})
+        assert atlas.EmuDeck(HOME, machine).root() == f"{HOME}/Emulation"
+
+    def test_unterminated_quote_stays_verbatim(self):
+        # The discriminating direction: bash refuses a line whose quote never
+        # closes, and atlas does not emulate a shell — the value stays
+        # verbatim, so the derived root is visibly not a real path and health
+        # states root-missing instead of a silently invented dequoting.
+        machine = FixtureMachine({EMUDECK_SETTINGS: 'romsPath="/x/Emulation/roms\n'})
+        ed = atlas.EmuDeck(HOME, machine)
+        assert ed.root() == '"/x/Emulation'
+        assert atlas.HEALTH_ISSUE_ROOT_MISSING in ed.health().codes
+
     def test_savefile_location_reads_standalone_cfg(self):
         machine = FixtureMachine(
             {

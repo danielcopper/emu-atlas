@@ -4605,12 +4605,52 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
 
 
+def _dequote_shell_value(value: str) -> str:
+    """Bash's quote removal over *value*'s segments — concatenation included.
+
+    EmuDeck composes values out of quoted and bare segments: the app-driven
+    installer reads ``storagePath`` with ``jq`` and no ``-r``, so the JSON
+    quotes land inside the value and every path key is written as
+    ``romsPath="/run/media/deck/Emulation"/Emulation/roms``
+    (``jsonToBashVars.sh:116-123``, upstream ``dragoonDorise/EmuDeck`` @
+    ``863ab69`` — observed on a live installation). ``source`` reads that as
+    one word: a quoted segment contributes its contents, a bare segment
+    itself. Stripping only a whole-value wrap kept the embedded quotes, and
+    every marker-derived root became a path that exists nowhere — health then
+    false-alarmed ``root-missing`` on a healthy machine.
+
+    Quote removal and nothing more: an unterminated quote returns the value
+    verbatim (bash refuses such a line; atlas does not emulate a shell), and
+    a backslash is an ordinary character — bash's own reading inside single
+    quotes and for every non-special character inside double quotes, and the
+    observed marker corpus carries no escape sequences at all (91 bare
+    values, 26 whole-quoted, 7 partially-quoted path keys).
+    """
+    parts: list[str] = []
+    i = 0
+    while i < len(value):
+        quote = value[i]
+        if quote in "\"'":
+            end = value.find(quote, i + 1)
+            if end == -1:
+                return value
+            parts.append(value[i + 1 : end])
+            i = end + 1
+        else:
+            cuts = [p for p in (value.find('"', i), value.find("'", i)) if p != -1]
+            end = min(cuts) if cuts else len(value)
+            parts.append(value[i:end])
+            i = end
+    return "".join(parts)
+
+
 def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
     """Parse EmuDeck's ``settings.sh`` (``key=value`` shell lines) into a dict.
 
-    Values are quote-stripped and literal ``$HOME`` / ``${HOME}`` is expanded
-    against the machine home — the two forms EmuDeck actually writes. Anything
-    fancier stays verbatim; atlas does not emulate a shell.
+    Values go through bash's quote removal (:func:`_dequote_shell_value`) and
+    literal ``$HOME`` / ``${HOME}`` is expanded against the machine home — the
+    forms EmuDeck actually writes. Anything fancier stays verbatim; atlas does
+    not emulate a shell.
     """
     result: dict[str, str] = {}
     for raw_line in text.splitlines():
@@ -4619,9 +4659,7 @@ def _parse_settings_sh(text: str, *, home: str) -> dict[str, str]:
             continue
         key, _, value = line.partition("=")
         key = key.strip()
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
+        value = _dequote_shell_value(value.strip())
         value = value.replace("${HOME}", home).replace("$HOME", home)
         if key:
             result[key] = value
