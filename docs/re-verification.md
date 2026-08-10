@@ -1,9 +1,9 @@
 # Re-verification — what to do when an arrangement updates
 
 atlas's world knowledge is verified against a pinned version of an arrangement (`atlas/data/arrangement_evidence.json`;
-today RetroDECK 0.10.9b). When the machine states a different one, every answer carries `arrangement-version-drifted`
-and keeps carrying it until this runs. The caveat is the reminder, this page is the work — for a typical point release,
-under an hour.
+today RetroDECK 0.10.9b and EmuDeck at backend commit `863ab69` with ES-DE 3.4.1). When the machine states a different
+one, every answer carries `arrangement-version-drifted` and keeps carrying it until this runs. The caveat is the
+reminder, this page is the work — for a typical point release, under an hour.
 
 The order is deliberate: each step narrows what the next one has to look at, and the citations atlas already carries
 _are_ the checklist. Nothing here is a re-audit from scratch.
@@ -11,9 +11,11 @@ _are_ the checklist. Nothing here is a re-audit from scratch.
 ## 1. What moved at all
 
 Diff the arrangement's build manifest between the pinned release and the new one — for RetroDECK, the Flatpak manifest
-in its repository at the two tags. This is a release-to-release list of component bumps: RetroArch, ES-DE, the cores,
-the emulator components. A component that did not move cannot have changed behaviour, and everything atlas knows about
-it still holds.
+in its repository at the two tags; for EmuDeck, the backend repository between the pinned commit and the machine's
+(`git log 863ab69..<observed>` over `functions/`, `tools/launchers/` and `configs/`), plus the deployed ES-DE version,
+which EmuDeck fetches at install time independently of its own commit. This is a release-to-release list of component
+bumps: RetroArch, ES-DE, the cores, the emulator components. A component that did not move cannot have changed
+behaviour, and everything atlas knows about it still holds.
 
 ## 2. Diff only what atlas cites
 

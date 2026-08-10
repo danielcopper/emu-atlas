@@ -1379,12 +1379,6 @@
               "data": {
                 "path": "/home/deck/Emulation/saves"
               }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         }
@@ -5833,12 +5827,6 @@
           "unclaimed": [],
           "caveats": [
             {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            },
-            {
               "code": "emulator-catalogue-sealed",
               "data": {
                 "system": "gb"
@@ -5894,12 +5882,6 @@
           "cores": [],
           "unclaimed": [],
           "caveats": [
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            },
             {
               "code": "emulator-catalogue-sealed",
               "data": {
@@ -6008,12 +5990,6 @@
           ],
           "unclaimed": [],
           "caveats": [
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            },
             {
               "code": "emulator-catalogue-unavailable",
               "data": {
@@ -6134,12 +6110,6 @@
           ],
           "unclaimed": [],
           "caveats": [
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            },
             {
               "code": "emulator-catalogue-sealed",
               "data": {

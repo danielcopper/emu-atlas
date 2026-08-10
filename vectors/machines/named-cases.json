@@ -467,12 +467,6 @@
           "granularity": null,
           "caveats": [
             {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            },
-            {
               "code": "no-core",
               "data": {}
             }
@@ -827,7 +821,7 @@
     },
     {
       "name": "emudeck-marker-paths-partially-quoted",
-      "rationale": "What the app-driven installer actually writes: every path key quotes only its jq-read prefix (jsonToBashVars.sh:116-123 @ 863ab69) and source concatenates the segments into one word. The marker-derived root comes out quote-free and health does not false-alarm root-missing on a healthy machine — observed on a live EmuDeck installation.",
+      "rationale": "What the app-driven installer actually writes: every path key quotes only its jq-read prefix (jsonToBashVars.sh:116-123 @ 863ab69) and source concatenates the segments into one word. The marker-derived root comes out quote-free and health does not false-alarm root-missing on a healthy machine \u2014 observed on a live EmuDeck installation.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4596,12 +4590,6 @@
               "data": {
                 "arrangement": "emudeck"
               }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         }
@@ -5004,8 +4992,8 @@
       }
     },
     {
-      "name": "evidence-a-verified-and-an-unverified-arrangement-on-one-machine",
-      "rationale": "The evidence caveat belongs to the arrangement, and one machine shows both sides at once: RetroDECK's placement was confirmed against a live installation and states nothing, while EmuDeck's is derived from upstream configuration alone and says so \u2014 same question, same machine, same detection order, two different evidence states. A caveat attached to the query rather than to the arrangement would appear on both answers; one attached to nothing would appear on neither.",
+      "name": "evidence-two-verified-arrangements-on-one-machine",
+      "rationale": "The evidence caveat belongs to the arrangement's record: RetroDECK and EmuDeck were each confirmed against a live installation, and neither machine here states a version (no retrodeck.json version, no backend checkout on disk), so both answers say nothing \u2014 the state a record change retires the caveat into, with no resolver change.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5103,12 +5091,6 @@
               },
               "granularity": null,
               "caveats": [
-                {
-                  "code": "arrangement-unverified",
-                  "data": {
-                    "kind": "emudeck"
-                  }
-                },
                 {
                   "code": "no-core",
                   "data": {}
@@ -5702,8 +5684,8 @@
       }
     },
     {
-      "name": "a-broken-unverified-arrangement-states-both-facts-in-one-list",
-      "rationale": "Two features meet in one caveat list, and their order is the contract: the health finding first (EmuDeck's settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then the arrangement's evidence caveat, then what the query itself could not resolve. A machine fact, a fact about atlas's evidence, and a missing argument are three different claims that must not merge, reorder, or crowd each other out \u2014 and the cfg still answers the directory, because an unreadable marker degrades the answer rather than replacing it.",
+      "name": "a-broken-arrangement-states-both-facts-in-one-list",
+      "rationale": "Two features meet in one caveat list, and their order is the contract: the health finding first (EmuDeck's settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then what the query itself could not resolve. A machine fact and a missing argument are two different claims that must not merge, reorder, or crowd each other out \u2014 and the cfg still answers the directory, because an unreadable marker degrades the answer rather than replacing it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5758,12 +5740,6 @@
               "data": {
                 "path": "/home/deck/.config/EmuDeck/settings.sh",
                 "status": "unreadable"
-              }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
               }
             },
             {
@@ -7702,12 +7678,6 @@
               "data": {
                 "system": "atarijaguar"
               }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         }
@@ -7765,12 +7735,6 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {}
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         },
@@ -7799,12 +7763,6 @@
               "data": {
                 "system": "atarijaguar"
               }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         },
@@ -7824,12 +7782,6 @@
               "code": "emulator-catalogue-sealed",
               "data": {
                 "system": "atarijaguar"
-              }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
               }
             }
           ]
@@ -7885,12 +7837,6 @@
               "data": {
                 "system": "gb"
               }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         },
@@ -7903,12 +7849,6 @@
               "code": "emulator-catalogue-sealed",
               "data": {
                 "system": "gb"
-              }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
               }
             }
           ]
@@ -7985,12 +7925,6 @@
                 "stated": "false",
                 "observed": "present"
               }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         }
@@ -8041,12 +7975,6 @@
                 "key": "doInstallESDE",
                 "stated": "true",
                 "observed": "absent"
-              }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
               }
             }
           ]
@@ -8107,12 +8035,6 @@
               "data": {
                 "path": "/home/deck/Applications/portable.txt"
               }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         },
@@ -8138,12 +8060,6 @@
               "code": "config-home-relocated",
               "data": {
                 "path": "/home/deck/Applications/portable.txt"
-              }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
               }
             }
           ]
@@ -8200,14 +8116,7 @@
             "atarijaguar",
             "gb"
           ],
-          "caveats": [
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            }
-          ]
+          "caveats": []
         },
         "catalogue": {
           "entries": [
@@ -8220,14 +8129,7 @@
               "caveats": []
             }
           ],
-          "caveats": [
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            }
-          ]
+          "caveats": []
         },
         "rom_location": {
           "dir": null,
@@ -8238,12 +8140,6 @@
               "code": "rom-path-undeclared",
               "data": {
                 "system": "gba"
-              }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
               }
             }
           ]
@@ -8295,12 +8191,6 @@
             {
               "code": "emulator-catalogue-unreadable",
               "data": {}
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         }
@@ -8366,12 +8256,6 @@
             "complete": false
           },
           "caveats": [
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            },
             {
               "code": "core-unaudited",
               "data": {
@@ -8751,12 +8635,6 @@
             {
               "code": "emulator-catalogue-exclusive",
               "data": {}
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
             }
           ]
         },
@@ -8784,12 +8662,6 @@
               "code": "emulator-catalogue-exclusive",
               "data": {
                 "system": "atarijaguar"
-              }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
               }
             }
           ]
@@ -8848,12 +8720,6 @@
               "code": "rom-path-undeclared",
               "data": {
                 "system": "gb"
-              }
-            },
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
               }
             }
           ]
@@ -8920,12 +8786,6 @@
             "complete": false
           },
           "caveats": [
-            {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            },
             {
               "code": "core-unaudited",
               "data": {
@@ -9005,6 +8865,297 @@
           ],
           "caveats": []
         }
+      }
+    },
+    {
+      "name": "emudeck-backend-head-matching-the-pin-states-nothing",
+      "rationale": "The runtime half of EmuDeck's anchor: the backend checkout's HEAD, read as the two plain files git keeps it in (.git/HEAD symref, then the loose ref \u2014 no git invocation), compared against the record's pin. Equal, so the answer states nothing: the arrangement is verified and this machine runs what it was verified against. The silence differs from an anchorless machine's only in what produced it \u2014 here the comparison ran \u2014 which is why this fixture models the files.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/.config/EmuDeck/backend/.git/HEAD": "ref: refs/heads/main\n",
+          "/home/deck/.config/EmuDeck/backend/.git/refs/heads/main": "863ab69d81f66a4c9c0cf65bf642fb96ccc4ca2c\n",
+          "/home/deck/Emulation/roms/gb/Tetris (World).zip": "",
+          "/home/deck/Emulation/saves/retroarch/saves/Tetris (World).srm": "sram"
+        },
+        "savefile_query": {
+          "content_path": "/home/deck/Emulation/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Tetris (World).srm"
+            ],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "emudeck-backend-head-drift-rides-between-health-and-the-query-hole",
+      "rationale": "Three claims meet in one caveat list, and their order is the contract: the health finding first (settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then the arrangement's evidence statement \u2014 the backend checkout names a commit the record never verified, the detached spelling of .git/HEAD, the second form the anchor read speaks \u2014 then what the query itself could not resolve. A machine fact, a fact about atlas's record, and a missing argument must not merge, reorder, or crowd each other out; and the cfg still answers the directory, because neither degradation replaces the answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": {
+            "status": "unreadable"
+          },
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/.config/EmuDeck/backend/.git/HEAD": "1111111111111111111111111111111111111111\n",
+          "/home/deck/Emulation/roms/gb/Tetris (World).zip": "",
+          "/home/deck/Emulation/saves/retroarch/saves/Tetris (World).srm": "sram"
+        },
+        "savefile_query": {
+          "content_path": "/home/deck/Emulation/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": [
+              {
+                "code": "marker-unreadable",
+                "data": {
+                  "path": "/home/deck/.config/EmuDeck/settings.sh",
+                  "status": "unreadable"
+                }
+              }
+            ]
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Tetris (World).srm"
+            ],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "marker-unreadable",
+              "data": {
+                "path": "/home/deck/.config/EmuDeck/settings.sh",
+                "status": "unreadable"
+              }
+            },
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "emudeck",
+                "verified": "863ab69d81f66a4c9c0cf65bf642fb96ccc4ca2c",
+                "observed": "1111111111111111111111111111111111111111"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "emudeck-unreadable-anchor-establishes-no-drift",
+      "rationale": "The anchor sources unreadable on a machine is the same state an unreadable retrodeck.json version leaves RetroDECK in: the machine states no version, and the comparison nobody could run is claimed in neither direction \u2014 no drift caveat (that would claim a comparison), and no unverified caveat either (the arrangement has been observed; that record does not age with one machine's disk). The silence spells 'no drift established', never 'no drift'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/.config/EmuDeck/backend/.git/HEAD": {
+            "status": "unreadable"
+          },
+          "/home/deck/Emulation/roms/gb/Tetris (World).zip": "",
+          "/home/deck/Emulation/saves/retroarch/saves/Tetris (World).srm": "sram"
+        },
+        "savefile_query": {
+          "content_path": "/home/deck/Emulation/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Tetris (World).srm"
+            ],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "evidence-a-verified-and-an-unverified-arrangement-on-one-machine",
+      "rationale": "The evidence caveat belongs to the arrangement, and one machine shows both sides at once: RetroDECK's placement was confirmed against a live installation and states nothing, while the native RetroArch's is derived from upstream configuration alone and says so \u2014 same question, same machine, same detection order, two different evidence states. A caveat attached to the query rather than to the arrangement would appear on both answers; one attached to nothing would appear on neither.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/.config/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
+          "/home/deck/roms/gb/Tetris (World).zip": "",
+          "/mnt/sd/retrodeck/saves/Tetris (World).srm": "sram",
+          "/home/deck/.config/retroarch/saves/Tetris (World).srm": "sram"
+        },
+        "aggregate_query": {
+          "question": "savefile_location",
+          "content_path": "/home/deck/roms/gb/Tetris (World).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          },
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "aggregate": [
+          {
+            "installation": {
+              "kind": "retrodeck",
+              "kinds": [
+                "retrodeck"
+              ],
+              "root": "/mnt/sd/retrodeck",
+              "health": []
+            },
+            "answer": {
+              "dir": "/mnt/sd/retrodeck/saves",
+              "root_kind": "savefile_directory",
+              "needs": [],
+              "fallback_dir": null,
+              "physical_dir": null,
+              "file_set": {
+                "state": "observed",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "complete": false
+              },
+              "caveats": [
+                {
+                  "code": "no-core",
+                  "data": {}
+                }
+              ],
+              "granularity": null
+            }
+          },
+          {
+            "installation": {
+              "kind": "bare_retroarch_native",
+              "kinds": [
+                "bare_retroarch_native"
+              ],
+              "root": "/home/deck/.config/retroarch",
+              "health": []
+            },
+            "answer": {
+              "dir": "/home/deck/.config/retroarch/saves",
+              "root_kind": "savefile_directory",
+              "needs": [],
+              "fallback_dir": null,
+              "physical_dir": null,
+              "file_set": {
+                "state": "observed",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "complete": false
+              },
+              "caveats": [
+                {
+                  "code": "arrangement-unverified",
+                  "data": {
+                    "kind": "bare_retroarch_native"
+                  }
+                },
+                {
+                  "code": "no-core",
+                  "data": {}
+                }
+              ],
+              "granularity": null
+            }
+          }
+        ]
       }
     }
   ]

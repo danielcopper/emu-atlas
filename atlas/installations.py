@@ -210,6 +210,10 @@ RETROARCH_CFG = "retroarch.cfg"
 RETRODECK_APP_ID = "net.retrodeck.retrodeck"
 RETROARCH_FLATPAK_APP_ID = "org.libretro.RetroArch"
 
+# The default XDG config home's directory name under ``home`` — where the
+# non-Flatpak markers live.
+_XDG_CONFIG_DIRNAME = ".config"
+
 # Config markers, as ``home``-relative suffixes.
 RETRODECK_JSON_SUFFIX = os.path.join(
     ".var", "app", RETRODECK_APP_ID, "config", "retrodeck", "retrodeck.json"
@@ -217,11 +221,11 @@ RETRODECK_JSON_SUFFIX = os.path.join(
 RETRODECK_CFG_SUFFIX = os.path.join(
     ".var", "app", RETRODECK_APP_ID, "config", "retroarch", RETROARCH_CFG
 )
-EMUDECK_SETTINGS_SUFFIX = os.path.join(".config", "EmuDeck", "settings.sh")
+EMUDECK_SETTINGS_SUFFIX = os.path.join(_XDG_CONFIG_DIRNAME, "EmuDeck", "settings.sh")
 STANDALONE_FLATPAK_CFG_SUFFIX = os.path.join(
     ".var", "app", RETROARCH_FLATPAK_APP_ID, "config", "retroarch", RETROARCH_CFG
 )
-NATIVE_CFG_SUFFIX = os.path.join(".config", "retroarch", RETROARCH_CFG)
+NATIVE_CFG_SUFFIX = os.path.join(_XDG_CONFIG_DIRNAME, "retroarch", RETROARCH_CFG)
 
 
 # Flatpak binds the app's private XDG directories into the sandbox under /var, so
@@ -4768,6 +4772,42 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             )
         return _parse_settings_sh(result.text, home=self._home), ()
 
+    # EmuDeck's installer *is* a git checkout — ``install.sh`` clones the
+    # backend to ``~/.config/EmuDeck/backend`` (upstream ``dragoonDorise/
+    # EmuDeck`` @ ``863ab69``) — and that checkout's HEAD is the one version
+    # statement the arrangement leaves on disk: ``settings.sh`` names none.
+    _BACKEND_GIT_SUFFIX = os.path.join(_XDG_CONFIG_DIRNAME, "EmuDeck", "backend", ".git")
+
+    def _observed_backend_head(self) -> str | None:
+        """The backend commit this machine runs — EmuDeck's version statement.
+
+        Read as the two plain files git keeps HEAD in, no git invocation:
+        ``.git/HEAD`` either names the commit directly (detached) or carries a
+        ``ref:`` line naming a ref whose loose file holds the hash — the shape
+        a live installation was observed with (``ref: refs/heads/main``).
+        Anything that stops the walk — a missing or unreadable file, an empty
+        ref, a ref packed away where no loose file exists — answers ``None``:
+        the machine states no version, and per
+        :func:`atlas.evidence.arrangement_caveats` that silence means *no
+        drift established*, never "no drift" — the same state an unreadable
+        ``retrodeck.json`` version leaves RetroDECK in. Following packed refs
+        is a possible refinement; the two plain files are what is read today.
+        """
+        git_dir = os.path.join(self._home, self._BACKEND_GIT_SUFFIX)
+        head = self._machine.read_text(os.path.join(git_dir, "HEAD")).text
+        if head is None:
+            return None
+        head = head.strip()
+        if head.startswith("ref:"):
+            ref = head[len("ref:") :].strip()
+            if not ref:
+                return None
+            resolved = self._machine.read_text(os.path.join(git_dir, ref)).text
+            if resolved is None:
+                return None
+            return resolved.strip() or None
+        return head or None
+
     def _setting_path(self, settings: dict[str, str], key: str, fallback_subdir: str) -> tuple[str, str]:
         value = settings.get(key, "")
         if value:
@@ -5227,19 +5267,23 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
         """Every system the readable layers declare — stated as incomplete while sealed.
 
-        No version travels back: ``settings.sh`` names none, and an
-        arrangement nobody verified has no pin a version could drift from.
+        The version travelling back is the backend checkout's HEAD
+        (:meth:`_observed_backend_head`) — ``settings.sh`` names none, so the
+        checkout is what this arrangement's evidence is weighed against. It
+        rides the refusal too: which ES-DE is on disk and which backend this
+        machine runs are separate facts.
         """
+        version = self._observed_backend_head()
         snapshot = self._esde_snapshot()
         if snapshot.refusal is not None:
-            return SystemsAnswer(caveats=snapshot.refusal), None
+            return SystemsAnswer(caveats=snapshot.refusal), version
         return (
             SystemsAnswer(
                 tuple(sorted(snapshot.by_system)),
                 (_CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,),
                 (*snapshot.findings, *snapshot.tail),
             ),
-            None,
+            version,
         )
 
     def _catalogue_answer(
@@ -5252,11 +5296,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         where the answer comes from: the marker, the on-disk ES-DE layers and
         the system's gamelist, each read once here. An empty entry list in the
         sealed state is **not** "the frontend knows none" — the sealed caveat
-        is the code that keeps those apart.
+        is the code that keeps those apart. The version travelling back is the
+        backend checkout's HEAD, exactly as on :meth:`_systems_answer`.
         """
+        version = self._observed_backend_head()
         snapshot = self._esde_snapshot(system)
         if snapshot.refusal is not None:
-            return CatalogueAnswer(caveats=snapshot.refusal), None
+            return CatalogueAnswer(caveats=snapshot.refusal), version
         anchor = (
             self._esde_system_dir(
                 snapshot.by_system, system, complete=snapshot.complete, relocated=snapshot.relocated
@@ -5276,7 +5322,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 (_CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,),
                 (*snapshot.findings, *snapshot.tail, *anchor.caveats),
             ),
-            None,
+            version,
         )
 
     def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
@@ -5288,11 +5334,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         system the readable layers do not declare answers nothing *carrying
         the sealed caveat* — the declaration may sit in the sealed layer,
         which is a different claim from ``rom-path-undeclared``'s "the
-        catalogue was read and declares none".
+        catalogue was read and declares none". The version travelling back is
+        the backend checkout's HEAD, exactly as on :meth:`_systems_answer`.
         """
+        version = self._observed_backend_head()
         snapshot = self._esde_snapshot(system)
         if snapshot.refusal is not None:
-            return RomPlacement(caveats=snapshot.refusal), None
+            return RomPlacement(caveats=snapshot.refusal), version
         declaration = snapshot.by_system.get(system)
         resolved = self._esde_system_dir(
             snapshot.by_system, system, complete=snapshot.complete, relocated=snapshot.relocated
@@ -5306,7 +5354,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             caveats=(*snapshot.findings, *snapshot.tail, *resolved.caveats),
         )
         if resolved.directory is None:
-            return placement, None
+            return placement, version
         # Same rule as RetroDECK's: every resolution branch that carries a
         # caveat also answers directory=None, so a resolved directory has
         # nothing to drop here — and the same shared link view backs it.
@@ -5318,7 +5366,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 physical_dir=physical_dir,
                 caveats=(*snapshot.findings, *snapshot.tail, *link_caveats),
             ),
-            None,
+            version,
         )
 
     def _entry_caveats_for(self, spec: EmulatorSpec, content_path: str) -> tuple[Caveat, ...]:
@@ -5424,11 +5472,19 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
     ) -> _SaveQuery:
-        """The placement question, over one read of the companion cfg."""
+        """The placement question, over one read of the companion cfg.
+
+        The version the machine states about itself is the backend checkout's
+        HEAD (:meth:`_observed_backend_head`), read once here and stated
+        through both channels — the per-card comparison and the
+        arrangement-level evidence — so the two can never weigh different
+        readings of it.
+        """
         settings, marker_issues = self._read_marker()
         global_cfg_path = self._companion_cfg_path()
         cfg = self._machine.read_text(global_cfg_path)
         health = self._health_from(settings, marker_issues, cfg.status)
+        version = self._observed_backend_head()
         return _SaveQuery(
             sandbox=self._sandbox(),
             global_cfg_path=global_cfg_path,
@@ -5440,8 +5496,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=core_so,
             core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
             arrangement="emudeck",
-            arrangement_version=None,
-            extra_caveats=(*extra_caveats, *health.issues, *arrangement_caveats(self.kind)),
+            arrangement_version=version,
+            extra_caveats=(
+                *extra_caveats,
+                *health.issues,
+                *arrangement_caveats(self.kind, observed_version=version),
+            ),
         )
 
     def savefile_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavefilePlacement:
@@ -5490,9 +5550,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self._retroarch_config_dir(),
             findings=self._health_from(settings, marker_issues, cfg.status).issues,
-            # ``settings.sh`` names no EmuDeck version, and an arrangement
-            # nobody verified has no pin a version could drift from.
-            arrangement_version=None,
+            # ``settings.sh`` names no EmuDeck version — the backend
+            # checkout's HEAD is the version this machine states about itself.
+            arrangement_version=self._observed_backend_head(),
         )
 
     def _read_firmware_context(self) -> FirmwareContext:

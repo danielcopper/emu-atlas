@@ -1303,12 +1303,6 @@
           },
           "caveats": [
             {
-              "code": "arrangement-unverified",
-              "data": {
-                "kind": "emudeck"
-              }
-            },
-            {
               "code": "no-core",
               "data": {}
             }
