@@ -383,32 +383,33 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 
 ### Placement caveats worth branching on
 
-| Code                                        | Meaning                                                                                       |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `sorted-dir-missing`                        | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`     |
-| `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`   |
-| `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                          |
-| `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes      |
-| `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"   |
-| `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                        |
-| `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified     |
-| `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it) |
-| `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope        |
-| `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated      |
-| `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain          |
-| `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below  |
-| `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                        |
-| `marker-missing`                            | health: the config marker this installation is detected by is gone                            |
-| `marker-unreadable`                         | health: the marker exists and its bytes could not be read                                     |
-| `marker-invalid`                            | health: the marker parsed to something unusable                                               |
-| `root-missing`                              | health: the installation's own root is not an existing directory                              |
-| `saves-root-missing`                        | health: its saves root is not an existing directory                                           |
-| `config-unreadable`                         | health: a bare RetroArch's `retroarch.cfg` could not be read                                  |
-| `companion-config-missing`                  | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                   |
-| `unverified-version`                        | the rule card was never verified against this emulator version                                |
-| `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)             |
-| `arrangement-version-drifted`               | it was observed, on another version than this machine runs — re-verification pending          |
-| `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read   |
+| Code                                        | Meaning                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `sorted-dir-missing`                        | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`        |
+| `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`      |
+| `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                             |
+| `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes         |
+| `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"      |
+| `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                           |
+| `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified        |
+| `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)    |
+| `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope           |
+| `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated         |
+| `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain             |
+| `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below     |
+| `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                           |
+| `marker-missing`                            | health: the config marker this installation is detected by is gone                               |
+| `marker-unreadable`                         | health: the marker exists and its bytes could not be read                                        |
+| `marker-invalid`                            | health: the marker parsed to something unusable                                                  |
+| `root-missing`                              | health: the installation's own root is not an existing directory                                 |
+| `saves-root-missing`                        | health: its saves root is not an existing directory                                              |
+| `config-unreadable`                         | health: a bare RetroArch's `retroarch.cfg` could not be read                                     |
+| `companion-config-missing`                  | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                      |
+| `unverified-version`                        | the rule card was never verified against this emulator version                                   |
+| `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)                |
+| `arrangement-version-drifted`               | it was observed, on another version than this machine runs — re-verification pending             |
+| `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read      |
+| `config-home-relocated`                     | RetroDECK: an override moved the app's config home — the files read may not be the ones in force |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
@@ -519,10 +520,12 @@ if not answer.entries and not refusals:
 ```
 
 `unavailable` is a statement about the machine; `unestablished` and `sealed` are statements about atlas, and a client
-that renders either as an absence is telling its user something nobody checked. On an EmuDeck handle two more codes can
-ride along without being refusals: `frontend-marker-mismatch` (the disk and `settings.sh`'s `doInstallESDE` record
-disagree about ES-DE being installed — the disk decided the answer) and `config-home-relocated` (a `portable.txt` next
-to the AppImage may have moved ES-DE's data directory out from under the files atlas read).
+that renders either as an absence is telling its user something nobody checked. Two more codes can ride along without
+being refusals: `config-home-relocated` (something moved the tree the handle reads out from under it — on RetroDECK a
+Flatpak override redefining the app's config home, and the caveat then rides every answer of that handle; on EmuDeck a
+`portable.txt` next to the AppImage that may have moved ES-DE's data directory) and, on EmuDeck,
+`frontend-marker-mismatch` (the disk and `settings.sh`'s `doInstallESDE` record disagree about ES-DE being installed —
+the disk decided the answer).
 
 The per-game step is ES-DE's, so it happens on the ES-DE-driven handles (RetroDECK, and EmuDeck where an ES-DE is
 present), and it matches on the path: pass the ROM the way it lies under the system's ROM directory — which is exactly
@@ -626,13 +629,19 @@ carries the read status in `data["status"]` (`unreadable`, `invalid-text`, or `u
 the machine moved the tree the frontend's default is relative to out from under the files atlas read: on RetroDECK, a
 Flatpak override redefining `XDG_CONFIG_HOME` or `HOME` for the app (`data` names the override file and the key); on
 EmuDeck, a `portable.txt` sitting next to the ES-DE AppImage (`data` names it in `path`). Either way the caveat is a
-warning about **this handle's other answers** too, not only about this one: they may rest on files that are not the ones
-in force — which is why EmuDeck states it on every catalogue-shaped answer while one is present, the firmware answers
-its catalogue informs included, next to whatever the answer still established.
+statement about the handle's answers as a whole, and it rides them: on RetroDECK **every** answer carries it while the
+override is in force — placements, catalogue, firmware, the entry routes — because everything that handle reads lives
+under, or is resolved out of, the moved config tree; on EmuDeck it rides every catalogue-shaped answer while the
+`portable.txt` is present, the firmware answers its catalogue informs included, because only the `~/ES-DE` reads are in
+doubt there. The riding answers still state what the on-disk files say — the caveat carries the doubt. The one place
+RetroDECK refuses instead is this ROM question's home-derived resolutions (the unset default, and a `~` expansion), and
+that refusal is the answer's own relocation statement: it carries `system` and `declared` in `data` on top of the file
+and key, and the riding form does not appear beside it — one fact, one code, once per answer.
 
 Never read `None` as "look in the default place" — where there is a default worth standing behind, atlas has already
-applied it. `rom-path-unresolved` (and RetroDECK's `config-home-relocated`) carry the declared path in
-`data["declared"]`, so a client that knows its own setup can finish the substitution atlas refused to guess at.
+applied it. `rom-path-unresolved` (and RetroDECK's `config-home-relocated` where it refuses this question's directory)
+carry the declared path in `data["declared"]`, so a client that knows its own setup can finish the substitution atlas
+refused to guess at.
 
 Extensions survive an unresolved directory: which files launch is declared in the same element and does not depend on
 where they sit.

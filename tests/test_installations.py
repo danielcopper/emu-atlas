@@ -2214,8 +2214,8 @@ class TestOneReadPerSourcePerQuery:
 
     def test_rom_location_reads_each_source_once(self):
         # This one reaches furthest: the marker, both catalogue layers, ES-DE's
-        # settings, and — because this fixture sets no ROMDirectory — all four
-        # Flatpak overrides files.
+        # settings, and all four Flatpak overrides files — the arrangement-level
+        # relocation check every question on this handle now makes.
         machine = self._query(lambda rd: rd.rom_location("n64"))
         assert machine.repeats() == {}
         assert self.DEPLOY_ESDE in machine.reads
@@ -2275,6 +2275,57 @@ class TestOneReadPerSourcePerQuery:
         assert [c.core_so for c in answer.cores] == [
             e.core_so for e in rd.emulators_for("n64").entries
         ]
+
+    # The four Flatpak overrides files, in the order _override_files probes
+    # them — the relocation guard's arrangement-level check.
+    OVERRIDE_FILES = (
+        f"{HOME}/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+        "/var/lib/flatpak/overrides/net.retrodeck.retrodeck",
+        f"{HOME}/.local/share/flatpak/overrides/global",
+        "/var/lib/flatpak/overrides/global",
+    )
+
+    def test_every_question_reads_the_overrides_files_once(self):
+        # The relocation guard is one arrangement-level check per query: every
+        # question on this handle consults the four Flatpak overrides files —
+        # exactly once each, which is what repeats() == {} adds on top of the
+        # membership check. On this unrelocated fixture all four are probed
+        # (a hit would short-circuit the rest).
+        content, core = self.CONTENT, "parallel_n64_libretro.so"
+        questions = {
+            "savefile_location": lambda rd: rd.savefile_location(content_path=content, core_so=core),
+            "savestate_location": lambda rd: rd.savestate_location(content_path=content, core_so=core),
+            "systems": lambda rd: rd.systems(),
+            "emulators_for": lambda rd: rd.emulators_for("n64"),
+            "emulators_for_content": lambda rd: rd.emulators_for("n64", content_path=content),
+            "rom_location": lambda rd: rd.rom_location("n64"),
+            "roms_dir": lambda rd: rd.roms_dir(),
+            "firmware_for_core": lambda rd: rd.firmware_for_core(core_so=core),
+            "firmware_for_system": lambda rd: rd.firmware_for_system(system="n64"),
+            "firmware_inventory": lambda rd: rd.firmware_inventory(),
+            "identify_firmware": lambda rd: rd.identify_firmware(md5="0" * 32),
+        }
+        for question, ask in questions.items():
+            machine = self._query(ask)
+            assert machine.repeats() == {}, question
+            for path in self.OVERRIDE_FILES:
+                assert path in machine.reads, f"{question} did not read {path}"
+
+    def test_the_entry_routes_read_the_overrides_files_once(self):
+        # The composed path again: the entry's own query makes the same one
+        # arrangement-level check — one read serves the per-game check's
+        # anchor and the answer-level rider.
+        for ask in (
+            lambda entry: entry.savefile_location(content_path=self.CONTENT),
+            lambda entry: entry.savestate_location(content_path=self.CONTENT),
+        ):
+            machine = _CountingMachine(self.FILES, cores=self.CORES)
+            entry = atlas.RetroDeck(HOME, machine).emulators_for("n64").entries[0]
+            machine.reads.clear()
+            ask(entry)
+            assert machine.repeats() == {}
+            for path in self.OVERRIDE_FILES:
+                assert path in machine.reads, f"the entry route did not read {path}"
 
 
 class TestCfgDirectorySpelling:
@@ -2733,6 +2784,165 @@ class TestEveryAnswerStatesTheInstallationsHealth:
         assert not isinstance(placement, atlas.Unresolved)
         carried = [c.code for c in placement.caveats]
         assert carried[: len(rd.health().codes)] == list(rd.health().codes)
+
+
+class TestTheRelocationGuardRidesEveryRetroDeckAnswer:
+    """A Flatpak override that moves the config home is stated on every answer.
+
+    Every file this handle reads lives under, or is resolved out of, the
+    per-app config tree — the marker, the cfg, the override chain, ES-DE's
+    settings — so an ``[Environment]`` override redefining ``XDG_CONFIG_HOME``
+    or ``HOME`` invalidates potentially every read. The guard is one
+    arrangement-level check per query (the read-log class above counts it),
+    and the answers keep answering what the on-disk tree says — the rider
+    carries the doubt. The ROM question's home-derived refusal predates the
+    guard and stays exactly as it was: where it stands, the rider stands down,
+    so the fact is stated once per answer whichever machinery states it.
+    """
+
+    DEPLOY_ESDE = (
+        "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
+        "/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+    )
+    ES_SYSTEMS = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>\n'
+        "    <path>%ROMPATH%/n64</path>\n    <extension>.z64 .Z64</extension>\n"
+        '    <command label="Mupen64Plus-Next">retroarch -L '
+        "/app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+    )
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: (
+            'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'system_directory = "/mnt/sd/retrodeck/bios"\n'
+            'libretro_info_path = "/app/cores"\nlibretro_directory = "/app/cores"\n'
+            'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+        ),
+        DEPLOY_ESDE: ES_SYSTEMS,
+        f"{RD_DEPLOY_CORES}/mupen64plus_next_libretro.info": 'display_name = "Mupen64Plus-Next"\n',
+        "/mnt/sd/retrodeck/saves/.keep": "",
+        "/mnt/sd/retrodeck/bios/.keep": "",
+        "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+        ESDE_SETTINGS: '<string name="ROMDirectory" value="/mnt/sd/retrodeck/roms" />',
+    }
+    CORES = {f"{RD_DEPLOY_CORES}/mupen64plus_next_libretro.so": {"library_name": "Mupen64Plus-Next"}}
+    CORE = "mupen64plus_next_libretro.so"
+    CONTENT = "/mnt/sd/retrodeck/roms/n64/Game.z64"
+    OVERRIDE = f"{HOME}/.local/share/flatpak/overrides/net.retrodeck.retrodeck"
+    MOVED = "[Context]\nfilesystems=host;\n\n[Environment]\nXDG_CONFIG_HOME=/mnt/elsewhere/config\n"
+    # The settings file with ROMDirectory unset: the state the home-derived
+    # default applies to, which is the state the ROM refusal guards.
+    UNSET_SETTINGS = '<string name="ROMDirectory" value="" />'
+
+    def _rd(self, extra=None):
+        return _retrodeck({**self.FILES, **(extra or {})}, cores=self.CORES)
+
+    def _relocated(self, extra=None):
+        return self._rd({self.OVERRIDE: self.MOVED, **(extra or {})})
+
+    @staticmethod
+    def _riders(caveats):
+        return [c for c in caveats if c.code == atlas.CAVEAT_CONFIG_HOME_RELOCATED]
+
+    def _answers(self, rd) -> dict[str, tuple[atlas.Caveat, ...]]:
+        return {
+            "savefile_location": rd.savefile_location(
+                content_path=self.CONTENT, core_so=self.CORE
+            ).caveats,
+            "savestate_location": rd.savestate_location(
+                content_path=self.CONTENT, core_so=self.CORE
+            ).caveats,
+            "systems": rd.systems().caveats,
+            "emulators_for": rd.emulators_for("n64").caveats,
+            "emulators_for_content": rd.emulators_for("n64", content_path=self.CONTENT).caveats,
+            "rom_location": rd.rom_location("n64").caveats,
+            "firmware_for_core": rd.firmware_for_core(core_so=self.CORE).caveats,
+            "firmware_for_system": rd.firmware_for_system(system="n64").caveats,
+            "firmware_inventory": rd.firmware_inventory().caveats,
+            "identify_firmware": rd.identify_firmware(md5="0" * 32).caveats,
+        }
+
+    def test_every_answer_carries_the_rider_exactly_once(self):
+        rd = self._relocated()
+        counted = {q: len(self._riders(caveats)) for q, caveats in self._answers(rd).items()}
+        assert counted == {question: 1 for question in counted}
+
+    def test_an_unrelocated_machine_carries_none(self):
+        rd = self._rd()
+        stated = {q: self._riders(caveats) for q, caveats in self._answers(rd).items()}
+        assert {q: r for q, r in stated.items() if r} == {}
+
+    def test_the_rider_names_the_file_and_the_key(self):
+        caveat = self._riders(self._relocated().savefile_location().caveats)[0]
+        assert dict(caveat.data) == {"path": self.OVERRIDE, "key": "XDG_CONFIG_HOME"}
+        assert self.OVERRIDE in caveat.message
+        assert "XDG_CONFIG_HOME" in caveat.message
+
+    def test_the_answers_still_answer(self):
+        # The rider rides; nothing new turns into a refusal. A configured
+        # absolute ROMDirectory and savefile_directory resolve exactly as on
+        # an unmoved machine — the caveat carries the doubt, the answer the
+        # reading.
+        rd = self._relocated()
+        assert rd.rom_location("n64").dir == "/mnt/sd/retrodeck/roms/n64"
+        placement = rd.savefile_location(content_path=self.CONTENT, core_so=self.CORE)
+        assert placement.dir == "/mnt/sd/retrodeck/saves"
+
+    def test_health_does_not_carry_the_rider(self):
+        # Health answers whether the installation is broken; the relocation is
+        # a statement about atlas, and it stays out of health the same way the
+        # arrangement-evidence caveat does — and EmuDeck's portable.txt guard.
+        assert self._relocated().health().ok
+
+    def test_the_rom_refusal_stands_and_the_rider_stands_down(self):
+        # Home-derived resolution (ROMDirectory unset): the refusal is this
+        # question's own relocation statement, carrying the system and
+        # declaration the rider does not — and it stays the only one, so the
+        # pre-guard contract of this answer is byte-identical.
+        placement = self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS}).rom_location("n64")
+        assert placement.dir is None
+        riders = self._riders(placement.caveats)
+        assert len(riders) == 1
+        assert dict(riders[0].data) == {
+            "system": "n64",
+            "declared": "%ROMPATH%/n64",
+            "path": self.OVERRIDE,
+            "key": "XDG_CONFIG_HOME",
+        }
+
+    def test_the_anchor_refusal_dedups_on_the_content_routes_too(self):
+        # The per-game check anchors on the same home-derived root; where its
+        # anchor states the relocation, one statement per answer still holds —
+        # on the catalogue answer and on the entry placements behind it.
+        rd = self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS})
+        answer = rd.emulators_for("n64", content_path=self.CONTENT)
+        assert len(self._riders(answer.caveats)) == 1
+        placement = answer.entries[0].savefile_location(content_path=self.CONTENT)
+        assert not isinstance(placement, atlas.Unresolved)
+        assert len(self._riders(placement.caveats)) == 1
+
+    def test_the_entry_route_carries_the_rider(self):
+        entry = self._relocated().emulators_for("n64").entries[0]
+        for placement in (
+            entry.savefile_location(content_path=self.CONTENT),
+            entry.savestate_location(content_path=self.CONTENT),
+        ):
+            assert not isinstance(placement, atlas.Unresolved)
+            assert len(self._riders(placement.caveats)) == 1
+
+    def test_the_aggregate_relays_it(self):
+        # Nothing aggregate-specific to build: the fan-out asks the same
+        # handle methods, so the rider arrives labeled with its installation.
+        machine = FixtureMachine({**self.FILES, self.OVERRIDE: self.MOVED}, cores=self.CORES)
+        every = atlas.EveryInstallation(atlas.detect(HOME, machine))
+        answers = every.savefile_location(content_path=self.CONTENT, core_so=self.CORE)
+        assert [len(self._riders(a.answer.caveats)) for a in answers] == [1]
+
+    def test_roms_dir_still_refuses_the_home_derived_root(self):
+        # The bare-string surface keeps its refusal — the same one
+        # rom_location states with the caveat attached.
+        assert self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS}).roms_dir() is None
+        assert self._relocated().roms_dir() == "/mnt/sd/retrodeck/roms"
 
 
 class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
