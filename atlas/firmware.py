@@ -151,6 +151,13 @@ CAVEAT_EMULATOR_CATALOGUE_UNREADABLE = "emulator-catalogue-unreadable"
 # the caveat says the frontend may declare more.
 CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED = "emulator-catalogue-unestablished"
 CAVEAT_EMULATOR_CATALOGUE_SEALED = "emulator-catalogue-sealed"
+# The fifth family member is not a degradation at all: the custom
+# es_systems.xml can declare itself the whole catalogue with a document-level
+# <loadExclusive/> (ES-DE INSTALL.md v3.4.1:1466; honored in
+# SystemData::loadConfig, SystemData.cpp:858-895), and then the bundled layer
+# is not loaded — by the frontend and by atlas alike. The enumeration such an
+# answer carries is *complete*; the code states why it is as small as it is.
+CAVEAT_EMULATOR_CATALOGUE_EXCLUSIVE = "emulator-catalogue-exclusive"
 CAVEAT_FIRMWARE_PATH_OBSTRUCTED = "firmware-path-obstructed"
 CAVEAT_FIRMWARE_PATH_INACCESSIBLE = "firmware-path-inaccessible"
 CAVEAT_FIRMWARE_SCAN_INCOMPLETE = "firmware-scan-incomplete"

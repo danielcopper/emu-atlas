@@ -49,29 +49,106 @@ BUNDLED_XML = """<?xml version="1.0"?>
 
 class TestParse:
     def test_systems_and_order(self):
-        parsed = parse_es_systems(BUNDLED_XML, provenance="test")
+        parsed = parse_es_systems(BUNDLED_XML, provenance="test").systems
         assert set(parsed) == {"dreamcast", "n64", "ps3"}
         assert [e.label for e in parsed["n64"].entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
 
     def test_libretro_classification_extracts_core_so(self):
-        parsed = parse_es_systems(BUNDLED_XML, provenance="test")
+        parsed = parse_es_systems(BUNDLED_XML, provenance="test").systems
         entry = parsed["dreamcast"].entries[0]
         assert entry.kind == atlas.KIND_LIBRETRO
         assert entry.core_so == "flycast_libretro.so"
 
     def test_standalone_classification(self):
-        parsed = parse_es_systems(BUNDLED_XML, provenance="test")
+        parsed = parse_es_systems(BUNDLED_XML, provenance="test").systems
         entry = parsed["ps3"].entries[0]
         assert entry.kind == atlas.KIND_STANDALONE
         assert entry.core_so is None
 
     def test_malformed_xml_is_skipped_layer(self):
-        assert parse_es_systems("<systemList><system>", provenance="test") == {}
+        layer = parse_es_systems("<systemList><system>", provenance="test")
+        assert dict(layer.systems) == {}
+        assert layer.load_exclusive is False
 
     def test_commented_out_systems_yield_nothing(self):
         # RetroDECK ships a custom_systems overlay that is entirely commented out.
         text = '<?xml version="1.0"?>\n<systemList>\n<!-- <system><name>x</name></system> -->\n</systemList>'
-        assert parse_es_systems(text, provenance="test") == {}
+        assert dict(parse_es_systems(text, provenance="test").systems) == {}
+
+    def test_a_byte_order_mark_is_stripped_and_the_layer_parses(self):
+        # pugixml detects the encoding from the mark and reads the file
+        # normally, so a BOM'd catalogue is the catalogue in force — and
+        # before the wrap, expat skipped a leading BOM by itself, so refusing
+        # it now would regress a file the frontend reads fine.
+        parsed = parse_es_systems(f"\ufeff{BUNDLED_XML}", provenance="test").systems
+        assert set(parsed) == {"dreamcast", "n64", "ps3"}
+
+
+class TestLoadExclusive:
+    """The document-level read — ``doc.child`` semantics, mirrored exactly.
+
+    ES-DE reads ``es_systems.xml`` at the document level
+    (``SystemData::loadConfig``, ``es-app/src/SystemData.cpp:884,898``, ES-DE
+    v3.4.1): ``<loadExclusive/>`` counts only as a document child, and the
+    systems come from the first document-level ``<systemList>``. The
+    documented placement (INSTALL.md v3.4.1:1722-1737) makes the file
+    double-rooted — pugixml does not mind, ``xml.etree`` without the wrap
+    refused the whole layer.
+    """
+
+    EXCLUSIVE = (
+        '<?xml version="1.0"?>\n'
+        "<loadExclusive/>\n"
+        "<systemList><system><name>nes</name>"
+        "<command>/usr/games/fceux %ROM%</command></system></systemList>"
+    )
+
+    def test_the_documented_placement_parses_and_is_stated(self):
+        layer = parse_es_systems(self.EXCLUSIVE, provenance="test")
+        assert layer.load_exclusive is True
+        assert set(layer.systems) == {"nes"}
+
+    def test_a_document_level_tag_after_the_system_list_is_stated_too(self):
+        # doc.child does not care about order — any document-level position.
+        layer = parse_es_systems(
+            "<systemList><system><name>nes</name><command>x %ROM%</command></system></systemList>"
+            "<loadExclusive/>",
+            provenance="test",
+        )
+        assert layer.load_exclusive is True
+        assert set(layer.systems) == {"nes"}
+
+    def test_a_tag_inside_the_system_list_is_not_document_level(self):
+        # Invisible to doc.child("loadExclusive"), so it has no effect on
+        # ES-DE — and none here.
+        layer = parse_es_systems(
+            "<systemList><loadExclusive/><system><name>nes</name>"
+            "<command>x %ROM%</command></system></systemList>",
+            provenance="test",
+        )
+        assert layer.load_exclusive is False
+        assert set(layer.systems) == {"nes"}
+
+    def test_an_absent_tag_is_not_exclusive(self):
+        assert parse_es_systems(BUNDLED_XML, provenance="test").load_exclusive is False
+
+    def test_a_byte_order_mark_does_not_hide_the_tag(self):
+        # The frontend reads a BOM'd custom file normally, tag included — a
+        # parse that dropped the layer over the mark would merge a bundled
+        # catalogue the frontend never loads.
+        layer = parse_es_systems(f"\ufeff{self.EXCLUSIVE}", provenance="test")
+        assert layer.load_exclusive is True
+        assert set(layer.systems) == {"nes"}
+
+    def test_the_first_system_list_wins(self):
+        # doc.child("systemList") returns the first match; a second list is
+        # invisible to the frontend and stays invisible here.
+        layer = parse_es_systems(
+            "<systemList><system><name>nes</name><command>x %ROM%</command></system></systemList>"
+            "<systemList><system><name>snes</name><command>y %ROM%</command></system></systemList>",
+            provenance="test",
+        )
+        assert set(layer.systems) == {"nes"}
 
 
 class TestParseSettings:
@@ -229,19 +306,19 @@ class TestMerge:
             "</system></systemList>",
             provenance="custom",
         )
-        merged = merge_layers(bundled, custom)
+        merged = merge_layers(bundled.systems, custom.systems)
         assert [e.label for e in merged["n64"].entries] == ["ParaLLEl N64"]
         assert merged["n64"].entries[0].provenance == "custom"
         assert "dreamcast" in merged  # untouched systems stay
 
     def test_custom_adds_new_system(self):
         merged = merge_layers(
-            parse_es_systems(BUNDLED_XML, provenance="bundled"),
+            parse_es_systems(BUNDLED_XML, provenance="bundled").systems,
             parse_es_systems(
                 '<systemList><system><name>mysystem</name>'
                 "<command>%EMULATOR_SOMETHING% %ROM%</command></system></systemList>",
                 provenance="custom",
-            ),
+            ).systems,
         )
         assert "mysystem" in merged
 
@@ -390,6 +467,12 @@ class TestGamelistAlternative:
 
     def test_parses_the_nested_shape(self):
         assert parse_gamelist_alternative(self.NESTED_SAMPLE) == "ParaLLEl N64"
+
+    def test_a_byte_order_mark_does_not_hide_the_selection(self):
+        # pugixml reads a BOM'd gamelist normally, so its selection is the one
+        # in force — dropping the file over the mark would answer the declared
+        # order while ES-DE launches the selected emulator.
+        assert parse_gamelist_alternative(f"\ufeff{self.REAL_SAMPLE}") == "ParaLLEl N64"
 
     def test_document_level_wins_over_nested(self):
         # ES-DE takes the document-level element when both exist, label or not.

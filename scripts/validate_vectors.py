@@ -141,7 +141,9 @@ EMULATOR_FIELDS = {"system", "label", "kind", "core_so", "selection", "caveats"}
 # The fourth family member, "emulator-catalogue-sealed", is deliberately NOT
 # here: it states that part of the catalogue could not be opened while the
 # readable part answered, so it accompanies real entries as legitimately as an
-# empty list.
+# empty list. The fifth, "emulator-catalogue-exclusive", is no refusal either:
+# the custom layer declared itself the whole catalogue (<loadExclusive/>), so
+# the enumeration it accompanies — entries or legitimately empty — is complete.
 NO_CATALOGUE_CODES = {
     "emulator-catalogue-unavailable",
     "emulator-catalogue-unreadable",
@@ -226,6 +228,7 @@ KNOWN_CAVEAT_CODES = {
     "emulator-catalogue-unreadable",
     "emulator-catalogue-unestablished",
     "emulator-catalogue-sealed",
+    "emulator-catalogue-exclusive",
     "frontend-marker-mismatch",
     "firmware-path-obstructed",
     "firmware-path-inaccessible",
