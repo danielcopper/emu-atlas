@@ -61,16 +61,19 @@ class TestTheLoaderRefusesAListItCannotPlace:
     def test_an_empty_id_set_is_rejected(self):
         # An empty vocabulary would answer "not an id" for every name on earth,
         # which reads exactly like a machine nothing is installed on.
+        document = _document(systems=[])
         with pytest.raises(ValueError, match="non-empty list"):
-            load_system_ids(_document(systems=[]))
+            load_system_ids(document)
 
     def test_an_id_that_is_not_a_string_is_rejected(self):
+        document = _document(systems=["gb", 64])
         with pytest.raises(ValueError, match="non-empty string"):
-            load_system_ids(_document(systems=["gb", 64]))
+            load_system_ids(document)
 
     def test_a_duplicate_id_is_rejected(self):
+        document = _document(systems=["gb", "gb"])
         with pytest.raises(ValueError, match="duplicate id"):
-            load_system_ids(_document(systems=["gb", "gb"]))
+            load_system_ids(document)
 
     def test_a_wellformed_list_loads(self):
         assert load_system_ids(_document()) == frozenset({"gb", "n64"})
