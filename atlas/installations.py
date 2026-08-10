@@ -58,6 +58,7 @@ from atlas.firmware import (
     FirmwareAnswer,
     FirmwareContext,
     FirmwareIdentification,
+    SYSTEMS_WITHOUT_CATALOGUE_ID,
     load_hashes,
     read_core_declarations,
 )
@@ -75,6 +76,7 @@ from atlas.machine import (
     CoreInfo,
     CoreOption,
     Machine,
+    ReadResult,
     ReadStatus,
 )
 from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
@@ -3191,6 +3193,34 @@ def _entries_from(
     return tuple(EmulatorEntry(host, spec, entry_caveats) for spec in specs)
 
 
+def _firmware_catalogue_entries(
+    host: "_CatalogueHost",
+    by_system: Mapping[str, SystemDeclaration],
+    system: str,
+    selections: GamelistSelections,
+) -> tuple[CatalogueEntry, ...]:
+    """The catalogue's emulator list for *system*, shaped for the firmware seam.
+
+    Module-level for the same reason :func:`_entries_from` is: both ES-DE-driven
+    handles hand their firmware route the same projection of the same assembly,
+    and a second copy is how the two would drift apart. No content is named on
+    the firmware route, so no per-game entry can match and the anchor is never
+    consulted — the enumeration and its gamelist promotion are all that cross
+    the seam.
+    """
+    entries = _entries_from(
+        host,
+        _declared_entries(by_system, system),
+        selections,
+        system_roms_dir=None,
+        content_path=None,
+    )
+    return tuple(
+        CatalogueEntry(label=entry.label, kind=entry.kind, core_so=entry.core_so)
+        for entry in entries
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class _RomRoot:
     """What ES-DE substitutes for ``%ROMPATH%``, or which way it could not be established.
@@ -4199,20 +4229,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, marker_issues = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read = self._read_catalogue(root)
-        entries = _entries_from(
-            self,
-            _declared_entries(by_system, system),
-            self._gamelist_selections_at(root, system),
-            # No content is named on this route, so no per-game entry can match
-            # and the anchor is never consulted — this query reads ES-DE's
-            # settings not at all.
-            system_roms_dir=None,
-            content_path=None,
-        )
         catalogue = Catalogue(
-            entries=tuple(
-                CatalogueEntry(label=entry.label, kind=entry.kind, core_so=entry.core_so)
-                for entry in entries
+            entries=_firmware_catalogue_entries(
+                self, by_system, system, self._gamelist_selections_at(root, system)
             ),
             read=read,
         )
@@ -4453,6 +4472,36 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """EmuDeck's BIOS directory (``biosPath`` or the default)."""
         return self._setting_path(self._read_marker()[0], "biosPath", "bios")[0]
 
+    def roms_dir(self) -> str | None:
+        """The ROM root the frontend substitutes for ``%ROMPATH%`` — or ``None``.
+
+        The **root**, not a system's directory: a system's own directory is
+        ``rom_location(system).dir``, which is this plus whatever ``<path>`` the
+        catalogue declares for it — usually the system name, and not reliably
+        so, which is why the two are different questions.
+
+        Read from ES-DE's ``ROMDirectory`` rather than ``settings.sh``'s
+        ``romsPath``. The two agree on a stock installation and are wired one
+        way — EmuDeck seds its own value into ES-DE's setting
+        (``ESDE_setDefaultSettings``, ``emuDeckESDE.sh:407-409``) and never
+        reads it back — so where a user has moved them apart, only this one is
+        what the frontend launches from. The same cfg-over-marker rule as
+        RetroDECK's :meth:`RetroDeck.roms_dir`, over this arrangement's files.
+
+        ``None`` is a refusal, never "no ROMs here", and it is the same refusal
+        :meth:`rom_location` states — for the reasons that belong to the root:
+        no ES-DE is on this disk at all (so there is no frontend whose
+        substitution this could be), ES-DE's settings exist and could not be
+        read, a ``portable.txt`` may have moved the tree the frontend's own
+        default is relative to, or the configured value is not an absolute
+        path. A bare string cannot carry which, and raising is not this
+        domain's grammar, so a caller who needs the reason asks
+        ``rom_location(system)`` and reads its caveats.
+        """
+        if not self._esde_present():
+            return None
+        return self._esde_rom_root(relocated=self._relocation_caveat() is not None).directory
+
     def _companion_cfg_path(self) -> str:
         return os.path.join(self._home, STANDALONE_FLATPAK_CFG_SUFFIX)
 
@@ -4597,6 +4646,23 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             "because the disk is what runs",
             {"key": self._FRONTEND_MARKER_KEY, "stated": stated, "observed": observed},
         )
+
+    def _riders(self, settings: dict[str, str], present: bool) -> tuple[Caveat, ...]:
+        """The statements that ride beside the catalogue status, in the pinned order.
+
+        The relocation suspicion first, then the marker cross-check — one
+        builder, consumed by :meth:`_esde_snapshot`'s tail and by the firmware
+        route, so the two can never spell the order apart. The relocation read
+        happens only while an ES-DE is present: with none on disk there is
+        nothing a ``portable.txt`` could move out from under.
+        """
+        cross_check = self._frontend_marker_caveat(settings, present)
+        mismatch = () if cross_check is None else (cross_check,)
+        if not present:
+            return mismatch
+        portable = self._relocation_caveat()
+        relocation = () if portable is None else (portable,)
+        return (*relocation, *mismatch)
 
     def _catalogue_sealed_caveat(self, system: str | None = None) -> Caveat:
         # Reading the sealed layer itself (extracting the AppImage's squashfs)
@@ -4778,37 +4844,34 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         M4). The caveat order every catalogue-shaped answer states is pinned
         here and only here: health findings lead (they qualify the
         installation), then the catalogue-status statement (sealed,
-        unreadable, or the unestablished refusal), then the relocation
-        suspicion, then the marker cross-check, then whatever the
-        per-question resolution has to say — and the evidence caveat the
-        template method appends closes the list.
+        unreadable, or the unestablished refusal), then the riding statements
+        in :meth:`_riders`'s one order (the relocation suspicion, then the
+        marker cross-check), then whatever the per-question resolution has to
+        say — and the evidence caveat the template method appends closes the
+        list.
         """
         settings, marker_issues = self._read_marker()
         companion_status = self._machine.read_text(self._companion_cfg_path()).status
         findings = self._health_from(settings, marker_issues, companion_status).issues
         present = self._esde_present()
-        cross_check = self._frontend_marker_caveat(settings, present)
-        mismatch = () if cross_check is None else (cross_check,)
+        riders = self._riders(settings, present)
         if not present:
             return _EsdeSnapshot(
-                findings, (*findings, self._catalogue_absence(), *mismatch), {}, False, False, ()
+                findings, (*findings, self._catalogue_absence(), *riders), {}, False, False, ()
             )
-        portable = self._relocation_caveat()
-        relocation = () if portable is None else (portable,)
+        relocated = any(caveat.code == CAVEAT_CONFIG_HOME_RELOCATED for caveat in riders)
         by_system, bundled_read, shadow_broken = self._read_esde_catalogue()
         if shadow_broken:
             return _EsdeSnapshot(
                 findings,
-                (*findings, *_catalogue_unread_caveat(system), *relocation, *mismatch),
+                (*findings, *_catalogue_unread_caveat(system), *riders),
                 {},
                 False,
-                bool(relocation),
+                relocated,
                 (),
             )
         sealed = () if bundled_read else (self._catalogue_sealed_caveat(system),)
-        return _EsdeSnapshot(
-            findings, None, by_system, bundled_read, bool(relocation), (*sealed, *relocation, *mismatch)
-        )
+        return _EsdeSnapshot(findings, None, by_system, bundled_read, relocated, (*sealed, *riders))
 
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
         """Every system the readable layers declare — stated as incomplete while sealed.
@@ -5050,16 +5113,18 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
-    def _read_firmware_context(self) -> FirmwareContext:
+    def _firmware_context_from(
+        self, settings: dict[str, str], marker_issues: tuple[Caveat, ...], cfg: ReadResult
+    ) -> FirmwareContext:
         """The cfg is the truth here too: ``settings.sh`` names a ``biosPath``,
         but what RetroArch actually hands its cores is ``system_directory``.
 
         The companion cfg is read once and answers both questions asked of it —
         its text builds the context, its status decides the companion health
-        finding — so the two can never describe different revisions of it.
+        finding — so the two can never describe different revisions of it. The
+        marker snapshot arrives for the same reason: the caller read it once
+        and every part of its answer describes that one revision.
         """
-        settings, marker_issues = self._read_marker()
-        cfg = self._machine.read_text(self._companion_cfg_path())
         return _retroarch_firmware_context(
             sandbox=self._sandbox(),
             global_text=cfg.text,
@@ -5069,6 +5134,74 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             # ``settings.sh`` names no EmuDeck version, and an arrangement
             # nobody verified has no pin a version could drift from.
             arrangement_version=None,
+        )
+
+    def _read_firmware_context(self) -> FirmwareContext:
+        settings, marker_issues = self._read_marker()
+        cfg = self._machine.read_text(self._companion_cfg_path())
+        return self._firmware_context_from(settings, marker_issues, cfg)
+
+    def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
+        """Which emulators this EmuDeck's ES-DE offers for *system*, and what each wants.
+
+        RetroDECK's route mirrored over this arrangement's sources: the ES-DE
+        on disk is the enumeration, assembled from this query's own snapshot —
+        marker, companion cfg and the on-disk ES-DE layers are each read once
+        here and handed on. What is EmuDeck's alone is the catalogue's third
+        state: the bundled layer is ordinarily sealed inside the AppImage, so
+        the catalogue travels with its pinned sealed statement as the seam's
+        ``hole`` — stated by the resolver on every answer the catalogue
+        informs, while an id the readable layers do not declare answers empty
+        as a look that failed, never as "no emulator covers this system".
+
+        With no ES-DE on this disk the catalogue-less behavior stands
+        unchanged: the derived enumeration, stated as derived. A broken
+        resource shadow is the unreadable catalogue, exactly as RetroDECK's
+        unreadable bundled layer is. And on every catalogue-informed answer
+        the relocation suspicion and the marker cross-check ride adjacent to
+        the catalogue-status statement, in the same order every catalogue
+        answer pins (sealed, relocation, mismatch).
+        """
+        settings, marker_issues = self._read_marker()
+        cfg = self._machine.read_text(self._companion_cfg_path())
+        context = self._stated(self._firmware_context_from(settings, marker_issues, cfg))
+        present = self._esde_present()
+        if not present or context.root is None:
+            # No ES-DE on this disk means the catalogue-less behavior stands;
+            # and a root the context could not resolve refuses before any
+            # catalogue could inform the answer — the resolver returns the
+            # same empty answer either way, so the ES-DE sources are not read
+            # for an answer that would discard them.
+            return _resolve_for_system(self._machine, context, system=system, verify=verify)
+        riders = self._riders(settings, present)
+        by_system, bundled_read, shadow_broken = self._read_esde_catalogue()
+        if shadow_broken:
+            # The bundled layer is on disk (the resource shadow) and could not
+            # be read or parsed: the resolver states the unreadable catalogue,
+            # the same statement RetroDECK's unread bundled layer gets.
+            catalogue = Catalogue(entries=(), read=False)
+        else:
+            catalogue = Catalogue(
+                entries=_firmware_catalogue_entries(
+                    self, by_system, system, self._gamelist_selections(system)
+                ),
+                hole=None if bundled_read else self._catalogue_sealed_caveat(system),
+            )
+        answer = _resolve_for_system(
+            self._machine, context, system=system, catalogue=catalogue, verify=verify
+        )
+        # The riders ride only answers the catalogue informed: an own spelling
+        # is answered from the cores on every arrangement, so the resolver
+        # never looks at the catalogue for it.
+        if not riders or system in SYSTEMS_WITHOUT_CATALOGUE_ID:
+            return answer
+        # Adjacent to the catalogue-status statement, which — when one exists
+        # (the hole, or the unreadable statement of a broken shadow) — is the
+        # first caveat the resolver appends after the context's own; the
+        # resolver's answer is (*context.caveats, *its own), per its contract.
+        index = len(context.caveats) + (1 if shadow_broken or catalogue.hole is not None else 0)
+        return _dc_replace(
+            answer, caveats=(*answer.caveats[:index], *riders, *answer.caveats[index:])
         )
 
 

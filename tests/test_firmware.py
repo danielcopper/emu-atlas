@@ -1506,6 +1506,69 @@ class TestNoDeclarationIsNeverSatisfied:
         assert CAVEAT_SYSTEM_UNKNOWN not in codes
         assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
 
+    def test_a_holed_catalogue_with_no_entries_is_a_failed_look(self):
+        # The third state between read and unread: part of the catalogue could
+        # not be consulted, so an empty enumeration says nothing about the
+        # machine — the hole is stated, the empty is declaration-unknown, and
+        # system-unknown (a machine claim) may not fire.
+        machine = _machine()
+        hole = Caveat("emulator-catalogue-sealed", "part of the catalogue is sealed away")
+        answer = firmware_for_system(
+            machine, _context(machine), system="gba", catalogue=Catalogue((), hole=hole)
+        )
+        codes = [c.code for c in answer.caveats]
+        assert "emulator-catalogue-sealed" in codes
+        assert CAVEAT_SYSTEM_UNKNOWN not in codes
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
+
+    def test_a_holed_catalogue_with_entries_enumerates(self):
+        # The readable part is authoritative for what it declares: entries
+        # resolve exactly as a read catalogue's do, with the hole stated
+        # beside them rather than degrading them.
+        machine = _machine()
+        hole = Caveat("emulator-catalogue-sealed", "part of the catalogue is sealed away")
+        catalogue = Catalogue(
+            (CatalogueEntry(label="Beetle PSX", kind="libretro", core_so="mednafen_psx_libretro.so"),),
+            hole=hole,
+        )
+        answer = firmware_for_system(machine, _context(machine), system="psx", catalogue=catalogue)
+        assert [c.label for c in answer.cores] == ["Beetle PSX"]
+        assert answer.cores[0].requirements
+        codes = [c.code for c in answer.caveats]
+        assert "emulator-catalogue-sealed" in codes
+        assert CAVEAT_SYSTEM_UNKNOWN not in codes
+
+    def test_a_holed_catalogue_that_named_entries_did_enumerate(self):
+        # The other half of the hole semantics, and the mainstream sealed
+        # case: an entry whose core was read and declares no firmware is the
+        # per-entry answer — declaration="read", empty list — and no
+        # answer-level declaration-unknown may ride it, or every sealed
+        # answer with a firmware-less emulator would read as a failed look.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/virtualjaguar_libretro.info": (
+                    'display_name = "Atari - Jaguar (Virtual Jaguar)"\nsystemname = "Jaguar"\n'
+                ),
+                f"{INFO_DIR}/virtualjaguar_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        hole = Caveat("emulator-catalogue-sealed", "part of the catalogue is sealed away")
+        catalogue = Catalogue(
+            (
+                CatalogueEntry(
+                    label="Virtual Jaguar", kind="libretro", core_so="virtualjaguar_libretro.so"
+                ),
+            ),
+            hole=hole,
+        )
+        answer = firmware_for_system(
+            machine, _context(machine), system="atarijaguar", catalogue=catalogue
+        )
+        assert [c.declaration for c in answer.cores] == [DECLARATION_READ]
+        codes = [c.code for c in answer.caveats]
+        assert "emulator-catalogue-sealed" in codes
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN not in codes
+
     def test_a_core_query_that_could_not_enumerate_claims_no_absence(self):
         machine = FixtureMachine({})
         context = FirmwareContext(root=BIOS_DIR, cores=(), hashes=load_hashes(TABLE), cores_read=False)

@@ -584,12 +584,12 @@ answer different questions. Write through `dir` unless you specifically need the
 from — so a ROM named the way it lies under `rom_location(system).dir` is a ROM the catalogue question can place
 per-game.
 
-Need the ROM **root** rather than one system's directory? That is `roms_dir()` on the RetroDECK handle: the value the
-frontend substitutes for `%ROMPATH%`, with no `<path>` applied. The per-system directory is usually that root plus the
-system name and not reliably so — the catalogue declares the `<path>`, and a custom system may declare anything — which
-is why they are two questions and only `rom_location` answers the second. `roms_dir()` returns `None` where the
-resolution refuses, for the three of the reasons below that belong to the root; it cannot carry which, so ask
-`rom_location(system)` when you need that.
+Need the ROM **root** rather than one system's directory? That is `roms_dir()` on the RetroDECK and EmuDeck handles: the
+value the frontend substitutes for `%ROMPATH%`, with no `<path>` applied. The per-system directory is usually that root
+plus the system name and not reliably so — the catalogue declares the `<path>`, and a custom system may declare anything
+— which is why they are two questions and only `rom_location` answers the second. `roms_dir()` returns `None` where the
+resolution refuses, for those of the reasons below that belong to the root — on EmuDeck that includes an arrangement
+running no ES-DE atlas can find; it cannot carry which, so ask `rom_location(system)` when you need that.
 
 **Do not recompute either of these from a table of your own.** The directory is the catalogue's `<path>` with ES-DE's
 `%ROMPATH%` substituted from the setting ES-DE substitutes it from, so it follows a user who moved their library; a map
@@ -627,8 +627,8 @@ the machine moved the tree the frontend's default is relative to out from under 
 Flatpak override redefining `XDG_CONFIG_HOME` or `HOME` for the app (`data` names the override file and the key); on
 EmuDeck, a `portable.txt` sitting next to the ES-DE AppImage (`data` names it in `path`). Either way the caveat is a
 warning about **this handle's other answers** too, not only about this one: they may rest on files that are not the ones
-in force — which is why EmuDeck states it on every catalogue-shaped answer while one is present, next to whatever the
-answer still established.
+in force — which is why EmuDeck states it on every catalogue-shaped answer while one is present, the firmware answers
+its catalogue informs included, next to whatever the answer still established.
 
 Never read `None` as "look in the default place" — where there is a default worth standing behind, atlas has already
 applied it. `rom-path-unresolved` (and RetroDECK's `config-home-relocated`) carry the declared path in
@@ -656,6 +656,15 @@ inst.firmware_for_system("gba")                             # which cores run th
 inst.firmware_inventory(verify=True)                        # everything — declared, present, and unclaimed
 inst.identify_firmware(md5="32fbbd84…")                     # this content: what is it, where does it go?
 ```
+
+`firmware_for_system` enumerates the way the arrangement does. Where a frontend catalogue answers (RetroDECK; EmuDeck
+while an ES-DE is on disk), the emulator list is the frontend's own — entries whose core is not installed and standalone
+emulators included, stated as such — and the same `emulator-catalogue-*` statements that ride the catalogue question
+ride this answer: EmuDeck's sealed statement included, with `config-home-relocated` and `frontend-marker-mismatch`
+beside it when their conditions hold. Where none does, the list is derived from the installed cores' own `systemname`
+and `emulator-catalogue-unavailable` says so. An id the readable layers of a sealed catalogue do not declare answers
+empty with `firmware-declaration-unknown` — a look that failed, never `system-unknown` — because the declaration may sit
+in the layer nobody could read.
 
 Reading a `FirmwareAnswer`:
 

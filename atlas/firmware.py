@@ -1355,10 +1355,21 @@ class Catalogue:
     the frontend knows no emulator for that system, while one that could not be
     read says nothing at all. Collapsing them turns a read failure into a claim
     about the machine.
+
+    ``hole`` is the third state, between those two: part of the catalogue could
+    not be consulted at all — EmuDeck's bundled ``es_systems.xml`` is sealed
+    inside the AppImage — and the caveat here is the caller's statement of that
+    fact, stated on every answer this catalogue informs. The entries are still
+    real (the readable part declares them), but an **empty** enumeration under
+    a hole says nothing about the machine: the declaration may sit in the part
+    nobody could read, so the answer is a look that failed, never "no emulator
+    covers this system". ``None`` means the enumeration is whole and ``read``
+    alone decides.
     """
 
     entries: tuple[CatalogueEntry, ...]
     read: bool = True
+    hole: Caveat | None = None
 
 
 _SAVE_ARTIFACTS: frozenset[str] | None = None
@@ -2218,6 +2229,12 @@ def firmware_for_system(
     own ``systemname`` through the packaged map;
     :data:`CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE` states that the
     *enumeration* is derived — the identifier means the same thing either way.
+    A catalogue with a ``hole`` answers between the two: its entries are the
+    frontend's and the hole is stated on the answer, while an id its readable
+    part does not declare answers empty as a look that failed
+    (:data:`CAVEAT_FIRMWARE_DECLARATION_UNKNOWN`), never as
+    :data:`CAVEAT_SYSTEM_UNKNOWN` — the declaration may sit in the part of the
+    catalogue nobody could consult.
 
     An own spelling is answered identically on **every** arrangement: no
     catalogue can enumerate or deny a word no build declares, so the cores'
@@ -2246,8 +2263,16 @@ def firmware_for_system(
     resolved: list[CoreFirmware] = []
     caveats: list[Caveat] = []
     # Whether the enumeration happened at all decides whether this answer may
-    # say anything about the machine when it comes back empty.
-    enumerated = context.cores_read if catalogue is None else catalogue.read
+    # say anything about the machine when it comes back empty. A holed
+    # catalogue that names entries still enumerated — the readable part is
+    # authoritative for what it declares — but one that names none performed
+    # no enumeration for this system: the declaration may sit in the part
+    # nobody could consult, which is exactly what the hole states.
+    enumerated = (
+        context.cores_read
+        if catalogue is None
+        else catalogue.read and (catalogue.hole is None or bool(catalogue.entries))
+    )
 
     if system in SYSTEMS_WITHOUT_CATALOGUE_ID:
         # A word no build declares is answered from the cores on every
@@ -2271,6 +2296,14 @@ def firmware_for_system(
             )
         )
     else:
+        if catalogue.hole is not None:
+            # The same position the unreadable statement rides: the part of
+            # the catalogue nobody could consult is stated on every answer
+            # this catalogue informs, entries or none. Like that statement,
+            # the catalogue-status statement is the first caveat its branch
+            # appends — an invariant the handles rely on when they ride
+            # further statements adjacent to it.
+            caveats.append(catalogue.hole)
         by_stem = {core.stem: core for core in context.cores}
         for entry in catalogue.entries:
             core, observed = _catalogue_entry_core(machine, context, entry, by_stem, verify=verify)
