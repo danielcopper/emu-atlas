@@ -164,14 +164,14 @@ using it.
 ## What atlas has actually seen — `arrangement-unverified`
 
 Every answer from an arrangement atlas has never observed on a live installation carries one caveat,
-`arrangement-unverified`, with the installation kind in `data["kind"]`. Today that is every EmuDeck arrangement and
-every bare RetroArch (the Flatpak and a native install); RetroDECK was verified against a running 0.10.9b installation
-and its answers say nothing.
+`arrangement-unverified`, with the installation kind in `data["kind"]`. Today that is every bare RetroArch (the Flatpak
+and a native install); RetroDECK was verified against a running 0.10.9b installation, EmuDeck against a running
+installation at backend commit `863ab69` (ES-DE 3.4.1), and their answers say nothing.
 
 ```python
 for c in answer.caveats:
     if c.code == "arrangement-unverified":
-        mark_as_derived(c.data["kind"])      # 'emudeck' | 'bare_retroarch_flatpak' | 'bare_retroarch_native'
+        mark_as_derived(c.data["kind"])      # 'bare_retroarch_flatpak' | 'bare_retroarch_native'
 ```
 
 What it means: **no machine running this arrangement has confirmed the wiring end to end.** What it does _not_ mean:
@@ -211,6 +211,13 @@ drift". The comparison runs only when both sides state a version, so an arrangem
 rather than claiming a comparison nobody made. (Where a missing live version does decide something — a rule card pinned
 to one — `unverified-version` says so at that point.) Nothing above applies to an arrangement that was never verified at
 all: with no pin there is nothing to drift from, and `arrangement-unverified` is already the more general statement.
+
+What "the version the machine states" is depends on the arrangement: RetroDECK states one in its `retrodeck.json`;
+EmuDeck states none there, so its statement is the backend checkout's git HEAD, read as the two plain files under
+`~/.config/EmuDeck/backend/.git` (the `HEAD` symref, then the loose ref — no git invocation). A machine where that read
+stops — a missing or unreadable file, a ref packed away — states no version and stays silent, per the paragraph above.
+The deployed ES-DE's version is part of the verification record's provenance, not of the runtime comparison: on disk it
+only exists in `~/ES-DE/logs/es_log.txt` after a first launch, and a fresh installation has none.
 
 ## Validating your own platform map
 

@@ -2479,7 +2479,6 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         assert answer.entries == ()
         assert [c.code for c in answer.caveats] == [
             atlas.CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
-            atlas.CAVEAT_ARRANGEMENT_UNVERIFIED,
         ]
 
     def test_the_two_refusals_are_different_codes(self):

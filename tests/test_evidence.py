@@ -120,12 +120,21 @@ class TestTheLoaderRefusesWhatItCannotPlace:
         assert load_arrangement_evidence(text)["x"].verified is not None
 
 
+# The two arrangements the packaged record says were observed live — every
+# tripwire test runs over both, because each pins its version in its own
+# spelling (a release string, a git HEAD) and the comparison must not care.
+VERIFIED_KINDS = (atlas.EmuDeck.kind, atlas.RetroDeck.kind)
+
+
 class TestWhatTheCaveatSays:
-    def test_a_verified_arrangement_states_nothing(self):
-        assert arrangement_caveats("retrodeck") == ()
+    @pytest.mark.parametrize("kind", VERIFIED_KINDS)
+    def test_a_verified_arrangement_states_nothing(self, kind):
+        assert arrangement_caveats(kind) == ()
 
     def test_an_unverified_arrangement_states_one_caveat(self):
-        assert [c.code for c in arrangement_caveats("emudeck")] == [CAVEAT_ARRANGEMENT_UNVERIFIED]
+        assert [c.code for c in arrangement_caveats("bare_retroarch_flatpak")] == [
+            CAVEAT_ARRANGEMENT_UNVERIFIED
+        ]
 
     def test_the_caveat_names_the_installation_kind(self):
         assert arrangement_caveats("bare_retroarch_native")[0].data == {"kind": "bare_retroarch_native"}
@@ -139,7 +148,7 @@ class TestWhatTheCaveatSays:
     def test_the_message_does_not_claim_the_reading_was_guessed(self):
         # The precision the caveat exists for: what is missing is the live
         # observation, not the source-verified config chain.
-        assert "source-verified" in arrangement_caveats("emudeck")[0].message
+        assert "source-verified" in arrangement_caveats("bare_retroarch_flatpak")[0].message
 
 
 class TestTheVersionTripwire:
@@ -149,41 +158,47 @@ class TestTheVersionTripwire:
     statement: the record's pin and the version the machine states about itself.
     """
 
-    KIND = atlas.RetroDeck.kind
+    def _codes(self, kind, **kwargs) -> list[str]:
+        return [c.code for c in arrangement_caveats(kind, **kwargs)]
 
-    def _codes(self, **kwargs) -> list[str]:
-        return [c.code for c in arrangement_caveats(self.KIND, **kwargs)]
+    @pytest.mark.parametrize("kind", VERIFIED_KINDS)
+    def test_the_pinned_version_states_nothing(self, kind):
+        assert arrangement_caveats(kind, observed_version=_pin(kind)) == ()
 
-    def test_the_pinned_version_states_nothing(self):
-        assert arrangement_caveats(self.KIND, observed_version=_pin(self.KIND)) == ()
+    @pytest.mark.parametrize("kind", VERIFIED_KINDS)
+    def test_another_version_states_the_drift(self, kind):
+        assert self._codes(kind, observed_version=DRIFTED_VERSION) == [
+            CAVEAT_ARRANGEMENT_VERSION_DRIFTED
+        ]
 
-    def test_another_version_states_the_drift(self):
-        assert self._codes(observed_version=DRIFTED_VERSION) == [CAVEAT_ARRANGEMENT_VERSION_DRIFTED]
-
-    def test_the_caveat_names_both_sides(self):
-        caveat = arrangement_caveats(self.KIND, observed_version=DRIFTED_VERSION)[0]
+    @pytest.mark.parametrize("kind", VERIFIED_KINDS)
+    def test_the_caveat_names_both_sides(self, kind):
+        caveat = arrangement_caveats(kind, observed_version=DRIFTED_VERSION)[0]
         assert caveat.data == {
-            "kind": self.KIND,
-            "verified": _pin(self.KIND),
+            "kind": kind,
+            "verified": _pin(kind),
             "observed": DRIFTED_VERSION,
         }
 
-    def test_a_machine_that_states_no_version_stays_silent(self):
+    @pytest.mark.parametrize("kind", VERIFIED_KINDS)
+    def test_a_machine_that_states_no_version_stays_silent(self, kind):
         # Not "no drift" — no drift ESTABLISHED. Claiming a comparison nobody
         # could make is the one thing atlas never does.
-        assert arrangement_caveats(self.KIND) == ()
+        assert arrangement_caveats(kind) == ()
 
-    def test_an_empty_version_names_no_version_either(self):
-        assert arrangement_caveats(self.KIND, observed_version="") == ()
+    @pytest.mark.parametrize("kind", VERIFIED_KINDS)
+    def test_an_empty_version_names_no_version_either(self, kind):
+        assert arrangement_caveats(kind, observed_version="") == ()
 
     def test_an_unverified_arrangement_has_no_pin_to_drift_from(self):
         # Whatever version an unobserved arrangement states, the missing
         # observation is the more general fact and the only one stated.
-        drifting = arrangement_caveats("emudeck", observed_version=DRIFTED_VERSION)
+        drifting = arrangement_caveats("bare_retroarch_flatpak", observed_version=DRIFTED_VERSION)
         assert [c.code for c in drifting] == [CAVEAT_ARRANGEMENT_UNVERIFIED]
 
-    def test_the_message_states_what_is_pending_not_that_the_answer_is_wrong(self):
-        message = arrangement_caveats(self.KIND, observed_version=DRIFTED_VERSION)[0].message
+    @pytest.mark.parametrize("kind", VERIFIED_KINDS)
+    def test_the_message_states_what_is_pending_not_that_the_answer_is_wrong(self, kind):
+        message = arrangement_caveats(kind, observed_version=DRIFTED_VERSION)[0].message
         assert "re-verification is pending" in message
 
 
@@ -207,20 +222,13 @@ def _machine(files, **kwargs) -> FixtureMachine:
 # One fixture machine per arrangement, each minimal: the marker its detection
 # triggers on, plus what its health needs to be quiet.
 UNVERIFIED_MACHINES = {
-    "emudeck": (
-        {
-            EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
-            STANDALONE_CFG: 'savefile_directory = "~/Emulation/saves"\n',
-        },
-        {"dirs": [f"{HOME}/Emulation/saves"]},
-    ),
     "bare_retroarch_flatpak": ({STANDALONE_CFG: ""}, {}),
     "bare_retroarch_native": ({NATIVE_CFG: ""}, {}),
 }
 
 
 def _retrodeck(version: str | None = None) -> atlas.Installation:
-    """The verified arrangement, stating *version* about itself — or none.
+    """The first verified arrangement, stating *version* about itself — or none.
 
     Minimal in the same way the dict above is: the marker detection triggers on,
     plus what its health needs to be quiet, so an evidence statement is never
@@ -232,6 +240,33 @@ def _retrodeck(version: str | None = None) -> atlas.Installation:
         marker["version"] = version
     files = {RETRODECK_JSON: json.dumps(marker), "/mnt/sd/retrodeck/roms/systeminfo.txt": ""}
     return atlas.detect(HOME, _machine(files, dirs=["/mnt/sd/retrodeck/saves"]))[0]
+
+
+def _emudeck(version: str | None = None) -> atlas.Installation:
+    """The second verified arrangement, stating *version* about itself — or none.
+
+    EmuDeck's version statement is the backend checkout's git HEAD, spelled
+    the way a live installation spells it: the symref in ``.git/HEAD`` and
+    the loose ref file it names. No version means no anchor files — the state
+    every fixture without them is in.
+    """
+    files = {
+        EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+        STANDALONE_CFG: 'savefile_directory = "~/Emulation/saves"\n',
+    }
+    if version is not None:
+        files[f"{HOME}/.config/EmuDeck/backend/.git/HEAD"] = "ref: refs/heads/main\n"
+        files[f"{HOME}/.config/EmuDeck/backend/.git/refs/heads/main"] = f"{version}\n"
+    return atlas.detect(HOME, _machine(files, dirs=[f"{HOME}/Emulation/saves"]))[0]
+
+
+# The verified arrangements' fixture builders, keyed the way the record is:
+# the drift-completeness checks below run over every one of them, so a third
+# verified arrangement extends this dict and inherits the whole battery.
+VERIFIED_FIXTURES = {
+    atlas.RetroDeck.kind: _retrodeck,
+    atlas.EmuDeck.kind: _emudeck,
+}
 
 
 def _answers(handle) -> dict[str, tuple[str, ...]]:
@@ -263,10 +298,10 @@ class TestEveryAnswerStatesItsEvidence:
         # files); that it is complete is not.
         assert set(UNVERIFIED_MACHINES) == _unverified_kinds()
 
-    def test_the_verified_kinds_are_the_one_this_file_asks_directly(self):
-        # _retrodeck() stands for every verified kind — true while there is
-        # one. A second verified arrangement needs its own fixture here.
-        assert _handle_kinds() - _unverified_kinds() == {atlas.RetroDeck.kind}
+    def test_the_verified_kinds_are_the_ones_this_file_asks_directly(self):
+        # Each verified kind has its own fixture builder — a third verified
+        # arrangement needs one here, and this is what notices its absence.
+        assert _handle_kinds() - _unverified_kinds() == set(VERIFIED_FIXTURES) == set(VERIFIED_KINDS)
 
     @pytest.mark.parametrize("kind", sorted(UNVERIFIED_MACHINES))
     def test_every_question_of_an_unverified_arrangement_says_so(self, kind):
@@ -279,10 +314,11 @@ class TestEveryAnswerStatesItsEvidence:
         )
         assert silent == []
 
-    def test_the_verified_arrangement_says_nothing_anywhere(self):
+    @pytest.mark.parametrize("kind", sorted(VERIFIED_FIXTURES))
+    def test_the_verified_arrangements_say_nothing_anywhere(self, kind):
         stated = sorted(
             question
-            for question, codes in _answers(_retrodeck()).items()
+            for question, codes in _answers(VERIFIED_FIXTURES[kind]()).items()
             if CAVEAT_ARRANGEMENT_UNVERIFIED in codes
         )
         assert stated == []
@@ -314,29 +350,32 @@ class TestEveryAnswerStatesTheDrift:
     this feature exists to end. So every question is asked, not a sample.
     """
 
-    def _drifted(self) -> dict[str, tuple[str, ...]]:
-        return _answers(_retrodeck(DRIFTED_VERSION))
+    def _drifted(self, kind) -> dict[str, tuple[str, ...]]:
+        return _answers(VERIFIED_FIXTURES[kind](DRIFTED_VERSION))
 
-    def test_every_question_of_a_drifted_arrangement_says_so(self):
+    @pytest.mark.parametrize("kind", sorted(VERIFIED_FIXTURES))
+    def test_every_question_of_a_drifted_arrangement_says_so(self, kind):
         silent = sorted(
             question
-            for question, codes in self._drifted().items()
+            for question, codes in self._drifted(kind).items()
             if CAVEAT_ARRANGEMENT_VERSION_DRIFTED not in codes
         )
         assert silent == []
 
-    def test_no_question_states_it_twice(self):
+    @pytest.mark.parametrize("kind", sorted(VERIFIED_FIXTURES))
+    def test_no_question_states_it_twice(self, kind):
         # Two seams reaching one answer would double it, and a client counting
         # caveats would read one drift as two.
         repeated = sorted(
             question
-            for question, codes in self._drifted().items()
+            for question, codes in self._drifted(kind).items()
             if codes.count(CAVEAT_ARRANGEMENT_VERSION_DRIFTED) != 1
         )
         assert repeated == []
 
-    def test_a_machine_on_the_pinned_version_says_nothing_anywhere(self):
-        handle = _retrodeck(_pin(atlas.RetroDeck.kind))
+    @pytest.mark.parametrize("kind", sorted(VERIFIED_FIXTURES))
+    def test_a_machine_on_the_pinned_version_says_nothing_anywhere(self, kind):
+        handle = VERIFIED_FIXTURES[kind](_pin(kind))
         stated = sorted(
             question
             for question, codes in _answers(handle).items()
@@ -344,18 +383,20 @@ class TestEveryAnswerStatesTheDrift:
         )
         assert stated == []
 
-    def test_the_drifted_arrangement_is_still_a_verified_one(self):
+    @pytest.mark.parametrize("kind", sorted(VERIFIED_FIXTURES))
+    def test_the_drifted_arrangement_is_still_a_verified_one(self, kind):
         # The two codes are different claims: this arrangement HAS been
         # observed live, so the never-observed caveat must stay away.
         stated = sorted(
             question
-            for question, codes in self._drifted().items()
+            for question, codes in self._drifted(kind).items()
             if CAVEAT_ARRANGEMENT_UNVERIFIED in codes
         )
         assert stated == []
 
-    def test_the_aggregate_carries_it_too(self):
-        every = atlas.EveryInstallation((_retrodeck(DRIFTED_VERSION),))
+    @pytest.mark.parametrize("kind", sorted(VERIFIED_FIXTURES))
+    def test_the_aggregate_carries_it_too(self, kind):
+        every = atlas.EveryInstallation((VERIFIED_FIXTURES[kind](DRIFTED_VERSION),))
         answered = every.savefile_location(core_so=CORE_SO)[0]
         assert CAVEAT_ARRANGEMENT_VERSION_DRIFTED in [c.code for c in answered.answer.caveats]
 
@@ -365,7 +406,7 @@ class TestHealthStaysAMachineFact:
 
     ``Health.ok`` is the absence of issues, and clients act on it — the usage
     guide tells them not to sync against an installation that is not ok. An
-    evidence note there would report every EmuDeck and every bare RetroArch as
+    evidence note there would report every bare RetroArch as
     defective, which is a claim about the machine that nobody made. A machine
     that updated past what atlas has verified is the same kind of note: the
     installation is fine, atlas's record of it is what aged.
@@ -378,12 +419,17 @@ class TestHealthStaysAMachineFact:
         assert handle.health().ok
 
     def test_health_carries_no_evidence_issue(self):
-        files, kwargs = UNVERIFIED_MACHINES["emudeck"]
+        files, kwargs = UNVERIFIED_MACHINES["bare_retroarch_flatpak"]
         handle = atlas.detect(HOME, _machine(files, **kwargs))[0]
         assert CAVEAT_ARRANGEMENT_UNVERIFIED not in handle.health().codes
 
-    def test_a_drifted_arrangement_can_still_be_healthy(self):
-        assert _retrodeck(DRIFTED_VERSION).health().ok
+    @pytest.mark.parametrize("kind", sorted(VERIFIED_FIXTURES))
+    def test_a_drifted_arrangement_can_still_be_healthy(self, kind):
+        assert VERIFIED_FIXTURES[kind](DRIFTED_VERSION).health().ok
 
-    def test_health_carries_no_drift_issue(self):
-        assert CAVEAT_ARRANGEMENT_VERSION_DRIFTED not in _retrodeck(DRIFTED_VERSION).health().codes
+    @pytest.mark.parametrize("kind", sorted(VERIFIED_FIXTURES))
+    def test_health_carries_no_drift_issue(self, kind):
+        assert (
+            CAVEAT_ARRANGEMENT_VERSION_DRIFTED
+            not in VERIFIED_FIXTURES[kind](DRIFTED_VERSION).health().codes
+        )

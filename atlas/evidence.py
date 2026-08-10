@@ -2,11 +2,12 @@
 
 Reading a config the way the emulator reads it is one thing; having watched a
 real machine of that arrangement do it is another. Atlas's resolver rules are
-source-verified against pinned upstream for every arrangement, but only
-RetroDECK has been observed end to end on a live installation
-(``docs/research/``, and the per-core column in ``docs/research/coverage-matrix.md``).
-An answer from an arrangement nobody has observed is derived, not confirmed —
-and derived is worth saying out loud, machine-readably, on the answer itself.
+source-verified against pinned upstream for every arrangement; RetroDECK and
+EmuDeck have each been observed end to end on a live installation
+(``docs/research/``, and the per-core column in ``docs/research/coverage-matrix.md``),
+the bare RetroArch arrangements have not. An answer from an arrangement nobody
+has observed is derived, not confirmed — and derived is worth saying out loud,
+machine-readably, on the answer itself.
 
 Two rules decide the shape here, both from CLAUDE.md's boundary rule:
 

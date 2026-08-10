@@ -14,8 +14,12 @@
     },
     "emudeck": {
       "label": "an EmuDeck arrangement",
-      "verified": null,
-      "note": "[D] Read from EmuDeck's shipped configuration upstream (settings.sh, its org.libretro.RetroArch cfg, the ES-DE wiring under ~/ES-DE — dragoonDorise/EmuDeck @ 863ab69, ES-DE v3.4.1); no EmuDeck machine has been observed. ES-DE presence is decided from the disk; a machine driven by Pegasus or Steam ROM Manager instead keeps the emulator-catalogue-unestablished refusal."
+      "verified": {
+        "version": "863ab69d81f66a4c9c0cf65bf642fb96ccc4ca2c",
+        "date": "2026-08-10",
+        "reference": "the EmuDeck installation atlas's live verification round ran against. The version is the backend checkout's git HEAD, read as the two plain files under ~/.config/EmuDeck/backend/.git (the HEAD symref, then the loose ref) — the same read the runtime drift comparison performs. The deployed ES-DE was 3.4.1, established out-of-band: the AppImage's md5 matched the stable LinuxSteamDeckAppImage package in ES-DE's published latest_release.json; ~/ES-DE/logs/es_log.txt states the version in its first line only after a first launch, and the verification machine had none"
+      },
+      "note": "[V] Detection, the marker parse, the ES-DE catalogue (the 8-system overlay, gamelist selections, the sealed state), ROM placement, the RetroArch save/state wiring ($savesPath/retroarch/{saves,states} symlinked into the Flatpak tree, cfg naming the symlink) and the firmware root were read off a running installation and compared against the resolver's answers. ES-DE presence is decided from the disk; a machine driven by Pegasus or Steam ROM Manager instead keeps the emulator-catalogue-unestablished refusal."
     },
     "bare_retroarch_flatpak": {
       "label": "the bare RetroArch Flatpak",
