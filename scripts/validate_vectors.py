@@ -1066,16 +1066,22 @@ def _no_catalogue_codes_in(caveats: list[Any]) -> list[str]:
     return sorted({c["code"] for c in caveats} & NO_CATALOGUE_CODES)
 
 
-def _validate_rom_location(name: str, placement: Any) -> None:
-    """A ROM placement: the pair of directory views, the declaration, and why not."""
-    fields = {"dir", "physical_dir", "extensions", "caveats"}
-    if not isinstance(placement, dict) or set(placement) != fields:
-        fail(f"{name}: expected.rom_location must carry exactly {sorted(fields)}")
+def _validate_rom_location_dirs(name: str, placement: dict[str, Any]) -> None:
+    """The pair of directory views: each a non-empty string or null, and the
+    physical view never stated without the resolved dir it backs."""
     for key in ("dir", "physical_dir"):
         if placement[key] is not None and (not isinstance(placement[key], str) or not placement[key]):
             fail(f"{name}: expected.rom_location.{key} must be a non-empty string or null")
     if placement["physical_dir"] is not None and placement["dir"] is None:
         fail(f"{name}: expected.rom_location.physical_dir without a dir — nothing was resolved to back")
+
+
+def _validate_rom_location(name: str, placement: Any) -> None:
+    """A ROM placement: the pair of directory views, the declaration, and why not."""
+    fields = {"dir", "physical_dir", "extensions", "caveats"}
+    if not isinstance(placement, dict) or set(placement) != fields:
+        fail(f"{name}: expected.rom_location must carry exactly {sorted(fields)}")
+    _validate_rom_location_dirs(name, placement)
     if not isinstance(placement["extensions"], list) or not all(
         isinstance(e, str) and e for e in placement["extensions"]
     ):
