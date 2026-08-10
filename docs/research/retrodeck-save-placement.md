@@ -738,6 +738,25 @@ otherwise the configured value with **one** trailing separator appended where it
 substitutes always ends in a separator, which is what the `//` collapse then absorbs — a configured `…/roms/` must not
 spell the answer `…/roms//n64`.
 
+**[V]** The non-empty branch expands `~` before the separator append:
+`romDirPath =
+Utils::FileSystem::expandHomePath(romDirPath)` (`FileData.cpp:289`). `expandHomePath`
+(`es-core/src/utils/FileSystemUtil.cpp:663-675`; the `systemHome` parameter defaults `false`, `FileSystemUtil.h:55`, and
+the call site passes one argument) is `Utils::String::replace(path, "~", getHomePath())` — plain text substitution of
+**every** `~`, not a shell's tilde grammar: a bare `~` becomes the home, `~user` looks no user up and becomes the home
+with `user` glued on, a mid-path `~` is replaced the same. One pass in effect, unlike the `//` collapse: after a pass no
+`~` from the input remains, and a home itself carrying one hits the endless-loop break (`StringUtil.cpp:293-294`) — so
+Python's single-pass `str.replace` mirrors it exactly. The home substituted is `getHomePath()`
+(`FileSystemUtil.cpp:183-229`): the `--home` a launcher passed — RetroDECK's `${XDG_CONFIG_HOME}` — else `$HOME`, else,
+with both absent, the process's current working directory (`FileSystemUtil.cpp:224-226`). The third case is unreachable
+for atlas: RetroDECK's launcher always passes `--home`, and the EmuDeck handle expands against the home the caller
+established for the machine — atlas never models an ES-DE process without one, so no answer rests on the CWD fallback.
+So a `~`-carrying `ROMDirectory` is not an unresolvable value: it resolves against the same per-arrangement home the
+empty-setting default derives from, and the same relocation that stops the default from resolving (a Flatpak override
+here, `portable.txt` on EmuDeck) stops the expansion. What stays unresolvable is what ES-DE resolves against bases atlas
+has not established: relative values (the process's working directory) and `%ESPATH%` (the binary directory,
+`FileData.cpp:300-302`).
+
 **[V]** The token is _required_ only in `createSystemDirectories()` (~L1214), whose guard at ~L1366 skips any system
 whose `<path>` does not start with it, with a warning. That is the placeholder-generation path. `loadConfig()` has no
 such guard, so a `<path>` without the token is a literal directory ES-DE loads normally.

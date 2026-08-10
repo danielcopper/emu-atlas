@@ -7172,8 +7172,8 @@
       }
     },
     {
-      "name": "rom-location-refuses-a-romdirectory-that-is-not-an-absolute-path",
-      "rationale": "The setting holds a ~-prefixed value, and what that resolves against is the ES-DE process's own environment inside its sandbox — which atlas has not established. This is the one reason left under rom-path-unresolved now that an unset setting resolves and a relocated home has its own code: a fact about the machine, whose remedy is to fix the setting. The declared path travels in the data so a caller who knows their own setup can finish the substitution.",
+      "name": "rom-location-expands-a-tilde-romdirectory-the-way-the-frontend-does",
+      "rationale": "The setting holds a ~-prefixed value, and ES-DE expands it: getROMDirectory hands the configured value to expandHomePath (FileData.cpp:289, v3.4.1), whose whole body is String::replace(path, \"~\", getHomePath()) (FileSystemUtil.cpp:663-675) — and this frontend's home is the launcher's --home \"${XDG_CONFIG_HOME}\", the per-app config home the empty-setting default already derives from, not the user's. So the answer lands under .var/app/net.retrodeck.retrodeck/config: refusing here made atlas stricter than the original it mirrors, and expanding against $HOME instead would name a real directory the frontend never launches from. What ES-DE does not resolve keeps its refusal — a relative value stays rom-path-unresolved, a moved config home stays config-home-relocated.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7185,6 +7185,56 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/mnt/sd/retrodeck/roms/n64/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"~/Emulation/roms\" />\n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "rom_location_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "rom_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Emulation/roms/n64",
+          "physical_dir": null,
+          "extensions": [
+            ".n64",
+            ".N64",
+            ".z64",
+            ".Z64",
+            ".zip",
+            ".ZIP"
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "rom-location-refuses-a-relative-romdirectory",
+      "rationale": "What remains under rom-path-unresolved now that ~ expands: a relative value resolves against the ES-DE process's own working directory, which atlas has not established — a fact about the machine, whose remedy is to fix the setting. The declared path and the setting's own unexpanded text travel in the data so a caller who knows their own setup can finish the substitution atlas refused to guess at.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/.keep": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"Emulation/roms\" />\n"
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
@@ -7223,7 +7273,133 @@
               "data": {
                 "system": "n64",
                 "declared": "%ROMPATH%/n64",
-                "configured": "~/Emulation/roms"
+                "configured": "Emulation/roms"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "rom-location-stops-expanding-a-tilde-when-an-override-moves-the-config-home",
+      "rationale": "~ expands against the same home the unset default derives from — the frontend's --home \"${XDG_CONFIG_HOME}\" — so the same Flatpak override that stops the default from resolving stops the expansion: what ~ becomes is a tree atlas cannot follow. config-home-relocated rather than rom-path-unresolved for the same reason as the unset case: nothing about this machine's setting is wrong — ES-DE expands it fine — atlas is the one that cannot follow, and if the config home moved, the es_settings.xml atlas read may not be the one in force either.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/.keep": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"~/Emulation/roms\" />\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=host;\n\n[Environment]\nXDG_CONFIG_HOME=/mnt/elsewhere/config\n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "rom_location_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "rom_location": {
+          "dir": null,
+          "physical_dir": null,
+          "extensions": [
+            ".n64",
+            ".N64",
+            ".z64",
+            ".Z64",
+            ".zip",
+            ".ZIP"
+          ],
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "system": "n64",
+                "declared": "%ROMPATH%/n64",
+                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
+                "key": "XDG_CONFIG_HOME"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-rom-location-expands-a-tilde-romdirectory-against-the-plain-home",
+      "rationale": "The same expansion against the other arrangement's home: EmuDeck's ES-DE runs with no --home, so getHomePath() is the user's own $HOME, and ~/Emulation/roms lands exactly where EmuDeck's own sed of the absolute value would have put it. Together with the RetroDECK vector this pins that the home is per arrangement — one tilde answer lands under the per-app config home, this one under /home/deck — and the sealed and unverified statements ride unchanged, because expanding the root says nothing about the catalogue layer nobody could read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"~/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "rom_location_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "rom_location": {
+          "dir": "/home/deck/Emulation/roms/atarijaguar",
+          "physical_dir": null,
+          "extensions": [
+            ".j64",
+            ".J64",
+            ".rom",
+            ".ROM",
+            ".zip",
+            ".ZIP"
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "emudeck"
               }
             }
           ]

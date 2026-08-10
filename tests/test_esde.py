@@ -7,6 +7,7 @@ from atlas.installations import parse_gamelist
 from atlas.machine import FixtureMachine
 from atlas.esde import (
     EmulatorSpec,
+    expand_home_path,
     merge_layers,
     parse_es_settings,
     parse_es_systems,
@@ -173,10 +174,50 @@ class TestResolveRomPath:
         assert resolve_rom_path(self.DECLARED, "Emulation/roms") is None
 
     def test_a_home_prefixed_directory_is_refused_rather_than_expanded(self):
+        # Expansion is the handles' job, where the home is established — a
+        # value still carrying ~ here was never expanded, and stays refused.
         assert resolve_rom_path(self.DECLARED, "~/Emulation/roms") is None
 
     def test_an_empty_declaration_resolves_to_nothing(self):
         assert resolve_rom_path("", self.DIRECTORY) is None
+
+
+class TestExpandHomePath:
+    """``expandHomePath`` is text substitution of every ``~``, not tilde grammar.
+
+    ``Utils::String::replace(path, "~", getHomePath())`` is the whole body
+    (``FileSystemUtil.cpp:663-675``, ES-DE v3.4.1), so the shapes a shell
+    treats specially — ``~user``, a mid-path ``~`` — are plain replacements
+    here, and the substituted string is the directory the frontend really
+    launches from.
+    """
+
+    HOME = "/home/deck"
+
+    def test_a_leading_tilde_slash_expands_to_the_home(self):
+        assert expand_home_path("~/Emulation/roms", self.HOME) == "/home/deck/Emulation/roms"
+
+    def test_a_bare_tilde_is_the_home(self):
+        assert expand_home_path("~", self.HOME) == self.HOME
+
+    def test_tilde_user_is_concatenation_not_a_user_lookup(self):
+        # No getpwnam anywhere in the function: ~user is the home with "user"
+        # glued on, and that (almost certainly absent) directory is ES-DE's.
+        assert expand_home_path("~user/roms", self.HOME) == "/home/deckuser/roms"
+
+    def test_a_tilde_in_the_middle_is_replaced_too(self):
+        assert expand_home_path("/mnt/sd/~/roms", self.HOME) == "/mnt/sd//home/deck/roms"
+
+    def test_every_occurrence_is_replaced(self):
+        assert expand_home_path("~/a~b", self.HOME) == "/home/deck/a/home/deckb"
+
+    def test_a_value_without_a_tilde_is_untouched(self):
+        assert expand_home_path("/mnt/sd/roms", self.HOME) == "/mnt/sd/roms"
+
+    def test_the_replacement_is_one_pass_never_rescanned(self):
+        # StringUtil.cpp:293-294 breaks the outer loop when the home itself
+        # carries a ~ — one full pass, exactly str.replace, no recursion.
+        assert expand_home_path("~/x", "/home/user~1") == "/home/user~1/x"
 
 
 class TestMerge:
