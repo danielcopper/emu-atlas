@@ -214,6 +214,12 @@ RETROARCH_FLATPAK_APP_ID = "org.libretro.RetroArch"
 # non-Flatpak markers live.
 _XDG_CONFIG_DIRNAME = ".config"
 
+# The user Flatpak installation's base, as a ``home``-relative suffix —
+# ``g_get_user_data_dir()/flatpak`` (``flatpak_get_user_base_dir_location``,
+# flatpak-dir.c:1918-1940 at 1.16.6). Deploys (``app/...``) and the overrides
+# files alike hang off it.
+_FLATPAK_USER_BASE = os.path.join(".local", "share", "flatpak")
+
 # Config markers, as ``home``-relative suffixes.
 RETRODECK_JSON_SUFFIX = os.path.join(
     ".var", "app", RETRODECK_APP_ID, "config", "retrodeck", "retrodeck.json"
@@ -329,6 +335,18 @@ class _Sandbox:
     machine: Machine
     home: str
     app_id: str | None
+    # What the app's own processes substitute for a ``~`` in a cfg value: the
+    # HOME their sandbox environment carries. The machine home unless a
+    # Flatpak override redefines HOME for the app — the host environment's
+    # HOME passes into the sandbox (flatpak-run.c:3055, flatpak 1.16.6) and an
+    # [Environment] override lands on top of it (:3352), with nothing
+    # reapplied after — and ``None`` where that environment carries no usable
+    # HOME at all (unset, or the empty string): RetroArch then leaves a ``~``
+    # exactly as written, because the substitution block is skipped when the
+    # home comes back empty (fill_pathname_expand_special →
+    # fill_pathname_home_dir → getenv("HOME"); file_path.c:1066-1101,
+    # :1457-1468 @ a79435a).
+    expansion_home: str | None
 
     def host(self, key: str, path: str) -> _CfgPath:
         """*path* as this host reads it, with the provenance *key* names it by."""
@@ -379,7 +397,7 @@ class _Sandbox:
         """The app's ``/app`` tree on the host: the deployment's ``files/``."""
         for base in (
             f"/var/lib/flatpak/app/{app_id}/current/active/files",
-            os.path.join(self.home, ".local", "share", "flatpak", "app", app_id, "current", "active", "files"),
+            os.path.join(self.home, _FLATPAK_USER_BASE, "app", app_id, "current", "active", "files"),
         ):
             candidate = os.path.join(base, rest)
             if self.machine.path_kind(candidate) != KIND_MISSING:
@@ -399,7 +417,7 @@ class _Sandbox:
             return None
         if is_app_relative(raw):
             return _CfgPath(key, raw, None, app_relative=True)
-        expanded = expand_home(raw, home=self.home)
+        expanded = expand_home(raw, home=self.expansion_home)
         return self.host(key, expanded) if expanded is not None else None
 
 
@@ -411,6 +429,23 @@ def _core_directory_in(sandbox: _Sandbox, global_text: str) -> str | None:
     """
     resolved = sandbox.cfg_path("libretro_directory", parse_cfg_text(global_text).get("libretro_directory"))
     return resolved.path if resolved is not None else None
+
+
+def _core_path_from(sandbox: _Sandbox, global_text: str | None, core_so: str) -> str | None:
+    """Resolve a core ``.so`` basename against a cfg snapshot's ``libretro_directory``.
+
+    The configured value is written in the app's own spelling (live:
+    ``/app/retrodeck/components/...``) and is translated to where the host
+    reads it. ``None`` when nothing resolvable — never a guess. One resolver
+    for every arrangement, taking the query's own sandbox so the cfg is read
+    through the same spellings everywhere in that query.
+    """
+    if global_text is None:
+        return None
+    cores_dir = _core_directory_in(sandbox, global_text)
+    if cores_dir is None:
+        return None
+    return os.path.join(cores_dir, core_so)
 
 
 # One file of the override chain as it is read: its provenance label and its
@@ -2197,7 +2232,7 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
     layout = resolve_layout(
         query.global_text,
         keys=keys,
-        home=query.sandbox.home,
+        home=query.sandbox.expansion_home,
         cfg_label=query.cfg_label,
         defaults=query.defaults,
         overrides=overrides,
@@ -2598,6 +2633,7 @@ def _retroarch_firmware_context(
     retroarch_config_dir: str,
     findings: tuple[Caveat, ...],
     arrangement_version: str | None,
+    extra_sources: tuple[str, ...] = (),
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
 
@@ -2610,6 +2646,11 @@ def _retroarch_firmware_context(
     declared paths are relative to — the same directory RetroArch hands cores
     when they look their firmware up. RetroDECK happens to collapse the first
     two into one directory; nothing here assumes it.
+
+    *extra_sources* are the caller's own statements about how this cfg is
+    read — the RetroDECK handle names the override file whose HOME decides
+    the ``~`` expansion here — and they lead the sources the reads below
+    append.
     """
     machine = sandbox.machine
     # The dropped lines are read here, not only the values: once an absent key
@@ -2623,7 +2664,7 @@ def _retroarch_firmware_context(
     # particular read could not resolve. The caller derives the findings from
     # the same reads it passed *global_text* out of.
     caveats: list[Caveat] = list(findings)
-    sources: list[str] = []
+    sources: list[str] = list(extra_sources)
 
     raw_system = parsed.get("system_directory")
     configured_system = sandbox.cfg_path("system_directory", raw_system) if raw_system is not None else None
@@ -2987,48 +3028,144 @@ class SystemsAnswer:
     caveats: tuple[Caveat, ...] = ()
 
 
-# Flatpak's per-app overrides are plain INI: [Section] headers and KEY=VALUE
-# lines. Only the [Environment] section is read here, and only to find out
-# whether the app's config home was moved out from under the path atlas
-# resolved — a full override parser is not the job.
-def _environment_overrides(text: str) -> dict[str, str]:
-    """The ``[Environment]`` section of a Flatpak overrides file, as key -> value."""
-    settings: dict[str, str] = {}
-    in_environment = False
+# Flatpak's per-app overrides are GKeyFile INI, and only the environment they
+# assign is read here — the [Environment] group's KEY=VALUE lines and the
+# [Context] group's unset-environment list. Value semantics follow
+# g_key_file_get_string, which is how flatpak reads them (flatpak 1.16.6,
+# flatpak-context.c:1944): leading whitespace of a value is skipped and
+# trailing whitespace kept (GLib 2.84.4 g_key_file_parse_key_value_pair), the
+# escapes \s \n \t \r \\ are decoded, and a value whose escape does not decode
+# is treated as an UNSET — flatpak hands the failed read on as NULL
+# (flatpak-context.c:1944-1946, the GError is NULL) and a NULL value unsets
+# the variable (flatpak-run.c:752-755). No $VAR is ever expanded: values are
+# literal strings all the way into the sandbox environment. Group names match
+# exactly, the way GKeyFile matches them — "[ Environment ]" is a different
+# group. One deliberate leniency: lines GKeyFile would refuse outright are
+# skipped here instead, because a file it cannot load at all stops
+# `flatpak run` before any emulator exists to ask about (the load error
+# propagates out of flatpak_load_override_file, flatpak-dir.c:2917-2940, and
+# fails flatpak_dir_load_deployed, :3053-3083) — a machine whose app cannot
+# launch is not a machine this parser has an answer for.
+_GKEYFILE_ESCAPES = {"s": " ", "n": "\n", "t": "\t", "r": "\r", "\\": "\\"}
+
+
+def _gkeyfile_string(value: str) -> str | None:
+    """*value* as ``g_key_file_get_string`` answers it — ``None`` where that read fails.
+
+    ``None`` is an escape GKeyFile refuses: a ``\\`` before anything outside
+    the escape set, or one at the end of the line. The caller treats it as an
+    unset, because that is what flatpak does with the failed read.
+    """
+    if "\\" not in value:
+        return value
+    decoded: list[str] = []
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if char != "\\":
+            decoded.append(char)
+            index += 1
+            continue
+        if index + 1 >= len(value):
+            return None
+        replacement = _GKEYFILE_ESCAPES.get(value[index + 1])
+        if replacement is None:
+            return None
+        decoded.append(replacement)
+        index += 2
+    return "".join(decoded)
+
+
+def _gkeyfile_list(value: str) -> tuple[str, ...]:
+    """*value* as a GKeyFile string list: ``;``-separated, ``\\;`` escaping the separator.
+
+    The trailing empty element is the writer's own trailing separator
+    (``flatpak override`` always leaves one) and is dropped the way GKeyFile
+    drops it. An element whose escapes do not decode is skipped — for flatpak
+    that failure stops the app from launching at all (see the module comment
+    above), which is not a state this parser models.
+    """
+    elements: list[str] = []
+    current: list[str] = []
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if char == "\\" and index + 1 < len(value):
+            if value[index + 1] == ";":
+                current.append(";")
+            else:
+                current.append(char)
+                current.append(value[index + 1])
+            index += 2
+            continue
+        if char == ";":
+            elements.append("".join(current))
+            current = []
+            index += 1
+            continue
+        current.append(char)
+        index += 1
+    elements.append("".join(current))
+    if elements and elements[-1] == "":
+        elements.pop()
+    decoded = (_gkeyfile_string(element) for element in elements)
+    return tuple(element for element in decoded if element is not None)
+
+
+def _environment_overrides(text: str) -> dict[str, str | None]:
+    """The environment assignments one overrides file makes: key -> value, ``None`` = unset.
+
+    Both spellings of an assignment, in the order flatpak applies them within
+    one file: the ``[Environment]`` group's values first, then the
+    ``[Context]`` group's ``unset-environment`` list on top — the unset wins
+    over a value in the same file, deliberately, so both can be written
+    together for compatibility (flatpak-context.c:1935-1972, the comment at
+    :1950-1953). Across files the caller composes: a later file's assignment,
+    set or unset, overwrites an earlier file's per key.
+    """
+    environment: dict[str, str | None] = {}
+    unset: tuple[str, ...] = ()
+    group: str | None = None
     for raw in text.splitlines():
         line = raw.strip()
         if not line or line.startswith(("#", ";")):
             continue
         if line.startswith("[") and line.endswith("]"):
-            in_environment = line[1:-1].strip() == "Environment"
+            group = line[1:-1]
             continue
-        if in_environment and "=" in line:
-            key, _, value = line.partition("=")
-            settings[key.strip()] = value.strip()
-    return settings
-
-
-# The environment variables that decide where a Flatpak app's config home is,
-# and therefore where the frontend's --home points. Flatpak sets
-# XDG_CONFIG_HOME to the per-app config directory; HOME is what the rest is
-# expressed relative to. Either one redefined in an overrides file moves the
-# tree atlas resolved against, so atlas stops resolving rather than answering
-# about a directory the frontend is not using. Documented Flatpak semantics
-# rather than a reading of this machine: [D].
-_CONFIG_HOME_ENV_KEYS = ("XDG_CONFIG_HOME", "HOME")
+        if "=" not in raw:
+            continue
+        key, _, value = raw.partition("=")
+        key = key.strip()
+        if group == "Environment":
+            environment[key] = _gkeyfile_string(value.lstrip(" \t"))
+        elif group == "Context" and key == "unset-environment":
+            unset = _gkeyfile_list(value.lstrip(" \t"))
+    for name in unset:
+        environment[name] = None
+    return environment
 
 
 # The ways a READ catalogue still yields no ROM directory. The first two are
 # facts about the machine — the catalogue declares nothing, or the frontend's
 # own setting is not a path anything can be resolved against — and a client acts
-# on them by fixing the machine. The last two are statements about atlas: the
-# file that decides the directory could not be read, or the environment that
-# decides where that file's defaults land was moved somewhere atlas cannot
-# follow. Four facts, four codes: a client branches on the code, and prose is
-# the one thing it cannot branch on.
+# on them by fixing the machine. The third is a statement about atlas: the
+# file that decides the directory could not be read. Three facts, three codes:
+# a client branches on the code, and prose is the one thing it cannot branch on.
 CAVEAT_ROM_PATH_UNDECLARED = "rom-path-undeclared"
 CAVEAT_ROM_PATH_UNRESOLVED = "rom-path-unresolved"
 CAVEAT_FRONTEND_SETTINGS_UNREADABLE = "frontend-settings-unreadable"
+
+# ES-DE's on-disk relocation switch: a portable.txt beside an EmuDeck-managed
+# AppImage may move the tree every ~/ES-DE read comes from, and the EmuDeck
+# handle's rider states that suspicion under this code. A Flatpak override
+# cannot earn it: flatpak force-pins the XDG_*_HOME variables to the per-app
+# directories AFTER applying every override and --env (flatpak 1.16.6,
+# flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the
+# override env applied at :3352, both with overwrite; flatpak-run(1) documents
+# the pin, and flatpak/flatpak#4529 — the request to make these overridable —
+# was closed as not planned), so the config home a RetroDECK answer reads from
+# is exactly the one in force, override files or no.
 CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
 
 # Why the settings could not be read, where the read itself succeeded and the
@@ -3036,17 +3173,6 @@ CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
 # because to a client they answer the same question — and it is not one of
 # them: the bytes arrived.
 _SETTINGS_UNPARSEABLE = "unparseable"
-
-
-def _relocation_stated(caveats: tuple[Caveat, ...]) -> bool:
-    """Whether *caveats* already state the relocated config home — the rider's dedup test.
-
-    One fact, one code, once per answer: where the ROM machinery's own
-    relocation refusal already stands (it carries the system and declaration
-    the general rider does not), adding the rider would state the same fact a
-    second time on the same answer.
-    """
-    return any(caveat.code == CAVEAT_CONFIG_HOME_RELOCATED for caveat in caveats)
 
 
 # The catalogue file's own name, spelled once: ES-DE uses it for the bundled
@@ -3286,7 +3412,10 @@ class _RomRoot:
     each becomes a different caveat code — and they carry only what those
     messages need, not the messages themselves: two of the three name the
     system's declared ``<path>``, which the root does not know and has no
-    business knowing.
+    business knowing. ``relocated`` is EmuDeck's alone — the on-disk
+    ``portable.txt`` switch; RetroDECK's root has no relocated state, because
+    flatpak pins the home its resolutions derive from (see
+    :meth:`RetroDeck._rom_root`).
     """
 
     directory: str | None = None
@@ -3738,15 +3867,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         the frontend launches from.
 
         ``None`` is a refusal, never "no ROMs here", and it is the same refusal
-        :meth:`rom_location` states — for three of its reasons, the ones that
-        belong to the root: ES-DE's settings exist and could not be read, a
-        Flatpak override moved the config home out from under them, or the
+        :meth:`rom_location` states — for the two of its reasons that belong
+        to the root: ES-DE's settings exist and could not be read, or the
         configured value is not an absolute path even after the frontend's own
         ``~`` expansion. A bare string cannot carry which, and raising is not
         this domain's grammar, so a caller who needs the reason asks
         ``rom_location(system)`` and reads its caveats.
         """
-        return self._rom_root(self._config_home_override()).directory
+        return self._rom_root().directory
 
     def _health_from(self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]) -> Health:
         issues = list(marker_issues)
@@ -3775,21 +3903,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return os.path.join(self._home, ".var", "app", self._APP_ID, "config", "retroarch")
 
     def _sandbox(self) -> _Sandbox:
-        return _Sandbox(self._machine, self._home, self._APP_ID)
-
-    def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
-        """Resolve a core ``.so`` basename against a cfg snapshot's ``libretro_directory``.
-
-        The configured value is written in the sandbox's spelling (live:
-        ``/app/retrodeck/components/...``) and is translated to where the host
-        reads it. ``None`` when nothing resolvable — never a guess.
-        """
-        if global_text is None:
-            return None
-        cores_dir = _core_directory_in(self._sandbox(), global_text)
-        if cores_dir is None:
-            return None
-        return os.path.join(cores_dir, core_so)
+        return _Sandbox(self._machine, self._home, self._APP_ID, expansion_home=self._home)
 
     # ES-DE catalogue — read live: bundled file in the Flatpak deployment,
     # user overlay under <rd_home>/ES-DE/custom_systems (observed layout).
@@ -3904,7 +4018,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             return None, _SETTINGS_UNPARSEABLE
         return settings.get(self._ROM_DIRECTORY_SETTING) or None, None
 
-    def _rom_root(self, moved: tuple[str, str] | None) -> _RomRoot:
+    def _rom_root(self) -> _RomRoot:
         """What ES-DE substitutes for ``%ROMPATH%`` — the ROM root, before any ``<path>``.
 
         The one chain every ROM-directory answer on this handle resolves
@@ -3919,36 +4033,31 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         ``FileData.cpp:289``, ES-DE v3.4.1) — against ES-DE's own home, which
         on this arrangement is the launcher's ``--home "${XDG_CONFIG_HOME}"``
         (:meth:`_esde_config_home`), not the user's. That is the same home
-        the unset default derives from, so the same Flatpak override that
-        stops the default from resolving stops the expansion too: what ``~``
-        becomes then is a tree atlas cannot follow. The absoluteness check
-        runs on the *expanded* value — the raw one is what a refusal names,
-        because the setting's own text is what a user edits.
-
-        *moved* is :meth:`_config_home_override`'s answer, read once by the
-        query this resolution serves — taking it rather than reading it keeps
-        the query's one arrangement-level check its only read of the override
-        files, however many resolutions the answer assembles.
+        the unset default derives from, and no Flatpak override can move it:
+        flatpak force-pins ``XDG_CONFIG_HOME`` to the per-app config
+        directory after applying every override (flatpak 1.16.6,
+        flatpak-context.c:3158-3187 via flatpak-run.c:3574, against the
+        override env applied at :3352; flatpak-run(1); flatpak/flatpak#4529
+        closed as not planned). Both home-derived resolutions therefore
+        resolve on every machine. The absoluteness check runs on the
+        *expanded* value — the raw one is what a refusal names, because the
+        setting's own text is what a user edits.
         """
         configured, unreadable = self._rom_directory()
         if unreadable is not None:
             return _RomRoot(unreadable=unreadable)
         sources = (self._ROM_DIRECTORY_SOURCE,)
         if configured is None:
-            if moved is not None:
-                return _RomRoot(relocated=moved, sources=sources)
             return _RomRoot(directory=self._default_rom_directory(), sources=sources)
         expanded = configured
         if "~" in configured:
-            if moved is not None:
-                return _RomRoot(relocated=moved, sources=sources)
             expanded = expand_home_path(configured, self._esde_config_home())
         if not expanded.startswith("/"):
             return _RomRoot(not_absolute=configured, sources=sources)
         return _RomRoot(directory=expanded, sources=sources)
 
     def _esde_system_dir(
-        self, by_system: Mapping[str, SystemDeclaration], system: str, *, moved: tuple[str, str] | None
+        self, by_system: Mapping[str, SystemDeclaration], system: str
     ) -> _RomDirectory:
         """Where ES-DE puts *system*'s ROMs: the root with the catalogue's ``<path>`` applied.
 
@@ -3959,26 +4068,17 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         matching overrides against a directory the frontend does not launch
         from, which is how an override goes missing on a machine whose two ROM
         paths have drifted apart.
-
-        *moved* travels through to :meth:`_rom_root` — the caller's one read
-        of the override files serves the resolution and the answer-level
-        rider alike.
         """
         declaration = by_system.get(system)
         if declaration is None or declaration.rom_path is None:
             return _RomDirectory(caveats=_rom_path_undeclared_caveat(system, declaration))
         declared = declaration.rom_path
-        root = self._rom_root(moved)
+        root = self._rom_root()
         if root.unreadable is not None:
             return _RomDirectory(
                 caveats=_settings_unreadable_caveat(
                     system, self._esde_settings_path(), root.unreadable
                 )
-            )
-        if root.relocated is not None:
-            return _RomDirectory(
-                sources=root.sources,
-                caveats=self._config_home_relocated_caveat(system, declared, *root.relocated),
             )
         if root.not_absolute is not None:
             return _RomDirectory(
@@ -4024,110 +4124,139 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     # reference machine 2026-08-08): one `flatpak override --show` invocation
     # opens exactly one file, and the four flag combinations — plain,
     # `--user`, `<app id>`, `--user <app id>` — open these four in turn.
-    _FLATPAK_OVERRIDES_USER = os.path.join(".local", "share", "flatpak", "overrides")
+    _FLATPAK_OVERRIDES_USER = os.path.join(_FLATPAK_USER_BASE, "overrides")
     _FLATPAK_OVERRIDES_SYSTEM = os.path.join("/var", "lib", "flatpak", "overrides")
     _FLATPAK_OVERRIDES_GLOBAL = "global"
+    _FLATPAK_DEPLOY_SYSTEM = os.path.join("/var", "lib", "flatpak", "app")
+    _FLATPAK_DEPLOY_USER = os.path.join(_FLATPAK_USER_BASE, "app")
+
+    def _system_overrides_apply(self) -> bool:
+        """Whether the system installation's overrides files speak for this app's runs.
+
+        Flatpak loads them only for an app the running deploy's own
+        installation carries: the deploy resolution searches the user
+        installation first (flatpak-dir-utils.c:294-317, the user dir is
+        inserted at the front; the first hit wins, :278-285), and system
+        overrides are loaded only when the resolved deploy is a system one
+        (flatpak-dir.c:3053-3083, flatpak 1.16.6). So a user deploy silences
+        the system files even where a system deploy also exists, and a
+        machine deploying the app nowhere runs nothing for any override to
+        speak about — only the always-loaded user files are read then.
+        """
+        user = os.path.join(self._home, self._FLATPAK_DEPLOY_USER, self._APP_ID, "current", "active")
+        if self._machine.path_kind(user) == KIND_DIRECTORY:
+            return False
+        system = os.path.join(self._FLATPAK_DEPLOY_SYSTEM, self._APP_ID, "current", "active")
+        return self._machine.path_kind(system) == KIND_DIRECTORY
 
     def _override_files(self) -> tuple[str, ...]:
-        """Every Flatpak overrides file that can speak for this app, most specific first.
+        """The overrides files that speak for this app's runs, least specific first.
 
-        App-specific before global, because that is Flatpak's own precedence —
-        "if the application ID APP is not specified then the overrides affect
-        all applications, but the per-application overrides can override the
-        global overrides" (flatpak-override(1)). Both installations are read at
-        each level: which one deploys this app is not something atlas has
-        established, and the order only decides which key a message names —
-        every one of these files means the same thing to the answer.
+        Flatpak's own composition, order and scope alike: within each
+        installation the global file before the per-app one, the system
+        installation before the user one, each later file overwriting the
+        earlier per key (``flatpak_deploy_get_overrides``,
+        flatpak-dir.c:1518-1567; the environment merge is a plain per-key
+        hash insert, flatpak-context.c:1077-1079). The system files join only
+        where they apply (:meth:`_system_overrides_apply`); the user files
+        always do (flatpak-dir.c:3053-3083).
         """
-        directories = (
-            os.path.join(self._home, self._FLATPAK_OVERRIDES_USER),
-            self._FLATPAK_OVERRIDES_SYSTEM,
-        )
+        directories = []
+        if self._system_overrides_apply():
+            directories.append(self._FLATPAK_OVERRIDES_SYSTEM)
+        directories.append(os.path.join(self._home, self._FLATPAK_OVERRIDES_USER))
         return tuple(
             os.path.join(directory, name)
-            for name in (self._APP_ID, self._FLATPAK_OVERRIDES_GLOBAL)
             for directory in directories
+            for name in (self._FLATPAK_OVERRIDES_GLOBAL, self._APP_ID)
         )
 
-    def _config_home_override(self) -> tuple[str, str] | None:
-        """The overrides file and key that move the app's config home, if one does.
+    def _effective_environment(self) -> dict[str, tuple[str | None, str]]:
+        """The environment the override files hand this app's runs: key -> (value, file).
 
-        The arrangement-level check every query on this handle makes exactly
-        once: the config home is what *all* of this handle's reads are
-        expressed relative to — the marker, the cfg, the override chain,
-        ES-DE's settings all live under the per-app config tree, and every
-        root below them is resolved out of those files — so an environment
-        that moves it invalidates potentially every file atlas read. Two
-        consequences, stated two ways: the ROM question's home-*derived*
-        resolutions stop (the unset default and a ``~`` expansion compute a
-        directory straight from the moved home — :meth:`_rom_root` refuses
-        those rather than stating them), and every other answer keeps
-        answering what the on-disk tree says with the answer-level rider
-        (:meth:`_relocation_caveat`) carrying the doubt.
-
-        Returns ``(path, key)``, or ``None`` when nothing moved it.
+        Composed the way flatpak composes it: every applicable file in
+        :meth:`_override_files` order, later files overwriting earlier ones
+        per key — a later set overwrites an earlier unset and vice versa,
+        because the merge is one hash insert per key
+        (flatpak-context.c:1077-1079). ``None`` is an unset. The file that
+        had the last word travels with each value, so a statement can name
+        what a user would edit.
         """
+        merged: dict[str, tuple[str | None, str]] = {}
         for path in self._override_files():
             text = self._machine.read_text(path).text
             if text is None:
                 continue
-            environment = _environment_overrides(text)
-            for key in _CONFIG_HOME_ENV_KEYS:
-                if key in environment:
-                    return path, key
-        return None
+            for key, value in _environment_overrides(text).items():
+                merged[key] = (value, path)
+        return merged
 
-    def _relocation_caveat(self, moved: tuple[str, str] | None) -> Caveat | None:
-        """The answer-level relocation statement — ``None`` while nothing moved the home.
+    def _cfg_sandbox(self) -> tuple[_Sandbox, tuple[str, ...]]:
+        """The sandbox a cfg read resolves through, its ``~`` base composed from the override files.
 
-        The same code the ROM question's refusal carries, because it is the
-        same fact (a Flatpak override redefined the app's config home); what
-        differs is the consequence stated. The refusal stops a home-derived
-        computation and names the system it stops; this rider rides an answer
-        that still says what the on-disk files say, and states that those
-        files may not be the ones in force. The message names what was read
-        (the overrides file and key) and what it implies (which tree the
-        answer's reads came from), so a client learns both without prose
-        archaeology. One shape either way — the caveat or ``None`` — and the
-        call sites wrap it, the same convention EmuDeck's twin keeps.
+        The one consequence a Flatpak override can still have on this handle,
+        and the cfg-reading queries' one read of the override files. The
+        config home itself cannot be moved: flatpak force-pins the
+        ``XDG_*_HOME`` variables to the per-app directories AFTER applying
+        every override and ``--env`` (flatpak 1.16.6,
+        flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against
+        the context env applied at :3352, both with overwrite;
+        flatpak-run(1) documents the pin; flatpak/flatpak#4529 — the request
+        to lift it — closed as not planned), and every file this handle
+        reads is keyed off ``XDG_CONFIG_HOME`` by RetroDECK's own scripts
+        (``all_vars.sh:4``, retroarch ``component_functions.sh:3``, es-de
+        ``component_launcher.sh:10``). ``HOME`` is different: the host
+        value passes into the sandbox and an override lands on top with
+        nothing reapplied after (flatpak-run.c:3055, :3352), and the one
+        thing it decides among this handle's reads is what RetroArch
+        substitutes for a ``~`` in a cfg value (``getenv("HOME")``,
+        file_path.c:1066-1101, :1457-1468 @ a79435a).
+
+        The override value is applied literally — flatpak expands no ``$`` —
+        so an overridden HOME that is not a literal absolute path expands
+        ``~`` into something that is not one either, and the ordinary
+        machinery states what that shape earns (RetroArch's own directory
+        test refuses it, or the sandbox translation cannot follow it). The
+        source line is the statement that an override is in force at all.
         """
-        if moved is None:
-            return None
-        path, key = moved
-        return Caveat(
-            CAVEAT_CONFIG_HOME_RELOCATED,
-            f"the Flatpak overrides at {path} redefine {key} for this app — the app and the "
-            "emulators it launches resolve their config home through that environment, so the "
-            f"per-app config tree this answer was read from ({self._esde_config_home()}: "
-            "retrodeck.json, retroarch.cfg, ES-DE's settings) and every root resolved out of "
-            "those files may not be the ones in force",
-            {"path": path, "key": key},
-        )
+        environment = self._effective_environment()
+        if "HOME" not in environment:
+            return self._sandbox(), ()
+        value, path = environment["HOME"]
+        if not value:
+            state = "HOME unset" if value is None else 'HOME = ""'
+            line = (
+                f"Flatpak overrides read live ({path}: {state}) — RetroArch leaves a ~ in cfg "
+                "values unexpanded (file_path.c:1066-1101, :1457-1468)"
+            )
+        else:
+            line = (
+                f"Flatpak overrides read live ({path}: HOME) — a ~ in cfg values expands "
+                f"against {value!r}"
+            )
+        sandbox = _Sandbox(self._machine, self._home, self._APP_ID, expansion_home=value or None)
+        return sandbox, (line,)
 
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
         """Every system the catalogue declares, sorted — and the version that read stated.
 
         The findings come from the marker snapshot this query already read, so
         the answer's health, its roots and the version its evidence is weighed
-        against are one revision of the file. The relocation rider follows the
-        catalogue-status statement where one stands, the same order EmuDeck's
-        riders keep.
+        against are one revision of the file.
         """
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
-        rider = self._relocation_caveat(self._config_home_override())
-        riding = () if rider is None else (rider,)
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive = self._read_catalogue(root)
         version = _marker_version(config)
         if not read:
-            return SystemsAnswer(caveats=(*findings, *_catalogue_unread_caveat(), *riding)), version
+            return SystemsAnswer(caveats=(*findings, *_catalogue_unread_caveat())), version
         status = self._catalogue_exclusive(root) if exclusive else ()
         return (
             SystemsAnswer(
                 tuple(sorted(by_system)),
                 (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
-                (*findings, *status, *riding),
+                (*findings, *status),
             ),
             version,
         )
@@ -4157,15 +4286,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
-        moved = self._config_home_override()
-        rider = self._relocation_caveat(moved)
-        riding = () if rider is None else (rider,)
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive = self._read_catalogue(root)
         version = _marker_version(config)
         if not read:
             return (
-                CatalogueAnswer(caveats=(*findings, *_catalogue_unread_caveat(system), *riding)),
+                CatalogueAnswer(caveats=(*findings, *_catalogue_unread_caveat(system))),
                 version,
             )
         status = self._catalogue_exclusive(root, system) if exclusive else ()
@@ -4173,15 +4299,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # that query pays ES-DE's settings read — and only that query can be
         # told the anchor failed, which is the whole reason its caveats join.
         anchor = (
-            self._esde_system_dir(by_system, system, moved=moved)
+            self._esde_system_dir(by_system, system)
             if content_path is not None
             else _NO_ANCHOR_NEEDED
         )
-        # An anchor that stopped at the relocation already states the fact,
-        # with the system and declaration the rider does not carry — one fact,
-        # one code, once per answer.
-        if _relocation_stated(anchor.caveats):
-            riding = ()
         return (
             CatalogueAnswer(
                 _entries_from(
@@ -4192,7 +4313,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     content_path=content_path,
                 ),
                 (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
-                (*findings, *status, *riding, *anchor.caveats),
+                (*findings, *status, *anchor.caveats),
             ),
             version,
         )
@@ -4208,15 +4329,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
-        moved = self._config_home_override()
-        rider = self._relocation_caveat(moved)
-        riding = () if rider is None else (rider,)
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive = self._read_catalogue(root)
         version = _marker_version(config)
         if not read:
             return (
-                RomPlacement(caveats=(*findings, *_catalogue_unread_caveat(system), *riding)),
+                RomPlacement(caveats=(*findings, *_catalogue_unread_caveat(system))),
                 version,
             )
         status = self._catalogue_exclusive(root, system) if exclusive else ()
@@ -4226,19 +4344,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # every outcome except the two that never opened it or opened it and
         # failed. The resolution reports that itself rather than being asked.
         declaration = by_system.get(system)
-        resolved = self._esde_system_dir(by_system, system, moved=moved)
-        # The home-derived refusal is this question's own relocation statement
-        # — richer than the rider by the system and declaration it names — so
-        # the rider stands down exactly there: one fact, one code, once.
-        if _relocation_stated(resolved.caveats):
-            riding = ()
+        resolved = self._esde_system_dir(by_system, system)
         placement = RomPlacement(
             extensions=() if declaration is None else declaration.extensions,
             sources=(
                 _CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,
                 *resolved.sources,
             ),
-            caveats=(*findings, *status, *riding, *resolved.caveats),
+            caveats=(*findings, *status, *resolved.caveats),
         )
         if resolved.directory is None:
             return placement, version
@@ -4256,37 +4369,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 placement,
                 dir=resolved.directory,
                 physical_dir=physical_dir,
-                caveats=(*findings, *status, *riding, *link_caveats),
+                caveats=(*findings, *status, *link_caveats),
             ),
             version,
-        )
-
-    @staticmethod
-    def _config_home_relocated_caveat(
-        system: str, declared: str, path: str, key: str
-    ) -> tuple[Caveat, ...]:
-        """A Flatpak override moved the tree the frontend's home-relative answers derive from.
-
-        Both home-derived resolutions land here — the unset default and a
-        ``~`` in the configured value — because they expand against the same
-        moved home. Its own code rather than the unresolved one, because it is
-        a different claim with a different remedy: nothing about this machine
-        is wrong, and atlas is the one that cannot follow. The fact is wider
-        than this answer — every file this handle reads lives under or is
-        resolved out of that same tree — and the wider statement is
-        :meth:`_relocation_caveat`'s, riding every answer; this refusal is the
-        ROM question's own, naming the system and declaration it stops, and
-        where it stands the rider stands down (one fact, one code, once).
-        """
-        return (
-            Caveat(
-                CAVEAT_CONFIG_HOME_RELOCATED,
-                f"the catalogue declares {system!r} at {declared!r}, and the Flatpak overrides at "
-                f"{path} redefine {key} for this app — so where the frontend's home-relative "
-                "resolution lands (its own default, or a ~ in its setting) is not something atlas "
-                "read, and the settings it did read may not be the ones in force either",
-                {"system": system, "declared": declared, "path": path, "key": key},
-            ),
         )
 
     def _query_from(
@@ -4297,7 +4382,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
-        relocation: tuple[Caveat, ...] = (),
     ) -> _SaveQuery:
         """The placement question over a marker snapshot this query already read.
 
@@ -4305,17 +4389,19 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         query's: savefiles and savestates are governed by the same cfg, the same
         override chain and the same core, so one question object serves both.
 
-        *relocation* is the caller's rider — passed in rather than read here,
-        because the entry routes decide it against their own per-game check
-        (whose anchor may already state the same fact), and reading the
-        override files here would read them a second time inside one query.
+        The sandbox arrives with its ``~`` base composed from the override
+        files (:meth:`_cfg_sandbox`) — the cfg-reading queries' one read of
+        those files — and every resolution in the query goes through that one
+        sandbox, the core path included, so no two parts of one answer can
+        read the same cfg value against different homes.
         """
         health = self._health_from(config, marker_issues)
         global_cfg_path = os.path.join(self._home, RETRODECK_CFG_SUFFIX)
         global_text = self._machine.read_text(global_cfg_path).text
         version = _marker_version(config)
+        sandbox, environment_sources = self._cfg_sandbox()
         return _SaveQuery(
-            sandbox=self._sandbox(),
+            sandbox=sandbox,
             global_cfg_path=global_cfg_path,
             global_text=global_text,
             cfg_label=RETROARCH_CFG,
@@ -4323,13 +4409,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             defaults=UPSTREAM_DEFAULTS,
             content_path=content_path,
             core_so=core_so,
-            core_path_resolver=lambda so: self._core_path_in(global_text, so),
+            core_path_resolver=lambda so: _core_path_from(sandbox, global_text, so),
             arrangement="retrodeck",
             arrangement_version=version,
+            extra_sources=environment_sources,
             extra_caveats=(
                 *extra_caveats,
                 *health.issues,
-                *relocation,
                 *arrangement_caveats(self.kind, observed_version=version),
             ),
         )
@@ -4342,7 +4428,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
-        relocation: tuple[Caveat, ...] = (),
     ) -> SavefilePlacement:
         return _retroarch_savefile_location(
             self._machine,
@@ -4352,7 +4437,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
                 core_so=core_so,
                 extra_caveats=extra_caveats,
-                relocation=relocation,
             ),
         )
 
@@ -4364,7 +4448,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
-        relocation: tuple[Caveat, ...] = (),
     ) -> SavestatePlacement:
         return _retroarch_savestate_location(
             self._machine,
@@ -4374,7 +4457,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
                 core_so=core_so,
                 extra_caveats=extra_caveats,
-                relocation=relocation,
             ),
         )
 
@@ -4387,13 +4469,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         ones leave holes and stated caveats, never guesses.
         """
         config, marker_issues = self._read_marker()
-        rider = self._relocation_caveat(self._config_home_override())
         return self._savefile_location_from(
             config,
             marker_issues,
             content_path=content_path,
             core_so=core_so,
-            relocation=() if rider is None else (rider,),
         )
 
     def savestate_location(
@@ -4406,20 +4486,17 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         instead of the savefile one.
         """
         config, marker_issues = self._read_marker()
-        rider = self._relocation_caveat(self._config_home_override())
         return self._savestate_location_from(
             config,
             marker_issues,
             content_path=content_path,
             core_so=core_so,
-            relocation=() if rider is None else (rider,),
         )
 
     def _firmware_context_from(
         self,
         config: dict[str, Any],
         marker_issues: tuple[Caveat, ...],
-        relocation: tuple[Caveat, ...],
     ) -> FirmwareContext:
         """The firmware context over a marker snapshot this query already read.
 
@@ -4427,29 +4504,25 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         :meth:`health` call, so the findings an answer states and the roots it
         resolved were read from one revision of ``retrodeck.json``.
 
-        The relocation rider joins the findings the context carries: the cfg
-        this context is read from lives in the very tree the override moved,
-        so the doubt is the context's — every firmware answer copies the
-        context's caveats, and all four questions state it through this one
-        seam. *relocation* arrives read rather than being read here, so the
-        callers that read other sources of their own still make one
-        arrangement-level check per query.
+        The sandbox arrives with its ``~`` base composed from the override
+        files (:meth:`_cfg_sandbox`) — this context's one read of those files,
+        and the ``system_directory`` read below goes through the same sandbox
+        the source line describes.
         """
+        sandbox, environment_sources = self._cfg_sandbox()
         return _retroarch_firmware_context(
-            sandbox=self._sandbox(),
+            sandbox=sandbox,
             global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self._retroarch_config_dir(),
-            findings=(*self._health_from(config, marker_issues).issues, *relocation),
+            findings=self._health_from(config, marker_issues).issues,
             arrangement_version=_marker_version(config),
+            extra_sources=environment_sources,
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
         config, marker_issues = self._read_marker()
-        rider = self._relocation_caveat(self._config_home_override())
-        return self._firmware_context_from(
-            config, marker_issues, () if rider is None else (rider,)
-        )
+        return self._firmware_context_from(config, marker_issues)
 
     def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
         """Which emulators RetroDECK offers for *system*, and what each of them wants.
@@ -4477,14 +4550,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
         # The marker this query already read builds the context too — asking
         # for a fresh one would read retrodeck.json twice inside one answer.
-        # The override files follow the same rule: read once here, stated
-        # through the context.
-        rider = self._relocation_caveat(self._config_home_override())
-        context = self._stated(
-            self._firmware_context_from(
-                config, marker_issues, () if rider is None else (rider,)
-            )
-        )
+        # The override files follow the same rule: read once, by the context.
+        context = self._stated(self._firmware_context_from(config, marker_issues))
         answer = _resolve_for_system(
             self._machine, context, system=system, catalogue=catalogue, verify=verify
         )
@@ -4506,8 +4573,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config: dict[str, Any],
         spec: EmulatorSpec,
         content_path: str,
-        *,
-        moved: tuple[str, str] | None,
     ) -> tuple[Caveat, ...]:
         """What the gamelist says about *this* game being launched by *this* entry.
 
@@ -4530,7 +4595,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # this system — and handing the empty snapshot straight to the
         # resolution would spell the first as the second.
         anchor = (
-            self._esde_system_dir(by_system, spec.system, moved=moved)
+            self._esde_system_dir(by_system, spec.system)
             if read
             else _RomDirectory(caveats=_catalogue_unread_caveat(spec.system))
         )
@@ -4554,16 +4619,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         Resolves the placement for a catalogue entry and, when *content_path*
         is given, checks the gamelist for a per-game override that would launch
-        a different emulator — all from one snapshot of the governing sources,
-        the override files included: the per-game check's anchor and the
-        answer-level relocation rider are decided off one read, and where the
-        anchor's own refusal states the relocation, the rider stands down.
+        a different emulator — all from one snapshot of the governing sources.
         """
         config, marker_issues = self._read_marker()
-        moved = self._config_home_override()
-        rider = self._relocation_caveat(moved)
         extra = (
-            self._entry_caveats_for(config, spec, content_path, moved=moved)
+            self._entry_caveats_for(config, spec, content_path)
             if content_path is not None
             else ()
         )
@@ -4573,7 +4633,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
-            relocation=() if rider is None or _relocation_stated(extra) else (rider,),
         )
         return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
 
@@ -4591,10 +4650,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         that would not launch says so on both.
         """
         config, marker_issues = self._read_marker()
-        moved = self._config_home_override()
-        rider = self._relocation_caveat(moved)
         extra = (
-            self._entry_caveats_for(config, spec, content_path, moved=moved)
+            self._entry_caveats_for(config, spec, content_path)
             if content_path is not None
             else ()
         )
@@ -4604,7 +4661,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
-            relocation=() if rider is None or _relocation_stated(extra) else (rider,),
         )
         return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
 
@@ -5455,15 +5511,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
 
     def _sandbox(self) -> _Sandbox:
-        return _Sandbox(self._machine, self._home, self._RA_APP_ID)
-
-    def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
-        if global_text is None:
-            return None
-        cores_dir = _core_directory_in(self._sandbox(), global_text)
-        if cores_dir is None:
-            return None
-        return os.path.join(cores_dir, core_so)
+        return _Sandbox(self._machine, self._home, self._RA_APP_ID, expansion_home=self._home)
 
     def _query(
         self,
@@ -5485,8 +5533,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         cfg = self._machine.read_text(global_cfg_path)
         health = self._health_from(settings, marker_issues, cfg.status)
         version = self._observed_backend_head()
+        sandbox = self._sandbox()
         return _SaveQuery(
-            sandbox=self._sandbox(),
+            sandbox=sandbox,
             global_cfg_path=global_cfg_path,
             global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
@@ -5494,7 +5543,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             defaults=UPSTREAM_DEFAULTS,
             content_path=content_path,
             core_so=core_so,
-            core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
+            core_path_resolver=lambda so: _core_path_from(sandbox, cfg.text, so),
             arrangement="emudeck",
             arrangement_version=version,
             extra_caveats=(
@@ -5695,22 +5744,15 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         any other. Translating it would move the answer to a directory this
         RetroArch never touches.
         """
-        return _Sandbox(self._machine, self._home, self._app_id)
-
-    def _core_path_in(self, global_text: str | None, core_so: str) -> str | None:
-        if global_text is None:
-            return None
-        cores_dir = _core_directory_in(self._sandbox(), global_text)
-        if cores_dir is None:
-            return None
-        return os.path.join(cores_dir, core_so)
+        return _Sandbox(self._machine, self._home, self._app_id, expansion_home=self._home)
 
     def _query(self, *, content_path: str | None, core_so: str | None) -> _SaveQuery:
         """The placement question, over one read of this install's cfg."""
         cfg = self._machine.read_text(self._cfg_path())
         health = self._health_from(cfg.status)
+        sandbox = self._sandbox()
         return _SaveQuery(
-            sandbox=self._sandbox(),
+            sandbox=sandbox,
             global_cfg_path=self._cfg_path(),
             global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
@@ -5718,7 +5760,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             defaults=UPSTREAM_DEFAULTS,
             content_path=content_path,
             core_so=core_so,
-            core_path_resolver=lambda so: self._core_path_in(cfg.text, so),
+            core_path_resolver=lambda so: _core_path_from(sandbox, cfg.text, so),
             arrangement="bare",
             arrangement_version=None,
             extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),

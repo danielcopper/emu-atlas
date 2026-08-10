@@ -451,7 +451,7 @@ def is_app_relative(raw: str) -> bool:
     return raw.startswith(_APP_DIR_PREFIX)
 
 
-def expand_home(raw: str, *, home: str) -> str | None:
+def expand_home(raw: str, *, home: str | None) -> str | None:
     """Expand a leading ``~`` against *home*; ``None`` when the value sets no path.
 
     Blank and the literal ``default`` are RetroArch's "unset" spellings, the
@@ -461,6 +461,17 @@ def expand_home(raw: str, *, home: str) -> str | None:
     (``config_file.c:1202-1216``, ``file_path.c:1066-1101``) on desktop builds.
     The value is used exactly as parsed: a quoted value may legitimately carry
     leading or trailing spaces, and RetroArch does not trim them.
+
+    *home* is what the running RetroArch's environment answers for ``HOME`` —
+    the substitution reads ``getenv("HOME")`` (``fill_pathname_home_dir``,
+    ``file_path.c:1457-1468``) — so it is whatever home the caller established
+    for that process, not necessarily the machine's. ``None`` and the empty
+    string are the absent and empty variable, and both leave the value exactly
+    as written: an empty home skips the whole substitution block
+    (``file_path.c:1081``) and the input is copied through unchanged
+    (``:1100``). A *home* with a trailing slash is not doubled — the separator
+    is inserted only when the copied home does not already end in one
+    (``file_path.c:1088-1094``).
 
     This is the one place the port knowingly departs from upstream: once a home
     directory is filled, ``in_path += 2`` runs unconditionally
@@ -472,10 +483,12 @@ def expand_home(raw: str, *, home: str) -> str | None:
     """
     if raw in ("", _UNSET_VALUE):
         return None
+    if not home:
+        return raw
     if raw == "~":
         return home
     if raw.startswith("~/"):
-        return home + raw[1:]
+        return home + raw[2:] if home.endswith("/") else home + raw[1:]
     return raw
 
 
@@ -603,7 +616,7 @@ def _resolve_flag(
 
 
 def _resolve_directory(
-    layers: Sequence[_Layer], *, keys: LayoutKeys, home: str, is_directory: DirectoryCheck | None
+    layers: Sequence[_Layer], *, keys: LayoutKeys, home: str | None, is_directory: DirectoryCheck | None
 ) -> tuple[str | None, str, tuple[RejectedDirectory, ...]]:
     """The family's root through the chain — ``None`` when the platform default applies.
 
@@ -700,7 +713,7 @@ def resolve_layout(
     global_text: str | None,
     *,
     keys: LayoutKeys,
-    home: str,
+    home: str | None,
     cfg_label: str,
     defaults: LayoutDefaults,
     overrides: Sequence[CfgLayer] = (),
@@ -724,7 +737,10 @@ def resolve_layout(
         silently defaulting to the savefile quartet would answer the wrong
         question in the one shape that looks right.
     home:
-        The machine home, used to expand a leading ``~`` in the root value.
+        What the running RetroArch's environment answers for ``HOME``, used to
+        expand a leading ``~`` in the root value (:func:`expand_home`) —
+        usually the machine home, and ``None`` where that environment carries
+        no usable HOME, which leaves a ``~`` value exactly as written.
     cfg_label:
         Human-readable label for the global cfg, woven into provenance strings.
     defaults:

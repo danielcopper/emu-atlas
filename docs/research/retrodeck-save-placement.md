@@ -16,7 +16,8 @@ live in the Flatpak at `/var/lib/flatpak/app/net.retrodeck.retrodeck/current/act
 **not** in the RetroDECK Git repository. EmuDeck has two pinned generations: `acc45fc` (clone of 2026-07-23, the pin
 §13's original findings were read at) and `863ab69` (default branch `main`, fetched 2026-08-09, the pin behind §13b and
 the corrections marked in §13); ES-DE upstream facts cite the `v3.4.1` tag — the current stable, and the same revision
-RetroDECK's shipped fork derives from.
+RetroDECK's shipped fork derives from. Flatpak facts cite tag `1.16.6` — the reference machine's own flatpak — at commit
+`e761a8885453c217a931281092a641ebbdd0a0c6` (see §15's env-composition subsection).
 
 ## 1. The target matrix
 
@@ -752,9 +753,10 @@ with both absent, the process's current working directory (`FileSystemUtil.cpp:2
 for atlas: RetroDECK's launcher always passes `--home`, and the EmuDeck handle expands against the home the caller
 established for the machine — atlas never models an ES-DE process without one, so no answer rests on the CWD fallback.
 So a `~`-carrying `ROMDirectory` is not an unresolvable value: it resolves against the same per-arrangement home the
-empty-setting default derives from, and the same relocation that stops the default from resolving (a Flatpak override
-here, `portable.txt` on EmuDeck) stops the expansion. What stays unresolvable is what ES-DE resolves against bases atlas
-has not established: relative values (the process's working directory) and `%ESPATH%` (the binary directory,
+empty-setting default derives from. On RetroDECK that home cannot be moved at all — the `--home` is the pinned
+`XDG_CONFIG_HOME` (the env-composition subsection below) — while on EmuDeck a `portable.txt` may move it, and stops
+default and expansion alike there. What stays unresolvable is what ES-DE resolves against bases atlas has not
+established: relative values (the process's working directory) and `%ESPATH%` (the binary directory,
 `FileData.cpp:300-302`).
 
 **[V]** The token is _required_ only in `createSystemDirectories()` (~L1214), whose guard at ~L1366 skips any system
@@ -795,10 +797,10 @@ default is a reading rather than an assumption.
 **[D]** RetroDECK ships the `RetroDECK/ES-DE` fork; `getROMDirectory` is taken as unmodified at the pinned build. The
 component is a binary here, so this is not verified against fork source.
 
-**[V]** What can still move that tree is a Flatpak override redefining `XDG_CONFIG_HOME` or `HOME` for the app. Four
-files can carry one. Each was observed under `strace` (flatpak 1.16.6, reference machine 2026-08-08); one
-`flatpak override --show` invocation opens exactly **one** file, so the set below is four separate runs, one per flag
-combination — reproduce it that way, not with a single command:
+**[V]** Nothing can move that tree — the finding that retired atlas's relocation guard. Four Flatpak overrides files can
+redefine environment variables for the app; each was observed under `strace` (flatpak 1.16.6, reference machine
+2026-08-08); one `flatpak override --show` invocation opens exactly **one** file, so the set below is four separate
+runs, one per flag combination — reproduce it that way, not with a single command:
 
 | invocation                                | file opened                                 | scope                          |
 | ----------------------------------------- | ------------------------------------------- | ------------------------------ |
@@ -807,9 +809,80 @@ combination — reproduce it that way, not with a single command:
 | `flatpak override --show --user`          | `~/.local/share/flatpak/overrides/global`   | user installation, every app   |
 | `flatpak override --show`                 | `/var/lib/flatpak/overrides/global`         | system installation, every app |
 
-Per-app beats global — "if the application ID APP is not specified then the overrides affect all applications, but the
-per-application overrides can override the global overrides" (`flatpak-override(1)`). None of the four exists on the
-reference machine (every run returned `ENOENT`), so the resolved default holds there.
+None of the four exists on the reference machine (every run returned `ENOENT`). What they can and cannot change is the
+next subsection's finding: an `XDG_CONFIG_HOME` entry in any of them is **inert** — flatpak force-pins the XDG variables
+after applying every override — so the per-app config tree the launcher's `--home` names is the tree in force on every
+machine, override files or no.
+
+### Flatpak environment composition — what an override can and cannot move
+
+All flatpak facts below are read at tag `1.16.6` (commit `e761a8885453c217a931281092a641ebbdd0a0c6`) — the flatpak the
+reference machine runs — and man-page citations are that tag's own `doc/` sources.
+
+**[V]** **Which files apply, and in which order.** Flatpak loads the system installation's overrides only for an app the
+system installation deploys, and the user installation's always (`flatpak_dir_load_deployed`,
+`flatpak-dir.c:3053-3083`); when both installations deploy the app, the user one runs — the deploy search puts the user
+dir first and the first hit wins (`flatpak_find_deploy_for_ref`, `flatpak-dir-utils.c:294-317`, `:278-285`). The
+applicable files merge in one order: system-global → system-app → user-global → user-app
+(`flatpak_deploy_get_overrides`, `flatpak-dir.c:1518-1567`), and the environment merge is a plain per-key hash insert
+(`flatpak-context.c:1077-1079`) — the last applicable file that names a key wins, a later set overwriting an earlier
+unset and vice versa.
+
+**[V]** **Values are literal GKeyFile strings.** `[Environment]` entries are read with `g_key_file_get_string`
+(`flatpak-context.c:1944`) and applied verbatim — **no `$VAR` is ever expanded**, by flatpak or by anything before the
+app. GKeyFile semantics apply: leading whitespace of a value is skipped and trailing kept (GLib 2.84.4,
+`g_key_file_parse_key_value_pair`), the escapes `\s` `\n` `\t` `\r` `\\` decode, and a value whose escape does not
+decode comes back `NULL` — which flatpak then applies as an **unset** (`flatpak-context.c:1944-1946` reads with a `NULL`
+`GError`; a `NULL` value unsets, `flatpak-run.c:752-755`). `unset-environment` in `[Context]` beats `[Environment]`
+within the same file, deliberately (`flatpak-context.c:1950-1972`). A file GKeyFile cannot load at all fails the deploy
+load and `flatpak run` with it (`flatpak-dir.c:2917-2940` propagates everything but `ENOENT`) — the app never launches,
+so that state is out of every resolver question's reach.
+
+**[V]** **The XDG pin.** The sandbox environment is assembled in this order inside `flatpak_run_app`: the host
+environment (`flatpak_bwrap_new(NULL)` → `g_get_environ()`, `flatpak-run.c:3055`), the static defaults
+(`flatpak_run_apply_env_default`, `:3351`; the `default_exports` table at `:542` touches `PATH`, `XDG_CONFIG_DIRS`, the
+`LD_*`/`TMP*` unsets — not `HOME`), the merged context environment — metadata `[Environment]`, all override files,
+`--env` — (`flatpak_run_apply_env_vars`, `:3352`), and then, **after all of that and with overwrite**, the per-app XDG
+variables: `flatpak-run.c:3574` → `:505` → `flatpak_context_apply_env_appid` (`flatpak-context.c:3286`, `:3158-3187`),
+which forces `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME` and `XDG_STATE_HOME` to the **host-spelled** per-app
+paths (`flatpak_get_data_dir`, `flatpak-context.c:3074-3081`; `flatpak_bwrap_set_env` overwrites,
+`flatpak-bwrap.c:87-93`). The block runs on every normal app run — `app_id_dir` is unset only for
+`flatpak-spawn --sandbox` (`flatpak-run.c:3290-3291`). So an override that sets **or unsets** any `XDG_*_HOME` never
+reaches the app. Documented, intended behavior, not an accident of ordering: flatpak-run(1) — "Flatpak also overrides
+the XDG environment variables to point sandboxed applications at their writable filesystem locations below
+`~/.var/app/$APPID/`" (`doc/flatpak-run.xml:138-147`) — and the request to make them overridable,
+[flatpak/flatpak#4529](https://github.com/flatpak/flatpak/issues/4529), is closed as not planned.
+[#2413](https://github.com/flatpak/flatpak/issues/2413) shows the same behavior reported in 2018.
+
+**[V]** **`HOME` is the key that does reach the app.** It enters the sandbox environment from the host
+(`flatpak-run.c:3055`), the static defaults leave it alone, an `[Environment]` override lands on top of it at `:3352` —
+and nothing reapplies it afterwards. So a `HOME` override (or unset) is effective in the sandbox.
+
+**[V]** **What an effective `HOME` decides among atlas's reads: the cfg `~` base, nothing else.** Every file the
+RetroDECK handle reads is keyed off the pinned `XDG_CONFIG_HOME` by RetroDECK's own scripts: the marker
+(`rd_conf="$XDG_CONFIG_HOME/retrodeck/retrodeck.json"`, `libexec/all_vars.sh:4`), RetroArch's cfg
+(`retroarch_config="$XDG_CONFIG_HOME/retroarch/retroarch.cfg"`, `components/retroarch/component_functions.sh:3`), and
+ES-DE's whole tree via the launcher's `--home "${XDG_CONFIG_HOME}"` (`components/es-de/component_launcher.sh:10`). What
+resolves against `HOME` is RetroArch's own `~` substitution in cfg values: `fill_pathname_expand_special`
+(`file_path.c:1066-1101`, RetroArch `a79435a`) calls `fill_pathname_home_dir` (`:1457-1468`), which reads
+`getenv("HOME")`. With `HOME` unset — or set to the empty string — the buffer stays empty, the substitution block is
+skipped (`:1081`), and the value passes through **verbatim** (`:1100`): a `~/`-value becomes a relative path RetroArch's
+own `path_is_directory` test then refuses (`configuration.c:6914-6960`). A home ending in a slash is not doubled
+(`:1088-1094`).
+
+**[D]** **Version range.** The pin is source-verified at 1.16.6 (this machine's flatpak) and documented in
+flatpak-run(1); #2413 dates the behavior to 2018. It is taken as the behavior of every flatpak a supported RetroDECK
+runs under — world knowledge, versioned and cited per the ground rule, since no file on a machine states its flatpak's
+env assembly.
+
+**Consequence for atlas.** The relocation guard — a refusal of the home-derived ROM resolutions plus a
+`config-home-relocated` rider on every answer whenever any override file named `XDG_CONFIG_HOME` or `HOME` — stated
+doubt the pinned source refutes, and retired. The override files remain read by exactly the queries they can still
+affect: the cfg-reading ones (save, savestate, firmware), which compose the applicable files per the merge order above
+and take the effective `HOME` as the `~`-expansion base — followed when it is a literal absolute path, and otherwise
+handed to the ordinary value-shape machinery (RetroArch's directory test refuses a non-absolute expansion; the sandbox
+translation states a `/var/...` one). `config-home-relocated` lives on solely as EmuDeck's `portable.txt` statement
+(§13b), an on-disk switch that really may move ES-DE's tree.
 
 **Consequence for every ROM-directory answer, not just the ROM question.** The dependency being one-way settles which
 source each of them reads: `roms_path` is RetroDECK's _input_ to the sed and nothing reads it back, so from atlas's view

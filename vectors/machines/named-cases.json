@@ -6890,8 +6890,8 @@
       }
     },
     {
-      "name": "rom-location-stops-resolving-when-an-override-moves-the-config-home",
-      "rationale": "The frontend's home-relative default is only knowable while its --home expands to the tree atlas read the settings from, and a Flatpak override can redefine exactly that. Here one does, so atlas stops resolving and says why rather than stating the directory it would otherwise have computed \u2014 which would be a real directory the caller would go looking in, belonging to a configuration that is not in force. config-home-relocated rather than rom-path-unresolved because the two are different claims: nothing about this machine's setting is wrong, atlas is the one that cannot follow, and the same fact reaches further than this answer \u2014 if the config home moved, the es_settings.xml atlas read may not be the one the frontend reads either, which is how an answer lands on this branch at all.",
+      "name": "an-xdg-override-is-inert-and-the-unset-default-resolves",
+      "rationale": "A Flatpak override redefining XDG_CONFIG_HOME never reaches the app: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 \u2014 the request to lift it \u2014 was closed as not planned). The frontend's --home \"${XDG_CONFIG_HOME}\" therefore stays exactly where atlas read the settings from, the unset-ROMDirectory default resolves against it, and the answer carries no caveat \u2014 the retired refusal stated doubt about which tree is in force, and the pinned source refutes the doubt: the tree atlas reads is the one in force, override or no.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6926,7 +6926,7 @@
           }
         ],
         "rom_location": {
-          "dir": null,
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs/n64",
           "physical_dir": null,
           "extensions": [
             ".n64",
@@ -6936,23 +6936,13 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "system": "n64",
-                "declared": "%ROMPATH%/n64",
-                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
-                "key": "XDG_CONFIG_HOME"
-              }
-            }
-          ]
+          "caveats": []
         }
       }
     },
     {
-      "name": "rom-location-reads-the-global-overrides-file-too",
-      "rationale": "flatpak override with no app id writes <installation>/overrides/global, and those overrides apply to every app \u2014 so a resolver that reads only the per-app file calls the environment unmoved when it has been moved. Here nothing names this app and the global file redefines HOME, which relocates the config home just as surely as XDG_CONFIG_HOME does. The system installation's copy is read as well as the user's, because which installation deploys this app is not something atlas has established and refusing on either is the direction that cannot state a wrong directory.",
+      "name": "a-home-override-cannot-move-the-config-home",
+      "rationale": "flatpak override with no app id writes <installation>/overrides/global, and the system installation's copy speaks here because the system installation deploys this app (flatpak-dir.c:3053-3083). Its HOME redefinition does reach the sandbox \u2014 HOME passes through from the host environment and the override lands on top of it with nothing reapplied after (flatpak-run.c:3055, :3352) \u2014 but nothing this answer reads resolves against HOME: the marker, the cfg and ES-DE's settings are all keyed off the pinned XDG_CONFIG_HOME (all_vars.sh:4, component_functions.sh:3), and ES-DE derives its unset-ROMDirectory default from the launcher's --home \"${XDG_CONFIG_HOME}\" (component_launcher.sh:10). So the default resolves exactly as with no override file at all; HOME's one remaining consequence is the ~ in retroarch.cfg values, and this machine's cfg carries none.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6987,7 +6977,7 @@
           }
         ],
         "rom_location": {
-          "dir": null,
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs/n64",
           "physical_dir": null,
           "extensions": [
             ".n64",
@@ -6997,17 +6987,7 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "system": "n64",
-                "declared": "%ROMPATH%/n64",
-                "path": "/var/lib/flatpak/overrides/global",
-                "key": "HOME"
-              }
-            }
-          ]
+          "caveats": []
         }
       }
     },
@@ -7174,7 +7154,7 @@
     },
     {
       "name": "rom-location-expands-a-tilde-romdirectory-the-way-the-frontend-does",
-      "rationale": "The setting holds a ~-prefixed value, and ES-DE expands it: getROMDirectory hands the configured value to expandHomePath (FileData.cpp:289, v3.4.1), whose whole body is String::replace(path, \"~\", getHomePath()) (FileSystemUtil.cpp:663-675) \u2014 and this frontend's home is the launcher's --home \"${XDG_CONFIG_HOME}\", the per-app config home the empty-setting default already derives from, not the user's. So the answer lands under .var/app/net.retrodeck.retrodeck/config: refusing here made atlas stricter than the original it mirrors, and expanding against $HOME instead would name a real directory the frontend never launches from. What ES-DE does not resolve keeps its refusal \u2014 a relative value stays rom-path-unresolved, a moved config home stays config-home-relocated.",
+      "rationale": "The setting holds a ~-prefixed value, and ES-DE expands it: getROMDirectory hands the configured value to expandHomePath (FileData.cpp:289, v3.4.1), whose whole body is String::replace(path, \"~\", getHomePath()) (FileSystemUtil.cpp:663-675) \u2014 and this frontend's home is the launcher's --home \"${XDG_CONFIG_HOME}\", the per-app config home the empty-setting default already derives from, not the user's. So the answer lands under .var/app/net.retrodeck.retrodeck/config: refusing here made atlas stricter than the original it mirrors, and expanding against $HOME instead would name a real directory the frontend never launches from. What ES-DE does not resolve keeps its refusal \u2014 a relative value stays rom-path-unresolved.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7282,8 +7262,8 @@
       }
     },
     {
-      "name": "rom-location-stops-expanding-a-tilde-when-an-override-moves-the-config-home",
-      "rationale": "~ expands against the same home the unset default derives from \u2014 the frontend's --home \"${XDG_CONFIG_HOME}\" \u2014 so the same Flatpak override that stops the default from resolving stops the expansion: what ~ becomes is a tree atlas cannot follow. config-home-relocated rather than rom-path-unresolved for the same reason as the unset case: nothing about this machine's setting is wrong \u2014 ES-DE expands it fine \u2014 atlas is the one that cannot follow, and if the config home moved, the es_settings.xml atlas read may not be the one in force either.",
+      "name": "an-xdg-override-does-not-stop-the-tilde-expansion",
+      "rationale": "~ expands against the same home the unset default derives from \u2014 the frontend's --home \"${XDG_CONFIG_HOME}\" \u2014 and no override can move that base: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 \u2014 the request to lift it \u2014 was closed as not planned). The expansion therefore proceeds against the per-app config home on every machine, and the retired refusal, which stopped it whenever an override file named XDG_CONFIG_HOME, was refusing a resolution the frontend performs identically with and without the override.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7318,7 +7298,7 @@
           }
         ],
         "rom_location": {
-          "dir": null,
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Emulation/roms/n64",
           "physical_dir": null,
           "extensions": [
             ".n64",
@@ -7328,23 +7308,13 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "system": "n64",
-                "declared": "%ROMPATH%/n64",
-                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
-                "key": "XDG_CONFIG_HOME"
-              }
-            }
-          ]
+          "caveats": []
         }
       }
     },
     {
-      "name": "the-relocation-guard-rides-every-retrodeck-answer",
-      "rationale": "A Flatpak override that redefines XDG_CONFIG_HOME (or HOME) for this app moves the config home every file this handle reads is expressed relative to \u2014 retrodeck.json, retroarch.cfg, the override chain, ES-DE's settings \u2014 and every root resolved out of those files inherits the doubt. The guard is one arrangement-level check per query: every question keeps answering what the on-disk tree says, and config-home-relocated rides each answer exactly once, naming the overrides file and the key. Nothing new refuses \u2014 the configured absolute ROMDirectory, savefile_directory and savestate_directory resolve exactly as on an unmoved machine, because the caveat carries the doubt and the answer carries the reading; only the ROM question's home-derived resolutions refuse, and this fixture is not in that state.",
+      "name": "an-xdg-override-leaves-every-retrodeck-answer-untouched",
+      "rationale": "The retired relocation guard rode every answer of exactly this machine; the evidence retired it: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 \u2014 the request to lift it \u2014 was closed as not planned), so the per-app config tree the answers were read from is exactly the one in force and every answer \u2014 the catalogue, the placements, the firmware \u2014 is byte-identical to the machine without the override file. The one thing an override still decides (the sandbox's HOME, and with it the ~ expansion base in retroarch.cfg values) decides nothing here: this override names only XDG_CONFIG_HOME.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7399,15 +7369,7 @@
           "systems": [
             "n64"
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
-                "key": "XDG_CONFIG_HOME"
-              }
-            }
-          ]
+          "caveats": []
         },
         "catalogue": {
           "entries": [
@@ -7420,15 +7382,7 @@
               "caveats": []
             }
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
-                "key": "XDG_CONFIG_HOME"
-              }
-            }
-          ]
+          "caveats": []
         },
         "rom_location": {
           "dir": "/mnt/sd/retrodeck/roms/n64",
@@ -7441,15 +7395,7 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
-                "key": "XDG_CONFIG_HOME"
-              }
-            }
-          ]
+          "caveats": []
         },
         "savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves",
@@ -7462,15 +7408,7 @@
             "files": [],
             "complete": false
           },
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
-                "key": "XDG_CONFIG_HOME"
-              }
-            }
-          ],
+          "caveats": [],
           "granularity": null
         },
         "savestate_location": {
@@ -7484,15 +7422,7 @@
             "files": [],
             "complete": false
           },
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
-                "key": "XDG_CONFIG_HOME"
-              }
-            }
-          ]
+          "caveats": []
         },
         "firmware": {
           "root": "/mnt/sd/retrodeck/bios",
@@ -7509,21 +7439,13 @@
             }
           ],
           "unclaimed": [],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck",
-                "key": "XDG_CONFIG_HOME"
-              }
-            }
-          ]
+          "caveats": []
         }
       }
     },
     {
-      "name": "the-rom-refusal-stands-and-the-rider-stands-down",
-      "rationale": "The same relocated machine answers the ROM question and the rest differently, and the fact is one code stated once per answer either way. ROMDirectory is unset, so the ROM directory would be computed straight from the moved home \u2014 that refusal predates the guard and stays exactly as it was, carrying the system and declaration the general rider does not; where it stands the rider stands down. Every other answer keeps resolving what the cfg says and carries the general rider instead. The relocation arrives through the global overrides file redefining HOME \u2014 the file that applies to every app, and the key that moves the config home just as surely as the per-app XDG_CONFIG_HOME does.",
+      "name": "a-home-override-leaves-the-esde-answers-untouched",
+      "rationale": "The same relocated-looking machine through the HOME spelling: the system-global overrides file redefines HOME, which does reach the sandbox \u2014 and moves none of these answers. ES-DE's unset-ROMDirectory default derives from --home \"${XDG_CONFIG_HOME}\", which the pin keeps at the per-app config home; the marker and the cfg are read from that same pinned tree; and the cfg's savefile_directory is absolute, so the one thing HOME decides \u2014 what RetroArch substitutes for a ~ in a cfg value (file_path.c:1066-1101, :1457-1468) \u2014 has nothing to decide. The retired refusal answered no directory for the unset ROMDirectory; the frontend resolves it the same on every machine.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7567,18 +7489,10 @@
           "systems": [
             "n64"
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/var/lib/flatpak/overrides/global",
-                "key": "HOME"
-              }
-            }
-          ]
+          "caveats": []
         },
         "rom_location": {
-          "dir": null,
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs/n64",
           "physical_dir": null,
           "extensions": [
             ".n64",
@@ -7588,17 +7502,7 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "system": "n64",
-                "declared": "%ROMPATH%/n64",
-                "path": "/var/lib/flatpak/overrides/global",
-                "key": "HOME"
-              }
-            }
-          ]
+          "caveats": []
         },
         "savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves",
@@ -7611,15 +7515,185 @@
             "files": [],
             "complete": false
           },
+          "caveats": [],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-home-override-moves-the-cfg-tilde-expansion",
+      "rationale": "HOME is the one override key that reaches the app, and the one thing it decides among this handle's reads: RetroArch substitutes getenv(\"HOME\") for the leading ~ in a cfg value (fill_pathname_expand_special, file_path.c:1066-1101, via fill_pathname_home_dir :1457-1468, RetroArch a79435a). The override value is applied literally \u2014 flatpak expands no $ \u2014 and it composes across files in flatpak's own merge order (system-global, system-app, user-global, user-app, each later file overwriting per key: flatpak-dir.c:1518-1567, flatpak-context.c:1077-1079), so the user-app /mnt/elsewhere wins over the user-global /mnt/userglobal. /home/deck/saves exists too, and is the discriminating direction: a resolver still expanding against the machine home would answer it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
+          "/home/deck/.local/share/flatpak/overrides/global": "[Environment]\nHOME=/mnt/userglobal\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Environment]\nHOME=/mnt/elsewhere\n",
+          "/mnt/elsewhere/saves/.keep": "",
+          "/mnt/userglobal/saves/.keep": "",
+          "/home/deck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/elsewhere/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-unset-home-leaves-the-cfg-tilde-verbatim",
+      "rationale": "unset-environment removes HOME from the sandbox environment (flatpak-context.c:1950-1972; a NULL value unsets, flatpak-run.c:752-755). getenv(\"HOME\") is then NULL, fill_pathname_home_dir leaves its buffer empty, and the substitution block is skipped \u2014 the value passes through as the literal ~/saves (file_path.c:1081, :1100, :1457-1468). RetroArch's own path_is_directory test refuses that read (configuration.c:6914-6960) and the root that stood before it stands: the platform default under the pinned config tree. /home/deck/saves exists, which is what a resolver still expanding ~ against the machine home would answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nunset-environment=HOME;\n",
+          "/home/deck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
           "caveats": [
             {
-              "code": "config-home-relocated",
+              "code": "invalid-save-directory",
               "data": {
-                "path": "/var/lib/flatpak/overrides/global",
-                "key": "HOME"
+                "layer": "retroarch.cfg",
+                "configured": "~/saves",
+                "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
               }
             }
           ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-system-override-does-not-speak-for-a-user-deployed-app",
+      "rationale": "Which installation deploys the app decides which overrides files flatpak loads: the deploy search puts the user installation first (flatpak-dir-utils.c:294-317, the first hit wins :278-285), and the system installation's overrides are loaded only for a system deploy (flatpak-dir.c:3053-3083). This app is deployed under ~/.local/share/flatpak, so the system-global file's HOME=/mnt/elsewhere \u2014 which moves the expansion on a system deploy \u2014 speaks for nothing here, and the ~ expands against the machine home. /mnt/elsewhere/saves exists too, and is the discriminating direction: a resolver reading every overrides file unscoped would answer it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
+          "/var/lib/flatpak/overrides/global": "[Environment]\nHOME=/mnt/elsewhere\n",
+          "/mnt/elsewhere/saves/.keep": "",
+          "/home/deck/saves/.keep": ""
+        },
+        "cores": {
+          "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [],
           "granularity": null
         }
       }

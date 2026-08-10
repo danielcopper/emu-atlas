@@ -168,11 +168,16 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   "none" where sealed's empty is a failed look.
 - **A directory read out of a config atlas could not read is not a directory.** `rom_location` resolves the frontend's
   own documented default where the ROM-directory setting is genuinely unset, because on this arrangement the home that
-  default hangs off is read rather than assumed. It refuses where the settings file exists and cannot be read
-  (`frontend-settings-unreadable`) and where a Flatpak override moved the tree that file lives in
-  (`config-home-relocated`) — the second reaching past this answer, since other readings from the same handle rest on
-  that tree too. Missing and unreadable are the same empty mapping and opposite facts, which is exactly the collapse the
-  seam's explicit outcomes exist to prevent.
+  default hangs off is read rather than assumed — and no Flatpak override can move it: flatpak force-pins the
+  `XDG_*_HOME` variables to the per-app directories after applying every override (flatpak 1.16.6; see the env
+  composition section of `docs/research/retrodeck-save-placement.md`), so an overrides file naming `XDG_CONFIG_HOME` is
+  inert and the tree atlas reads is the tree in force. What an override can still move is the sandbox's `HOME`, whose
+  one consequence among atlas's reads is the `~`-expansion base of `retroarch.cfg` values — followed when the effective
+  value is a literal path, refused by the ordinary value-shape machinery when it is not. `rom_location` refuses where
+  the settings file exists and cannot be read (`frontend-settings-unreadable`); `config-home-relocated` remains
+  EmuDeck's statement, for the on-disk `portable.txt` switch that really may move ES-DE's tree. Missing and unreadable
+  are the same empty mapping and opposite facts, which is exactly the collapse the seam's explicit outcomes exist to
+  prevent.
 
 ## The machine seam
 
