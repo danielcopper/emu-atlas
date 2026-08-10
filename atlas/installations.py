@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import os
 from glob import escape as _glob_escape
-from typing import Any, Callable, Mapping, Protocol, Sequence, runtime_checkable
+from typing import Any, Callable, Mapping, Protocol, Sequence, cast, runtime_checkable
 
 from dataclasses import dataclass, replace as _dc_replace
 
@@ -3408,6 +3408,35 @@ class EmulatorEntry:
         )
 
 
+# One caveat-replacement helper per answer type, monomorphic on purpose: a
+# generic one would hand Sonar's type engine the very TypeVar it cannot carry
+# (it types dataclasses.replace as bare DataclassInstance), and the concrete
+# signatures are what keep the declared type standing at every call site. Each
+# helper holds the one cast: Sonar's engine does not carry replace's generic;
+# basedpyright resolves it — the cast is for the weaker engine, made true by
+# the signature's contract with its callers.
+
+
+def _systems_with_caveats(answer: SystemsAnswer, caveats: tuple[Caveat, ...]) -> SystemsAnswer:
+    """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
+    return cast(SystemsAnswer, _dc_replace(answer, caveats=caveats))
+
+
+def _rom_placement_with_caveats(answer: RomPlacement, caveats: tuple[Caveat, ...]) -> RomPlacement:
+    """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
+    return cast(RomPlacement, _dc_replace(answer, caveats=caveats))
+
+
+def _catalogue_with_caveats(answer: CatalogueAnswer, caveats: tuple[Caveat, ...]) -> CatalogueAnswer:
+    """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
+    return cast(CatalogueAnswer, _dc_replace(answer, caveats=caveats))
+
+
+def _firmware_with_caveats(answer: FirmwareAnswer, caveats: tuple[Caveat, ...]) -> FirmwareAnswer:
+    """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
+    return cast(FirmwareAnswer, _dc_replace(answer, caveats=caveats))
+
+
 class _CatalogueQueries:
     """The catalogue entry points, answered by every handle — including with a refusal.
 
@@ -3436,9 +3465,8 @@ class _CatalogueQueries:
     def systems(self) -> SystemsAnswer:
         """Every system the frontend catalogue declares, sorted."""
         answer, version = self._systems_answer()
-        return _dc_replace(
-            answer,
-            caveats=(*answer.caveats, *arrangement_caveats(self.kind, observed_version=version)),
+        return _systems_with_caveats(
+            answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
 
     def rom_location(self, system: str) -> RomPlacement:
@@ -3456,9 +3484,8 @@ class _CatalogueQueries:
         ``%ROMPATH%`` nothing here resolves.
         """
         answer, version = self._rom_location_answer(system)
-        return _dc_replace(
-            answer,
-            caveats=(*answer.caveats, *arrangement_caveats(self.kind, observed_version=version)),
+        return _rom_placement_with_caveats(
+            answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
@@ -3493,9 +3520,8 @@ class _CatalogueQueries:
         nothing" looks like there.
         """
         answer, version = self._catalogue_answer(system, content_path=content_path)
-        return _dc_replace(
-            answer,
-            caveats=(*answer.caveats, *arrangement_caveats(self.kind, observed_version=version)),
+        return _catalogue_with_caveats(
+            answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
 
     # The two public questions above are the whole catalogue surface, and a
@@ -5200,8 +5226,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         # first caveat the resolver appends after the context's own; the
         # resolver's answer is (*context.caveats, *its own), per its contract.
         index = len(context.caveats) + (1 if shadow_broken or catalogue.hole is not None else 0)
-        return _dc_replace(
-            answer, caveats=(*answer.caveats[:index], *riders, *answer.caveats[index:])
+        return _firmware_with_caveats(
+            answer, (*answer.caveats[:index], *riders, *answer.caveats[index:])
         )
 
 

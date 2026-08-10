@@ -2209,6 +2209,54 @@ def _catalogue_entry_core(
     return _read_core(machine, context, core, entry.label, verify=verify)
 
 
+def _empty_system_statement(
+    cores: tuple[CoreFirmware, ...], *, enumerated: bool, system: str
+) -> Caveat | None:
+    """The answer-level statement a system answer with no requirement carries — if any.
+
+    An identifier that resolved no emulator at all, on an enumeration that did
+    happen, is unknown here (:data:`CAVEAT_SYSTEM_UNKNOWN`) — a different
+    answer from "nobody declares firmware for it", and a different thing for a
+    client to do. A consumer working in RomM slugs that forgets to translate
+    ("dc" for ES-DE's "dreamcast") lands exactly here, and must not read it as
+    "nothing needed". A published own spelling is exempt: the word IS
+    vocabulary, so nothing filing under it is a machine fact, not an
+    identifier mistake — it answers empty through the empty-kind route below,
+    the same shape an id whose emulators declare nothing answers with.
+
+    Otherwise the empty-kind vocabulary decides (:func:`_empty_answer_caveat`),
+    with one suppression: a system whose emulators were read and declare
+    nothing says so per emulator — ``declaration="read"`` with an empty list
+    is the answer, exactly as the per-core route gives it, and an answer-level
+    line would add nothing while reading as a degradation. What the entries
+    cannot say is the other two: that firmware was declared here and never
+    became a requirement, or that nothing could be read at all. And only
+    entries that exist can say anything: an own spelling nothing files under
+    arrives with no cores at all (its ``system-unknown`` deliberately
+    suppressed above), so the established absence is stated here or nowhere.
+    """
+    if not cores and enumerated and system not in SYSTEMS_WITHOUT_CATALOGUE_ID:
+        return Caveat(
+            CAVEAT_SYSTEM_UNKNOWN,
+            f"no emulator on this machine covers the system {system!r} — nothing was resolved, so this "
+            "empty answer says the identifier is unknown here, not that nothing is needed; check the "
+            "vocabulary before reading it as complete",
+            {"system": system},
+        )
+    if any(core.requirements for core in cores):
+        return None
+    empty = _empty_answer_caveat(
+        cores,
+        enumerated=enumerated,
+        declared=_declared_without_requiring(cores),
+        subject=f"firmware for system {system!r}",
+        data={"system": system},
+    )
+    if empty.code != CAVEAT_NO_FIRMWARE_DECLARATION or not cores:
+        return empty
+    return None
+
+
 def firmware_for_system(
     machine: Machine,
     context: FirmwareContext,
@@ -2310,46 +2358,8 @@ def firmware_for_system(
             resolved.append(core)
             caveats.extend(observed)
 
-    if not resolved and enumerated and system not in SYSTEMS_WITHOUT_CATALOGUE_ID:
-        # Nothing here covers that identifier — a different answer from "nobody
-        # declares firmware for it", and a different thing for a client to do.
-        # A consumer working in RomM slugs that forgets to translate ("dc" for
-        # ES-DE's "dreamcast") lands exactly here, and must not read it as
-        # "nothing needed". A published own spelling is exempt: the word IS
-        # vocabulary, so nothing filing under it is a machine fact, not an
-        # identifier mistake — it answers empty carrying only its mark, the
-        # same shape an id whose emulators declare nothing answers with.
-        # system-unknown fires only for words in neither vocabulary.
-        caveats.append(
-            Caveat(
-                CAVEAT_SYSTEM_UNKNOWN,
-                f"no emulator on this machine covers the system {system!r} — nothing was resolved, so this "
-                "empty answer says the identifier is unknown here, not that nothing is needed; check the "
-                "vocabulary before reading it as complete",
-                {"system": system},
-            )
-        )
-    elif not any(c.requirements for c in resolved):
-        cores = tuple(resolved)
-        empty = _empty_answer_caveat(
-            cores,
-            enumerated=enumerated,
-            declared=_declared_without_requiring(cores),
-            subject=f"firmware for system {system!r}",
-            data={"system": system},
-        )
-        # A system whose emulators were read and declare nothing says so per
-        # emulator — ``declaration="read"`` with an empty list is the answer,
-        # exactly as the per-core route gives it, and an answer-level line
-        # would add nothing while reading as a degradation. What the entries
-        # cannot say is the other two: that firmware was declared here and
-        # never became a requirement, or that nothing could be read at all.
-        # And only entries that exist can say anything: an own spelling
-        # nothing files under reaches here with no cores at all (its
-        # ``system-unknown`` is deliberately suppressed above), so the
-        # established absence is stated here or nowhere.
-        if empty.code != CAVEAT_NO_FIRMWARE_DECLARATION or not cores:
-            caveats.append(empty)
+    statement = _empty_system_statement(tuple(resolved), enumerated=enumerated, system=system)
+    caveats.extend(() if statement is None else (statement,))
 
     return FirmwareAnswer(
         root=context.root,
