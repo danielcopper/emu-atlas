@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import importlib.resources
 import json
+from pathlib import Path
 
 import pytest
 
 import atlas
-from atlas.machine import FixtureMachine
-from atlas.oddities import load_audit, load_oddities, lookup_card
+from atlas.machine import CoreOption, FixtureMachine, RealMachine
+from atlas.oddities import CoreCard, load_audit, load_oddities, lookup_card
 from atlas.placement import (
     GRANULARITIES,
     GRANULARITY_PER_GAME_FILE,
@@ -39,6 +40,14 @@ CFG_WITHOUT_GLOBAL_OPTS = CFG.replace('global_core_options = "true"\n', "")
 DEPLOY = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
 ROM_STEM = "Dreamcast Game (Europe)"
 ROM = f"/mnt/sd/retrodeck/roms/dreamcast/{ROM_STEM}.gdi"
+
+# Where RetroDECK deploys the core binaries RetroArch loads — the real ones, not
+# a fixture's. Its per-emulator payload lives in the Flatpak, not in RetroDECK's
+# Git repository.
+DEPLOYED_CORES = Path(
+    "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
+    "/retroarch/rd_extras/cores"
+)
 
 
 class TestCardLookup:
@@ -1352,3 +1361,81 @@ class TestVerificationMatrix:
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["arrangement"] == "emudeck"
+
+
+CARDS = load_oddities()
+
+
+def _registered_governing_option(machine: RealMachine, card: CoreCard) -> CoreOption | None:
+    """A card's governing option as the deployed core registers it — ``None`` when unread.
+
+    Three ways to read nothing, none of them evidence against the card: the core
+    is not deployed on this machine, the probe captured no registration at all
+    (LRPS2 registers its options later than ``retro_set_environment``), or the
+    deployed core registers other keys than the card's — which is the generation
+    mismatch the resolver already answers with ``card-generation-mismatch``.
+    """
+    if card.option_key is None:
+        return None
+    for so_name in card.so_names:
+        info = machine.query_core(str(DEPLOYED_CORES / so_name))
+        if info is None or info.options is None:
+            continue
+        option = info.options.get(card.option_key)
+        if option is not None:
+            return option
+    return None
+
+
+@pytest.fixture(scope="module")
+def prober() -> RealMachine:
+    """One machine for the whole module, so each core is probed once."""
+    return RealMachine()
+
+
+class TestTheRecordedDefaultIsTheDeployedCoresOwn:
+    """Each card's ``governing_option.default``, measured against the binary.
+
+    A card's copy of a default is world knowledge, and world knowledge ages; the
+    core on the machine does not. Recorded option values in this repository had
+    drifted from the cores they described — one of them into a "version drift"
+    invented from a live value the shipped core registers perfectly well — so
+    what catches the next one is a measurement rather than a re-reading.
+
+    Skipped where the cores are not deployed: the Flatpak is not a build
+    dependency and CI has no emulator installation. Where they *are* deployed
+    the module must really measure something, which is the second test's job.
+    """
+
+    @pytest.mark.parametrize("card", CARDS, ids=[card.key for card in CARDS])
+    def test_a_cards_default_is_the_one_the_deployed_core_registers(
+        self, prober: RealMachine, card: CoreCard
+    ):
+        if not DEPLOYED_CORES.is_dir():
+            pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        option = _registered_governing_option(prober, card)
+        if option is None:
+            pytest.skip(f"the deployed cores register no {card.option_key!r} for card {card.key!r}")
+        assert card.option_default == option.default, (
+            f"card {card.key!r} records {card.option_default!r} as the default of "
+            f"{card.option_key!r} and the deployed core registers {option.default!r} — "
+            "the binary is the machine, so the card is what changes"
+        )
+
+    def test_the_defaults_are_really_measured_where_the_cores_are_deployed(
+        self, prober: RealMachine
+    ):
+        # A run that skipped every card looks exactly like a run that checked
+        # them all. On a machine carrying the cores, at least one card has to
+        # have been read from a binary — a probe that silently stopped working
+        # would otherwise retire this whole measurement without a failure.
+        if not DEPLOYED_CORES.is_dir():
+            pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        measured = sorted(
+            card.key for card in CARDS if _registered_governing_option(prober, card) is not None
+        )
+        assert measured, (
+            f"cores are deployed at {DEPLOYED_CORES} and not one card's governing option was read "
+            "from a binary — either every card is a generation behind what is installed, or the "
+            "probe (atlas._core_probe) stopped capturing registrations"
+        )
