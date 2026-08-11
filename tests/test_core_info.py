@@ -8,7 +8,15 @@ that ``.info`` files really go through it, plus the firmware enumeration
 
 from __future__ import annotations
 
-from atlas.core_info import enumerate_firmware, firmware_key, parse_core_info
+from atlas.core_info import (
+    UNREAD_EMPTY,
+    UNREAD_NO_SLOT,
+    UNREAD_UNCOUNTED,
+    enumerate_firmware,
+    firmware_key,
+    parse_core_info,
+    unread_reason,
+)
 
 
 def test_basic_key_value():
@@ -136,11 +144,76 @@ class TestTheFirmwareEnumeration:
         assert [slot.path for slot in enumeration.slots] == ["exec.bin"]
         assert enumeration.unread == ()
 
-    def test_an_empty_path_declares_nothing(self):
+    def test_an_empty_path_fills_no_slot_and_is_still_stated(self):
+        # config_get_entry finds the key and the write is skipped because the
+        # value is empty (core_info.c:1610), so the slot stays NULL — but the
+        # line is in the file, and a reader of the file sees a declaration.
         fields = parse_core_info('firmware_count = "1"\nfirmware0_path = ""\n')
         enumeration = enumerate_firmware(fields)
         assert enumeration.slots == ()
+        assert enumeration.unread == ("firmware0_path",)
+        assert unread_reason("firmware0_path", "1") == UNREAD_EMPTY
+
+    def test_an_empty_path_outside_the_count_is_stated_for_the_count(self):
+        # The precedence the two reasons need: the loop never reaches a slot
+        # past the count (core_info.c:1592), so the lookup that would have
+        # found the empty value never happens — the count is why, not the
+        # value. Same shape as the in-count twin above, opposite reason.
+        fields = parse_core_info('firmware_count = "1"\nfirmware0_path = "read.bin"\nfirmware5_path = ""\n')
+        enumeration = enumerate_firmware(fields)
+        assert [slot.path for slot in enumeration.slots] == ["read.bin"]
+        assert enumeration.unread == ("firmware5_path",)
+        assert unread_reason("firmware5_path", "1") == UNREAD_UNCOUNTED
+
+    def test_a_letter_where_the_index_belongs_is_stated(self):
+        # 'firmwareA_' is not a prefix snprintf("%u_") can write
+        # (core_info.c:1599), so no lookup ever asks for this key.
+        fields = parse_core_info('firmware_count = "1"\nfirmwareA_path = "needed.bin"\n')
+        enumeration = enumerate_firmware(fields)
+        assert enumeration.slots == ()
+        assert enumeration.unread == ("firmwareA_path",)
+        assert unread_reason("firmwareA_path", "1") == UNREAD_NO_SLOT
+
+    def test_a_path_key_with_no_index_at_all_is_stated(self):
+        # The composer always writes an index between the prefix and the field
+        # name, so the un-indexed spelling is a key nothing looks up either.
+        fields = parse_core_info('firmware_count = "1"\nfirmware_path = "needed.bin"\n')
+        enumeration = enumerate_firmware(fields)
+        assert enumeration.slots == ()
+        assert enumeration.unread == ("firmware_path",)
+        assert unread_reason("firmware_path", "1") == UNREAD_NO_SLOT
+
+    def test_a_key_that_names_no_file_is_not_a_declaration(self):
+        # holani_libretro.info ships firmware0_md5. RetroArch reads it nowhere,
+        # but it states a checksum, not a path — calling it an unread
+        # declaration would put a file nobody declared into the answer.
+        fields = parse_core_info('firmware_count = "1"\nfirmware0_path = "a.bin"\nfirmware0_md5 = "d41d8c"\n')
+        enumeration = enumerate_firmware(fields)
+        assert [slot.path for slot in enumeration.slots] == ["a.bin"]
         assert enumeration.unread == ()
+
+    def test_every_path_key_is_either_read_or_stated(self):
+        # The property the three shapes above are instances of: a declaration
+        # leaves the enumeration through one of two doors, never through none.
+        fields = parse_core_info(
+            'firmware_count = "2"\n'
+            'firmware0_path = "read.bin"\n'
+            'firmware1_path = ""\n'
+            'firmware9_path = "past.bin"\n'
+            'firmware00_path = "misspelled.bin"\n'
+            'firmware_path = "unindexed.bin"\n'
+            'firmware0_desc = "not a path"\n'
+        )
+        enumeration = enumerate_firmware(fields)
+        stated = {slot.index: slot.path for slot in enumeration.slots}
+        assert stated == {0: "read.bin"}
+        assert enumeration.unread == ("firmware00_path", "firmware1_path", "firmware9_path", "firmware_path")
+        assert [unread_reason(key, "2") for key in enumeration.unread] == [
+            UNREAD_NO_SLOT,
+            UNREAD_EMPTY,
+            UNREAD_UNCOUNTED,
+            UNREAD_NO_SLOT,
+        ]
 
     def test_only_retroarchs_own_boolean_vocabulary_means_optional(self):
         for raw, optional in (
@@ -207,13 +280,19 @@ class TestTheFirmwareEnumeration:
         enumeration = enumerate_firmware(sparse)
         assert enumeration.slots == ()
         assert enumeration.unread == ("firmware999999999_path",)
+        # And no count reaches it: at that index the composer's four bytes hold
+        # '999', so what it asks for is firmware999path (core_info.c:1599).
+        assert unread_reason("firmware999999999_path", "4000000000") == UNREAD_NO_SLOT
 
     def test_the_key_loses_its_separator_past_index_99(self):
         # char prefix[12] holds "firmware" plus three bytes (core_info.c:1577).
         assert firmware_key(0, "path") == "firmware0_path"
         assert firmware_key(99, "opt") == "firmware99_opt"
         assert firmware_key(100, "path") == "firmware100path"
-        # And that spelling is the one a run of 101 slots reads.
+        # And that spelling is the one a run of 101 slots reads — a key with no
+        # separator is read, not a misspelling of one.
         fields = parse_core_info('firmware_count = "101"\nfirmware100path = "a.bin"\n')
-        (slot,) = enumerate_firmware(fields).slots
+        enumeration = enumerate_firmware(fields)
+        (slot,) = enumeration.slots
         assert (slot.index, slot.path) == (100, "a.bin")
+        assert enumeration.unread == ()

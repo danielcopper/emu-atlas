@@ -449,6 +449,56 @@ class TestTheCountIsTheEnumeration:
         assert core.requirements == ()
         assert core.caveats == ()
 
+    def test_a_letter_where_the_index_belongs_is_not_silently_dropped(self):
+        # snprintf("%u_") cannot write 'A_' (core_info.c:1599), so nothing ever
+        # looks this key up — and an answer that just left it out would read as
+        # a core whose .info asks for nothing.
+        core = self._answered('firmware_count = 1\nfirmwareA_path = "needed.bin"\n')
+        assert core.requirements == ()
+        assert core.requirements_met is True
+        assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
+        assert core.caveats[0].data == {
+            "core_so": f"{self.STEM}.so",
+            "declared": "firmwareA_path",
+            "firmware_count": "1",
+        }
+
+    def test_a_path_key_with_no_index_is_not_silently_dropped(self):
+        core = self._answered('firmware_count = 1\nfirmware_path = "needed.bin"\n')
+        assert core.requirements == ()
+        assert core.requirements_met is True
+        assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
+        assert core.caveats[0].data["declared"] == "firmware_path"
+
+    def test_an_empty_path_inside_the_count_is_not_silently_dropped(self):
+        # The one shape RetroArch does look up: it finds the entry, sees an
+        # empty value and keeps the NULL (core_info.c:1610). The slot is empty
+        # either way; that the file states the key is what gets said.
+        core = self._answered('firmware_count = 2\nfirmware0_path = "a.bin"\nfirmware1_path = ""\n')
+        assert [r.declared for r in core.requirements] == ["a.bin"]
+        assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
+        assert core.caveats[0].data["declared"] == "firmware1_path"
+
+    def test_a_checksum_key_is_not_a_declaration_nobody_reads(self):
+        # holani_libretro.info ships firmware0_md5 — a key RetroArch reads
+        # nowhere, but it names no file, so it is not a hidden declaration and
+        # a well-formed core must stay silent.
+        core = self._answered('firmware_count = 1\nfirmware0_path = "a.bin"\nfirmware0_md5 = "d41d8c"\n')
+        assert [r.declared for r in core.requirements] == ["a.bin"]
+        assert core.caveats == ()
+
+    def test_a_file_wrong_in_several_ways_states_a_reason_for_each(self):
+        # One reason standing for three would name a cause the reader cannot
+        # find in their file, so each group is named with the keys it explains.
+        core = self._answered(
+            'firmware_count = 1\nfirmware_path = "un.bin"\nfirmware1_path = "past.bin"\nfirmware0_path = ""\n'
+        )
+        (caveat,) = core.caveats
+        assert caveat.data["declared"] == "firmware0_path, firmware1_path, firmware_path"
+        assert "firmware_path (no key it composes is spelled that way)" in caveat.message
+        assert "firmware1_path (its firmware_count is 1, so it reads firmware0_ up to firmware0_" in caveat.message
+        assert "firmware0_path (an empty value, which the read that finds it discards)" in caveat.message
+
 
 class TestPerCoreAnswer:
     """Criterion 1: does this core need firmware, and where does each file go?"""
@@ -1678,6 +1728,27 @@ class TestNoDeclarationIsNeverSatisfied:
         codes = [c.code for c in identified.caveats]
         assert CAVEAT_NO_FIRMWARE_REQUIREMENT in codes
         assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_an_unread_key_with_no_path_behind_it_leaves_the_absence_standing(self):
+        # The reach of the case above is its own premise: the unread key counts
+        # because it MAY have named these bytes. An empty value names no file,
+        # so it cannot have — neither inside the count, where RetroArch looks
+        # the key up and discards what it finds, nor outside it, where the
+        # lookup never happens. Both stay stated on the core; neither may turn
+        # an established absence into an unresolved one.
+        for info in ('firmware_count = 1\nfirmware0_path = ""\n', 'firmware_count = 1\nfirmware5_path = ""\n'):
+            machine = _machine(
+                {
+                    f"{INFO_DIR}/empty_libretro.info": 'systemname = "Nintendo - Game Boy"\n' + info,
+                    f"{INFO_DIR}/empty_libretro.so": {"status": "invalid-text"},
+                }
+            )
+            context = _context(machine)
+            core = next(c for c in firmware_inventory(machine, context).cores if c.core_so == "empty_libretro.so")
+            assert CAVEAT_FIRMWARE_DECLARATION_UNREAD in [c.code for c in core.caveats], info
+            codes = [c.code for c in identify_firmware(machine, context, md5="ee" * 16).caveats]
+            assert CAVEAT_NO_FIRMWARE_DECLARATION in codes, info
+            assert CAVEAT_NO_FIRMWARE_REQUIREMENT not in codes, info
 
     def test_one_core_atlas_could_not_read_withdraws_the_whole_absence(self):
         # An absence is a claim about EVERY emulator in the answer. One core

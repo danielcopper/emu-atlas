@@ -3243,6 +3243,457 @@
       }
     },
     {
+      "name": "firmware-a-letter-where-the-slot-number-belongs-is-still-stated",
+      "rationale": "The key RetroArch looks up is one it composes itself — snprintf(prefix + 8, 4, \"%u_\", i) writes a decimal index and nothing else (core_info.c:1599-1606), so no run of slots ever asks for firmwareA_path. The line is in the file all the same, and a reader of the file takes it for a second requirement. Left out, this core answers exactly like one that declares a single BIOS; stated, the answer says which line the emulator walks past. The count is deliberately well-formed here: nothing but the spelling is wrong.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/letterslot_libretro.info": "display_name = \"Letter Slot\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmwareA_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmwareA_path = \"psxonpsp660.bin\"\n",
+          "/usr/lib/libretro/letterslot_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "letterslot_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "letterslot_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "letterslot_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unread",
+                  "data": {
+                    "core_so": "letterslot_libretro.so",
+                    "declared": "firmwareA_path",
+                    "firmware_count": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-path-key-with-no-slot-number-is-still-stated",
+      "rationale": "The same composer, the other way to miss it: the index is not wrong but absent. firmware_path is a key nothing looks up, because every lookup carries the index snprintf wrote (core_info.c:1599-1606). It is the spelling a hand-edited .info drifts to when a core declares one file and the author drops the slot, and the answer must not present the file as a requirement nor pretend the line is not there.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/noindex_libretro.info": "display_name = \"No Index\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware_path = \"psxonpsp660.bin\"\n",
+          "/usr/lib/libretro/noindex_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "noindex_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "noindex_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "noindex_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unread",
+                  "data": {
+                    "core_so": "noindex_libretro.so",
+                    "declared": "firmware_path",
+                    "firmware_count": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-empty-path-inside-the-count-is-still-stated",
+      "rationale": "The one shape upstream really does look up: slot 1 is inside the count, so config_get_entry finds the entry — and the write is guarded on the value being non-empty (core_info.c:1610), so the slot keeps the NULL its calloc gave it and every read that follows skips it (:2378). The emulator ends with one BIOS, which is what the answer states; the second line the file spends on slot 1 is what the caveat states. Discarded is not the same as never asked for, and neither is the same as silently dropped.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/emptyslot_libretro.info": "display_name = \"Empty Slot\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"\"\n",
+          "/usr/lib/libretro/emptyslot_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "emptyslot_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "emptyslot_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "emptyslot_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unread",
+                  "data": {
+                    "core_so": "emptyslot_libretro.so",
+                    "declared": "firmware1_path",
+                    "firmware_count": "2"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-empty-declaration-names-no-file-so-the-absence-stands",
+      "rationale": "Both halves of one machine, because the two answers pull in opposite directions and only together do they pin the rule. The .info spends two lines on firmware paths and puts a value behind neither: slot 0 is inside the count, so RetroArch composes the key, finds the entry and drops it for being empty (core_info.c:1610); slot 5 is outside it, so the lookup never happens (core_info.c:1592). Both are lines the emulator acts on nowhere, so the core states firmware-declaration-unread for both — and neither may count as a declaration that could have been about the identified content, because an empty value names no file. Counting them would answer no-firmware-requirement, 'something is declared that atlas could not resolve', over a possibility that cannot be true; the honest answer is no-firmware-declaration, an absence that was established.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/emptyonly_libretro.info": "display_name = \"Empty Only\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 1\nfirmware0_path = \"\"\nfirmware5_path = \"\"\n",
+          "/usr/lib/libretro/emptyonly_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "emptyonly_libretro.so",
+          "verify": true
+        },
+        "identify_query": {
+          "md5": "490f666e1afb15b7362b406ed1cea246"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "emptyonly_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unread",
+                  "data": {
+                    "core_so": "emptyonly_libretro.so",
+                    "declared": "firmware0_path, firmware5_path",
+                    "firmware_count": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        },
+        "identification": {
+          "identity": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          },
+          "known_as": [
+            "scph5501.bin",
+            "scph7003.bin"
+          ],
+          "requirements": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "no-firmware-declaration",
+              "data": {
+                "md5": "490f666e1afb15b7362b406ed1cea246"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-checksum-key-is-not-a-declaration-nobody-reads",
+      "rationale": "The control, and it is a real shipped shape: holani_libretro.info states firmware0_md5, a key RetroArch reads nowhere (core_info.c:1592-1625 asks for opt, path and desc only). It is still not an unread declaration, because it names a checksum and no file — reporting it would put a path nobody declared into an answer about declared paths. A core whose every path key is read stays silent, which is what keeps the caveat worth reading on the 292 .info files that ship.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/checksum_libretro.info": "display_name = \"Checksum\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware0_md5 = \"490f666e1afb15b7362b406ed1cea246\"\n",
+          "/usr/lib/libretro/checksum_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "checksum_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "checksum_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "checksum_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "firmware-a-repeated-declaration-is-read-as-the-first-one",
       "rationale": "The shape a shipped .info really has (FreeIntvTSOverlay: a second firmware1_path typed as firmware0_path): config_file maps a key only when it is not mapped yet (config_file.c:670-676), so the FIRST value is the one every read sees and the second line sets nothing. Slot 1 then has a desc and no path, which is a slot RetroArch materialises and never resolves (core_info.c:1610-1614, :2378) — the count being larger than the declared paths costs nothing and states nothing, because no key was left unread.",
       "input": {

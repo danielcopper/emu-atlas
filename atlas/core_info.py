@@ -50,6 +50,15 @@ _DESC = "desc"
 # bytes behind it (``core_info.c:1577``, ``:1590-1599``).
 _PREFIX_ROOM = 3
 
+# Why an enumeration passed over a ``firmware…path`` key the file states. The
+# three are the three places a declaration can fall out of
+# ``core_info_resolve_firmware`` (``core_info.c:1572-1629``), and they are told
+# apart because each is a different mistake in the file: a key nobody composes,
+# a slot nobody reaches, and a slot read and then thrown away.
+UNREAD_NO_SLOT = "no-slot"
+UNREAD_UNCOUNTED = "uncounted"
+UNREAD_EMPTY = "empty"
+
 
 @dataclass(frozen=True, slots=True)
 class FirmwareSlot:
@@ -60,7 +69,9 @@ class FirmwareSlot:
     ``path`` is always non-empty here — a slot whose ``firmwareN_path`` is
     absent or empty keeps the NULL its ``calloc`` gave it and is skipped by
     every read that follows (``core_info.c:1610-1614``, ``:2378``), so it
-    declares nothing and :func:`enumerate_firmware` does not return one.
+    declares nothing and :func:`enumerate_firmware` does not return one. A slot
+    the file *states* and empties that way is not nothing to a reader of the
+    file, so it comes back under ``unread`` instead of coming back at all.
     """
 
     index: int
@@ -74,15 +85,30 @@ class FirmwareEnumeration:
     """The firmware one ``.info`` declares, bounded by its own ``firmware_count``.
 
     ``count`` is that field verbatim, as the file spells it — empty when the
-    file states none. ``unread`` names the ``firmwareN_path`` keys the file
-    states and this enumeration never asked for; they are the gap between what
-    the file says and what the emulator does, and nothing else in a firmware
-    answer would show it.
+    file states none. ``unread`` names every ``firmware…path`` key the file
+    states and this enumeration did not take, whether because the composer
+    never asks for that spelling, because the count does not reach the slot, or
+    because the value stated there is empty (:func:`unread_reason` tells them
+    apart). Together with ``slots`` it accounts for every path key in the file:
+    a declaration is read or it is stated, never dropped. That gap between what
+    the file says and what the emulator does is what nothing else in a firmware
+    answer would show.
+
+    ``unread_stating_a_path`` is the part of ``unread`` that put a value behind
+    the key. The two are not the same question: an unread key is a line the
+    file spends and the emulator ignores, which is worth saying whatever it
+    holds, while only one with a value could have been *about* some particular
+    file. This is the only place both are known — the values do not leave the
+    enumeration — so a caller asking the second question has to be handed the
+    answer here. A value that states a path naming no file (``"pcsx2/"``) is
+    still a stated path; whether a path names a file is a separate question
+    with its own answer.
     """
 
     slots: tuple[FirmwareSlot, ...]
     count: str
     unread: tuple[str, ...]
+    unread_stating_a_path: tuple[str, ...]
 
 
 def firmware_key(index: int, field: str) -> str:
@@ -100,34 +126,72 @@ def firmware_key(index: int, field: str) -> str:
     return f"{_FIRMWARE}{f'{index}_'[:_PREFIX_ROOM]}{field}"
 
 
-def _slot_of_path_key(key: str) -> str:
-    """The slot part of a ``firmware…path`` key — empty when *key* names no slot.
+def _states_a_path(key: str) -> bool:
+    """Does *key* state a firmware path at all — however badly it is spelled?
 
-    Only a key that could belong to a slot is worth weighing against the count,
-    and that is one whose middle starts with an ASCII digit: ``firmware_path``
-    names no slot, ``firmware00_path`` names one badly. Both spellings the
-    composer can produce are covered — with the separator, and without it from
-    index 100 on (:func:`firmware_key`).
+    The widest reading that is still about firmware paths, and deliberately so:
+    a key that opens with ``firmware`` and closes with ``path`` is a line a
+    reader of the file takes for a firmware declaration, which is the whole
+    reason it must not vanish when RetroArch passes over it. That takes in
+    every spelling :func:`firmware_key` composes and every one it does not
+    (``firmware_path``, ``firmwareA_path``, ``firmware00_path``).
+
+    It leaves out the keys that name something other than a file. One shipped
+    ``.info`` states ``firmware0_md5``, a key RetroArch reads nowhere — but a
+    checksum is not a declared path, and reporting it as one would put a file
+    nobody declared into an answer about declared files.
     """
-    if not (key.startswith(_FIRMWARE) and key.endswith(_PATH)):
-        return ""
-    middle = key[len(_FIRMWARE) : -len(_PATH)]
-    return middle if middle[:1].isascii() and middle[:1].isdigit() else ""
+    return key.startswith(_FIRMWARE) and key.endswith(_PATH)
+
+
+def _composed_index(key: str) -> int | None:
+    """The slot whose composed ``path`` key is exactly *key* — ``None`` when none is.
+
+    The check runs the composer forwards: whatever the key looks like, it
+    belongs to a slot only when it is *exactly* what :func:`firmware_key` would
+    have asked for at that index. So ``firmware00_path`` belongs to no slot,
+    ``firmware100path`` is slot 100 — and ``firmware999999999_path`` belongs to
+    no slot either, because at that index the composer's four bytes hold
+    ``999`` and it asks for ``firmware999path``.
+    """
+    digits = key[len(_FIRMWARE) : -len(_PATH)].rstrip("_")
+    if not (digits.isascii() and digits.isdigit()):
+        return None
+    index = int(digits)
+    return index if firmware_key(index, _PATH) == key else None
 
 
 def _slot_read_by(key: str, limit: int) -> int | None:
     """The slot *key* answers in a run of *limit* slots — ``None`` when no run does.
 
-    The check runs the composer forwards: whatever the key looks like, it is
-    read only when it is *exactly* what :func:`firmware_key` would have asked
-    for at that index. So ``firmware00_path`` is not slot 0, and a key past the
-    count is not read at all.
+    Two ways to answer none: the key belongs to no slot at all
+    (:func:`_composed_index`), or it belongs to one this run does not reach.
     """
-    digits = _slot_of_path_key(key).rstrip("_")
-    if not (digits.isascii() and digits.isdigit()):
-        return None
-    index = int(digits)
-    return index if index < limit and firmware_key(index, _PATH) == key else None
+    index = _composed_index(key)
+    return index if index is not None and index < limit else None
+
+
+def unread_reason(key: str, count: str) -> str:
+    """Why the enumeration of a file stating *count* passed over *key*.
+
+    One of :data:`UNREAD_NO_SLOT`, :data:`UNREAD_UNCOUNTED`,
+    :data:`UNREAD_EMPTY` — asked only about a key :func:`enumerate_firmware`
+    put in its ``unread``, and answering the *first* reason the declaration
+    failed to reach the emulator. That order is the order upstream fails in: a
+    key it never composes is never looked up whatever the count says
+    (``core_info.c:1599-1606``), a slot outside the count is never composed,
+    and only a key it did look up can have its value discarded for being empty
+    (``core_info.c:1610``).
+
+    The count is enough to tell the last two apart because a key that is inside
+    the count *and* composed is read unless its value is empty — so a key that
+    is both and still unread can only be the empty one.
+    """
+    index = _composed_index(key)
+    if index is None:
+        return UNREAD_NO_SLOT
+    bound = cfg_uint(count)
+    return UNREAD_EMPTY if bound is not None and index < bound else UNREAD_UNCOUNTED
 
 
 def _slot_at(fields: Mapping[str, str], index: int, path: str) -> FirmwareSlot:
@@ -170,19 +234,29 @@ def enumerate_firmware(fields: Mapping[str, str]) -> FirmwareEnumeration:
     otherwise be four billion lookups. Upstream never gets there either — it
     ``calloc``s the whole array first and abandons the core's firmware when
     that fails (``core_info.c:1584-1588``).
+
+    Walking the file this way is also what makes the second half of the answer
+    possible. Every path key the walk passes over goes into ``unread``, so the
+    ways a declaration can be written and still be ignored — a spelling nobody
+    composes, a slot nobody reaches, a value the read discards — are three
+    outcomes of one loop rather than three checks somebody has to remember to
+    write.
     """
     count = fields.get(FIRMWARE_COUNT, "")
     enumerated = cfg_uint(count)
     limit = 0 if enumerated is None else enumerated
     read: list[tuple[int, str]] = []
     unread: list[str] = []
+    stating_a_path: list[str] = []
     for key, value in fields.items():
-        if not value or not _slot_of_path_key(key):
+        if not _states_a_path(key):
             continue
         index = _slot_read_by(key, limit)
-        if index is None:
-            unread.append(key)
-        else:
+        if index is not None and value:
             read.append((index, value))
+            continue
+        unread.append(key)
+        if value:
+            stating_a_path.append(key)
     slots = tuple(_slot_at(fields, index, path) for index, path in sorted(read))
-    return FirmwareEnumeration(slots, count, tuple(sorted(unread)))
+    return FirmwareEnumeration(slots, count, tuple(sorted(unread)), tuple(sorted(stating_a_path)))
