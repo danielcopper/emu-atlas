@@ -70,7 +70,15 @@ from dataclasses import dataclass
 from glob import escape as _glob_escape
 from typing import Any, Literal, Mapping
 
-from atlas.core_info import FirmwareSlot, enumerate_firmware, parse_core_info
+from atlas.core_info import (
+    UNREAD_EMPTY,
+    UNREAD_NO_SLOT,
+    UNREAD_UNCOUNTED,
+    FirmwareSlot,
+    enumerate_firmware,
+    parse_core_info,
+    unread_reason,
+)
 from atlas.esde import KIND_LIBRETRO
 from atlas.machine import (
     DIGEST_MD5,
@@ -746,9 +754,13 @@ class CoreDeclarations:
     of its own and never a silent deletion from the inventory.
 
     ``firmware_count`` is that field as the ``.info`` spells it and ``unread``
-    the ``firmwareN_path`` keys its enumeration left out — together the reason
-    ``firmware`` can be shorter than the file looks
-    (:func:`atlas.core_info.enumerate_firmware`).
+    the ``firmware…path`` keys its enumeration left out, however they are
+    spelled — together the reason ``firmware`` can be shorter than the file
+    looks (:func:`atlas.core_info.enumerate_firmware`).
+    ``unread_stating_a_path`` is the part of ``unread`` that put a value behind
+    the key, carried because the values themselves do not survive the
+    enumeration and only a declaration with one could have been about some
+    particular file.
     """
 
     core_so: str
@@ -760,6 +772,7 @@ class CoreDeclarations:
     info_status: ReadStatus = READ_OK
     firmware_count: str = ""
     unread: tuple[str, ...] = ()
+    unread_stating_a_path: tuple[str, ...] = ()
 
     @property
     def serves_several_systems(self) -> bool:
@@ -807,11 +820,12 @@ class _Info:
     firmware: tuple[FirmwareDeclaration, ...]
     firmware_count: str
     unread: tuple[str, ...]
+    unread_stating_a_path: tuple[str, ...]
 
 
 # What a core whose ``.info`` could not be read declares: nothing, and not
 # because it wants nothing — ``info_status`` carries that difference.
-_UNREADABLE_INFO = _Info("", (), (), "", ())
+_UNREADABLE_INFO = _Info("", (), (), "", (), ())
 
 
 def _declaration_of(slot: FirmwareSlot, systemname: str) -> FirmwareDeclaration:
@@ -839,6 +853,7 @@ def _declarations_in(text: str) -> _Info:
         firmware=tuple(_declaration_of(slot, systemname) for slot in enumeration.slots),
         firmware_count=enumeration.count,
         unread=enumeration.unread,
+        unread_stating_a_path=enumeration.unread_stating_a_path,
     )
 
 
@@ -914,6 +929,7 @@ def read_core_declarations(
                 info_status=result.status,
                 firmware_count=info.firmware_count,
                 unread=info.unread,
+                unread_stating_a_path=info.unread_stating_a_path,
             )
         )
     return CoreEnumeration(tuple(sorted(cores, key=lambda c: c.core_so)), listing.unreadable)
@@ -1188,14 +1204,22 @@ class CoreFirmware:
     requirements: tuple[FirmwareRequirement, ...]
     caveats: tuple[Caveat, ...]
     refused: tuple[RefusedDeclaration, ...] = ()
-    # The ``.info`` keys RetroArch's own enumeration never reaches (declared
-    # without a count, or past it). A field rather than a caveat read back out
-    # of the answer: whether this core declares something nobody asks for is a
-    # fact about the core, and the identification route needs it as data, not
-    # as the presence of a message. It stays out of the contract — the caveat
-    # that states it already carries the keys, and one fact serialized twice is
-    # one fact that can disagree with itself.
+    # The ``.info`` path keys RetroArch's own enumeration never takes (a
+    # spelling it does not compose, a slot past the count, an empty value it
+    # discards). A field rather than a caveat read back out of the answer:
+    # whether this core declares something nobody asks for is a fact about the
+    # core, and the identification route needs it as data, not as the presence
+    # of a message. It stays out of the contract — the caveat that states it
+    # already carries the keys, and one fact serialized twice is one fact that
+    # can disagree with itself.
     unread: tuple[str, ...] = ()
+    # The part of ``unread`` that put a value behind the key. Both are needed
+    # because they answer different questions: ``unread`` is what the caveat
+    # states (a line the file spends and the emulator ignores, whatever it
+    # holds), this one is what the identification route may count (only a
+    # declaration that stated a path could have been about some particular
+    # file). Also out of the contract, and for the same reason.
+    unread_stating_a_path: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.declaration not in CORE_DECLARATION_STATES:
@@ -1846,8 +1870,8 @@ def _empty_answer_caveat(
     return _no_declaration(subject, data)
 
 
-def _why_unread(raw_count: str) -> str:
-    """Why an enumeration left declared paths out — what its ``firmware_count`` said."""
+def _why_uncounted(raw_count: str) -> str:
+    """Why an enumeration reached no further — what its ``firmware_count`` said."""
     bound = cfg_uint(raw_count)
     if not raw_count:
         return "its .info states no firmware_count, and without one it enumerates no firmware at all"
@@ -1861,14 +1885,51 @@ def _why_unread(raw_count: str) -> str:
     return f"its firmware_count is {bound}, so it reads firmware0_ up to firmware{bound - 1}_ and no further"
 
 
+# The other two reasons a declaration goes unread. Both are properties of the
+# key alone, so unlike the uncounted one they need nothing from the file.
+_WHY_UNREAD = {
+    UNREAD_NO_SLOT: "no key it composes is spelled that way",
+    UNREAD_EMPTY: "an empty value, which the read that finds it discards",
+}
+# Told in the order upstream fails in, so a file wrong in several ways reads
+# from the earliest failure to the latest rather than in dictionary order.
+_UNREAD_ORDER = (UNREAD_NO_SLOT, UNREAD_UNCOUNTED, UNREAD_EMPTY)
+
+
+def _why_unread(unread: tuple[str, ...], raw_count: str) -> str:
+    """Why each declaration went unread, grouped so every reason present is stated.
+
+    A file can be wrong in more than one way at once, and one reason standing
+    for three would name a cause the reader cannot find in their file. So the
+    keys are grouped by :func:`atlas.core_info.unread_reason` and each group
+    states its own; a group only names its keys when there is another group to
+    tell it apart from, because with one reason the caveat has already listed
+    them all.
+    """
+    grouped: dict[str, list[str]] = {}
+    for key in unread:
+        grouped.setdefault(unread_reason(key, raw_count), []).append(key)
+    clauses: list[str] = []
+    for reason in _UNREAD_ORDER:
+        keys = grouped.get(reason)
+        if not keys:
+            continue
+        why = _why_uncounted(raw_count) if reason == UNREAD_UNCOUNTED else _WHY_UNREAD[reason]
+        clauses.append(f"{', '.join(keys)} ({why})" if len(grouped) > 1 else why)
+    return "; ".join(clauses)
+
+
 def _unread_declaration_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
     """State the firmware a core's ``.info`` declares outside its own enumeration.
 
-    RetroArch reads firmware through ``firmware_count`` slots and nothing else
-    (:func:`atlas.core_info.enumerate_firmware`), so a path declared without a
-    count, or past it, is a file it never asks for. atlas answers what the
-    emulator reads — and says so here, because the answer on its own looks
-    exactly like a core that simply wants less than its file lists.
+    RetroArch reads firmware through the ``firmware_count`` slots it composes
+    keys for and takes nothing else
+    (:func:`atlas.core_info.enumerate_firmware`), so a path declared under a
+    spelling it never composes, at a slot the count does not reach, or with an
+    empty value it discards, is a line the file states and the emulator acts on
+    nowhere. atlas answers what the emulator reads — and says so here, because
+    the answer on its own looks exactly like a core that simply wants less than
+    its file lists.
     """
     if not core.unread:
         return ()
@@ -1876,8 +1937,9 @@ def _unread_declaration_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
     return (
         Caveat(
             CAVEAT_FIRMWARE_DECLARATION_UNREAD,
-            f"{core.core_so} declares {keys}, which RetroArch never reads: {_why_unread(core.firmware_count)} "
-            "— those files are not requirements here because the emulator will not ask for them",
+            f"{core.core_so} declares {keys}, which RetroArch does not take: "
+            f"{_why_unread(core.unread, core.firmware_count)} "
+            "— what they state is not part of this core's requirements",
             {
                 "core_so": core.core_so,
                 "declared": keys,
@@ -1934,6 +1996,7 @@ def _read_core(
             caveats=_core_caveats(core, core_caveats),
             refused=refused,
             unread=core.unread,
+            unread_stating_a_path=core.unread_stating_a_path,
         ),
         observed,
     )
@@ -2604,9 +2667,16 @@ def _declared_beyond_requirements(
     absence was established while a core's ``.info`` may name exactly this
     file. Over-reporting "unresolved" costs a caller one look at the core
     entries; the other direction is the claim this module exists to refuse.
+
+    That reasoning reaches exactly as far as its own premise: it rests on the
+    declaration *maybe naming this file*, so a key whose value is empty — a
+    line that names no file at all, and one atlas states for a different reason
+    — is left out. Counting it would turn an established absence into an
+    unresolved one over a possibility that cannot be true, and this route's
+    two empty answers are different instructions to a caller.
     """
     for core in cores:
-        if core.unread:
+        if core.unread_stating_a_path:
             return True
         for refusal in core.refused:
             expected = hashes.for_path(refusal.declared)
