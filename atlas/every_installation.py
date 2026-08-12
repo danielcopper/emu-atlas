@@ -48,7 +48,7 @@ from atlas.detect import detect
 from atlas.firmware import FirmwareAnswer, FirmwareIdentification
 from atlas.installations import CatalogueAnswer, Health, Installation, RomPlacement, SystemsAnswer
 from atlas.machine import Machine
-from atlas.placement import SavefilePlacement, SavestatePlacement
+from atlas.placement import SavefilePlacement, SavestatePlacement, Unresolved
 
 AnswerT = TypeVar("AnswerT")
 
@@ -108,8 +108,14 @@ class EveryInstallation:
 
     def savefile_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> tuple[InstallationAnswer[SavefilePlacement], ...]:
-        """Where each installation keeps this save — one placement per arrangement."""
+    ) -> tuple[InstallationAnswer[SavefilePlacement | Unresolved], ...]:
+        """Where each installation keeps this save — one placement per arrangement.
+
+        An installation that does not have the named core refuses rather than
+        answering, so an answer here is a placement *or* that refusal: the same
+        question can be answerable on one arrangement and not on its neighbour,
+        which is exactly what this route exists to show.
+        """
         return self._ask(
             lambda installation: installation.savefile_location(
                 content_path=content_path, core_so=core_so
@@ -118,8 +124,12 @@ class EveryInstallation:
 
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> tuple[InstallationAnswer[SavestatePlacement], ...]:
-        """Where each installation keeps this content's savestates."""
+    ) -> tuple[InstallationAnswer[SavestatePlacement | Unresolved], ...]:
+        """Where each installation keeps this content's savestates, or refuses to.
+
+        Refuses on the same condition the savefile route does: a core this
+        installation does not have.
+        """
         return self._ask(
             lambda installation: installation.savestate_location(
                 content_path=content_path, core_so=core_so

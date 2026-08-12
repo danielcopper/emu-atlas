@@ -20,12 +20,14 @@ from atlas.contract import (
     health_contract,
     identification_contract,
     installation_answers_contract,
+    savefile_answer_contract,
     installation_contract,
     savefile_placement_contract,
     rom_placement_contract,
     savestate_placement_contract,
     systems_contract,
 )
+from tests.answers import placed, state_placed
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -72,7 +74,7 @@ class TestTheEmptyMachine:
 
     def test_the_empty_answer_serializes_to_an_empty_list(self):
         answers = _every(FixtureMachine({})).savefile_location(core_so=CORE_SO)
-        assert installation_answers_contract(answers, savefile_placement_contract) == []
+        assert installation_answers_contract(answers, savefile_answer_contract) == []
 
 
 class TestTheFanOut:
@@ -105,7 +107,7 @@ class TestTheFanOut:
         # The point of the aggregate: two arrangements, two save roots, both
         # true — nothing merged, nothing preferred.
         answers = _every(_coexistence()).savefile_location(content_path=ROM)
-        assert [a.answer.dir for a in answers] == ["/mnt/sd/retrodeck/saves", f"{HOME}/ra-saves"]
+        assert [placed(a.answer).dir for a in answers] == ["/mnt/sd/retrodeck/saves", f"{HOME}/ra-saves"]
 
 
 class TestItDelegates:
@@ -119,13 +121,18 @@ class TestItDelegates:
         return [a.answer for a in aggregate], [question(handle) for handle in handles]
 
     def test_savefile_location(self):
+        # The question goes to the aggregate and to each handle unchanged, so it
+        # cannot narrow inside the lambda: the aggregate answers a tuple. Both
+        # sides narrow where they are compared instead.
         asked, direct = self._pairs(lambda h: h.savefile_location(content_path=ROM, core_so=CORE_SO))
-        assert [savefile_placement_contract(p) for p in asked] == [savefile_placement_contract(p) for p in direct]
+        assert [savefile_placement_contract(placed(p)) for p in asked] == [
+            savefile_placement_contract(placed(p)) for p in direct
+        ]
 
     def test_savestate_location(self):
         asked, direct = self._pairs(lambda h: h.savestate_location(content_path=ROM, core_so=CORE_SO))
-        assert [savestate_placement_contract(p) for p in asked] == [
-            savestate_placement_contract(p) for p in direct
+        assert [savestate_placement_contract(state_placed(p)) for p in asked] == [
+            savestate_placement_contract(state_placed(p)) for p in direct
         ]
 
     def test_emulators_for(self):
@@ -247,7 +254,7 @@ class TestTheContract:
 
     def _first(self) -> dict[str, Any]:
         answers = _every(_coexistence()).savefile_location(content_path=ROM)
-        return installation_answers_contract(answers, savefile_placement_contract)[0]
+        return installation_answers_contract(answers, savefile_answer_contract)[0]
 
     def test_each_entry_is_the_label_and_the_answer(self):
         assert set(self._first()) == {"installation", "answer"}
@@ -258,7 +265,7 @@ class TestTheContract:
 
     def test_the_answer_is_the_questions_own_contract(self):
         handle = _handles(_coexistence())[0]
-        direct = handle.savefile_location(content_path=ROM)
+        direct = placed(handle.savefile_location(content_path=ROM))
         assert self._first()["answer"] == savefile_placement_contract(direct)
 
 

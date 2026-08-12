@@ -193,8 +193,8 @@ KNOWN_CAVEAT_CODES = {
     "core-suspect",
     "core-unaudited",
     "core-multi-option",
-    "card-mode-unconfirmed",
-    "card-generation-mismatch",
+    "core-generation-mismatch",
+    "core-generation-unestablished",
     "arrangement-unverified",
     "arrangement-version-drifted",
     "sandbox-path-untranslated",
@@ -269,7 +269,10 @@ UNIDENTIFIED_CODES = {
     "firmware-content-contradictory",
     "firmware-content-unstated",
 }
-KNOWN_UNRESOLVED_CODES = {"standalone-unsupported"}
+# The refusals a placement question may answer with instead of a location.
+# "core-not-installed" is the firmware route's word for the same fact, and
+# deliberately the same string: one fact, one code on both routes.
+KNOWN_UNRESOLVED_CODES = {"standalone-unsupported", "core-not-installed"}
 
 
 class VectorError(Exception):
@@ -723,13 +726,20 @@ def _validate_unresolved(name: str, outcome: Any, what: str) -> bool:
     return True
 
 
-def _validate_savefile_entry_outcome(name: str, outcome: Any) -> None:
-    if not _validate_unresolved(name, outcome, "entry_savefile_location"):
+def _validate_savefile_outcome(name: str, outcome: Any, what: str = "savefile_location") -> None:
+    """A savefile answer in either shape: the placement, or the typed refusal.
+
+    Both routes refuse the same way and for the same reasons — a standalone
+    emulator on the entry route, a core this installation does not have on
+    either — so one validator holds the pair everywhere the answer appears.
+    """
+    if not _validate_unresolved(name, outcome, what):
         _validate_savefile_placement(name, outcome)
 
 
-def _validate_savestate_entry_outcome(name: str, outcome: Any) -> None:
-    if not _validate_unresolved(name, outcome, "entry_savestate_location"):
+def _validate_savestate_outcome(name: str, outcome: Any, what: str = "savestate_location") -> None:
+    """A savestate answer in either shape — the savefile validator's twin."""
+    if not _validate_unresolved(name, outcome, what):
         _validate_savestate_placement(name, outcome)
 
 
@@ -1142,9 +1152,9 @@ def _validate_aggregate_answer(name: str, answered: Any, question: str) -> None:
     """
     _require_exact(name, answered, AGGREGATE_ANSWER_FIELDS, "each aggregate answer")
     if question == "savefile_location":
-        _validate_savefile_placement(name, answered["answer"])
+        _validate_savefile_outcome(name, answered["answer"])
     elif question == "savestate_location":
-        _validate_savestate_placement(name, answered["answer"])
+        _validate_savestate_outcome(name, answered["answer"])
     elif question == "emulators_for":
         _validate_catalogue(name, answered["answer"])
     else:
@@ -1232,7 +1242,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     ) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
     if "savefile_location" in keys:
-        _validate_savefile_placement(name, expected["savefile_location"])
+        _validate_savefile_outcome(name, expected["savefile_location"])
     if "aggregate" in keys:
         _validate_aggregate(name, expected["aggregate"], inp["aggregate_query"], expected["installations"])
     if "catalogue" in keys:
@@ -1242,11 +1252,11 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     if "systems" in keys:
         _validate_systems(name, expected["systems"])
     if "savestate_location" in keys:
-        _validate_savestate_placement(name, expected["savestate_location"])
+        _validate_savestate_outcome(name, expected["savestate_location"])
     if "entry_savefile_location" in keys:
-        _validate_savefile_entry_outcome(name, expected["entry_savefile_location"])
+        _validate_savefile_outcome(name, expected["entry_savefile_location"], "entry_savefile_location")
     if "entry_savestate_location" in keys:
-        _validate_savestate_entry_outcome(name, expected["entry_savestate_location"])
+        _validate_savestate_outcome(name, expected["entry_savestate_location"], "entry_savestate_location")
     if "firmware" in keys:
         _validate_firmware(name, expected["firmware"])
     if "identification" in keys:

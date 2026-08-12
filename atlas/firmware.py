@@ -94,7 +94,12 @@ from atlas.machine import (
     ReadStatus,
 )
 from atlas.oddities import SaveMode, load_oddities
-from atlas.placement import ROOT_SYSTEM_DIRECTORY, UNRESOLVED_STANDALONE, Caveat
+from atlas.placement import (
+    ROOT_SYSTEM_DIRECTORY,
+    UNRESOLVED_CORE_NOT_INSTALLED,
+    UNRESOLVED_STANDALONE,
+    Caveat,
+)
 from atlas.retroarch_cfg import cfg_uint
 
 FirmwareNeed = Literal["required", "optional"]
@@ -125,7 +130,11 @@ CAVEAT_FIRMWARE_DECLARATION_UNKNOWN = "firmware-declaration-unknown"
 CAVEAT_INFO_PATH_UNRESOLVED = "info-path-unresolved"
 CAVEAT_CORE_DIR_UNRESOLVED = "core-dir-unresolved"
 CAVEAT_FIRMWARE_ROOT_MISSING = "firmware-root-missing"
-CAVEAT_CORE_NOT_INSTALLED = "core-not-installed"
+# The same two-route sharing as the standalone code below, in the same
+# direction: the save routes answer a core this installation does not have with
+# the typed Unresolved outcome, this route with a caveat, and both spell it the
+# same word.
+CAVEAT_CORE_NOT_INSTALLED = UNRESOLVED_CORE_NOT_INSTALLED
 # One fact, one code on both routes: the placement route answers a standalone
 # emulator with the typed Unresolved outcome, the firmware route with this
 # caveat, and a client that learned the word on one route reads the other.

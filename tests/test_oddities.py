@@ -18,6 +18,7 @@ from atlas.placement import (
     GRANULARITY_SHARED_CARD,
     ROOT_KINDS,
 )
+from tests.answers import placed, state_placed
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -97,7 +98,7 @@ def _retrodeck(files, **kwargs):
 
 def _flycast_query(files):
     rd = _retrodeck(files, cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}})
-    return rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so")
+    return placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
 
 
 class TestFlycastResolution:
@@ -173,7 +174,7 @@ class TestFlycastResolution:
         assert not any(c.code == atlas.CAVEAT_FILENAMES_UNVERIFIED for c in p.caveats)
         spans = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS]
         assert [dict(c.data) for c in spans] == [
-            {"card": "flycast", "mode": "VMU A1", "also_under": "system_directory"}
+            {"core": "flycast", "mode": "VMU A1", "also_under": "system_directory"}
         ]
 
     def test_all_vmus_declares_one_file_per_connected_port(self):
@@ -218,7 +219,7 @@ class TestFlycastResolution:
         conditional = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
         assert len(conditional) == 1
         data = dict(conditional[0].data)
-        assert data["card"] == "flycast"
+        assert data["core"] == "flycast"
         assert data["mode"] == "All VMUs"
         assert data["files"].split(", ") == list(p.file_set.files)
         assert data["files_without_save_id"].split(", ") == [
@@ -257,7 +258,7 @@ class TestFlycastResolution:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},
         )
-        p = rd.savefile_location(core_so="flycast_libretro.so")
+        p = placed(rd.savefile_location(core_so="flycast_libretro.so"))
         conditional = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
         assert conditional
         assert conditional[0].data["files_without_save_id"].startswith("<rom_stem>.A1.bin")
@@ -408,7 +409,7 @@ class TestFlycastResolution:
             },
             cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}},
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so"))
         assert p.granularity is None
 
 
@@ -431,7 +432,7 @@ class TestLRPS2Card:
             },
             cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so"))
         assert p.dir == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert p.file_set.state == "declared"
@@ -456,8 +457,10 @@ class TestLRPS2Card:
             },
             cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
         )
-        p = rd.savefile_location(
-            content_path="/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso", core_so="pcsx2_libretro.so"
+        p = placed(
+            rd.savefile_location(
+                content_path="/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso", core_so="pcsx2_libretro.so"
+            )
         )
         assert p.dir == "/mnt/sd/retrodeck/saves/ps2"
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
@@ -476,7 +479,7 @@ class TestLRPS2Card:
             },
             cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so"))
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("Mcd001.ps2",)
 
@@ -505,7 +508,7 @@ class TestFeatureDetection:
         }
         base.update(files or {})
         rd = _retrodeck(base, cores={f"{DEPLOY}/flycast_libretro.so": core_spec})
-        return rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so")
+        return placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
 
     def test_registered_key_confirms_card_despite_version_drift(self):
         # Version drifted (fffffff ≠ pinned 1dac369), but the governing option
@@ -534,9 +537,9 @@ class TestFeatureDetection:
         )
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY  # standard frame
         assert p.granularity is None
-        mismatch = [c for c in p.caveats if c.code == atlas.CAVEAT_CARD_GENERATION_MISMATCH]
+        mismatch = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_GENERATION_MISMATCH]
         assert mismatch
-        assert mismatch[0].data["card"] == "flycast"
+        assert mismatch[0].data["core"] == "flycast"
 
     def test_uncaptured_options_fall_back_to_version_comparison(self):
         p = self._flycast({"library_name": "Flycast"})
@@ -583,7 +586,191 @@ class TestFeatureDetection:
             files={OPTIONS_CFG: 'reicast_per_content_vmus = "VMU A1+A2"\n'},
         )
         assert p.granularity is None
-        assert any(c.code == atlas.CAVEAT_CARD_GENERATION_MISMATCH for c in p.caveats)
+        assert any(c.code == atlas.CAVEAT_CORE_GENERATION_MISMATCH for c in p.caveats)
+
+
+class TestACoreThatCannotBeReadGetsNoCard:
+    """Issue #81: no read, no generation — and therefore no card.
+
+    The neighbouring case (core read, governing option absent) retires the card
+    because the evidence contradicts it. Here there is no evidence at all, and
+    the ``.so`` file name is not any: applying the card would state a recorded
+    deviation as though its generation had been confirmed.
+    """
+
+    def _unreadable(self, so_name: str):
+        rd = _retrodeck(
+            {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, ROM: "", SAVES_KEEP: ""},
+            cores={f"{DEPLOY}/{so_name}": None},
+        )
+        return placed(rd.savefile_location(content_path=ROM, core_so=so_name))
+
+    def test_the_card_is_not_applied(self):
+        p = self._unreadable("flycast_libretro.so")
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY  # standard frame, not the card's root
+        assert p.granularity is None
+
+    def test_the_answer_says_which_generation_could_not_be_established(self):
+        p = self._unreadable("flycast_libretro.so")
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_GENERATION_UNESTABLISHED]
+        assert stated
+        assert stated[0].data == {"core": "flycast"}
+
+    def test_nothing_read_is_not_a_generation_mismatch(self):
+        # The two codes answer different questions and can never ride together:
+        # a mismatch is a core that ANSWERED, for a generation the record does
+        # not describe.
+        p = self._unreadable("flycast_libretro.so")
+        assert not any(c.code == atlas.CAVEAT_CORE_GENERATION_MISMATCH for c in p.caveats)
+
+    def test_a_generation_mismatch_is_not_nothing_read(self):
+        # The same exclusivity from the other side, on the core that answers
+        # with another option vocabulary.
+        rd = _retrodeck(
+            {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, ROM: "", SAVES_KEEP: ""},
+            cores={
+                f"{DEPLOY}/flycast_libretro.so": {
+                    "library_name": "Flycast",
+                    "options": {"flycast_vmu_layout": {"default": "new", "values": ["new", "old"]}},
+                }
+            },
+        )
+        p = placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_CORE_GENERATION_MISMATCH in codes
+        assert atlas.CAVEAT_CORE_GENERATION_UNESTABLISHED not in codes
+
+    def test_a_core_with_no_card_loses_nothing_and_says_nothing_extra(self):
+        # Nothing was retired here, and core-unqueryable already states that the
+        # read failed — a second caveat would announce the loss of knowledge
+        # that never existed.
+        p = self._unreadable("applewin_libretro.so")
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_CORE_UNQUERYABLE in codes
+        assert atlas.CAVEAT_CORE_GENERATION_UNESTABLISHED not in codes
+
+    def test_a_core_that_reads_is_untouched_by_this(self):
+        rd = _retrodeck(
+            {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, ROM: "", SAVES_KEEP: ""},
+            cores={
+                f"{DEPLOY}/flycast_libretro.so": {
+                    "library_name": "Flycast",
+                    "options": {
+                        "reicast_per_content_vmus": {
+                            "default": "disabled",
+                            "values": ["disabled", "VMU A1", "All VMUs"],
+                        }
+                    },
+                }
+            },
+        )
+        p = placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY  # card applied, as before
+        assert not any(c.code == atlas.CAVEAT_CORE_GENERATION_UNESTABLISHED for c in p.caveats)
+
+
+class TestACoreThatIsNotInstalledIsRefused:
+    """Three ways to read nothing about a core, and only one of them is absence.
+
+    Absence is a claim, so it takes a read that could have found the core: the
+    directory RetroArch loads cores from, reached and read, without this ``.so``
+    in it. Then there is no location to answer with, and the question is refused
+    rather than answered with the directory a core that cannot run would use. A
+    core that IS there and will not load still has a placement; a cores
+    directory atlas could not read establishes nothing and keeps its answer too.
+    """
+
+    BASE = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, ROM: "", SAVES_KEEP: ""}
+
+    def _ask(self, so_name, *, cores=None, files=None, **kwargs):
+        base = dict(self.BASE)
+        base.update(files or {})
+        rd = _retrodeck(base, cores=cores, **kwargs)
+        return rd.savefile_location(content_path=ROM, core_so=so_name)
+
+    def test_a_core_that_is_not_in_the_cores_directory_is_refused(self):
+        # The directory is real (another core sits in it) and this one is not
+        # there: absence established, so no directory is offered for it.
+        outcome = self._ask(
+            "flycast_libretro.so", cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}}
+        )
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_CORE_NOT_INSTALLED
+        assert outcome.data == {"core_so": "flycast_libretro.so"}
+
+    def test_the_refusal_is_the_firmware_routes_word_for_the_same_fact(self):
+        assert atlas.UNRESOLVED_CORE_NOT_INSTALLED == atlas.CAVEAT_CORE_NOT_INSTALLED
+
+    def test_a_core_with_no_card_is_refused_the_same_way(self):
+        # The refusal is about the core, not about the recorded knowledge: an
+        # ordinary core nobody wrote anything down about is just as absent.
+        outcome = self._ask(
+            "applewin_libretro.so", cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}}
+        )
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_CORE_NOT_INSTALLED
+
+    def test_nothing_was_retired_so_nothing_says_a_generation_is_unestablished(self):
+        # The refusal replaces the answer; it does not also report the loss of a
+        # card, because no card was in play once there is no core. The data
+        # naming only the core is what proves nothing else was attached — a
+        # refusal has no caveat list to carry a second statement in.
+        outcome = self._ask(
+            "flycast_libretro.so", cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}}
+        )
+        assert isinstance(outcome, atlas.Unresolved)
+        assert dict(outcome.data) == {"core_so": "flycast_libretro.so"}
+        assert not hasattr(outcome, "caveats")
+
+    def test_a_core_that_is_there_and_will_not_load_still_gets_a_placement(self):
+        # Present but unloadable is not absent — the directory it would use is
+        # known, and only its generation is not.
+        outcome = self._ask("flycast_libretro.so", cores={f"{DEPLOY}/flycast_libretro.so": None})
+        p = placed(outcome)
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
+        assert any(c.code == atlas.CAVEAT_CORE_GENERATION_UNESTABLISHED for c in p.caveats)
+
+    def test_a_cores_directory_atlas_cannot_read_establishes_no_absence(self):
+        # The directory is there — another core is deployed in it — and the stat
+        # on it fails, so "this one is not in it" was never read. Claiming the
+        # core is not installed would be a claim about a place nobody looked
+        # into, so the answer stays the placement it was before.
+        outcome = self._ask(
+            "flycast_libretro.so",
+            cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}},
+            inaccessible=[DEPLOY],
+        )
+        p = placed(outcome)
+        assert any(c.code == atlas.CAVEAT_CORE_UNQUERYABLE for c in p.caveats)
+
+    def test_a_core_directory_that_resolves_to_nothing_establishes_no_absence(self):
+        # The other half of "cannot look": the configured libretro_directory
+        # resolves nowhere on the host at all, so there is no directory to have
+        # read and no absence to establish.
+        outcome = self._ask("flycast_libretro.so")
+        p = placed(outcome)
+        assert any(c.code == atlas.CAVEAT_CORE_UNQUERYABLE for c in p.caveats)
+
+    def test_a_healthy_core_is_untouched(self):
+        outcome = self._ask(
+            "flycast_libretro.so",
+            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},
+        )
+        p = placed(outcome)
+        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY  # the card applies, as before
+
+    def test_the_savestate_route_refuses_on_the_same_evidence(self):
+        # Same lookup, same refusal: sorting by core and the savestate-support
+        # declaration are both answers about a core that is not here.
+        rd = _retrodeck(self.BASE, cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}})
+        outcome = rd.savestate_location(content_path=ROM, core_so="flycast_libretro.so")
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_CORE_NOT_INSTALLED
+
+    def test_naming_no_core_is_not_an_absent_one(self):
+        rd = _retrodeck(self.BASE, cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}})
+        p = placed(rd.savefile_location(content_path=ROM))
+        assert any(c.code == atlas.CAVEAT_NO_CORE for c in p.caveats)
 
 
 class TestOperaCard:
@@ -606,7 +793,7 @@ class TestOperaCard:
         }
         base.update(files)
         rd = _retrodeck(base, cores={f"{DEPLOY}/opera_libretro.so": {"library_name": "Opera"}})
-        return rd.savefile_location(content_path=self.ROM_3DO, core_so="opera_libretro.so")
+        return placed(rd.savefile_location(content_path=self.ROM_3DO, core_so="opera_libretro.so"))
 
     def test_default_per_game_nests_subdir_under_save_dir(self):
         p = self._query({})
@@ -655,7 +842,7 @@ class TestAuditVerdictCaveats:
             },
             cores={f"{DEPLOY}/{core_so}": {"library_name": library_name}},
         )
-        return rd.savefile_location(content_path=f"/mnt/sd/retrodeck/roms/{system}/{rom}", core_so=core_so)
+        return placed(rd.savefile_location(content_path=f"/mnt/sd/retrodeck/roms/{system}/{rom}", core_so=core_so))
 
     def test_multi_option_verdict_names_the_options_that_decide_granularity(self):
         p = self._query(
@@ -1258,7 +1445,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so"))
         assert not any(c.code == atlas.CAVEAT_UNVERIFIED_VERSION for c in p.caveats)
 
     def test_arrangement_version_drift_fires_caveat(self):
@@ -1270,7 +1457,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so"))
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["arrangement_live"] == "0.11.0"
@@ -1285,7 +1472,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "fffffff"}},
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so"))
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["core_live"] == "fffffff"
@@ -1302,7 +1489,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},  # no library_version
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so"))
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["verification"] == "runtime-version-unknown"
@@ -1323,7 +1510,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so"))
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["verification"] == "runtime-version-unknown"
@@ -1338,7 +1525,7 @@ class TestVerificationMatrix:
             },
             cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast", "library_version": "1dac369"}},
         )
-        p = rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so"))
         assert any("verified on retrodeck 0.10.9b" in s for s in p.sources)
 
     def test_unverified_arrangement_fires_caveat(self):
@@ -1357,7 +1544,7 @@ class TestVerificationMatrix:
             cores={"/cores/flycast_libretro.so": {"library_name": "Flycast"}},
         )
         ed = atlas.EmuDeck(HOME, machine)
-        p = ed.savefile_location(content_path=f"{HOME}/Emulation/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so")
+        p = placed(ed.savefile_location(content_path=f"{HOME}/Emulation/roms/dreamcast/Game.gdi", core_so="flycast_libretro.so"))
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["arrangement"] == "emudeck"
@@ -1373,7 +1560,7 @@ def _registered_governing_option(machine: RealMachine, card: CoreCard) -> CoreOp
     is not deployed on this machine, the probe captured no registration at all
     (LRPS2 registers its options later than ``retro_set_environment``), or the
     deployed core registers other keys than the card's — which is the generation
-    mismatch the resolver already answers with ``card-generation-mismatch``.
+    mismatch the resolver already answers with ``core-generation-mismatch``.
     """
     if card.option_key is None:
         return None

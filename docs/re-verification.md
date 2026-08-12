@@ -52,8 +52,9 @@ own. Re-check the intersection — cards whose core actually moved — following
 (unfiltered scan, then upstream source, then live observation).
 
 Everything else is guarded at runtime and needs no pass: a card whose governing option a core no longer registers steps
-aside by feature detection (`card-generation-mismatch`), and a card pinned to versions this machine does not run says so
-per answer (`unverified-version`).
+aside by feature detection (`core-generation-mismatch`), a card whose core could not be read at all steps aside too
+(`core-generation-unestablished`), and a card pinned to versions this machine does not run says so per answer
+(`unverified-version`).
 
 ## 4. One full-surface live run
 

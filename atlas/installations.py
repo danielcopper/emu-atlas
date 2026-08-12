@@ -84,13 +84,14 @@ from atlas.machine import (
 )
 from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
 from atlas.placement import (
+    UNRESOLVED_CORE_NOT_INSTALLED,
     CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
-    CAVEAT_CARD_GENERATION_MISMATCH,
-    CAVEAT_CARD_MODE_UNCONFIRMED,
     CAVEAT_CFG_LINE_DROPPED,
     CAVEAT_CFG_VALUE_REJECTED,
     CAVEAT_CONTENT_DIR_OBSERVATION,
     CAVEAT_CONTENT_PATH_UNNAMED,
+    CAVEAT_CORE_GENERATION_MISMATCH,
+    CAVEAT_CORE_GENERATION_UNESTABLISHED,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_SORTED_DIR_UNCREATABLE,
@@ -431,21 +432,39 @@ def _core_directory_in(sandbox: _Sandbox, global_text: str) -> str | None:
     return resolved.path if resolved is not None else None
 
 
-def _core_path_from(sandbox: _Sandbox, global_text: str | None, core_so: str) -> str | None:
+@dataclass(frozen=True, slots=True)
+class _CoreLookup:
+    """Where a named core would be on this machine, and what it took to say so.
+
+    ``so_path`` is the path to stat and load; ``cores_dir`` is the directory it
+    was composed against. The directory rides along because *absence* is a
+    claim: a missing ``.so`` under a directory atlas really read establishes
+    that the core is not installed, while the same missing ``.so`` under a
+    directory that could not be read establishes nothing at all. Both are
+    ``None`` when the cfg names no resolvable ``libretro_directory``; a caller
+    who passed a full path gets that path with no directory, because the stat on
+    the path itself is then the whole evidence.
+    """
+
+    so_path: str | None = None
+    cores_dir: str | None = None
+
+
+def _core_path_from(sandbox: _Sandbox, global_text: str | None, core_so: str) -> _CoreLookup:
     """Resolve a core ``.so`` basename against a cfg snapshot's ``libretro_directory``.
 
     The configured value is written in the app's own spelling (live:
     ``/app/retrodeck/components/...``) and is translated to where the host
-    reads it. ``None`` when nothing resolvable — never a guess. One resolver
-    for every arrangement, taking the query's own sandbox so the cfg is read
-    through the same spellings everywhere in that query.
+    reads it. An empty lookup when nothing resolvable — never a guess. One
+    resolver for every arrangement, taking the query's own sandbox so the cfg is
+    read through the same spellings everywhere in that query.
     """
     if global_text is None:
-        return None
+        return _CoreLookup()
     cores_dir = _core_directory_in(sandbox, global_text)
     if cores_dir is None:
-        return None
-    return os.path.join(cores_dir, core_so)
+        return _CoreLookup()
+    return _CoreLookup(os.path.join(cores_dir, core_so), cores_dir)
 
 
 # One file of the override chain as it is read: its provenance label and its
@@ -605,16 +624,18 @@ def _option_file_candidates(
     rom_stem: str | None,
     game_specific_options: bool,
     per_core_options: bool,
-) -> tuple[list[str], bool]:
+) -> list[str]:
     """The options files that could govern an option, in RetroArch's priority order.
 
     Game ``.opt``, folder ``.opt``, per-core ``.opt`` (when
     ``global_core_options`` is off), then the global options file — the same
     order ``validate_per_core_options`` walks.
 
-    Returns ``(candidates, unconfirmed)``, where ``unconfirmed`` is true when a
-    path that needs ``library_name`` could exist but cannot be built because the
-    core was unqueryable.
+    Every path but the global file is keyed by ``library_name``, so an unknown
+    one leaves only the global file to read. That is not a degradation this
+    function has to state any more: ``library_name`` is unknown exactly when the
+    core could not be queried, and :func:`_select_card` does not let a card
+    reach this code path at all in that case.
     """
     candidates: list[str] = []
     if library_name and game_specific_options:
@@ -622,11 +643,10 @@ def _option_file_candidates(
             candidates.append(os.path.join(override_config_dir, library_name, f"{rom_stem}.opt"))
         if content_dir_name:
             candidates.append(os.path.join(override_config_dir, library_name, f"{content_dir_name}.opt"))
-    unconfirmed = library_name is None and (game_specific_options or per_core_options)
     if library_name and per_core_options:
         candidates.append(os.path.join(override_config_dir, library_name, f"{library_name}.opt"))
     candidates.append(global_file)
-    return candidates, unconfirmed
+    return candidates
 
 
 def _core_options_value(
@@ -641,7 +661,7 @@ def _core_options_value(
     option_default: str,
     game_specific_options: bool,
     per_core_options: bool,
-) -> tuple[str, str, str, bool]:
+) -> tuple[str, str, str]:
     """Read a core option the way RetroArch does — first existing file is THE source.
 
     Priority (``runloop.c`` ``validate_per_core_options``): game ``.opt``,
@@ -649,13 +669,10 @@ def _core_options_value(
     then *global_file*. A key absent from the governing file falls back to the
     core default — it does not fall through to another file.
 
-    Returns ``(value, provenance, options_file, unconfirmed)``:
-    ``options_file`` is the file a caller would edit to change the option, and
-    ``unconfirmed`` is true when a governing file whose path needs
-    ``library_name`` could exist but cannot be checked (the core was
-    unqueryable) — the returned value may then not be the effective one.
+    Returns ``(value, provenance, options_file)``, where ``options_file`` is the
+    file a caller would edit to change the option.
     """
-    candidates, unconfirmed = _option_file_candidates(
+    candidates = _option_file_candidates(
         override_config_dir=override_config_dir,
         global_file=global_file,
         library_name=library_name,
@@ -675,19 +692,16 @@ def _core_options_value(
                 parsed[option_key],
                 f'{os.path.basename(path)}: {option_key} = "{parsed[option_key]}"',
                 path,
-                unconfirmed,
             )
         return (
             option_default,
             f'core default: {option_key} = "{option_default}" ({os.path.basename(path)} has no entry)',
             path,
-            unconfirmed,
         )
     return (
         option_default,
         f'core default: {option_key} = "{option_default}" (no options file present)',
         global_file,
-        unconfirmed,
     )
 
 
@@ -710,7 +724,7 @@ class _SaveQuery:
     defaults: LayoutDefaults
     content_path: str | None
     core_so: str | None
-    core_path_resolver: Callable[[str], str | None]
+    core_path_resolver: Callable[[str], _CoreLookup]
     arrangement: str
     arrangement_version: str | None
     extra_sources: tuple[str, ...] = ()
@@ -783,12 +797,19 @@ class _CoreIdentity:
     ``library_name`` is the value that names sort-by-core directories *and* the
     override directory, and it lives only in the binary; ``None`` means the
     core could not be queried (or none was named), never a guessed name.
+
+    ``not_installed`` is set when the machine established that the named core is
+    not here at all. It is the one answer no placement can be built on: every
+    other state still has a directory to name, and this one has a caller asking
+    about a core their machine does not have. The route hands it back as the
+    typed refusal rather than resolving a location for it.
     """
 
     info: CoreInfo | None = None
     library_name: str | None = None
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    not_installed: Unresolved | None = None
 
 
 # What naming no core costs, per family. The code is one — a client branches on
@@ -796,28 +817,59 @@ class _CoreIdentity:
 # route's sentence on a savestate answer would name a mechanism (rule cards)
 # that cannot reach savestates at all.
 NO_CORE_FOR_SAVES = (
-    "no core given — per-core overrides and save-behaviour rule cards not checked: this answer "
-    "assumes a standard core, and a card-carrying core (e.g. one rooted in system_directory, like "
-    "Flycast) keeps its saves elsewhere entirely"
+    "no core given — per-core overrides and recorded per-core save behaviour not checked: this "
+    "answer assumes a standard core, and a core recorded as deviating (e.g. one rooted in "
+    "system_directory, like Flycast) keeps its saves elsewhere entirely"
 )
 NO_CORE_FOR_STATES = (
     "no core given — per-core overrides not checked, sorting by core cannot be resolved, and "
-    "whether this core declares savestate support at all was not read. No rule card can move a "
-    "savestate, so unlike the save answer this one is not assuming a standard core"
+    "whether this core declares savestate support at all was not read. No recorded per-core save "
+    "behaviour can move a savestate, so unlike the save answer this one is not assuming a "
+    "standard core"
 )
+
+
+def _core_is_absent(machine: Machine, lookup: _CoreLookup) -> bool:
+    """Did the machine *establish* that this core is not installed?
+
+    Absence is a claim, and it needs a read that could have found the core. A
+    ``.so`` that stats missing under a directory that stats as a directory is
+    that read: the place the core would live was reached, and the core is not in
+    it. Everything else refuses the claim — a cores directory that is missing,
+    inaccessible or not a directory at all leaves atlas unable to look, and
+    "cannot look" is not "is not there". A caller who passed a full path is
+    taken at their word: the stat on that path is the whole evidence, and there
+    is no directory of atlas's choosing to vouch for.
+    """
+    if lookup.so_path is None:
+        return False
+    if lookup.cores_dir is not None and machine.path_kind(lookup.cores_dir) != KIND_DIRECTORY:
+        return False
+    return machine.path_kind(lookup.so_path) == KIND_MISSING
 
 
 def _identify_core(
     machine: Machine,
     *,
     core_so: str | None,
-    core_path_resolver: Callable[[str], str | None],
+    core_path_resolver: Callable[[str], _CoreLookup],
     no_core_message: str = NO_CORE_FOR_SAVES,
 ) -> _CoreIdentity:
     """Load the named core and ask it its ``library_name`` — the same read RetroArch does."""
     if core_so is None:
         return _CoreIdentity(caveats=(Caveat(CAVEAT_NO_CORE, no_core_message),))
-    so_path = core_so if os.sep in core_so else core_path_resolver(core_so)
+    lookup = _CoreLookup(core_so) if os.sep in core_so else core_path_resolver(core_so)
+    if _core_is_absent(machine, lookup):
+        return _CoreIdentity(
+            not_installed=Unresolved(
+                UNRESOLVED_CORE_NOT_INSTALLED,
+                f"core {core_so!r} is not installed here — atlas read the directory RetroArch "
+                "loads cores from and this one is not in it, so there is no location to answer "
+                "with: a directory named for a core that cannot run would be invented, not read",
+                {"core_so": core_so},
+            )
+        )
+    so_path = lookup.so_path
     info = machine.query_core(so_path) if so_path else None
     if info is None:
         return _CoreIdentity(
@@ -1175,47 +1227,70 @@ class _CardChoice:
     caveats: tuple[Caveat, ...] = ()
 
 
-def _select_card(
-    *,
-    so_basename: str | None,
-    library_name: str | None,
-    registered_options: Mapping[str, CoreOption] | None,
-) -> _CardChoice:
+def _select_card(*, so_basename: str | None, core_info: CoreInfo | None) -> _CardChoice:
     """Which rule card applies to this core — decided on evidence, not on a version.
 
     Feature detection is the generation question made observable (the LRPS2
-    lesson): when the probe captured which options this core REGISTERS, the
-    card's governing option key decides applicability. Key registered → the
-    card generation is confirmed by evidence. Key not registered → the card
-    describes a different generation and is NOT applied; stale knowledge with a
-    warning would still be a guess. Options not captured (probe limitation,
-    core registers later) → unknown, and the version comparison keeps doing its
-    job.
+    lesson), and ``core_info`` carries the three answers the probe can give,
+    which this function must keep apart (issue #81):
+
+    * ``None`` — the core could not be examined at all: the ``.so`` is absent or
+      unreadable, built for another architecture, or missing a host library.
+      Nothing about the installed core was established, and selecting a card on
+      the ``.so`` file name alone would state a recorded deviation as though its
+      generation had been confirmed. The card is NOT applied.
+    * options captured — the card's governing option key decides. Key registered
+      → the generation is confirmed by evidence. Key not registered → the card
+      describes a different generation and is NOT applied; stale knowledge with
+      a warning would still be a guess.
+    * options not captured (``CoreInfo.options is None`` — a probe limitation:
+      LRPS2 and NeoCD register theirs after atlas listens) → unknown. The core
+      itself answered, so the card applies and the version comparison keeps
+      doing its job.
+
+    Only the second state can retire a card for describing another generation;
+    the first never saw a generation to compare. That is why they carry separate
+    codes and can never ride together.
     """
+    library_name = core_info.library_name if core_info is not None else None
     card = lookup_card(so_basename=so_basename, library_name=library_name)
     live_option = None
     sources: tuple[str, ...] = ()
     caveats: list[Caveat] = []
-    if card is not None and card.option_key is not None and registered_options is not None:
-        live_option = registered_options.get(card.option_key)
-        if live_option is None:
+    if card is not None:
+        if core_info is None:
             caveats.append(
                 Caveat(
-                    CAVEAT_CARD_GENERATION_MISMATCH,
-                    f"rule card '{card.key}' is governed by option {card.option_key!r}, which this core "
-                    "does not register — the card describes a different core generation and is not "
-                    "applied; this core's actual save behaviour is unknown until re-audited, so the "
-                    "standard answer below may miss the real save stack",
-                    {"card": card.key, "option_key": card.option_key},
+                    CAVEAT_CORE_GENERATION_UNESTABLISHED,
+                    f"core {card.key!r} is recorded as placing its saves outside the standard "
+                    "layout, but the installed core could not be read — which generation is here "
+                    "was never established, so the recorded behaviour is not applied; the standard "
+                    "answer below may miss the real save stack",
+                    {"core": card.key},
                 )
             )
             card = None
-        else:
-            sources = (
-                f"feature-detected: core registers {card.option_key!r} (default "
-                f"{live_option.default!r}, values {list(live_option.values)}) — card generation "
-                "confirmed by observation, not by version comparison",
-            )
+        elif card.option_key is not None and core_info.options is not None:
+            live_option = core_info.options.get(card.option_key)
+            if live_option is None:
+                caveats.append(
+                    Caveat(
+                        CAVEAT_CORE_GENERATION_MISMATCH,
+                        f"core {card.key!r} is recorded as placing its saves outside the standard "
+                        f"layout under option {card.option_key!r}, which this core does not "
+                        "register — the recorded behaviour belongs to a different core generation "
+                        "and is not applied; this core's actual save behaviour is unknown until "
+                        "re-audited, so the standard answer below may miss the real save stack",
+                        {"core": card.key, "option_key": card.option_key},
+                    )
+                )
+                card = None
+            else:
+                sources = (
+                    f"feature-detected: core registers {card.option_key!r} (default "
+                    f"{live_option.default!r}, values {list(live_option.values)}) — card generation "
+                    "confirmed by observation, not by version comparison",
+                )
     if card is None and so_basename is not None:
         caveats.extend(_unaudited_caveats(so_basename))
     return _CardChoice(card=card, live_option=live_option, sources=sources, caveats=tuple(caveats))
@@ -1262,9 +1337,9 @@ def _verification_notes(
         return (), (
             Caveat(
                 CAVEAT_UNVERIFIED_VERSION,
-                f"rule card '{card.key}' was never verified on a {arrangement} arrangement — "
-                "the behaviour it describes may not hold here",
-                {"card": card.key, "arrangement": arrangement, "verification": "never-verified"},
+                f"the recorded save behaviour of core {card.key!r} was never verified on a "
+                f"{arrangement} arrangement — the behaviour it describes may not hold here",
+                {"core": card.key, "arrangement": arrangement, "verification": "never-verified"},
             ),
         )
     drift, missing = _version_drift(
@@ -1281,14 +1356,14 @@ def _verification_notes(
             f"the governing option is feature-confirmed — the decision falls on observed evidence",
         ), ()
     if drift:
-        data = {"card": card.key, "arrangement": arrangement, "verification": "drifted", **drift}
+        data = {"core": card.key, "arrangement": arrangement, "verification": "drifted", **drift}
         if missing:
             data["missing"] = ", ".join(missing)
         return (), (
             Caveat(
                 CAVEAT_UNVERIFIED_VERSION,
-                f"rule card '{card.key}' was verified against different versions than this "
-                f"machine runs ({drift}) — behaviour may have drifted",
+                f"the recorded save behaviour of core {card.key!r} was verified against different "
+                f"versions than this machine runs ({drift}) — behaviour may have drifted",
                 data,
             ),
         )
@@ -1296,11 +1371,11 @@ def _verification_notes(
         return (), (
             Caveat(
                 CAVEAT_UNVERIFIED_VERSION,
-                f"rule card '{card.key}' is pinned to {arrangement} versions this machine does "
-                f"not expose ({', '.join(missing)} unavailable) — the verification cannot be "
-                "confirmed live",
+                f"the recorded save behaviour of core {card.key!r} is pinned to {arrangement} "
+                f"versions this machine does not expose ({', '.join(missing)} unavailable) — the "
+                "verification cannot be confirmed live",
                 {
-                    "card": card.key,
+                    "core": card.key,
                     "arrangement": arrangement,
                     "verification": "runtime-version-unknown",
                     "missing": ", ".join(missing),
@@ -1333,12 +1408,12 @@ def _mode_for_unknown_value(
             None,
             opt_value,
             Caveat(
-                CAVEAT_CARD_GENERATION_MISMATCH,
-                f'core option {card.option_key} = "{opt_value}" cannot be interpreted by rule '
-                f"card '{card.key}' — the card lags this core's generation; the configured save "
-                "behaviour is unknown until re-audited, and the standard answer below may miss "
-                "the real save stack",
-                {"card": card.key, "option_key": card.option_key or "", "value": opt_value},
+                CAVEAT_CORE_GENERATION_MISMATCH,
+                f'core option {card.option_key} = "{opt_value}" is a value the recorded save '
+                f"behaviour of core {card.key!r} cannot interpret — the record lags this core's "
+                "generation; the configured save behaviour is unknown until re-audited, and the "
+                "standard answer below may miss the real save stack",
+                {"core": card.key, "option_key": card.option_key or "", "value": opt_value},
             ),
         )
     return (
@@ -1347,9 +1422,9 @@ def _mode_for_unknown_value(
         effective_default or opt_value,
         Caveat(
             CAVEAT_UNKNOWN_OPTION_VALUE,
-            f'core option {card.option_key} = "{opt_value}" is not a value the rule card '
-            f"knows — applying the core default mode {effective_default!r} as RetroArch would",
-            {"card": card.key, "option_key": card.option_key or "", "value": opt_value},
+            f'core option {card.option_key} = "{opt_value}" is not a value the recorded save '
+            f"behaviour knows — applying the core default mode {effective_default!r} as RetroArch would",
+            {"core": card.key, "option_key": card.option_key or "", "value": opt_value},
         ),
     )
 
@@ -1425,7 +1500,7 @@ def _apply_card(
     # auto_overrides_enable, which is captured before the merge (:4941).
     global_core_options, global_ignored = chain_bool(layers, "global_core_options", default=False)
     game_specific_options, game_ignored = chain_bool(layers, "game_specific_options", default=True)
-    opt_value, opt_source, options_file, opt_unconfirmed = _core_options_value(
+    opt_value, opt_source, options_file = _core_options_value(
         machine,
         override_config_dir=gates.override_config_dir,
         global_file=global_file,
@@ -1448,16 +1523,6 @@ def _apply_card(
             card, opt_value=opt_value, effective_default=effective_default, live_option=live_option
         )
         caveats.append(caveat)
-    if applied is not None and opt_unconfirmed and mode is not None:
-        caveats.append(
-            Caveat(
-                CAVEAT_CARD_MODE_UNCONFIRMED,
-                f"a game/folder/per-core options file keyed by library_name could govern "
-                f"{card.option_key} but cannot be checked (core unqueryable) — the applied mode "
-                f"{opt_value!r} may not be the effective one",
-                {"card": card.key, "option_key": card.option_key or "", "applied": opt_value},
-            )
-        )
     granularity = None
     if applied is not None and mode is not None:
         granularity = Granularity(
@@ -1530,24 +1595,25 @@ def _file_set_caveats(
         return (
             Caveat(
                 CAVEAT_FILE_SET_SPANS_ROOTS,
-                f"rule card '{card.key}': in mode {mode_value!r} only part of the save moves here — "
-                f"the rest keeps using the {also_under} root. A card states one root per mode, so the "
-                "file set is left unstated instead of presenting the visible part as the whole save",
-                {"card": card.key, "mode": mode_value, "also_under": also_under},
+                f"core {card.key!r} in mode {mode_value!r}: only part of the save moves here — the "
+                f"rest keeps using the {also_under} root. What is recorded about this core states "
+                "one root per mode, so the file set is left unstated instead of presenting the "
+                "visible part as the whole save",
+                {"core": card.key, "mode": mode_value, "also_under": also_under},
             ),
         )
     if mode.files is None:
         return (
             Caveat(
                 CAVEAT_FILENAMES_UNVERIFIED,
-                f"rule card '{card.key}': mode {mode_value!r} places per-game files under the "
-                "standard directory, but the filename scheme is unverified — file names not stated",
-                {"card": card.key, "mode": mode_value},
+                f"core {card.key!r} in mode {mode_value!r} places per-game files under the standard "
+                "directory, but the filename scheme is unverified — file names not stated",
+                {"core": card.key, "mode": mode_value},
             ),
         )
     if mode.files_without_save_id is not None or mode.files_established_for is not None:
         stated = _card_files(mode.files, rom_stem) or mode.files
-        data = {"card": card.key, "mode": mode_value, "files": ", ".join(stated)}
+        data = {"core": card.key, "mode": mode_value, "files": ", ".join(stated)}
         spelling = ""
         scope = ""
         if mode.files_without_save_id is not None:
@@ -1570,7 +1636,7 @@ def _file_set_caveats(
         return (
             Caveat(
                 CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
-                f"rule card '{card.key}': in mode {mode_value!r} the file set depends on the content, "
+                f"core {card.key!r} in mode {mode_value!r}: the file set depends on the content, "
                 f"which atlas does not identify.{spelling}{scope}",
                 data,
             ),
@@ -2279,14 +2345,20 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
     )
 
 
-def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> SavefilePlacement:
+def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> SavefilePlacement | Unresolved:
     """Where the savefile lands: the shared chain, then the per-core rule cards.
 
     The cards are what this route has and the savestate one does not — cores
     write their own save data and can put it elsewhere entirely, which is a
     thing no core can do to a savestate (:func:`_retroarch_savestate_location`).
+
+    A core the machine established is not installed ends the question instead of
+    steering it: there is no answer to give about where a core that is not here
+    keeps its saves, and the typed refusal says so.
     """
     chain = _read_chain(machine, query, SAVEFILE_KEYS)
+    if chain.core.not_installed is not None:
+        return chain.core.not_installed
     content, core = chain.content, chain.core
     layout, layers = chain.layout, list(chain.layers)
     retroarch_config_dir = chain.retroarch_config_dir
@@ -2297,11 +2369,7 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
     # Rule cards: cores whose save behaviour deviates from the standard rule.
     # The card names the governing option; its current value is read live.
     so_basename = os.path.basename(query.core_so) if query.core_so is not None else None
-    choice = _select_card(
-        so_basename=so_basename,
-        library_name=core.library_name,
-        registered_options=core.info.options if core.info is not None else None,
-    )
+    choice = _select_card(so_basename=so_basename, core_info=core.info)
     sources_extra.extend(choice.sources)
     caveats.extend(choice.caveats)
 
@@ -2523,7 +2591,7 @@ def _core_info_unreadable_caveat(core_so: str, status: ReadStatus) -> Caveat:
     )
 
 
-def _retroarch_savestate_location(machine: Machine, query: _SaveQuery) -> SavestatePlacement:
+def _retroarch_savestate_location(machine: Machine, query: _SaveQuery) -> SavestatePlacement | Unresolved:
     """Where the savestate lands: the shared chain, and nothing per-core after it.
 
     The savefile route continues into rule cards here, because a core writes
@@ -2533,8 +2601,15 @@ def _retroarch_savestate_location(machine: Machine, query: _SaveQuery) -> Savest
     the whole story. What the core does get to say is whether it can be
     serialized at all, which is a caveat and not a placement
     (:func:`_savestate_support_caveats`).
+
+    The core reaches this route through the same lookup the savefile route uses,
+    so it refuses identically for a core that is not installed. Sorting by core
+    and the savestate-support declaration are both answers about that core, and
+    a directory offered for one the machine does not have would be invented.
     """
     chain = _read_chain(machine, query, SAVESTATE_KEYS)
+    if chain.core.not_installed is not None:
+        return chain.core.not_installed
     content = chain.content
     caveats = list(chain.caveats)
 
@@ -3619,6 +3694,29 @@ def _firmware_with_caveats(answer: FirmwareAnswer, caveats: tuple[Caveat, ...]) 
     return cast(FirmwareAnswer, _dc_replace(answer, caveats=caveats))
 
 
+# An entry's own caveats ride the answer it qualifies, and a refusal is not one:
+# it has no caveat list, and it is already the whole answer. Same shape as the
+# helpers above and monomorphic for the same reason.
+
+
+def _entry_savefile_with_caveats(
+    outcome: SavefilePlacement | Unresolved, extra: tuple[Caveat, ...]
+) -> SavefilePlacement | Unresolved:
+    """*outcome* with the entry's *extra* caveats appended — refusals pass through untouched."""
+    if isinstance(outcome, Unresolved) or not extra:
+        return outcome
+    return cast(SavefilePlacement, _dc_replace(outcome, caveats=(*outcome.caveats, *extra)))
+
+
+def _entry_savestate_with_caveats(
+    outcome: SavestatePlacement | Unresolved, extra: tuple[Caveat, ...]
+) -> SavestatePlacement | Unresolved:
+    """*outcome* with the entry's *extra* caveats appended — refusals pass through untouched."""
+    if isinstance(outcome, Unresolved) or not extra:
+        return outcome
+    return cast(SavestatePlacement, _dc_replace(outcome, caveats=(*outcome.caveats, *extra)))
+
+
 class _CatalogueQueries:
     """The catalogue entry points, answered by every handle — including with a refusal.
 
@@ -4428,7 +4526,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
-    ) -> SavefilePlacement:
+    ) -> SavefilePlacement | Unresolved:
         return _retroarch_savefile_location(
             self._machine,
             self._query_from(
@@ -4448,7 +4546,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
-    ) -> SavestatePlacement:
+    ) -> SavestatePlacement | Unresolved:
         return _retroarch_savestate_location(
             self._machine,
             self._query_from(
@@ -4460,7 +4558,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
-    def savefile_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavefilePlacement:
+    def savefile_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> SavefilePlacement | Unresolved:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.
 
         ``core_so`` is the core's ``.so`` basename (e.g.
@@ -4478,7 +4578,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> SavestatePlacement:
+    ) -> SavestatePlacement | Unresolved:
         """Where this RetroDECK's RetroArch keeps the savestates for *content_path*.
 
         The savefile question's twin, taking the same two optional arguments and
@@ -4614,7 +4714,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavefilePlacement:
+    ) -> SavefilePlacement | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savefile_location` — one marker read.
 
         Resolves the placement for a catalogue entry and, when *content_path*
@@ -4634,7 +4734,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
         )
-        return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
+        return _entry_savefile_with_caveats(placement, extra)
 
     def entry_savestate_location(
         self,
@@ -4642,7 +4742,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavestatePlacement:
+    ) -> SavestatePlacement | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savestate_location` — one marker read.
 
         The savefile route's twin, down to the per-game override check: which
@@ -4662,7 +4762,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
         )
-        return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
+        return _entry_savestate_with_caveats(placement, extra)
 
 
 def _dequote_shell_value(value: str) -> str:
@@ -5474,7 +5574,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavefilePlacement:
+    ) -> SavefilePlacement | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savefile_location` — EmuDeck's wiring.
 
         The placement itself is the companion RetroArch's, exactly as the
@@ -5488,7 +5588,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if content_path is None:
             return placement
         extra = self._entry_caveats_for(spec, content_path)
-        return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
+        return _entry_savefile_with_caveats(placement, extra)
 
     def entry_savestate_location(
         self,
@@ -5496,7 +5596,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavestatePlacement:
+    ) -> SavestatePlacement | Unresolved:
         """The savefile entry route's twin — same sources, the savestate keys."""
         placement = _retroarch_savestate_location(
             self._machine,
@@ -5505,7 +5605,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if content_path is None:
             return placement
         extra = self._entry_caveats_for(spec, content_path)
-        return _dc_replace(placement, caveats=(*placement.caveats, *extra)) if extra else placement
+        return _entry_savestate_with_caveats(placement, extra)
 
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
@@ -5553,7 +5653,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
-    def savefile_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavefilePlacement:
+    def savefile_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> SavefilePlacement | Unresolved:
         """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg."""
         return _retroarch_savefile_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
@@ -5561,7 +5663,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
 
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> SavestatePlacement:
+    ) -> SavestatePlacement | Unresolved:
         """Where EmuDeck's RetroArch keeps the savestates — the same cfg, the state keys.
 
         At the current pin both directions derive from ``savesPath``:
@@ -5766,7 +5868,9 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
         )
 
-    def savefile_location(self, *, content_path: str | None = None, core_so: str | None = None) -> SavefilePlacement:
+    def savefile_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> SavefilePlacement | Unresolved:
         """Where this RetroArch install keeps the save for *content_path* under *core_so*."""
         return _retroarch_savefile_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
@@ -5774,7 +5878,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
 
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> SavestatePlacement:
+    ) -> SavestatePlacement | Unresolved:
         """Where this RetroArch install keeps the savestates for *content_path*.
 
         A bare install carries the upstream compile-time defaults, and there
@@ -5848,11 +5952,11 @@ class Installation(Protocol):
 
     def savefile_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> SavefilePlacement: ...
+    ) -> SavefilePlacement | Unresolved: ...
 
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
-    ) -> SavestatePlacement: ...
+    ) -> SavestatePlacement | Unresolved: ...
 
     def systems(self) -> SystemsAnswer: ...
 
