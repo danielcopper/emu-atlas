@@ -144,6 +144,130 @@ The machine-readable core of `docs/research/core-audit.md`: per core, the verdic
 saves are a proven capability, and — per arrangement — the versions the knowledge was verified against. The file's own
 `spec` field carries the rules; the research doc carries the method.
 
+## `texture_packs.json` — where each emulator reads texture packs
+
+One card per core, read by `atlas.textures`, and the split it makes is the boundary rule at its sharpest: **the root is
+not in this file, and neither is the option's value.** A card names a root _kind_ that the resolver resolves live — the
+system directory as the core receives it, or the save root as it stands — plus the option that gates replacement and
+which of its values mean _on_. Whether it is on is then read from the options file RetroArch would read first, or from
+the default the installed core registers. What is left is what no machine states: the fragment below the root, the
+option's identity, and how the tree is keyed per game.
+
+```json
+"flycast": {
+  "identifiers": { "library_name": ["Flycast"] },
+  "textures": {
+    "root": "system_directory",
+    "subdir": "dc/textures",
+    "keying": { "value": "game-id", "citation": "[V-binary] flycast_libretro.so (1dac369): …" },
+    "replacement_option": { "setting": "reicast_custom_textures", "values": { "enabled": true, "disabled": false } }
+  },
+  "provenance": { "source": "[V-binary] … carries \"system/dc/textures/<game-id>/\" as a NUL-delimited literal …" }
+}
+```
+
+- The key is the `.so` basename without `_libretro.so`, and the `.so` name is **derived** from it — a restated one could
+  only ever disagree, so the loader refuses `identifiers.so`. `library_name` makes lookup work from either side.
+- `root` must be one of the placement's own root kinds; `subdir` must be relative and free of `..`, because it is joined
+  onto a directory resolved from a config and an absolute fragment would replace that root instead of extending it.
+- `keying` is the one field no read of any machine can contradict, so **it is refused without a citation**: the
+  vocabulary is `game-id | serial | title-id | rom-name | pack`, and a row whose evidence stops short states nothing at
+  all rather than a derived value wearing the same field name as an established one.
+- `replacement_option` may be `null` (nothing switches this core's replacement). Its `setting` is the core option's own
+  name — spelled the way `absent_switch` spells its own, so the two blocks read alike. Its `values` must name at least
+  one value meaning enabled and one meaning disabled — an option whose every value means the same thing governs nothing,
+  and would report a feature as permanently on while the machine could say otherwise. Booleans are never coerced from
+  strings. No default lives here: RetroArch falls back to the **installed core's** own registration, which is a live
+  read.
+- `provenance.source` is required on every card, for the same reason `keying` needs its citation.
+
+### `emulators` — the standalone half
+
+A second block, keyed by the `%EMULATOR_…%` token the frontend's own launch command names, because for a standalone
+entry that token is the only identifier there is (no `.so` basename exists). The split from `cores` is not
+organisational: the two kinds of emulator are handed their root by different parties. A libretro core is handed one by
+RetroArch; a standalone emulator opens **its own default directory below an XDG base**, so a card names which base
+(`data` or `config`) and the fixed subpath, and the arrangement resolves where that base is. Inside a flatpak the bases
+are pinned, which is exactly why these rows need no config of the emulator's to place.
+
+```json
+"DOLPHIN": {
+  "textures": {
+    "base": "data",
+    "subdir": "dolphin-emu/Load/Textures",
+    "keying": { "value": "game-id", "citation": "[V-binary] the shipped dolphin-emu carries \"…<game_id>/…\"" },
+    "config": { "base": "config", "path": "dolphin-emu/GFX.ini" }
+  },
+  "provenance": { "source": "[V-binary/V-script] …" }
+}
+```
+
+`config` is **required** and is the one field here that is never read: it names the settings file that would establish
+whether replacement is on, and every standalone answer carries `emulator-config-unread` pointing at it with `enabled`
+left `None`. A card without one would tell a client the switch is unknown and give it nowhere to look. `base` and
+`subdir` are held to the same rules as the core block's root and fragment; `keying` to the same cited-or-absent rule.
+
+Two standalone emulators are **absent on purpose**, and a test holds the absence down: PCSX2 and Vita3K do not open a
+default at all — RetroDECK writes their texture directory _into the emulator's own configuration_ (`Folders/Textures` in
+`PCSX2.ini`, `pref-path` in Vita3K's `config.yml`). Reading that means modelling the configuration; quoting the path the
+installer intended would state an arrangement's directory as an emulator's read location. They refuse with
+`standalone-unsupported`, and the split inside the standalone kind is evidence rather than policy.
+
+### Absence is a statement about atlas, not about the emulator
+
+Neither block is a census of emulators with texture packs. A **core** this file does not reach answers
+`texture-wiring-unestablished`; a **standalone** emulator it does not reach answers `standalone-unsupported`. Both say
+atlas has not established where that emulator reads — never that it reads nowhere.
+
+### `absent_switch` — a feature the build offers no way to switch on
+
+The third thing a core card can say about the switch, beside naming an option and saying nothing. LRPS2 is the case that
+earned it: at 14d19f8 texture replacement is compiled in and aimed at
+`<system_directory>/pcsx2/textures/<serial>/replacements/` recursively — the card's `keying` is `serial` and the fixed
+`replacements` level is stated in provenance, because no decided field carries a constant below the keyed level — while
+the setting that enables it, `EmuCore/GS/LoadTextureReplacements`, defaults false and has **no writer anywhere in the
+build**. So `enabled` is `false` as a fact about the binary rather than a reading of any file, and the answer carries
+`feature-switch-absent`.
+
+```json
+"absent_switch": {
+  "setting": "EmuCore/GS/LoadTextureReplacements",
+  "enabled": false,
+  "verified_core": "14d19f8",
+  "citation": "[V-source/V-binary] defaults false (Pcsx2Config.cpp:433); memory-only settings store …"
+}
+```
+
+Three rules keep the strongest negative in this file honest. A card states an **option or an absent switch, never both**
+— they are contradictory claims about one build, and the loader refuses the pair. `enabled` is a JSON boolean, never
+coerced. And the claim is **pinned to the build it was proven against** by `verified_core`, because a build is exactly
+what could add a writer: a machine whose core reports a different version gets `unverified-version` beside the claim
+rather than inheriting it unexamined.
+
+That pin is the card's **own** field rather than `core_audit.json`'s `core_library_version`, and the difference is not
+cosmetic. The audit's version moves whenever a live round re-verifies a core's _save_ behaviour, so keying this claim on
+it would let a bump made for an unrelated reason silently re-validate it against a build nobody examined for texture
+replacement. A field of its own moves only when someone re-examines the build for this.
+
+It can never ride with `emulator-read-unestablished`, because the two say opposite kinds of thing — there the read path
+is in doubt, here it is established and simply never taken. A card with an `absent_switch` therefore belongs to a core
+whose audit verdict is not `suspect`, and a test asserts exactly that over the shipped cards.
+
+One fact belongs beside the row because it invalidates the obvious shortcut: the core **creates that directory on every
+`retro_load_game`** (`libretro/main.cpp:1922` → `Pcsx2Config.cpp:1084-1085`), so finding it on disk, empty or not, is
+evidence of nothing.
+
+An earlier version of this file recorded LRPS2 as spelling no texture path in any string encoding, and refused it a row
+on that basis. That was wrong, and the reason is now the third trap in `docs/research/core-audit.md`: `textures` and
+`Textures` are linker-tail-merged into `GL_EXT_protected_textures` and `glBindTextures`, so no `strings` pass surfaces
+them at any encoding — only a raw-byte search does.
+
+Three cards (`azahar`, `dolphin`, `ppsspp`) describe cores that port a standalone emulator and build a user directory
+under a root nobody has watched them choose. Their answers carry `emulator-read-unestablished`, and **that caveat is
+driven by `core_audit.json`, not by this file or by a resolver**: it fires on the `suspect` verdict those cores already
+carry for their saves, so closing the verdict there retires it here, the way `arrangement_evidence.json` retires
+`arrangement-unverified`.
+
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 
 One record per installation kind, saying whether a live installation of that arrangement has ever confirmed atlas's

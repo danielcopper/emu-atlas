@@ -49,8 +49,28 @@ from typing import Mapping
 # a file name can be one anyway.
 _CORE_SO_RE = re.compile(r"([A-Za-z0-9_\-\[\]]{1,255}_libretro\.so)")
 
+# The emulator ES-DE would run, as its command names it: ``%EMULATOR_DOLPHIN%``,
+# ``%EMULATOR_DOSBOX-STAGING%``. For a standalone entry this token is the only
+# identifier there is — no ``.so`` basename exists — and it is the frontend's
+# own vocabulary read off the machine, not a name atlas invented. Bounded like
+# the run above, and for the same reason.
+_EMULATOR_TOKEN_RE = re.compile(r"%EMULATOR_([A-Za-z0-9_-]{1,255})%")
+
 KIND_LIBRETRO = "libretro"
 KIND_STANDALONE = "standalone"
+
+
+def emulator_token(command: str) -> str | None:
+    """The ``%EMULATOR_…%`` token a launch command names, or ``None``.
+
+    ES-DE substitutes the token from its own find rules, so what it *resolves*
+    to is the frontend's business; what the token identifies — which emulator
+    this entry launches — is a fact the catalogue states, and the only handle a
+    standalone entry offers. A command that names none (a bare path, a shell
+    line) identifies no emulator, and ``None`` says exactly that.
+    """
+    match = _EMULATOR_TOKEN_RE.search(command)
+    return match.group(1) if match else None
 
 
 @dataclass(frozen=True, slots=True)

@@ -25,6 +25,7 @@ from atlas.contract import (
     catalogue_contract,
     savefile_answer_contract,
     savestate_answer_contract,
+    texture_answer_contract,
     systems_contract,
     firmware_contract,
     identification_contract,
@@ -92,6 +93,13 @@ def _aggregate(installs, query, name):
             ),
             savestate_answer_contract,
         )
+    if question == "texture_pack_location":
+        return installation_answers_contract(
+            every.texture_pack_location(
+                content_path=query.get("content_path"), core_so=query.get("core_so")
+            ),
+            texture_answer_contract,
+        )
     if question == "emulators_for":
         return installation_answers_contract(
             every.emulators_for(query["system"], content_path=query.get("content_path")),
@@ -127,6 +135,15 @@ def _savestate_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return savestate_answer_contract(
         install.savestate_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+    )
+
+
+def _texture_pack_location(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return texture_answer_contract(
+        install.texture_pack_location(
+            content_path=query.get("content_path"), core_so=query.get("core_so")
+        )
     )
 
 
@@ -171,6 +188,11 @@ def _entry_savestate_location(installs, query, name):
     return savestate_answer_contract(entry.savestate_location(content_path=query.get("content_path")))
 
 
+def _entry_texture_pack_location(installs, query, name):
+    entry = _entry_of(installs, query, name)
+    return texture_answer_contract(entry.texture_pack_location(content_path=query.get("content_path")))
+
+
 # expected key → (the input key that asks it, how the runner asks it). The map
 # is what makes an unknown expectation an error instead of a silent pass: a
 # vector could once carry an `expected.savelocation` typo and prove nothing,
@@ -186,6 +208,8 @@ QUESTIONS = {
     "firmware": ("firmware_query", _firmware),
     "identification": ("identify_query", _identification),
     "entry_savefile_location": ("entry_savefile_query", _entry_savefile_location),
+    "texture_pack_location": ("texture_query", _texture_pack_location),
+    "entry_texture_pack_location": ("entry_texture_query", _entry_texture_pack_location),
 }
 
 

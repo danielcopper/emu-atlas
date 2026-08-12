@@ -29,7 +29,7 @@ from atlas.evidence import (
     load_arrangement_evidence,
     lookup_arrangement,
 )
-from tests.answers import placed, state_placed
+from tests.answers import placed, state_placed, texture_placed
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -37,6 +37,10 @@ EMUDECK_SETTINGS = f"{HOME}/.config/EmuDeck/settings.sh"
 STANDALONE_CFG = f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg"
 NATIVE_CFG = f"{HOME}/.config/retroarch/retroarch.cfg"
 CORE_SO = "mgba_libretro.so"
+# The texture question refuses for a core no texture card covers, and a
+# refusal carries no caveats to state evidence on — so this battery asks it
+# about a core the packaged table does reach.
+TEXTURE_CORE_SO = "flycast_libretro.so"
 SYSTEM = "gb"
 
 VERIFIED_RECORD = {"version": "0.10.9b", "date": "2026-08-05", "reference": "one live installation"}
@@ -281,6 +285,10 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
     return {
         "savefile_location": tuple(c.code for c in placed(handle.savefile_location(core_so=CORE_SO)).caveats),
         "savestate_location": tuple(c.code for c in state_placed(handle.savestate_location(core_so=CORE_SO)).caveats),
+        "texture_pack_location": tuple(
+            c.code
+            for c in texture_placed(handle.texture_pack_location(core_so=TEXTURE_CORE_SO)).caveats
+        ),
         "systems": tuple(c.code for c in handle.systems().caveats),
         "emulators_for": tuple(c.code for c in handle.emulators_for(SYSTEM).caveats),
         "rom_location": tuple(c.code for c in handle.rom_location(SYSTEM).caveats),

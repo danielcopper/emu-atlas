@@ -203,12 +203,23 @@ Method per core:
 4. verdict + (if deviant) rule card with provenance, per-mode status, and an anchor for every name the card records
 
 **A string the scan cannot find is not a code path that does not exist** — step 1 bounds what a name scan can prove,
-step 2 is what establishes a path. Two ways a shipped build hides what it does: it compiles out its INFO and DEBUG log
-format strings (flycast's `"flash/nvmem is missing, will create new file..."` and every `DEBUG_LOG` text in its VMU
-handling are absent from the `.so` while the `WARN_LOG` texts beside them are present), so probing for a branch by the
-text of its info log reads absence as non-existence; and the compiler folds short literals into instruction immediates,
-which is where flycast's `dc_nvmem.bin` lives — a `movabs` operand in `.text` at each of its two sites, in no string
-table.
+step 2 is what establishes a path. Three ways a shipped build hides what it does, each of which has produced a wrong
+verdict here:
+
+- It **compiles out its INFO and DEBUG log format strings** (flycast's
+  `"flash/nvmem is missing, will create new
+  file..."` and every `DEBUG_LOG` text in its VMU handling are absent from
+  the `.so` while the `WARN_LOG` texts beside them are present), so probing for a branch by the text of its info log
+  reads absence as non-existence.
+- The compiler **folds short literals into instruction immediates**, which is where flycast's `dc_nvmem.bin` lives — a
+  `movabs` operand in `.text` at each of its two sites, in no string table.
+- The linker **tail-merges a literal that is a suffix of another literal**, and then it has no copy of its own: LRPS2's
+  `textures` is stored as the tail of `GL_EXT_protected_textures` (`0x8e6d6a`) and its `Textures` as the tail of
+  `glBindTextures` (`0x8e7813`) in the shipped `pcsx2_libretro.so` at 14d19f8. `strings` emits whole NUL-delimited runs,
+  so a suffix is invisible to it — and to every encoding sweep, because the encoding was never the problem. This one
+  cost a wrong absence: "no texture path literal in any encoding" was recorded for LRPS2 when both components were in
+  the binary all along. **Search raw bytes, not tokens** — `data.find(b"textures")` over the whole file, then read back
+  the enclosing NUL-delimited run to see what the name is a suffix of.
 
 Version drift is real and recorded: LRPS2 changed its option scheme between generations (`pcsx2_memcard_slot_1/2` →
 `pcsx2_shared_memory_cards`), observed in a live `retroarch-core-options.cfg`. Cards state which shipped version they

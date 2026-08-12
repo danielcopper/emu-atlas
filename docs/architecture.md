@@ -67,6 +67,7 @@ classDiagram
         +health() Health
         +savefile_location(content_path, core_so) SavefilePlacement
         +savestate_location(content_path, core_so) SavestatePlacement
+        +texture_pack_location(content_path, core_so) TexturePlacement
         +systems() SystemsAnswer
         +emulators_for(system, content_path) CatalogueAnswer
         +rom_location(system) RomPlacement
@@ -132,6 +133,14 @@ classDiagram
         +fallback_dir / physical_dir
         +caveats: tuple~Caveat~
     }
+    class TexturePlacement {
+        +dir: str
+        +needs: tuple
+        +enabled: bool|None
+        +keying: Keying|None
+        +physical_dir: str|None
+        +caveats: tuple~Caveat~
+    }
     class FileSet {
         +state: FileSetState
         +files: tuple
@@ -155,6 +164,7 @@ classDiagram
         +system / label / kind / core_so
         +savefile_location(content_path)
         +savestate_location(content_path)
+        +texture_pack_location(content_path)
     }
     class FirmwareAnswer {
         +root: str
@@ -190,11 +200,13 @@ classDiagram
     SavestatePlacement *-- Caveat
     SavefilePlacement *-- FileSet
     SavefilePlacement *-- Caveat
+    TexturePlacement *-- Caveat
     CatalogueAnswer *-- EmulatorEntry
     CatalogueAnswer *-- Caveat
     RomPlacement *-- Caveat
     EmulatorEntry ..> SavefilePlacement : savefile_location()
     EmulatorEntry ..> SavestatePlacement : savestate_location()
+    EmulatorEntry ..> TexturePlacement : texture_pack_location()
     EmulatorEntry ..> Unresolved : standalone emulator
     FirmwareAnswer *-- CoreFirmware
     CoreFirmware *-- FirmwareRequirement
@@ -203,15 +215,15 @@ classDiagram
 
 ## What to import from where
 
-| You are…                        | You import                                                                     |
-| ------------------------------- | ------------------------------------------------------------------------------ |
-| writing a client                | `import atlas` — entry points, handles, answers, vocabularies, serializers     |
-| branching on a field's value    | `import atlas` — every closed set a field can hold, values and types alike     |
-| writing a test or a fixture     | `from atlas.machine import FixtureMachine`                                     |
-| porting the resolver            | the Tier-2 modules, as the reference for what each parser reads                |
-| reading a cfg / catalogue alone | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems` |
-| validating your own system map  | `import atlas` — `from_esde_system`, `known_systems`                           |
-| checking packaged knowledge     | `from atlas.oddities import lookup_card`, `from atlas.evidence import …`       |
+| You are…                        | You import                                                                                               |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| writing a client                | `import atlas` — entry points, handles, answers, vocabularies, serializers                               |
+| branching on a field's value    | `import atlas` — every closed set a field can hold, values and types alike                               |
+| writing a test or a fixture     | `from atlas.machine import FixtureMachine`                                                               |
+| porting the resolver            | the Tier-2 modules, as the reference for what each parser reads                                          |
+| reading a cfg / catalogue alone | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems`                           |
+| validating your own system map  | `import atlas` — `from_esde_system`, `known_systems`                                                     |
+| checking packaged knowledge     | `from atlas.oddities import lookup_card`, `from atlas.textures import …`, `from atlas.evidence import …` |
 
 The rule behind the table: if a client acts on it, it is in `atlas`; if it exists so a port or a test can reproduce the
 resolver, it lives in its module. `DESIGN.md`'s "The two tiers" carries the reasoning.

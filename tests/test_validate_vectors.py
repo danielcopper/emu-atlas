@@ -210,6 +210,34 @@ def _base_systems(**overrides) -> Vector:
     return _vector({"systems": block}, installed=True, systems_query={})
 
 
+def _texture(**overrides) -> Vector:
+    return {
+        "dir": f"{HOME}/bios/dc/textures",
+        "needs": [],
+        "physical_dir": None,
+        "enabled": None,
+        "keying": None,
+        "caveats": [],
+        **overrides,
+    }
+
+
+def _base_texture(**overrides) -> Vector:
+    return _vector(
+        {"texture_pack_location": _texture(**overrides)},
+        installed=True,
+        texture_query={"core_so": CORE_SO},
+    )
+
+
+def _base_entry_texture(outcome=None) -> Vector:
+    return _vector(
+        {"entry_texture_pack_location": outcome if outcome is not None else _texture()},
+        installed=True,
+        entry_texture_query={"system": SYSTEM},
+    )
+
+
 def _base_entry(outcome=None) -> Vector:
     return _vector(
         {"entry_savefile_location": outcome if outcome is not None else _placement()},
@@ -239,6 +267,8 @@ BASES = {
     "catalogue": _base_catalogue,
     "systems": _base_systems,
     "entry": _base_entry,
+    "texture": _base_texture,
+    "entry_texture": _base_entry_texture,
     "aggregate": _base_aggregate,
 }
 
@@ -435,6 +465,12 @@ PAIRING_CASES = [
     case(_vector({"identification": _identification()}, installed=True),
          "identify_query and identification expectation", id="pair-identification"),
     case(_vector({"aggregate": []}), "aggregate_query and aggregate expectation", id="pair-aggregate"),
+    case(_vector({"texture_pack_location": _texture()}, installed=True),
+         "texture_query and texture_pack_location expectation", id="pair-texture"),
+    case(_vector(installed=True, texture_query={"core_so": CORE_SO}),
+         "texture_query and texture_pack_location expectation", id="pair-texture-query-alone"),
+    case(_vector({"entry_texture_pack_location": _texture()}, installed=True),
+         "entry_texture_query and entry_texture_pack_location expectation", id="pair-entry-texture"),
     case(_vector({"savefile_location": _placement()}, savefile_query={"content_path": ROM}),
          "needs a detected installation", id="expectation-without-installation"),
 ]
@@ -492,6 +528,32 @@ PLACEMENT_CASES = [
          "granularity.alternatives must be a list", id="granularity-alternatives-shape"),
     case(_base_placement(granularity=_granularity(alternatives=[["off", "nope"]])),
          "every alternative's granularity must be one of", id="granularity-alternative-value"),
+]
+
+TEXTURE_CASES = [
+    case(_base_texture(dir=""), "texture_pack_location.dir must be a non-empty string", id="texture-empty-dir"),
+    case(_base_texture(needs="content_dir"), "texture_pack_location.needs must be a list", id="texture-needs-not-list"),
+    case(_base_texture(needs=["rom_stem"]), "texture_pack_location.needs must be holes from", id="texture-unknown-hole"),
+    case(_base_texture(physical_dir=""), "must be null or a non-empty string", id="texture-empty-physical"),
+    # Nothing can be link-resolved through a hole, so a vector stating both
+    # pins an answer the resolver cannot give.
+    case(_base_texture(needs=["content_dir"], physical_dir="/real"),
+         "physical_dir for a directory that is still a template", id="texture-physical-through-a-hole"),
+    case(_base_texture(enabled="yes"), "enabled must be true, false, or null", id="texture-enabled-type"),
+    case(_base_texture(keying="per-game"), "keying must be null or one of", id="texture-unknown-keying"),
+    case(_vector({"texture_pack_location": {**_texture(), "stray": 1}}, installed=True,
+                 texture_query={"core_so": CORE_SO}),
+         "texture_pack_location must be exactly the fields", id="texture-stray-field"),
+    # The three fields a save placement has and this question does not: naming
+    # one would put a promise in the corpus no serializer produces.
+    case(_vector({"texture_pack_location": {**_texture(), "root_kind": "system_directory"}}, installed=True,
+                 texture_query={"core_so": CORE_SO}),
+         "texture_pack_location must be exactly the fields", id="texture-root-kind"),
+    case(_vector({"texture_pack_location": {**_texture(), "file_set": _file_set()}}, installed=True,
+                 texture_query={"core_so": CORE_SO}),
+         "texture_pack_location must be exactly the fields", id="texture-file-set"),
+    case(_base_entry_texture({"unresolved": {"code": "nope", "data": {}}}),
+         "unresolved code must be one of", id="entry-texture-unknown-unresolved-code"),
 ]
 
 ENTRY_CASES = [
@@ -746,6 +808,7 @@ ALL_CASES = [
     *PAIRING_CASES,
     *INSTALLATION_CASES,
     *PLACEMENT_CASES,
+    *TEXTURE_CASES,
     *ENTRY_CASES,
     *CATALOGUE_CASES,
     *SYSTEMS_CASES,

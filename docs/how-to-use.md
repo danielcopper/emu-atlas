@@ -506,6 +506,109 @@ Take it as a warning, not a refusal. Two things override the declaration and atl
 answer. Where the `.info` could not be read at all you get `core-info-unreadable` or `info-path-unresolved` instead —
 "atlas could not look" is never spelled as "states work here".
 
+## Where do texture packs go?
+
+`texture_pack_location` answers where one emulator, configured as it is, reads replacement textures from — the directory
+you install a pack into.
+
+```python
+outcome = inst.texture_pack_location(core_so="flycast_libretro.so")
+
+outcome.dir           # '/run/media/deck/Emulation/retrodeck/bios/dc/textures'
+outcome.physical_dir  # '/run/media/deck/Emulation/retrodeck/texture_packs/retroarch-core/Flycast/textures'
+outcome.enabled       # True | False | None — is replacement switched on right now?
+outcome.keying        # 'game-id' — how the tree below dir is divided per game (None where nothing cited says)
+outcome.needs         # the holes left, same vocabulary as a save placement
+outcome.caveats       # stated degradations
+```
+
+It takes the same two optional arguments the save questions take, the entry route has it
+(`entry.texture_pack_location(content_path=…)`), and so does the aggregate. `content_path` never moves the directory — a
+texture root belongs to the emulator, not to one game — but it does decide which per-game options file governs
+`enabled`, so pass it when you have it.
+
+**Two halves, two kinds of knowledge.** The root is read off your machine (the system directory as the core receives it,
+or the save root as it stands); the fragment below it is per-core behaviour written in no config, so it is packaged,
+versioned and source-cited (`atlas/data/texture_packs.json`). Move `system_directory` and the answer moves with it.
+
+**`enabled` is a live read, and `None` is not "off".** The switch comes from the options file RetroArch would read first
+(game `.opt`, folder `.opt`, per-core `.opt`, then the global one), and where no file states it, from the default the
+**installed core** registers. `None` means neither answered — nothing on this machine states the option and the core
+declared no default, or it is set to a value the record cannot interpret (`unknown-option-value` says which). A packs
+directory whose feature is off is still the right directory: that is why these are two fields and not one hedged answer.
+
+**`keying` is stated only where a citation backs it.** `game-id | serial | title-id | rom-name | pack` — Flycast's own
+binary documents `system/dc/textures/<game-id>/`, so that row states `game-id`; a row whose evidence stops short states
+`None`, which is not the claim that the tree is undivided.
+
+**Standalone emulators answer here, and their saves do not — that asymmetry is deliberate.** A save routes through a
+config atlas would have to model; a texture pack usually does not, because a standalone emulator opens its own default
+directory below an XDG base the distribution's flatpak pins. So the same catalogue entry can refuse `savefile_location`
+and answer `texture_pack_location`:
+
+```python
+entry = inst.emulators_for("gc").entries[0]         # 'Dolphin (Standalone)'
+entry.savefile_location()                            # Unresolved: standalone-unsupported
+outcome = entry.texture_pack_location()
+outcome.dir           # '/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Load/Textures'
+outcome.physical_dir  # the shared tree the distribution linked it into
+outcome.enabled       # None — always, on a standalone row
+```
+
+`enabled` is always `None` there and always carries `emulator-config-unread` naming the file that would answer it
+(Dolphin's `GFX.ini`, PPSSPP's `ppsspp.ini`, …): reading those means modelling each emulator's configuration, which is
+its own roadmap block. Standalone rows are asked **through the entry route only** — the handle route's subject is a
+core, and a standalone emulator has none.
+
+Not every standalone emulator answers. Where the texture directory is a value an installer writes into the emulator's
+own settings rather than a default the emulator opens (PCSX2's `Folders/Textures`, Vita3K's `pref-path`), the entry
+refuses with `standalone-unsupported` — the split runs on evidence, not on the kind of entry. And EmuDeck's standalone
+entries all refuse: it installs each emulator as its own flatpak or AppImage, so the bases their trees hang off differ
+per emulator and atlas has established none of them.
+
+Three ways this question answers with `Unresolved` instead of a directory, and each is a different instruction:
+
+| Code                           | Meaning                                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `core-not-installed`           | the machine established the core is not here — the same code the save routes use                                                     |
+| `standalone-unsupported`       | a standalone emulator whose directory is named only in its own config — or one on an arrangement whose XDG bases are not established |
+| `texture-wiring-unestablished` | atlas carries no texture wiring for this core                                                                                        |
+
+The third is a statement about atlas, never about the emulator. It does **not** say the emulator has no texture-pack
+feature; most cores are simply outside the packaged knowledge.
+
+Three caveats are this question's own:
+
+| Code                          | Meaning                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `emulator-read-unestablished` | the directory is stated and nobody has established that this emulator reads it   |
+| `emulator-config-unread`      | `enabled` is unanswered because the setting lives in a config atlas did not read |
+| `feature-switch-absent`       | `enabled` is `false` and this build offers no way to turn it on                  |
+
+The first rides the three cores that port a standalone emulator into a libretro core (Azahar, Dolphin, PPSSPP): they
+build a user directory under a root nobody has watched them choose, which is the same open question atlas's audit
+already carries for their saves. Take it as "install here, and verify before you trust it". The symlink and read caveats
+you already know (`dead-symlink`, `symlink-loop`, `sandbox-path-untranslated`, the health findings) mean here exactly
+what they mean on a save placement.
+
+The second rides every standalone row, always with `enabled` at `None`, and its `data` names the emulator and the file:
+`{'emulator': 'DOLPHIN', 'config': '…/dolphin-emu/GFX.ini'}`. Read it as "the directory is right, go look in that file
+yourself" — never as "replacement is off".
+
+The third is the opposite kind of statement to the first, and the two can never appear together. `feature-switch-absent`
+says the read path is established and this build gives you no way to use it: LRPS2 reads packs from
+`<system_directory>/pcsx2/textures/<serial>/replacements/`, and the setting that would enable it
+(`EmuCore/GS/LoadTextureReplacements`) is not a core option — the only thing that writes it anywhere in the build is the
+defaults pass, writing the compiled `false`. So `enabled` is `false` as a fact about the binary rather than a reading of
+a file, and no configuration you can edit changes it — only a different core build would. Because a build is exactly
+what could add a writer, an installation running a different core version gets `unverified-version` beside the claim
+instead of inheriting it.
+
+**The shared browsing trees are not modelled.** RetroDECK links each emulator's own texture directory into
+`texture_packs/`, so `dir` is the path the emulator opens and `physical_dir` the tree behind it — both true, and a
+client copying files can use either. EmuDeck wires the opposite direction (links in `texturepacks/` pointing _into_ the
+emulator's real directory), so nothing on the read path passes through them and no answer mentions them.
+
 ## Which emulator would launch this? (the catalogue)
 
 **Every handle answers this**, and the ones that cannot answer it from a catalogue say why — so you never have to narrow

@@ -14,6 +14,7 @@ from atlas.placement import (
     FileSet,
     SavefilePlacement,
     SavestatePlacement,
+    TexturePlacement,
     build_savefile_placement,
     build_savestate_placement,
     file_set_holes,
@@ -57,6 +58,23 @@ class TestInvariants:
                 root_kind="savefile_directory",
                 needs=(),
                 file_set=UNKNOWN_FILE_SET,
+                sources=(),
+                caveats=(),
+            )
+
+    def test_texture_placement_dir_must_be_non_empty(self):
+        # A texture question with no directory to name is Unresolved, the same
+        # way an unanswerable save placement is.
+        with pytest.raises(ValueError):
+            TexturePlacement(dir="", needs=(), enabled=None, keying=None, sources=(), caveats=())
+
+    def test_keying_vocabulary_is_closed(self):
+        with pytest.raises(ValueError):
+            TexturePlacement(
+                dir="/mnt/sd/retrodeck/bios/dc/textures",
+                needs=(),
+                enabled=None,
+                keying="per-game",  # type: ignore[arg-type]
                 sources=(),
                 caveats=(),
             )
