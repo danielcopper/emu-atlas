@@ -14,3 +14,6 @@ coverage.xml
 *.out
 build/
 scripts/logo/out/
+
+# Local working state: worktrees and maintainer notes about one particular machine
+.claude/
