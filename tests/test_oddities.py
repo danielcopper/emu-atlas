@@ -5,12 +5,20 @@ from __future__ import annotations
 import importlib.resources
 import json
 from pathlib import Path
+from typing import Mapping
 
 import pytest
 
 import atlas
 from atlas.machine import CoreOption, FixtureMachine, RealMachine
-from atlas.oddities import CoreCard, load_audit, load_oddities, lookup_card
+from atlas.oddities import (
+    ANCHOR_KINDS,
+    CoreCard,
+    load_audit,
+    load_oddities,
+    lookup_card,
+    recorded_vocabulary,
+)
 from atlas.placement import (
     GRANULARITIES,
     GRANULARITY_PER_GAME_FILE,
@@ -65,11 +73,27 @@ class TestCardLookup:
     def test_no_card_for_ordinary_core(self):
         assert lookup_card(so_basename="mgba_libretro.so", library_name="mGBA") is None
 
+    def test_the_so_name_comes_from_the_card_key(self):
+        # Not a field any more: the key IS the .so basename. What matters is
+        # that every shipped card is still found under the name the derivation
+        # produces — a restated spelling was a way for those two to disagree.
+        for card in load_oddities():
+            assert card.so_name == f"{card.key}_libretro.so"
+            found = lookup_card(so_basename=card.so_name, library_name=None)
+            assert found is not None
+            assert found.key == card.key
+
     def test_card_modes_and_default(self):
         card = lookup_card(so_basename="flycast_libretro.so", library_name=None)
         assert card is not None
         assert card.option_key == "reicast_per_content_vmus"
-        assert card.option_default == "disabled"
+        # No recorded default: the deployed core registers one, and a card copy
+        # of a value the machine states is the second, ageing copy the boundary
+        # rule refuses. LRPS2, which registers nothing, is the one that keeps it.
+        assert card.option_default is None
+        lrps2 = lookup_card(so_basename="pcsx2_libretro.so", library_name=None)
+        assert lrps2 is not None
+        assert lrps2.option_default == "enabled"
         assert set(card.modes) == {"disabled", "VMU A1", "All VMUs"}
         assert card.modes["disabled"].files is not None
         # 'All VMUs' names its files through the content's own id — a template,
@@ -96,8 +120,20 @@ def _retrodeck(files, **kwargs):
     return atlas.RetroDeck(HOME, machine)
 
 
+# What the deployed cores really register, so a fixture core answers the way the
+# shipped binary does. The default lives here rather than in the card: the card
+# records one only for a core that registers none, and these two register theirs.
+# TestTheModeKeysAreTheDeployedCoresOwn measures both sets against the binaries.
+FLYCAST_REGISTERED = {
+    "reicast_per_content_vmus": {"default": "disabled", "values": ["disabled", "VMU A1", "All VMUs"]}
+}
+OPERA_REGISTERED = {"opera_nvram_storage": {"default": "per game", "values": ["per game", "shared"]}}
+FLYCAST_CORE = {"library_name": "Flycast", "options": FLYCAST_REGISTERED}
+OPERA_CORE = {"library_name": "Opera", "options": OPERA_REGISTERED}
+
+
 def _flycast_query(files):
-    rd = _retrodeck(files, cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}})
+    rd = _retrodeck(files, cores={f"{DEPLOY}/flycast_libretro.so": FLYCAST_CORE})
     return placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
 
 
@@ -489,15 +525,12 @@ class TestFeatureDetection:
 
     Key registered → card confirmed, version drift demoted to provenance.
     Key gone → the card describes another generation and steps aside.
-    Options not captured → unknown; the version comparison keeps working.
+    Options not captured → the generation stays unknown and the version
+    comparison keeps working, but nothing states the governing value either, so
+    no mode can be selected.
     """
 
-    FLYCAST_OPTIONS = {
-        "reicast_per_content_vmus": {
-            "default": "disabled",
-            "values": ["disabled", "VMU A1", "All VMUs"],
-        }
-    }
+    FLYCAST_OPTIONS = FLYCAST_REGISTERED
 
     def _flycast(self, core_spec, files=None, rd_json=RD_JSON):
         base = {
@@ -541,16 +574,45 @@ class TestFeatureDetection:
         assert mismatch
         assert mismatch[0].data["core"] == "flycast"
 
-    def test_uncaptured_options_fall_back_to_version_comparison(self):
+    def test_uncaptured_options_still_reach_the_version_comparison(self):
+        # The core answered, so the version comparison runs and reports what it
+        # cannot check — that half is unchanged. What the probe did not capture
+        # is the option registration, and with it the core's default.
         p = self._flycast({"library_name": "Flycast"})
-        assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY  # card applied as before
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
-        assert stale  # runtime-version-unknown — unchanged behaviour
+        assert stale
+        assert stale[0].data["verification"] == "runtime-version-unknown"
 
-    def test_live_default_outranks_card_default(self):
+    def test_uncaptured_options_leave_the_governing_value_unestablished(self):
+        # Nothing states the value: no options file here, and the core declared
+        # no default because the probe read no registration at all. The card
+        # fits, and still cannot say which of its modes is in force — so it
+        # steps aside rather than picking one, and says which half is missing.
+        p = self._flycast({"library_name": "Flycast"})
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY  # standard frame
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED]
+        assert [dict(c.data) for c in stated] == [
+            {"core": "flycast", "option_key": "reicast_per_content_vmus"}
+        ]
+
+    def test_an_options_file_settles_it_even_with_the_options_uncaptured(self):
+        # The probe read nothing, but the machine states the value outright —
+        # which is all the card ever needed. Nothing is unestablished here.
+        p = self._flycast(
+            {"library_name": "Flycast"},
+            files={OPTIONS_CFG: 'reicast_per_content_vmus = "All VMUs"\n'},
+        )
+        assert p.granularity is not None
+        assert p.granularity.option_value == "All VMUs"
+        assert not any(
+            c.code == atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED for c in p.caveats
+        )
+
+    def test_the_live_default_is_what_governs_when_no_file_states_a_value(self):
         # The registered default says per-game VMUs — a generation that
         # flipped its default. No options file present: the live default
-        # governs, not the card's shipped-generation copy.
+        # governs, and it is the only default there is.
         options = {
             "reicast_per_content_vmus": {
                 "default": "VMU A1",
@@ -669,6 +731,114 @@ class TestACoreThatCannotBeReadGetsNoCard:
         assert not any(c.code == atlas.CAVEAT_CORE_GENERATION_UNESTABLISHED for c in p.caveats)
 
 
+class TestAGoverningValueNothingEstablishes:
+    """The card fits the core, and nothing says which of its modes is in force.
+
+    One level below the two codes above. There the *generation* is in doubt —
+    the core could not be read at all, or answered for a vocabulary the record
+    does not describe. Here the generation is fine and the *setting* is missing:
+    no options file states the value, and the core declared no default because
+    the probe captured no registration. A card records a default only where the
+    core states none, so for these two cards there is nothing to fall back on,
+    and choosing a mode would be a save location asserted on the strength of
+    nothing.
+    """
+
+    BASE = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, ROM: "", SAVES_KEEP: ""}
+
+    def _probe_blind(self, files=None):
+        base = dict(self.BASE)
+        base.update(files or {})
+        rd = _retrodeck(base, cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}})
+        return placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
+
+    def test_the_standard_frame_answers_and_the_caveat_names_the_option(self):
+        p = self._probe_blind()
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED]
+        assert [dict(c.data) for c in stated] == [
+            {"core": "flycast", "option_key": "reicast_per_content_vmus"}
+        ]
+
+    def test_no_value_nobody_read_reaches_the_answer(self):
+        # The failure this replaces: the empty string travelling into the answer
+        # as though the machine had stated it, inside a caveat about a "value"
+        # the card cannot interpret.
+        p = self._probe_blind()
+        assert not any("value" in c.data for c in p.caveats)
+
+    def test_it_never_rides_with_a_generation_mismatch(self):
+        p = self._probe_blind()
+        assert not any(c.code == atlas.CAVEAT_CORE_GENERATION_MISMATCH for c in p.caveats)
+
+    def test_it_never_rides_with_an_unestablished_generation(self):
+        p = self._probe_blind()
+        assert not any(c.code == atlas.CAVEAT_CORE_GENERATION_UNESTABLISHED for c in p.caveats)
+
+    def test_a_generation_mismatch_is_not_this(self):
+        # The other side of the first exclusion: a core that answers with
+        # another option vocabulary. Its generation is what is wrong, and the
+        # governing value was never the question.
+        rd = _retrodeck(
+            self.BASE,
+            cores={
+                f"{DEPLOY}/flycast_libretro.so": {
+                    "library_name": "Flycast",
+                    "options": {"flycast_vmu_layout": {"default": "new", "values": ["new", "old"]}},
+                }
+            },
+        )
+        p = placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_CORE_GENERATION_MISMATCH in codes
+        assert atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED not in codes
+
+    def test_a_core_that_could_not_be_read_is_not_this(self):
+        # The other side of the second exclusion. Nothing was read, so no card
+        # was in play and no option of it was ever looked for.
+        rd = _retrodeck(self.BASE, cores={f"{DEPLOY}/flycast_libretro.so": None})
+        p = placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_CORE_GENERATION_UNESTABLISHED in codes
+        assert atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED not in codes
+
+    def test_a_recorded_default_is_what_keeps_lrps2_answering(self):
+        # The same probe blindness on the card that records a default: LRPS2
+        # registers its options too late for the probe, which is exactly why
+        # its card keeps one — so this machine is answered, not degraded.
+        rd = _retrodeck(
+            {**self.BASE, "/mnt/sd/retrodeck/roms/ps2/Game.iso": ""},
+            cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}},
+        )
+        p = placed(
+            rd.savefile_location(
+                content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so"
+            )
+        )
+        assert p.dir == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+        assert p.granularity is not None
+        assert p.granularity.option_value == "enabled"
+        assert not any(
+            c.code == atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED for c in p.caveats
+        )
+
+    def test_a_core_with_no_card_never_reaches_this(self):
+        # No card, no governing option, nothing to leave unestablished.
+        rd = _retrodeck(
+            {**self.BASE, "/mnt/sd/retrodeck/roms/gba/Game.zip": ""},
+            cores={f"{DEPLOY}/mgba_libretro.so": {"library_name": "mGBA"}},
+        )
+        p = placed(
+            rd.savefile_location(
+                content_path="/mnt/sd/retrodeck/roms/gba/Game.zip", core_so="mgba_libretro.so"
+            )
+        )
+        assert not any(
+            c.code == atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED for c in p.caveats
+        )
+
+
 class TestACoreThatIsNotInstalledIsRefused:
     """Three ways to read nothing about a core, and only one of them is absence.
 
@@ -753,8 +923,7 @@ class TestACoreThatIsNotInstalledIsRefused:
 
     def test_a_healthy_core_is_untouched(self):
         outcome = self._ask(
-            "flycast_libretro.so",
-            cores={f"{DEPLOY}/flycast_libretro.so": {"library_name": "Flycast"}},
+            "flycast_libretro.so", cores={f"{DEPLOY}/flycast_libretro.so": FLYCAST_CORE}
         )
         p = placed(outcome)
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY  # the card applies, as before
@@ -792,7 +961,7 @@ class TestOperaCard:
             SAVES_KEEP: "",
         }
         base.update(files)
-        rd = _retrodeck(base, cores={f"{DEPLOY}/opera_libretro.so": {"library_name": "Opera"}})
+        rd = _retrodeck(base, cores={f"{DEPLOY}/opera_libretro.so": OPERA_CORE})
         return placed(rd.savefile_location(content_path=self.ROM_3DO, core_so="opera_libretro.so"))
 
     def test_default_per_game_nests_subdir_under_save_dir(self):
@@ -1062,7 +1231,7 @@ class TestStrictLoaders:
                 "schema": 1,
                 "cores": {
                     "x": {
-                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "identifiers": {"library_name": ["X"]},
                         "saves": {
                             "modes": {
                                 "always": {
@@ -1151,7 +1320,7 @@ class TestStrictLoaders:
                 "schema": 1,
                 "cores": {
                     "x": {
-                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "identifiers": {"library_name": ["X"]},
                         "saves": {
                             "modes": {
                                 "always": {
@@ -1175,7 +1344,7 @@ class TestStrictLoaders:
                 "schema": 1,
                 "cores": {
                     "x": {
-                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "identifiers": {"library_name": ["X"]},
                         "saves": {
                             "modes": {
                                 "always": {
@@ -1191,18 +1360,112 @@ class TestStrictLoaders:
         )
         assert load_oddities(text)[0].modes["always"].files == ("<save_id>.A1.bin", "<rom_stem>.srm")
 
-    def _mode_card(self, mode):
+    def _mode_card(self, mode, *, anchors=None):
+        saves = {"modes": {"always": {"root": "savefile_directory", **mode}}}
+        if anchors is not None:
+            saves["anchors"] = anchors
         return json.dumps(
+            {"schema": 1, "cores": {"x": {"identifiers": {"library_name": ["X"]}, "saves": saves}}}
+        )
+
+    def test_a_restated_so_name_is_rejected(self):
+        # The key IS the .so basename, so a second spelling can only ever be a
+        # way for the two to disagree — and the disagreement would decide which
+        # core a card is applied to. Ignoring the field would be the silent
+        # version of the same bug.
+        text = json.dumps(
             {
                 "schema": 1,
                 "cores": {
                     "x": {
                         "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
-                        "saves": {"modes": {"always": {"root": "savefile_directory", **mode}}},
+                        "saves": {"modes": {"always": {"root": "savefile_directory", "granularity": "shared-card"}}},
                     }
                 },
             }
         )
+        with pytest.raises(ValueError, match="identifiers.so"):
+            load_oddities(text)
+
+    def test_an_anchor_for_a_name_the_card_does_not_record_is_rejected(self):
+        # An anchor outliving its name protects nothing while looking like it
+        # does — and the next name to arrive gets no anchor at all.
+        text = self._mode_card(
+            {"granularity": "per-game-file", "files": ["a.srm"]},
+            anchors={"a.srm": {"literal": "a.srm"}, "b.srm": {"literal": "b.srm"}},
+        )
+        with pytest.raises(ValueError, match="does not record"):
+            load_oddities(text)
+
+    @pytest.mark.parametrize(
+        "anchor",
+        [
+            {},  # states no protection at all
+            {"literal": "a.srm", "unprotected": "and also not"},  # two at once
+            {"read_it_somewhere": "a.srm"},  # not a kind
+            {"literal": ""},  # matches every binary
+            {"unprotected": ""},  # states no reason
+            "a.srm",  # not an entry
+        ],
+    )
+    def test_a_malformed_anchor_entry_is_rejected(self, anchor):
+        text = self._mode_card(
+            {"granularity": "per-game-file", "files": ["a.srm"]}, anchors={"a.srm": anchor}
+        )
+        with pytest.raises(ValueError, match="anchors"):
+            load_oddities(text)
+
+    def test_an_anchors_block_that_is_not_a_map_is_rejected(self):
+        text = self._mode_card(
+            {"granularity": "per-game-file", "files": ["a.srm"]}, anchors=["a.srm"]
+        )
+        with pytest.raises(ValueError, match="anchors"):
+            load_oddities(text)
+
+    @pytest.mark.parametrize("kind", ["literal", "unprotected", "arrangement"])
+    def test_every_anchor_kind_loads(self, kind):
+        text = self._mode_card(
+            {"granularity": "per-game-file", "files": ["a.srm"]}, anchors={"a.srm": {kind: "because"}}
+        )
+        assert load_oddities(text)[0].key == "x"
+
+    def test_the_recorded_vocabulary_is_every_name_a_card_states(self):
+        # What the anchors have to cover: the option key, each segment of a
+        # subdir, and every file name in all three lists. Mode keys are not in
+        # it — the deployed core registers those, and a measurement beats an
+        # anchor.
+        text = json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"library_name": ["X"]},
+                        "saves": {
+                            "governing_option": {"key": "x_storage"},
+                            "modes": {
+                                "on": {
+                                    "root": "savefile_directory",
+                                    "subdir": "x/per_game",
+                                    "granularity": "per-game-files",
+                                    "files": ["<save_id>.srm"],
+                                    "files_without_save_id": ["<rom_stem>.srm"],
+                                    "observe": ["<save_id>.srm", "<save_id>.bak"],
+                                }
+                            },
+                        },
+                    }
+                },
+            }
+        )
+        card = load_oddities(text)[0]
+        assert recorded_vocabulary(option_key=card.option_key, modes=card.modes) == {
+            "x_storage",
+            "x",
+            "per_game",
+            "<save_id>.srm",
+            "<save_id>.bak",
+            "<rom_stem>.srm",
+        }
 
     def test_a_mode_that_spans_roots_cannot_declare_files(self):
         # The field exists because one list cannot describe a two-root save.
@@ -1269,7 +1532,7 @@ class TestStrictLoaders:
                 "schema": 1,
                 "cores": {
                     "x": {
-                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "identifiers": {"library_name": ["X"]},
                         "saves": {"modes": {"always": {"root": "wherever", "granularity": "shared-card"}}},
                     }
                 },
@@ -1303,7 +1566,7 @@ class TestStrictLoaders:
                 "schema": 1,
                 "cores": {
                     "x": {
-                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "identifiers": {"library_name": ["X"]},
                         "saves": {"modes": modes},
                     }
                 },
@@ -1319,7 +1582,7 @@ class TestStrictLoaders:
                 "schema": 1,
                 "cores": {
                     "x": {
-                        "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
+                        "identifiers": {"library_name": ["X"]},
                         "saves": {
                             "governing_option": {"key": "x_storage", "default": "enabled"},
                             "modes": {"enabled": {"root": "savefile_directory", "granularity": "shared-card"}},
@@ -1564,14 +1827,10 @@ def _registered_governing_option(machine: RealMachine, card: CoreCard) -> CoreOp
     """
     if card.option_key is None:
         return None
-    for so_name in card.so_names:
-        info = machine.query_core(str(DEPLOYED_CORES / so_name))
-        if info is None or info.options is None:
-            continue
-        option = info.options.get(card.option_key)
-        if option is not None:
-            return option
-    return None
+    info = machine.query_core(str(DEPLOYED_CORES / card.so_name))
+    if info is None or info.options is None:
+        return None
+    return info.options.get(card.option_key)
 
 
 @pytest.fixture(scope="module")
@@ -1580,14 +1839,42 @@ def prober() -> RealMachine:
     return RealMachine()
 
 
-class TestTheRecordedDefaultIsTheDeployedCoresOwn:
-    """Each card's ``governing_option.default``, measured against the binary.
+@pytest.fixture(scope="module")
+def deployed_core_bytes() -> Mapping[str, bytes]:
+    """Every deployed card core, read whole, once for the module.
 
-    A card's copy of a default is world knowledge, and world knowledge ages; the
-    core on the machine does not. Recorded option values in this repository had
-    drifted from the cores they described — one of them into a "version drift"
-    invented from a live value the shipped core registers perfectly well — so
-    what catches the next one is a measurement rather than a re-reading.
+    The anchor check is byte containment, which needs the file in memory; the
+    three cards together are ~50 MB and read in well under a second. Reading
+    them per parametrised case instead would multiply that by the anchor count,
+    and shelling out to ``strings`` would put binutils in a test path of a
+    library whose zero-dependency contract is the reason vendoring it is a
+    directory copy.
+    """
+    if not DEPLOYED_CORES.is_dir():
+        return {}
+    return {
+        card.key: (DEPLOYED_CORES / card.so_name).read_bytes()
+        for card in CARDS
+        if (DEPLOYED_CORES / card.so_name).is_file()
+    }
+
+
+class TestADefaultIsRecordedOnlyWhereTheCoreStatesNone:
+    """``governing_option.default`` exists for one reason: nothing else states it.
+
+    Where a core registers its options during ``retro_set_environment``, the
+    probe reads the default straight off the shipped binary, and the resolver
+    uses that live value. A card copy would then be a second, ageing one — and
+    ageing is exactly what it did: recorded option values in this repository had
+    drifted from the cores they described, one of them into a "version drift"
+    invented from a live value the shipped core registers perfectly well. So the
+    rule is not "keep the copy correct", it is "do not keep a copy".
+
+    The measurement runs both ways. A card that records a default the core also
+    registers fails, because the copy is redundant and will drift. A card that
+    records none must be one whose core registers one — otherwise nothing states
+    the value and the resolver can only answer ``core-option-value-unestablished``
+    for a machine that has no options file.
 
     Skipped where the cores are not deployed: the Flatpak is not a build
     dependency and CI has no emulator installation. Where they *are* deployed
@@ -1595,18 +1882,40 @@ class TestTheRecordedDefaultIsTheDeployedCoresOwn:
     """
 
     @pytest.mark.parametrize("card", CARDS, ids=[card.key for card in CARDS])
-    def test_a_cards_default_is_the_one_the_deployed_core_registers(
+    def test_a_card_records_no_default_the_deployed_core_already_states(
         self, prober: RealMachine, card: CoreCard
     ):
         if not DEPLOYED_CORES.is_dir():
             pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
         option = _registered_governing_option(prober, card)
-        if option is None:
-            pytest.skip(f"the deployed cores register no {card.option_key!r} for card {card.key!r}")
-        assert card.option_default == option.default, (
+        # What decides the invariant is whether a *default* was registered, not
+        # whether the option was. A core can register the key and declare no
+        # default with it, and then nothing states the value either — reading
+        # the option's presence instead would invert the rule for exactly that
+        # core and let every machine without an options file answer
+        # core-option-value-unestablished with a green suite.
+        registered_default = option.default if option is not None else None
+        if registered_default is None:
+            # Nothing the probe can read states a default (LRPS2 registers its
+            # options after retro_set_environment), so the card's is the only
+            # one there is — the case the field exists for.
+            #
+            # For a core that registers the key with a NULL default the resolver
+            # answers core-option-value-unestablished, which is the conservative
+            # reading: whether RetroArch's option manager then falls back to the
+            # first declared value is an upstream fact nobody here has verified,
+            # and unverified upstream behaviour is not encoded. Seen, deferred.
+            assert card.option_default is not None, (
+                f"card {card.key!r} records no default and the deployed core states none for "
+                f"{card.option_key!r} either, so nothing on such a machine says which mode is "
+                "in force — record the default the audit read, with the reason in provenance"
+            )
+            return
+        assert card.option_default is None, (
             f"card {card.key!r} records {card.option_default!r} as the default of "
-            f"{card.option_key!r} and the deployed core registers {option.default!r} — "
-            "the binary is the machine, so the card is what changes"
+            f"{card.option_key!r} and the deployed core registers {registered_default!r} itself — "
+            "a card records a default only where the core states none, and this copy can only "
+            "drift away from the binary that answers"
         )
 
     def test_the_defaults_are_really_measured_where_the_cores_are_deployed(
@@ -1615,7 +1924,9 @@ class TestTheRecordedDefaultIsTheDeployedCoresOwn:
         # A run that skipped every card looks exactly like a run that checked
         # them all. On a machine carrying the cores, at least one card has to
         # have been read from a binary — a probe that silently stopped working
-        # would otherwise retire this whole measurement without a failure.
+        # would otherwise retire this whole measurement without a failure. The
+        # test above never skips now (it answers for both outcomes), so what
+        # this guards is the reading itself.
         if not DEPLOYED_CORES.is_dir():
             pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
         measured = sorted(
@@ -1625,4 +1936,204 @@ class TestTheRecordedDefaultIsTheDeployedCoresOwn:
             f"cores are deployed at {DEPLOYED_CORES} and not one card's governing option was read "
             "from a binary — either every card is a generation behind what is installed, or the "
             "probe (atlas._core_probe) stopped capturing registrations"
+        )
+
+
+class TestTheModeKeysAreTheDeployedCoresOwn:
+    """Each card's mode keys, measured against the value set the binary registers.
+
+    A mode key is not a label this repository chose: it is one value of the
+    governing option, spelled the way the core spells it, and the resolver looks
+    the live value up in that map. A key that drifts by a character selects
+    nothing, and the answer then reports a generation mismatch that never
+    happened — so the set is measured, not proof-read, exactly as the default
+    above is.
+
+    Equality both ways is the claim. A card missing one of the core's values
+    cannot answer for a machine that selected it; a card inventing a value
+    describes behaviour no configuration can reach.
+    """
+
+    @pytest.mark.parametrize("card", CARDS, ids=[card.key for card in CARDS])
+    def test_a_cards_modes_are_the_values_the_deployed_core_registers(
+        self, prober: RealMachine, card: CoreCard
+    ):
+        if not DEPLOYED_CORES.is_dir():
+            pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        option = _registered_governing_option(prober, card)
+        if option is None:
+            pytest.skip(f"the deployed cores register no {card.option_key!r} for card {card.key!r}")
+        assert sorted(card.modes) == sorted(option.values), (
+            f"card {card.key!r} describes modes {sorted(card.modes)} and the deployed core "
+            f"registers {sorted(option.values)} for {card.option_key!r} — the binary is the "
+            "machine, so the card is what changes"
+        )
+
+    def test_the_mode_keys_are_really_measured_where_the_cores_are_deployed(
+        self, prober: RealMachine
+    ):
+        # Same guard as the defaults have, for the same reason: an all-skip run
+        # passes exactly like a run that measured every card, so a probe that
+        # quietly stopped capturing registrations would retire this measurement
+        # without a single failure.
+        if not DEPLOYED_CORES.is_dir():
+            pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        measured = sorted(
+            card.key for card in CARDS if _registered_governing_option(prober, card) is not None
+        )
+        assert measured, (
+            f"cores are deployed at {DEPLOYED_CORES} and not one card's mode keys were read from a "
+            "binary — either every card is a generation behind what is installed, or the probe "
+            "(atlas._core_probe) stopped capturing registrations"
+        )
+
+
+def _shipped_anchors() -> dict[str, dict[str, dict[str, str]]]:
+    """The packaged cards' ``anchors`` blocks, raw.
+
+    Anchors are audit machinery: the loader validates them and drops them, so
+    nothing that reaches a caller can carry them. Reading the file here is how
+    ``provenance.status`` is checked too.
+    """
+    text = (
+        importlib.resources.files("atlas").joinpath("data", "core_oddities.json").read_text(encoding="utf-8")
+    )
+    return {key: entry["saves"].get("anchors", {}) for key, entry in json.loads(text)["cores"].items()}
+
+
+# One (card, literal) pair per distinct byte string the auditor read — several
+# recorded names share an anchor (Flycast's four VMU files are all one stem).
+LITERAL_ANCHORS = sorted(
+    {
+        (key, anchor["literal"])
+        for key, anchors in _shipped_anchors().items()
+        for anchor in anchors.values()
+        if "literal" in anchor
+    }
+)
+
+
+class TestEveryRecordedNameIsAnchoredOrMarked:
+    """No silent opt-out: each name a card states is protected, or says it is not.
+
+    A card names files and subdirectories that atlas hands to callers as fact,
+    and those names came from somewhere — a literal in the shipped binary, or a
+    run-time composition nobody can pin to one. Recording which is which is the
+    difference between a vocabulary that fails loudly when a build renames it
+    and one that quietly goes on describing a core that no longer exists.
+
+    This is a claim about the *shipped* cards, so it lives here rather than in
+    the loader: a synthetic card built inside some other test would otherwise
+    have to carry anchors merely to load.
+    """
+
+    def test_every_shipped_card_covers_its_whole_vocabulary(self):
+        anchors = _shipped_anchors()
+        for card in CARDS:
+            recorded = recorded_vocabulary(option_key=card.option_key, modes=card.modes)
+            unprotected = sorted(recorded - set(anchors.get(card.key, {})))
+            assert unprotected == [], (
+                f"card {card.key!r} states {unprotected} and saves.anchors says nothing about them "
+                "— give each the literal it was read from, or mark it 'unprotected' (composed at "
+                "run time) or 'arrangement' (the path is not the core's) with a reason"
+            )
+
+    def test_the_shipped_cards_really_record_something_to_anchor(self):
+        # The check above is vacuous for a card that states no names at all, so
+        # a schema change that stopped exposing them would read as a clean run.
+        recording = [
+            card.key
+            for card in CARDS
+            if recorded_vocabulary(option_key=card.option_key, modes=card.modes)
+        ]
+        assert recording, (
+            "not one shipped card records an option key, a subdir or a file name — either the cards "
+            "state nothing any more, or recorded_vocabulary stopped seeing what they state, and the "
+            "coverage check above is passing on an empty set"
+        )
+
+    def test_the_names_no_binary_check_reaches_are_the_ones_already_reasoned_about(self):
+        """Which names the tripwire does not watch — pinned, so the set cannot grow quietly.
+
+        ``unprotected`` and ``arrangement`` are the two ways out of the byte
+        check. Both are right where they stand: Flycast composes its per-content
+        VMU names at run time and the console flash name is nowhere in the
+        binary, and LRPS2's ``pcsx2/`` segment is a path RetroDECK builds. Each
+        is still one more name resting on live observation alone, so the list
+        lives here and a new one arrives as a visible diff rather than a quiet
+        opt-out.
+        """
+        marked = sorted(
+            (key, name, kind)
+            for key, anchors in _shipped_anchors().items()
+            for name, anchor in anchors.items()
+            for kind in anchor
+            if kind != "literal"
+        )
+        assert marked == [
+            ("flycast", "<rom_stem>.A1.bin", "unprotected"),
+            ("flycast", "<rom_stem>.B1.bin", "unprotected"),
+            ("flycast", "<rom_stem>.C1.bin", "unprotected"),
+            ("flycast", "<rom_stem>.D1.bin", "unprotected"),
+            ("flycast", "<save_id>.A1.bin", "unprotected"),
+            ("flycast", "<save_id>.B1.bin", "unprotected"),
+            ("flycast", "<save_id>.C1.bin", "unprotected"),
+            ("flycast", "<save_id>.D1.bin", "unprotected"),
+            ("flycast", "dc_nvmem.bin", "unprotected"),
+            ("pcsx2", "pcsx2", "arrangement"),
+        ], (
+            "the set of recorded names no anchor watches has changed — every entry here rests on "
+            "live observation alone, so confirm the new one really cannot be pinned to a literal "
+            "before updating this list"
+        )
+        for key, anchors in _shipped_anchors().items():
+            for name, anchor in anchors.items():
+                ((kind, _),) = anchor.items()
+                assert kind in ANCHOR_KINDS, f"card {key!r}, {name!r}: unknown anchor kind {kind!r}"
+
+
+class TestTheAnchorsAreLiteralsInTheDeployedCore:
+    """The tripwire itself: every anchor, re-read in the binary it came from.
+
+    What it catches is a vocabulary rename — a build that stops spelling
+    ``vmu_save_`` or ``Mcd%03u.ps2`` fails here instead of leaving the card
+    describing names the core no longer writes. What it cannot catch is the
+    grammar around a literal (that ``%s.ps2`` is still the *save* name and not
+    something else), or a name no literal carries at all — those stay marked
+    ``unprotected`` and rest on live observation.
+
+    Skipped where the cores are not deployed: the Flatpak is not a build
+    dependency and CI has no emulator installation.
+    """
+
+    @pytest.mark.parametrize(
+        ("key", "literal"), LITERAL_ANCHORS, ids=[f"{key}:{literal}" for key, literal in LITERAL_ANCHORS]
+    )
+    def test_an_anchor_is_a_whole_string_in_the_shipped_binary(
+        self, deployed_core_bytes: Mapping[str, bytes], key: str, literal: str
+    ):
+        if key not in deployed_core_bytes:
+            pytest.skip(f"no {key} core is deployed at {DEPLOYED_CORES}")
+        # Whole NUL-delimited, not a substring: 'dc' occurs inside a thousand
+        # unrelated strings, and the flycast binary really does carry '/dc' —
+        # its texture-dump path, which has nothing to do with saves.
+        needle = b"\x00" + literal.encode() + b"\x00"
+        assert needle in deployed_core_bytes[key], (
+            f"card {key!r} anchors a recorded name to {literal!r} and the deployed "
+            f"{key}_libretro.so carries no such string — the core's vocabulary moved, so the card "
+            "describes names it no longer writes; re-audit before trusting the placement"
+        )
+
+    def test_the_anchors_are_really_read_where_the_cores_are_deployed(
+        self, deployed_core_bytes: Mapping[str, bytes]
+    ):
+        # The same all-skip guard the option measurements carry: a run that
+        # checked nothing is indistinguishable from a clean one otherwise.
+        if not DEPLOYED_CORES.is_dir():
+            pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        checked = sorted({key for key, _ in LITERAL_ANCHORS if key in deployed_core_bytes})
+        assert checked, (
+            f"cores are deployed at {DEPLOYED_CORES} and not one anchor was read from a binary — "
+            "either no shipped card anchors anything any more, or the cores moved out of this "
+            "directory and the tripwire is silently checking nothing"
         )

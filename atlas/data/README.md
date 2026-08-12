@@ -6,6 +6,23 @@ One card per libretro core whose save behaviour deviates from RetroArch's standa
 governs the core_ and what each of its values means; the value itself is always read off the machine. The audit verdict
 behind every card lives in `core_audit.json`, and a test fails if a card has no entry there.
 
+**A card states only what no read of the machine recovers, and what it states is machine-checked wherever a machine can
+check it.** Three consequences run through the format:
+
+- The card key is the core's canonical short name — the `.so` basename without `_libretro.so` — and the `.so` name is
+  **derived** from it rather than restated. A second spelling could only ever be a way for the two to disagree about
+  which core a card describes, so the loader refuses a card that still carries `identifiers.so`. What the key does not
+  give is the display name the binary reports (`Flycast`, `LRPS2`); `identifiers.library_name` carries that, and lookup
+  works from either side.
+- `governing_option.default` is recorded **only for a core that registers none**, and a test fails the redundant copy
+  rather than keeping it correct by hand. Where a core registers its options during `retro_set_environment`,
+  `query_core` reads the default off the shipped binary; a card's copy would be a second, ageing one. LRPS2 registers
+  later than that, which is why its card keeps a default and says so in its provenance. The consequence is stated, not
+  papered over: on a machine where such a core's registration cannot be read **and** no options file names the value,
+  nothing establishes which mode is in force, so the card steps aside and the answer carries
+  `core-option-value-unestablished`.
+- Every file name and subdir fragment a card records is pinned to the binary it was read from — see _Anchors_ below.
+
 A mode — one value of the governing option — states the root it anchors at, an optional `subdir`, its `granularity`, and
 the files the save consists of. Three of those fields are closed vocabularies — all three the placement's own, imported
 by the loader rather than respelled here, so a card cannot select a value the contract cannot carry — and one is a type
@@ -71,12 +88,53 @@ placement vocabulary first. An empty list, an empty name and a literal angle bra
 `complete` is the explicit claim that the mode's candidate universe is closed. A template can in principle carry it —
 the hole is in the name, not in the membership — but only source-verified provenance earns it.
 
+### Anchors — every recorded name, pinned to the string it was read from
+
+A card names files and subdirectories that reach a caller as fact, and `saves.anchors` records where each of those names
+came from. One entry per recorded name — the governing option key, every segment of a `subdir`, and every name in
+`files`, `observe` and `files_without_save_id` — carrying exactly one of three kinds:
+
+| kind          | means                                                                                |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `literal`     | the whole NUL-delimited byte string the auditor read in the shipped `.so`            |
+| `unprotected` | no literal spells this name — the core composes it at run time, and the text says so |
+| `arrangement` | the name is not the core's word at all: the arrangement builds that path             |
+
+```json
+"anchors": {
+  "vmu_save_A1.bin": { "literal": "vmu_save_" },
+  "dc_nvmem.bin": { "unprotected": "no literal in the shipped binary spells this name — …" }
+}
+```
+
+A test re-reads every `literal` in the deployed core and fails when it is gone, so a build that renames `vmu_save_` or
+`Mcd%03u.ps2` is caught instead of leaving the card describing names the core no longer writes. The check is
+whole-string containment between NUL bytes, not a substring scan: flycast really does carry the literal `/dc`, and it is
+the texture-dump path, nothing to do with saves.
+
+**A recorded name with none of the three kinds fails the tests** — there is no silent opt-out, because a name that looks
+checked and is not is worse than one marked as what it is. What the tripwire cannot catch is the _grammar_ around a
+literal (that `%s.ps2` still names the save and not something else) and the names no literal carries; those stay
+`unprotected` and rest on live observation and the next re-audit.
+
+Mode keys are deliberately not anchored. They are the governing option's own values and the deployed core registers
+them, so the tests measure that set against the binary directly — a measurement beats an anchor.
+
+The loader validates the block and then drops it: anchors are audit machinery, and nothing that reaches a caller holds
+them.
+
 ### Provenance
 
-`provenance.source` is the evidence prose the answer carries in its `sources`, `verified_against` and `date` pin what it
-was established on, and `provenance.status` states it **per mode**: every mode has an entry, and the flycast card opens
-each with the project's evidence marker (`[V-live]`, `[D]`, `[O]`) so an observed mode and a derived one cannot be read
-as the same claim. Tests enforce the per-mode coverage and that marker split.
+`provenance.source` is the evidence prose the answer carries in its `sources` — the one field of the block a resolver
+reads. `provenance.status` states the evidence **per mode**: every mode has an entry, and the flycast card opens each
+with the project's evidence marker (`[V-live]`, `[D]`, `[O]`) so an observed mode and a derived one cannot be read as
+the same claim. That is a maintenance invariant enforced by tests over this file, not an input to any answer — no client
+receives anything shaped by it.
+
+What a card was verified _against_ is not written here. It lives in `core_audit.json` as `verified.<arrangement>` — the
+arrangement version, the core's `library_version`, the date — where it is structured, compared against the running
+machine, and carries `unverified-version` when the two differ. A prose twin beside the card could only be a second copy
+going stale in silence.
 
 ## `core_audit.json`
 

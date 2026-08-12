@@ -1,20 +1,16 @@
 {
   "schema": 1,
-  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' lists every name the card matches, including the display library_name the core binary reports. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
+  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
     "flycast": {
       "identifiers": {
-        "so": [
-          "flycast_libretro.so"
-        ],
         "library_name": [
           "Flycast"
         ]
       },
       "saves": {
         "governing_option": {
-          "key": "reicast_per_content_vmus",
-          "default": "disabled"
+          "key": "reicast_per_content_vmus"
         },
         "modes": {
           "disabled": {
@@ -66,12 +62,69 @@
             "files_citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)",
             "granularity": "per-game-files"
           }
+        },
+        "anchors": {
+          "reicast_per_content_vmus": {
+            "literal": "reicast_per_content_vmus"
+          },
+          "dc": {
+            "literal": "%s%cdc"
+          },
+          "vmu_save_A1.bin": {
+            "literal": "vmu_save_"
+          },
+          "vmu_save_A2.bin": {
+            "literal": "vmu_save_"
+          },
+          "vmu_save_B1.bin": {
+            "literal": "vmu_save_"
+          },
+          "vmu_save_B2.bin": {
+            "literal": "vmu_save_"
+          },
+          "vmu_save_C1.bin": {
+            "literal": "vmu_save_"
+          },
+          "vmu_save_C2.bin": {
+            "literal": "vmu_save_"
+          },
+          "vmu_save_D1.bin": {
+            "literal": "vmu_save_"
+          },
+          "vmu_save_D2.bin": {
+            "literal": "vmu_save_"
+          },
+          "dc_nvmem.bin": {
+            "unprotected": "no literal in the shipped binary spells this name — the flash file's vocabulary there is '.nvmem'/'.nvmem2'. The name comes from the live observation recorded in provenance.status, and that observation plus the next re-audit is all that stands behind it"
+          },
+          "<save_id>.A1.bin": {
+            "unprotected": "composed at run time from the disc's product number and the port; live observation and re-audit are the protection"
+          },
+          "<save_id>.B1.bin": {
+            "unprotected": "composed at run time from the disc's product number and the port; live observation and re-audit are the protection"
+          },
+          "<save_id>.C1.bin": {
+            "unprotected": "composed at run time from the disc's product number and the port; live observation and re-audit are the protection"
+          },
+          "<save_id>.D1.bin": {
+            "unprotected": "composed at run time from the disc's product number and the port; live observation and re-audit are the protection"
+          },
+          "<rom_stem>.A1.bin": {
+            "unprotected": "composed at run time from the content's own name and the port; live observation and re-audit are the protection"
+          },
+          "<rom_stem>.B1.bin": {
+            "unprotected": "composed at run time from the content's own name and the port; live observation and re-audit are the protection"
+          },
+          "<rom_stem>.C1.bin": {
+            "unprotected": "composed at run time from the content's own name and the port; live observation and re-audit are the protection"
+          },
+          "<rom_stem>.D1.bin": {
+            "unprotected": "composed at run time from the content's own name and the port; live observation and re-audit are the protection"
+          }
         }
       },
       "provenance": {
         "source": "flycast_libretro.so option strings ('Per-Game VMUs', mode descriptions); live observation on RetroDECK 0.10.9b — <system_directory>/dc holds vmu_save_{A1,B1,C1,D1}.bin + dc_nvmem.bin, and a per-content run wrote <save_id>.<port>.bin for the four connected ports into the save directory the frontend handed the core. Names follow hostfs::getVmuPath (flycast@1dac369 shell/libretro/oslib.cpp:38-67): with settings.platform.isConsole() and a non-empty settings.content.gameId the name is that id — the disc's product number read from its header (core/emulator.cpp:838-841), trailing blanks trimmed, each of ' /\\:*?|<>' replaced by '_' — and without one (arcade content, or a disc header stating none) the ROM's own name (oslib.cpp:62); a legacy ROM-named file is still read when no id-named one exists (oslib.cpp:55-60). The directory is RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY as the frontend redirected it (shell/libretro/libretro.cpp:2142-2148), so the mode nests no subdirectory of its own. Switching modes moves the save, it does not duplicate it: the shared cards stay behind untouched. Per-content applies per port — with 'VMU A1' only port A1 moves and B1..D1 keep using the shared card (oslib.cpp:40-41), which is why that mode states no file set. dc_nvmem.bin is the console's own flash, shared by every game in every mode, and stays under <system_directory>/dc throughout. Slot-2 VMUs (A2..D2) exist only when a port's slot 2 is configured as VMU; on Naomi the connected VMUs are B1 and C1 (core/hw/maple/maple_cfg.cpp:246-253). The key is reicast_per_content_vmus and not the flycast_per_content_vmus libretro's own documentation names (libretro/docs @ cf43d92 docs/library/flycast.md:294): every Flycast build prefixes its options with CORE_OPTION_NAME, which upstream still defines as \"reicast\" (flyinghead/flycast shell/libretro/libretro_core_option_defines.h:20, unchanged from the shipped 1dac369 to master a172e00) — the documented spelling is a docs bug, never a generation signal.",
-        "verified_against": "Flycast as shipped in RetroDECK 0.10.9b",
-        "date": "2026-08-05",
         "status": {
           "disabled": "[V-live] 2026-07-23 — observed under <system_directory>/dc, A1 written by play",
           "VMU A1": "[D] 2026-08-05 — derived from the same code path as 'All VMUs' (oslib.cpp:40-41); not exercised live. The save spans two roots in this mode, so no file set is stated",
@@ -81,17 +134,13 @@
     },
     "opera": {
       "identifiers": {
-        "so": [
-          "opera_libretro.so"
-        ],
         "library_name": [
           "Opera"
         ]
       },
       "saves": {
         "governing_option": {
-          "key": "opera_nvram_storage",
-          "default": "per game"
+          "key": "opera_nvram_storage"
         },
         "modes": {
           "per game": {
@@ -106,12 +155,24 @@
             "files": null,
             "granularity": "shared-card"
           }
+        },
+        "anchors": {
+          "opera_nvram_storage": {
+            "literal": "opera_nvram_storage"
+          },
+          "opera": {
+            "literal": "opera"
+          },
+          "per_game": {
+            "literal": "per_game"
+          },
+          "shared": {
+            "literal": "shared"
+          }
         }
       },
       "provenance": {
         "source": "opera-libretro @ 67a29e6, the revision the shipped binary names in its library_version: NVRAM is written to '<save_dir>/opera/per_game/<rom_stem>.<version>.srm' (opera_lr_nvram.c:130-152) or '<save_dir>/opera/shared/nvram.<version>.srm' (:154-175); <version> comes from opera_nvram_version (libretro_core_options.c:188-206), which is why per-mode file lists are omitted rather than declared — the option's values are read from the core, not recorded here. The 'opera' directory is joined onto the save directory the frontend gives (:115-128), which falls back to the system directory only when the frontend provides none (:102-113) — never the case under RetroArch. RETRO_MEMORY_SAVE_RAM returns NULL (libretro.c:430-444), so these files are the ONLY persistence; no RetroArch-side .srm exists. Legacy locations are tried at load only, in order: the per_game/shared file, then '<save_dir>/<rom_stem>.srm' and '<system_dir>/<rom_stem>.srm' for a per-game load (opera_lr_nvram.c:177-217, :243-265), or '<save_dir>/3DO.nvram' and '<system_dir>/3DO.nvram' for a shared one (:267-303, :328-349, name at :17).",
-        "verified_against": "opera-libretro @ 67a29e6; Opera as shipped in RetroDECK 0.10.9b, which reports library_version '1.0.0 67a29e6' and registers opera_nvram_storage",
-        "date": "2026-08-11",
         "status": {
           "per game": "paths verified from source; file names are opera_nvram_version-parameterized and therefore not declared; not yet live-observed",
           "shared": "paths verified from source; not yet live-observed"
@@ -120,9 +181,6 @@
     },
     "pcsx2": {
       "identifiers": {
-        "so": [
-          "pcsx2_libretro.so"
-        ],
         "library_name": [
           "LRPS2"
         ]
@@ -150,12 +208,30 @@
             ],
             "granularity": "per-game-file"
           }
+        },
+        "anchors": {
+          "pcsx2_shared_memory_cards": {
+            "literal": "pcsx2_shared_memory_cards"
+          },
+          "pcsx2": {
+            "arrangement": "not the core's word: RetroDECK builds this path (retroarch/component_prepare.sh:97). The binary carries an identical literal — PCSX2's own data-root name — so anchoring here would pass a check the arrangement, not the core, has to answer"
+          },
+          "memcards": {
+            "literal": "memcards"
+          },
+          "Mcd001.ps2": {
+            "literal": "Mcd%03u.ps2"
+          },
+          "Mcd002.ps2": {
+            "literal": "Mcd%03u.ps2"
+          },
+          "<rom_stem>.ps2": {
+            "literal": "%s.ps2"
+          }
         }
       },
       "provenance": {
-        "source": "libretro/ps2 source: option def libretro_core_options.h:158-170; per-content branch main.cpp:2154-2166 sets Folders/MemoryCards to RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY and Pcsx2Config.cpp:995-997 names slot 1 '<rom_stem>.ps2'. Shared mode roots at PCSX2's default memcards folder — under RetroDECK that is <system_directory>/pcsx2/memcards (component_prepare.sh:97 dir_prep, live symlink observed). NOTE: an older LRPS2 generation used pcsx2_memcard_slot_1/2 keys (observed in a live retroarch-core-options.cfg) — this card matches the core shipped in RetroDECK 0.10.9b. LRPS2 registers its options later than retro_set_environment, so a probe of the shipped binary captures none of them and cannot confirm the default the way it can for other cards; governing_option.default is the recorded fallback for an options file that has no entry.",
-        "verified_against": "LRPS2 as shipped in RetroDECK 0.10.9b; libretro/ps2 @ master 2026-07-23",
-        "date": "2026-07-23",
+        "source": "libretro/ps2 source: option def libretro_core_options.h:158-170; per-content branch main.cpp:2154-2166 sets Folders/MemoryCards to RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY and Pcsx2Config.cpp:995-997 names slot 1 '<rom_stem>.ps2'. Shared mode roots at PCSX2's default memcards folder — under RetroDECK that is <system_directory>/pcsx2/memcards, and that path is the arrangement's own work, not the core's: retroarch/component_prepare.sh:97 (in the Flatpak's components tree) runs dir_prep for it against <saves>/ps2/retroarch-core/LRPS2/memcards. What stands there is therefore whatever the arrangement last prepared — observed on 2026-08-12 as exactly that symlink, empty; a plain directory at the same path is the same answer for placement, since the core is handed the path either way. NOTE: an older LRPS2 generation used pcsx2_memcard_slot_1/2 keys (observed in a live retroarch-core-options.cfg) — this card matches the core shipped in RetroDECK 0.10.9b. LRPS2 registers its options later than retro_set_environment, so a probe of the shipped binary captures none of them and cannot confirm the default the way it can for other cards; governing_option.default is the recorded fallback for an options file that has no entry.",
         "status": {
           "enabled": "root verified via RetroDECK arrangement; filenames from format strings + PCSX2 defaults, not yet live-observed",
           "disabled": "root and slot-1 filename verified from source; slot-2 behaviour in this mode unestablished"

@@ -47,14 +47,17 @@ what their check is for.
 
 ## 3. Cores: only carded, only moved
 
-Rule cards (`atlas/data/core_oddities.json`) and audit entries (`atlas/data/core_audit.json`) pin core versions of their
-own. Re-check the intersection — cards whose core actually moved — following the method in `docs/research/core-audit.md`
-(unfiltered scan, then upstream source, then live observation).
+Audit entries (`atlas/data/core_audit.json`) pin the core versions, one record per arrangement — the rule cards
+themselves pin nothing, by design: a prose copy beside the structured record could only go stale unnoticed, so
+`verified.<arrangement>` is the single place a version is written down. Re-check the intersection — cards whose core
+actually moved — following the method in `docs/research/core-audit.md` (unfiltered scan, then upstream source, then live
+observation).
 
 Everything else is guarded at runtime and needs no pass: a card whose governing option a core no longer registers steps
 aside by feature detection (`core-generation-mismatch`), a card whose core could not be read at all steps aside too
-(`core-generation-unestablished`), and a card pinned to versions this machine does not run says so per answer
-(`unverified-version`).
+(`core-generation-unestablished`), a card whose governing value nothing establishes — the core registered no default,
+the card records none, and no config states one — steps aside as well (`core-option-value-unestablished`), and a card
+pinned to versions this machine does not run says so per answer (`unverified-version`).
 
 ## 4. One full-surface live run
 
