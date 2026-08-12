@@ -14,6 +14,7 @@ from atlas.esde import (
     parse_gamelist_alternative,
     resolve_rom_path,
 )
+from tests.answers import placed, state_placed
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -429,7 +430,7 @@ class TestEntrySavefileLocation:
             cores={f"{DEPLOY}/cores/flycast_libretro.so": {"library_name": "Flycast"}},
         )
         entry = _entries(rd.emulators_for("dreamcast"))[0]
-        p = entry.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi")
+        p = placed(entry.savefile_location(content_path="/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi"))
         assert isinstance(p, atlas.SavefilePlacement)
         assert p.dir == "/mnt/sd/retrodeck/bios/dc"
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
@@ -610,7 +611,7 @@ class TestPerGameAltemulator:
             }
         )
         parallel = _entries(rd.emulators_for("n64"))[0]  # ParaLLEl (system default)
-        p = parallel.savefile_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip")
+        p = placed(parallel.savefile_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip"))
         assert isinstance(p, atlas.SavefilePlacement)
         override = [c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
         assert override
@@ -762,11 +763,11 @@ class TestPerGameMatchIsAnchored:
             {**self.FILES, RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'}
         )
         mupen = _entries(rd.emulators_for("n64"))[0]
-        nested = mupen.savefile_location(content_path=f"{self.ROMS}/Collection/Game.m3u")
+        nested = placed(mupen.savefile_location(content_path=f"{self.ROMS}/Collection/Game.m3u"))
         assert isinstance(nested, atlas.SavefilePlacement)
         assert not [c for c in nested.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE]
         # The game that does carry it still gets it.
-        owner = mupen.savefile_location(content_path=f"{self.ROMS}/Game.m3u")
+        owner = placed(mupen.savefile_location(content_path=f"{self.ROMS}/Game.m3u"))
         assert isinstance(owner, atlas.SavefilePlacement)
         assert [c.data["label"] for c in owner.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDE] == [
             "ParaLLEl N64"
@@ -818,7 +819,7 @@ class TestAnAnchorThatCannotBeResolvedSaysSo:
                 ESDE_SETTINGS: {"status": "unreadable"},
             }
         )
-        placement = _entries(rd.emulators_for("n64"))[0].savefile_location(content_path=self.CONTENT)
+        placement = placed(_entries(rd.emulators_for("n64"))[0].savefile_location(content_path=self.CONTENT))
         assert isinstance(placement, atlas.SavefilePlacement)
         assert atlas.CAVEAT_FRONTEND_SETTINGS_UNREADABLE in [c.code for c in placement.caveats]
 
@@ -857,6 +858,6 @@ class TestAnAnchorThatCannotBeResolvedSaysSo:
         placement = atlas.RetroDeck(HOME, machine).entry_savefile_location(
             spec, content_path="/mnt/sd/retrodeck/roms/n64/Game.m3u"
         )
-        codes = [c.code for c in placement.caveats]
+        codes = [c.code for c in placed(placement).caveats]
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE in codes
         assert atlas.CAVEAT_ROM_PATH_UNDECLARED not in codes

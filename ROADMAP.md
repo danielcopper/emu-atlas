@@ -67,7 +67,7 @@ override enumeration without a core, deviation warnings against shipped referenc
 
 **Foundation done:** `query_core` captures registered option definitions; card applicability is decided on the
 observable key (registered → confirmed, version drift demoted to provenance; missing → card retired with
-`card-generation-mismatch`); registered defaults and value sets are live reads. Remaining: per-generation card
+`core-generation-mismatch`); registered defaults and value sets are live reads. Remaining: per-generation card
 _variants_ keyed by their option signature — added when an old generation actually gets audited — and distinct
 probe-failure reporting. Design in `docs/research/core-audit.md`.
 

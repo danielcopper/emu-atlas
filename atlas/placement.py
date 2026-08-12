@@ -138,8 +138,13 @@ CAVEAT_INVALID_SAVE_DIRECTORY = "invalid-save-directory"
 CAVEAT_CORE_SUSPECT = "core-suspect"
 CAVEAT_CORE_UNAUDITED = "core-unaudited"
 CAVEAT_CORE_MULTI_OPTION = "core-multi-option"
-CAVEAT_CARD_MODE_UNCONFIRMED = "card-mode-unconfirmed"
-CAVEAT_CARD_GENERATION_MISMATCH = "card-generation-mismatch"
+CAVEAT_CORE_GENERATION_MISMATCH = "core-generation-mismatch"
+# The installed core could not be read at all, so which generation is on this
+# machine was never established and the recorded deviation is not applied. Its
+# own code, and never together with the mismatch above: that one is a core that
+# WAS read and answered for a generation the record does not describe. Here
+# nothing answered, which is a different thing to tell a client.
+CAVEAT_CORE_GENERATION_UNESTABLISHED = "core-generation-unestablished"
 CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
 CAVEAT_DEAD_SYMLINK = "dead-symlink"
 CAVEAT_SYMLINK_LOOP = "symlink-loop"
@@ -349,6 +354,14 @@ class SavefilePlacement:
 
 # Unresolved outcome codes — stable identifiers like caveat codes.
 UNRESOLVED_STANDALONE = "standalone-unsupported"
+# The caller named a core this installation does not have, and the cores
+# directory was read well enough to establish that. One fact, one code on both
+# routes: the firmware route says it with a caveat
+# (``atlas.firmware.CAVEAT_CORE_NOT_INSTALLED``, which is this same string), the
+# save routes with this outcome, and a client that learned the word on one route
+# reads the other. Not to be confused with a core that is *there* and will not
+# load — that one still has a placement, with its generation left unestablished.
+UNRESOLVED_CORE_NOT_INSTALLED = "core-not-installed"
 
 
 @dataclass(frozen=True, slots=True)

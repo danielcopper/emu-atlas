@@ -158,11 +158,13 @@ on parsing version strings (the browser lesson: sniffing user agents loses; prob
 - **Card applicability is feature-detected** (implemented): `query_core` captures the option definitions a core
   registers in `retro_set_environment` (all API formats: `SET_VARIABLES`, `SET_CORE_OPTIONS`/`_INTL`, v2, v2 `_INTL`). A
   card applies when its governing key is observably registered — then version drift is demoted to provenance; a key the
-  core does not register retires the card (`card-generation-mismatch`, the standard frame stays with the caveat);
+  core does not register retires the card (`core-generation-mismatch`, the standard frame stays with the caveat);
   registered defaults outrank the card's shipped-generation copy, and persisted values are validated against the live
-  value set. Not every core is capturable — LRPS2 itself registers its options after `retro_set_environment` (probe
-  shows none), so the uncaptured case falls back to the version comparison. Next step when an old generation gets
-  audited: per-generation card _variants_ keyed by their option signature.
+  value set. A core that could not be read at all retires its card too, under its own code
+  (`core-generation-unestablished`): the `.so` file name is not evidence of a generation. Not every core is capturable —
+  LRPS2 itself registers its options after `retro_set_environment` (probe shows none), so the uncaptured case — the core
+  answered, its options did not — falls back to the version comparison. Next step when an old generation gets audited:
+  per-generation card _variants_ keyed by their option signature.
 - **A vector per generation, never deleted.** Each supported generation keeps its fixture machine in the conformance
   vectors — that is the guarantee that understanding an old version survives supporting a new one.
 - The version matrix records what was _proven_; the caveat marks everything else as unverified rather than wrong.

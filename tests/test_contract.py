@@ -13,6 +13,7 @@ import json
 import atlas
 from atlas.machine import FixtureMachine
 from atlas.contract import health_contract, installation_contract
+from tests.answers import placed, state_placed
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -92,8 +93,8 @@ class TestTheSavestateFormOmitsGranularity:
     def _placements(self):
         handle = _healthy()
         return (
-            atlas.savefile_placement_contract(handle.savefile_location()),
-            atlas.savestate_placement_contract(handle.savestate_location()),
+            atlas.savefile_placement_contract(placed(handle.savefile_location())),
+            atlas.savestate_placement_contract(state_placed(handle.savestate_location())),
         )
 
     def test_granularity_is_absent_rather_than_null(self):

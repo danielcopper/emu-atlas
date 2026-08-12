@@ -23,15 +23,14 @@ from atlas.machine import FixtureMachine
 from scripts import validate_vectors
 from atlas.contract import (
     catalogue_contract,
+    savefile_answer_contract,
+    savestate_answer_contract,
     systems_contract,
     firmware_contract,
     identification_contract,
     installation_answers_contract,
     installation_contract,
-    savefile_placement_contract,
     rom_placement_contract,
-    savestate_placement_contract,
-    unresolved_contract,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -84,14 +83,14 @@ def _aggregate(installs, query, name):
             every.savefile_location(
                 content_path=query.get("content_path"), core_so=query.get("core_so")
             ),
-            savefile_placement_contract,
+            savefile_answer_contract,
         )
     if question == "savestate_location":
         return installation_answers_contract(
             every.savestate_location(
                 content_path=query.get("content_path"), core_so=query.get("core_so")
             ),
-            savestate_placement_contract,
+            savestate_answer_contract,
         )
     if question == "emulators_for":
         return installation_answers_contract(
@@ -119,14 +118,14 @@ def _systems(installs, query, name):
 
 def _savefile_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
-    return savefile_placement_contract(
+    return savefile_answer_contract(
         install.savefile_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
     )
 
 
 def _savestate_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
-    return savestate_placement_contract(
+    return savestate_answer_contract(
         install.savestate_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
     )
 
@@ -164,18 +163,12 @@ def _entry_of(installs, query, name):
 
 def _entry_savefile_location(installs, query, name):
     entry = _entry_of(installs, query, name)
-    outcome = entry.savefile_location(content_path=query.get("content_path"))
-    if isinstance(outcome, atlas.Unresolved):
-        return unresolved_contract(outcome)
-    return savefile_placement_contract(outcome)
+    return savefile_answer_contract(entry.savefile_location(content_path=query.get("content_path")))
 
 
 def _entry_savestate_location(installs, query, name):
     entry = _entry_of(installs, query, name)
-    outcome = entry.savestate_location(content_path=query.get("content_path"))
-    if isinstance(outcome, atlas.Unresolved):
-        return unresolved_contract(outcome)
-    return savestate_placement_contract(outcome)
+    return savestate_answer_contract(entry.savestate_location(content_path=query.get("content_path")))
 
 
 # expected key → (the input key that asks it, how the runner asks it). The map

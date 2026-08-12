@@ -303,6 +303,28 @@ def rom_placement_contract(placement: RomPlacement) -> dict[str, Any]:
     }
 
 
+def savefile_answer_contract(outcome: SavefilePlacement | Unresolved) -> dict[str, Any]:
+    """A savefile question's answer in whichever of its two shapes it took.
+
+    The route answers with a placement, or refuses with an
+    :class:`~atlas.placement.Unresolved` for a core this installation does not
+    have. Both are contractual, and one serializer for the pair is what lets a
+    caller write the answer down without first deciding which it got — the
+    aggregate route above all, where one installation can answer while its
+    neighbour refuses the very same question.
+    """
+    if isinstance(outcome, Unresolved):
+        return unresolved_contract(outcome)
+    return savefile_placement_contract(outcome)
+
+
+def savestate_answer_contract(outcome: SavestatePlacement | Unresolved) -> dict[str, Any]:
+    """A savestate question's answer, placement or refusal — the savefile twin."""
+    if isinstance(outcome, Unresolved):
+        return unresolved_contract(outcome)
+    return savestate_placement_contract(outcome)
+
+
 def installation_answers_contract(
     answers: Sequence[InstallationAnswer[AnswerT]],
     serialize: Callable[[AnswerT], dict[str, Any]],

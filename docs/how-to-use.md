@@ -125,11 +125,18 @@ question to all of them and hands back every answer, labelled with the handle th
 
 ```python
 everywhere = atlas.every_installation(home="/home/deck")     # detect(), then ask — same arguments, same probe order
-for answered in everywhere.savefile_location(content_path=rom_path):
-    print(answered.installation.kind, answered.answer.dir)
+for answered in everywhere.savefile_location(content_path=rom_path, core_so=core):
+    if isinstance(answered.answer, atlas.Unresolved):
+        print(answered.installation.kind, "refused:", answered.answer.code)
+    else:
+        print(answered.installation.kind, answered.answer.dir)
 # retrodeck /run/media/deck/Emulation/retrodeck/saves/n64     — RetroDECK's shipped cfg sorts by content
 # emudeck   /home/deck/Emulation/saves/retroarch/saves        — EmuDeck's is flat: two arrangements, two layouts
 ```
+
+The refusal branch is not decoration here: whether an arrangement has the core you named is exactly the kind of thing
+that differs between two installations on one machine, so this is the route where one answer and one refusal side by
+side is the normal case.
 
 Every question a handle answers, the aggregate asks all of them: `health()`, `savefile_location()`, `systems()`,
 `emulators_for()`, `rom_location()`, `firmware_for_core()`, `firmware_for_system()`, `firmware_inventory()`,
@@ -138,7 +145,9 @@ Every question a handle answers, the aggregate asks all of them: `health()`, `sa
 - `answered.installation` is the handle itself, not a copy of its identity: read `kind`, `kinds`, `root()` and
   `health()` off it, or ask it the next question (its `emulators_for`, then that entry's own `savefile_location`).
 - `answered.answer` is exactly what the handle route returns for that question — the same `SavefilePlacement`,
-  `CatalogueAnswer`, `RomPlacement` or `FirmwareAnswer`, unchanged, with its own caveats.
+  `SavestatePlacement`, `CatalogueAnswer`, `RomPlacement` or `FirmwareAnswer`, unchanged, with its own caveats. For the
+  two save families it is also whatever refusal that handle would have given you directly: an `Unresolved`, for a core
+  that arrangement does not have. Branch on the type before reading `dir`.
 
 The aggregate resolves nothing itself. It merges nothing, drops no duplicates, and prefers nothing beyond detection
 order (RetroDECK, EmuDeck, bare Flatpak, bare native): a machine that runs PPSSPP under two arrangements gives you
@@ -273,6 +282,25 @@ placement.physical_dir # set when dir reaches its files through symlinks: the re
 placement.sources      # provenance — which config said what (prose, for debugging)
 ```
 
+**Both save questions can refuse instead of answering, so branch on the type first.** When the core you name is not
+installed on that arrangement — atlas read the directory RetroArch loads cores from and it is not in there — there is no
+location to give, and inventing the directory a core that cannot run would use is exactly what atlas does not do. You
+get an `Unresolved` with the code `core-not-installed`, the same word the firmware route uses for the same fact, and
+`data["core_so"]` naming what you asked for:
+
+```python
+outcome = inst.savefile_location(content_path=rom, core_so="pcsx2_libretro.so")
+if isinstance(outcome, atlas.Unresolved):
+    ...  # outcome.code == atlas.UNRESOLVED_CORE_NOT_INSTALLED — this arrangement has no such core
+else:
+    outcome.dir
+```
+
+This is per arrangement, not per machine: on a two-arrangement machine one installation can answer while the other
+refuses, which is what the aggregate route is for. A core that _is_ installed and will not load is a different case and
+still answers with a placement — see `core-generation-unestablished` in the caveat table. So is a core directory atlas
+could not read: nothing was established there, so nothing is claimed.
+
 Without `content_path`, the answer is a template and `needs` names the holes:
 
 ```python
@@ -403,6 +431,8 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope           |
 | `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated         |
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain             |
+| `core-generation-mismatch`                  | the recorded deviation names an option this core does not register — not applied, standard frame |
+| `core-generation-unestablished`             | the core could not be read, so its generation is unknown — the recorded deviation is not applied |
 | `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below     |
 | `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                           |
 | `marker-missing`                            | health: the config marker this installation is detected by is gone                               |
@@ -572,7 +602,9 @@ else:
 ```
 
 Always handle the `Unresolved` branch: standalone emulators (DuckStation, PCSX2-SA, …) are catalogued but outside the
-resolver's coverage, and pretending otherwise is exactly what atlas refuses to do.
+resolver's coverage, and pretending otherwise is exactly what atlas refuses to do. The entry route refuses on one more
+code than that — `core-not-installed`, when the catalogue names a libretro core this installation does not have — so
+match on the code rather than assuming which refusal you got.
 
 `standalone-unsupported` is one word on both routes: the placement route answers it as the `Unresolved` code above, and
 the firmware route as a caveat on a core whose `declaration` is `"unsupported"`. Both say the same thing — the emulator
@@ -903,6 +935,8 @@ Handles are live — every query re-reads its sources. So drift detection is: as
 
 ```python
 placement = entry.savefile_location(content_path=rom.file_path)
+if isinstance(placement, atlas.Unresolved):
+    return                                        # nothing to compare: no location was answered
 if placement.dir != last_seen_dir(rom):
     migrate(from_=last_seen_dir(rom), to=placement.dir)
     # placement.sources names which config produced the change — log it for the user
@@ -919,7 +953,6 @@ Honest limits you must cover yourself today (roadmap: `ROADMAP.md`):
   system names (ES-DE) where a catalogue exists and an atlas slug where none does — `firmware_for_system` states that
   switch with the `emulator-catalogue-unavailable` caveat rather than translating, and closing that seam is atlas's own
   open work.
-- **Savestates.** Only savefiles are resolved; `savestate_directory` and the `sort_savestates_*` keys are unread.
 - **Standalone emulators.** Catalogued, but placements answer `Unresolved` until the standalone block lands.
 - **Reverse lookup is a non-goal, not a gap.** Atlas is forward-only (ROM → placement); "which ROM owns this save path"
   is not on the roadmap. Inverting a placement would mean reading a directory and guessing which content produced each

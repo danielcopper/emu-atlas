@@ -62,6 +62,7 @@ from atlas.installations import (
 # --- The answers ------------------------------------------------------------
 from atlas.contract import (
     catalogue_contract,
+    savestate_answer_contract,
     savestate_placement_contract,
     rom_placement_contract,
     emulator_contract,
@@ -70,6 +71,7 @@ from atlas.contract import (
     identification_contract,
     installation_answers_contract,
     installation_contract,
+    savefile_answer_contract,
     savefile_placement_contract,
     systems_contract,
     unresolved_contract,
@@ -187,12 +189,12 @@ from atlas.machine import (
 )
 from atlas.placement import (
     CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
-    CAVEAT_CARD_GENERATION_MISMATCH,
-    CAVEAT_CARD_MODE_UNCONFIRMED,
     CAVEAT_CFG_LINE_DROPPED,
     CAVEAT_CFG_VALUE_REJECTED,
     CAVEAT_CONTENT_DIR_OBSERVATION,
     CAVEAT_CONTENT_PATH_UNNAMED,
+    CAVEAT_CORE_GENERATION_MISMATCH,
+    CAVEAT_CORE_GENERATION_UNESTABLISHED,
     CAVEAT_CORE_MULTI_OPTION,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_CORE_SUSPECT,
@@ -231,6 +233,7 @@ from atlas.placement import (
     ROOT_SYSTEM_DIRECTORY,
     STATE_ROOT_CONTENT_DIRECTORY,
     STATE_ROOT_KINDS,
+    UNRESOLVED_CORE_NOT_INSTALLED,
     UNRESOLVED_STANDALONE,
     FileSetState,
     RootKind,
@@ -273,7 +276,9 @@ __all__ = [
     "RefusedDeclaration",
     "Caveat",
     # Serializers — one per answer type, the same code the vectors assert
+    "savefile_answer_contract",
     "savefile_placement_contract",
+    "savestate_answer_contract",
     "savestate_placement_contract",
     "unresolved_contract",
     "health_contract",
@@ -353,13 +358,12 @@ __all__ = [
     "HEALTH_ISSUE_CONFIG_UNREADABLE",
     "HEALTH_ISSUE_COMPANION_CONFIG_MISSING",
     # Typed outcome codes
+    "UNRESOLVED_CORE_NOT_INSTALLED",
     "UNRESOLVED_STANDALONE",
     # Caveat codes
     "CAVEAT_APP_RELATIVE_PATH_UNEXPANDED",
     "CAVEAT_ARRANGEMENT_UNVERIFIED",
     "CAVEAT_ARRANGEMENT_VERSION_DRIFTED",
-    "CAVEAT_CARD_GENERATION_MISMATCH",
-    "CAVEAT_CARD_MODE_UNCONFIRMED",
     "CAVEAT_CFG_LINE_DROPPED",
     "CAVEAT_CFG_VALUE_REJECTED",
     "CAVEAT_CONFIG_HOME_RELOCATED",
@@ -367,6 +371,8 @@ __all__ = [
     "CAVEAT_CONTENT_PATH_UNNAMED",
     "CAVEAT_CORE_DIR_UNRESOLVED",
     "CAVEAT_CORE_ENUMERATION_INCOMPLETE",
+    "CAVEAT_CORE_GENERATION_MISMATCH",
+    "CAVEAT_CORE_GENERATION_UNESTABLISHED",
     "CAVEAT_CORE_INFO_UNREADABLE",
     "CAVEAT_CORE_MULTI_OPTION",
     "CAVEAT_CORE_NOT_INSTALLED",

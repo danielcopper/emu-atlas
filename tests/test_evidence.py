@@ -29,6 +29,7 @@ from atlas.evidence import (
     load_arrangement_evidence,
     lookup_arrangement,
 )
+from tests.answers import placed, state_placed
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -278,8 +279,8 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
     holds that decision down.
     """
     return {
-        "savefile_location": tuple(c.code for c in handle.savefile_location(core_so=CORE_SO).caveats),
-        "savestate_location": tuple(c.code for c in handle.savestate_location(core_so=CORE_SO).caveats),
+        "savefile_location": tuple(c.code for c in placed(handle.savefile_location(core_so=CORE_SO)).caveats),
+        "savestate_location": tuple(c.code for c in state_placed(handle.savestate_location(core_so=CORE_SO)).caveats),
         "systems": tuple(c.code for c in handle.systems().caveats),
         "emulators_for": tuple(c.code for c in handle.emulators_for(SYSTEM).caveats),
         "rom_location": tuple(c.code for c in handle.rom_location(SYSTEM).caveats),
@@ -338,7 +339,7 @@ class TestEveryAnswerStatesItsEvidence:
         files, kwargs = UNVERIFIED_MACHINES["bare_retroarch_native"]
         every = atlas.every_installation(HOME, _machine(files, **kwargs))
         answered = every.savefile_location(core_so=CORE_SO)[0]
-        assert CAVEAT_ARRANGEMENT_UNVERIFIED in [c.code for c in answered.answer.caveats]
+        assert CAVEAT_ARRANGEMENT_UNVERIFIED in [c.code for c in placed(answered.answer).caveats]
 
 
 class TestEveryAnswerStatesTheDrift:
@@ -398,7 +399,7 @@ class TestEveryAnswerStatesTheDrift:
     def test_the_aggregate_carries_it_too(self, kind):
         every = atlas.EveryInstallation((VERIFIED_FIXTURES[kind](DRIFTED_VERSION),))
         answered = every.savefile_location(core_so=CORE_SO)[0]
-        assert CAVEAT_ARRANGEMENT_VERSION_DRIFTED in [c.code for c in answered.answer.caveats]
+        assert CAVEAT_ARRANGEMENT_VERSION_DRIFTED in [c.code for c in placed(answered.answer).caveats]
 
 
 class TestHealthStaysAMachineFact:

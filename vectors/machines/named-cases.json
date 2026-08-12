@@ -641,7 +641,7 @@
     },
     {
       "name": "unloadable-core-is-stated-not-guessed",
-      "rationale": "A core that is present but unloadable (missing host library \u2014 the applewin case) yields library_name unknown: the hole stays open and the caveat states it. Never a guess from the .so filename.",
+      "rationale": "A core that is present but unloadable (missing host library \u2014 the applewin case) yields library_name unknown: the hole stays open and the caveat states it. Never a guess from the .so filename. This core carries no card, so nothing was retired and no core-generation-unestablished rides here \u2014 core-unqueryable already says the read failed, and a second caveat would announce the loss of knowledge that never existed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -992,7 +992,7 @@
             {
               "code": "file-set-spans-roots",
               "data": {
-                "card": "flycast",
+                "core": "flycast",
                 "mode": "VMU A1",
                 "also_under": "system_directory"
               }
@@ -1081,7 +1081,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "card": "flycast",
+                "core": "flycast",
                 "mode": "All VMUs",
                 "files": "<save_id>.A1.bin, <save_id>.B1.bin, <save_id>.C1.bin, <save_id>.D1.bin",
                 "files_without_save_id": "Multi Disc Game (Europe).A1.bin, Multi Disc Game (Europe).B1.bin, Multi Disc Game (Europe).C1.bin, Multi Disc Game (Europe).D1.bin",
@@ -1522,7 +1522,7 @@
             {
               "code": "file-set-spans-roots",
               "data": {
-                "card": "flycast",
+                "core": "flycast",
                 "mode": "VMU A1",
                 "also_under": "content_directory"
               }
@@ -2408,7 +2408,7 @@
             {
               "code": "unverified-version",
               "data": {
-                "card": "opera",
+                "core": "opera",
                 "arrangement": "retrodeck",
                 "verification": "never-verified"
               }
@@ -2416,7 +2416,7 @@
             {
               "code": "filenames-unverified",
               "data": {
-                "card": "opera",
+                "core": "opera",
                 "mode": "per game"
               }
             }
@@ -2486,7 +2486,7 @@
             {
               "code": "unverified-version",
               "data": {
-                "card": "opera",
+                "core": "opera",
                 "arrangement": "retrodeck",
                 "verification": "never-verified"
               }
@@ -2494,7 +2494,7 @@
             {
               "code": "filenames-unverified",
               "data": {
-                "card": "opera",
+                "core": "opera",
                 "mode": "shared"
               }
             }
@@ -2593,7 +2593,7 @@
     },
     {
       "name": "feature-detection-retires-mismatched-card",
-      "rationale": "The LRPS2 lesson, structurally: this core generation does not register the card's governing option \u2014 the card describes another generation and steps aside instead of guessing. The answer is the standard frame with a card-generation-mismatch caveat; granularity is honestly absent.",
+      "rationale": "The LRPS2 lesson, structurally: this core generation does not register the card's governing option \u2014 the card describes another generation and steps aside instead of guessing. The answer is the standard frame with a core-generation-mismatch caveat; granularity is honestly absent. The core itself answered here, which is what separates this from the unreadable core's core-generation-unestablished.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2649,9 +2649,9 @@
           "granularity": null,
           "caveats": [
             {
-              "code": "card-generation-mismatch",
+              "code": "core-generation-mismatch",
               "data": {
-                "card": "flycast",
+                "core": "flycast",
                 "option_key": "reicast_per_content_vmus"
               }
             },
@@ -2942,7 +2942,7 @@
             {
               "code": "unverified-version",
               "data": {
-                "card": "opera",
+                "core": "opera",
                 "arrangement": "retrodeck",
                 "verification": "never-verified"
               }
@@ -2950,7 +2950,7 @@
             {
               "code": "filenames-unverified",
               "data": {
-                "card": "opera",
+                "core": "opera",
                 "mode": "shared"
               }
             }
@@ -3471,7 +3471,7 @@
             {
               "code": "unverified-version",
               "data": {
-                "card": "flycast",
+                "core": "flycast",
                 "arrangement": "retrodeck",
                 "verification": "runtime-version-unknown",
                 "missing": "arrangement_version, core_library_version"
@@ -6278,8 +6278,8 @@
       }
     },
     {
-      "name": "card-mode-unconfirmed-when-the-core-will-not-load",
-      "rationale": "The card applies, and says how far it can be trusted. The core is present but will not load, so no library_name \u2014 and the per-game/folder/per-core options files are keyed by exactly that name, so the layer that could override the mode cannot even be looked for. The mode still stands (it is the documented default), and card-mode-unconfirmed states that it may not be the effective one. Three different limits ride together here and none subsumes another: the core could not be queried, the card's pinned versions could not be confirmed live, and the options layer could not be checked.",
+      "name": "a-core-that-cannot-be-read-does-not-get-its-card",
+      "rationale": "The core is present but will not load, so nothing about it was established \u2014 not its library_name, not its option registrations, not its version. The .so file name alone is what remains, and a card selected on a file name would state a recorded deviation as though the generation carrying it had been confirmed. So the card steps aside, exactly as it does for a core that answers for another generation, and core-generation-unestablished says which of the two happened. The answer is the standard frame: the saves root sorted by content directory, granularity honestly absent. The system-directory placement the card would have given is the one this machine cannot be shown to deserve.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6309,34 +6309,17 @@
           }
         ],
         "savefile_location": {
-          "dir": "/mnt/sd/retrodeck/bios/dc",
-          "root_kind": "system_directory",
+          "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+          "root_kind": "savefile_directory",
           "needs": [],
-          "fallback_dir": null,
+          "fallback_dir": "/mnt/sd/retrodeck/saves",
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
-            "files": [
-              "vmu_save_A1.bin"
-            ],
+            "state": "unknown",
+            "files": [],
             "complete": false
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
-            ]
-          },
+          "granularity": null,
           "caveats": [
             {
               "code": "core-unqueryable",
@@ -6345,20 +6328,16 @@
               }
             },
             {
-              "code": "unverified-version",
+              "code": "core-generation-unestablished",
               "data": {
-                "card": "flycast",
-                "arrangement": "retrodeck",
-                "verification": "runtime-version-unknown",
-                "missing": "core_library_version"
+                "core": "flycast"
               }
             },
             {
-              "code": "card-mode-unconfirmed",
+              "code": "sorted-dir-missing",
               "data": {
-                "card": "flycast",
-                "option_key": "reicast_per_content_vmus",
-                "applied": "disabled"
+                "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+                "fallback_dir": "/mnt/sd/retrodeck/saves"
               }
             }
           ]
@@ -6433,7 +6412,7 @@
             {
               "code": "unknown-option-value",
               "data": {
-                "card": "flycast",
+                "core": "flycast",
                 "option_key": "reicast_per_content_vmus",
                 "value": "Every VMU"
               }
@@ -6578,7 +6557,7 @@
     },
     {
       "name": "a-core-that-registers-no-options-is-not-a-core-nobody-asked",
-      "rationale": "Two different unknowns about a core's options, told apart by the fixture: a core answer with no 'options' key means the probe never captured them, and the card applies on its pinned evidence; an options map that IS captured and is empty is evidence \u2014 this core registers nothing, so it cannot be the generation whose governing option the card describes, and the card steps aside with card-generation-mismatch rather than answering for another core's behaviour.",
+      "rationale": "Two different unknowns about a core's options, told apart by the fixture: a core answer with no 'options' key means the probe never captured them, and the card applies on its pinned evidence; an options map that IS captured and is empty is evidence \u2014 this core registers nothing, so it cannot be the generation whose governing option the card describes, and the card steps aside with core-generation-mismatch rather than answering for another core's behaviour.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6625,9 +6604,9 @@
           "granularity": null,
           "caveats": [
             {
-              "code": "card-generation-mismatch",
+              "code": "core-generation-mismatch",
               "data": {
-                "card": "flycast",
+                "core": "flycast",
                 "option_key": "reicast_per_content_vmus"
               }
             },
@@ -9230,6 +9209,160 @@
             }
           }
         ]
+      }
+    },
+    {
+      "name": "a-core-this-installation-does-not-have-is-refused-not-placed",
+      "rationale": "The case measured on a live machine: an EmuDeck arrangement whose RetroArch ships some cores and not the PS2 one. The core directory the cfg names is read, the .so is not in it, and that is an established absence \u2014 so there is no location to give. Answering the standard save root here would name a directory for a core that cannot run, which is invention, not a reading. The refusal carries the firmware route's word for the same fact, core-not-installed, and nothing else: no card was in play, so nothing reports a retired one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsavestate_directory = \"/home/deck/Emulation/saves/retroarch/states\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
+          "/home/deck/Emulation/roms/ps2/Game (Europe).iso": "",
+          "/home/deck/Emulation/saves/retroarch/saves/.keep": "",
+          "/home/deck/Emulation/saves/retroarch/states/.keep": ""
+        },
+        "cores": {
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/flycast_libretro.so": {
+            "library_name": "Flycast"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/home/deck/Emulation/roms/ps2/Game (Europe).iso",
+          "core_so": "pcsx2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "unresolved": {
+            "code": "core-not-installed",
+            "data": {
+              "core_so": "pcsx2_libretro.so"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "the-savestate-question-refuses-the-same-absent-core",
+      "rationale": "The savestate route resolves the core through the same lookup, so it refuses on the same evidence. Sorting by core and the savestate-support declaration are both statements about a core this installation does not have, and the directory RetroArch would use for it is not a fact about this machine.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsavestate_directory = \"/home/deck/Emulation/saves/retroarch/states\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
+          "/home/deck/Emulation/roms/ps2/Game (Europe).iso": "",
+          "/home/deck/Emulation/saves/retroarch/saves/.keep": "",
+          "/home/deck/Emulation/saves/retroarch/states/.keep": ""
+        },
+        "cores": {
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/flycast_libretro.so": {
+            "library_name": "Flycast"
+          }
+        },
+        "savestate_query": {
+          "content_path": "/home/deck/Emulation/roms/ps2/Game (Europe).iso",
+          "core_so": "pcsx2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "savestate_location": {
+          "unresolved": {
+            "code": "core-not-installed",
+            "data": {
+              "core_so": "pcsx2_libretro.so"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "a-core-directory-that-cannot-be-read-establishes-no-absence",
+      "rationale": "The boundary the refusal rests on. The same machine, with the core directory unreadable: the stat on it fails, so 'this core is not in it' was never read and absence was never established. Claiming the core is not installed would be a claim about a place nobody could look into, so the answer stays the placement it always was \u2014 with core-unqueryable for the read that failed and core-generation-unestablished for the recorded deviation that cannot be applied to a generation nobody saw.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsavestate_directory = \"/home/deck/Emulation/saves/retroarch/states\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
+          "/home/deck/Emulation/roms/ps2/Game (Europe).iso": "",
+          "/home/deck/Emulation/saves/retroarch/saves/.keep": "",
+          "/home/deck/Emulation/saves/retroarch/states/.keep": ""
+        },
+        "cores": {
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/flycast_libretro.so": {
+            "library_name": "Flycast"
+          }
+        },
+        "inaccessible": [
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores"
+        ],
+        "savefile_query": {
+          "content_path": "/home/deck/Emulation/roms/ps2/Game (Europe).iso",
+          "core_so": "pcsx2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "pcsx2_libretro.so"
+              }
+            },
+            {
+              "code": "core-generation-unestablished",
+              "data": {
+                "core": "pcsx2"
+              }
+            }
+          ]
+        }
       }
     }
   ]
