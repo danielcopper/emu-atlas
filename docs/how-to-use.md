@@ -447,7 +447,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)                |
 | `arrangement-version-drifted`               | it was observed, on another version than this machine runs — re-verification pending             |
 | `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read      |
-| `config-home-relocated`                     | RetroDECK: an override moved the app's config home — the files read may not be the ones in force |
+| `config-home-relocated`                     | EmuDeck entry route: a `portable.txt` may have moved ES-DE's tree — reads may not be in force    |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
@@ -565,11 +565,9 @@ if not answer.entries and not refusals:
 that renders either as an absence is telling its user something nobody checked. `exclusive` is a statement about the
 machine and deliberately **not** in the refusal set above: with it riding, an empty list is the frontend's real answer,
 so the snippet's `nothing_here` branch is exactly where it should land. Two more codes can ride along without being
-refusals: `config-home-relocated` (something moved the tree the handle reads out from under it — on RetroDECK a Flatpak
-override redefining the app's config home, and the caveat then rides every answer of that handle; on EmuDeck a
-`portable.txt` next to the AppImage that may have moved ES-DE's data directory) and, on EmuDeck,
-`frontend-marker-mismatch` (the disk and `settings.sh`'s `doInstallESDE` record disagree about ES-DE being installed —
-the disk decided the answer).
+refusals, both of them EmuDeck's: `config-home-relocated` (a `portable.txt` next to the ES-DE AppImage may have moved
+the tree this handle reads out from under it) and `frontend-marker-mismatch` (the disk and `settings.sh`'s
+`doInstallESDE` record disagree about ES-DE being installed — the disk decided the answer).
 
 The per-game step is ES-DE's, so it happens on the ES-DE-driven handles (RetroDECK, and EmuDeck where an ES-DE is
 present), and it matches on the path: pass the ROM the way it lies under the system's ROM directory — which is exactly
@@ -652,42 +650,43 @@ not established where it keeps one (`emulator-catalogue-unestablished`), it coul
 (`emulator-catalogue-sealed`). Four belong to this question, and they split along the line that decides what you can do
 about them — the first two are facts about the machine, the last two statements about atlas:
 
-| caveat                         | what it means                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------------- |
-| `rom-path-undeclared`          | the catalogue was read and declares no such system, or declares it without a `<path>` |
-| `rom-path-unresolved`          | the frontend's ROM-directory setting holds something that is not an absolute path     |
-| `frontend-settings-unreadable` | the file that setting lives in is there and atlas could not read it                   |
-| `config-home-relocated`        | a Flatpak override moved the tree the frontend's own default is relative to           |
+| caveat                         | what it means                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `rom-path-undeclared`          | the catalogue was read and declares no such system, or declares it without a `<path>`       |
+| `rom-path-unresolved`          | the frontend's ROM-directory setting holds something that is not an absolute path           |
+| `frontend-settings-unreadable` | the file that setting lives in is there and atlas could not read it                         |
+| `config-home-relocated`        | EmuDeck: a `portable.txt` may have moved the tree the frontend's own default is relative to |
 
 **An unset ROM-directory setting is not one of those cases** — it resolves. The frontend has a documented home-relative
-default, and on this arrangement its home is knowable rather than guessable: the distribution's only launch path hands
-the frontend an explicit `--home` pointing at the app's own config tree, which is the same tree the setting was read
-from. So `dir` comes back as that tree's `ROMs` directory, and the answer is a reading rather than an assumption.
-Resolving is not asserting the directory exists — nothing stats it, and an absent one is the ordinary missing-directory
-state.
+default, and on both arrangements its home is knowable rather than guessable: on RetroDECK the launcher hands ES-DE an
+explicit `--home` pointing at the app's own config tree, which is the same tree the setting was read from; on EmuDeck it
+hands none, so the home is the user's own and the default is `~/ROMs`. So `dir` comes back as that home's `ROMs`
+directory, and the answer is a reading rather than an assumption. Resolving is not asserting the directory exists —
+nothing stats it, and an absent one is the ordinary missing-directory state.
 
 A settings file that is **missing** is the unset case, and one that is **there and unreadable** is not: the frontend
 reads that file without trouble, so whatever it says is the configuration in force, and answering the default would name
 a directory belonging to a configuration nobody established. That is what `frontend-settings-unreadable` says, and it
 carries the read status in `data["status"]` (`unreadable`, `invalid-text`, or `unparseable`).
 
-`config-home-relocated` is worth handling on its own rather than as one more "no directory". It fires when something on
-the machine moved the tree the frontend's default is relative to out from under the files atlas read: on RetroDECK, a
-Flatpak override redefining `XDG_CONFIG_HOME` or `HOME` for the app (`data` names the override file and the key); on
-EmuDeck, a `portable.txt` sitting next to the ES-DE AppImage (`data` names it in `path`). Either way the caveat is a
-statement about the handle's answers as a whole, and it rides them: on RetroDECK **every** answer carries it while the
-override is in force — placements, catalogue, firmware, the entry routes — because everything that handle reads lives
-under, or is resolved out of, the moved config tree; on EmuDeck it rides every catalogue-shaped answer while the
-`portable.txt` is present, the firmware answers its catalogue informs included, because only the `~/ES-DE` reads are in
-doubt there. The riding answers still state what the on-disk files say — the caveat carries the doubt. The one place
-RetroDECK refuses instead is this ROM question's home-derived resolutions (the unset default, and a `~` expansion), and
-that refusal is the answer's own relocation statement: it carries `system` and `declared` in `data` on top of the file
-and key, and the riding form does not appear beside it — one fact, one code, once per answer.
+`config-home-relocated` is worth handling on its own rather than as one more "no directory", and it is **EmuDeck's**
+code alone. It fires when a `portable.txt` sits next to the ES-DE AppImage (`data` names it in `path`): ES-DE reads that
+file to move its application data directory away from `~/ES-DE`, so the presence of one puts the tree the frontend's
+default is relative to in doubt. The caveat is a statement about the handle's answers as a whole, and it rides them:
+every catalogue-shaped answer carries it while the `portable.txt` is present, the firmware answers its catalogue informs
+included, because the `~/ES-DE` reads are what is in doubt — and it reaches the entry route's placements too, which
+re-read those sources when content is named. The riding answers still state what the on-disk files say — the caveat
+carries the doubt. Where it refuses instead is this ROM question's home-derived resolutions (the unset default, and a
+`~` expansion): `dir` comes back `None`, and the riding caveat is that refusal's own statement — one fact, one code,
+once per answer. A configured absolute directory is still answered, with the caveat riding.
+
+RetroDECK has no such doubt to state, and none of its answers carry the code: its config home is pinned by Flatpak
+itself — the `XDG_*_HOME` variables are force-set to the per-app directories after every override file has been applied
+— so nothing an override says can move the tree, and the answers resolve against the config home atlas read.
 
 Never read `None` as "look in the default place" — where there is a default worth standing behind, atlas has already
-applied it. `rom-path-unresolved` (and RetroDECK's `config-home-relocated` where it refuses this question's directory)
-carry the declared path in `data["declared"]`, so a client that knows its own setup can finish the substitution atlas
-refused to guess at.
+applied it. `rom-path-unresolved` carries the declared path in `data["declared"]`, so a client that knows its own setup
+can finish the substitution atlas refused to guess at.
 
 Extensions survive an unresolved directory: which files launch is declared in the same element and does not depend on
 where they sit.
