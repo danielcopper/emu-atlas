@@ -7,8 +7,9 @@ way the emulator does. The one rule that decides every "table or live?" question
 > knowledge is marked, versioned, and source-cited.
 
 Spec: `DESIGN.md`. Plan: `ROADMAP.md`. Where to pick up core work: `docs/research/coverage-matrix.md` (generated).
-Evidence: `docs/research/`. Itemized gaps: `docs/tasks/save-detection.md`. Session-spanning working state (the live
-verification round, its protocol and baseline): `.claude/memory/` — read `MEMORY.md` there before resuming audit work.
+Evidence: `docs/research/`. Itemized gaps: `docs/tasks/save-detection.md`. The live verification round's protocol and
+baseline are maintainer-side working state, kept outside the tree (`~/Memory/emu-atlas/`): they describe one particular
+machine, so this repository does not carry them and no contributor needs them.
 
 ## Ground rules
 

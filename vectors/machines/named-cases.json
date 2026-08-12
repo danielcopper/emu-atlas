@@ -8327,6 +8327,170 @@
       }
     },
     {
+      "name": "emudeck-entry-route-carries-the-relocated-config-home-with-it",
+      "rationale": "The same portable.txt machine, asked through a catalogue entry: config-home-relocated is not only the arrangement-level statement about what atlas read, it rides the entry route's placements too. The entry re-reads the ES-DE side per query, so the doubt about which files are in force reaches the placement the entry hands out \u2014 on both save families, and only where content is named, because that is what makes the entry route ask the ES-DE question at all. The direct question on the same machine is the contrast, and the reason this vector asks it too: same content, same core, the same placement and the same two core caveats, and neither the sealed catalogue nor the relocation \u2014 the direct route reads no ES-DE, so it carries neither. No per-game statement rides along: on a relocated tree the home-derived ROMDirectory default is refused (FileData.cpp:283-284), so the per-game check has no anchor to resolve this game's path against.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/home/deck/Applications/portable.txt": "",
+          "/home/deck/Emulation/roms/atarijaguar/Tempest 2000.j64": {
+            "status": "invalid-text",
+            "size": 4194304
+          }
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "entry_savefile_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar",
+          "label": "Virtual Jaguar",
+          "content_path": "/home/deck/Emulation/roms/atarijaguar/Tempest 2000.j64"
+        },
+        "entry_savestate_query": {
+          "installation": "emudeck",
+          "system": "atarijaguar",
+          "label": "Virtual Jaguar",
+          "content_path": "/home/deck/Emulation/roms/atarijaguar/Tempest 2000.j64"
+        },
+        "savefile_query": {
+          "installation": "emudeck",
+          "content_path": "/home/deck/Emulation/roms/atarijaguar/Tempest 2000.j64",
+          "core_so": "virtualjaguar_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "virtualjaguar_libretro.so"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "virtualjaguar"
+              }
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/Applications/portable.txt"
+              }
+            }
+          ],
+          "granularity": null
+        },
+        "entry_savestate_location": {
+          "dir": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/states/<library_name>",
+          "root_kind": "savestate_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "virtualjaguar_libretro.so"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/Applications/portable.txt"
+              }
+            }
+          ]
+        },
+        "savefile_location": {
+          "dir": "/home/deck/Emulation/saves/retroarch/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "virtualjaguar_libretro.so"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "virtualjaguar"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
       "name": "emudeck-esde-resource-shadow-is-the-bundled-layer",
       "rationale": "ES-DE's per-file resource override (INSTALL.md v3.4.1:1125): a file at ~/ES-DE/resources/systems/linux/es_systems.xml shadows the embedded es_systems.xml for ES-DE itself, so where one exists and parses it IS the bundled layer, on disk. Nothing is sealed away: no sealed caveat, the shadow and the overlay merge the way RetroDECK's two layers do, and a system neither layer declares is now the read-and-declares-none fact rom-path-undeclared states.",
       "input": {
