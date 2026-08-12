@@ -195,6 +195,7 @@ KNOWN_CAVEAT_CODES = {
     "core-multi-option",
     "core-generation-mismatch",
     "core-generation-unestablished",
+    "core-option-value-unestablished",
     "arrangement-unverified",
     "arrangement-version-drifted",
     "sandbox-path-untranslated",

@@ -433,6 +433,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain             |
 | `core-generation-mismatch`                  | the recorded deviation names an option this core does not register — not applied, standard frame |
 | `core-generation-unestablished`             | the core could not be read, so its generation is unknown — the recorded deviation is not applied |
+| `core-option-value-unestablished`           | the core fits the card, but nothing states the value governing it — not applied, standard frame  |
 | `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below     |
 | `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                           |
 | `marker-missing`                            | health: the config marker this installation is detected by is gone                               |

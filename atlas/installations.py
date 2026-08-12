@@ -92,6 +92,7 @@ from atlas.placement import (
     CAVEAT_CONTENT_PATH_UNNAMED,
     CAVEAT_CORE_GENERATION_MISMATCH,
     CAVEAT_CORE_GENERATION_UNESTABLISHED,
+    CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_SORTED_DIR_UNCREATABLE,
@@ -658,10 +659,10 @@ def _core_options_value(
     content_dir_name: str | None,
     rom_stem: str | None,
     option_key: str,
-    option_default: str,
+    option_default: str | None,
     game_specific_options: bool,
     per_core_options: bool,
-) -> tuple[str, str, str]:
+) -> tuple[str | None, str, str]:
     """Read a core option the way RetroArch does — first existing file is THE source.
 
     Priority (``runloop.c`` ``validate_per_core_options``): game ``.opt``,
@@ -670,7 +671,11 @@ def _core_options_value(
     core default — it does not fall through to another file.
 
     Returns ``(value, provenance, options_file)``, where ``options_file`` is the
-    file a caller would edit to change the option.
+    file a caller would edit to change the option. The value is ``None`` when the
+    governing file states none and *option_default* is ``None`` too: the core
+    itself did not state a default and none is recorded, so what governs here was
+    never established. Substituting the empty string would put a value nobody
+    read into the answer's own provenance.
     """
     candidates = _option_file_candidates(
         override_config_dir=override_config_dir,
@@ -693,10 +698,24 @@ def _core_options_value(
                 f'{os.path.basename(path)}: {option_key} = "{parsed[option_key]}"',
                 path,
             )
+        if option_default is None:
+            return (
+                None,
+                f"{os.path.basename(path)} has no entry for {option_key} and no default for it was "
+                "established — the installed core states none and none is recorded",
+                path,
+            )
         return (
             option_default,
             f'core default: {option_key} = "{option_default}" ({os.path.basename(path)} has no entry)',
             path,
+        )
+    if option_default is None:
+        return (
+            None,
+            f"no options file states {option_key} and no default for it was established — the "
+            "installed core states none and none is recorded",
+            global_file,
         )
     return (
         option_default,
@@ -1389,6 +1408,28 @@ def _verification_notes(
     ), ()
 
 
+def _no_governing_value(card: CoreCard) -> Caveat:
+    """Nothing on this machine, and nothing in the core, says which mode is active.
+
+    The card fits the core — its option key is the one this generation registers,
+    or the read was inconclusive and the version comparison still stands — but the
+    value that selects between its modes was never established: no options file
+    states it, and the core declared no default to fall back on. Picking a mode
+    from the card's order, or from the first one written down, would be the guess
+    the boundary rule exists to prevent, so the card steps aside exactly as it
+    does for a generation nobody could confirm.
+    """
+    return Caveat(
+        CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
+        f"core {card.key!r} is recorded as placing its saves outside the standard layout under "
+        f"option {card.option_key!r}, and which value governs it here was never established — no "
+        "configuration on this machine states one and the installed core declared no default, so "
+        "the recorded behaviour is not applied; the standard answer below may miss the real save "
+        "stack",
+        {"core": card.key, "option_key": card.option_key or ""},
+    )
+
+
 def _mode_for_unknown_value(
     card: CoreCard, *, opt_value: str, effective_default: str | None, live_option: CoreOption | None
 ) -> tuple[CoreCard | None, SaveMode | None, str, Caveat]:
@@ -1399,9 +1440,16 @@ def _mode_for_unknown_value(
     and applying any other mode would guess, so the card steps aside. Otherwise
     RetroArch's option manager keeps the core-declared default when a persisted
     value is invalid; it does not fall back to the standard rule (REVIEW M1).
+
+    A third way to have no mode is to have no default at all: RetroArch would
+    keep the core's own, and neither the core nor the record states it. Nothing
+    about the card's generation is wrong there, so it is not the mismatch — it is
+    the setting that was never read (:func:`_no_governing_value`).
     """
     live_registered_value = live_option is not None and opt_value in live_option.values
     fallback_mode = card.modes.get(effective_default or "")
+    if fallback_mode is None and effective_default is None and not live_registered_value:
+        return None, None, opt_value, _no_governing_value(card)
     if live_registered_value or fallback_mode is None:
         return (
             None,
@@ -1508,7 +1556,7 @@ def _apply_card(
         content_dir_name=content.dir_name,
         rom_stem=content.rom_stem,
         option_key=card.option_key or "",
-        option_default=effective_default or "",
+        option_default=effective_default,
         game_specific_options=game_specific_options,
         per_core_options=not global_core_options,
     )
@@ -1516,6 +1564,19 @@ def _apply_card(
         *options_file_caveats,
         *_ignored_caveats((*global_ignored, *game_ignored)),
     ]
+    if opt_value is None:
+        # No file states the option and no default was established. There is
+        # nothing to select a mode with, and no granularity to report either:
+        # the field says which grouping is in force, and none is known.
+        #
+        # Deleting this branch does not change a single answer — the general
+        # one in _mode_for_unknown_value reaches the same caveat for a value of
+        # None. What it does is let None past a `str`, and the type check is
+        # what says so; keep the two apart rather than widening the parameter,
+        # because "no value was read" and "this value selects no mode" are
+        # different questions that happen to have one answer here.
+        caveats.append(_no_governing_value(card))
+        return _CardApplication(caveats=tuple(caveats))
     applied: CoreCard | None = card
     mode = card.modes.get(opt_value)
     if mode is None:

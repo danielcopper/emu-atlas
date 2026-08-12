@@ -2348,8 +2348,8 @@
       }
     },
     {
-      "name": "opera-per-game-nvram-subdir",
-      "rationale": "3DO NVRAM (rule card 'opera'): the core nests opera/per_game under the effective save directory it receives from GET_SAVE_DIRECTORY (runloop.c:2001/8977). The default mode is per-game; the file name carries the opera_nvram_version option, so the set is observed, never declared. The card was never live-verified on any arrangement \u2014 the answer says so.",
+      "name": "opera-nvram-subdir-unanswered-when-no-mode-is-established",
+      "rationale": "3DO NVRAM (rule card 'opera') on a core the probe could not read: it loaded and answered, but registered no options this probe captured, so it declared no default for opera_nvram_storage. The opera card records none either \u2014 a default is written down only for a core that registers none, and this one normally does. With no options file on the machine, nothing states which mode is in force, so the card cannot pick between opera/per_game and opera/shared and steps aside rather than nesting a subdirectory on the strength of nothing. core-option-value-unestablished says which half is missing; the version comparison still runs and still reports that this card was never verified on any arrangement. The per_game answer this machine used to give lives on in opera-nvram-subdir-from-the-cores-own-default, where the core states its default.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2361,6 +2361,79 @@
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
             "library_name": "Opera"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd",
+          "core_so": "opera_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "opera",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-option-value-unestablished",
+              "data": {
+                "core": "opera",
+                "option_key": "opera_nvram_storage"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "opera-nvram-subdir-from-the-cores-own-default",
+      "rationale": "The same 3DO machine with the core read as the shipped binary really answers: opera registers opera_nvram_storage and declares 'per game' as its default. No options file states a value, so that live default governs \u2014 a machine fact, not a recorded one \u2014 and the core nests opera/per_game under the effective save directory it receives from GET_SAVE_DIRECTORY (runloop.c:2001/8977). The file name carries the opera_nvram_version option, so the set is observed, never declared. The card was never live-verified on any arrangement, and the answer says so. This is the guarantee opera-nvram-subdir-unanswered-when-no-mode-is-established held while the card still carried a copy of the default.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
+          "/mnt/sd/retrodeck/saves/opera/per_game/Road Rash (USA).0.srm": "nv"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
+            "library_name": "Opera",
+            "options": {
+              "opera_nvram_storage": {
+                "default": "per game",
+                "values": [
+                  "per game",
+                  "shared"
+                ]
+              }
+            }
           }
         },
         "savefile_query": {
@@ -6345,8 +6418,8 @@
       }
     },
     {
-      "name": "an-option-value-no-card-knows-falls-back-and-says-so",
-      "rationale": "A value outside the card's vocabulary is not a reason to guess. The options file sets the governing option to something no mode of the card describes, so the answer falls back to the card's default mode and states unknown-option-value with the value it read \u2014 a client learns the layout may be wrong for this exact configuration, instead of being handed a mode nobody verified.",
+      "name": "an-option-value-no-card-knows-with-no-default-to-fall-back-to",
+      "rationale": "A value outside the card's vocabulary is not a reason to guess \u2014 and neither is having no value at all. The options file sets the governing option to something no mode of the card describes, so RetroArch would keep the core's own default; but this core registered no options the probe could capture, so it declared no default, and flycast's card records none because the shipped core normally states one. There is nothing to fall back to, so the card steps aside with core-option-value-unestablished instead of reporting an unknown-option-value it could recover from. Stepping aside moves the answer from the card's system-directory root to the standard sorted save directory, which this machine never created \u2014 so sorted-dir-missing rides along, naming the fallback, exactly as it would for any other core here. The fallback answer this machine used to give lives on in an-option-value-no-card-knows-falls-back-to-the-live-default, where the core states its default and the fallback really is available.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6361,6 +6434,82 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
             "library_name": "Flycast",
             "library_version": "1dac369"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": "/mnt/sd/retrodeck/saves",
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-option-value-unestablished",
+              "data": {
+                "core": "flycast",
+                "option_key": "reicast_per_content_vmus"
+              }
+            },
+            {
+              "code": "sorted-dir-missing",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+                "fallback_dir": "/mnt/sd/retrodeck/saves"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-option-value-no-card-knows-falls-back-to-the-live-default",
+      "rationale": "A value outside the card's vocabulary is not a reason to guess. The options file sets the governing option to something no mode of the card describes, and the core \u2014 read as the shipped binary answers \u2014 registers reicast_per_content_vmus with 'disabled' as its default and the three values the card knows. RetroArch's option manager keeps that declared default for a persisted value it cannot validate, so the answer falls back to the matching mode and states unknown-option-value with the value it read: a client learns the layout may be wrong for this exact configuration instead of being handed a mode nobody verified. The fallback is available because the core states the default, not because a card recorded one \u2014 which is the whole difference from an-option-value-no-card-knows-with-no-default-to-fall-back-to, the same machine with the core's registration unread.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"Every VMU\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369",
+            "options": {
+              "reicast_per_content_vmus": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "VMU A1",
+                  "All VMUs"
+                ]
+              }
+            }
           }
         },
         "savefile_query": {
@@ -6415,6 +6564,64 @@
                 "core": "flycast",
                 "option_key": "reicast_per_content_vmus",
                 "value": "Every VMU"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-governing-option-value-nothing-establishes",
+      "rationale": "The card fits the core \u2014 the core answered, and nothing contradicts the recorded deviation \u2014 but which of its modes is active was never established: this machine's configuration states no value for the governing option, and the core registered no options at all, so it declared no default either. A default is written down only for a core that registers none, so there is nothing left to fall back on. Choosing a mode anyway would state a save location on the strength of nothing, so the card steps aside and core-option-value-unestablished says which half is missing: not the generation (core-generation-unestablished is a core that could not be read at all) and not the vocabulary (core-generation-mismatch is a core answering for another generation), but the setting. The standard frame answers below it, granularity honestly absent.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/saves/dreamcast/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "core-option-value-unestablished",
+              "data": {
+                "core": "flycast",
+                "option_key": "reicast_per_content_vmus"
               }
             }
           ]

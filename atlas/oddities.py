@@ -4,9 +4,17 @@ The cards live in ``data/core_oddities.json`` — world knowledge under the
 boundary rule: a card states *which* live config governs a core and what its
 values mean; the current value is always read from the machine, never from the
 card. Cards are keyed by the core's canonical short name (the ``.so`` basename
-without ``_libretro.so``); the ``identifiers`` block carries every matching
-name, including the display ``library_name`` the binary reports, so lookup
-works from either side.
+without ``_libretro.so``), which is also where the ``.so`` name comes from — it
+is derived, not restated, so the two cannot disagree. The ``identifiers`` block
+carries the display ``library_name`` the binary reports, so lookup works from
+either side.
+
+A card states only what no read of the machine recovers. Everything it does
+state about a core's own vocabulary is machine-checked where a machine can
+check it: the option key, its default and its value set against the
+registration the deployed core makes, and the recorded file names and subdir
+fragments against the literals in the shipped binary (the ``anchors`` block —
+validated here, asserted in ``tests/test_oddities.py``).
 
 Facts in data, interpretation in code: this module only loads and indexes; the
 resolver in :mod:`atlas.installations` applies the card.
@@ -44,6 +52,22 @@ _KNOWN_GRANULARITIES = set(GRANULARITIES)
 # outside the set would travel into a stated filename and be read as literal
 # text, so it fails the load instead.
 _KNOWN_FILE_TEMPLATES = (TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID)
+# How a libretro core's ``.so`` is spelled. Derived from the card key rather
+# than restated in the card: the key IS that basename, so a second spelling
+# could only ever be a way for the two to disagree.
+SO_SUFFIX = "_libretro.so"
+# What protects one recorded name. Exactly one per entry:
+#
+# - ``literal`` — the byte string the auditor read in the shipped binary. The
+#   name was established from it, so a build that renames it fails the check
+#   instead of leaving the card quietly describing a vocabulary that is gone.
+# - ``unprotected`` — no literal spells this name (the core assembles it at run
+#   time), with the reason. Live observation and the next re-audit are what
+#   stand behind it, and saying so is the point: an unchecked name that looks
+#   checked is worse than one marked as what it is.
+# - ``arrangement`` — the name is not the core's at all; the arrangement builds
+#   this path. Anchoring it to the core binary would check the wrong artefact.
+ANCHOR_KINDS = ("literal", "unprotected", "arrangement")
 
 
 # This check exists verbatim three times, one per packaged-data loader
@@ -161,7 +185,6 @@ class CoreCard:
     """A core's save rule card: identifiers, governing option, modes, provenance."""
 
     key: str
-    so_names: tuple[str, ...]
     library_names: tuple[str, ...]
     option_key: str | None
     option_default: str | None
@@ -171,8 +194,13 @@ class CoreCard:
     def __post_init__(self) -> None:
         object.__setattr__(self, "modes", MappingProxyType(dict(self.modes)))
 
+    @property
+    def so_name(self) -> str:
+        """The ``.so`` basename this card describes — the key plus the suffix."""
+        return f"{self.key}{SO_SUFFIX}"
+
     def matches(self, *, so_basename: str | None, library_name: str | None) -> bool:
-        if so_basename is not None and so_basename in self.so_names:
+        if so_basename is not None and so_basename == self.so_name:
             return True
         return library_name is not None and library_name in self.library_names
 
@@ -258,6 +286,66 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     )
 
 
+def recorded_vocabulary(*, option_key: str | None, modes: Mapping[str, SaveMode]) -> frozenset[str]:
+    """Every word a card states as this core's own: option key, subdirs, file names.
+
+    These are the names a caller reads back as fact, so they are the names the
+    anchor tripwire covers. A subdir contributes one item per path segment,
+    because that is the granularity the binary spells them at (``opera`` and
+    ``per_game`` are two literals, not one).
+
+    Mode *keys* are deliberately absent: they are the governing option's own
+    values, and the deployed core registers them — a measurement beats an
+    anchor, and ``tests/test_oddities.py`` makes it.
+    """
+    words: set[str] = set()
+    if option_key is not None:
+        words.add(option_key)
+    for mode in modes.values():
+        if mode.subdir is not None:
+            words.update(segment for segment in mode.subdir.split("/") if segment)
+        for names in (mode.files, mode.observe, mode.files_without_save_id):
+            words.update(names or ())
+    return frozenset(words)
+
+
+def _expect_anchors(value: object, *, where: str, vocabulary: frozenset[str]) -> None:
+    """Validate a card's ``anchors`` block — shape here, bytes in the tests.
+
+    What the loader can decide without a machine it decides: an entry names
+    exactly one of :data:`ANCHOR_KINDS`, carries a non-empty string, and covers
+    a name this card actually records. Whether a ``literal`` really is a whole
+    NUL-delimited literal in the deployed ``.so`` needs the binary, so it is a
+    test; and whether every recorded name has an entry is a claim about the
+    *shipped* cards, which is a test too — a synthetic card built inside a test
+    for some other purpose would otherwise have to carry anchors to load at all.
+
+    The block is validated and then dropped. Anchors are audit machinery, not
+    an answer: nothing that reaches a caller holds them, so nothing can leak
+    them (``provenance.status`` is kept out of :class:`CoreCard` the same way).
+    """
+    if not isinstance(value, dict):
+        raise ValueError(f"{where}: expected an object of recorded name -> anchor, got {value!r}")
+    for name, anchor in value.items():
+        at = f"{where}[{name!r}]"
+        if name not in vocabulary:
+            raise ValueError(
+                f"{at}: anchors a name this card does not record — an anchor for nothing outlives "
+                "the name it was written for and silently protects the next typo instead"
+            )
+        if not isinstance(anchor, dict) or len(anchor) != 1:
+            raise ValueError(
+                f"{at}: expected an object naming exactly one of {list(ANCHOR_KINDS)}, got {anchor!r} "
+                "— a name is protected one way, and two ways at once say neither"
+            )
+        ((kind, detail),) = anchor.items()
+        if kind not in ANCHOR_KINDS:
+            raise ValueError(f"{at}: unknown anchor kind {kind!r}, expected one of {list(ANCHOR_KINDS)}")
+        # An empty literal matches every binary and an empty reason states no
+        # reason — both are the opt-out this block exists to make impossible.
+        _expect_str(detail, f"{at}.{kind}")
+
+
 def _expect_selectable_modes(where: str, *, option_key: str | None, modes: Mapping[str, SaveMode]) -> None:
     """A card without a governing option states exactly the ``always`` mode.
 
@@ -306,10 +394,21 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
         provenance = entry.get("provenance", {})
         option_key = _expect_opt_str(governing.get("key"), f"{where}: governing_option.key")
         _expect_selectable_modes(where, option_key=option_key, modes=modes)
+        if "so" in identifiers:
+            raise ValueError(
+                f"{where}: identifiers.so is derived from the card key ({key + SO_SUFFIX!r}) and no "
+                "longer read — a restated one could only ever disagree with it"
+            )
+        anchors = saves.get("anchors")
+        if anchors is not None:
+            _expect_anchors(
+                anchors,
+                where=f"{where}: saves.anchors",
+                vocabulary=recorded_vocabulary(option_key=option_key, modes=modes),
+            )
         cards.append(
             CoreCard(
                 key=key,
-                so_names=_expect_str_list(identifiers.get("so", []), f"{where}: identifiers.so"),
                 library_names=_expect_str_list(
                     identifiers.get("library_name", []), f"{where}: identifiers.library_name"
                 ),

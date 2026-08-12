@@ -145,6 +145,13 @@ CAVEAT_CORE_GENERATION_MISMATCH = "core-generation-mismatch"
 # WAS read and answered for a generation the record does not describe. Here
 # nothing answered, which is a different thing to tell a client.
 CAVEAT_CORE_GENERATION_UNESTABLISHED = "core-generation-unestablished"
+# The core was read and the recorded deviation fits it, but which value governs
+# the option it hangs on was never established: no configuration on this machine
+# states one, and the core did not state its default either. One level below the
+# code above — there the generation is unknown, here the generation is fine and
+# the *setting* is unknown — and exclusive with both of the two above it, since
+# each of them has already retired the card before an option can be read.
+CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED = "core-option-value-unestablished"
 CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
 CAVEAT_DEAD_SYMLINK = "dead-symlink"
 CAVEAT_SYMLINK_LOOP = "symlink-loop"

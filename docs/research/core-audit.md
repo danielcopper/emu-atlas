@@ -46,9 +46,24 @@ _keys_, what each mode does, and where the files land instead. Three shipped cor
 — LRPS2, NeoCD and Dolphin — and the two with a default to keep it keep it in the one place that survives: **LRPS2** in
 the structured `governing_option.default` of its rule card, and **NeoCD**, which has no card, in its own row above,
 cited to the registration in source. **Dolphin** needs neither: no save option of its own has been established, which is
-what its `suspect` verdict says. `tests/test_oddities.py` measures every card's recorded default against the core
-installed on the machine it runs on. The round that produced this rule found five recorded values that had drifted from
-the binaries they claimed to describe, one of them invented as a "version drift" that never happened.
+what its `suspect` verdict says. `tests/test_oddities.py` measures a card's option vocabulary against the core installed
+on the machine it runs on, in both directions: the mode keys must be that option's registered value set, and a card must
+record **no** default for a core that registers one — the redundant copy fails, rather than being kept correct by hand.
+The round that produced this rule found five recorded values that had drifted from the binaries they claimed to
+describe, one of them invented as a "version drift" that never happened.
+
+**A recorded name is pinned to the string it was read from.** The method's step 1 reads file names and path fragments
+out of the shipped binary; `saves.anchors` in each card writes down _which_ literal each recorded name came from, and a
+test re-reads it there — whole NUL-delimited, so flycast's `/dc` (its texture-dump path) cannot stand in for the VMU
+subdir format `%s%cdc`. What that catches is a **vocabulary rename**: a build that stops spelling `vmu_save_`,
+`Mcd%03u.ps2` or `memcards` fails the suite instead of leaving a card describing names the core no longer writes. What
+it cannot catch is the **grammar** around a literal — that `%s.ps2` is still the per-game memory card and not some other
+file — which stays the job of source reading and live observation. Names no literal carries are marked `unprotected`
+with their reason and are genuinely unguarded here: flycast's nine run-time-composed names (`dc_nvmem.bin` and the
+`<save_id>`/`<rom_stem>` port sets) rest on live observation and the next re-audit. A third mark, `arrangement`, is for
+a path the arrangement builds rather than the core — LRPS2's `pcsx2/memcards` subdir, whose first segment matches a
+literal in the binary purely by coincidence (it is PCSX2's own data-root name). A recorded name with none of the three
+marks fails the tests, so the opt-out is always a written decision.
 
 **General fact for all core-written saves** [V]: `RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY` returns the _redirected_ save
 directory — sorting applied, mkdir-or-revert resolved (`runloop.c:2001` reads `runloop_st->savefile_dir`, which
@@ -163,7 +178,12 @@ on parsing version strings (the browser lesson: sniffing user agents loses; prob
   value set. A core that could not be read at all retires its card too, under its own code
   (`core-generation-unestablished`): the `.so` file name is not evidence of a generation. Not every core is capturable —
   LRPS2 itself registers its options after `retro_set_environment` (probe shows none), so the uncaptured case — the core
-  answered, its options did not — falls back to the version comparison. Next step when an old generation gets audited:
+  answered, its options did not — falls back to the version comparison. That fallback establishes the generation, not
+  the _setting_: with no registration read, the core states no default either, and a card that records none (because its
+  core normally registers one) then has nothing to select a mode with. If the machine's own configuration does not state
+  the value, the card steps aside under its own code, `core-option-value-unestablished` — one level below the two above,
+  and never alongside either, since each of those has already retired the card before an option is read. LRPS2 is the
+  case the recorded default exists for, and it keeps answering. Next step when an old generation gets audited:
   per-generation card _variants_ keyed by their option signature.
 - **A vector per generation, never deleted.** Each supported generation keeps its fixture machine in the conformance
   vectors — that is the guarantee that understanding an old version survives supporting a new one.
@@ -176,7 +196,7 @@ Method per core:
 2. upstream source for anything the scan implies (path construction, what each option value does), at the revision the
    shipped binary names — cited as `file:line`
 3. live observation on a real machine where save data exists
-4. verdict + (if deviant) rule card with provenance and per-mode status
+4. verdict + (if deviant) rule card with provenance, per-mode status, and an anchor for every name the card records
 
 Version drift is real and recorded: LRPS2 changed its option scheme between generations (`pcsx2_memcard_slot_1/2` →
 `pcsx2_shared_memory_cards`), observed in a live `retroarch-core-options.cfg`. Cards state which shipped version they
