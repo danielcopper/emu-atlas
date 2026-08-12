@@ -326,7 +326,9 @@ both sides (`24:5255`), which is why the SD-card paths above need no translation
 anything else under `/var/` or under `/run/user/` exists only inside the sandbox and is reported as
 `sandbox-path-untranslated` rather than resolved against a host path that means something else; everything else passes
 through untouched. Only a handle that carries an app id translates — a native install writes its cfg outside any
-sandbox, where `/var/config` is a real (if unusual) host path.
+sandbox, where `/var/config` is a real (if unusual) host path. Which host tree an `/app/...` path lands in is decided
+once, by the deploy resolution in §15's env-composition subsection: the app runs from one installation's deploy, and
+that deploy's `files/` is its `/app`.
 
 **[V]** One exception sits inside `/var` and is not a sandbox path: on an **ostree host** — Fedora Silverblue and
 Bazzite, both of which ship RetroDECK — `/home` is a symlink to `/var/home`, so real home directories live under `/var`
@@ -822,11 +824,18 @@ reference machine runs — and man-page citations are that tag's own `doc/` sour
 **[V]** **Which files apply, and in which order.** Flatpak loads the system installation's overrides only for an app the
 system installation deploys, and the user installation's always (`flatpak_dir_load_deployed`,
 `flatpak-dir.c:3053-3083`); when both installations deploy the app, the user one runs — the deploy search puts the user
-dir first and the first hit wins (`flatpak_find_deploy_for_ref`, `flatpak-dir-utils.c:294-317`, `:278-285`). The
-applicable files merge in one order: system-global → system-app → user-global → user-app
-(`flatpak_deploy_get_overrides`, `flatpak-dir.c:1518-1567`), and the environment merge is a plain per-key hash insert
-(`flatpak-context.c:1077-1079`) — the last applicable file that names a key wins, a later set overwriting an earlier
-unset and vice versa.
+dir first and the first hit wins (`flatpak_find_deploy_for_ref`, `flatpak-dir-utils.c:294-317`, the insert at `:314`,
+the loop at `:278-285`). `flatpak run` — the route that decides for an **app**, and therefore the one this rests on —
+reaches the same order itself: it moves the user dir to the front of the installations it parsed, under the comment
+"Move the user dir to the front so it 'wins' in case an app is in more than one installation", and searches that list
+(`app/flatpak-builtins-run.c:240-255`, the search at `:285`). That same resolution answers the other question a deploy
+decides: which tree the app's `/app/...` files are read from (§6). Atlas models the two standard installations only: the
+search also carries the extra system installations configurable under `/etc/flatpak/installations.d`, sorted by priority
+and able to precede the default one (`get_system_locations`, `flatpak-dir.c:1874-1900`), and atlas reads the user
+installation and `/var/lib/flatpak`. The applicable files merge in one order: system-global → system-app → user-global →
+user-app (`flatpak_deploy_get_overrides`, `flatpak-dir.c:1518-1567`), and the environment merge is a plain per-key hash
+insert (`flatpak-context.c:1077-1079`) — the last applicable file that names a key wins, a later set overwriting an
+earlier unset and vice versa.
 
 **[V]** **Values are literal GKeyFile strings.** `[Environment]` entries are read with `g_key_file_get_string`
 (`flatpak-context.c:1944`) and applied verbatim — **no `$VAR` is ever expanded**, by flatpak or by anything before the
