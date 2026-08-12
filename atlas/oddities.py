@@ -62,9 +62,10 @@ SO_SUFFIX = "_libretro.so"
 #   name was established from it, so a build that renames it fails the check
 #   instead of leaving the card quietly describing a vocabulary that is gone.
 # - ``unprotected`` — no literal spells this name (the core assembles it at run
-#   time), with the reason. Live observation and the next re-audit are what
-#   stand behind it, and saying so is the point: an unchecked name that looks
-#   checked is worse than one marked as what it is.
+#   time), with the reason. The reason states what does stand behind the name —
+#   live observation, or source the byte check cannot reach — and saying so is
+#   the point: an unchecked name that looks checked is worse than one marked as
+#   what it is.
 # - ``arrangement`` — the name is not the core's at all; the arrangement builds
 #   this path. Anchoring it to the core binary would check the wrong artefact.
 ANCHOR_KINDS = ("literal", "unprotected", "arrangement")
