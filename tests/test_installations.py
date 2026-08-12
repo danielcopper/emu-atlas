@@ -3143,8 +3143,8 @@ class TestAHomeOverrideMovesOnlyTheCfgTildeBase:
 
     def test_a_system_file_does_not_speak_for_a_user_deployed_app(self):
         # The deploy search finds the user installation first
-        # (flatpak-dir-utils.c:294-317), and system overrides load only for a
-        # system deploy (flatpak-dir.c:3053-3083) — so the same file that
+        # (flatpak-dir-utils.c:300-316), and system overrides load only for a
+        # system deploy (flatpak-dir.c:3053-3059) — so the same file that
         # moves the expansion on a system deploy moves nothing here.
         user_deploy = self.DEPLOY_ESDE.replace(
             "/var/lib/flatpak/app", f"{HOME}/.local/share/flatpak/app"
@@ -3154,21 +3154,16 @@ class TestAHomeOverrideMovesOnlyTheCfgTildeBase:
         }
         files[user_deploy] = self.ES_SYSTEMS
         files[self.SYSTEM_GLOBAL] = "[Environment]\nHOME=/mnt/elsewhere\n"
-        # The core is deployed in BOTH trees on purpose. Moving it with the
-        # ES-DE deploy described a machine whose configured core directory holds
-        # no core, and that machine now — rightly — gets the not-installed
-        # refusal instead of a save directory. Which tree the cfg's "/app/cores"
-        # resolves to is a separate open question (the deploy search prefers the
-        # system tree here, while the override scoping this test is about
-        # searches the user tree first), so the fixture satisfies both readings
-        # and this test stays about the override, whichever way that is settled.
-        cores = dict(self.CORES)
-        cores.update(
-            {
-                so.replace("/var/lib/flatpak/app", f"{HOME}/.local/share/flatpak/app"): answer
-                for so, answer in self.CORES.items()
-            }
-        )
+        # Both installations carry the app — FILES leaves the core's .info in
+        # the system tree — which is the machine this scoping is about: with no
+        # system deploy at all the system files would fall away for the wrong
+        # reason. The core itself is deployed in the user tree alone, because
+        # that is the tree the running deploy's own "/app" reads come out of
+        # (the fixture used to hold it in both while that was unsettled).
+        cores = {
+            so.replace("/var/lib/flatpak/app", f"{HOME}/.local/share/flatpak/app"): answer
+            for so, answer in self.CORES.items()
+        }
         machine = FixtureMachine(files, cores=cores, dirs=self.HOME_DIRS)
         placement = placed(
             atlas.RetroDeck(HOME, machine).savefile_location(
@@ -3183,6 +3178,105 @@ class TestAHomeOverrideMovesOnlyTheCfgTildeBase:
             {self.SYSTEM_GLOBAL: "[Environment]\nHOME=/mnt/elsewhere\n"}, dirs=self.HOME_DIRS
         )
         assert placement.dir == "/mnt/elsewhere/saves"
+
+
+class TestTheRunningDeployIsTheOneFlatpakWouldStart:
+    """Both installations can carry the same app; the reads come from the one that runs.
+
+    Flatpak resolves the deploy by searching the installations with the user
+    one inserted at the front of the list and stopping at the first that has
+    the app (``flatpak_find_deploy_for_ref``, flatpak-dir-utils.c:300-316 @
+    1.16.6, the loop at :278-285). So on a machine deploying RetroDECK both
+    ways, every ``/app/...`` a cfg or a handle names is a file in the *user*
+    tree, and the system tree's copy of it is one nothing here opens — the
+    same resolution that decides whose overrides files speak for the app.
+    """
+
+    SYSTEM_DEPLOY = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files"
+    USER_DEPLOY = f"{HOME}/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/files"
+    ESDE_SUFFIX = "retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+    CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+    )
+    CONTENT = "/mnt/sd/retrodeck/roms/n64/Game.z64"
+    CORE = "mupen64plus_next_libretro.so"
+    OTHER_CORE = "mgba_libretro.so"
+
+    def _catalogue(self, system):
+        return (
+            f'<?xml version="1.0"?>\n<systemList>\n  <system><name>{system}</name>\n'
+            f"    <path>%ROMPATH%/{system}</path>\n    <extension>.z64 .Z64</extension>\n"
+            '    <command label="Libretro">retroarch -L '
+            f"/app/cores/{self.CORE} %ROM%</command>\n  </system>\n</systemList>\n"
+        )
+
+    def _rd(self, files=None, cores=None):
+        base = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: self.CFG,
+            "/mnt/sd/retrodeck/saves/.keep": "",
+            self.CONTENT: "",
+        }
+        base.update(files or {})
+        return _retrodeck(base, cores=cores)
+
+    def _cores(self, *deploys):
+        return {f"{deploy}/cores/{self.CORE}": {"library_name": "Mupen64Plus-Next"} for deploy in deploys}
+
+    def test_the_user_deploys_catalogue_is_the_one_read(self):
+        # Both trees ship an es_systems.xml and they declare different
+        # systems, so the answer names which tree was read.
+        rd = self._rd(
+            {
+                f"{self.SYSTEM_DEPLOY}/{self.ESDE_SUFFIX}": self._catalogue("psx"),
+                f"{self.USER_DEPLOY}/{self.ESDE_SUFFIX}": self._catalogue("n64"),
+            }
+        )
+        assert rd.systems().systems == ("n64",)
+
+    def test_a_system_only_deploy_is_still_the_one_read(self):
+        # The direction that keeps the rule falsifiable: with no user deploy
+        # the search reaches the system installation, and that tree answers.
+        rd = self._rd({f"{self.SYSTEM_DEPLOY}/{self.ESDE_SUFFIX}": self._catalogue("psx")})
+        assert rd.systems().systems == ("psx",)
+
+    def test_the_running_deploy_does_not_borrow_the_other_trees_core(self):
+        # The cfg names "/app/cores"; the user deploy runs, so its cores
+        # directory is the one that decides. It holds another core — absence
+        # established — and the system tree's copy of the asked-for one is not
+        # what a run of this app would load.
+        rd = self._rd(
+            {f"{self.USER_DEPLOY}/{self.ESDE_SUFFIX}": self._catalogue("n64")},
+            cores={
+                **self._cores(self.SYSTEM_DEPLOY),
+                f"{self.USER_DEPLOY}/cores/{self.OTHER_CORE}": {"library_name": "mGBA"},
+            },
+        )
+        outcome = rd.savefile_location(content_path=self.CONTENT, core_so=self.CORE)
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_CORE_NOT_INSTALLED
+
+    def test_the_same_machine_resolves_when_the_running_deploy_carries_the_core(self):
+        # The counterpart: only the tree the core sits in differs, and the
+        # placement comes back.
+        rd = self._rd(
+            {f"{self.USER_DEPLOY}/{self.ESDE_SUFFIX}": self._catalogue("n64")},
+            cores=self._cores(self.USER_DEPLOY),
+        )
+        placement = placed(rd.savefile_location(content_path=self.CONTENT, core_so=self.CORE))
+        assert placement.dir == "/mnt/sd/retrodeck/saves"
+
+    def test_a_system_only_deploy_resolves_its_own_core(self):
+        # And the system tree keeps answering where it is the only deploy —
+        # the machine every other fixture describes.
+        rd = self._rd(
+            {f"{self.SYSTEM_DEPLOY}/{self.ESDE_SUFFIX}": self._catalogue("n64")},
+            cores=self._cores(self.SYSTEM_DEPLOY),
+        )
+        placement = placed(rd.savefile_location(content_path=self.CONTENT, core_so=self.CORE))
+        assert placement.dir == "/mnt/sd/retrodeck/saves"
 
 
 class TestTheOverridesFileReadsTheWayGKeyFileDoes:

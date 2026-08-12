@@ -222,6 +222,67 @@ _XDG_CONFIG_DIRNAME = ".config"
 # files alike hang off it.
 _FLATPAK_USER_BASE = os.path.join(".local", "share", "flatpak")
 
+# Where each installation keeps its deployed apps: the system one absolute, the
+# user one a ``home``-relative suffix.
+_FLATPAK_DEPLOY_SYSTEM = os.path.join("/var", "lib", "flatpak", "app")
+_FLATPAK_DEPLOY_USER = os.path.join(_FLATPAK_USER_BASE, "app")
+
+
+@dataclass(frozen=True, slots=True)
+class _Deploy:
+    """The one deploy of an app that a ``flatpak run`` of it would start.
+
+    ``files`` is that deploy's ``/app`` tree as the host reads it. ``system``
+    says which installation carries it — the second thing the resolution
+    decides, because the system overrides files speak for a system deploy and
+    for no other (flatpak-dir.c:3053-3059, :3071-3077 @ 1.16.6).
+    """
+
+    files: str
+    system: bool
+
+
+def _running_deploy(machine: Machine, home: str, app_id: str) -> _Deploy | None:
+    """The deploy of *app_id* that runs on this machine — ``None`` where none does.
+
+    Flatpak searches the installations in one order and stops at the first one
+    that has the app deployed: the system list with the user installation
+    inserted at its front (``flatpak_find_deploy_for_ref``,
+    flatpak-dir-utils.c:300-316 @ 1.16.6 — ``g_ptr_array_insert (dirs, 0,
+    flatpak_dir_get_user ())`` at :314), the loop ending on the first dir that
+    loads a deploy (``flatpak_find_deploy_for_ref_in``, :278-285). ``flatpak
+    run`` reaches the same order by its own route, which is the one that
+    decides for an *app*: it moves the user dir to the front of the list it
+    parsed — under the comment "Move the user dir to the front so it 'wins' in
+    case an app is in more than one installation" — and searches that list
+    (app/flatpak-builtins-run.c:240-255, the search at :285). So where both
+    installations carry the app, the user one runs — and every question about
+    the app that runs answers off this one resolution: which tree its ``/app``
+    files come from, and whose overrides files speak for it.
+
+    A deploy is read as present where the installation's ``<app id>``
+    directory has a ``current/active`` — the symlink pair flatpak points at the
+    deployed commit of the current branch.
+
+    What this models is the two standard installations. Flatpak's system list
+    is every location configured under ``/etc/flatpak/installations.d``, sorted
+    by priority, plus the default ``/var/lib/flatpak`` (``get_system_locations``,
+    flatpak-dir.c:1874-1900); atlas reads neither that configuration nor the
+    deploys below such an installation, so an app deployed only in an extra
+    system installation reads here as deployed nowhere, and one whose extra
+    installation outranks the default reads out of the default's tree.
+    """
+    search_order = (
+        (os.path.join(home, _FLATPAK_DEPLOY_USER), False),
+        (_FLATPAK_DEPLOY_SYSTEM, True),
+    )
+    for base, system in search_order:
+        deployed = os.path.join(base, app_id, "current", "active")
+        if machine.path_kind(deployed) == KIND_DIRECTORY:
+            return _Deploy(os.path.join(deployed, "files"), system)
+    return None
+
+
 # Config markers, as ``home``-relative suffixes.
 RETRODECK_JSON_SUFFIX = os.path.join(
     ".var", "app", RETRODECK_APP_ID, "config", "retrodeck", "retrodeck.json"
@@ -368,8 +429,8 @@ class _Sandbox:
 
         The XDG binds are a deterministic per-app mapping, so they translate
         unconditionally and the caller's own existence check stays the one that
-        decides usability. ``/app`` has two possible deployment roots (system
-        and user install), so there the existing one is the answer.
+        decides usability. ``/app`` is the tree of the deploy that runs, which
+        is a resolution of its own (:func:`_running_deploy`).
         """
         app_id = self.app_id
         if app_id is None or not path.startswith("/") or self._is_host_home(path):
@@ -396,15 +457,20 @@ class _Sandbox:
         return path == self.home or path.startswith((self.home + "/", _OSTREE_HOME))
 
     def _deployment_path(self, app_id: str, rest: str) -> str | None:
-        """The app's ``/app`` tree on the host: the deployment's ``files/``."""
-        for base in (
-            f"/var/lib/flatpak/app/{app_id}/current/active/files",
-            os.path.join(self.home, _FLATPAK_USER_BASE, "app", app_id, "current", "active", "files"),
-        ):
-            candidate = os.path.join(base, rest)
-            if self.machine.path_kind(candidate) != KIND_MISSING:
-                return candidate
-        return None
+        """The app's ``/app`` tree on the host: the running deploy's ``files/``.
+
+        One installation answers — the one whose deploy runs
+        (:func:`_running_deploy`) — so a machine carrying the app in both
+        reads the files the emulator really opens, not whichever copy exists.
+        A path the running deploy does not carry is no host path at all: what
+        is missing inside the sandbox is missing, and another installation's
+        copy is not what the app would open instead.
+        """
+        deploy = _running_deploy(self.machine, self.home, app_id)
+        if deploy is None:
+            return None
+        candidate = os.path.join(deploy.files, rest)
+        return candidate if self.machine.path_kind(candidate) != KIND_MISSING else None
 
     def cfg_path(self, key: str, raw: str | None) -> _CfgPath | None:
         """One cfg key resolved to a host path — ``None`` when the key is unset.
@@ -4286,27 +4352,22 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     _FLATPAK_OVERRIDES_USER = os.path.join(_FLATPAK_USER_BASE, "overrides")
     _FLATPAK_OVERRIDES_SYSTEM = os.path.join("/var", "lib", "flatpak", "overrides")
     _FLATPAK_OVERRIDES_GLOBAL = "global"
-    _FLATPAK_DEPLOY_SYSTEM = os.path.join("/var", "lib", "flatpak", "app")
-    _FLATPAK_DEPLOY_USER = os.path.join(_FLATPAK_USER_BASE, "app")
 
     def _system_overrides_apply(self) -> bool:
         """Whether the system installation's overrides files speak for this app's runs.
 
-        Flatpak loads them only for an app the running deploy's own
-        installation carries: the deploy resolution searches the user
-        installation first (flatpak-dir-utils.c:294-317, the user dir is
-        inserted at the front; the first hit wins, :278-285), and system
-        overrides are loaded only when the resolved deploy is a system one
-        (flatpak-dir.c:3053-3083, flatpak 1.16.6). So a user deploy silences
-        the system files even where a system deploy also exists, and a
-        machine deploying the app nowhere runs nothing for any override to
-        speak about — only the always-loaded user files are read then.
+        Flatpak loads them only for an app whose running deploy the system
+        installation carries (``flatpak_dir_load_deployed``,
+        flatpak-dir.c:3053-3059 and :3071-3077 @ 1.16.6, both gated on the
+        installation not being the user one) — and which deploy runs is
+        :func:`_running_deploy`'s single resolution, the same one this app's
+        ``/app`` reads come out of. So a user deploy silences the system files
+        even where a system deploy also exists, and a machine deploying the
+        app nowhere runs nothing for any override to speak about — only the
+        always-loaded user files are read then.
         """
-        user = os.path.join(self._home, self._FLATPAK_DEPLOY_USER, self._APP_ID, "current", "active")
-        if self._machine.path_kind(user) == KIND_DIRECTORY:
-            return False
-        system = os.path.join(self._FLATPAK_DEPLOY_SYSTEM, self._APP_ID, "current", "active")
-        return self._machine.path_kind(system) == KIND_DIRECTORY
+        deploy = _running_deploy(self._machine, self._home, self._APP_ID)
+        return deploy is not None and deploy.system
 
     def _override_files(self) -> tuple[str, ...]:
         """The overrides files that speak for this app's runs, least specific first.

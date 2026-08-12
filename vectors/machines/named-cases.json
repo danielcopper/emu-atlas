@@ -9735,6 +9735,175 @@
           ]
         }
       }
+    },
+    {
+      "name": "both-flatpak-deploys-the-user-tree-is-the-one-that-runs",
+      "rationale": "The same app is installed in both flatpak installations, and the two deploys differ: the user tree ships the n64 catalogue and an mGBA core, the system tree a psx catalogue and the Mupen64Plus-Next core the query asks for. Flatpak starts the user deploy \u2014 the deploy search puts the user installation at the front of the list and stops at the first hit (flatpak_find_deploy_for_ref, flatpak-dir-utils.c:300-316, :278-285 @ 1.16.6) \u2014 so every \"/app/...\" the cfg names is a file in the user tree: the catalogue read is that tree's, and the core sitting in the system tree is one no run of this app loads, which makes it not installed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.z64 .Z64</extension>\n    <command label=\"Libretro\">retroarch -L /app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name>\n    <path>%ROMPATH%/n64</path>\n    <extension>.z64 .Z64</extension>\n    <command label=\"Libretro\">retroarch -L /app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          },
+          "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "systems_query": {},
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": []
+        },
+        "savefile_location": {
+          "unresolved": {
+            "code": "core-not-installed",
+            "data": {
+              "core_so": "mupen64plus_next_libretro.so"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "a-system-only-flatpak-deploy-is-the-one-that-runs",
+      "rationale": "The other direction of the same rule: with no user deploy the search reaches the system installation, and that tree is what the app runs from \u2014 the catalogue it ships is the one read and the core it deploys is installed. Preferring the user installation is a choice between two deploys, never a refusal of the system one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name>\n    <path>%ROMPATH%/n64</path>\n    <extension>.z64 .Z64</extension>\n    <command label=\"Libretro\">retroarch -L /app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "systems_query": {},
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "n64"
+          ],
+          "caveats": []
+        },
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "an-inaccessible-flatpak-deploy-tree-establishes-no-running-deploy",
+      "rationale": "The one deploy this machine has cannot be stat'd \u2014 a mode-000 parent, an unplugged mount \u2014 so which deploy runs is not established, and the cfg's \"/app/retrodeck/saves\" gets no host location: the answer states the sandbox spelling it was given and says atlas cannot read what the emulator reads there. Taking the stat failure for a deploy would compose a host path out of it and hand that to RetroArch's directory test, which refuses everything it cannot read \u2014 turning the host's blindness into a claim about the sandbox and quietly relocating the saves to the platform default.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/app/retrodeck/saves\"\nlibretro_directory = \"/mnt/sd/retrodeck/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/mnt/sd/retrodeck/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "inaccessible": [
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active"
+        ],
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/n64/Game.z64",
+          "core_so": "mupen64plus_next_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/app/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false
+          },
+          "granularity": null,
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "savefile_directory",
+                "path": "/app/retrodeck/saves"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
