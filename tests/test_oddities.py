@@ -2057,11 +2057,11 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
 
         ``unprotected`` and ``arrangement`` are the two ways out of the byte
         check. Both are right where they stand: Flycast composes its per-content
-        VMU names at run time and the console flash name is nowhere in the
-        binary, and LRPS2's ``pcsx2/`` segment is a path RetroDECK builds. Each
-        is still one more name resting on live observation alone, so the list
-        lives here and a new one arrives as a visible diff rather than a quiet
-        opt-out.
+        VMU names at run time, its console flash name is in the binary but as
+        instruction immediates no NUL-delimited literal can pin, and LRPS2's
+        ``pcsx2/`` segment is a path RetroDECK builds. Each is one more name the
+        tripwire does not watch, so the list lives here and a new one arrives as
+        a visible diff rather than a quiet opt-out.
         """
         marked = sorted(
             (key, name, kind)
@@ -2082,9 +2082,9 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("flycast", "dc_nvmem.bin", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
         ], (
-            "the set of recorded names no anchor watches has changed — every entry here rests on "
-            "live observation alone, so confirm the new one really cannot be pinned to a literal "
-            "before updating this list"
+            "the set of recorded names no anchor watches has changed — every entry here is a name "
+            "the byte tripwire cannot reach, so confirm the new one really cannot be pinned to a "
+            "literal before updating this list"
         )
         for key, anchors in _shipped_anchors().items():
             for name, anchor in anchors.items():
@@ -2100,7 +2100,7 @@ class TestTheAnchorsAreLiteralsInTheDeployedCore:
     describing names the core no longer writes. What it cannot catch is the
     grammar around a literal (that ``%s.ps2`` is still the *save* name and not
     something else), or a name no literal carries at all — those stay marked
-    ``unprotected`` and rest on live observation.
+    ``unprotected``, each with the reason that says what does stand behind it.
 
     Skipped where the cores are not deployed: the Flatpak is not a build
     dependency and CI has no emulator installation.

@@ -59,11 +59,15 @@ subdir format `%s%cdc`. What that catches is a **vocabulary rename**: a build th
 `Mcd%03u.ps2` or `memcards` fails the suite instead of leaving a card describing names the core no longer writes. What
 it cannot catch is the **grammar** around a literal — that `%s.ps2` is still the per-game memory card and not some other
 file — which stays the job of source reading and live observation. Names no literal carries are marked `unprotected`
-with their reason and are genuinely unguarded here: flycast's nine run-time-composed names (`dc_nvmem.bin` and the
-`<save_id>`/`<rom_stem>` port sets) rest on live observation and the next re-audit. A third mark, `arrangement`, is for
-a path the arrangement builds rather than the core — LRPS2's `pcsx2/memcards` subdir, whose first segment matches a
-literal in the binary purely by coincidence (it is PCSX2's own data-root name). A recorded name with none of the three
-marks fails the tests, so the opt-out is always a written decision.
+with their reason, and flycast's nine run-time-composed names are two different cases under that one mark. The eight
+`<save_id>`/`<rom_stem>` port names are genuinely unguarded: they rest on live observation and the next re-audit.
+`dc_nvmem.bin` is not unguarded, only **unanchorable**. Source establishes it — the core composes it from
+`getRomPrefix()` and `nvmem.bin` at its one load and its one save site (flycast@1dac369
+`core/hw/flashrom/nvmem.cpp:35-50`, `:246`, `:305`; `shell/libretro/oslib.cpp:91-93`, `:109-114`) — and the shipped
+binary does carry both halves, as `.text` instruction immediates, which is exactly why no NUL-delimited literal can pin
+it. A third mark, `arrangement`, is for a path the arrangement builds rather than the core — LRPS2's `pcsx2/memcards`
+subdir, whose first segment matches a literal in the binary purely by coincidence (it is PCSX2's own data-root name). A
+recorded name with none of the three marks fails the tests, so the opt-out is always a written decision.
 
 **General fact for all core-written saves** [V]: `RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY` returns the _redirected_ save
 directory — sorting applied, mkdir-or-revert resolved (`runloop.c:2001` reads `runloop_st->savefile_dir`, which
@@ -197,6 +201,14 @@ Method per core:
    shipped binary names — cited as `file:line`
 3. live observation on a real machine where save data exists
 4. verdict + (if deviant) rule card with provenance, per-mode status, and an anchor for every name the card records
+
+**A string the scan cannot find is not a code path that does not exist** — step 1 bounds what a name scan can prove,
+step 2 is what establishes a path. Two ways a shipped build hides what it does: it compiles out its INFO and DEBUG log
+format strings (flycast's `"flash/nvmem is missing, will create new file..."` and every `DEBUG_LOG` text in its VMU
+handling are absent from the `.so` while the `WARN_LOG` texts beside them are present), so probing for a branch by the
+text of its info log reads absence as non-existence; and the compiler folds short literals into instruction immediates,
+which is where flycast's `dc_nvmem.bin` lives — a `movabs` operand in `.text` at each of its two sites, in no string
+table.
 
 Version drift is real and recorded: LRPS2 changed its option scheme between generations (`pcsx2_memcard_slot_1/2` →
 `pcsx2_shared_memory_cards`), observed in a live `retroarch-core-options.cfg`. Cards state which shipped version they

@@ -103,7 +103,7 @@ came from. One entry per recorded name — the governing option key, every segme
 ```json
 "anchors": {
   "vmu_save_A1.bin": { "literal": "vmu_save_" },
-  "dc_nvmem.bin": { "unprotected": "no literal in the shipped binary spells this name — …" }
+  "dc_nvmem.bin": { "unprotected": "composed at run time from the platform prefix and the flash file's own name — …" }
 }
 ```
 
@@ -115,7 +115,9 @@ the texture-dump path, nothing to do with saves.
 **A recorded name with none of the three kinds fails the tests** — there is no silent opt-out, because a name that looks
 checked and is not is worse than one marked as what it is. What the tripwire cannot catch is the _grammar_ around a
 literal (that `%s.ps2` still names the save and not something else) and the names no literal carries; those stay
-`unprotected` and rest on live observation and the next re-audit.
+`unprotected`, and each one's reason states what does stand behind it — live observation and the next re-audit, or
+source the byte check simply cannot reach (Flycast's `dc_nvmem.bin` is assembled in `.text` from instruction
+immediates).
 
 Mode keys are deliberately not anchored. They are the governing option's own values and the deployed core registers
 them, so the tests measure that set against the binary directly — a measurement beats an anchor.
