@@ -42,7 +42,7 @@ from atlas.installations import (
     RomPlacement,
     SystemsAnswer,
 )
-from atlas.placement import SavefilePlacement, SavestatePlacement, Unresolved
+from atlas.placement import SavefilePlacement, SavestatePlacement, TexturePlacement, Unresolved
 
 AnswerT = TypeVar("AnswerT")
 
@@ -103,6 +103,34 @@ def savestate_placement_contract(placement: SavestatePlacement) -> dict[str, Any
     directory.
     """
     return _placement_core(placement)
+
+
+def texture_placement_contract(placement: TexturePlacement) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.placement.TexturePlacement`.
+
+    It shares ``dir``, ``needs``, ``physical_dir`` and ``caveats`` with the save
+    placements and carries neither ``root_kind``, ``fallback_dir`` nor
+    ``file_set`` — three omissions that are each the contract rather than an
+    oversight. Nothing asked which root the tree hangs off; the sorted-directory
+    fallback is RetroArch's own path math for files *it* writes, and a core's
+    user directory is not one of them; and the files below a texture root are a
+    pack the user installed, so observing them would report a caller's own
+    downloads back as an answer about the emulator.
+
+    The two fields that *are* its own carry ``null`` for opposite reasons, which
+    is why both serialize rather than being omitted when unset: ``enabled`` is
+    ``null`` where nothing established whether replacement is on — never to be
+    read as off — and ``keying`` is ``null`` where no cited evidence states how
+    the tree is divided per game, never as a claim that it is undivided.
+    """
+    return {
+        "dir": placement.dir,
+        "needs": list(placement.needs),
+        "physical_dir": placement.physical_dir,
+        "enabled": placement.enabled,
+        "keying": placement.keying,
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+    }
 
 
 def unresolved_contract(unresolved: Unresolved) -> dict[str, Any]:
@@ -323,6 +351,20 @@ def savestate_answer_contract(outcome: SavestatePlacement | Unresolved) -> dict[
     if isinstance(outcome, Unresolved):
         return unresolved_contract(outcome)
     return savestate_placement_contract(outcome)
+
+
+def texture_answer_contract(outcome: TexturePlacement | Unresolved) -> dict[str, Any]:
+    """A texture-pack question's answer in whichever of its two shapes it took.
+
+    This route refuses more often than the save routes do, and the pair
+    serializer is what keeps that from being the caller's problem: a core that
+    is not installed, a standalone entry, and a core whose texture wiring atlas
+    has not established all come back as the typed refusal, while everything
+    else is a placement.
+    """
+    if isinstance(outcome, Unresolved):
+        return unresolved_contract(outcome)
+    return texture_placement_contract(outcome)
 
 
 def installation_answers_contract(

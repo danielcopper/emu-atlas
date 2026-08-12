@@ -41,12 +41,17 @@ INPUT_FIELDS_OPTIONAL = {
     "entry_savefile_query",
     "savestate_query",
     "entry_savestate_query",
+    "texture_query",
+    "entry_texture_query",
     "firmware_query",
     "identify_query",
 }
-# The savefile and savestate questions take the same three arguments, because
-# they are the same question about two families — one vocabulary, not two that
-# have to be kept in step.
+# The savefile, savestate and texture-pack questions take the same three
+# arguments, because they are one question asked about three families — one
+# vocabulary, not three that have to be kept in step. Content plays a part in
+# the texture answer too, and a narrower part than in the other two: it never
+# moves the directory a core builds its tree in, but it does decide which
+# per-game options file states whether replacement is on.
 QUERY_FIELDS = {"content_path", "core_so", "installation"}
 CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
 # The systems question takes no arguments — only which handle answers it.
@@ -69,6 +74,7 @@ ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
 AGGREGATE_QUESTION_FIELDS = {
     "savefile_location": ({"question"}, {"content_path", "core_so"}),
     "savestate_location": ({"question"}, {"content_path", "core_so"}),
+    "texture_pack_location": ({"question"}, {"content_path", "core_so"}),
     "emulators_for": ({"question", "system"}, {"content_path"}),
 }
 AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
@@ -92,6 +98,17 @@ PLACEMENT_FIELDS = {
 # set rather than spelled out, so the two can never drift in the fields they
 # do share.
 SAVESTATE_PLACEMENT_FIELDS = PLACEMENT_FIELDS - {"granularity"}
+# A texture placement shares only the fields its own question has. Written out
+# rather than derived from the save set, because here the difference is not a
+# subtraction: three save fields are gone (`root_kind` nobody asked for,
+# `fallback_dir` is RetroArch's path math for files it writes itself, and a
+# `file_set` below a texture root would report the caller's own downloads back
+# to it) and two fields are new.
+TEXTURE_PLACEMENT_FIELDS = {"dir", "needs", "physical_dir", "enabled", "keying", "caveats"}
+# How the tree below a texture root is divided per game. World knowledge, so it
+# is stated only where a citation backs it and is null otherwise — never a claim
+# that the tree is undivided.
+KNOWN_KEYINGS = {"game-id", "serial", "title-id", "rom-name", "pack"}
 FILE_SET_FIELDS = {"state", "files", "complete"}
 FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats"}
 FIRMWARE_CORE_FIELDS = {
@@ -243,6 +260,9 @@ KNOWN_CAVEAT_CODES = {
     "firmware-scan-incomplete",
     "core-enumeration-incomplete",
     "save-dir-unlistable",
+    "emulator-read-unestablished",
+    "emulator-config-unread",
+    "feature-switch-absent",
     # An installation's health findings are caveats with their own stable
     # codes, and an answer computed on a broken installation carries them
     # directly — so the caveat vocabulary contains the health vocabulary by
@@ -273,7 +293,11 @@ UNIDENTIFIED_CODES = {
 # The refusals a placement question may answer with instead of a location.
 # "core-not-installed" is the firmware route's word for the same fact, and
 # deliberately the same string: one fact, one code on both routes.
-KNOWN_UNRESOLVED_CODES = {"standalone-unsupported", "core-not-installed"}
+KNOWN_UNRESOLVED_CODES = {
+    "standalone-unsupported",
+    "core-not-installed",
+    "texture-wiring-unestablished",
+}
 
 
 class VectorError(Exception):
@@ -574,6 +598,10 @@ def _validate_input_queries(name: str, inp: Any) -> None:
         _validate_query(name, inp["savestate_query"], "savestate_query")
     if "entry_savestate_query" in inp:
         _validate_entry_query(name, inp["entry_savestate_query"], "entry_savestate_query")
+    if "texture_query" in inp:
+        _validate_query(name, inp["texture_query"], "texture_query")
+    if "entry_texture_query" in inp:
+        _validate_entry_query(name, inp["entry_texture_query"], "entry_texture_query")
     if "firmware_query" in inp:
         _validate_firmware_query(name, inp["firmware_query"])
     if "identify_query" in inp:
@@ -742,6 +770,46 @@ def _validate_savestate_outcome(name: str, outcome: Any, what: str = "savestate_
     """A savestate answer in either shape — the savefile validator's twin."""
     if not _validate_unresolved(name, outcome, what):
         _validate_savestate_placement(name, outcome)
+
+
+def _validate_texture_placement(name: str, placement: Any, what: str) -> None:
+    """A texture placement: the directory, the switch, and how the tree is keyed.
+
+    ``enabled`` and ``keying`` are both nullable and null means something
+    different in each — nothing established whether replacement is on, and
+    nothing cited says how the tree is divided — so both are required to be
+    present rather than omittable. A field a vector may leave out is a field a
+    port may forget to answer.
+    """
+    _require_exact(name, placement, TEXTURE_PLACEMENT_FIELDS, what)
+    if not isinstance(placement["dir"], str) or not placement["dir"]:
+        fail(f"{name}: {what}.dir must be a non-empty string")
+    needs = placement["needs"]
+    if not isinstance(needs, list) or not all(isinstance(n, str) for n in needs):
+        fail(f"{name}: {what}.needs must be a list of strings")
+    unknown_holes = sorted(set(needs) - KNOWN_HOLES)
+    if unknown_holes:
+        fail(f"{name}: {what}.needs must be holes from {sorted(KNOWN_HOLES)}, got {unknown_holes}")
+    physical = placement["physical_dir"]
+    if physical is not None and (not isinstance(physical, str) or not physical):
+        fail(f"{name}: {what}.physical_dir must be null or a non-empty string")
+    if physical is not None and needs:
+        # A template is not a path: nothing can be link-resolved through a hole,
+        # so a vector stating both locks in an answer the resolver cannot give.
+        fail(f"{name}: {what} states a physical_dir for a directory that is still a template")
+    enabled = placement["enabled"]
+    if enabled is not None and not isinstance(enabled, bool):
+        fail(f"{name}: {what}.enabled must be true, false, or null")
+    keying = placement["keying"]
+    if keying is not None and keying not in KNOWN_KEYINGS:
+        fail(f"{name}: {what}.keying must be null or one of {sorted(KNOWN_KEYINGS)}")
+    _validate_caveats(name, placement["caveats"])
+
+
+def _validate_texture_outcome(name: str, outcome: Any, what: str = "texture_pack_location") -> None:
+    """A texture answer in either shape: the placement, or the typed refusal."""
+    if not _validate_unresolved(name, outcome, what):
+        _validate_texture_placement(name, outcome, what)
 
 
 def _validate_identity(name: str, identity: Any, what: str) -> None:
@@ -1156,6 +1224,8 @@ def _validate_aggregate_answer(name: str, answered: Any, question: str) -> None:
         _validate_savefile_outcome(name, answered["answer"])
     elif question == "savestate_location":
         _validate_savestate_outcome(name, answered["answer"])
+    elif question == "texture_pack_location":
+        _validate_texture_outcome(name, answered["answer"])
     elif question == "emulators_for":
         _validate_catalogue(name, answered["answer"])
     else:
@@ -1199,6 +1269,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         "entry_savefile_location",
         "savestate_location",
         "entry_savestate_location",
+        "texture_pack_location",
+        "entry_texture_pack_location",
         "firmware",
         "identification",
     }
@@ -1220,6 +1292,12 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: savestate_query and savestate_location expectation must appear together")
     if ("entry_savestate_location" in keys) != ("entry_savestate_query" in inp):
         fail(f"{name}: entry_savestate_query and entry_savestate_location expectation must appear together")
+    if ("texture_pack_location" in keys) != ("texture_query" in inp):
+        fail(f"{name}: texture_query and texture_pack_location expectation must appear together")
+    if ("entry_texture_pack_location" in keys) != ("entry_texture_query" in inp):
+        fail(
+            f"{name}: entry_texture_query and entry_texture_pack_location expectation must appear together"
+        )
     if ("firmware" in keys) != ("firmware_query" in inp):
         fail(f"{name}: firmware_query and firmware expectation must appear together")
     if ("identification" in keys) != ("identify_query" in inp):
@@ -1235,6 +1313,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
             "savestate_location",
             "entry_savefile_location",
             "entry_savestate_location",
+            "texture_pack_location",
+            "entry_texture_pack_location",
             "catalogue",
             "systems",
             "firmware",
@@ -1258,6 +1338,12 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_savefile_outcome(name, expected["entry_savefile_location"], "entry_savefile_location")
     if "entry_savestate_location" in keys:
         _validate_savestate_outcome(name, expected["entry_savestate_location"], "entry_savestate_location")
+    if "texture_pack_location" in keys:
+        _validate_texture_outcome(name, expected["texture_pack_location"])
+    if "entry_texture_pack_location" in keys:
+        _validate_texture_outcome(
+            name, expected["entry_texture_pack_location"], "entry_texture_pack_location"
+        )
     if "firmware" in keys:
         _validate_firmware(name, expected["firmware"])
     if "identification" in keys:

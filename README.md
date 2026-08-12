@@ -36,10 +36,11 @@ Four principles, fixed before any code:
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, bare RetroArch installs, any
   of them side by side — and every question is asked _of an installation_, never of a global "the system":
   `installation.savefile_location(content_path=..., core_so=...)`, `installation.savestate_location(...)`,
-  `installation.emulators_for(system)` and `installation.rom_location(system)` on every handle — the ones without a
-  frontend catalogue answer with the reason rather than an empty list. Choosing one of them is optional:
-  `every_installation(home)` asks them all and labels each answer with the handle it came from, because two arrangements
-  on one machine give two true answers and picking a winner would be the guess.
+  `installation.texture_pack_location(...)`, `installation.emulators_for(system)` and
+  `installation.rom_location(system)` on every handle — the ones without a frontend catalogue answer with the reason
+  rather than an empty list. Choosing one of them is optional: `every_installation(home)` asks them all and labels each
+  answer with the handle it came from, because two arrangements on one machine give two true answers and picking a
+  winner would be the guess.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
   machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`, `file_size`, `file_digest`) whose every
   operation reports an explicit outcome — missing is not unreadable is not invalid text — because the emulators make
@@ -134,6 +135,19 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   savestate and no rule card for one can exist. In exchange it can name the files — `<stem>.state`, the numbered slots,
   the auto slot and their thumbnails are RetroArch's own naming — and a core whose `.info` declares no savestate support
   is stated as a caveat rather than left to be discovered.
+- `installation.texture_pack_location(content_path=..., core_so=...)` answers where one emulator reads replacement
+  textures from, joining a root read off the machine (the system directory as the core receives it, or the save root as
+  it stands) to the fragment below it, which is per-core behaviour no config states and therefore packaged, versioned
+  and source-cited. Beside the directory it states two things a client cannot derive: whether replacement is switched on
+  right now — read from the options file RetroArch would read first, else the default the installed core registers, and
+  honestly `None` where neither answered — and how the tree below the root is keyed per game, stated only where a
+  citation backs it. Where nothing establishes an emulator's texture wiring the answer is a typed refusal that says so,
+  never a directory nobody read; where the wiring is known but the root has never been observed in use, the directory is
+  stated with `emulator-read-unestablished` beside it. Standalone emulators answer this question through the catalogue
+  entry even where their saves refuse, and the asymmetry is the point: a save routes through a config atlas would have
+  to model, while a standalone emulator's packs mostly sit at its own default below an XDG base a flatpak pins. Those
+  answers leave the switch unstated and name the emulator configuration that would settle it, rather than reading an
+  unread file as "off".
 - `installation.emulators_for(system, content_path=...)` — on every handle — answers which emulators can launch a
   system. On RetroDECK it reads the ES-DE catalogue live (bundled + custom overlay) and resolves the effective default
   through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. On EmuDeck it

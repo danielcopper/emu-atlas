@@ -48,7 +48,7 @@ from atlas.detect import detect
 from atlas.firmware import FirmwareAnswer, FirmwareIdentification
 from atlas.installations import CatalogueAnswer, Health, Installation, RomPlacement, SystemsAnswer
 from atlas.machine import Machine
-from atlas.placement import SavefilePlacement, SavestatePlacement, Unresolved
+from atlas.placement import SavefilePlacement, SavestatePlacement, TexturePlacement, Unresolved
 
 AnswerT = TypeVar("AnswerT")
 
@@ -132,6 +132,23 @@ class EveryInstallation:
         """
         return self._ask(
             lambda installation: installation.savestate_location(
+                content_path=content_path, core_so=core_so
+            )
+        )
+
+    def texture_pack_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> tuple[InstallationAnswer[TexturePlacement | Unresolved], ...]:
+        """Where each installation's copy of this core reads texture packs from.
+
+        The question this fan-out shows off best: two arrangements running the
+        same core point it at two different roots, and both are true. An
+        installation that does not have the core, or whose wiring atlas has not
+        established, refuses instead of answering — so an answer here is a
+        placement *or* one of those refusals.
+        """
+        return self._ask(
+            lambda installation: installation.texture_pack_location(
                 content_path=content_path, core_so=core_so
             )
         )

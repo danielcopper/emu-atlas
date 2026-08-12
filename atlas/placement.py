@@ -97,6 +97,20 @@ ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory")
 STATE_ROOT_KINDS = ("savestate_directory", "content_directory")
 _FILE_SET_STATES = ("observed", "declared", "unknown")
 
+# How a texture pack tree is keyed below its root — the values
+# :attr:`TexturePlacement.keying` may take, and therefore the values a texture
+# card may state. World knowledge with the same standing as a granularity: no
+# read of the machine recovers it, so it is stated only where a citation backs
+# it and left absent otherwise. Closed like every other vocabulary here, and
+# named per value so a client branches on a constant rather than a literal.
+KEYING_GAME_ID = "game-id"
+KEYING_SERIAL = "serial"
+KEYING_TITLE_ID = "title-id"
+KEYING_ROM_NAME = "rom-name"
+KEYING_PACK = "pack"
+KEYINGS = (KEYING_GAME_ID, KEYING_SERIAL, KEYING_TITLE_ID, KEYING_ROM_NAME, KEYING_PACK)
+Keying = Literal["game-id", "serial", "title-id", "rom-name", "pack"]
+
 # How a save is grouped — the values :attr:`Granularity.value` may take, and
 # therefore the values a rule card may select. Contractual: clients branch on
 # them and vectors assert them, so the packaged cards are validated against
@@ -167,6 +181,33 @@ CAVEAT_CONTENT_PATH_UNNAMED = "content-path-unnamed"
 # caveat is what keeps "here is the directory" from reading as "and states will
 # appear in it".
 CAVEAT_CORE_SAVESTATES_UNSUPPORTED = "core-savestates-unsupported"
+# A directory is stated, and that this emulator reads it is not established.
+# The texture family's own degradation, and one level weaker than every other
+# code here: those qualify an answer atlas resolved, this one qualifies the
+# premise underneath it. Three libretro cores port a standalone emulator and
+# build their tree under a user directory whose root nobody has watched them
+# choose — the same open question the audit already carries for their saves —
+# so the location is the one the reading derives and the caveat says nobody has
+# seen it read. Never to be read as "the packs go nowhere": the directory is
+# real and stated; what is open is whether the emulator looks there.
+CAVEAT_EMULATOR_READ_UNESTABLISHED = "emulator-read-unestablished"
+# The directory is stated and the switch beside it is not, because the setting
+# that would answer it lives in a configuration file of the emulator's own that
+# atlas does not read. The texture family's second degradation, and the one a
+# standalone emulator's answer always carries today: where a libretro core's
+# option is read through RetroArch's own options chain, a standalone emulator
+# keeps its settings in its own ini, and modelling those is a different piece of
+# work (issue #3). Distinct from a value nobody stated — there the file was read
+# and said nothing; here no file was read at all.
+CAVEAT_EMULATOR_CONFIG_UNREAD = "emulator-config-unread"
+# The feature is off and this build offers no way to turn it on — not a core
+# option, not a setting any config file reaches. The strongest of the three
+# statements this family makes about a switch, and the only one that is about
+# the *build* rather than about a value: ``enabled`` is ``false`` here as an
+# established fact, not as a reading of some file. It can never ride with
+# ``emulator-read-unestablished``, which says the opposite kind of thing — there
+# the read path is in doubt, here it is established and simply never taken.
+CAVEAT_FEATURE_SWITCH_ABSENT = "feature-switch-absent"
 
 
 @dataclass(frozen=True, slots=True)
@@ -369,6 +410,14 @@ UNRESOLVED_STANDALONE = "standalone-unsupported"
 # reads the other. Not to be confused with a core that is *there* and will not
 # load — that one still has a placement, with its generation left unestablished.
 UNRESOLVED_CORE_NOT_INSTALLED = "core-not-installed"
+# Nothing establishes where this emulator reads texture packs, so no directory
+# is named. A statement about atlas, never about the emulator: it does NOT say
+# the emulator has no texture-pack feature, and a client rendering it that way
+# reports something nobody checked. Most cores are simply outside the packaged
+# wiring knowledge; one — LRPS2 at its shipped generation — is deliberately left
+# out of it, because the only path anyone can name for it is one an arrangement
+# builds rather than one the emulator was seen to read.
+UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED = "texture-wiring-unestablished"
 
 
 @dataclass(frozen=True, slots=True)
@@ -433,6 +482,64 @@ class SavestatePlacement:
             raise ValueError(
                 f"SavestatePlacement: root_kind must be one of {STATE_ROOT_KINDS}, got {self.root_kind!r}"
             )
+
+
+@dataclass(frozen=True, slots=True)
+class TexturePlacement:
+    """Where this emulator, configured as it is, reads texture packs from.
+
+    The third placement, and the first whose *root* is not RetroArch's to
+    choose: a core that supports texture replacement builds the tree itself,
+    under a directory it derives from one of the roots RetroArch hands it. So
+    the split runs the other way round from the save family — the root is read
+    live (the system directory as the core receives it, or the save root as it
+    stands), the fragment below it is per-core behaviour no config states, and
+    the two are joined here.
+
+    ``dir`` is concrete when every hole is filled and otherwise a template whose
+    remaining holes are listed in ``needs`` — the same grammar
+    :class:`SavefilePlacement` answers with, and for the same reason: a core
+    rooted in the system directory is handed the *content's* directory wherever
+    ``systemfiles_in_content_dir`` sends it, so a caller who named no content
+    gets ``<content_dir>`` and a hole to fill rather than a directory nobody
+    picked. ``physical_dir`` is the link-resolved backing directory where the
+    answer is reached through symlinks — the shape every distribution that wires
+    a shared texture tree into place produces — and a traversal that ends
+    nowhere is a ``dead-symlink`` or ``symlink-loop`` caveat instead.
+
+    Two fields are this question's own, and each is a different kind of
+    knowledge:
+
+    - ``enabled`` says whether replacement is switched on **right now**, read
+      from the option that governs it: the options file that RetroArch would
+      read first, else the default the installed core itself registers. It is
+      ``None`` where neither answered — the option is not in any file atlas
+      could read *and* the core did not state a default (or registered a value
+      outside the ones the card knows). A directory whose feature is off is
+      still the right directory, which is exactly why the two facts are separate
+      fields rather than one hedged answer.
+    - ``keying`` names how the tree below ``dir`` is divided per game
+      (:data:`KEYINGS`) and is ``None`` wherever no cited evidence states it.
+      It is world knowledge — nothing on the machine spells it — so it follows
+      the boundary rule to the letter: cited or absent, never derived into an
+      answer.
+    """
+
+    dir: str
+    needs: tuple[str, ...]
+    enabled: bool | None
+    keying: Keying | None
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...]
+    physical_dir: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.dir:
+            raise ValueError(
+                "TexturePlacement: dir must be non-empty (an unanswerable placement is Unresolved)"
+            )
+        if self.keying is not None and self.keying not in KEYINGS:
+            raise ValueError(f"TexturePlacement: keying must be one of {KEYINGS}, got {self.keying!r}")
 
 
 @dataclass(frozen=True, slots=True)

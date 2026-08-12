@@ -1,0 +1,445 @@
+"""Texture cards — where each emulator reads texture packs, minus the live part.
+
+The cards live in ``data/texture_packs.json`` — world knowledge under the
+boundary rule, and the split it makes is sharper than the save cards':
+
+- **The root is not here.** A card names a root *kind* and the resolver resolves
+  it live, the same way the save routes resolve theirs (the system directory as
+  the core is handed it, the save root as it stands). A directory written down
+  would be stale on the first user click.
+- **The option's value is not here either.** A card names the option that
+  governs replacement and which of its values mean *on*; which value is set is
+  read from the options file RetroArch would read first, or from the default the
+  installed core registers — both live reads.
+- **What is here is what no machine states**: the fragment below the root, the
+  option's identity, and the per-game keying of the tree.
+
+Cards are keyed by the core's canonical short name (the ``.so`` basename without
+``_libretro.so``), which is where the ``.so`` name comes from — derived, not
+restated, so the two cannot disagree. ``identifiers.library_name`` carries the
+display name the binary reports, so lookup works from either side. Both
+conventions are :mod:`atlas.oddities`'s, deliberately: a maintainer editing one
+table should not have to learn a second dialect.
+
+Every recorded fact is refused without provenance. That is the one rule this
+loader adds over the save cards', and it is the one decision 4 of the family's
+design rests on: a keying is stated only where a citation backs it, so the field
+is absent rather than derived wherever the evidence stops. A card that recorded
+a keying and cited nothing would put a guess into an answer under the same field
+name a cited one uses, which no client could tell apart.
+
+Facts in data, interpretation in code: this module only loads and indexes; the
+resolver in :mod:`atlas.installations` resolves the root and joins it.
+"""
+
+from __future__ import annotations
+
+import importlib.resources
+import json
+from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Any, Mapping
+
+from atlas.placement import KEYINGS, ROOT_KINDS, Keying
+
+# Packaged-data schema version. The loader is strict for the same reason every
+# other packaged-data loader here is: a malformed build fails loudly instead of
+# resolving with knowledge nobody can place.
+TEXTURE_PACKS_SCHEMA = 1
+
+# How a card's ``.so`` is spelled — the card key plus this suffix, exactly as
+# :data:`atlas.oddities.SO_SUFFIX` spells it for the save cards.
+SO_SUFFIX = "_libretro.so"
+
+# The roots a card may anchor at. The placement's own vocabulary, imported
+# rather than respelled: a value that only looked right would be joined onto a
+# resolved directory and stated as fact.
+_KNOWN_ROOTS = set(ROOT_KINDS)
+_KNOWN_KEYINGS = set(KEYINGS)
+
+# The XDG base a standalone emulator's tree hangs off. Two values, because two
+# are what the emulators use: a data home for content-like trees (Dolphin's
+# ``Load``, Cemu's ``graphicPacks``) and a config home for settings-adjacent
+# ones (PPSSPP's memory stick, DuckStation's data directory). *Which* base an
+# emulator uses is world knowledge; where that base is on this machine is the
+# arrangement's to resolve, and a flatpak pins it.
+XDG_DATA = "data"
+XDG_CONFIG = "config"
+XDG_BASES = (XDG_DATA, XDG_CONFIG)
+
+
+# This check exists verbatim in every packaged-data loader
+# (:func:`atlas.oddities._expect_str`, :func:`atlas.evidence._expect_str`,
+# :func:`atlas.systems._expect_str`). The repetition is the deliberate cost of
+# keeping the loaders independent: each reads its one file and shares no
+# machinery with the others, so a defect in one table can never fail the load of
+# another.
+def _expect_str(value: object, where: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{where}: expected a non-empty string, got {value!r}")
+    return value
+
+
+def _expect_str_list(value: object, where: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
+        raise ValueError(f"{where}: expected a list of non-empty strings, got {value!r}")
+    return tuple(value)
+
+
+def _expect_subdir(value: object, where: str) -> str:
+    """The fragment below the root: relative, and no path trickery in it.
+
+    It is joined onto a directory that was resolved from a config, so an
+    absolute fragment would silently discard that root and a ``..`` would climb
+    out of it — both of which reach a caller as an ordinary-looking answer
+    pointing somewhere the emulator never reads.
+    """
+    subdir = _expect_str(value, where)
+    if subdir.startswith("/"):
+        raise ValueError(
+            f"{where}: {subdir!r} is absolute — a card states the fragment BELOW a root it does not "
+            "know, and an absolute one would replace that root instead of extending it"
+        )
+    if ".." in subdir.split("/"):
+        raise ValueError(f"{where}: {subdir!r} climbs out of the root with '..'")
+    return subdir
+
+
+@dataclass(frozen=True, slots=True)
+class ReplacementOption:
+    """The core option that switches texture replacement on, and what its values mean.
+
+    ``setting`` is the core option's own name — spelled ``setting`` rather than
+    ``key`` so it matches :class:`AbsentSwitch`, which says the same thing about
+    a switch that does not exist. ``values`` maps each value the card knows to
+    whether it means *enabled*. A
+    value outside the map leaves :attr:`~atlas.placement.TexturePlacement.enabled`
+    unanswered with a stated caveat — the record lags the core's generation, and
+    reading an unknown word as "off" would be the guess the boundary rule
+    refuses.
+    """
+
+    setting: str
+    values: Mapping[str, bool]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "values", MappingProxyType(dict(self.values)))
+
+
+@dataclass(frozen=True, slots=True)
+class AbsentSwitch:
+    """A feature this build compiles in and offers no way to switch.
+
+    The third thing a card can say about the switch, beside naming a core option
+    and saying nothing. Here the setting exists in the emulator's own
+    vocabulary, its value is established, and **nothing in the shipped build
+    writes it** — so the state is a fact about the binary rather than a reading
+    of any file, and it cannot change until the build does.
+
+    That is why ``citation`` is required, and why ``verified_core`` is: "no
+    writer anywhere" is the strongest negative in this file, and the only honest
+    way to carry it is pinned to the binary it was proven against. The pin lives
+    **here** rather than being read off ``core_audit.json``, and the difference
+    is not cosmetic: that record's ``core_library_version`` moves whenever a
+    live round re-verifies a core's *save* behaviour, and a bump for an
+    unrelated reason would silently re-validate this claim against a build
+    nobody examined for it. A field of its own moves only when someone
+    re-examines the build for this.
+    """
+
+    setting: str
+    enabled: bool
+    verified_core: str
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
+class TextureCard:
+    """One core's texture-pack rule card: where below which root, keyed how, gated by what."""
+
+    key: str
+    library_names: tuple[str, ...]
+    root: str
+    subdir: str
+    keying: Keying | None
+    keying_citation: str | None
+    option: ReplacementOption | None
+    absent_switch: AbsentSwitch | None
+    provenance: str
+
+    @property
+    def so_name(self) -> str:
+        """The ``.so`` basename this card describes — the key plus the suffix."""
+        return f"{self.key}{SO_SUFFIX}"
+
+    def matches(self, *, so_basename: str | None, library_name: str | None) -> bool:
+        if so_basename is not None and so_basename == self.so_name:
+            return True
+        return library_name is not None and library_name in self.library_names
+
+
+def _replacement_option(value: object, where: str) -> ReplacementOption | None:
+    """The governing option, or ``None`` where the card records none.
+
+    A card with no option is a core whose replacement is not switchable, and
+    the answer then leaves ``enabled`` unanswered rather than claiming *on*.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError(f"{where}: expected an object or null, got {value!r}")
+    values = value.get("values")
+    if not isinstance(values, dict) or not values:
+        raise ValueError(f"{where}.values: expected a non-empty object of option value -> boolean")
+    for option_value, meaning in values.items():
+        if not isinstance(option_value, str) or not option_value:
+            raise ValueError(f"{where}.values: {option_value!r} is not an option value")
+        if not isinstance(meaning, bool):
+            # bool("false") is True in Python — never coerce this claim.
+            raise ValueError(f"{where}.values[{option_value!r}]: must be a JSON boolean")
+    if set(values.values()) != {True, False}:
+        # An option whose every value means the same thing governs nothing, and
+        # a card recording one would report a feature as permanently on or
+        # permanently off while the machine could say otherwise.
+        raise ValueError(
+            f"{where}.values: must name at least one value that means enabled and one that means "
+            f"disabled — got {sorted(values)} meaning {sorted(set(values.values()))}"
+        )
+    return ReplacementOption(
+        setting=_expect_str(value.get("setting"), f"{where}.setting"), values=values
+    )
+
+
+def _keying(value: object, where: str) -> tuple[Keying | None, str | None]:
+    """How the tree below the root is divided per game — cited, or not stated.
+
+    The citation is required rather than encouraged. A keying is the one field
+    of this table that no read of any machine can contradict, so an uncited one
+    would be indistinguishable from a cited one at the point a client acts on
+    it, and the honest alternative — saying nothing — is always available.
+    """
+    if value is None:
+        return None, None
+    if not isinstance(value, dict) or set(value) != {"value", "citation"}:
+        raise ValueError(f"{where}: expected {{'value': …, 'citation': …}} or null, got {value!r}")
+    keying = _expect_str(value.get("value"), f"{where}.value")
+    if keying not in _KNOWN_KEYINGS:
+        # It reaches the caller as the contractual TexturePlacement.keying, so a
+        # misspelling here would be stated as this tree's actual shape.
+        raise ValueError(f"{where}.value: must be one of {sorted(_KNOWN_KEYINGS)}, got {keying!r}")
+    citation = _expect_str(value.get("citation"), f"{where}.citation")
+    return keying, citation
+
+
+def _absent_switch(value: object, where: str) -> AbsentSwitch | None:
+    """A switch this build does not offer — or ``None`` where the card claims none."""
+    if value is None:
+        return None
+    if not isinstance(value, dict) or set(value) != {
+        "setting",
+        "enabled",
+        "verified_core",
+        "citation",
+    }:
+        raise ValueError(
+            f"{where}: expected {{'setting': …, 'enabled': …, 'verified_core': …, 'citation': …}} "
+            f"or null, got {value!r}"
+        )
+    enabled = value.get("enabled")
+    if not isinstance(enabled, bool):
+        # It reaches the caller as TexturePlacement.enabled, stated as fact
+        # rather than as a reading — and bool("false") is True in Python.
+        raise ValueError(f"{where}.enabled: must be a JSON boolean")
+    return AbsentSwitch(
+        setting=_expect_str(value.get("setting"), f"{where}.setting"),
+        enabled=enabled,
+        verified_core=_expect_str(value.get("verified_core"), f"{where}.verified_core"),
+        citation=_expect_str(value.get("citation"), f"{where}.citation"),
+    )
+
+
+def _texture_card(key: str, entry: Any) -> TextureCard:
+    """One core's card — validated, never coerced."""
+    where = f"texture card {key!r}"
+    if not isinstance(entry, dict):
+        raise ValueError(f"{where}: expected an object, got {entry!r}")
+    identifiers = entry.get("identifiers", {})
+    if "so" in identifiers:
+        raise ValueError(
+            f"{where}: identifiers.so is derived from the card key ({key + SO_SUFFIX!r}) and not "
+            "read — a restated one could only ever disagree with it"
+        )
+    textures = entry.get("textures")
+    if not isinstance(textures, dict):
+        raise ValueError(f"{where}: expected a 'textures' object, got {textures!r}")
+    root = _expect_str(textures.get("root"), f"{where}: textures.root")
+    if root not in _KNOWN_ROOTS:
+        raise ValueError(f"{where}: textures.root must be one of {sorted(_KNOWN_ROOTS)}, got {root!r}")
+    keying, citation = _keying(textures.get("keying"), f"{where}: textures.keying")
+    option = _replacement_option(
+        textures.get("replacement_option"), f"{where}: textures.replacement_option"
+    )
+    absent = _absent_switch(textures.get("absent_switch"), f"{where}: textures.absent_switch")
+    if option is not None and absent is not None:
+        # A switch that exists and a switch that does not are contradictory
+        # claims about one build, and the answer would have to pick one.
+        raise ValueError(
+            f"{where}: a card states either the option that governs replacement or that this build "
+            "offers no way to switch it — never both"
+        )
+    return TextureCard(
+        key=key,
+        library_names=_expect_str_list(
+            identifiers.get("library_name", []), f"{where}: identifiers.library_name"
+        ),
+        root=root,
+        subdir=_expect_subdir(textures.get("subdir"), f"{where}: textures.subdir"),
+        keying=keying,
+        keying_citation=citation,
+        option=option,
+        absent_switch=absent,
+        provenance=_expect_str(
+            entry.get("provenance", {}).get("source"), f"{where}: provenance.source"
+        ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class EmulatorConfig:
+    """The emulator's own settings file, named but never read.
+
+    It is what would answer whether replacement is switched on, and reading it
+    means modelling that emulator's configuration — a different piece of work
+    (issue #3). So the answer names the file instead of guessing at the switch,
+    and ``emulator-config-unread`` carries this pair.
+    """
+
+    base: str
+    path: str
+
+
+@dataclass(frozen=True, slots=True)
+class StandaloneTextureCard:
+    """Where a standalone emulator reads texture packs, below which XDG base.
+
+    The standalone twin of :class:`TextureCard`, and the difference is exactly
+    the one that makes these rows answerable without modelling an emulator: a
+    libretro core is handed its root by RetroArch, while a standalone emulator
+    opens its own default directory below an XDG base — a fixed subpath the
+    emulator itself decides. So a card names the base and the subpath, and the
+    arrangement resolves where that base is (a flatpak pins it).
+
+    Keyed by the ``%EMULATOR_…%`` token the frontend's launch command names,
+    because for a standalone entry that token is the only identifier there is.
+
+    ``config`` names the settings file that would establish ``enabled`` and is
+    never read; ``keying`` follows the same cited-or-absent rule as everywhere
+    in this file.
+    """
+
+    token: str
+    base: str
+    subdir: str
+    keying: Keying | None
+    keying_citation: str | None
+    config: EmulatorConfig
+    provenance: str
+
+
+def _emulator_config(value: object, where: str) -> EmulatorConfig:
+    """The settings file a standalone card names — required, and never read.
+
+    Required because the answer it belongs to always states
+    ``emulator-config-unread``: a caveat that named no file would tell a client
+    the switch is unknown and leave it nowhere to go.
+    """
+    if not isinstance(value, dict) or set(value) != {"base", "path"}:
+        raise ValueError(f"{where}: expected {{'base': …, 'path': …}}, got {value!r}")
+    base = _expect_str(value.get("base"), f"{where}.base")
+    if base not in XDG_BASES:
+        raise ValueError(f"{where}.base: must be one of {sorted(XDG_BASES)}, got {base!r}")
+    return EmulatorConfig(base=base, path=_expect_subdir(value.get("path"), f"{where}.path"))
+
+
+def _standalone_card(token: str, entry: Any) -> StandaloneTextureCard:
+    """One standalone emulator's card — validated, never coerced."""
+    where = f"standalone texture card {token!r}"
+    if not isinstance(entry, dict):
+        raise ValueError(f"{where}: expected an object, got {entry!r}")
+    textures = entry.get("textures")
+    if not isinstance(textures, dict):
+        raise ValueError(f"{where}: expected a 'textures' object, got {textures!r}")
+    base = _expect_str(textures.get("base"), f"{where}: textures.base")
+    if base not in XDG_BASES:
+        raise ValueError(f"{where}: textures.base must be one of {sorted(XDG_BASES)}, got {base!r}")
+    keying, citation = _keying(textures.get("keying"), f"{where}: textures.keying")
+    return StandaloneTextureCard(
+        token=token,
+        base=base,
+        subdir=_expect_subdir(textures.get("subdir"), f"{where}: textures.subdir"),
+        keying=keying,
+        keying_citation=citation,
+        config=_emulator_config(textures.get("config"), f"{where}: textures.config"),
+        provenance=_expect_str(
+            entry.get("provenance", {}).get("source"), f"{where}: provenance.source"
+        ),
+    )
+
+
+def load_standalone_texture_packs(text: str | None = None) -> tuple[StandaloneTextureCard, ...]:
+    """Load the packaged standalone cards (or *text* when supplied, for tests)."""
+    raw = json.loads(text if text is not None else _packaged_text())
+    if not isinstance(raw, dict) or raw.get("schema") != TEXTURE_PACKS_SCHEMA:
+        raise ValueError(
+            f"texture_packs: unsupported schema {raw.get('schema') if isinstance(raw, dict) else None!r} "
+            f"(this atlas reads schema {TEXTURE_PACKS_SCHEMA})"
+        )
+    return tuple(_standalone_card(token, entry) for token, entry in raw.get("emulators", {}).items())
+
+
+def _packaged_text() -> str:
+    return (
+        importlib.resources.files("atlas")
+        .joinpath("data", "texture_packs.json")
+        .read_text(encoding="utf-8")
+    )
+
+
+def load_texture_packs(text: str | None = None) -> tuple[TextureCard, ...]:
+    """Load the packaged texture cards (or *text* when supplied, for tests).
+
+    Reading packaged data is not the machine seam — it is the library reading
+    its own bundled world knowledge, which is exactly what the cards are.
+    """
+    raw = json.loads(text if text is not None else _packaged_text())
+    if not isinstance(raw, dict) or raw.get("schema") != TEXTURE_PACKS_SCHEMA:
+        raise ValueError(
+            f"texture_packs: unsupported schema {raw.get('schema') if isinstance(raw, dict) else None!r} "
+            f"(this atlas reads schema {TEXTURE_PACKS_SCHEMA})"
+        )
+    return tuple(_texture_card(key, entry) for key, entry in raw.get("cores", {}).items())
+
+
+_PACKAGED: tuple[TextureCard, ...] | None = None
+_PACKAGED_STANDALONE: tuple[StandaloneTextureCard, ...] | None = None
+
+
+def lookup_texture_card(*, so_basename: str | None, library_name: str | None) -> TextureCard | None:
+    """Find the packaged texture card matching a core, by ``.so`` name or ``library_name``."""
+    global _PACKAGED
+    if _PACKAGED is None:
+        _PACKAGED = load_texture_packs()
+    for card in _PACKAGED:
+        if card.matches(so_basename=so_basename, library_name=library_name):
+            return card
+    return None
+
+
+def lookup_standalone_texture_card(token: str | None) -> StandaloneTextureCard | None:
+    """Find the packaged card for the emulator a ``%EMULATOR_…%`` token names."""
+    global _PACKAGED_STANDALONE
+    if _PACKAGED_STANDALONE is None:
+        _PACKAGED_STANDALONE = load_standalone_texture_packs()
+    if token is None:
+        return None
+    return next((card for card in _PACKAGED_STANDALONE if card.token == token), None)

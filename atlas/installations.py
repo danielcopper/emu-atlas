@@ -36,6 +36,7 @@ from atlas.esde import (
     EmulatorSpec,
     GamelistSelections,
     SystemDeclaration,
+    emulator_token,
     expand_home_path,
     merge_layers,
     parse_es_settings,
@@ -83,6 +84,13 @@ from atlas.machine import (
     ReadStatus,
 )
 from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
+from atlas.textures import (
+    XDG_DATA,
+    StandaloneTextureCard,
+    TextureCard,
+    lookup_standalone_texture_card,
+    lookup_texture_card,
+)
 from atlas.placement import (
     UNRESOLVED_CORE_NOT_INSTALLED,
     CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
@@ -95,6 +103,9 @@ from atlas.placement import (
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
+    CAVEAT_EMULATOR_CONFIG_UNREAD,
+    CAVEAT_EMULATOR_READ_UNESTABLISHED,
+    CAVEAT_FEATURE_SWITCH_ABSENT,
     CAVEAT_SORTED_DIR_UNCREATABLE,
     CAVEAT_CORE_MULTI_OPTION,
     CAVEAT_CORE_SUSPECT,
@@ -116,6 +127,7 @@ from atlas.placement import (
     CAVEAT_UNKNOWN_OPTION_VALUE,
     HOLE_CONTENT_DIR,
     ROOT_CONTENT_DIRECTORY,
+    ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     STATE_ROOT_CONTENT_DIRECTORY,
     TEMPLATE_ROM_STEM,
@@ -124,12 +136,14 @@ from atlas.placement import (
     FILE_SET_UNKNOWN,
     UNKNOWN_FILE_SET,
     UNRESOLVED_STANDALONE,
+    UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED,
     Caveat,
     FileSet,
     Granularity,
     RootKind,
     SavefilePlacement,
     SavestatePlacement,
+    TexturePlacement,
     Unresolved,
     build_savefile_placement,
     build_savestate_placement,
@@ -1299,6 +1313,51 @@ def _unaudited_caveats(so_basename: str) -> tuple[Caveat, ...]:
 
 
 @dataclass(frozen=True, slots=True)
+class _OptionGates:
+    """Which options files RetroArch would consult, and what reading that cost.
+
+    The preamble every route that reads a core option shares. Both flags
+    default from ``config.def.h`` and both are read from the MERGED config,
+    after ``config_load_override`` has run: the core's own
+    ``retro_set_environment`` (``runloop.c:5037``) triggers
+    ``runloop_init_core_options``, which reads
+    ``settings->bools.game_specific_options`` and ``.global_core_options``
+    (``runloop.c:1529-1530``, ``:1564-1565``) — one step after the overrides
+    were merged at ``:5003``. So an override that says
+    ``game_specific_options = "false"`` really does switch the game/folder
+    ``.opt`` layer off, unlike ``auto_overrides_enable``, which is captured
+    before the merge (``:4941``).
+
+    Shared rather than written twice because the second copy had already lost
+    this comment: the save route reads its card's governing option here and the
+    texture route reads its replacement switch, and neither may drift from the
+    order RetroArch itself walks.
+    """
+
+    global_file: str
+    game_specific_options: bool
+    per_core_options: bool
+    caveats: tuple[Caveat, ...]
+
+
+def _option_gates(
+    layers: Sequence[_CfgLayer], *, sandbox: _Sandbox, retroarch_config_dir: str
+) -> _OptionGates:
+    """Read the two gates and locate the global options file, once."""
+    global_file, options_file_caveats = _global_options_file(
+        layers, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir
+    )
+    global_core_options, global_ignored = chain_bool(layers, "global_core_options", default=False)
+    game_specific_options, game_ignored = chain_bool(layers, "game_specific_options", default=True)
+    return _OptionGates(
+        global_file=global_file,
+        game_specific_options=game_specific_options,
+        per_core_options=not global_core_options,
+        caveats=(*options_file_caveats, *_ignored_caveats((*global_ignored, *game_ignored))),
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class _CardChoice:
     """The rule card that applies here, once feature detection has had its say.
 
@@ -1601,35 +1660,22 @@ def _apply_card(
     effective_default = card.option_default
     if live_option is not None and live_option.default is not None:
         effective_default = live_option.default
-    global_file, options_file_caveats = _global_options_file(
+    option_gates = _option_gates(
         layers, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir
     )
-    # Both default false/true from config.def.h and both are read from the
-    # MERGED config, after config_load_override has run: the core's own
-    # retro_set_environment (runloop.c:5037) triggers runloop_init_core_options,
-    # which reads settings->bools.game_specific_options and .global_core_options
-    # (runloop.c:1529-1530, :1564-1565) — one step after the overrides were
-    # merged at :5003. So an override that says game_specific_options = "false"
-    # really does switch the game/folder .opt layer off, unlike
-    # auto_overrides_enable, which is captured before the merge (:4941).
-    global_core_options, global_ignored = chain_bool(layers, "global_core_options", default=False)
-    game_specific_options, game_ignored = chain_bool(layers, "game_specific_options", default=True)
     opt_value, opt_source, options_file = _core_options_value(
         machine,
         override_config_dir=gates.override_config_dir,
-        global_file=global_file,
+        global_file=option_gates.global_file,
         library_name=library_name,
         content_dir_name=content.dir_name,
         rom_stem=content.rom_stem,
         option_key=card.option_key or "",
         option_default=effective_default,
-        game_specific_options=game_specific_options,
-        per_core_options=not global_core_options,
+        game_specific_options=option_gates.game_specific_options,
+        per_core_options=option_gates.per_core_options,
     )
-    caveats: list[Caveat] = [
-        *options_file_caveats,
-        *_ignored_caveats((*global_ignored, *game_ignored)),
-    ]
+    caveats: list[Caveat] = [*option_gates.caveats]
     if opt_value is None:
         # No file states the option and no default was established. There is
         # nothing to select a mode with, and no granularity to report either:
@@ -2797,6 +2843,411 @@ def _retroarch_savestate_location(machine: Machine, query: _SaveQuery) -> Savest
     )
 
 
+def _optional(caveat: Caveat | None) -> tuple[Caveat, ...]:
+    """A caveat that may not exist, as something a caveat list can splice."""
+    return () if caveat is None else (caveat,)
+
+
+def _texture_read_caveat(card: TextureCard) -> Caveat | None:
+    """Has anyone established that this core reads the directory below?
+
+    At most one caveat, so the return type says so rather than a tuple that is
+    empty or holds exactly one — a shape a caller has to unpack to learn what
+    the signature could have told it.
+
+    Driven by the audit, not by this function's knowledge of which cores are
+    doubtful: three libretro cores port a standalone emulator and build their
+    tree under a user directory whose root nobody has watched them choose, and
+    that is the same open question the audit already carries for their saves
+    (``core_audit.json``, verdict ``suspect``). So the doubt is read off the
+    record. When the audit closes it — issue #98 — the verdict changes and this
+    caveat retires or converts by that edit alone, exactly the way
+    ``arrangement-unverified`` retires by an edit to
+    ``arrangement_evidence.json``. No resolver names a core here, which is what
+    keeps the retirement a data change rather than a code change.
+    """
+    entry = lookup_audit(card.key)
+    if entry is None or entry.verdict != "suspect":
+        return None
+    return Caveat(
+        CAVEAT_EMULATOR_READ_UNESTABLISHED,
+        f"core {card.key!r} is a documented deviation suspect: which root it builds its user "
+        "directory under has never been observed, so the directory below is the one the "
+        "reading derives and nothing has confirmed the core reads it "
+        "(docs/research/core-audit.md)",
+        {"core": card.key, "verdict": entry.verdict},
+    )
+
+
+def _texture_root(
+    *,
+    card: TextureCard,
+    chain: _Chain,
+    query: _SaveQuery,
+) -> _SystemRoot:
+    """The directory the core builds its texture tree under, resolved live.
+
+    Two kinds reach here, and each is resolved by the route that already owns
+    it. ``system_directory`` is *the directory the core is handed*, not the cfg
+    key's value (:func:`_core_system_root`) — so a machine with
+    ``systemfiles_in_content_dir`` sends the packs to the content's own
+    directory, and a caller who named no content is answered with the hole.
+    ``savefile_directory`` is resolved by that family's own root selection, and
+    for the same reason: ``savefiles_in_content_dir`` sends the core's save
+    root to the content's own directory (``runloop.c:8789``), so a texture tree
+    built under it goes there too. Reading the cfg key's value instead would
+    name a directory RetroArch never hands the core — the mistake commit
+    ``02177f2`` fixed for the system directory, in a second place. What is *not*
+    taken from that family is the sorting stages — a derivation, decided
+    against contrary evidence rather than settled: the sorting redirect runs
+    before the core ever sees the directory
+    (``docs/research/retrodeck-save-placement.md`` §"sorting stages apply
+    before the core", the [V-live] Flycast observation), so a core that builds
+    its texture tree lazily under the handed root *would* land under the
+    sorted directory. What decides the other way here: both distributions wire
+    the texture links at the UNSORTED root while running with content-sorting
+    on, and both disable sort-by-core — so the wired tree is the unsorted one
+    on every arrangement with a card, and the sorted reading is live only on a
+    bare RetroArch, which already rides ``arrangement-unverified``. If a live
+    run ever shows a texture tree under a sorted directory, this branch is the
+    one to revisit.
+
+    The return type is the system route's, reused rather than copied: what a
+    texture root needs from a resolution is exactly what that one already
+    carries — the base, the holes it left, whether it can be looked at from
+    here, and its provenance. Only ``root_kind`` goes unread, because nothing
+    asked this question which root it was.
+    """
+    if card.root == ROOT_SYSTEM_DIRECTORY:
+        return _core_system_root(
+            sandbox=query.sandbox,
+            cfg_label=query.cfg_label,
+            layers=chain.layers,
+            content=chain.content,
+            retroarch_config_dir=chain.retroarch_config_dir,
+        )
+    if chain.layout.in_content_dir:
+        provenance = (
+            f'{query.cfg_label} chain: {chain.layout.keys.in_content_dir} = "true" — the core\'s save '
+            "root is the content's own directory, and it builds its user directory there "
+            "(runloop.c:8789)"
+        )
+        if chain.content.dir_path is not None:
+            return _SystemRoot(chain.content.dir_path, ROOT_CONTENT_DIRECTORY, sources=(provenance,))
+        return _SystemRoot(
+            "<content_dir>",
+            ROOT_CONTENT_DIRECTORY,
+            needs=(HOLE_CONTENT_DIR,),
+            sources=(provenance,),
+        )
+    return _SystemRoot(
+        chain.effective_root,
+        ROOT_SAVEFILE_DIRECTORY,
+        reachable=chain.reachable,
+        sources=(
+            f"{query.cfg_label} chain: the core builds its user directory under the save root "
+            f"({chain.effective_root})",
+        ),
+    )
+
+
+def _switch_absent(
+    card: TextureCard, *, core_version: str | None
+) -> tuple[bool, tuple[str, ...], tuple[Caveat, ...]]:
+    """A feature this build compiles in and offers no way to switch on.
+
+    ``enabled`` is stated as a fact about the binary rather than read from
+    anywhere — the setting exists in the emulator's own vocabulary, nothing in
+    the shipped build writes it, and no configuration on any machine can reach
+    it. That is a stronger claim than every other answer in this family makes,
+    so it is the one that is pinned to a core generation: the card names the
+    build it was proven against — its own field rather than the audit's
+    save-side record, which moves for unrelated reasons — and a machine running
+    a different one gets the claim with ``unverified-version`` beside it rather
+    than silently inheriting it. The comparison needs both sides to speak, exactly as the
+    arrangement-level tripwire does — a core that reports no version is not
+    compared, and silence there means *no drift established*, not *no drift*.
+    """
+    switch = card.absent_switch
+    assert switch is not None  # the caller checked; this keeps the type honest
+    caveats = [
+        Caveat(
+            CAVEAT_FEATURE_SWITCH_ABSENT,
+            f"core {card.key!r} reads texture packs from this directory and this build offers no way "
+            f"to switch that on: {switch.setting} is not a core option and no configuration reaches "
+            "it, so replacement stays off until the core itself changes",
+            {"core": card.key, "option_key": switch.setting},
+        )
+    ]
+    if core_version is not None and switch.verified_core != core_version:
+        caveats.append(
+            Caveat(
+                CAVEAT_UNVERIFIED_VERSION,
+                f"that {card.key!r} offers no switch was established against core "
+                f"{switch.verified_core}, and "
+                f"this machine runs {core_version} — a build is exactly what could add one, so the "
+                "claim is not carried across the difference unexamined",
+                {
+                    "core": card.key,
+                    "verification": "drifted",
+                    "core_verified": switch.verified_core,
+                    "core_live": core_version,
+                },
+            )
+        )
+    return (
+        switch.enabled,
+        (
+            f"texture card '{card.key}': {switch.setting} is not switchable in this build — "
+            f"{switch.citation}",
+        ),
+        tuple(caveats),
+    )
+
+
+def _texture_enabled(
+    machine: Machine,
+    *,
+    card: TextureCard,
+    chain: _Chain,
+    query: _SaveQuery,
+    core_version: str | None,
+) -> tuple[bool | None, tuple[str, ...], tuple[Caveat, ...]]:
+    """Is replacement switched on right now — read the way RetroArch reads it?
+
+    The card names the option and what its values mean; everything else is live.
+    The options files are walked in RetroArch's own priority order (game
+    ``.opt``, folder ``.opt``, per-core ``.opt``, then the global file), and a
+    file that states nothing falls back to the default the **installed core**
+    registers, which is a machine fact rather than a recorded one.
+
+    ``None`` is the honest answer three ways, and none of them may be read as
+    *off*: the card records no governing option, nothing states the option and
+    the core declared no default (LRPS2 and Dolphin register options too late
+    for the probe to capture, so this is a real state on a real machine), or the
+    value that is set is one the record cannot interpret.
+    """
+    if card.absent_switch is not None:
+        return _switch_absent(card, core_version=core_version)
+    if card.option is None:
+        return (
+            None,
+            (f"texture card '{card.key}': no option governs replacement — whether it is on is not stated",),
+            (),
+        )
+    # Options the probe did not capture are ``None``, which is a probe
+    # limitation and not a core that registers none (:mod:`atlas.machine`) —
+    # the difference decides whether a missing entry means *this core does not
+    # offer the option* or *nobody looked*, and both end in the same honest
+    # ``None`` default below.
+    registered = chain.core.info.options if chain.core.info is not None else None
+    live_option = registered.get(card.option.setting) if registered is not None else None
+    option_gates = _option_gates(
+        chain.layers, sandbox=query.sandbox, retroarch_config_dir=chain.retroarch_config_dir
+    )
+    value, provenance, _ = _core_options_value(
+        machine,
+        override_config_dir=chain.gates.override_config_dir,
+        global_file=option_gates.global_file,
+        library_name=chain.core.library_name,
+        content_dir_name=chain.content.dir_name,
+        rom_stem=chain.content.rom_stem,
+        option_key=card.option.setting,
+        option_default=live_option.default if live_option is not None else None,
+        game_specific_options=option_gates.game_specific_options,
+        per_core_options=option_gates.per_core_options,
+    )
+    stated = option_gates.caveats
+    if value is None:
+        return None, (provenance,), stated
+    if value not in card.option.values:
+        return (
+            None,
+            (provenance,),
+            (
+                *stated,
+                Caveat(
+                    CAVEAT_UNKNOWN_OPTION_VALUE,
+                    f'core option {card.option.setting} = "{value}" is not a value the recorded texture '
+                    f"behaviour of core {card.key!r} knows — whether replacement is on is left "
+                    "unstated rather than read as off",
+                    {"core": card.key, "option_key": card.option.setting, "value": value},
+                ),
+            ),
+        )
+    return card.option.values[value], (provenance,), stated
+
+
+def _retroarch_texture_pack_location(
+    machine: Machine, query: _SaveQuery
+) -> TexturePlacement | Unresolved:
+    """Where this core reads texture packs: the shared chain, then its texture card.
+
+    The chain is the savefile family's, read once and unchanged — the same
+    global cfg, the same override layers, the same core identification — because
+    the roots a texture tree hangs off are the roots that family already
+    resolves, and reading them a second way would be a second answer to one
+    question. What differs is everything after the root: the fragment below it,
+    the option that gates it and the keying of the tree are per-core behaviour
+    from :mod:`atlas.textures`, not RetroArch's path math.
+
+    Two refusals, both typed. A core the machine established is not installed
+    ends the question the way it ends the save question. A core with no texture
+    card ends it differently and says so in its own code: nothing establishes
+    where this emulator reads packs, which is a statement about atlas and never
+    the claim that the emulator has none.
+    """
+    chain = _read_chain(machine, query, SAVEFILE_KEYS)
+    if chain.core.not_installed is not None:
+        return chain.core.not_installed
+
+    so_basename = os.path.basename(query.core_so) if query.core_so is not None else None
+    card = lookup_texture_card(so_basename=so_basename, library_name=chain.core.library_name)
+    if card is None:
+        return Unresolved(
+            UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED,
+            f"where {so_basename or 'this emulator'} reads texture packs is not established — atlas "
+            "carries no texture wiring for it, which says nothing about whether it has the feature: "
+            "the packaged knowledge simply does not reach this core "
+            "(docs/how-to-use.md, 'Where texture packs go')",
+            {"core_so": so_basename} if so_basename is not None else {},
+        )
+
+    root = _texture_root(card=card, chain=chain, query=query)
+    directory = os.path.join(root.base, card.subdir)
+    enabled, enabled_sources, enabled_caveats = _texture_enabled(
+        machine,
+        card=card,
+        chain=chain,
+        query=query,
+        core_version=chain.core.info.library_version if chain.core.info is not None else None,
+    )
+    caveats = [
+        *chain.caveats,
+        *root.caveats,
+        *enabled_caveats,
+        *_optional(_texture_read_caveat(card)),
+    ]
+    physical_dir: str | None = None
+    if root.reachable and not root.needs:
+        physical_dir, link_caveats = _link_view(machine, directory)
+        caveats.extend(link_caveats)
+    return TexturePlacement(
+        dir=directory,
+        needs=root.needs,
+        enabled=enabled,
+        keying=card.keying,
+        sources=(
+            *chain.sources,
+            *root.sources,
+            f"texture card '{card.key}': the core reads packs from {card.subdir!r} below that root "
+            f"— {card.provenance}",
+            *enabled_sources,
+            *(
+                (f"texture card '{card.key}': keyed by {card.keying} — {card.keying_citation}",)
+                if card.keying is not None
+                else ()
+            ),
+        ),
+        caveats=tuple(caveats),
+        physical_dir=physical_dir,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _XdgHomes:
+    """The two XDG bases a standalone emulator's own trees hang off.
+
+    An arrangement supplies them; a standalone card names which of the two it
+    wants. The pair exists because the emulators genuinely split — Dolphin's
+    ``Load`` and Cemu's ``graphicPacks`` are data, PPSSPP's memory stick and
+    DuckStation's tree are config — and because only an arrangement knows where
+    the bases are. Inside a flatpak they are pinned (flatpak force-sets the
+    ``XDG_*_HOME`` variables after every override; see the env composition
+    section of ``docs/research/retrodeck-save-placement.md``), which is the
+    whole reason these rows need no emulator config read to place.
+    """
+
+    data: str
+    config: str
+
+    def base(self, which: str) -> str:
+        return self.data if which == XDG_DATA else self.config
+
+
+def _standalone_texture_placement(
+    machine: Machine,
+    *,
+    card: StandaloneTextureCard,
+    homes: _XdgHomes,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> TexturePlacement:
+    """Where a standalone emulator reads texture packs — an XDG join, then the links.
+
+    No config of the emulator's is read, and that is what the answer says: the
+    directory is its own default below a base the arrangement pins, so it
+    resolves without modelling the emulator, while the switch beside it does
+    not. ``enabled`` is therefore always ``None`` here, with
+    ``emulator-config-unread`` naming the file that would answer it — never
+    ``False``, which would be a reading nobody made.
+
+    ``needs`` is always empty: nothing in this join comes from the content. A
+    standalone emulator's texture root belongs to the emulator, and the same
+    directory serves every game it launches.
+    """
+    directory = os.path.join(homes.base(card.base), card.subdir)
+    config_path = os.path.join(homes.base(card.config.base), card.config.path)
+    physical_dir, link_caveats = _link_view(machine, directory)
+    return TexturePlacement(
+        dir=directory,
+        needs=(),
+        enabled=None,
+        keying=card.keying,
+        sources=(
+            f"texture card '{card.token}': the emulator reads packs from {card.subdir!r} below its "
+            f"XDG {card.base} home — {card.provenance}",
+            *(
+                (f"texture card '{card.token}': keyed by {card.keying} — {card.keying_citation}",)
+                if card.keying is not None
+                else ()
+            ),
+        ),
+        caveats=(
+            *extra_caveats,
+            *link_caveats,
+            Caveat(
+                CAVEAT_EMULATOR_CONFIG_UNREAD,
+                f"whether {card.token} has texture replacement switched on is not established — the "
+                f"setting lives in {config_path}, a configuration of the emulator's own that atlas "
+                "does not read (standalone emulator configuration is its own roadmap block)",
+                {"emulator": card.token, "config": config_path},
+            ),
+        ),
+        physical_dir=physical_dir,
+    )
+
+
+def _standalone_texture_unresolved(spec: EmulatorSpec) -> Unresolved:
+    """The refusal for a standalone entry no packaged card covers.
+
+    The same code the save routes answer every standalone entry with, and
+    deliberately so: what is missing here is what is missing there — nothing
+    reads this emulator's own configuration, and for these emulators the
+    texture directory is *in* that configuration rather than at a default the
+    emulator picks (RetroDECK writes PCSX2's into ``PCSX2.ini`` and Vita3K's
+    ``pref-path`` into ``config.yml``). An emulator whose packs live at its own
+    default answers instead, and the split between the two is evidence, not
+    policy.
+    """
+    return Unresolved(
+        UNRESOLVED_STANDALONE,
+        f"where standalone emulator {spec.label!r} ({spec.system}) reads texture packs is not "
+        "resolvable yet — its texture directory is named in a configuration of its own, and "
+        "reading those is the standalone roadmap block (ROADMAP.md)",
+        {"label": spec.label, "system": spec.system},
+    )
+
+
 def _cfg_directory(
     sandbox: _Sandbox, parsed: Mapping[str, str], key: str
 ) -> tuple[str | None, tuple[Caveat, ...]]:
@@ -3197,6 +3648,14 @@ class _CatalogueHost(Protocol):
         *,
         content_path: str | None = None,
     ) -> SavestatePlacement | Unresolved: ...
+
+    def entry_texture_pack_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> TexturePlacement | Unresolved: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -3776,6 +4235,26 @@ class EmulatorEntry:
             self._spec, self._caveats, content_path=content_path
         )
 
+    def texture_pack_location(self, *, content_path: str | None = None) -> TexturePlacement | Unresolved:
+        """Where this emulator reads texture packs — the emulator taken from the catalogue.
+
+        The one question of the three that does **not** short-circuit on a
+        standalone entry, and the asymmetry is deliberate. A save routes through
+        a config atlas would have to model; a texture pack mostly does not — a
+        standalone emulator opens its own default directory below an XDG base a
+        flatpak pins, which is a path join and a symlink walk. So the same entry
+        can refuse ``savefile_location`` and answer this, and the answer says
+        what it could not read (``emulator-config-unread``) rather than
+        pretending the switch is off.
+
+        Which of the two it is stays the installation's decision, not a kind
+        check here: the catalogue names an emulator, and whether atlas has that
+        emulator's wiring is a question about packaged knowledge.
+        """
+        return self._installation.entry_texture_pack_location(
+            self._spec, self._caveats, content_path=content_path
+        )
+
     def _standalone(self) -> Unresolved:
         """The outcome both placement questions give for a non-libretro entry."""
         return Unresolved(
@@ -3842,6 +4321,15 @@ def _entry_savestate_with_caveats(
     if isinstance(outcome, Unresolved) or not extra:
         return outcome
     return cast(SavestatePlacement, _dc_replace(outcome, caveats=(*outcome.caveats, *extra)))
+
+
+def _entry_texture_with_caveats(
+    outcome: TexturePlacement | Unresolved, extra: tuple[Caveat, ...]
+) -> TexturePlacement | Unresolved:
+    """*outcome* with the entry's *extra* caveats appended — refusals pass through untouched."""
+    if isinstance(outcome, Unresolved) or not extra:
+        return outcome
+    return cast(TexturePlacement, _dc_replace(outcome, caveats=(*outcome.caveats, *extra)))
 
 
 class _CatalogueQueries:
@@ -4715,6 +5203,51 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=core_so,
         )
 
+    def _texture_pack_location_from(
+        self,
+        config: dict[str, Any],
+        marker_issues: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+        core_so: str | None,
+        extra_caveats: tuple[Caveat, ...] = (),
+    ) -> TexturePlacement | Unresolved:
+        return _retroarch_texture_pack_location(
+            self._machine,
+            self._query_from(
+                config,
+                marker_issues,
+                content_path=content_path,
+                core_so=core_so,
+                extra_caveats=extra_caveats,
+            ),
+        )
+
+    def texture_pack_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> TexturePlacement | Unresolved:
+        """Where this RetroDECK's *core_so* reads texture packs from.
+
+        RetroDECK is the arrangement this question was shaped by: it links each
+        emulator's own texture directory into one shared tree, so ``dir`` is the
+        path the emulator opens and ``physical_dir`` the tree the bytes are
+        really in — the two truthful answers a ``dir_prep`` install produces, the
+        same pair the save routes already report.
+
+        The link is not what atlas reads the location *from*. The directory
+        comes from the root RetroArch hands the core plus the fragment the core
+        itself appends; whether an arrangement has redirected that directory is
+        then an observation on top, which is why a machine that never ran
+        RetroDECK's setup still answers.
+        """
+        config, marker_issues = self._read_marker()
+        return self._texture_pack_location_from(
+            config,
+            marker_issues,
+            content_path=content_path,
+            core_so=core_so,
+        )
+
     def _firmware_context_from(
         self,
         config: dict[str, Any],
@@ -4885,6 +5418,66 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             extra_caveats=entry_caveats,
         )
         return _entry_savestate_with_caveats(placement, extra)
+
+    def _xdg_homes(self) -> _XdgHomes:
+        """Where the emulators RetroDECK ships keep their own XDG trees.
+
+        One flatpak holds all of them, so one pair of bases serves every
+        standalone row — and flatpak pins those bases after applying every
+        override, which is what makes a standalone texture directory a path
+        join rather than a config read.
+        """
+        app_dir = os.path.join(self._home, ".var", "app", self._APP_ID)
+        return _XdgHomes(data=os.path.join(app_dir, "data"), config=os.path.join(app_dir, "config"))
+
+    def entry_texture_pack_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> TexturePlacement | Unresolved:
+        """The entry route behind :meth:`EmulatorEntry.texture_pack_location` — one marker read.
+
+        Both kinds of entry answer here, which is what the save routes cannot
+        do: a libretro entry goes through the core route, and a standalone one
+        through its own XDG join, refusing only where no packaged card covers
+        the emulator the command names.
+
+        The per-game override check rides along for the reason it rides the two
+        save routes: an entry ES-DE would not launch for this game reads no
+        texture packs for it either.
+        """
+        config, marker_issues = self._read_marker()
+        extra = (
+            self._entry_caveats_for(config, spec, content_path)
+            if content_path is not None
+            else ()
+        )
+        if spec.kind != KIND_LIBRETRO:
+            card = lookup_standalone_texture_card(emulator_token(spec.command))
+            if card is None:
+                return _standalone_texture_unresolved(spec)
+            health = self._health_from(config, marker_issues)
+            return _standalone_texture_placement(
+                self._machine,
+                card=card,
+                homes=self._xdg_homes(),
+                extra_caveats=(
+                    *entry_caveats,
+                    *extra,
+                    *health.issues,
+                    *arrangement_caveats(self.kind, observed_version=_marker_version(config)),
+                ),
+            )
+        placement = self._texture_pack_location_from(
+            config,
+            marker_issues,
+            content_path=content_path,
+            core_so=spec.core_so,
+            extra_caveats=entry_caveats,
+        )
+        return _entry_texture_with_caveats(placement, extra)
 
 
 def _dequote_shell_value(value: str) -> str:
@@ -5729,6 +6322,33 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         extra = self._entry_caveats_for(spec, content_path)
         return _entry_savestate_with_caveats(placement, extra)
 
+    def entry_texture_pack_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> TexturePlacement | Unresolved:
+        """The texture-pack entry route — same sources, the entry's own caveats.
+
+        A standalone entry refuses here, and not because its emulator is
+        unknown: EmuDeck installs each standalone emulator as its own flatpak or
+        AppImage, so the XDG bases their trees hang off differ per emulator and
+        atlas has established none of them. RetroDECK's standalone rows resolve
+        precisely because one flatpak pins one pair of bases for all of them —
+        so this refusal is about what nobody has established here, and answering
+        it with RetroDECK's homes would name directories on the wrong tree.
+        """
+        if spec.kind != KIND_LIBRETRO:
+            return _standalone_texture_unresolved(spec)
+        placement = _retroarch_texture_pack_location(
+            self._machine,
+            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+        )
+        if content_path is None:
+            return placement
+        return _entry_texture_with_caveats(placement, self._entry_caveats_for(spec, content_path))
+
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
 
@@ -5802,6 +6422,27 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         installer history is context, not an input.
         """
         return _retroarch_savestate_location(
+            self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
+    def texture_pack_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> TexturePlacement | Unresolved:
+        """Where EmuDeck's RetroArch reads texture packs from, per core.
+
+        The answer is the emulator's own read location and nothing else. EmuDeck
+        keeps browsable trees of its own — ``Emulation/texturepacks``,
+        ``Emulation/hdpacks``, ``storage/<emulator>/textures`` — wired the
+        opposite way round from RetroDECK's: the links live in the shared tree
+        and point *into* the emulator's real directory
+        (``functions/helperFunctions.sh:479-506`` @ ``863ab69``), so nothing on
+        any emulator's read path passes through them and nothing here models
+        them. For the cores this arrangement wires, the read location is the
+        default below ``system_directory``, which the installer points at its own
+        bios root (``functions/EmuScripts/emuDeckRetroArch.sh:216``) and which
+        this route reads live like every other setting.
+        """
+        return _retroarch_texture_pack_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
@@ -6012,6 +6653,20 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    def texture_pack_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> TexturePlacement | Unresolved:
+        """Where this RetroArch install's *core_so* reads texture packs from.
+
+        A bare install wires no shared texture tree, so the answer is the
+        emulator's own default location and ``physical_dir`` stays ``None`` —
+        which is the honest shape rather than a missing feature: nothing here
+        redirects the directory, so there is no second path to report.
+        """
+        return _retroarch_texture_pack_location(
+            self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
     def _read_firmware_context(self) -> FirmwareContext:
         # One read of the cfg answers both: its text is the context, its status
         # is the health of an installation whose cfg *is* the marker.
@@ -6079,6 +6734,10 @@ class Installation(Protocol):
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement | Unresolved: ...
+
+    def texture_pack_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> TexturePlacement | Unresolved: ...
 
     def systems(self) -> SystemsAnswer: ...
 
