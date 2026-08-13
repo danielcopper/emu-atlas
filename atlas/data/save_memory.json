@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "spec": "Which of the two files RetroArch writes per content a core actually fills, per core and per system. The NAME is not here and never will be: RetroArch builds it from the content's own stem plus '.srm' (runloop.c:8720-8723 at RetroArch a79435a) and derives the '.rtc' twin from it, registering the pair as RETRO_MEMORY_SAVE_RAM and RETRO_MEMORY_RTC before any core is asked (save.c:710-724, reached for all non-subsystem content at runloop.c:4461), and the three remaining RETRO_MEMORY_* ids never reach a file at all. That rule is code, not data — no machine states it and no core changes it. What IS here is the one part no machine states: RetroArch writes a file only where the core answers with a pointer and a non-zero size (save.c:480), and a core answers that only once content is loaded, which atlas never does. So the claim is read out of the core's own source at the revision the machine ships, and 'verified_core' pins it to that build — for these cores the core's own library_version names the very commit, which is what makes the citation checkable. Records are keyed by core AND system because a core is not one behaviour: mGBA answers a Game Boy cartridge's clock and a Game Boy Advance cartridge's not at all, so a record spelled 'mgba' alone would have to be wrong about one of the two. Every entry is an upper bound and nothing more: whether THIS cartridge carries a battery or a clock is a fact about the game — mGBA reads it out of the ROM, gambatte off header byte 0x147 — and no table can hold it. A core absent from this file is not one that writes nothing; it is one whose source nobody has read yet, and the resolver states that as an unknown file set rather than inventing a set. Method note, hard-won on the first two records: mGBA's retro_get_memory_data has no 'break' in its RTC branch, so for a Game Boy Advance cartridge that id falls through and returns a valid work-RAM pointer — reading only that function would put a '.rtc' into an answer for every GBA game. The size function is the one that decides, because save.c:480 requires both.",
+  "cores": {
+    "mgba": {
+      "identifiers": {
+        "library_name": ["mGBA"]
+      },
+      "systems": {
+        "gba": {
+          "memory_types": ["save_ram"],
+          "verified_core": "0.11-dev c758314",
+          "citation": "[V] src/platform/libretro/libretro.c:2338-2347 at mgba c758314 — for mPLATFORM_GBA the SAVE_RAM size is GBA_SIZE_FLASH1M while the save type is still GBA_SAVEDATA_AUTODETECT and GBASavedataSize() once it is detected, so the id is filled for any GBA content. RTC has no mPLATFORM_GBA branch and falls to 'default: break' (:2357-2370), returning 0 — which stops the write at save.c:480 even though the data pointer for that id is non-NULL (:2288-2302, a fall-through into the SYSTEM_RAM branch)."
+        },
+        "gb": {
+          "memory_types": ["save_ram", "rtc"],
+          "verified_core": "0.11-dev c758314",
+          "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — for mPLATFORM_GB the SAVE_RAM size is the cartridge's sramSize, and the RTC size is sizeof(struct GBMBCRTCSaveBuffer) for a GB_MBC3_RTC cartridge and 0 for every other mapper. Both are read off the loaded cartridge, so each file appears for the games that carry the hardware."
+        },
+        "gbc": {
+          "memory_types": ["save_ram", "rtc"],
+          "verified_core": "0.11-dev c758314",
+          "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — the Game Boy Color is the same mPLATFORM_GB branch as the Game Boy: mGBA distinguishes the two by the cartridge it loaded, not by a separate libretro platform, so the memory ids it fills are the same pair."
+        }
+      },
+      "provenance": {
+        "source": "Read at the revision the installed binary names: the core reports library_version '0.11-dev c758314', which is the upstream commit, and the source was read there rather than at master (master's file differs by 31 lines)."
+      }
+    },
+    "gambatte": {
+      "identifiers": {
+        "library_name": ["Gambatte"]
+      },
+      "systems": {
+        "gb": {
+          "memory_types": ["save_ram", "rtc"],
+          "verified_core": "v0.5.0-netlink 6924c76",
+          "citation": "[V] libgambatte/libretro/libretro.cpp:2676-2683 at gambatte-libretro 6924c76 — SAVE_RAM answers gb.savedata_size() and RTC answers gb.rtcdata_size(). The size that decides the write is Cartridge::rtcdata_size (libgambatte/src/mem/cartridge_libretro.cpp:70-80, its pointer twin at :58-68): both gate on hasRtc(romdata[0x147]) (:30-41) and return 0 for every cartridge without a clock, so the file appears for exactly the games that carry the hardware — MBC3 and HuC3 alike."
+        },
+        "gbc": {
+          "memory_types": ["save_ram", "rtc"],
+          "verified_core": "v0.5.0-netlink 6924c76",
+          "citation": "[V] libgambatte/libretro/libretro.cpp:2676-2683 at gambatte-libretro 6924c76 — the core has one code path for both handhelds and tells them apart by the loaded cartridge (gb.isCgb()), so the memory ids it fills are the same pair as for the Game Boy."
+        }
+      },
+      "provenance": {
+        "source": "Read at the revision the installed binary names: the core reports library_version 'v0.5.0-netlink 6924c76', which is the upstream commit. The shipped .info file's display_version disagrees with the binary on the sibling core and was not used."
+      }
+    }
+  }
+}

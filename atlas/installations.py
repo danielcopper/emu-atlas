@@ -97,6 +97,7 @@ from atlas.mods import (
     lookup_standalone_mod_card,
 )
 from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
+from atlas.save_memory import lookup_save_memory
 from atlas.textures import (
     XDG_DATA,
     StandaloneTextureCard,
@@ -156,6 +157,8 @@ from atlas.placement import (
     UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED,
     Caveat,
     FileSet,
+    GRANULARITY_PER_GAME_FILE,
+    GRANULARITY_PER_GAME_FILES,
     Granularity,
     ModPlacement,
     ModTree,
@@ -847,6 +850,15 @@ class _SaveQuery:
     core_path_resolver: Callable[[str], _CoreLookup]
     arrangement: str
     arrangement_version: str | None
+    # Which system the question is about, where the asker knew — the catalogue
+    # routes do, because an entry is declared *for* a system. It narrows one
+    # thing only: a save-memory record is keyed by core and system together, so
+    # a core that behaves differently per system (mGBA answers a Game Boy
+    # cartridge's clock and a GBA cartridge's not at all) can be stated
+    # precisely instead of not at all. ``None`` is the honest state of the
+    # direct route, which is handed a core and nothing else, and it narrows
+    # nothing rather than picking one of a record's systems.
+    system: str | None = None
     extra_sources: tuple[str, ...] = ()
     extra_caveats: tuple[Caveat, ...] = ()
 
@@ -2281,6 +2293,135 @@ def _is_content_dir(directory: str, content: _Content) -> bool:
     return os.path.normpath(directory) == os.path.normpath(content.dir_path)
 
 
+def _standard_declaration(
+    query: _SaveQuery,
+    *,
+    content: _Content,
+    library_name: str | None,
+    card: CoreCard | None,
+    core_info: CoreInfo | None,
+) -> tuple[FileSet | None, Granularity | None, tuple[Caveat, ...]]:
+    """The files RetroArch itself writes for this core on this system, or nothing stated.
+
+    The one file set in this resolver that is *not* a look at the directory,
+    and deliberately so: what a save is called follows from RetroArch's naming
+    rule and the core's own memory ids, both of which hold whether or not a
+    file has been written yet. A file lying in the directory is evidence about
+    the past — it may be what a core option wrote before it was switched, or
+    what a different core left behind — so it cannot carry a present-tense
+    claim about where this configuration writes, and it is not consulted here.
+
+    Five things make the declaration stay silent instead, each of them a
+    refusal rather than a fallback:
+
+    - **A rule card speaks for this core.** The card is the stronger statement
+      — it knows the deviation this record does not model — and two
+      declarations of one file set would be a contradiction a client cannot
+      resolve. Any card at all silences the record, not merely one whose mode
+      declares files: a carded core is a *deviating* core, and a record that
+      filled in the file names of a save the card has moved elsewhere would be
+      right about the names and wrong about the save.
+    - **No content was named**, so the template's ``<rom_stem>`` has nothing to
+      fill it and the shape is not the answer.
+    - **The core has no record**, which is not "it writes nothing" but "nobody
+      has read its source yet".
+    - **The system is unknown or not in the record.** A record is keyed by core
+      *and* system because one core is not one behaviour, and narrowing by
+      guessing which system was meant is the guess this package refuses.
+    - **The installed core could not be examined at all.** A record is read
+      out of one build's source, and applying it on the strength of a ``.so``
+      file name would state a source-verified claim about a binary nobody
+      read. That is the decision :func:`_select_card` already makes for a rule
+      card in the same state, and for the same reason: the drift tripwire
+      below compares against a version, and *no version at all* is not a
+      version that matched.
+
+    The granularity comes out of the same record and is not a second claim:
+    the standard rule keys every file it writes by the content, so the only
+    question left is how many of them there are, and the record answers it.
+    ``option_key`` is ``None`` for the reason LRPS2's is — no option governs
+    this, so there is nothing for a caller to switch.
+    """
+    if card is not None:
+        return None, None, ()
+    if content.rom_stem is None:
+        return None, None, ()
+    so_basename = os.path.basename(query.core_so) if query.core_so is not None else None
+    record = lookup_save_memory(so_basename=so_basename, library_name=library_name)
+    if record is None:
+        return None, None, ()
+    entry = record.for_system(query.system)
+    if entry is None:
+        return None, None, ()
+    # Last, and deliberately after the system check: this is the only refusal
+    # here that states a caveat, so it must fire exactly where a declaration
+    # was actually withheld. Asked without a system the record could never
+    # have spoken anyway, and a caveat there would report the loss of
+    # something that was never on offer.
+    if core_info is None:
+        return (
+            None,
+            None,
+            (
+                Caveat(
+                    CAVEAT_CORE_GENERATION_UNESTABLISHED,
+                    f"which save files core {record.key!r} writes for {query.system} is recorded, "
+                    "but the installed core could not be read — which build is here was never "
+                    "established, so the recorded file set is not applied and the answer names "
+                    "no files",
+                    {"core": record.key},
+                ),
+            ),
+        )
+    core_version = core_info.library_version
+    files = _card_files(entry.file_templates, content.rom_stem)
+    if files is None:
+        return None, None, ()
+    caveats: tuple[Caveat, ...] = ()
+    if core_version is not None and entry.verified_core != core_version:
+        caveats = (
+            Caveat(
+                CAVEAT_UNVERIFIED_VERSION,
+                f"which save files {record.key!r} writes for {query.system} was read from core "
+                f"{entry.verified_core}, and this machine runs {core_version} — a build is exactly "
+                "what could add or drop a memory id, so the claim is not carried across the "
+                "difference unexamined",
+                {
+                    "core": record.key,
+                    "verification": "drifted",
+                    "core_verified": entry.verified_core,
+                    "core_live": core_version,
+                },
+            ),
+        )
+    return (
+        FileSet(
+            state=FILE_SET_DECLARED,
+            files=files,
+            provenance=(
+                f"declared by the standard rule: RetroArch names the save after the content "
+                f"(runloop.c:8720-8723) and writes only .srm and .rtc (save.c:710-724), and core "
+                f"'{record.key}' on {query.system} fills {', '.join(entry.memory_types)} — "
+                f"{entry.citation}"
+            ),
+        ),
+        Granularity(
+            value=(
+                GRANULARITY_PER_GAME_FILE if len(files) == 1 else GRANULARITY_PER_GAME_FILES
+            ),
+            option_key=None,
+            option_value=None,
+            option_provenance=(
+                f"RetroArch's standard rule keys every save file by the content, and '{record.key}' "
+                f"on {query.system} fills {len(files)} of them — no core option governs this"
+            ),
+            options_file=None,
+            alternatives=(),
+        ),
+        caveats,
+    )
+
+
 def _observed_at(
     machine: Machine,
     *,
@@ -2289,11 +2430,19 @@ def _observed_at(
     content_path: str | None,
     card: CoreCard | None,
     mode: SaveMode | None,
+    declared: FileSet | None = None,
 ) -> tuple[FileSet, str | None, tuple[Caveat, ...]]:
-    """What lies at the resolved directory: the file set and the link view."""
-    file_set = UNKNOWN_FILE_SET
+    """What lies at the resolved directory: the file set and the link view.
+
+    *declared* short-circuits the file-set half: where the standard rule
+    already states which files this core writes, the directory is not listed
+    for them at all. That is not an optimisation — a listing would produce
+    findings this answer must not state, and the caveat about an unlistable
+    directory would report a degradation of something no longer being asked.
+    """
+    file_set = declared if declared is not None else UNKNOWN_FILE_SET
     caveats: tuple[Caveat, ...] = ()
-    if content.rom_stem is not None:
+    if declared is None and content.rom_stem is not None:
         file_set, caveats = _observed_file_set(
             machine,
             directory=directory,
@@ -2308,6 +2457,65 @@ def _observed_at(
     return file_set, physical_dir, (*caveats, *link_caveats)
 
 
+def _against_the_filesystem(
+    machine: Machine,
+    *,
+    intended_dir: str,
+    root_kind: RootKind,
+    layout: RetroArchCfg,
+    platform_default_dir: str,
+    content: _Content,
+    content_path: str | None,
+    card: CoreCard | None,
+    mode: SaveMode | None,
+    declared: FileSet | None,
+    reachable: bool,
+) -> tuple[str, str | None, str | None, FileSet | None, tuple[str, ...], tuple[Caveat, ...]]:
+    """What the machine does to a resolved directory: fallback, nesting, and the look.
+
+    Split out of :func:`_standard_placement` because it is the one part of that
+    answer the filesystem gets a say in, and *reachable* gates it twice: a
+    sandbox path with no host location still resolves to a directory the
+    emulator writes to, but every read of that directory would be a read that
+    never applied. The card's own subtree is nested either way — it follows
+    from the card, not from the disk.
+
+    Returns ``None`` for the file set where nothing was looked at, so the
+    caller keeps whatever it already stated rather than having an unknown
+    written over a declaration.
+    """
+    fallback_dir: str | None = None
+    physical_dir: str | None = None
+    file_set: FileSet | None = None
+    caveats: list[Caveat] = []
+    final_dir = intended_dir
+    if reachable:
+        effective_root = (
+            content.dir_path
+            if root_kind == ROOT_CONTENT_DIRECTORY
+            else layout.directory or platform_default_dir
+        )
+        final_dir, fallback_dir, sorted_dir_caveats = _sorted_dir_fallback(
+            machine, intended_dir=final_dir, effective_root=effective_root
+        )
+        caveats.extend(sorted_dir_caveats)
+    final_dir, fallback_dir, subdir_sources = _nest_card_subdir(
+        final_dir, fallback_dir, card=card, mode=mode
+    )
+    if reachable:
+        file_set, physical_dir, link_caveats = _observed_at(
+            machine,
+            directory=final_dir,
+            content=content,
+            content_path=content_path,
+            card=card,
+            mode=mode,
+            declared=declared,
+        )
+        caveats.extend(link_caveats)
+    return final_dir, fallback_dir, physical_dir, file_set, subdir_sources, tuple(caveats)
+
+
 def _standard_placement(
     machine: Machine,
     query: _SaveQuery,
@@ -2315,7 +2523,7 @@ def _standard_placement(
     layout: RetroArchCfg,
     platform_default_dir: str,
     content: _Content,
-    library_name: str | None,
+    core: _CoreIdentity,
     card: CoreCard | None,
     mode: SaveMode | None,
     granularity: Granularity | None,
@@ -2350,13 +2558,27 @@ def _standard_placement(
             )
         )
 
-    file_set = UNKNOWN_FILE_SET
+    declared, declared_granularity, declaration_caveats = _standard_declaration(
+        query,
+        content=content,
+        library_name=core.library_name,
+        card=card,
+        core_info=core.info,
+    )
+    all_caveats.extend(declaration_caveats)
+    # A card's granularity is the stronger word and keeps precedence; the
+    # standard rule fills the field only where no card spoke. A declaration
+    # holds without reading anything, so it is also the answer where the root
+    # cannot be reached from here — what the unreachable branch withholds is
+    # every *observation*, and this is not one.
+    granularity = granularity or declared_granularity
+    file_set = declared or UNKNOWN_FILE_SET
     placement = build_savefile_placement(
         layout=layout,
         platform_default_dir=platform_default_dir,
         content_dir_path=content.dir_path,
         content_dir_name=content.dir_name,
-        library_name=library_name,
+        library_name=core.library_name,
         extra_sources=sources,
     )
 
@@ -2371,29 +2593,24 @@ def _standard_placement(
     if card is not None and mode is not None:
         final_sources.append(f"rule card '{card.key}' governs this placement — {card.provenance}")
     if not placement.needs:
-        if reachable:
-            if placement.root_kind == ROOT_CONTENT_DIRECTORY:
-                effective_root = content.dir_path
-            else:
-                effective_root = layout.directory or platform_default_dir
-            final_dir, fallback_dir, sorted_dir_caveats = _sorted_dir_fallback(
-                machine, intended_dir=final_dir, effective_root=effective_root
-            )
-            all_caveats.extend(sorted_dir_caveats)
-        final_dir, fallback_dir, subdir_sources = _nest_card_subdir(
-            final_dir, fallback_dir, card=card, mode=mode
-        )
-        final_sources.extend(subdir_sources)
-        if reachable:
-            file_set, physical_dir, link_caveats = _observed_at(
+        final_dir, fallback_dir, physical_dir, looked_at, subdir_sources, machine_caveats = (
+            _against_the_filesystem(
                 machine,
-                directory=final_dir,
+                intended_dir=final_dir,
+                root_kind=placement.root_kind,
+                layout=layout,
+                platform_default_dir=platform_default_dir,
                 content=content,
                 content_path=query.content_path,
                 card=card,
                 mode=mode,
+                declared=declared,
+                reachable=reachable,
             )
-            all_caveats.extend(link_caveats)
+        )
+        final_sources.extend(subdir_sources)
+        all_caveats.extend(machine_caveats)
+        file_set = looked_at or file_set
 
     return SavefilePlacement(
         dir=final_dir,
@@ -2615,7 +2832,7 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
         layout=layout,
         platform_default_dir=platform_default_dir,
         content=content,
-        library_name=core.library_name,
+        core=core,
         card=card,
         mode=card_mode,
         granularity=granularity,
@@ -5698,6 +5915,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None,
         core_so: str | None,
+        system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
     ) -> _SaveQuery:
         """The placement question over a marker snapshot this query already read.
@@ -5729,6 +5947,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_path_resolver=lambda so: _core_path_from(sandbox, global_text, so),
             arrangement="retrodeck",
             arrangement_version=version,
+            system=system,
             extra_sources=environment_sources,
             extra_caveats=(
                 *extra_caveats,
@@ -5744,6 +5963,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None,
         core_so: str | None,
+        system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
     ) -> SavefilePlacement | Unresolved:
         return _retroarch_savefile_location(
@@ -5753,6 +5973,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 marker_issues,
                 content_path=content_path,
                 core_so=core_so,
+                system=system,
                 extra_caveats=extra_caveats,
             ),
         )
@@ -6048,6 +6269,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             marker_issues,
             content_path=content_path,
             core_so=spec.core_so,
+            system=spec.system,
             extra_caveats=entry_caveats,
         )
         return _entry_savefile_with_caveats(placement, extra)
@@ -7002,7 +7224,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """
         placement = _retroarch_savefile_location(
             self._machine,
-            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+            self._query(
+                content_path=content_path,
+                core_so=spec.core_so,
+                system=spec.system,
+                extra_caveats=entry_caveats,
+            ),
         )
         if content_path is None:
             return placement
@@ -7089,6 +7316,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None,
         core_so: str | None,
+        system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
     ) -> _SaveQuery:
         """The placement question, over one read of the companion cfg.
@@ -7117,6 +7345,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             core_path_resolver=lambda so: _core_path_from(sandbox, cfg.text, so),
             arrangement="emudeck",
             arrangement_version=version,
+            system=system,
             extra_caveats=(
                 *extra_caveats,
                 *health.issues,
