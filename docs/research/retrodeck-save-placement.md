@@ -367,6 +367,12 @@ different kinds of knowledge with different acquisition costs and different comp
 file-set question largely dissolves: for existing saves the resolver **observes** the set (`glob("<rom_stem>.*")`), and
 a server-supplied save brings its own filenames — only the directory must be resolved.
 
+> **Superseded for recorded cores.** The observation above is what the resolver does where nothing else is established,
+> and it remains the answer for most cores. Where a core's memory ids _have_ been read from its source
+> (`atlas/data/save_memory.json`), the file set is **declared** instead and the directory is not listed at all: a file
+> found under the content's stem is evidence about the past — what an option wrote before it was switched, what another
+> core left behind — and cannot carry a claim about where the configuration writes now.
+
 **[V]** The observation is honest about one blind spot: with `savefiles_in_content_dir` it runs in the ROM's own
 directory, where the content shares the ROM's name (`Game.bin` next to `Game.cue`, cover art, the archive itself). No
 shipped source says which extensions are content — `supported_extensions` is per core, not per content file, and it

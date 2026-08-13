@@ -268,6 +268,60 @@ driven by `core_audit.json`, not by this file or by a resolver**: it fires on th
 carry for their saves, so closing the verdict there retires it here, the way `arrangement_evidence.json` retires
 `arrangement-unverified`.
 
+## `save_memory.json` — which files RetroArch writes for a core, per system
+
+Read by `atlas.save_memory`, and it is the only table here keyed by **core _and_ system**. The name of a save is not in
+this file and never will be: RetroArch builds it from the content's own stem plus `.srm` (`runloop.c:8720-8723` at
+RetroArch a79435a) and derives the `.rtc` twin from it, registering the pair as `RETRO_MEMORY_SAVE_RAM` and
+`RETRO_MEMORY_RTC` before any core is asked (`save.c:710-724`, reached for all non-subsystem content at
+`runloop.c:4461`); the three remaining `RETRO_MEMORY_*` ids never reach a file. That rule is code, not data — no machine
+states it and no core changes it. What is here is the half no machine states: RetroArch writes a file only where the
+core answers with a pointer **and** a non-zero size (`save.c:480`), and a core answers that only once content is loaded,
+which atlas never does.
+
+```json
+"mgba": {
+  "identifiers": { "library_name": ["mGBA"] },
+  "systems": {
+    "gba": { "memory_types": ["save_ram"], "verified_core": "0.11-dev c758314", "citation": "[V] …libretro.c:2338-2347 …" },
+    "gb":  { "memory_types": ["save_ram", "rtc"], "verified_core": "0.11-dev c758314", "citation": "[V] …:2349-2351, :2357-2366 …" }
+  },
+  "provenance": { "source": "read at the revision the installed binary names" }
+}
+```
+
+- **Why the system is part of the key.** A core is not one behaviour. mGBA answers a Game Boy cartridge's clock and a
+  Game Boy Advance cartridge's not at all, so a record spelled `mgba` alone would have to be wrong about one of them.
+  Where the caller did not name a system the resolver states nothing rather than picking one of a record's entries.
+- **Every entry is an upper bound.** Whether _this_ cartridge carries a battery or a clock is a fact about the game —
+  mGBA reads it out of the ROM, gambatte off header byte `0x147` — and no table can hold it. A record states which files
+  can occur at all, which is the candidate set a save-syncing client needs.
+- **`verified_core` is the core's own `library_version`**, which for these cores names the very commit the binary was
+  built from (`0.11-dev c758314`). That is what makes the citation checkable, and a machine running another build gets
+  the claim with `unverified-version` beside it — a rebuild is exactly what can add or drop a memory id. The pin lives
+  here rather than in `core_audit.json` for the reason `absent_switch` keeps its own: that record's version moves when a
+  live round re-verifies a core's _placement_, and a bump for an unrelated reason would silently re-validate a claim
+  nobody re-read the source for.
+- **An extension a core writes itself can never appear here**, and that is what "memory" in the file's name means: this
+  table records the two ids a core hands the _frontend_, so Flycast's `.bin` VMUs, Beetle Saturn's `.bcr`/`.bkr`/`.smpc`
+  and beetle_psx's `.mcr` are outside it by construction — the core writes those past the interface. They belong to
+  `core_oddities.json`, where several of them already are, and the loader enforces the boundary: `memory_types` accepts
+  `save_ram` and `rtc` and refuses every other word.
+- **A card wins.** Where `core_oddities.json` carries a card for a core, this file is not consulted at all — not merely
+  where that card declares files. A carded core is a _deviating_ core, and a record that filled in the file names of a
+  save the card has moved elsewhere would be right about the names and wrong about the save.
+- **A core absent from this file writes nothing that is stated**, not nothing at all: its source has not been read yet,
+  and the resolver keeps whatever answer it gave before.
+- **A core that could not be examined gets no claim either.** A record is read out of one build's source, so applying it
+  on the strength of a `.so` file name would state a source-verified claim about a binary nobody read — the decision
+  `_select_card` already makes for a rule card in the same state. The answer then carries
+  `core-generation-unestablished` and names no files.
+
+Method note, hard-won on the first two records: mGBA's `retro_get_memory_data` has no `break` in its RTC branch, so for
+a GBA cartridge that id falls through and returns a valid work-RAM pointer. Reading only that function would put a
+`.rtc` into the answer for every GBA game — the size function is the one that decides, because `save.c:480` requires
+both.
+
 ## `mods.json` — where each emulator reads mods, and what a build patches with
 
 The texture file's grammar, read by `atlas.mods`, split the same way for the same reason: `cores` for libretro cores

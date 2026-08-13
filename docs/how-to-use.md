@@ -275,8 +275,8 @@ placement.dir          # '/run/media/deck/Emulation/retrodeck/saves/n64'  — co
 placement.root_kind    # 'savefile_directory' | 'content_directory' | 'system_directory'
 placement.needs        # ()  — nothing left for you to fill
 placement.file_set     # what the save consists of — see below
-placement.granularity  # a Granularity — the value plus the option that selects it — where a rule card states it;
-                       # None elsewhere
+placement.granularity  # a Granularity — how the save is grouped, plus the option that selects it where one does;
+                       # stated wherever the file set is, and None where atlas states no file set either
 placement.fallback_dir # set when dir does not exist yet: RetroArch reverts here if it cannot create dir
 placement.physical_dir # set when dir reaches its files through symlinks: the real backing path
 placement.sources      # provenance — which config said what (prose, for debugging)
@@ -335,10 +335,31 @@ Pass the path the way RetroArch gets it, and atlas names the content the way Ret
   whether a verified rule card closes the universe. **`complete` is reserved and always `false` today** — closing the
   universe means establishing which files the core can write at all for the active mode, and no shipped card's evidence
   goes that far yet. Treat `false` as "no completeness claim", never as "atlas checked and the set is open".
-- `"declared"` — `files` come from a source-verified rule card (e.g. Flycast's VMU set). A declared name may still be a
-  **template** — see below.
+- `"declared"` — `files` are the names this configuration writes, from source-verified world knowledge rather than a
+  look at the directory: either a rule card for a deviating core (Flycast's VMU set), or, for an ordinary core, the
+  standard rule — RetroArch names the save after the content and writes only `.srm` and `.rtc`, and which of the two a
+  core fills is recorded per core and system. A declared name may still be a **template** — see below.
 - `"unknown"` — atlas refuses to guess; `files` is empty. Fall back to your own knowledge, and treat that fallback as
   yours, not as atlas's answer.
+
+**Declared beats what is lying there, and that is the point.** For a core whose files are recorded, atlas does not look
+in the save directory at all: a file under the content's stem is evidence about the _past_ — what a core option wrote
+before it was switched, what another core left behind — and it cannot carry a claim about where this configuration
+writes now. So a stale `Game.rtc` beside a core that cannot write one never appears in the answer.
+
+Two consequences worth planning for. The set is an **upper bound over the system**: whether _this_ cartridge carries a
+battery or a clock is a fact about the game, which atlas does not read, so treat the names as the files to look for
+rather than files that must exist. And the standard rule needs to know **which system** is being asked about, because
+one core is not one behaviour — mGBA answers a Game Boy cartridge's clock and a Game Boy Advance cartridge's not at all.
+The catalogue route knows the system and gets the declaration; `savefile_location(core_so=…)` asked on its own does not,
+and the set stays `"unknown"` rather than narrowing to a guess:
+
+```python
+entry = install.emulators_for("gb").entries[0]        # the catalogue names the system
+entry.savefile_location(content_path=rom).file_set    # declared: ('Game.srm', 'Game.rtc')
+
+install.savefile_location(content_path=rom, core_so="mgba_libretro.so").file_set   # unknown — no system
+```
 
 ```python
 fs = placement.file_set
