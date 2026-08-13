@@ -268,6 +268,97 @@ driven by `core_audit.json`, not by this file or by a resolver**: it fires on th
 carry for their saves, so closing the verdict there retires it here, the way `arrangement_evidence.json` retires
 `arrangement-unverified`.
 
+## `mods.json` — where each emulator reads mods, and what a build patches with
+
+The texture file's grammar, read by `atlas.mods`, split the same way for the same reason: `cores` for libretro cores
+(handed a root by RetroArch) and `emulators` for standalone ones (opening their own default below an XDG base). Roots
+and option values are read live; the fragment, the keying and the option's identity are here. Three things are this
+file's own.
+
+### `trees` — a card may state several directories
+
+An emulator can read mods from directories that are **different mechanisms rather than alternatives**. FBNeo takes a
+replacement romset from one, an IPS patch set from a second and a romdata file from a third, all under one switch, so a
+card states a list and each entry carries its own `subdir` and `keying`:
+
+```json
+"fbneo": {
+  "identifiers": { "library_name": ["FinalBurn Neo"] },
+  "mods": {
+    "root": "system_directory",
+    "trees": [
+      { "role": "patched", "subdir": "fbneo/patched", "keying": { "value": "rom-name", "citation": "[V-source] …" } },
+      { "role": "ips", "subdir": "fbneo/ips", "keying": { "value": "rom-name", "citation": "[V-source] …" } },
+      { "role": "romdata", "subdir": "fbneo/romdata", "keying": { "value": "rom-name", "citation": "[V-source] …" } }
+    ],
+    "option": { "setting": "fbneo-allow-patched-romsets", "values": { "enabled": true, "disabled": false }, "default": { … } }
+  },
+  "provenance": { "source": "[V-source/V-binary] …" }
+}
+```
+
+`role` is the emulator's own word for a tree and is what tells several apart. A card stating **one** tree names **no**
+role — there is nothing to tell apart, and a made-up name would be vocabulary a client has to learn to ignore — while a
+card stating several requires one on each, all distinct. The loader refuses every other combination.
+
+### `option.default` — a switch value written down because no machine states it
+
+Ordinarily no default lives in a card: RetroArch falls back to the installed core's own registration, which is a live
+read. FBNeo cannot be read that way — it registers its options **after** `retro_set_environment`, so no probe captures
+them and no options file mentions the key — so the card carries the upstream value:
+
+```json
+"default": {
+  "value": "enabled",
+  "verified_core": "v1.0.0.03  01e29d5",
+  "citation": "[V-source] fbneo@01e29d5 retro_common.cpp:236-249 … default_value \"enabled\", and :53 initialises …"
+}
+```
+
+The precedence is the point: an options file wins over this, and a default the probe **does** capture wins over it too —
+the record is the last resort, not the first word. Like every claim about a build it is pinned by `verified_core`, so a
+machine running another build gets the value with `unverified-version` beside it. The loader refuses a default outside
+the option's own `values`, which would reach an answer as a value it then declines to interpret.
+
+### `config` — optional here, unlike the texture cards
+
+A standalone card's `config` names the settings file that would establish whether loading is on, and its answer then
+carries `emulator-config-unread` pointing at it. Here the field may be **`null`**, and exactly one shipped card uses
+that (a test holds the count down): for Azahar nobody has established that any switch exists at all — not a core option,
+not a CLI flag — so naming a file would signpost one that may govern nothing. That row states `enabled` as unanswered
+and points nowhere, which is the weaker and the honest claim.
+
+A **core** card may name one too, and that is where `emulator-config-unread` first rides a libretro row: the Dolphin
+core's mod switch is not a core option but an ordinary `GFX.ini` inside the user tree the core builds, so the card gives
+a `path` relative to the same root the trees hang off (no `base` — the root is not an XDG one).
+
+MAME is **absent on purpose**, the same way PCSX2 and Vita3K are absent from the texture table: its plugin directories
+are values RetroDECK writes into `mame.ini` rather than defaults the emulator opens. PCSX2 goes the other way here and
+**answers**, because nothing writes `Folders/Patches` and the directory is the emulator's own default — the split runs
+on evidence, not on the emulator. A core this file does not reach answers `mod-wiring-unestablished`; a standalone
+emulator it does not reach answers `standalone-unsupported`.
+
+### `soft_patching` — what a shipped RetroArch was built to attempt
+
+The other question's world knowledge, keyed by **installation kind** rather than by emulator, because it is a fact about
+a frontend build: patching as a whole is `HAVE_PATCH` and the `.xdelta` applier `HAVE_XDELTA`
+(`Makefile.common:260-267`), both compile-time and stated by no setting, log or file on any running machine.
+
+```json
+"soft_patching": {
+  "retrodeck": {
+    "formats": ["ips", "bps", "ups", "xdelta"],
+    "verified_arrangement": "0.10.9b",
+    "citation": "[V-binary] … four adjacent whole NUL-delimited runs at 0x78a06a-0x78a07f, and the help lines that exist only inside their own guard …"
+  }
+}
+```
+
+`formats` is the set that build was **proven** to attempt, so a format outside it is a claim as strong as the positive
+one, and an empty list is a legal record (patching compiled out) rather than a missing one. An arrangement with no
+record is one nobody examined: every candidate comes back with `attempted` null beside `patch-formats-unestablished`,
+never with the upstream build defaults, which are a fact about the source tree and not about anyone's binary.
+
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 
 One record per installation kind, saying whether a live installation of that arrangement has ever confirmed atlas's

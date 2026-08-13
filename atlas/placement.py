@@ -111,6 +111,26 @@ KEYING_PACK = "pack"
 KEYINGS = (KEYING_GAME_ID, KEYING_SERIAL, KEYING_TITLE_ID, KEYING_ROM_NAME, KEYING_PACK)
 Keying = Literal["game-id", "serial", "title-id", "rom-name", "pack"]
 
+# The patch formats RetroArch looks for beside the content, **in the order it
+# tries them** (``task_patch.c:1071-1075`` at RetroArch a79435a). The order is
+# compiled in, not configured, which is why it is a constant here rather than a
+# card's word: nothing on a machine can reorder it. Closed like every other
+# vocabulary in this module, and named per value so a client branches on a
+# constant.
+PATCH_FORMAT_IPS = "ips"
+PATCH_FORMAT_BPS = "bps"
+PATCH_FORMAT_UPS = "ups"
+PATCH_FORMAT_XDELTA = "xdelta"
+PATCH_FORMATS = (PATCH_FORMAT_IPS, PATCH_FORMAT_BPS, PATCH_FORMAT_UPS, PATCH_FORMAT_XDELTA)
+PatchFormat = Literal["ips", "bps", "ups", "xdelta"]
+
+# The indexed continuations a patch chain may carry: one digit appended to the
+# whole file name, 1 through 9 (``task_patch.c:1121-1147``). Nine and not more
+# is the upstream implementation's own bound — it writes a single character into
+# the byte behind the name and says so in a comment — so the list a candidate
+# carries is exactly as long as the emulator's own loop.
+PATCH_CONTINUATION_INDICES = tuple(range(1, 10))
+
 # How a save is grouped — the values :attr:`Granularity.value` may take, and
 # therefore the values a rule card may select. Contractual: clients branch on
 # them and vectors assert them, so the packaged cards are validated against
@@ -208,6 +228,26 @@ CAVEAT_EMULATOR_CONFIG_UNREAD = "emulator-config-unread"
 # ``emulator-read-unestablished``, which says the opposite kind of thing — there
 # the read path is in doubt, here it is established and simply never taken.
 CAVEAT_FEATURE_SWITCH_ABSENT = "feature-switch-absent"
+# Which patch formats the RetroArch on this machine attempts is not established.
+# The soft-patching question's own degradation, and the one place in atlas where
+# a *frontend* build's compile-time flags decide an answer: patching as a whole
+# and the ``.xdelta`` applier in particular are ``HAVE_PATCH`` / ``HAVE_XDELTA``
+# (``Makefile.common:260-267``), and nothing a running machine writes down says
+# which way they were set — no setting, no log, no file. So the candidate paths
+# are stated (they follow from the content path alone) and each one's
+# ``attempted`` is left unanswered rather than assumed from a build default.
+# Never to be read as "patching is off here": what is missing is the reading,
+# not the feature.
+CAVEAT_PATCH_FORMATS_UNESTABLISHED = "patch-formats-unestablished"
+# This emulator has a mod directory *and* the frontend patches its content
+# before it ever gets there. Stated on the mod answer because the two mechanisms
+# are easy to mistake for one: a caller holding an IPS file for an FBNeo romset
+# has two true places to put it — the core's own ``ips`` tree, and beside the
+# ROM where RetroArch itself would apply it — and they behave differently (one
+# is a core feature under a core option, the other is the frontend patching a
+# buffer). Not a degradation of the directory answer: everything it states
+# stands, and this points at the other question.
+CAVEAT_SOFT_PATCHING_APPLIES = "soft-patching-applies"
 
 
 @dataclass(frozen=True, slots=True)
@@ -418,6 +458,13 @@ UNRESOLVED_CORE_NOT_INSTALLED = "core-not-installed"
 # out of it, because the only path anyone can name for it is one an arrangement
 # builds rather than one the emulator was seen to read.
 UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED = "texture-wiring-unestablished"
+# The texture refusal's twin, one family over: nothing establishes where this
+# emulator reads mods, so no directory is named. A statement about atlas and
+# never about the emulator — most emulators are simply outside the packaged
+# wiring, and one is deliberately outside it: MAME's plugin directories are
+# values an installer writes into ``mame.ini``, so naming them would state an
+# arrangement's directory as an emulator's read location.
+UNRESOLVED_MOD_WIRING_UNESTABLISHED = "mod-wiring-unestablished"
 
 
 @dataclass(frozen=True, slots=True)
@@ -540,6 +587,201 @@ class TexturePlacement:
             )
         if self.keying is not None and self.keying not in KEYINGS:
             raise ValueError(f"TexturePlacement: keying must be one of {KEYINGS}, got {self.keying!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class ModTree:
+    """One directory a mod goes into, and how the tree below it is keyed.
+
+    ``dir`` and ``physical_dir`` mean exactly what they mean on a
+    :class:`TexturePlacement`: the path the emulator opens, and the
+    link-resolved directory the bytes are really in where an arrangement wired
+    one. ``keying`` follows the same cited-or-absent rule.
+
+    ``role`` is this family's own field, and its domain is the reason the
+    family's answer is plural at all: an emulator may read mods from **several**
+    directories that are not alternatives to each other but different mechanisms
+    — FBNeo takes a replacement romset from ``patched``, an IPS patch set from
+    ``ips`` and a romdata file from ``romdata``, all governed by one switch. The
+    role is the emulator's own word for such a tree, so a caller with three
+    directories in hand can tell which is which. It is ``None`` where the
+    emulator reads mods from one directory, because there is then nothing to
+    tell apart — a made-up name for the only tree would be vocabulary a client
+    has to learn to ignore.
+    """
+
+    dir: str
+    keying: Keying | None
+    role: str | None = None
+    physical_dir: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.dir:
+            raise ValueError("ModTree: dir must be non-empty")
+        if self.keying is not None and self.keying not in KEYINGS:
+            raise ValueError(f"ModTree: keying must be one of {KEYINGS}, got {self.keying!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class ModPlacement:
+    """Where this emulator, configured as it is, reads mods from.
+
+    The texture family's answer with one difference, and the difference is the
+    plural: ``trees`` replaces the single ``dir``/``keying``/``physical_dir``
+    trio, because a mod is not one kind of thing. Ten of the eleven rows atlas
+    ships carry exactly one tree; FBNeo carries three, each a different
+    mechanism under one switch, and an answer that named one of them would be
+    two-thirds wrong for a caller who has an IPS patch in hand.
+
+    That plurality is deliberate rather than incidental, and it is the shape
+    this grammar will need again: a single question can have several true
+    locations at once, which is the same class of answer the save side runs into
+    where one core writes to two roots for one game (issue #97).
+
+    Everything else is the texture answer, field for field and meaning for
+    meaning. ``needs`` are the holes of the *answer* — a root resolved into the
+    content's own directory leaves the same hole for every tree hanging off it,
+    so the list belongs here rather than on each tree. ``enabled`` is the switch
+    that governs the feature, read live where a live read exists, ``None``
+    where nothing established it and never to be read as *off*.
+    """
+
+    trees: tuple[ModTree, ...]
+    needs: tuple[str, ...]
+    enabled: bool | None
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...]
+
+    def __post_init__(self) -> None:
+        if not self.trees:
+            raise ValueError(
+                "ModPlacement: at least one tree (an emulator with no directory is Unresolved)"
+            )
+        roles = [tree.role for tree in self.trees]
+        if len(self.trees) > 1:
+            if None in roles:
+                raise ValueError(
+                    "ModPlacement: every tree of a multi-tree answer names its role — that is what "
+                    "the field is for"
+                )
+            if len(set(roles)) != len(roles):
+                raise ValueError(f"ModPlacement: roles must tell the trees apart, got {roles}")
+
+
+@dataclass(frozen=True, slots=True)
+class SoftPatchCandidate:
+    """One patch file RetroArch would look for beside the content, and its chain.
+
+    ``path`` is the absolute file name the frontend composes: the content's own
+    basename with its last extension stripped, plus this format's extension
+    (``runloop.c:5196-5253``, over the basename ``runloop.c:8673-8713`` built).
+    ``continuations`` are the indexed follow-ups applied on top of it once it
+    hits — the same name with one digit appended, 1 through 9, stopping at the
+    first gap (``task_patch.c:1121-1147``). They are listed rather than
+    described because they *are* file names: a rule for composing them would
+    hand a client the one piece of upstream arithmetic this answer exists to
+    have done for it.
+
+    ``attempted`` says whether the RetroArch on this machine tries this format
+    at all, and it is ``None`` wherever nobody established that — the flags are
+    compile-time (:data:`CAVEAT_PATCH_FORMATS_UNESTABLISHED`) and no read of a
+    running machine recovers them. ``None`` is not *no*: a patch in an
+    unestablished format may well apply, and a client that renders it as
+    unsupported reports something nobody checked.
+    """
+
+    format: PatchFormat
+    path: str
+    continuations: tuple[str, ...]
+    attempted: bool | None = None
+
+    def __post_init__(self) -> None:
+        if self.format not in PATCH_FORMATS:
+            raise ValueError(
+                f"SoftPatchCandidate: format must be one of {PATCH_FORMATS}, got {self.format!r}"
+            )
+        if not self.path:
+            raise ValueError("SoftPatchCandidate: path must be non-empty")
+
+
+@dataclass(frozen=True, slots=True)
+class SoftPatchAnswer:
+    """Which files RetroArch would patch this content with, before any core sees it.
+
+    The family's second question, and the only one whose subject is the
+    **content** rather than an emulator: soft patching is the frontend's own,
+    it has no directory of its own — the files sit beside the ROM — and no
+    configuration key anywhere governs it (a grep for ``soft_patching`` over
+    the pinned tree finds none; the one patch-related setting,
+    ``notification_show_patch_applied``, governs an on-screen message). What
+    could change it is a command line — ``--ips=``/``--bps=``/``--ups=``/
+    ``--xdelta=`` force one format, ``--no-patch`` blocks patching entirely
+    (``retroarch.c:7458-7465``, consumed ``task_content.c:695-696``,
+    ``:1203-1204``) — and no launcher on either arrangement passes one.
+
+    So this answer is exact where the rest of the family hedges: ``candidates``
+    is the whole candidate set in attempt order, derived from the content path
+    by arithmetic atlas ports rather than from anything it had to look up.
+
+    ``applies`` is the one live per-core reading: RetroArch patches only content
+    it loads **into memory**, which is every core that does not need a full path
+    (``task_content.c:744-745`` sets the flag from the core's own
+    ``retro_system_info.need_fullpath``, ``:1736-1737`` puts it on the content
+    element, ``:1469`` skips the memory load — and with it the patch call at
+    ``:1195-1215`` — when it is set). ``True`` means this core loads into memory
+    and is therefore patched, ``False`` means it never is, ``None`` means atlas
+    could not establish it: no core was named, or the core's ``.info`` states no
+    ``needs_fullpath``, or it could not be read (which says so in a caveat).
+
+    Two further gates ride every ``True`` and are stated in prose rather than in
+    fields, because neither is a fact about this machine: only the **first**
+    content file is patched (``idx == 0``), and only when it is not a media type
+    (``first_content_type == RARCH_CONTENT_NONE``, ``task_content.c:1195-1198``).
+    A single-file launch — what every launcher on both arrangements performs —
+    meets both.
+
+    **Nothing here is written to disk.** The patch is applied to the in-memory
+    buffer the core is handed (``task_patch.c:872-879``); the ROM beside the
+    patch file is not modified, and no answer of atlas's is a statement that it
+    will be.
+    """
+
+    candidates: tuple[SoftPatchCandidate, ...]
+    applies: bool | None
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...]
+
+
+def build_soft_patch_candidates(
+    *, content_basename: str, attempted: Mapping[str, bool] | None = None
+) -> tuple[SoftPatchCandidate, ...]:
+    """The four candidates for a content basename, in RetroArch's attempt order.
+
+    *content_basename* is ``runtime_content_path_basename`` — the value
+    :func:`atlas.content_path.content_basename` ports, which is already the
+    archive-aware, extension-truncated name, so content inside an archive is
+    answered with the inner file's name in the archive's own directory. An
+    empty one names no file and yields no candidates: appending ``.ips`` to
+    nothing would name a dotfile in a directory nobody asked about.
+
+    *attempted* maps a format to whether this build tries it; a format the
+    mapping does not carry is left ``None``, which is the honest state wherever
+    no record establishes the build.
+    """
+    if not content_basename:
+        return ()
+    states = attempted or {}
+    return tuple(
+        SoftPatchCandidate(
+            format=fmt,
+            path=f"{content_basename}.{fmt}",
+            continuations=tuple(
+                f"{content_basename}.{fmt}{index}" for index in PATCH_CONTINUATION_INDICES
+            ),
+            attempted=states.get(fmt),
+        )
+        for fmt in PATCH_FORMATS
+    )
 
 
 @dataclass(frozen=True, slots=True)

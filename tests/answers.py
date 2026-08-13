@@ -16,6 +16,7 @@ A test *about* the refusal does not use these. It asserts the outcome is
 from __future__ import annotations
 
 from atlas.placement import (
+    ModPlacement,
     SavefilePlacement,
     SavestatePlacement,
     TexturePlacement,
@@ -38,4 +39,10 @@ def state_placed(outcome: SavestatePlacement | Unresolved) -> SavestatePlacement
 def texture_placed(outcome: TexturePlacement | Unresolved) -> TexturePlacement:
     """The texture placement this fixture guarantees — never one of the refusals."""
     assert isinstance(outcome, TexturePlacement), f"expected a texture placement, got {outcome}"
+    return outcome
+
+
+def mod_placed(outcome: ModPlacement | Unresolved) -> ModPlacement:
+    """The mod placement this fixture guarantees — never one of the refusals."""
+    assert isinstance(outcome, ModPlacement), f"expected a mod placement, got {outcome}"
     return outcome

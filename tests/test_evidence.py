@@ -29,7 +29,7 @@ from atlas.evidence import (
     load_arrangement_evidence,
     lookup_arrangement,
 )
-from tests.answers import placed, state_placed, texture_placed
+from tests.answers import mod_placed, placed, state_placed, texture_placed
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -41,6 +41,9 @@ CORE_SO = "mgba_libretro.so"
 # refusal carries no caveats to state evidence on — so this battery asks it
 # about a core the packaged table does reach.
 TEXTURE_CORE_SO = "flycast_libretro.so"
+# The same for the mod question, whose packaged table reaches other cores than
+# the texture one does.
+MOD_CORE_SO = "fbneo_libretro.so"
 SYSTEM = "gb"
 
 VERIFIED_RECORD = {"version": "0.10.9b", "date": "2026-08-05", "reference": "one live installation"}
@@ -288,6 +291,15 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
         "texture_pack_location": tuple(
             c.code
             for c in texture_placed(handle.texture_pack_location(core_so=TEXTURE_CORE_SO)).caveats
+        ),
+        "mod_location": tuple(
+            c.code for c in mod_placed(handle.mod_location(core_so=MOD_CORE_SO)).caveats
+        ),
+        # The one question whose subject is the content rather than an
+        # emulator; it still answers about the arrangement's own RetroArch, so
+        # it states the arrangement's evidence like every other question here.
+        "soft_patch_candidates": tuple(
+            c.code for c in handle.soft_patch_candidates("/roms/gb/Game.gb").caveats
         ),
         "systems": tuple(c.code for c in handle.systems().caveats),
         "emulators_for": tuple(c.code for c in handle.emulators_for(SYSTEM).caveats),

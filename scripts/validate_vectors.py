@@ -43,6 +43,9 @@ INPUT_FIELDS_OPTIONAL = {
     "entry_savestate_query",
     "texture_query",
     "entry_texture_query",
+    "soft_patch_query",
+    "mod_query",
+    "entry_mod_query",
     "firmware_query",
     "identify_query",
 }
@@ -105,6 +108,23 @@ SAVESTATE_PLACEMENT_FIELDS = PLACEMENT_FIELDS - {"granularity"}
 # `file_set` below a texture root would report the caller's own downloads back
 # to it) and two fields are new.
 TEXTURE_PLACEMENT_FIELDS = {"dir", "needs", "physical_dir", "enabled", "keying", "caveats"}
+# The soft-patching answer has no directory at all: its subject is the content,
+# and what it answers with is the candidate files beside it. `applies` is the one
+# live per-core reading (does this core load its content into memory), and it is
+# nullable for the reason every nullable field here is — nothing established it.
+# A mod placement is the texture placement with its directory trio moved inside
+# `trees`: this family's answer is plural because an emulator may read mods from
+# several directories that are different mechanisms rather than alternatives.
+MOD_PLACEMENT_FIELDS = {"trees", "needs", "enabled", "caveats"}
+MOD_TREE_FIELDS = {"role", "dir", "physical_dir", "keying"}
+SOFT_PATCH_FIELDS = {"candidates", "applies", "caveats"}
+SOFT_PATCH_CANDIDATE_FIELDS = {"format", "path", "continuations", "attempted"}
+# The formats RetroArch tries beside the content, in the order it tries them.
+# The ORDER is contractual, not just the set: a port that answers the four in
+# another order answers a different question.
+PATCH_FORMAT_ORDER = ("ips", "bps", "ups", "xdelta")
+# One digit, 1 through 9 — upstream's own bound (task_patch.c:1121-1147).
+PATCH_CONTINUATIONS = 9
 # How the tree below a texture root is divided per game. World knowledge, so it
 # is stated only where a citation backs it and is null otherwise — never a claim
 # that the tree is undivided.
@@ -263,6 +283,8 @@ KNOWN_CAVEAT_CODES = {
     "emulator-read-unestablished",
     "emulator-config-unread",
     "feature-switch-absent",
+    "patch-formats-unestablished",
+    "soft-patching-applies",
     # An installation's health findings are caveats with their own stable
     # codes, and an answer computed on a broken installation carries them
     # directly — so the caveat vocabulary contains the health vocabulary by
@@ -297,6 +319,7 @@ KNOWN_UNRESOLVED_CODES = {
     "standalone-unsupported",
     "core-not-installed",
     "texture-wiring-unestablished",
+    "mod-wiring-unestablished",
 }
 
 
@@ -580,32 +603,60 @@ def _validate_input_cores(name: str, cores: Any) -> None:
             _validate_core_options(name, so_path, options)
 
 
+# Which validator each optional query key goes through. Three groups, because
+# there are three shapes of question and not fifteen: a placement question asked
+# of a core, the same asked through a catalogue entry, and the ones that carry
+# their own vocabulary. The key doubles as the label a failure reports under, so
+# the table states the pairing once instead of repeating it per family — and a
+# family added tomorrow is a line here rather than another branch.
+_PLAIN_QUERY_KEYS = (
+    "savefile_query",
+    "savestate_query",
+    "texture_query",
+    "mod_query",
+    "soft_patch_query",
+)
+_ENTRY_QUERY_KEYS = (
+    "entry_savefile_query",
+    "entry_savestate_query",
+    "entry_texture_query",
+    "entry_mod_query",
+)
+_OWN_QUERY_VALIDATORS = {
+    "aggregate_query": _validate_aggregate_query,
+    "catalogue_query": _validate_catalogue_query,
+    "systems_query": _validate_systems_query,
+    "rom_location_query": _validate_rom_location_query,
+    "firmware_query": _validate_firmware_query,
+    "identify_query": _validate_identify_query,
+}
+
+
+def _validate_soft_patch_subject(name: str, inp: Any) -> None:
+    """The one query whose content is required rather than optional.
+
+    The content is that question's subject, not a modifier: the patch files are
+    named after it, so a query without one asks about no file at all. Its own
+    rule rather than a branch inside the dispatch, because it is a statement
+    about that question and not about how queries are shaped.
+    """
+    query = inp.get("soft_patch_query")
+    if query is not None and not query.get("content_path"):
+        fail(f"{name}: soft_patch_query must name the content_path it asks about")
+
+
 def _validate_input_queries(name: str, inp: Any) -> None:
     """The optional question an input asks, at most one shape per family."""
-    if "savefile_query" in inp:
-        _validate_query(name, inp["savefile_query"])
-    if "aggregate_query" in inp:
-        _validate_aggregate_query(name, inp["aggregate_query"])
-    if "catalogue_query" in inp:
-        _validate_catalogue_query(name, inp["catalogue_query"])
-    if "systems_query" in inp:
-        _validate_systems_query(name, inp["systems_query"])
-    if "rom_location_query" in inp:
-        _validate_rom_location_query(name, inp["rom_location_query"])
-    if "entry_savefile_query" in inp:
-        _validate_entry_query(name, inp["entry_savefile_query"])
-    if "savestate_query" in inp:
-        _validate_query(name, inp["savestate_query"], "savestate_query")
-    if "entry_savestate_query" in inp:
-        _validate_entry_query(name, inp["entry_savestate_query"], "entry_savestate_query")
-    if "texture_query" in inp:
-        _validate_query(name, inp["texture_query"], "texture_query")
-    if "entry_texture_query" in inp:
-        _validate_entry_query(name, inp["entry_texture_query"], "entry_texture_query")
-    if "firmware_query" in inp:
-        _validate_firmware_query(name, inp["firmware_query"])
-    if "identify_query" in inp:
-        _validate_identify_query(name, inp["identify_query"])
+    for key in _PLAIN_QUERY_KEYS:
+        if key in inp:
+            _validate_query(name, inp[key], key)
+    for key in _ENTRY_QUERY_KEYS:
+        if key in inp:
+            _validate_entry_query(name, inp[key], key)
+    for key, validate in _OWN_QUERY_VALIDATORS.items():
+        if key in inp:
+            validate(name, inp[key])
+    _validate_soft_patch_subject(name, inp)
 
 
 def _validate_input(name: str, inp: Any) -> None:
@@ -810,6 +861,96 @@ def _validate_texture_outcome(name: str, outcome: Any, what: str = "texture_pack
     """A texture answer in either shape: the placement, or the typed refusal."""
     if not _validate_unresolved(name, outcome, what):
         _validate_texture_placement(name, outcome, what)
+
+
+def _validate_mod_tree(name: str, tree: Any, what: str) -> None:
+    _require_exact(name, tree, MOD_TREE_FIELDS, what)
+    if not isinstance(tree["dir"], str) or not tree["dir"]:
+        fail(f"{name}: {what}.dir must be a non-empty string")
+    physical = tree["physical_dir"]
+    if physical is not None and (not isinstance(physical, str) or not physical):
+        fail(f"{name}: {what}.physical_dir must be null or a non-empty string")
+    role = tree["role"]
+    if role is not None and (not isinstance(role, str) or not role):
+        fail(f"{name}: {what}.role must be null or a non-empty string")
+    keying = tree["keying"]
+    if keying is not None and keying not in KNOWN_KEYINGS:
+        fail(f"{name}: {what}.keying must be null or one of {sorted(KNOWN_KEYINGS)}")
+
+
+def _validate_mod_placement(name: str, placement: Any, what: str) -> None:
+    """A mod placement: the trees, the switch, and the holes they all share."""
+    _require_exact(name, placement, MOD_PLACEMENT_FIELDS, what)
+    trees = placement["trees"]
+    if not isinstance(trees, list) or not trees:
+        # An emulator with no directory is a refusal, not an empty list.
+        fail(f"{name}: {what}.trees must be a non-empty list")
+    for index, tree in enumerate(trees):
+        _validate_mod_tree(name, tree, f"{what}.trees[{index}]")
+    roles = [tree["role"] for tree in trees if isinstance(tree, dict)]
+    if len(trees) == 1:
+        if roles != [None]:
+            fail(f"{name}: {what} states one tree, which names no role — there is nothing to tell apart")
+    elif None in roles or len(set(roles)) != len(roles):
+        fail(f"{name}: {what} states several trees, so each names its own distinct role")
+    needs = placement["needs"]
+    if not isinstance(needs, list) or not all(isinstance(n, str) for n in needs):
+        fail(f"{name}: {what}.needs must be a list of strings")
+    unknown_holes = sorted(set(needs) - KNOWN_HOLES)
+    if unknown_holes:
+        fail(f"{name}: {what}.needs must be holes from {sorted(KNOWN_HOLES)}, got {unknown_holes}")
+    if needs and any(tree.get("physical_dir") is not None for tree in trees if isinstance(tree, dict)):
+        # A template is not a path: nothing can be link-resolved through a hole.
+        fail(f"{name}: {what} states a physical_dir for a directory that is still a template")
+    enabled = placement["enabled"]
+    if enabled is not None and not isinstance(enabled, bool):
+        fail(f"{name}: {what}.enabled must be true, false, or null")
+    _validate_caveats(name, placement["caveats"])
+
+
+def _validate_mod_outcome(name: str, outcome: Any, what: str = "mod_location") -> None:
+    """A mod answer in either shape: the placement, or the typed refusal."""
+    if not _validate_unresolved(name, outcome, what):
+        _validate_mod_placement(name, outcome, what)
+
+
+def _validate_soft_patch_candidate(name: str, candidate: Any, what: str) -> None:
+    _require_exact(name, candidate, SOFT_PATCH_CANDIDATE_FIELDS, what)
+    for key in ("format", "path"):
+        if not isinstance(candidate[key], str) or not candidate[key]:
+            fail(f"{name}: {what}.{key} must be a non-empty string")
+    if not candidate["path"].endswith("." + candidate["format"]):
+        # The name IS the format: RetroArch composes it by appending the
+        # extension to the content's basename, so a path that ends elsewhere
+        # states a file the frontend never looks for.
+        fail(f"{name}: {what}.path must end in the format's own extension")
+    continuations = candidate["continuations"]
+    if not isinstance(continuations, list) or len(continuations) != PATCH_CONTINUATIONS:
+        fail(f"{name}: {what}.continuations must list {PATCH_CONTINUATIONS} indexed follow-ups")
+    for index, path in enumerate(continuations, start=1):
+        if path != f"{candidate['path']}{index}":
+            fail(f"{name}: {what}.continuations[{index - 1}] must be the path with '{index}' appended")
+    if candidate["attempted"] is not None and not isinstance(candidate["attempted"], bool):
+        fail(f"{name}: {what}.attempted must be true, false, or null")
+
+
+def _validate_soft_patch_outcome(name: str, outcome: Any, what: str = "soft_patch_candidates") -> None:
+    """A soft-patching answer in either shape: the candidates, or the typed refusal."""
+    if _validate_unresolved(name, outcome, what):
+        return
+    _require_exact(name, outcome, SOFT_PATCH_FIELDS, what)
+    candidates = outcome["candidates"]
+    if not isinstance(candidates, list):
+        fail(f"{name}: {what}.candidates must be a list")
+    # Each candidate first, then the list as a whole: a malformed one would
+    # otherwise trip the order rule and name the wrong defect.
+    for candidate in candidates:
+        _validate_soft_patch_candidate(name, candidate, f"{what} candidate")
+    if candidates and [c["format"] for c in candidates] != list(PATCH_FORMAT_ORDER):
+        fail(f"{name}: {what}.candidates must be the four formats in attempt order {PATCH_FORMAT_ORDER}")
+    if outcome["applies"] is not None and not isinstance(outcome["applies"], bool):
+        fail(f"{name}: {what}.applies must be true, false, or null")
+    _validate_caveats(name, outcome["caveats"])
 
 
 def _validate_identity(name: str, identity: Any, what: str) -> None:
@@ -1271,6 +1412,9 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         "entry_savestate_location",
         "texture_pack_location",
         "entry_texture_pack_location",
+        "soft_patch_candidates",
+        "mod_location",
+        "entry_mod_location",
         "firmware",
         "identification",
     }
@@ -1298,6 +1442,12 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(
             f"{name}: entry_texture_query and entry_texture_pack_location expectation must appear together"
         )
+    if ("mod_location" in keys) != ("mod_query" in inp):
+        fail(f"{name}: mod_query and mod_location expectation must appear together")
+    if ("entry_mod_location" in keys) != ("entry_mod_query" in inp):
+        fail(f"{name}: entry_mod_query and entry_mod_location expectation must appear together")
+    if ("soft_patch_candidates" in keys) != ("soft_patch_query" in inp):
+        fail(f"{name}: soft_patch_query and soft_patch_candidates expectation must appear together")
     if ("firmware" in keys) != ("firmware_query" in inp):
         fail(f"{name}: firmware_query and firmware expectation must appear together")
     if ("identification" in keys) != ("identify_query" in inp):
@@ -1315,6 +1465,9 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
             "entry_savestate_location",
             "texture_pack_location",
             "entry_texture_pack_location",
+            "soft_patch_candidates",
+            "mod_location",
+            "entry_mod_location",
             "catalogue",
             "systems",
             "firmware",
@@ -1344,6 +1497,12 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_texture_outcome(
             name, expected["entry_texture_pack_location"], "entry_texture_pack_location"
         )
+    if "mod_location" in keys:
+        _validate_mod_outcome(name, expected["mod_location"])
+    if "entry_mod_location" in keys:
+        _validate_mod_outcome(name, expected["entry_mod_location"], "entry_mod_location")
+    if "soft_patch_candidates" in keys:
+        _validate_soft_patch_outcome(name, expected["soft_patch_candidates"])
     if "firmware" in keys:
         _validate_firmware(name, expected["firmware"])
     if "identification" in keys:
