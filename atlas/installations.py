@@ -97,7 +97,7 @@ from atlas.mods import (
     lookup_standalone_mod_card,
 )
 from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
-from atlas.save_memory import lookup_save_memory
+from atlas.save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
 from atlas.textures import (
     XDG_DATA,
     StandaloneTextureCard,
@@ -114,6 +114,7 @@ from atlas.placement import (
     CAVEAT_CONTENT_PATH_UNNAMED,
     CAVEAT_CORE_GENERATION_MISMATCH,
     CAVEAT_CORE_GENERATION_UNESTABLISHED,
+    CAVEAT_CORE_OWN_WRITES_UNESTABLISHED,
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
@@ -2293,6 +2294,89 @@ def _is_content_dir(directory: str, content: _Content) -> bool:
     return os.path.normpath(directory) == os.path.normpath(content.dir_path)
 
 
+@dataclass(frozen=True, slots=True)
+class _Declaration:
+    """What the standard rule states about a core's files, or that it states nothing.
+
+    One type for every outcome rather than a tuple whose members change shape
+    between returns: the empty declaration, the declared set of no files and
+    the named set are three different answers, and a caller that unpacks
+    positions has to remember which position means what in which case.
+    """
+
+    file_set: FileSet | None = None
+    granularity: Granularity | None = None
+    caveats: tuple[Caveat, ...] = ()
+
+
+def _drift_caveat(
+    record: SaveMemoryRecord, entry: SystemMemory, *, system: str | None, core_version: str | None
+) -> tuple[Caveat, ...]:
+    """The tripwire both declaration shapes share: a build nobody read this against."""
+    if core_version is None or entry.verified_core == core_version:
+        return ()
+    return (
+        Caveat(
+            CAVEAT_UNVERIFIED_VERSION,
+            f"which save files {record.key!r} writes for {system} was read from core "
+            f"{entry.verified_core}, and this machine runs {core_version} — a build is exactly "
+            "what could add or drop a memory id, so the claim is not carried across the "
+            "difference unexamined",
+            {
+                "core": record.key,
+                "verification": "drifted",
+                "core_verified": entry.verified_core,
+                "core_live": core_version,
+            },
+        ),
+    )
+
+
+def _no_frontend_files(
+    record: SaveMemoryRecord, entry: SystemMemory, *, system: str | None, core_version: str | None
+) -> _Declaration:
+    """The established emptiness: RetroArch writes this core no save file at all.
+
+    A declared set of *no* files, which is a different answer from the unknown
+    an unrecorded core gets — one says atlas looked and there are none, the
+    other says atlas has not looked. Both spell ``files`` empty, and
+    ``file_set.state`` is the field that tells them apart, exactly as the
+    grammar was built to.
+
+    No granularity travels with it. Granularity says how a save is grouped, and
+    there is no save here to group; a value would be a field invented for an
+    empty answer.
+
+    The caveat is not decoration. Read alone, "no files" would tell a client
+    syncing saves that a Nintendo DS game has nothing to back up — DeSmuME
+    fills no libretro memory id (``libretro.cpp:2481`` at desmume 7f05a8d) and
+    still keeps its saves somewhere. So the answer states which half is
+    established and which is open.
+    """
+    return _Declaration(
+        file_set=FileSet(
+            state=FILE_SET_DECLARED,
+            files=(),
+            provenance=(
+                f"declared by the standard rule: core '{record.key}' on {system} fills none of the "
+                f"memory ids RetroArch writes files for, so the frontend writes no save file at "
+                f"all — {entry.citation}"
+            ),
+        ),
+        caveats=(
+            Caveat(
+                CAVEAT_CORE_OWN_WRITES_UNESTABLISHED,
+                f"RetroArch writes no save file for core {record.key!r} on {system}, which is "
+                "established; whether the core writes save files of its own, past the frontend, "
+                "is not — an empty file set here is a statement about the frontend, never a "
+                "claim that this content has no save",
+                {"core": record.key},
+            ),
+            *_drift_caveat(record, entry, system=system, core_version=core_version),
+        ),
+    )
+
+
 def _standard_declaration(
     query: _SaveQuery,
     *,
@@ -2300,7 +2384,7 @@ def _standard_declaration(
     library_name: str | None,
     card: CoreCard | None,
     core_info: CoreInfo | None,
-) -> tuple[FileSet | None, Granularity | None, tuple[Caveat, ...]]:
+) -> _Declaration:
     """The files RetroArch itself writes for this core on this system, or nothing stated.
 
     The one file set in this resolver that is *not* a look at the directory,
@@ -2343,26 +2427,24 @@ def _standard_declaration(
     this, so there is nothing for a caller to switch.
     """
     if card is not None:
-        return None, None, ()
+        return _Declaration()
     if content.rom_stem is None:
-        return None, None, ()
+        return _Declaration()
     so_basename = os.path.basename(query.core_so) if query.core_so is not None else None
     record = lookup_save_memory(so_basename=so_basename, library_name=library_name)
     if record is None:
-        return None, None, ()
+        return _Declaration()
     entry = record.for_system(query.system)
     if entry is None:
-        return None, None, ()
+        return _Declaration()
     # Last, and deliberately after the system check: this is the only refusal
     # here that states a caveat, so it must fire exactly where a declaration
     # was actually withheld. Asked without a system the record could never
     # have spoken anyway, and a caveat there would report the loss of
     # something that was never on offer.
     if core_info is None:
-        return (
-            None,
-            None,
-            (
+        return _Declaration(
+            caveats=(
                 Caveat(
                     CAVEAT_CORE_GENERATION_UNESTABLISHED,
                     f"which save files core {record.key!r} writes for {query.system} is recorded, "
@@ -2376,26 +2458,11 @@ def _standard_declaration(
     core_version = core_info.library_version
     files = _card_files(entry.file_templates, content.rom_stem)
     if files is None:
-        return None, None, ()
-    caveats: tuple[Caveat, ...] = ()
-    if core_version is not None and entry.verified_core != core_version:
-        caveats = (
-            Caveat(
-                CAVEAT_UNVERIFIED_VERSION,
-                f"which save files {record.key!r} writes for {query.system} was read from core "
-                f"{entry.verified_core}, and this machine runs {core_version} — a build is exactly "
-                "what could add or drop a memory id, so the claim is not carried across the "
-                "difference unexamined",
-                {
-                    "core": record.key,
-                    "verification": "drifted",
-                    "core_verified": entry.verified_core,
-                    "core_live": core_version,
-                },
-            ),
-        )
-    return (
-        FileSet(
+        return _Declaration()
+    if entry.frontend_writes_nothing:
+        return _no_frontend_files(record, entry, system=query.system, core_version=core_version)
+    return _Declaration(
+        file_set=FileSet(
             state=FILE_SET_DECLARED,
             files=files,
             provenance=(
@@ -2405,7 +2472,7 @@ def _standard_declaration(
                 f"{entry.citation}"
             ),
         ),
-        Granularity(
+        granularity=Granularity(
             value=(
                 GRANULARITY_PER_GAME_FILE if len(files) == 1 else GRANULARITY_PER_GAME_FILES
             ),
@@ -2418,7 +2485,7 @@ def _standard_declaration(
             options_file=None,
             alternatives=(),
         ),
-        caveats,
+        caveats=_drift_caveat(record, entry, system=query.system, core_version=core_version),
     )
 
 
@@ -2558,20 +2625,21 @@ def _standard_placement(
             )
         )
 
-    declared, declared_granularity, declaration_caveats = _standard_declaration(
+    declaration = _standard_declaration(
         query,
         content=content,
         library_name=core.library_name,
         card=card,
         core_info=core.info,
     )
-    all_caveats.extend(declaration_caveats)
+    declared = declaration.file_set
+    all_caveats.extend(declaration.caveats)
     # A card's granularity is the stronger word and keeps precedence; the
     # standard rule fills the field only where no card spoke. A declaration
     # holds without reading anything, so it is also the answer where the root
     # cannot be reached from here — what the unreachable branch withholds is
     # every *observation*, and this is not one.
-    granularity = granularity or declared_granularity
+    granularity = granularity or declaration.granularity
     file_set = declared or UNKNOWN_FILE_SET
     placement = build_savefile_placement(
         layout=layout,

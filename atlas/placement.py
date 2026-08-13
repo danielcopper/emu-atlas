@@ -168,6 +168,14 @@ CAVEAT_SYSTEM_DIRECTORY_CLEARED = "system-directory-cleared"
 CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
 CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
 CAVEAT_UNVERIFIED_VERSION = "unverified-version"
+# The frontend writes this core no save file — established from its source, not
+# guessed — and what the core writes on its own is a different question nobody
+# has answered yet. Both halves matter, which is why the empty file set does not
+# travel alone: read on its own, "no files" would tell a client syncing saves
+# that a Nintendo DS game has nothing to back up, when DeSmuME fills no libretro
+# memory id and still keeps its saves somewhere. So the emptiness is stated as
+# what it is — a fact about the FRONTEND — and this says the other half is open.
+CAVEAT_CORE_OWN_WRITES_UNESTABLISHED = "core-own-writes-unestablished"
 CAVEAT_INVALID_SAVE_DIRECTORY = "invalid-save-directory"
 CAVEAT_CORE_SUSPECT = "core-suspect"
 CAVEAT_CORE_UNAUDITED = "core-unaudited"

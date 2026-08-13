@@ -61,7 +61,8 @@ class TestLoader:
         with pytest.raises(ValueError, match="not memory ids that reach a file"):
             load_save_memory(text)
 
-    def test_an_empty_memory_list_is_refused_because_absence_already_says_it(self):
+    def test_an_empty_memory_list_is_the_commonest_claim_not_a_gap(self):
+        """Most cores fill no id at all; recording that is an answer, not silence."""
         systems = {
             "gba": {
                 "memory_types": [],
@@ -69,9 +70,23 @@ class TestLoader:
                 "citation": "[V] libretro.c:1",
             }
         }
-        text = _doc(systems)
-        with pytest.raises(ValueError, match="leave the system out"):
-            load_save_memory(text)
+        (record,) = load_save_memory(_doc(systems))
+        entry = record.for_system("gba")
+        assert entry is not None
+        assert entry.memory_types == ()
+        assert entry.file_templates == ()
+        assert entry.frontend_writes_nothing is True
+
+    def test_a_filled_id_is_not_read_as_writing_nothing(self):
+        (record,) = load_save_memory(_doc())
+        entry = record.for_system("gba")
+        assert entry is not None
+        assert entry.frontend_writes_nothing is False
+
+    def test_a_system_the_record_leaves_out_stays_silence(self):
+        """The other half of the distinction: absent is 'not looked at', empty is 'none'."""
+        (record,) = load_save_memory(_doc())
+        assert record.for_system("snes") is None
 
     def test_a_repeated_memory_id_is_refused(self):
         systems = {

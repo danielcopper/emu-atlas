@@ -586,6 +586,138 @@
           }
         }
       }
+    },
+    {
+      "name": "a-core-that-fills-no-memory-id-says-so-and-says-what-stays-open",
+      "rationale": "The commonest shape once the reading starts: DeSmuME answers no libretro memory id, so RetroArch writes it no save file at all. That is a declared emptiness, not an unknown — atlas looked. And it is deliberately not the whole story: DS games do have saves, DeSmuME keeps them past the frontend, and the caveat says that half is unestablished so nobody reads 'no files' as 'nothing to back up'. No granularity travels with it: there is no save here to group.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume_libretro.so %ROM%</command>\n  </system>\n  <system><name>arduboy</name><path>%ROMPATH%/arduboy</path>\n    <command label=\"Arduous\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/arduous_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
+            "library_name": "DeSmuME",
+            "library_version": "git 7f05a8d"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "desmume"
+              }
+            },
+            {
+              "code": "core-own-writes-unestablished",
+              "data": {
+                "core": "desmume"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-handheld-that-does-use-the-interface-still-names-its-file",
+      "rationale": "The other outcome from the same batch, so the two are pinned side by side: Arduous answers RETRO_MEMORY_SAVE_RAM with the Arduboy's EEPROM size, so the frontend writes one file and the answer names it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume_libretro.so %ROM%</command>\n  </system>\n  <system><name>arduboy</name><path>%ROMPATH%/arduboy</path>\n    <command label=\"Arduous\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/arduous_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/arduboy/Mystic Balloon.hex": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/arduous_libretro.so": {
+            "library_name": "arduous",
+            "library_version": "0.1.0"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "arduboy",
+          "content_path": "/mnt/sd/retrodeck/roms/arduboy/Mystic Balloon.hex"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mystic Balloon.srm"
+            ],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "arduous"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

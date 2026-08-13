@@ -104,18 +104,22 @@ def _expect_str_list(value: object, where: str) -> tuple[str, ...]:
 def _memory_types(value: object, where: str) -> tuple[str, ...]:
     """The memory ids a core fills for this system — known, distinct, in frontend order.
 
-    An empty list is refused rather than read as "this core writes nothing":
-    that claim exists and has its own spelling (a system entry absent from the
-    record), and the two would be indistinguishable in an answer. The order is
-    normalized to RetroArch's own so two records that state the same fact
+    **An empty list is a claim, not a gap**, and it is the commonest one: most
+    cores fill no id at all, so RetroArch writes them no save file. Recording
+    that is the difference between *atlas established there is none* and *atlas
+    has not looked* — the first is an answer, the second is silence, and an
+    empty list is how the first is spelled. A system the record leaves out
+    keeps the second meaning.
+
+    What an empty list does **not** claim is that the content has no save. A
+    core that ignores the interface may still write its own files, which is a
+    rule card's question; the answer says so rather than reading "no ids" as
+    "no save".
+
+    The order is normalized to RetroArch's own so two records stating one fact
     cannot produce two different file sets.
     """
     listed = _expect_str_list(value, where)
-    if not listed:
-        raise ValueError(
-            f"{where}: a system entry states which memory ids the core fills, and an empty list "
-            "states nothing — leave the system out of the record instead"
-        )
     unknown = [name for name in listed if name not in MEMORY_TYPE_EXTENSIONS]
     if unknown:
         raise ValueError(
@@ -147,10 +151,24 @@ class SystemMemory:
 
     @property
     def file_templates(self) -> tuple[str, ...]:
-        """The names RetroArch would write, as templates over the content's stem."""
+        """The names RetroArch would write, as templates over the content's stem.
+
+        Empty where the core fills no id — an established emptiness, which the
+        answer states as a declared set of no files rather than as an unknown.
+        """
         return tuple(
             f"{TEMPLATE_ROM_STEM}{MEMORY_TYPE_EXTENSIONS[name]}" for name in self.memory_types
         )
+
+    @property
+    def frontend_writes_nothing(self) -> bool:
+        """Does RetroArch write no save file at all for this core and system?
+
+        Named for what it is rather than left as ``not memory_types``: the
+        resolver branches on it to state a caveat, and the emptiness carries a
+        meaning a bare length check hides.
+        """
+        return not self.memory_types
 
 
 @dataclass(frozen=True, slots=True)

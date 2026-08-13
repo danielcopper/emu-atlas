@@ -2,49 +2,289 @@
   "schema": 1,
   "spec": "Which of the two files RetroArch writes per content a core actually fills, per core and per system. The NAME is not here and never will be: RetroArch builds it from the content's own stem plus '.srm' (runloop.c:8720-8723 at RetroArch a79435a) and derives the '.rtc' twin from it, registering the pair as RETRO_MEMORY_SAVE_RAM and RETRO_MEMORY_RTC before any core is asked (save.c:710-724, reached for all non-subsystem content at runloop.c:4461), and the three remaining RETRO_MEMORY_* ids never reach a file at all. That rule is code, not data — no machine states it and no core changes it. What IS here is the one part no machine states: RetroArch writes a file only where the core answers with a pointer and a non-zero size (save.c:480), and a core answers that only once content is loaded, which atlas never does. So the claim is read out of the core's own source at the revision the machine ships, and 'verified_core' pins it to that build — for these cores the core's own library_version names the very commit, which is what makes the citation checkable. Records are keyed by core AND system because a core is not one behaviour: mGBA answers a Game Boy cartridge's clock and a Game Boy Advance cartridge's not at all, so a record spelled 'mgba' alone would have to be wrong about one of the two. Every entry is an upper bound and nothing more: whether THIS cartridge carries a battery or a clock is a fact about the game — mGBA reads it out of the ROM, gambatte off header byte 0x147 — and no table can hold it. A core absent from this file is not one that writes nothing; it is one whose source nobody has read yet, and the resolver states that as an unknown file set rather than inventing a set. Method note, hard-won on the first two records: mGBA's retro_get_memory_data has no 'break' in its RTC branch, so for a Game Boy Advance cartridge that id falls through and returns a valid work-RAM pointer — reading only that function would put a '.rtc' into an answer for every GBA game. The size function is the one that decides, because save.c:480 requires both.",
   "cores": {
-    "mgba": {
+    "81": {
       "identifiers": {
-        "library_name": ["mGBA"]
+        "library_name": [
+          "EightyOne"
+        ]
       },
       "systems": {
-        "gba": {
-          "memory_types": ["save_ram"],
-          "verified_core": "0.11-dev c758314",
-          "citation": "[V] src/platform/libretro/libretro.c:2338-2347 at mgba c758314 — for mPLATFORM_GBA the SAVE_RAM size is GBA_SIZE_FLASH1M while the save type is still GBA_SAVEDATA_AUTODETECT and GBASavedataSize() once it is detected, so the id is filled for any GBA content. RTC has no mPLATFORM_GBA branch and falls to 'default: break' (:2357-2370), returning 0 — which stops the write at save.c:480 even though the data pointer for that id is non-NULL (:2288-2302, a fall-through into the SYSTEM_RAM branch)."
-        },
-        "gb": {
-          "memory_types": ["save_ram", "rtc"],
-          "verified_core": "0.11-dev c758314",
-          "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — for mPLATFORM_GB the SAVE_RAM size is the cartridge's sramSize, and the RTC size is sizeof(struct GBMBCRTCSaveBuffer) for a GB_MBC3_RTC cartridge and 0 for every other mapper. Both are read off the loaded cartridge, so each file appears for the games that carry the hardware."
-        },
-        "gbc": {
-          "memory_types": ["save_ram", "rtc"],
-          "verified_core": "0.11-dev c758314",
-          "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — the Game Boy Color is the same mPLATFORM_GB branch as the Game Boy: mGBA distinguishes the two by the cartridge it loaded, not by a separate libretro platform, so the memory ids it fills are the same pair."
+        "zx81": {
+          "memory_types": [],
+          "verified_core": "1.0a ffc99f2",
+          "citation": "[V] src/libretro.cpp:424-427 at 81-libretro ffc99f2 — retro_get_memory_size returns 0 for every id, so RetroArch writes neither .srm nor .rtc."
         }
       },
       "provenance": {
-        "source": "Read at the revision the installed binary names: the core reports library_version '0.11-dev c758314', which is the upstream commit, and the source was read there rather than at master (master's file differs by 31 lines)."
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "a5200": {
+      "identifiers": {
+        "library_name": [
+          "a5200"
+        ]
+      },
+      "systems": {
+        "atari5200": {
+          "memory_types": [],
+          "verified_core": "2.0.2  5264040",
+          "citation": "[V] libretro/libretro.c:1534-1537 at a5200 5264040 — retro_get_memory_size returns 0 for every id."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "amiarcadia": {
+      "identifiers": {
+        "library_name": [
+          "AmiArcadia"
+        ]
+      },
+      "systems": {
+        "arcadia": {
+          "memory_types": [],
+          "verified_core": "4.50",
+          "citation": "[V] src/libretro.c:956-972 at warmenhoven/amiarcadia (release 4.50) — every id but RETRO_MEMORY_SYSTEM_RAM returns 0, and system RAM never reaches a file."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a release, not a commit, so the pin is that release rather than a revision"
+      }
+    },
+    "arduous": {
+      "identifiers": {
+        "library_name": [
+          "arduous"
+        ]
+      },
+      "systems": {
+        "arduboy": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.1.0",
+          "citation": "[V] src/libretro/libretro.cpp:190-201 at libretro/arduous (release 0.1.0) — RETRO_MEMORY_SAVE_RAM answers the Arduboy's EEPROM size, so RetroArch writes <rom_stem>.srm; no RTC branch exists."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a release, not a commit, so the pin is that release rather than a revision"
+      }
+    },
+    "atari800": {
+      "identifiers": {
+        "library_name": [
+          "Atari800"
+        ]
+      },
+      "systems": {
+        "atari800": {
+          "memory_types": [],
+          "verified_core": "3.1.0 6a18cb2",
+          "citation": "[V] libretro/libretro-core.c:1502-1508 at libretro-atari800 6a18cb2 — only RETRO_MEMORY_SYSTEM_RAM answers (65536 bytes); every other id returns 0."
+        },
+        "atarixe": {
+          "memory_types": [],
+          "verified_core": "3.1.0 6a18cb2",
+          "citation": "[V] libretro/libretro-core.c:1502-1508 at libretro-atari800 6a18cb2 — only RETRO_MEMORY_SYSTEM_RAM answers (65536 bytes); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "bluemsx": {
+      "identifiers": {
+        "library_name": [
+          "blueMSX"
+        ]
+      },
+      "systems": {
+        "colecovision": {
+          "memory_types": [],
+          "verified_core": "git 036376d",
+          "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
+        },
+        "msx": {
+          "memory_types": [],
+          "verified_core": "git 036376d",
+          "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
+        },
+        "msx1": {
+          "memory_types": [],
+          "verified_core": "git 036376d",
+          "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
+        },
+        "msx2": {
+          "memory_types": [],
+          "verified_core": "git 036376d",
+          "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
+        },
+        "msxturbor": {
+          "memory_types": [],
+          "verified_core": "git 036376d",
+          "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
+        },
+        "spectravideo": {
+          "memory_types": [],
+          "verified_core": "git 036376d",
+          "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "cap32": {
+      "identifiers": {
+        "library_name": [
+          "cap32"
+        ]
+      },
+      "systems": {
+        "amstradcpc": {
+          "memory_types": [],
+          "verified_core": "4.5.4 a5d96c5 HI",
+          "citation": "[V] libretro/libretro-core.c:1525-1535 at libretro-cap32 a5d96c5 — the switch answers RETRO_MEMORY_SYSTEM_RAM alone and falls through to 'not supported' with 0 for everything else."
+        },
+        "gx4000": {
+          "memory_types": [],
+          "verified_core": "4.5.4 a5d96c5 HI",
+          "citation": "[V] libretro/libretro-core.c:1525-1535 at libretro-cap32 a5d96c5 — the switch answers RETRO_MEMORY_SYSTEM_RAM alone and falls through to 'not supported' with 0 for everything else."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "chailove": {
+      "identifiers": {
+        "library_name": [
+          "ChaiLove"
+        ]
+      },
+      "systems": {
+        "chailove": {
+          "memory_types": [],
+          "verified_core": "2.0.0 467cd45",
+          "citation": "[V] libretro/ChaiLove 467cd45 — the core defines no retro_get_memory_size at all across its sources, so every id answers the libretro default of nothing."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "desmume": {
+      "identifiers": {
+        "library_name": [
+          "DeSmuME"
+        ]
+      },
+      "systems": {
+        "nds": {
+          "memory_types": [],
+          "verified_core": "git 7f05a8d",
+          "citation": "[V] desmume/src/frontend/libretro/libretro.cpp:2473-2488 at desmume 7f05a8d — retro_get_memory_data answers only RETRO_MEMORY_SYSTEM_RAM (MMU.MAIN_MEM) and retro_get_memory_size only its size; RETRO_MEMORY_SAVE_RAM answers NULL and 0. The core also never asks for GET_SAVE_DIRECTORY, so where it keeps a DS save is a separate question this record does not answer."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "dosbox_pure": {
+      "identifiers": {
+        "library_name": [
+          "DOSBox-pure"
+        ]
+      },
+      "systems": {
+        "dos": {
+          "memory_types": [],
+          "verified_core": "1.0-preview4",
+          "citation": "[V] dosbox_pure_libretro.cpp:3833-3834 at libretro/dosbox-pure (release 1.0-preview4) — both retro_get_memory_data and retro_get_memory_size are one-liners returning NULL and 0 for every id."
+        },
+        "pc": {
+          "memory_types": [],
+          "verified_core": "1.0-preview4",
+          "citation": "[V] dosbox_pure_libretro.cpp:3833-3834 at libretro/dosbox-pure (release 1.0-preview4) — both retro_get_memory_data and retro_get_memory_size are one-liners returning NULL and 0 for every id."
+        },
+        "windows3x": {
+          "memory_types": [],
+          "verified_core": "1.0-preview4",
+          "citation": "[V] dosbox_pure_libretro.cpp:3833-3834 at libretro/dosbox-pure (release 1.0-preview4) — both retro_get_memory_data and retro_get_memory_size are one-liners returning NULL and 0 for every id."
+        },
+        "windows9x": {
+          "memory_types": [],
+          "verified_core": "1.0-preview4",
+          "citation": "[V] dosbox_pure_libretro.cpp:3833-3834 at libretro/dosbox-pure (release 1.0-preview4) — both retro_get_memory_data and retro_get_memory_size are one-liners returning NULL and 0 for every id."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a release, not a commit, so the pin is that release rather than a revision"
       }
     },
     "gambatte": {
       "identifiers": {
-        "library_name": ["Gambatte"]
+        "library_name": [
+          "Gambatte"
+        ]
       },
       "systems": {
         "gb": {
-          "memory_types": ["save_ram", "rtc"],
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
           "verified_core": "v0.5.0-netlink 6924c76",
           "citation": "[V] libgambatte/libretro/libretro.cpp:2676-2683 at gambatte-libretro 6924c76 — SAVE_RAM answers gb.savedata_size() and RTC answers gb.rtcdata_size(). The size that decides the write is Cartridge::rtcdata_size (libgambatte/src/mem/cartridge_libretro.cpp:70-80, its pointer twin at :58-68): both gate on hasRtc(romdata[0x147]) (:30-41) and return 0 for every cartridge without a clock, so the file appears for exactly the games that carry the hardware — MBC3 and HuC3 alike."
         },
         "gbc": {
-          "memory_types": ["save_ram", "rtc"],
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
           "verified_core": "v0.5.0-netlink 6924c76",
           "citation": "[V] libgambatte/libretro/libretro.cpp:2676-2683 at gambatte-libretro 6924c76 — the core has one code path for both handhelds and tells them apart by the loaded cartridge (gb.isCgb()), so the memory ids it fills are the same pair as for the Game Boy."
         }
       },
       "provenance": {
         "source": "Read at the revision the installed binary names: the core reports library_version 'v0.5.0-netlink 6924c76', which is the upstream commit. The shipped .info file's display_version disagrees with the binary on the sibling core and was not used."
+      }
+    },
+    "mgba": {
+      "identifiers": {
+        "library_name": [
+          "mGBA"
+        ]
+      },
+      "systems": {
+        "gba": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.11-dev c758314",
+          "citation": "[V] src/platform/libretro/libretro.c:2338-2347 at mgba c758314 — for mPLATFORM_GBA the SAVE_RAM size is GBA_SIZE_FLASH1M while the save type is still GBA_SAVEDATA_AUTODETECT and GBASavedataSize() once it is detected, so the id is filled for any GBA content. RTC has no mPLATFORM_GBA branch and falls to 'default: break' (:2357-2370), returning 0 — which stops the write at save.c:480 even though the data pointer for that id is non-NULL (:2288-2302, a fall-through into the SYSTEM_RAM branch)."
+        },
+        "gb": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "0.11-dev c758314",
+          "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — for mPLATFORM_GB the SAVE_RAM size is the cartridge's sramSize, and the RTC size is sizeof(struct GBMBCRTCSaveBuffer) for a GB_MBC3_RTC cartridge and 0 for every other mapper. Both are read off the loaded cartridge, so each file appears for the games that carry the hardware."
+        },
+        "gbc": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "0.11-dev c758314",
+          "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — the Game Boy Color is the same mPLATFORM_GB branch as the Game Boy: mGBA distinguishes the two by the cartridge it loaded, not by a separate libretro platform, so the memory ids it fills are the same pair."
+        }
+      },
+      "provenance": {
+        "source": "Read at the revision the installed binary names: the core reports library_version '0.11-dev c758314', which is the upstream commit, and the source was read there rather than at master (master's file differs by 31 lines)."
       }
     }
   }

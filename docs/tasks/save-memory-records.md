@@ -1,48 +1,54 @@
 # Save-memory records — the cores still to read
 
-A checklist for one grind: giving every core RetroDECK launches by default a record in `atlas/data/save_memory.json`, so
-a standard core's savefile answer names its files instead of stating an honest `file_set: unknown`.
+A checklist for one grind: reading every core RetroDECK launches by default, so a standard core's savefile answer states
+its files instead of an honest `file_set: unknown`.
 
-## What a line here means
+## Three outcomes, not one
 
-A record says which libretro memory ids a core fills for one system — `save_ram` (`.srm`), `rtc` (`.rtc`), or both.
-RetroArch composes the names; the core only decides whether there is anything to write, and it decides that per
-cartridge, after content load. So a record is read out of the core's own source at the revision the installed binary
-names, pinned to it with `verified_core`, and it is an upper bound over the system rather than a claim about any one
-game. `atlas/data/README.md` carries the format and the rules.
+Reading a core settles which of three shapes it has, and the first batch made clear that the middle one is the exception
+rather than the rule — nine of the first ten cores fell into the third.
 
-**A core is done when** every system it is the default for has an entry with a `file:line` citation at the pinned
-revision, its loader tests pass, and a vector covers the answer.
+1. **It fills the interface.** One or both of `save_ram` (`.srm`) and `rtc` (`.rtc`), so RetroArch writes the file and
+   names it after the content. A record in `atlas/data/save_memory.json` with the ids listed. _mgba, gambatte, arduous._
+2. **It writes its own files.** The core ignores the interface and writes past the frontend, with its own names and
+   sometimes its own directory. That is a rule card in `core_oddities.json` — binary anchors, live option reads, the
+   expensive kind of work. _flycast, opera, LRPS2._
+3. **The frontend writes nothing.** The core fills no id, so no `.srm` and no `.rtc` exist. A record with an empty
+   `memory_types`, which the answer states as a declared set of no files plus `core-own-writes-unestablished` — because
+   whether the core writes its own is a separate question that outcome does not settle. _desmume, dosbox_pure, bluemsx,
+   …_
+
+Outcomes 1 and 3 are cheap: one function in the core's source decides it, and both are recorded in the same file.
+Outcome 2 is a round of its own and belongs to the card family, so a core that turns out to be one is ticked here and
+opened there.
+
+## What a record has to carry
+
+Which ids a core fills for one system, read out of its source at the revision the installed binary names, pinned with
+`verified_core`, with a `file:line` citation. It is an upper bound over the system, never a claim about one game —
+whether _this_ cartridge has a battery is a fact about the game. `atlas/data/README.md` carries the format.
+
+**A core is done when** every system it is the default for has an entry, its loader tests pass, and a vector covers the
+answer.
 
 ## Not on this list, and why
 
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
-- **Cores with a rule card** (`flycast`, `opera`). A card already declares that core's files, and it wins — two
-  declarations of one file set would be a contradiction no client could resolve.
-- **Cores that are not a default.** A system may offer several; this list follows the one RetroDECK declares first,
-  which is what launches when nobody picked another. A non-default core is not excluded from the family — it is just not
-  what this grind is scoped to.
+- **Cores that already carry a rule card** (`flycast`, `opera`). The card wins, and a record beside it would be a second
+  declaration of one file set.
+- **Cores that are not a default.** A system may offer several; this list follows the one RetroDECK declares first. A
+  non-default core is not excluded from the family — it is just outside what this grind is scoped to.
 
 ## Order
 
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (69 cores)
+## The list (59 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
-- [ ] **`81`** — `zx81`
-- [ ] **`a5200`** — `atari5200`
-- [ ] **`amiarcadia`** — `arcadia`
-- [ ] **`arduous`** — `arduboy`
-- [ ] **`atari800`** — `atari800`, `atarixe`
-- [ ] **`bluemsx`** — `colecovision`, `msx`, `msx1`, `msx2`, `msxturbor`, `spectravideo`
-- [ ] **`cap32`** — `amstradcpc`, `gx4000`
-- [ ] **`chailove`** — `chailove`
-- [ ] **`desmume`** — `nds`
-- [ ] **`dosbox_pure`** — `dos`, `pc`, `windows3x`, `windows9x`
 - [ ] **`easyrpg`** — `easyrpg`
 - [ ] **`ecwolf`** — `ports`
 - [ ] **`fbalpha2012`** — `fba`
@@ -108,7 +114,17 @@ Tick a core when all of its systems are in and the vector is green.
 
 ## Done
 
-Systems as the record states them, which can be more than the ones the core is the default for.
+Systems as the record states them, with the outcome each turned out to be.
 
-- [x] **`gambatte`** — `gb`, `gbc`
-- [x] **`mgba`** — `gb`, `gba`, `gbc`
+- [x] **`81`** — frontend writes nothing on zx81
+- [x] **`a5200`** — frontend writes nothing on atari5200
+- [x] **`amiarcadia`** — frontend writes nothing on arcadia
+- [x] **`arduous`** — fills `save_ram` on arduboy
+- [x] **`atari800`** — frontend writes nothing on atari800, atarixe
+- [x] **`bluemsx`** — frontend writes nothing on colecovision, msx, msx1, msx2, msxturbor, spectravideo
+- [x] **`cap32`** — frontend writes nothing on amstradcpc, gx4000
+- [x] **`chailove`** — frontend writes nothing on chailove
+- [x] **`desmume`** — frontend writes nothing on nds
+- [x] **`dosbox_pure`** — frontend writes nothing on dos, pc, windows3x, windows9x
+- [x] **`gambatte`** — fills `rtc`, `save_ram` on gb, gbc
+- [x] **`mgba`** — fills `rtc`, `save_ram` on gb, gba, gbc
