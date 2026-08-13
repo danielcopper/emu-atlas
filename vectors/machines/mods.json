@@ -1,0 +1,707 @@
+{
+  "family": "machines",
+  "schema": 3,
+  "spec": "DESIGN.md 'Placements'; atlas/mods.py; docs/research/core-audit.md",
+  "description": "Where each emulator reads mods. The root is read live and the fragment below it is packaged world knowledge, so these vectors pin both halves of that join — and the half this family adds: an emulator may read mods from SEVERAL directories that are different mechanisms rather than alternatives, each with its own role, keying and link. Beside them: the switch, including the value a card writes down for a core that registers its options too late for any probe to read; the caveat that says the frontend patches this core's content as well; and the three ways this question refuses to name a directory at all.",
+  "vectors": [
+    {
+      "name": "one-core-three-trees-each-with-its-own-role-and-link",
+      "rationale": "FBNeo reads mods from three directories that are different mechanisms — a replacement romset, an IPS patch set, a romdata file — all under one switch. The answer states all three, each with its own keying and its own link into the distribution's hub, which is why this family's answer is plural where the texture one is singular.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/mnt/sd/retrodeck/cores/fbneo_libretro.info": "corename = \"FinalBurn Neo\"\nneeds_fullpath = \"false\"\n",
+          "/mnt/sd/retrodeck/mods/retroarch-core/fbneo/patched/readme.txt": "put romsets here"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo"
+          }
+        },
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/fbneo/patched": "/mnt/sd/retrodeck/mods/retroarch-core/fbneo/patched"
+        },
+        "mod_query": {
+          "core_so": "fbneo_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "trees": [
+            {
+              "role": "patched",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/patched",
+              "physical_dir": "/mnt/sd/retrodeck/mods/retroarch-core/fbneo/patched",
+              "keying": "rom-name"
+            },
+            {
+              "role": "ips",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/ips",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "romdata",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/romdata",
+              "physical_dir": null,
+              "keying": "rom-name"
+            }
+          ],
+          "needs": [],
+          "enabled": true,
+          "caveats": [
+            {
+              "code": "soft-patching-applies",
+              "data": {
+                "core": "fbneo"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "the-recorded-default-answers-a-switch-no-machine-states",
+      "rationale": "FBNeo registers its options after retro_set_environment, so no probe reads a default and no options file mentions the key. The value written down in the card stands then — and because it is a claim about a build, a machine running another one gets it with unverified-version beside it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo",
+            "library_version": "v9.9.9  deadbee"
+          }
+        },
+        "mod_query": {
+          "core_so": "fbneo_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "trees": [
+            {
+              "role": "patched",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/patched",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "ips",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/ips",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "romdata",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/romdata",
+              "physical_dir": null,
+              "keying": "rom-name"
+            }
+          ],
+          "needs": [],
+          "enabled": true,
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "fbneo",
+                "verification": "drifted",
+                "core_verified": "v1.0.0.03  01e29d5",
+                "core_live": "v9.9.9  deadbee"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an-options-file-outranks-the-recorded-default",
+      "rationale": "The record is the last resort, not the first word: a value in the options file RetroArch would read is what the machine says, and it wins.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "fbneo-allow-patched-romsets = \"disabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo"
+          }
+        },
+        "mod_query": {
+          "core_so": "fbneo_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "trees": [
+            {
+              "role": "patched",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/patched",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "ips",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/ips",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "romdata",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/romdata",
+              "physical_dir": null,
+              "keying": "rom-name"
+            }
+          ],
+          "needs": [],
+          "enabled": false,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-core-whose-switch-is-an-ini-in-its-own-user-tree",
+      "rationale": "The Dolphin core's mod switch is not a core option: it lives in a GFX.ini inside the user tree the core builds under the root RetroArch hands it. That is emulator-config-unread arriving on a core row for the first time, and the caveat names the file on this machine. The core is also a documented deviation suspect, so the directory carries emulator-read-unestablished beside it — and its .info declares needs_fullpath, so the frontend never patches its content and no soft-patching word rides this answer, which is the other side of the live read the FBNeo row shows.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/mnt/sd/retrodeck/cores/dolphin_libretro.info": "corename = \"dolphin-emu\"\nneeds_fullpath = \"true\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/dolphin_libretro.so": {
+            "library_name": "dolphin-emu"
+          }
+        },
+        "mod_query": {
+          "core_so": "dolphin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/mnt/sd/retrodeck/saves/dolphin-emu/User/Load/GraphicMods",
+              "physical_dir": null,
+              "keying": null
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "core": "dolphin",
+                "config": "/mnt/sd/retrodeck/saves/dolphin-emu/User/Config/GFX.ini"
+              }
+            },
+            {
+              "code": "emulator-read-unestablished",
+              "data": {
+                "core": "dolphin",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-core-with-no-switch-at-all-states-nothing-about-one",
+      "rationale": "The Azahar core registers 30 options and none of them names mods, and nobody has established that any setting gates the feature. The answer leaves enabled unstated and names no file — a weaker claim than emulator-config-unread, and the only honest one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/azahar_libretro.so": {
+            "library_name": "Azahar",
+            "options": {}
+          }
+        },
+        "mod_query": {
+          "core_so": "azahar_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/mnt/sd/retrodeck/saves/azahar-emu/load/mods",
+              "physical_dir": null,
+              "keying": "title-id"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-read-unestablished",
+              "data": {
+                "core": "azahar",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "soft-patching-rides-the-row-where-both-mechanisms-exist",
+      "rationale": "A caller holding an IPS file for an FBNeo romset has two true places to put it: the core's own ips tree, and beside the ROM where RetroArch itself would apply it. The second is stated as a caveat pointing at the other question — read from the same .info declaration, not recorded.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/mnt/sd/retrodeck/cores/fbneo_libretro.info": "corename = \"FinalBurn Neo\"\nneeds_fullpath = \"false\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo"
+          }
+        },
+        "mod_query": {
+          "core_so": "fbneo_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "trees": [
+            {
+              "role": "patched",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/patched",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "ips",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/ips",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "romdata",
+              "dir": "/mnt/sd/retrodeck/bios/fbneo/romdata",
+              "physical_dir": null,
+              "keying": "rom-name"
+            }
+          ],
+          "needs": [],
+          "enabled": true,
+          "caveats": [
+            {
+              "code": "soft-patching-applies",
+              "data": {
+                "core": "fbneo"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-core-no-mod-card-reaches-refuses-in-its-own-words",
+      "rationale": "A statement about atlas, never about the emulator: most cores are simply outside the packaged wiring, and the refusal must not be read as 'this core has no mods'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "mod_query": {
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "unresolved": {
+            "code": "mod-wiring-unestablished",
+            "data": {
+              "core_so": "mgba_libretro.so"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "mods-follow-the-system-directory-into-the-content-s-own-folder",
+      "rationale": "systemfiles_in_content_dir sends the core to the ROM's own directory, so every tree hanging off that root goes there too — and with no content named the hole is the caller's to fill, on the answer rather than on each tree.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystemfiles_in_content_dir = \"true\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo"
+          }
+        },
+        "mod_query": {
+          "core_so": "fbneo_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "trees": [
+            {
+              "role": "patched",
+              "dir": "<content_dir>/fbneo/patched",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "ips",
+              "dir": "<content_dir>/fbneo/ips",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "romdata",
+              "dir": "<content_dir>/fbneo/romdata",
+              "physical_dir": null,
+              "keying": "rom-name"
+            }
+          ],
+          "needs": [
+            "content_dir"
+          ],
+          "enabled": true,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "an-emudeck-core-answers-its-own-default-with-no-hub-behind-it",
+      "rationale": "EmuDeck wires no mods root at all — its installer creates none and links nothing — so the same core answers the same emulator-side directories with no physical_dir behind them.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "emulationPath=\"/mnt/sd/Emulation\"\nbiosPath=\"/mnt/sd/Emulation/bios\"\nromsPath=\"/mnt/sd/Emulation/roms\"\nsavesPath=\"/mnt/sd/Emulation/saves\"\nstoragePath=\"/mnt/sd/Emulation/storage\"\ntoolsPath=\"/mnt/sd/Emulation/tools\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/Emulation/cores\"\nsystem_directory = \"/mnt/sd/Emulation/bios\"\nsavefile_directory = \"/mnt/sd/Emulation/saves/retroarch/saves\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/Emulation/saves/retroarch/saves",
+          "/mnt/sd/Emulation/cores"
+        ],
+        "cores": {
+          "/mnt/sd/Emulation/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo"
+          }
+        },
+        "mod_query": {
+          "core_so": "fbneo_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/mnt/sd/Emulation",
+            "health": []
+          }
+        ],
+        "mod_location": {
+          "trees": [
+            {
+              "role": "patched",
+              "dir": "/mnt/sd/Emulation/bios/fbneo/patched",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "ips",
+              "dir": "/mnt/sd/Emulation/bios/fbneo/ips",
+              "physical_dir": null,
+              "keying": "rom-name"
+            },
+            {
+              "role": "romdata",
+              "dir": "/mnt/sd/Emulation/bios/fbneo/romdata",
+              "physical_dir": null,
+              "keying": "rom-name"
+            }
+          ],
+          "needs": [],
+          "enabled": true,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-standalone-entry-answers-where-its-saves-refuse",
+      "rationale": "The deliberate asymmetry, one family over: a standalone emulator's mod directory is its own default below an XDG base the distribution's flatpak pins, so the entry answers it while refusing savefile_location — with emulator-config-unread naming the file that would say whether loading is on.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <fullname>Nintendo 3DS</fullname>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds .3DS</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n    <platform>n3ds</platform>\n    <theme>n3ds</theme>\n  </system>\n  <system>\n    <name>arcade</name>\n    <fullname>Arcade</fullname>\n    <path>%ROMPATH%/arcade</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME (Standalone)\">%EMULATOR_MAME% %ROM%</command>\n    <platform>arcade</platform>\n    <theme>arcade</theme>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/mods/Dolphin/GraphicMods/readme.txt": "put mods here"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Load/GraphicMods": "/mnt/sd/retrodeck/mods/Dolphin/GraphicMods"
+        },
+        "entry_mod_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Load/GraphicMods",
+              "physical_dir": "/mnt/sd/retrodeck/mods/Dolphin/GraphicMods",
+              "keying": null
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DOLPHIN",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/GFX.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-standalone-emulator-with-no-established-switch-stays-silent-about-one",
+      "rationale": "Azahar's mods row names no configuration file, because nobody has established that any switch exists — not a core option, not a CLI flag. The answer leaves enabled unstated and points nowhere, which is a weaker claim than emulator-config-unread and the only honest one available.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <fullname>Nintendo 3DS</fullname>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds .3DS</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n    <platform>n3ds</platform>\n    <theme>n3ds</theme>\n  </system>\n  <system>\n    <name>arcade</name>\n    <fullname>Arcade</fullname>\n    <path>%ROMPATH%/arcade</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME (Standalone)\">%EMULATOR_MAME% %ROM%</command>\n    <platform>arcade</platform>\n    <theme>arcade</theme>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "entry_mod_query": {
+          "system": "n3ds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/azahar-emu/load/mods",
+              "physical_dir": null,
+              "keying": "title-id"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "an-installer-written-mod-directory-refuses",
+      "rationale": "MAME's plugin directories are values RetroDECK writes into mame.ini rather than defaults the emulator opens, so quoting them would state an arrangement's directory as an emulator's read location. The row is deliberately absent from the packaged table and the entry refuses.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nlibretro_info_path = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <fullname>Nintendo 3DS</fullname>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds .3DS</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n    <platform>n3ds</platform>\n    <theme>n3ds</theme>\n  </system>\n  <system>\n    <name>arcade</name>\n    <fullname>Arcade</fullname>\n    <path>%ROMPATH%/arcade</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME (Standalone)\">%EMULATOR_MAME% %ROM%</command>\n    <platform>arcade</platform>\n    <theme>arcade</theme>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "entry_mod_query": {
+          "system": "arcade"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "unresolved": {
+            "code": "standalone-unsupported",
+            "data": {
+              "label": "MAME (Standalone)",
+              "system": "arcade"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

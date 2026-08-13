@@ -42,7 +42,14 @@ from atlas.installations import (
     RomPlacement,
     SystemsAnswer,
 )
-from atlas.placement import SavefilePlacement, SavestatePlacement, TexturePlacement, Unresolved
+from atlas.placement import (
+    ModPlacement,
+    SavefilePlacement,
+    SavestatePlacement,
+    SoftPatchAnswer,
+    TexturePlacement,
+    Unresolved,
+)
 
 AnswerT = TypeVar("AnswerT")
 
@@ -130,6 +137,70 @@ def texture_placement_contract(placement: TexturePlacement) -> dict[str, Any]:
         "enabled": placement.enabled,
         "keying": placement.keying,
         "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+    }
+
+
+def mod_placement_contract(placement: ModPlacement) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.placement.ModPlacement`.
+
+    The texture placement's fields, with the directory trio moved inside
+    ``trees``: this family's answer is plural because a mod is not one kind of
+    thing, and an emulator may read three of them from three directories under
+    one switch. Ten of the eleven rows atlas ships serialize a one-element list,
+    and a client that only ever reads ``trees[0]`` is right about those ten and
+    visibly wrong about the eleventh — which is the point of the shape.
+
+    ``role`` is ``null`` on a single-tree answer (nothing to tell apart) and
+    names the emulator's own word for the tree where there are several. Both
+    ``keying`` and ``enabled`` carry ``null`` for the reasons they do on a
+    texture answer: no cited evidence states how the tree is divided, and
+    nothing established whether the feature is on — never to be read as off.
+    """
+    return {
+        "trees": [
+            {
+                "role": tree.role,
+                "dir": tree.dir,
+                "physical_dir": tree.physical_dir,
+                "keying": tree.keying,
+            }
+            for tree in placement.trees
+        ],
+        "needs": list(placement.needs),
+        "enabled": placement.enabled,
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+    }
+
+
+def soft_patch_contract(answer: SoftPatchAnswer) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.placement.SoftPatchAnswer`.
+
+    Every field is structured and every one serializes, including the two that
+    carry ``null``: ``applies`` is ``null`` where nothing established whether
+    this core's content is loaded into memory — never to be read as *no* — and
+    a candidate's ``attempted`` is ``null`` where nobody has read this build's
+    compile-time flags, which is likewise not *this format is unsupported*.
+
+    ``continuations`` are listed in full rather than described by a rule,
+    because they are the answer: nine file names per format, in the order
+    RetroArch applies them. A client that wants only the first patch reads
+    ``path``; one managing a chain reads the list it would otherwise have to
+    compose from upstream arithmetic. The order of ``candidates`` is contractual
+    too — it is the attempt order, and a port that emits the four in another
+    order is answering a different question.
+    """
+    return {
+        "candidates": [
+            {
+                "format": candidate.format,
+                "path": candidate.path,
+                "continuations": list(candidate.continuations),
+                "attempted": candidate.attempted,
+            }
+            for candidate in answer.candidates
+        ],
+        "applies": answer.applies,
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
     }
 
 
@@ -365,6 +436,33 @@ def texture_answer_contract(outcome: TexturePlacement | Unresolved) -> dict[str,
     if isinstance(outcome, Unresolved):
         return unresolved_contract(outcome)
     return texture_placement_contract(outcome)
+
+
+def mod_answer_contract(outcome: ModPlacement | Unresolved) -> dict[str, Any]:
+    """A mod question's answer in whichever of its two shapes it took.
+
+    Refuses on the same three conditions the texture question does — a core
+    that is not installed, a standalone entry atlas cannot place, and an
+    emulator whose mod wiring is not established — so one serializer for the
+    pair keeps that from being the caller's problem.
+    """
+    if isinstance(outcome, Unresolved):
+        return unresolved_contract(outcome)
+    return mod_placement_contract(outcome)
+
+
+def soft_patch_answer_contract(outcome: SoftPatchAnswer | Unresolved) -> dict[str, Any]:
+    """A soft-patching question's answer, candidates or refusal.
+
+    One refusal reaches here and only one: a core the machine established is
+    not installed. The candidate files themselves would still be true — they are
+    the content's own — but the question was asked about a core this
+    installation does not have, and the family answers that with one code
+    wherever it is asked.
+    """
+    if isinstance(outcome, Unresolved):
+        return unresolved_contract(outcome)
+    return soft_patch_contract(outcome)
 
 
 def installation_answers_contract(

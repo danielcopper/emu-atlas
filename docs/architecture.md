@@ -68,6 +68,8 @@ classDiagram
         +savefile_location(content_path, core_so) SavefilePlacement
         +savestate_location(content_path, core_so) SavestatePlacement
         +texture_pack_location(content_path, core_so) TexturePlacement
+        +mod_location(content_path, core_so) ModPlacement
+        +soft_patch_candidates(content_path, core_so) SoftPatchAnswer
         +systems() SystemsAnswer
         +emulators_for(system, content_path) CatalogueAnswer
         +rom_location(system) RomPlacement
@@ -141,6 +143,29 @@ classDiagram
         +physical_dir: str|None
         +caveats: tuple~Caveat~
     }
+    class ModPlacement {
+        +trees: tuple~ModTree~
+        +needs: tuple
+        +enabled: bool|None
+        +caveats: tuple~Caveat~
+    }
+    class ModTree {
+        +role: str|None
+        +dir: str
+        +physical_dir: str|None
+        +keying: Keying|None
+    }
+    class SoftPatchAnswer {
+        +candidates: tuple~SoftPatchCandidate~
+        +applies: bool|None
+        +caveats: tuple~Caveat~
+    }
+    class SoftPatchCandidate {
+        +format: PatchFormat
+        +path: str
+        +continuations: tuple
+        +attempted: bool|None
+    }
     class FileSet {
         +state: FileSetState
         +files: tuple
@@ -165,6 +190,7 @@ classDiagram
         +savefile_location(content_path)
         +savestate_location(content_path)
         +texture_pack_location(content_path)
+        +mod_location(content_path)
     }
     class FirmwareAnswer {
         +root: str
@@ -201,12 +227,17 @@ classDiagram
     SavefilePlacement *-- FileSet
     SavefilePlacement *-- Caveat
     TexturePlacement *-- Caveat
+    ModPlacement *-- ModTree
+    ModPlacement *-- Caveat
+    SoftPatchAnswer *-- SoftPatchCandidate
+    SoftPatchAnswer *-- Caveat
     CatalogueAnswer *-- EmulatorEntry
     CatalogueAnswer *-- Caveat
     RomPlacement *-- Caveat
     EmulatorEntry ..> SavefilePlacement : savefile_location()
     EmulatorEntry ..> SavestatePlacement : savestate_location()
     EmulatorEntry ..> TexturePlacement : texture_pack_location()
+    EmulatorEntry ..> ModPlacement : mod_location()
     EmulatorEntry ..> Unresolved : standalone emulator
     FirmwareAnswer *-- CoreFirmware
     CoreFirmware *-- FirmwareRequirement

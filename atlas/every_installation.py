@@ -48,7 +48,14 @@ from atlas.detect import detect
 from atlas.firmware import FirmwareAnswer, FirmwareIdentification
 from atlas.installations import CatalogueAnswer, Health, Installation, RomPlacement, SystemsAnswer
 from atlas.machine import Machine
-from atlas.placement import SavefilePlacement, SavestatePlacement, TexturePlacement, Unresolved
+from atlas.placement import (
+    ModPlacement,
+    SavefilePlacement,
+    SavestatePlacement,
+    SoftPatchAnswer,
+    TexturePlacement,
+    Unresolved,
+)
 
 AnswerT = TypeVar("AnswerT")
 
@@ -150,6 +157,37 @@ class EveryInstallation:
         return self._ask(
             lambda installation: installation.texture_pack_location(
                 content_path=content_path, core_so=core_so
+            )
+        )
+
+    def mod_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> tuple[InstallationAnswer[ModPlacement | Unresolved], ...]:
+        """Where each installation's copy of this core reads mods from.
+
+        Two arrangements running one core point it at two roots, and both are
+        true. An installation that does not have the core, or whose mod wiring
+        atlas has not established, refuses instead of answering.
+        """
+        return self._ask(
+            lambda installation: installation.mod_location(
+                content_path=content_path, core_so=core_so
+            )
+        )
+
+    def soft_patch_candidates(
+        self, content_path: str, *, core_so: str | None = None
+    ) -> tuple[InstallationAnswer[SoftPatchAnswer | Unresolved], ...]:
+        """Which patch files each installation's RetroArch would apply to this content.
+
+        The candidate *names* are the content's own and come back identical from
+        every handle — what differs per arrangement is what each build was
+        established to attempt, and whether the named core is installed there at
+        all, which is the one condition this question refuses on.
+        """
+        return self._ask(
+            lambda installation: installation.soft_patch_candidates(
+                content_path, core_so=core_so
             )
         )
 

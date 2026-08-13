@@ -36,7 +36,8 @@ Four principles, fixed before any code:
 - **Installations are handles.** `detect(home)` finds what is present — RetroDECK, EmuDeck, bare RetroArch installs, any
   of them side by side — and every question is asked _of an installation_, never of a global "the system":
   `installation.savefile_location(content_path=..., core_so=...)`, `installation.savestate_location(...)`,
-  `installation.texture_pack_location(...)`, `installation.emulators_for(system)` and
+  `installation.texture_pack_location(...)`, `installation.mod_location(...)`,
+  `installation.soft_patch_candidates(content_path)`, `installation.emulators_for(system)` and
   `installation.rom_location(system)` on every handle — the ones without a frontend catalogue answer with the reason
   rather than an empty list. Choosing one of them is optional: `every_installation(home)` asks them all and labels each
   answer with the handle it came from, because two arrangements on one machine give two true answers and picking a
@@ -148,6 +149,21 @@ The resolver core is built and verified live against a real RetroDECK 0.10.9b in
   to model, while a standalone emulator's packs mostly sit at its own default below an XDG base a flatpak pins. Those
   answers leave the switch unstated and name the emulator configuration that would settle it, rather than reading an
   unread file as "off".
+- `installation.mod_location(content_path=..., core_so=...)` answers where one emulator reads mods from, over the same
+  join and the same grammar — with one difference: the answer is **plural**. An emulator may read mods from several
+  directories that are different mechanisms rather than alternatives (FBNeo takes a replacement romset, an IPS patch set
+  and a romdata file from three trees under one switch), so it answers a list of trees, each with its own directory,
+  keying and the role that tells it apart; where an emulator has one tree the list has one entry and no role. Where the
+  switch is a setting in a configuration atlas does not read the answer names that file — including on a core row, for a
+  core whose switch is an ini inside the user tree it builds — and where no switch has been established at all it points
+  nowhere rather than at a file that may govern nothing.
+- `installation.soft_patch_candidates(content_path, core_so=...)` answers the other half of that question: the patch
+  files RetroArch itself applies to content before any core sees it. It is the exact one — the four candidate paths in
+  the order the frontend tries them, each with the nine indexed continuations that chain onto it, all composed from the
+  content path by upstream arithmetic rather than looked up. Beside them it states whether this core's content is loaded
+  into memory at all, which is what decides whether patching runs, and whether this RetroArch build was established to
+  attempt each format, which no running machine states and which is therefore packaged per arrangement and pinned to the
+  build it was read at. Nothing is written to disk: the patch is applied to the buffer the core is handed.
 - `installation.emulators_for(system, content_path=...)` — on every handle — answers which emulators can launch a
   system. On RetroDECK it reads the ES-DE catalogue live (bundled + custom overlay) and resolves the effective default
   through the full hierarchy: per-game `altemulator` > per-system `alternativeEmulator` > declared order. On EmuDeck it

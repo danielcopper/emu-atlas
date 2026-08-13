@@ -28,7 +28,12 @@ from typing import Any, Callable, Mapping, Protocol, Sequence, cast, runtime_che
 
 from dataclasses import dataclass, replace as _dc_replace
 
-from atlas.content_path import content_file_name, content_system_dir, split_content_path
+from atlas.content_path import (
+    content_basename,
+    content_file_name,
+    content_system_dir,
+    split_content_path,
+)
 from atlas.core_info import parse_core_info
 from atlas.esde import (
     KIND_LIBRETRO,
@@ -83,6 +88,14 @@ from atlas.machine import (
     ReadResult,
     ReadStatus,
 )
+from atlas.mods import (
+    ModCard,
+    SoftPatchBuild,
+    StandaloneModCard,
+    lookup_mod_card,
+    lookup_soft_patch_build,
+    lookup_standalone_mod_card,
+)
 from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
 from atlas.textures import (
     XDG_DATA,
@@ -119,13 +132,16 @@ from atlas.placement import (
     CAVEAT_FILENAMES_UNVERIFIED,
     CAVEAT_FILE_SET_SPANS_ROOTS,
     CAVEAT_NO_CORE,
+    CAVEAT_PATCH_FORMATS_UNESTABLISHED,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+    CAVEAT_SOFT_PATCHING_APPLIES,
     CAVEAT_SAVE_DIR_UNLISTABLE,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     HOLE_CONTENT_DIR,
+    PATCH_FORMATS,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
@@ -135,18 +151,23 @@ from atlas.placement import (
     FILE_SET_OBSERVED,
     FILE_SET_UNKNOWN,
     UNKNOWN_FILE_SET,
+    UNRESOLVED_MOD_WIRING_UNESTABLISHED,
     UNRESOLVED_STANDALONE,
     UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED,
     Caveat,
     FileSet,
     Granularity,
+    ModPlacement,
+    ModTree,
     RootKind,
     SavefilePlacement,
     SavestatePlacement,
+    SoftPatchAnswer,
     TexturePlacement,
     Unresolved,
     build_savefile_placement,
     build_savestate_placement,
+    build_soft_patch_candidates,
     file_set_holes,
     needs_with_file_set,
 )
@@ -2848,7 +2869,7 @@ def _optional(caveat: Caveat | None) -> tuple[Caveat, ...]:
     return () if caveat is None else (caveat,)
 
 
-def _texture_read_caveat(card: TextureCard) -> Caveat | None:
+def _read_unestablished_caveat(core_key: str) -> Caveat | None:
     """Has anyone established that this core reads the directory below?
 
     At most one caveat, so the return type says so rather than a tuple that is
@@ -2866,26 +2887,31 @@ def _texture_read_caveat(card: TextureCard) -> Caveat | None:
     ``arrangement_evidence.json``. No resolver names a core here, which is what
     keeps the retirement a data change rather than a code change.
     """
-    entry = lookup_audit(card.key)
+    entry = lookup_audit(core_key)
     if entry is None or entry.verdict != "suspect":
         return None
     return Caveat(
         CAVEAT_EMULATOR_READ_UNESTABLISHED,
-        f"core {card.key!r} is a documented deviation suspect: which root it builds its user "
+        f"core {core_key!r} is a documented deviation suspect: which root it builds its user "
         "directory under has never been observed, so the directory below is the one the "
         "reading derives and nothing has confirmed the core reads it "
         "(docs/research/core-audit.md)",
-        {"core": card.key, "verdict": entry.verdict},
+        {"core": core_key, "verdict": entry.verdict},
     )
 
 
-def _texture_root(
+def _card_root(
     *,
-    card: TextureCard,
+    root: str,
     chain: _Chain,
     query: _SaveQuery,
 ) -> _SystemRoot:
-    """The directory the core builds its texture tree under, resolved live.
+    """The directory the core builds its content tree under, resolved live.
+
+    Shared by both content-tree families, because the root a core builds a
+    texture tree under and the root it builds a mod tree under are the same
+    directory reached the same way — what differs is only the fragment below it.
+    A second port of this would be a second answer to one question.
 
     Two kinds reach here, and each is resolved by the route that already owns
     it. ``system_directory`` is *the directory the core is handed*, not the cfg
@@ -2918,7 +2944,7 @@ def _texture_root(
     here, and its provenance. Only ``root_kind`` goes unread, because nothing
     asked this question which root it was.
     """
-    if card.root == ROOT_SYSTEM_DIRECTORY:
+    if root == ROOT_SYSTEM_DIRECTORY:
         return _core_system_root(
             sandbox=query.sandbox,
             cfg_label=query.cfg_label,
@@ -3113,7 +3139,7 @@ def _retroarch_texture_pack_location(
             {"core_so": so_basename} if so_basename is not None else {},
         )
 
-    root = _texture_root(card=card, chain=chain, query=query)
+    root = _card_root(root=card.root, chain=chain, query=query)
     directory = os.path.join(root.base, card.subdir)
     enabled, enabled_sources, enabled_caveats = _texture_enabled(
         machine,
@@ -3126,7 +3152,7 @@ def _retroarch_texture_pack_location(
         *chain.caveats,
         *root.caveats,
         *enabled_caveats,
-        *_optional(_texture_read_caveat(card)),
+        *_optional(_read_unestablished_caveat(card.key)),
     ]
     physical_dir: str | None = None
     if root.reachable and not root.needs:
@@ -3245,6 +3271,559 @@ def _standalone_texture_unresolved(spec: EmulatorSpec) -> Unresolved:
         "resolvable yet — its texture directory is named in a configuration of its own, and "
         "reading those is the standalone roadmap block (ROADMAP.md)",
         {"label": spec.label, "system": spec.system},
+    )
+
+
+def _mod_enabled(
+    machine: Machine,
+    *,
+    card: ModCard,
+    chain: _Chain,
+    query: _SaveQuery,
+    core_version: str | None,
+) -> tuple[bool | None, tuple[str, ...], tuple[Caveat, ...]]:
+    """Is mod loading switched on right now — read the way RetroArch reads it?
+
+    The texture route's reading, with one addition this family needed: a card
+    may carry the option's **default**. The chain is otherwise identical — the
+    options files in RetroArch's own priority order, then the default the
+    installed core registers — and the recorded value enters only at the end of
+    it, where the machine has said nothing at all.
+
+    That ordering is what keeps the record from overriding a machine: a core
+    that registers its options is read, and only a core that registers them too
+    late for any probe (FBNeo, LRPS2) reaches the written-down value. Because
+    that value is a claim about a build, the card pins the build it was read
+    from and a machine running another one gets it with ``unverified-version``
+    beside it — the same tripwire the texture family puts on its absent switch,
+    and for the same reason.
+    """
+    if card.option is None:
+        return (
+            None,
+            (f"mod card '{card.key}': no option governs mod loading — whether it is on is not stated",),
+            (),
+        )
+    registered = chain.core.info.options if chain.core.info is not None else None
+    live_option = registered.get(card.option.setting) if registered is not None else None
+    recorded = card.option.default
+    caveats: list[Caveat] = []
+    sources: list[str] = []
+    effective_default = live_option.default if live_option is not None else None
+    if effective_default is None and recorded is not None:
+        effective_default = recorded.value
+        sources.append(
+            f"mod card '{card.key}': {card.option.setting} defaults to \"{recorded.value}\" — "
+            f"{recorded.citation}"
+        )
+        if core_version is not None and recorded.verified_core != core_version:
+            caveats.append(
+                Caveat(
+                    CAVEAT_UNVERIFIED_VERSION,
+                    f"that {card.option.setting} defaults to \"{recorded.value}\" was established "
+                    f"against core {recorded.verified_core}, and this machine runs {core_version} — "
+                    "a build is exactly what could change a default, so the value is not carried "
+                    "across the difference unexamined",
+                    {
+                        "core": card.key,
+                        "verification": "drifted",
+                        "core_verified": recorded.verified_core,
+                        "core_live": core_version,
+                    },
+                )
+            )
+    option_gates = _option_gates(
+        chain.layers, sandbox=query.sandbox, retroarch_config_dir=chain.retroarch_config_dir
+    )
+    value, provenance, _ = _core_options_value(
+        machine,
+        override_config_dir=chain.gates.override_config_dir,
+        global_file=option_gates.global_file,
+        library_name=chain.core.library_name,
+        content_dir_name=chain.content.dir_name,
+        rom_stem=chain.content.rom_stem,
+        option_key=card.option.setting,
+        option_default=effective_default,
+        game_specific_options=option_gates.game_specific_options,
+        per_core_options=option_gates.per_core_options,
+    )
+    stated = (*option_gates.caveats, *caveats)
+    if value is None:
+        return None, (*sources, provenance), stated
+    if value not in card.option.values:
+        return (
+            None,
+            (*sources, provenance),
+            (
+                *stated,
+                Caveat(
+                    CAVEAT_UNKNOWN_OPTION_VALUE,
+                    f'core option {card.option.setting} = "{value}" is not a value the recorded mod '
+                    f"behaviour of core {card.key!r} knows — whether mod loading is on is left "
+                    "unstated rather than read as off",
+                    {"core": card.key, "option_key": card.option.setting, "value": value},
+                ),
+            ),
+        )
+    return card.option.values[value], (*sources, provenance), stated
+
+
+def _mod_trees(
+    machine: Machine, *, card: ModCard, root: _SystemRoot
+) -> tuple[tuple[ModTree, ...], tuple[str, ...], tuple[Caveat, ...]]:
+    """One resolved tree per directory the card states, each with its own links.
+
+    The link walk runs per tree rather than once, because the trees are separate
+    directories an arrangement may wire separately — RetroDECK links FBNeo's
+    three into its hub one by one — and a single physical directory could only
+    ever be right for one of them.
+    """
+    trees: list[ModTree] = []
+    sources: list[str] = []
+    caveats: list[Caveat] = []
+    for spec in card.trees:
+        directory = os.path.join(root.base, spec.subdir)
+        physical: str | None = None
+        if root.reachable and not root.needs:
+            physical, link_caveats = _link_view(machine, directory)
+            caveats.extend(link_caveats)
+        trees.append(
+            ModTree(dir=directory, keying=spec.keying, role=spec.role, physical_dir=physical)
+        )
+        named = f" ({spec.role})" if spec.role is not None else ""
+        sources.append(
+            f"mod card '{card.key}'{named}: the core reads mods from {spec.subdir!r} below that root"
+        )
+        if spec.keying is not None:
+            sources.append(
+                f"mod card '{card.key}'{named}: keyed by {spec.keying} — {spec.keying_citation}"
+            )
+    return tuple(trees), tuple(sources), tuple(caveats)
+
+
+def _core_config_caveat(card: ModCard, *, root: str) -> Caveat | None:
+    """The ini inside the core's own user tree that would answer the switch.
+
+    A libretro core that ports a standalone emulator keeps that emulator's
+    configuration inside the user directory it builds, so the setting is neither
+    a core option nor a file atlas reads — which is exactly what
+    ``emulator-config-unread`` says on a standalone row, arriving here on a core
+    row for the first time. The path is resolved against the same root the trees
+    hang off, so a caller is pointed at the file on *this* machine.
+    """
+    if card.config is None:
+        return None
+    path = os.path.join(root, card.config.path)
+    return Caveat(
+        CAVEAT_EMULATOR_CONFIG_UNREAD,
+        f"whether core {card.key!r} has mod loading switched on is not established — it is not a "
+        f"core option; the setting lives in {path}, an emulator configuration inside the user tree "
+        "this core builds, which atlas does not read (standalone emulator configuration is its own "
+        "roadmap block)",
+        {"core": card.key, "config": path},
+    )
+
+
+def _soft_patching_caveat(card: ModCard, *, applies: bool | None) -> Caveat | None:
+    """Does the frontend patch this core's content too, beside the trees above?
+
+    Read rather than recorded: soft patching runs for exactly those cores whose
+    content RetroArch loads into memory, and that is the reading
+    :func:`_soft_patch_applies` already performs off the core's own ``.info``.
+    A card flag would be world knowledge duplicating a live fact, and it would
+    go stale the day a core's metadata changed.
+    """
+    if applies is not True:
+        return None
+    return Caveat(
+        CAVEAT_SOFT_PATCHING_APPLIES,
+        f"core {card.key!r} loads its content into memory, so RetroArch's own patching applies to it "
+        "as well: a patch file beside the ROM is applied to the buffer before this core sees it, "
+        "which is a different mechanism from the directories above and is answered by "
+        "soft_patch_candidates()",
+        {"core": card.key},
+    )
+
+
+def _retroarch_mod_location(machine: Machine, query: _SaveQuery) -> ModPlacement | Unresolved:
+    """Where this core reads mods: the shared chain, then its mod card.
+
+    The texture route's shape, over the same chain and the same roots, because
+    the two families ask one question about two trees. What is this route's own
+    is the plural: a card may state several directories that are different
+    mechanisms, and each comes back as its own tree with its own keying and its
+    own link walk.
+
+    Two refusals, both typed: a core the machine established is not installed,
+    and a core whose mod wiring atlas has not established — the second a
+    statement about atlas and never the claim that the emulator has no mods.
+    """
+    chain = _read_chain(machine, query, SAVEFILE_KEYS)
+    if chain.core.not_installed is not None:
+        return chain.core.not_installed
+
+    so_basename = os.path.basename(query.core_so) if query.core_so is not None else None
+    card = lookup_mod_card(so_basename=so_basename, library_name=chain.core.library_name)
+    if card is None:
+        return Unresolved(
+            UNRESOLVED_MOD_WIRING_UNESTABLISHED,
+            f"where {so_basename or 'this emulator'} reads mods is not established — atlas carries "
+            "no mod wiring for it, which says nothing about whether it has the feature: the "
+            "packaged knowledge simply does not reach this core "
+            "(docs/how-to-use.md, 'Where do mods go?')",
+            {"core_so": so_basename} if so_basename is not None else {},
+        )
+
+    root = _card_root(root=card.root, chain=chain, query=query)
+    trees, tree_sources, tree_caveats = _mod_trees(machine, card=card, root=root)
+    enabled, enabled_sources, enabled_caveats = _mod_enabled(
+        machine,
+        card=card,
+        chain=chain,
+        query=query,
+        core_version=chain.core.info.library_version if chain.core.info is not None else None,
+    )
+    applies: bool | None = None
+    applies_sources: tuple[str, ...] = ()
+    if query.core_so is not None:
+        # The caveat below rests on a live reading of the core's .info, so that
+        # reading is sourced here like every other stated fact. Its *caveats*
+        # stay with the question that owns them: a .info nobody could read
+        # leaves this answer stating nothing about soft patching, and a
+        # degradation of a reading this answer does not make would be noise on
+        # it — soft_patch_candidates() states them where they decide something.
+        applies, applies_sources, _ = _soft_patch_applies(
+            machine,
+            sandbox=query.sandbox,
+            parsed=chain.global_values,
+            core_so=query.core_so,
+        )
+    return ModPlacement(
+        trees=trees,
+        needs=root.needs,
+        enabled=enabled,
+        sources=(
+            *chain.sources,
+            *root.sources,
+            *tree_sources,
+            f"mod card '{card.key}': {card.provenance}",
+            *enabled_sources,
+            *applies_sources,
+        ),
+        caveats=(
+            *chain.caveats,
+            *root.caveats,
+            *enabled_caveats,
+            *_optional(_core_config_caveat(card, root=root.base)),
+            *_optional(_read_unestablished_caveat(card.key)),
+            *_optional(_soft_patching_caveat(card, applies=applies)),
+            *tree_caveats,
+        ),
+    )
+
+
+def _standalone_mod_placement(
+    machine: Machine,
+    *,
+    card: StandaloneModCard,
+    homes: _XdgHomes,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> ModPlacement:
+    """Where a standalone emulator reads mods — an XDG join, then the links.
+
+    The texture family's standalone answer, with one difference that is evidence
+    rather than design: a card may name **no** configuration file. Naming one
+    says "this is where the switch would be", and for one emulator nobody has
+    established that a switch exists at all — not a core option, not a CLI flag,
+    nothing. That row states ``enabled`` as unanswered and stays silent about
+    where to look, which is a weaker claim than ``emulator-config-unread`` and
+    the only honest one available.
+    """
+    trees: list[ModTree] = []
+    sources: list[str] = []
+    caveats: list[Caveat] = [*extra_caveats]
+    for spec in card.trees:
+        directory = os.path.join(homes.base(card.base), spec.subdir)
+        physical, link_caveats = _link_view(machine, directory)
+        caveats.extend(link_caveats)
+        trees.append(
+            ModTree(dir=directory, keying=spec.keying, role=spec.role, physical_dir=physical)
+        )
+        sources.append(
+            f"mod card '{card.token}': the emulator reads mods from {spec.subdir!r} below its "
+            f"XDG {card.base} home — {card.provenance}"
+        )
+        if spec.keying is not None:
+            sources.append(
+                f"mod card '{card.token}': keyed by {spec.keying} — {spec.keying_citation}"
+            )
+    if card.config is not None:
+        config_path = os.path.join(homes.base(card.config.base or card.base), card.config.path)
+        caveats.append(
+            Caveat(
+                CAVEAT_EMULATOR_CONFIG_UNREAD,
+                f"whether {card.token} has mod loading switched on is not established — the setting "
+                f"lives in {config_path}, a configuration of the emulator's own that atlas does not "
+                "read (standalone emulator configuration is its own roadmap block)",
+                {"emulator": card.token, "config": config_path},
+            )
+        )
+    else:
+        sources.append(
+            f"mod card '{card.token}': no switch is established for this emulator — neither a core "
+            "option nor a setting anyone has found, so whether loading is on is not stated"
+        )
+    return ModPlacement(
+        trees=tuple(trees),
+        needs=(),
+        enabled=None,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
+    )
+
+
+def _standalone_mod_unresolved(spec: EmulatorSpec) -> Unresolved:
+    """The refusal for a standalone entry no packaged mod card covers.
+
+    The same code the save routes answer every standalone entry with, and for
+    the reason the texture family gives: what is missing is that nobody reads
+    this emulator's own configuration, and for these emulators the mod
+    directory is *in* that configuration rather than at a default the emulator
+    opens — RetroDECK writes MAME's ``pluginspath`` and ``homepath`` into
+    ``mame.ini``. An emulator whose mods live at its own default answers
+    instead, and the split between the two is evidence, not policy.
+    """
+    return Unresolved(
+        UNRESOLVED_STANDALONE,
+        f"where standalone emulator {spec.label!r} ({spec.system}) reads mods is not resolvable yet "
+        "— its mod directory is named in a configuration of its own, and reading those is the "
+        "standalone roadmap block (ROADMAP.md)",
+        {"label": spec.label, "system": spec.system},
+    )
+
+
+# What naming no core costs the soft-patching question — the third entry beside
+# NO_CORE_FOR_SAVES and NO_CORE_FOR_STATES, and the smallest of the three: the
+# candidate files follow from the content path alone, so a nameless core costs
+# exactly one field.
+NO_CORE_FOR_SOFT_PATCHING = (
+    "no core given — the candidate files below are the content's own and stand either way, but "
+    "whether patching runs at all is a fact about the core (it patches only content it loads into "
+    "memory), so 'applies' is left unanswered rather than assumed"
+)
+
+# The ``.info`` key that declares whether a core is handed a path instead of the
+# content's bytes. RetroArch itself does not read this key — the gate is the
+# core's own ``retro_system_info.need_fullpath`` (``task_content.c:744-745``) —
+# so what atlas reads here is the *declaration* beside the core, spelled the way
+# the metadata spells it (``needs_fullpath``, not the struct field's
+# ``need_fullpath``: 174 of the 292 ``.info`` files a stock RetroDECK ships state
+# it, 87 each way).
+INFO_NEEDS_FULLPATH = "needs_fullpath"
+
+
+def _soft_patch_applies(
+    machine: Machine,
+    *,
+    sandbox: _Sandbox,
+    parsed: Mapping[str, str],
+    core_so: str,
+) -> tuple[bool | None, tuple[str, ...], tuple[Caveat, ...]]:
+    """Does the frontend patch what this core loads — read off the core's own ``.info``?
+
+    RetroArch patches the content **buffer**, so it patches only content it
+    loads into memory, which is every core that does not need a full path
+    (``task_content.c:1465-1484``). What the machine states about that is the
+    ``.info``'s ``needs_fullpath``, read here the same way the savestate route
+    reads that file's ``savestate`` declaration — same file, same directory key,
+    same three ways to fail.
+
+    It is a declaration and the answer says so: RetroArch never reads this key
+    (nothing in ``core_info.c`` looks it up), and the flag that decides is the
+    one the *core* reports when it is loaded. The two agree wherever the
+    metadata is current, and where they disagree the core wins — which is why a
+    stated ``applies`` is worth having and worth qualifying, and why a ``.info``
+    that says nothing leaves it unanswered instead of falling back to a default.
+    """
+    info_dir, dir_caveats = _cfg_directory(sandbox, parsed, "libretro_info_path")
+    if info_dir is None:
+        return None, (), (*dir_caveats, _info_path_unresolved_for_patching())
+    info_path = os.path.join(info_dir, os.path.basename(core_so).removesuffix(".so") + ".info")
+    read = machine.read_text(info_path)
+    if read.text is None:
+        return None, (), (_core_info_unreadable_for_patching(core_so, read.status),)
+    declared = parse_core_info(read.text).get(INFO_NEEDS_FULLPATH)
+    if declared is None or (needs_fullpath := cfg_bool(declared)) is None:
+        # Read, and it said nothing this vocabulary can act on. Stated as the
+        # honest None with its provenance rather than as a caveat: the file was
+        # reachable and simply carries no such declaration, which is the state
+        # 118 of the 292 shipped .info files are in.
+        return (
+            None,
+            (
+                f"{info_path}: no {INFO_NEEDS_FULLPATH} declaration this reading can use"
+                + (f' (states "{declared}")' if declared is not None else ""),
+            ),
+            (),
+        )
+    return (
+        not needs_fullpath,
+        (
+            f'{info_path}: {INFO_NEEDS_FULLPATH} = "{declared}" — the content is '
+            f"{'handed to the core as a path' if needs_fullpath else 'loaded into memory'}, so the "
+            f"frontend {'never patches it' if needs_fullpath else 'patches it before the core sees it'}",
+        ),
+        (),
+    )
+
+
+def _info_path_unresolved_for_patching() -> Caveat:
+    """``libretro_info_path`` names no readable directory, so no ``.info`` was read."""
+    return Caveat(
+        CAVEAT_INFO_PATH_UNRESOLVED,
+        "libretro_info_path does not resolve to a readable directory on this machine — whether this "
+        "core loads its content into memory, and so whether the candidates below are ever applied, "
+        "could not be established",
+    )
+
+
+def _core_info_unreadable_for_patching(core_so: str, status: ReadStatus) -> Caveat:
+    """The core's ``.info`` is there in name only — the same code the other routes state."""
+    return Caveat(
+        CAVEAT_CORE_INFO_UNREADABLE,
+        f"{os.path.basename(core_so)}'s .info could not be read ({status}) — whether this core "
+        "loads its content into memory is unknown, so whether the candidates below are ever "
+        "applied is unstated rather than assumed",
+        {"core_so": os.path.basename(core_so), "status": status},
+    )
+
+
+def _patch_formats(
+    build: SoftPatchBuild | None, *, arrangement_version: str | None
+) -> tuple[Mapping[str, bool], tuple[str, ...], tuple[Caveat, ...]]:
+    """Which formats this build attempts — from the packaged record, or unestablished.
+
+    The record is read by installation kind and names no arrangement in code, so
+    the day someone reads another distribution's binary the claim arrives as a
+    data change (the pattern ``arrangement_evidence.json`` and the rule cards
+    both follow).
+
+    The version comparison is the texture family's, verbatim in intent: a claim
+    about a build is not carried across a version nobody re-examined, and it
+    needs both sides to speak — a machine that states no version is not
+    compared, and that silence means *no drift established*, not *no drift*.
+    """
+    if build is None:
+        return (
+            {},
+            (),
+            (
+                Caveat(
+                    CAVEAT_PATCH_FORMATS_UNESTABLISHED,
+                    "which patch formats this RetroArch attempts is not established — patching and "
+                    "its .xdelta applier are compile-time flags (Makefile.common:260-267) and "
+                    "nothing on a running machine states how they were set, so each candidate "
+                    "below is listed without a claim that this build tries it",
+                    {"formats": ",".join(PATCH_FORMATS)},
+                ),
+            ),
+        )
+    caveats: list[Caveat] = []
+    if arrangement_version is not None and arrangement_version != build.verified_arrangement:
+        caveats.append(
+            Caveat(
+                CAVEAT_UNVERIFIED_VERSION,
+                f"which formats this build attempts was established against "
+                f"{build.verified_arrangement}, and this machine states {arrangement_version} — a "
+                "build is exactly what could add or drop an applier, so the claim is not carried "
+                "across the difference unexamined",
+                {
+                    "verification": "drifted",
+                    "arrangement_verified": build.verified_arrangement,
+                    "arrangement_live": arrangement_version,
+                },
+            )
+        )
+    return (
+        build.attempts(),
+        (f"soft-patching record '{build.kind}': {build.citation}",),
+        tuple(caveats),
+    )
+
+
+def _retroarch_soft_patch_candidates(
+    machine: Machine, query: _SaveQuery, *, build: SoftPatchBuild | None
+) -> SoftPatchAnswer | Unresolved:
+    """Which files RetroArch would patch this content with — arithmetic, then two readings.
+
+    Deliberately **not** built on the shared chain the other three routes read.
+    That chain resolves a save layout — roots, sorting stages, override layers —
+    and none of it reaches this question: the candidate files sit beside the
+    content, so the only things to read are the core (is it installed, does it
+    load content into memory) and the one cfg key that says where ``.info``
+    files live. Reading the save layout to answer a question it cannot move
+    would put its degradations on an answer they say nothing about.
+
+    A core the machine established is not installed ends the question the way it
+    ends the other three. The candidates would still be true — they are the
+    content's own — but ``applies`` is then a question about a core that cannot
+    run, and one refusal code across the family is worth more to a client than
+    an answer that is half about a core it does not have.
+    """
+    core = _identify_core(
+        machine,
+        core_so=query.core_so,
+        core_path_resolver=query.core_path_resolver,
+        no_core_message=NO_CORE_FOR_SOFT_PATCHING,
+    )
+    if core.not_installed is not None:
+        return core.not_installed
+
+    parsed = parse_cfg_text(query.global_text) if query.global_text is not None else {}
+    caveats = [*query.extra_caveats, *core.caveats]
+    sources = [*query.extra_sources, *core.sources]
+
+    applies: bool | None = None
+    if query.core_so is not None:
+        applies, applies_sources, applies_caveats = _soft_patch_applies(
+            machine, sandbox=query.sandbox, parsed=parsed, core_so=query.core_so
+        )
+        sources.extend(applies_sources)
+        caveats.extend(applies_caveats)
+
+    attempted, format_sources, format_caveats = _patch_formats(
+        build, arrangement_version=query.arrangement_version
+    )
+    sources.extend(format_sources)
+    caveats.extend(format_caveats)
+
+    basename = content_basename(query.content_path) if query.content_path else ""
+    # "Names a file" is the *last component* being non-empty, not the basename
+    # being non-empty: ``/roms/psx/Game/`` keeps its trailing slash all the way
+    # through the path math and would compose ``/roms/psx/Game/.ips`` — a
+    # dotfile in a directory nobody named. It is the same test the save routes
+    # make on their rom_stem, and the same caveat.
+    if not os.path.basename(basename):
+        caveats.append(_unnamed_content_caveat(query.content_path or ""))
+        basename = ""
+    else:
+        sources.append(
+            f"content {query.content_path!r}: RetroArch names patches after "
+            f"{basename!r} — the content path with its last extension truncated, and for content "
+            "inside an archive the entry's own name in the archive's directory "
+            "(runloop.c:8673-8713, then runloop.c:5196-5253)"
+        )
+        sources.append(
+            "attempt order ips -> bps -> ups -> xdelta, first hit wins, then indexed continuations "
+            "<name>1..<name>9 stopping at the first gap (task_patch.c:1071-1075, :1121-1147); the "
+            "patch is applied to the in-memory buffer and never to the file on disk "
+            "(task_patch.c:872-879)"
+        )
+    return SoftPatchAnswer(
+        candidates=build_soft_patch_candidates(content_basename=basename, attempted=attempted),
+        applies=applies,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
     )
 
 
@@ -3656,6 +4235,14 @@ class _CatalogueHost(Protocol):
         *,
         content_path: str | None = None,
     ) -> TexturePlacement | Unresolved: ...
+
+    def entry_mod_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> ModPlacement | Unresolved: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -4255,6 +4842,19 @@ class EmulatorEntry:
             self._spec, self._caveats, content_path=content_path
         )
 
+    def mod_location(self, *, content_path: str | None = None) -> ModPlacement | Unresolved:
+        """Where this emulator reads mods — the emulator taken from the catalogue.
+
+        Answers for both kinds of entry, exactly as the texture question does
+        and for the same reason: a standalone emulator's mod directory is
+        mostly its own default below an XDG base a flatpak pins, which is a
+        path join and a symlink walk rather than a configuration to model. So
+        the same entry can refuse ``savefile_location`` and answer this.
+        """
+        return self._installation.entry_mod_location(
+            self._spec, self._caveats, content_path=content_path
+        )
+
     def _standalone(self) -> Unresolved:
         """The outcome both placement questions give for a non-libretro entry."""
         return Unresolved(
@@ -4330,6 +4930,15 @@ def _entry_texture_with_caveats(
     if isinstance(outcome, Unresolved) or not extra:
         return outcome
     return cast(TexturePlacement, _dc_replace(outcome, caveats=(*outcome.caveats, *extra)))
+
+
+def _entry_mod_with_caveats(
+    outcome: ModPlacement | Unresolved, extra: tuple[Caveat, ...]
+) -> ModPlacement | Unresolved:
+    """*outcome* with the entry's *extra* caveats appended — refusals pass through untouched."""
+    if isinstance(outcome, Unresolved) or not extra:
+        return outcome
+    return cast(ModPlacement, _dc_replace(outcome, caveats=(*outcome.caveats, *extra)))
 
 
 class _CatalogueQueries:
@@ -5248,6 +5857,58 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=core_so,
         )
 
+    def _mod_location_from(
+        self,
+        config: dict[str, Any],
+        marker_issues: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+        core_so: str | None,
+        extra_caveats: tuple[Caveat, ...] = (),
+    ) -> ModPlacement | Unresolved:
+        return _retroarch_mod_location(
+            self._machine,
+            self._query_from(
+                config,
+                marker_issues,
+                content_path=content_path,
+                core_so=core_so,
+                extra_caveats=extra_caveats,
+            ),
+        )
+
+    def mod_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> ModPlacement | Unresolved:
+        """Where this RetroDECK's *core_so* reads mods from.
+
+        The arrangement that links every emulator's mod directory into one
+        shared hub, so each tree's ``dir`` is the path the emulator opens and
+        its ``physical_dir`` the directory the bytes are really in — per tree,
+        because the hub links them one by one.
+        """
+        config, marker_issues = self._read_marker()
+        return self._mod_location_from(
+            config, marker_issues, content_path=content_path, core_so=core_so
+        )
+
+    def soft_patch_candidates(
+        self, content_path: str, *, core_so: str | None = None
+    ) -> SoftPatchAnswer | Unresolved:
+        """Which patch files RetroDECK's RetroArch would apply to *content_path*.
+
+        The one arrangement whose shipped RetroArch has been read for this, so
+        the candidates come back with each format's ``attempted`` decided rather
+        than unestablished — and with the version pin that retires the claim
+        when the shipped build moves.
+        """
+        config, marker_issues = self._read_marker()
+        return _retroarch_soft_patch_candidates(
+            self._machine,
+            self._query_from(config, marker_issues, content_path=content_path, core_so=core_so),
+            build=lookup_soft_patch_build(self.kind),
+        )
+
     def _firmware_context_from(
         self,
         config: dict[str, Any],
@@ -5478,6 +6139,49 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             extra_caveats=entry_caveats,
         )
         return _entry_texture_with_caveats(placement, extra)
+
+    def entry_mod_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> ModPlacement | Unresolved:
+        """The entry route behind :meth:`EmulatorEntry.mod_location` — one marker read.
+
+        The texture entry route's twin, down to the per-game override check: an
+        entry ES-DE would not launch for this game reads no mods for it either.
+        """
+        config, marker_issues = self._read_marker()
+        extra = (
+            self._entry_caveats_for(config, spec, content_path)
+            if content_path is not None
+            else ()
+        )
+        if spec.kind != KIND_LIBRETRO:
+            card = lookup_standalone_mod_card(emulator_token(spec.command))
+            if card is None:
+                return _standalone_mod_unresolved(spec)
+            health = self._health_from(config, marker_issues)
+            return _standalone_mod_placement(
+                self._machine,
+                card=card,
+                homes=self._xdg_homes(),
+                extra_caveats=(
+                    *entry_caveats,
+                    *extra,
+                    *health.issues,
+                    *arrangement_caveats(self.kind, observed_version=_marker_version(config)),
+                ),
+            )
+        placement = self._mod_location_from(
+            config,
+            marker_issues,
+            content_path=content_path,
+            core_so=spec.core_so,
+            extra_caveats=entry_caveats,
+        )
+        return _entry_mod_with_caveats(placement, extra)
 
 
 def _dequote_shell_value(value: str) -> str:
@@ -6349,6 +7053,31 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return placement
         return _entry_texture_with_caveats(placement, self._entry_caveats_for(spec, content_path))
 
+    def entry_mod_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> ModPlacement | Unresolved:
+        """The mod entry route — same sources, the entry's own caveats.
+
+        A standalone entry refuses here for the reason it refuses the texture
+        question: EmuDeck installs each standalone emulator as its own flatpak
+        or AppImage, so the XDG bases their trees hang off differ per emulator
+        and atlas has established none of them. Answering with RetroDECK's homes
+        would name directories on the wrong tree.
+        """
+        if spec.kind != KIND_LIBRETRO:
+            return _standalone_mod_unresolved(spec)
+        placement = _retroarch_mod_location(
+            self._machine,
+            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+        )
+        if content_path is None:
+            return placement
+        return _entry_mod_with_caveats(placement, self._entry_caveats_for(spec, content_path))
+
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
 
@@ -6444,6 +7173,38 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return _retroarch_texture_pack_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
+    def mod_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> ModPlacement | Unresolved:
+        """Where EmuDeck's RetroArch reads mods from, per core.
+
+        EmuDeck wires no mod hub at all — its installer creates no mods root
+        and links no emulator's mod directory anywhere — so the answer is the
+        emulator's own read location and nothing else, which for the cores it
+        deploys is the default below the ``system_directory`` it points at its
+        own bios root.
+        """
+        return _retroarch_mod_location(
+            self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
+    def soft_patch_candidates(
+        self, content_path: str, *, core_so: str | None = None
+    ) -> SoftPatchAnswer | Unresolved:
+        """Which patch files EmuDeck's RetroArch would apply to *content_path*.
+
+        EmuDeck runs the ``org.libretro.RetroArch`` Flatpak rather than a
+        RetroArch of its own, and nobody has read that binary for its patch
+        flags — so every candidate comes back unestablished
+        (``patch-formats-unestablished``) while the file names, which follow
+        from the content path alone, are exact.
+        """
+        return _retroarch_soft_patch_candidates(
+            self._machine,
+            self._query(content_path=content_path, core_so=core_so),
+            build=lookup_soft_patch_build(self.kind),
         )
 
     def _firmware_context_from(
@@ -6667,6 +7428,36 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    def mod_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> ModPlacement | Unresolved:
+        """Where this RetroArch install's *core_so* reads mods from.
+
+        A bare install wires no shared mod tree, so each tree's
+        ``physical_dir`` stays ``None`` — the honest shape rather than a
+        missing feature: nothing here redirects the directories, so there is no
+        second path to report.
+        """
+        return _retroarch_mod_location(
+            self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
+    def soft_patch_candidates(
+        self, content_path: str, *, core_so: str | None = None
+    ) -> SoftPatchAnswer | Unresolved:
+        """Which patch files this RetroArch install would apply to *content_path*.
+
+        A bare install's binary is whatever the user installed, so no packaged
+        record covers it and every candidate's ``attempted`` is unestablished —
+        which is the same statement the arrangement itself carries about
+        everything else it answers.
+        """
+        return _retroarch_soft_patch_candidates(
+            self._machine,
+            self._query(content_path=content_path, core_so=core_so),
+            build=lookup_soft_patch_build(self.kind),
+        )
+
     def _read_firmware_context(self) -> FirmwareContext:
         # One read of the cfg answers both: its text is the context, its status
         # is the health of an installation whose cfg *is* the marker.
@@ -6738,6 +7529,14 @@ class Installation(Protocol):
     def texture_pack_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> TexturePlacement | Unresolved: ...
+
+    def mod_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> ModPlacement | Unresolved: ...
+
+    def soft_patch_candidates(
+        self, content_path: str, *, core_so: str | None = None
+    ) -> SoftPatchAnswer | Unresolved: ...
 
     def systems(self) -> SystemsAnswer: ...
 

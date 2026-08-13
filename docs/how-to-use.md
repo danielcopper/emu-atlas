@@ -609,6 +609,136 @@ instead of inheriting it.
 client copying files can use either. EmuDeck wires the opposite direction (links in `texturepacks/` pointing _into_ the
 emulator's real directory), so nothing on the read path passes through them and no answer mentions them.
 
+## Where do mods go?
+
+`mod_location` answers where one emulator, configured as it is, reads mods from. It is a pair with the question after
+it: this one is about **directories an emulator opens**, the next about **files the frontend applies to the ROM**. A
+SNES hack is the clearest case of the split — no core in this table has a SNES mod directory at all, and the mechanism
+that installs the hack is soft patching, the next question down.
+
+```python
+outcome = inst.mod_location(core_so="fbneo_libretro.so")
+
+for tree in outcome.trees:
+    tree.role          # 'patched' | 'ips' | 'romdata' — or None where the emulator has one tree
+    tree.dir           # '/run/media/deck/Emulation/retrodeck/bios/fbneo/patched'
+    tree.physical_dir  # the shared tree the distribution linked it into, or None
+    tree.keying        # 'rom-name' — how the tree below dir is divided per game
+outcome.enabled        # True | False | None — is mod loading switched on right now?
+outcome.needs          # the holes left, same vocabulary as a save placement
+outcome.caveats
+```
+
+**The answer is plural, and that is the point.** Most emulators read mods from one directory and `trees` is a
+one-element list. FBNeo reads from three that are not alternatives but different mechanisms — a replacement romset, an
+IPS patch set, a romdata file — all governed by one switch, so an answer that named one of them would be two-thirds
+wrong for a caller holding an IPS patch. `role` tells them apart and is `None` where there is nothing to tell apart.
+(The same shape will be needed elsewhere: a single question can have several true locations at once, which the save side
+runs into where one core writes to two roots for one game.)
+
+Everything else is the texture question's grammar, and means the same: the root is read off your machine and the
+fragment below it is packaged, versioned and source-cited (`atlas/data/mods.json`); `enabled` is a live read of the
+option that governs the feature, `None` where neither an options file nor the core stated one; `keying` is stated only
+where a citation backs it. Both handle and entry routes have it, and so does the aggregate.
+
+**One switch is written down rather than read**, because no machine states it: FBNeo registers its core options too late
+for any probe to capture, and no options file mentions the key, so the card carries the upstream default (`enabled`)
+with the build it was read at. An options file still wins wherever it speaks, and a machine running another build of the
+core gets `unverified-version` beside the value.
+
+Three ways this question answers with `Unresolved`:
+
+| Code                       | Meaning                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `core-not-installed`       | the machine established the core is not here                                                                        |
+| `standalone-unsupported`   | a standalone emulator whose mod directory is named only in its own config (MAME's `pluginspath`), or one on EmuDeck |
+| `mod-wiring-unestablished` | atlas carries no mod wiring for this core — a statement about atlas, never about the emulator                       |
+
+Standalone emulators answer through the catalogue entry, exactly as they do for texture packs and with the same
+asymmetry against their saves. Two caveats are worth branching on, and one absence:
+
+| Code                          | Meaning                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `emulator-read-unestablished` | the directory is stated and nobody has established that this emulator reads it   |
+| `emulator-config-unread`      | `enabled` is unanswered because the setting lives in a config atlas did not read |
+| `soft-patching-applies`       | this core's content is also patched by the frontend — see the next question      |
+
+`emulator-config-unread` now rides a **core** row too: the Dolphin core's mod switch is not a core option at all but an
+ordinary `GFX.ini` inside the user tree the core builds, and the caveat names that file on your machine. And where a row
+carries **no** config caveat and `enabled` is still `None` — Azahar, in both its standalone and its core row — that is
+the weaker statement on purpose: nobody has established that any switch exists, so the answer points nowhere rather than
+at a file that may govern nothing.
+
+**PCSX2 answers here and refuses the texture question — the same emulator, the opposite outcome.** That is evidence, not
+inconsistency: RetroDECK writes PCSX2's texture directory into the emulator's own `PCSX2.ini` (`Folders/Textures`), so
+the texture answer would have to model a configuration atlas does not read, while nothing writes `Folders/Patches` at
+all — the patches directory stays the emulator's own default, which is a path join. If you set `Folders/Patches`
+yourself, the mod answer moves out from under you and atlas will not see it.
+
+**Cemu appears in this question and in the texture one, with the same directory.** On that emulator a graphic pack is
+one mechanism: `rules.txt` replaces textures and `patches.txt` beside it patches the running title's code. Both
+questions answer `Cemu/graphicPacks` because both are true, and neither is made to say "ask the other one".
+
+## What patches this ROM before it loads?
+
+`soft_patch_candidates` answers where a ROM hack goes. It is the other half of the question above: RetroArch's own
+mechanism, not an emulator's — before a core sees the content, the frontend looks for a patch file **beside the ROM**
+and applies it to the copy in memory. Where `mod_location` refuses because no core in the table has a mod directory for
+that system, this is usually the answer the caller actually wanted.
+
+```python
+outcome = inst.soft_patch_candidates("/roms/snes/Chrono Trigger.sfc", core_so="snes9x_libretro.so")
+
+[c.path for c in outcome.candidates]   # the four names, in the order RetroArch tries them:
+# ['/roms/snes/Chrono Trigger.ips', '.../Chrono Trigger.bps',
+#  '.../Chrono Trigger.ups', '.../Chrono Trigger.xdelta']
+outcome.candidates[0].continuations    # ['…Trigger.ips1', … '…Trigger.ips9'] — the chain, in order
+outcome.candidates[0].attempted        # True | False | None — does this build try this format?
+outcome.applies                        # True | False | None — is this core patched at all?
+```
+
+The content path is the question's subject, so it is positional and required; `core_so` is optional and decides one
+field. The aggregate has this question too.
+
+**Nothing is written to disk.** The patch is applied to the in-memory buffer the core is handed — the ROM beside the
+patch file is never modified, so "install a hack" here means "drop the patch file next to the ROM", and the original
+stays what it was.
+
+**How the names are built.** Take the content path, cut its last extension, append the format's own. Content inside an
+archive is named after the **entry**, in the archive's directory: `roms/nes/pack.zip#Game.nes` is patched by
+`roms/nes/Game.ips`. The first patch that applies wins; then indexed continuations `<name>1` … `<name>9` are applied on
+top of it, stopping at the first gap, which is why each candidate carries its nine.
+
+**`applies` is about the core, and it is a live read.** RetroArch patches the content _buffer_, so it patches only what
+it loads into memory — every core that does not need a full path. Atlas reads the `needs_fullpath` declaration in the
+core's own `.info`; `True` means this core is patched, `False` means it never is (disc and full-path cores: LRPS2,
+PPSSPP, the Dolphin and Azahar cores…), and `None` means nothing established it — no core named, or that `.info` states
+nothing (118 of the 292 files a stock RetroDECK ships state nothing), or it could not be read (`core-info-unreadable`,
+`info-path-unresolved` say which). Two further conditions ride every `True` and are not fields because neither is a fact
+about your machine: only the **first** content file is patched, and only when it is not a media type. A single-file
+launch — what every launcher does — meets both.
+
+**`attempted` is about the build, and it is not readable at all.** Patching and its `.xdelta` applier are compile-time
+flags; no setting, log or file on a running machine states how they were set. So atlas states them only where someone
+read the binary: RetroDECK's shipped RetroArch was, and answers `True` for all four. Everywhere else each candidate is
+`None` beside `patch-formats-unestablished` — which is _not_ "this format is unsupported", it is "nobody looked". The
+file names are exact either way.
+
+| Code                          | Meaning                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `patch-formats-unestablished` | nobody has read this RetroArch build's patch flags                         |
+| `content-path-unnamed`        | the path names no file, so no candidate is named (you get an empty list)   |
+| `unverified-version`          | the build claim was established against another version of the arrangement |
+
+One refusal, and it is the family's usual: naming a core this installation does not have gives `core-not-installed`. The
+candidate names would still be true — they are the content's own — but the question was asked about a core that cannot
+run here.
+
+**Nothing on the machine switches this on or off.** There is no configuration key for soft patching anywhere in
+RetroArch; the only things that change it are command-line flags (`--ips=`/`--bps=`/`--ups=`/`--xdelta=` force one
+format, `--no-patch` blocks patching), and no launcher on either arrangement passes one. So on a normal launch the four
+candidates above are simply what happens.
+
 ## Which emulator would launch this? (the catalogue)
 
 **Every handle answers this**, and the ones that cannot answer it from a catalogue say why — so you never have to narrow

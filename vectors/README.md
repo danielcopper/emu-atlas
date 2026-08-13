@@ -102,12 +102,18 @@ Each expectation is paired with the input key that asks it. Several may appear i
 | `entry_savestate_query` | `entry_savestate_location`    | the same placement, asked _through_ a catalogue entry |
 | `texture_query`         | `texture_pack_location`       | where does this emulator read texture packs           |
 | `entry_texture_query`   | `entry_texture_pack_location` | the same, asked _through_ a catalogue entry           |
+| `mod_query`             | `mod_location`                | where does this emulator read mods                    |
+| `entry_mod_query`       | `entry_mod_location`          | the same, asked _through_ a catalogue entry           |
+| `soft_patch_query`      | `soft_patch_candidates`       | which patch files this content would be patched with  |
 | `catalogue_query`       | `catalogue`                   | which emulators can launch this system                |
 | `systems_query`         | `systems`                     | which systems does the frontend declare               |
 | `rom_location_query`    | `rom_location`                | where do this system's ROMs live                      |
 | `firmware_query`        | `firmware`                    | `kind` is `core`, `system` or `inventory`             |
 | `identify_query`        | `identification`              | what is this content, by `md5` / `sha1` / `size`      |
 | `aggregate_query`       | `aggregate`                   | one question put to **every** detected installation   |
+
+`soft_patch_query` is the one family whose `content_path` is required rather than optional: the content is that
+question's subject — the patch files are named after it — so a vector asking it without one asks about no file at all.
 
 Every single-question family may name `installation` (a handle kind) to choose which detected installation answers;
 without it the first one does. `aggregate_query` may not — asking the aggregate to choose is the one thing it does not

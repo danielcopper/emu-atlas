@@ -238,6 +238,65 @@ def _base_entry_texture(outcome=None) -> Vector:
     )
 
 
+def _mod_tree(**overrides) -> Vector:
+    return {
+        "role": None,
+        "dir": f"{HOME}/bios/fbneo/patched",
+        "physical_dir": None,
+        "keying": None,
+        **overrides,
+    }
+
+
+def _mods(**overrides) -> Vector:
+    return {"trees": [_mod_tree()], "needs": [], "enabled": None, "caveats": [], **overrides}
+
+
+def _base_mods(**overrides) -> Vector:
+    return _vector(
+        {"mod_location": _mods(**overrides)}, installed=True, mod_query={"core_so": CORE_SO}
+    )
+
+
+def _base_entry_mods(outcome=None) -> Vector:
+    return _vector(
+        {"entry_mod_location": outcome if outcome is not None else _mods()},
+        installed=True,
+        entry_mod_query={"system": SYSTEM},
+    )
+
+
+CONTENT = f"{HOME}/roms/nes/Game.nes"
+PATCH_STEM = f"{HOME}/roms/nes/Game"
+
+
+def _candidate(fmt: str, **overrides) -> Vector:
+    return {
+        "format": fmt,
+        "path": f"{PATCH_STEM}.{fmt}",
+        "continuations": [f"{PATCH_STEM}.{fmt}{index}" for index in range(1, 10)],
+        "attempted": None,
+        **overrides,
+    }
+
+
+def _soft_patch(**overrides) -> Vector:
+    return {
+        "candidates": [_candidate(fmt) for fmt in ("ips", "bps", "ups", "xdelta")],
+        "applies": None,
+        "caveats": [],
+        **overrides,
+    }
+
+
+def _base_soft_patch(**overrides) -> Vector:
+    return _vector(
+        {"soft_patch_candidates": _soft_patch(**overrides)},
+        installed=True,
+        soft_patch_query={"content_path": CONTENT},
+    )
+
+
 def _base_entry(outcome=None) -> Vector:
     return _vector(
         {"entry_savefile_location": outcome if outcome is not None else _placement()},
@@ -269,6 +328,9 @@ BASES = {
     "entry": _base_entry,
     "texture": _base_texture,
     "entry_texture": _base_entry_texture,
+    "mods": _base_mods,
+    "entry_mods": _base_entry_mods,
+    "soft_patch": _base_soft_patch,
     "aggregate": _base_aggregate,
 }
 
@@ -471,6 +533,27 @@ PAIRING_CASES = [
          "texture_query and texture_pack_location expectation", id="pair-texture-query-alone"),
     case(_vector({"entry_texture_pack_location": _texture()}, installed=True),
          "entry_texture_query and entry_texture_pack_location expectation", id="pair-entry-texture"),
+    case(_vector({"mod_location": _mods()}, installed=True),
+         "mod_query and mod_location expectation", id="pair-mods"),
+    case(_vector(installed=True, mod_query={"core_so": CORE_SO}),
+         "mod_query and mod_location expectation", id="pair-mods-query-alone"),
+    case(_vector({"entry_mod_location": _mods()}, installed=True),
+         "entry_mod_query and entry_mod_location expectation", id="pair-entry-mods"),
+    case(_vector({"soft_patch_candidates": _soft_patch()}, installed=True),
+         "soft_patch_query and soft_patch_candidates expectation", id="pair-soft-patch"),
+    case(_vector(installed=True, soft_patch_query={"content_path": CONTENT}),
+         "soft_patch_query and soft_patch_candidates expectation", id="pair-soft-patch-query-alone"),
+    # The content is that question's subject, not a modifier: a query that names
+    # other keys and not that one asks about no file at all.
+    case(_vector({"soft_patch_candidates": _soft_patch()}, installed=True,
+                 soft_patch_query={"core_so": CORE_SO}),
+         "soft_patch_query must name the content_path", id="soft-patch-query-without-content"),
+    # An empty path is refused a step earlier, by the rule every query shares —
+    # asserted here so the two guarantees cannot collapse into one.
+    case(_vector({"soft_patch_candidates": _soft_patch()}, installed=True,
+                 soft_patch_query={"content_path": ""}),
+         "soft_patch_query.content_path must be a non-empty string",
+         id="soft-patch-query-empty-content"),
     case(_vector({"savefile_location": _placement()}, savefile_query={"content_path": ROM}),
          "needs a detected installation", id="expectation-without-installation"),
 ]
@@ -554,6 +637,82 @@ TEXTURE_CASES = [
          "texture_pack_location must be exactly the fields", id="texture-file-set"),
     case(_base_entry_texture({"unresolved": {"code": "nope", "data": {}}}),
          "unresolved code must be one of", id="entry-texture-unknown-unresolved-code"),
+]
+
+MOD_CASES = [
+    case(_base_mods(trees=[]), "mod_location.trees must be a non-empty list", id="mods-no-tree"),
+    case(_base_mods(trees=[_mod_tree(dir="")]), "dir must be a non-empty string", id="mods-empty-dir"),
+    case(_base_mods(trees=[_mod_tree(physical_dir="")]), "must be null or a non-empty string",
+         id="mods-empty-physical"),
+    case(_base_mods(trees=[_mod_tree(role="")]), "role must be null or a non-empty string",
+         id="mods-empty-role"),
+    case(_base_mods(trees=[_mod_tree(keying="per-game")]), "keying must be null or one of",
+         id="mods-unknown-keying"),
+    case(_base_mods(trees=[{**_mod_tree(), "stray": 1}]), "must be exactly the fields",
+         id="mods-tree-stray-field"),
+    # The role tells several trees apart; on a lone tree it is vocabulary a
+    # client has to learn to ignore, so the corpus may not carry one.
+    case(_base_mods(trees=[_mod_tree(role="patched")]), "states one tree, which names no role",
+         id="mods-lone-tree-with-a-role"),
+    case(_base_mods(trees=[_mod_tree(dir="/a"), _mod_tree(dir="/b")]),
+         "each names its own distinct role", id="mods-several-trees-without-roles"),
+    case(_base_mods(trees=[_mod_tree(dir="/a", role="same"), _mod_tree(dir="/b", role="same")]),
+         "each names its own distinct role", id="mods-repeated-roles"),
+    case(_base_mods(needs="content_dir"), "mod_location.needs must be a list", id="mods-needs-not-list"),
+    case(_base_mods(needs=["rom_stem"]), "mod_location.needs must be holes from", id="mods-unknown-hole"),
+    # Nothing can be link-resolved through a hole, whichever tree states it.
+    case(_base_mods(needs=["content_dir"], trees=[_mod_tree(physical_dir="/real")]),
+         "physical_dir for a directory that is still a template", id="mods-physical-through-a-hole"),
+    case(_base_mods(enabled="yes"), "enabled must be true, false, or null", id="mods-enabled-type"),
+    case(_vector({"mod_location": {**_mods(), "stray": 1}}, installed=True,
+                 mod_query={"core_so": CORE_SO}),
+         "mod_location must be exactly the fields", id="mods-stray-field"),
+    # The texture question's own field: a mod answer keeps its directories
+    # inside `trees`, so a top-level one would be a shape no serializer emits.
+    case(_vector({"mod_location": {**_mods(), "dir": "/x"}}, installed=True,
+                 mod_query={"core_so": CORE_SO}),
+         "mod_location must be exactly the fields", id="mods-top-level-dir"),
+    case(_base_entry_mods({"unresolved": {"code": "nope", "data": {}}}),
+         "unresolved code must be one of", id="entry-mods-unknown-unresolved-code"),
+]
+
+SOFT_PATCH_CASES = [
+    case(_base_soft_patch(candidates="ips"), "candidates must be a list", id="patch-candidates-not-list"),
+    # The order is contractual, not just the set: a port answering the four in
+    # another order answers a different question.
+    case(_base_soft_patch(candidates=[_candidate(f) for f in ("bps", "ips", "ups", "xdelta")]),
+         "must be the four formats in attempt order", id="patch-wrong-order"),
+    case(_base_soft_patch(candidates=[_candidate(f) for f in ("ips", "bps", "ups")]),
+         "must be the four formats in attempt order", id="patch-missing-format"),
+    case(_base_soft_patch(applies="yes"), "applies must be true, false, or null", id="patch-applies-type"),
+    case(_vector({"soft_patch_candidates": {**_soft_patch(), "stray": 1}}, installed=True,
+                 soft_patch_query={"content_path": CONTENT}),
+         "soft_patch_candidates must be exactly the fields", id="patch-stray-field"),
+]
+
+
+def _patched(**overrides) -> Vector:
+    """A vector whose FIRST candidate carries *overrides* — the rest stay legal."""
+    first = _candidate("ips", **overrides)
+    rest = [_candidate(fmt) for fmt in ("bps", "ups", "xdelta")]
+    return _base_soft_patch(candidates=[first, *rest])
+
+
+SOFT_PATCH_CANDIDATE_CASES = [
+    case(_patched(format=""), "must be a non-empty string", id="patch-empty-format"),
+    case(_patched(path=""), "must be a non-empty string", id="patch-empty-path"),
+    # The name IS the format: RetroArch composes it by appending the extension
+    # to the content's basename, so a path ending elsewhere names a file the
+    # frontend never looks for.
+    case(_patched(path=f"{PATCH_STEM}.bps"), "must end in the format's own extension",
+         id="patch-path-format-mismatch"),
+    case(_patched(continuations=[]), "must list 9 indexed follow-ups", id="patch-no-continuations"),
+    case(_patched(continuations=[f"{PATCH_STEM}.ips{i}" for i in range(1, 9)]),
+         "must list 9 indexed follow-ups", id="patch-eight-continuations"),
+    case(_patched(continuations=[f"{PATCH_STEM}.ips{i}" for i in range(2, 11)]),
+         "must be the path with '1' appended", id="patch-continuations-misnumbered"),
+    case(_patched(attempted="yes"), "attempted must be true, false, or null", id="patch-attempted-type"),
+    case(_patched(stray=1), "must be exactly the fields", id="patch-candidate-stray-field"),
 ]
 
 ENTRY_CASES = [
@@ -809,6 +968,9 @@ ALL_CASES = [
     *INSTALLATION_CASES,
     *PLACEMENT_CASES,
     *TEXTURE_CASES,
+    *MOD_CASES,
+    *SOFT_PATCH_CASES,
+    *SOFT_PATCH_CANDIDATE_CASES,
     *ENTRY_CASES,
     *CATALOGUE_CASES,
     *SYSTEMS_CASES,

@@ -26,6 +26,8 @@ from atlas.contract import (
     savefile_answer_contract,
     savestate_answer_contract,
     texture_answer_contract,
+    mod_answer_contract,
+    soft_patch_answer_contract,
     systems_contract,
     firmware_contract,
     identification_contract,
@@ -147,6 +149,25 @@ def _texture_pack_location(installs, query, name):
     )
 
 
+def _mod_location(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return mod_answer_contract(
+        install.mod_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+    )
+
+
+def _entry_mod_location(installs, query, name):
+    entry = _entry_of(installs, query, name)
+    return mod_answer_contract(entry.mod_location(content_path=query.get("content_path")))
+
+
+def _soft_patch_candidates(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return soft_patch_answer_contract(
+        install.soft_patch_candidates(query["content_path"], core_so=query.get("core_so"))
+    )
+
+
 def _firmware(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     verify = query.get("verify", False)
@@ -210,6 +231,9 @@ QUESTIONS = {
     "entry_savefile_location": ("entry_savefile_query", _entry_savefile_location),
     "texture_pack_location": ("texture_query", _texture_pack_location),
     "entry_texture_pack_location": ("entry_texture_query", _entry_texture_pack_location),
+    "soft_patch_candidates": ("soft_patch_query", _soft_patch_candidates),
+    "mod_location": ("mod_query", _mod_location),
+    "entry_mod_location": ("entry_mod_query", _entry_mod_location),
 }
 
 
