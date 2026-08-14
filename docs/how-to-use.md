@@ -376,6 +376,46 @@ else:
     paths = my_own_fallback(system)   # "unknown", or a name only you can complete — your table, your risk
 ```
 
+### When one save is several kinds of file — `file_set.groups`
+
+`dir` and `files` describe **one directory**, and for most answers that is the whole save. Some emulators write more
+than one kind of thing, in more than one place, for one game: MAME keeps a machine's battery memory in `mame/nvram/`,
+its dip switches in `mame/cfg/` beside an emulator-wide `default.cfg`, and hard-disk write-differences in `mame/diff/`.
+Handing that back as one flat list would tell you the names and hide which of them are the player's progress and which
+belong to every game at once.
+
+`groups` is that decomposition. Each entry carries its own resolved `dir`, its own `files`, and two fields that answer
+two different questions:
+
+```python
+for g in placement.file_set.groups:
+    g.dir          # '/…/saves/arcade/mame/cfg'  — resolved, this group's own directory
+    g.files        # ('default.cfg',)            — basenames within it
+    g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'shared-card' | 'shared-file'
+    g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'settings'
+```
+
+**The two fields are separate because they are different facts**, and MAME is the case that proves it: `<machine>.cfg`
+and `default.cfg` sit in one directory with the same role and differ only in whom they belong to. So neither field can
+be read off the other, and a client needs both.
+
+**The rule for a save-syncing client** is one line, and it is the reason `role` exists:
+
+```python
+mine = [g for g in placement.file_set.groups if g.role != atlas.ROLE_SETTINGS]
+```
+
+Take every role but `settings` — dip switches and input maps are configuration, not progress. And never copy a
+`shared-card` or `shared-file` group between machines without thinking: those files belong to every game at once, so
+restoring one game's copy overwrites every other game's state in them. A tool making a _complete_ backup takes them all;
+that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
+
+**Reading nothing of this keeps today's answer.** `groups` is empty unless a rule card decomposed the answer — every
+observation, every unknown and every standard-rule declaration has none, and empty means _not decomposed_, never _no
+files_. Where it is populated, `files` is still exactly the names lying in `dir`: every group under the first group's
+directory, in order. So a card that splits one list into two by role moves no name out of `files`; the groups under
+_other_ directories are the part you only see here.
+
 ### A file set can carry a hole
 
 `needs` is the answer's holes, not the directory's alone. Some cores name a save after the content's own platform-native

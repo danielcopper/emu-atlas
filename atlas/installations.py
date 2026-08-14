@@ -157,6 +157,7 @@ from atlas.placement import (
     UNRESOLVED_STANDALONE,
     UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED,
     Caveat,
+    FileGroup,
     FileSet,
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
@@ -1764,8 +1765,15 @@ def _card_file_set(
     declared = _card_files(mode.files, rom_stem) if mode.files is not None else None
     if declared is None:
         return UNKNOWN_FILE_SET
+    groups = _declared_groups(mode, directory=directory, rom_stem=rom_stem or "")
     if not observable or file_set_holes(declared):
-        return FileSet("declared", declared, f"declared by rule card '{card.key}'", complete=mode.complete)
+        return FileSet(
+            "declared",
+            declared,
+            f"declared by rule card '{card.key}'",
+            complete=mode.complete,
+            groups=groups,
+        )
     # Observation candidates may be wider than the declared defaults —
     # e.g. Flycast's slot-2 VMUs exist only when configured (REVIEW M2).
     observe = _card_files(mode.observe, rom_stem) if mode.observe is not None else None
@@ -1778,6 +1786,7 @@ def _card_file_set(
         declared,
         f"declared by rule card '{card.key}' (none present yet)",
         complete=mode.complete,
+        groups=groups,
     )
 
 
@@ -2201,6 +2210,46 @@ def _unlistable_caveat(path: str) -> Caveat:
     )
 
 
+def _base_of(directory: str, subdir: str | None) -> str:
+    """The root a mode's directory was built from, by undoing its own subdir.
+
+    The subdir is joined on segment by segment (:func:`_nest_card_subdir`), so
+    dropping that many components is exact — no string matching against a path
+    the machine may spell differently.
+    """
+    if not subdir:
+        return directory
+    for _ in [segment for segment in subdir.split("/") if segment]:
+        directory = os.path.dirname(directory)
+    return directory
+
+
+def _declared_groups(mode: SaveMode | None, *, directory: str, rom_stem: str) -> tuple[FileGroup, ...]:
+    """The card's own decomposition of a declared set, each part in its directory.
+
+    Stated only where every part can be stated: a mode with one group whose
+    names do not fill is not half-answered, and the flat set already says what
+    the answer's own directory holds.
+    """
+    if mode is None or mode.files is None:
+        return ()
+    base = _base_of(directory, mode.subdir)
+    groups: list[FileGroup] = []
+    for group in mode.groups:
+        names = _card_files(group.files, rom_stem) if group.files is not None else None
+        if not names:
+            return ()
+        groups.append(
+            FileGroup(
+                dir=os.path.join(base, *[s for s in (group.subdir or "").split("/") if s]),
+                files=names,
+                granularity=group.granularity,
+                role=group.role,
+            )
+        )
+    return tuple(groups)
+
+
 def _file_set_of(
     matches: list[str],
     *,
@@ -2230,6 +2279,7 @@ def _file_set_of(
             files=declared,
             provenance=f"declared by rule card '{card.key}' (none present yet)",
             complete=mode.complete if mode is not None else False,
+            groups=_declared_groups(mode, directory=directory, rom_stem=rom_stem),
         )
     return FileSet(
         state=FILE_SET_UNKNOWN,

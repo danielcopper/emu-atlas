@@ -15,52 +15,73 @@
         "modes": {
           "disabled": {
             "root": "system_directory",
-            "subdir": "dc",
-            "files": [
-              "vmu_save_A1.bin",
-              "vmu_save_B1.bin",
-              "vmu_save_C1.bin",
-              "vmu_save_D1.bin",
-              "dc_nvmem.bin"
-            ],
-            "observe": [
-              "vmu_save_A1.bin",
-              "vmu_save_A2.bin",
-              "vmu_save_B1.bin",
-              "vmu_save_B2.bin",
-              "vmu_save_C1.bin",
-              "vmu_save_C2.bin",
-              "vmu_save_D1.bin",
-              "vmu_save_D2.bin",
-              "dc_nvmem.bin"
-            ],
-            "granularity": "shared-card"
+            "groups": [
+              {
+                "subdir": "dc",
+                "files": [
+                  "vmu_save_A1.bin",
+                  "vmu_save_B1.bin",
+                  "vmu_save_C1.bin",
+                  "vmu_save_D1.bin"
+                ],
+                "granularity": "shared-card",
+                "observe": [
+                  "vmu_save_A1.bin",
+                  "vmu_save_A2.bin",
+                  "vmu_save_B1.bin",
+                  "vmu_save_B2.bin",
+                  "vmu_save_C1.bin",
+                  "vmu_save_C2.bin",
+                  "vmu_save_D1.bin",
+                  "vmu_save_D2.bin"
+                ],
+                "role": "memory-card"
+              },
+              {
+                "subdir": "dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "VMU A1": {
             "root": "savefile_directory",
-            "subdir": null,
-            "files": null,
             "also_under": "system_directory",
-            "granularity": "per-game-file"
+            "groups": [
+              {
+                "subdir": null,
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
           },
           "All VMUs": {
             "root": "savefile_directory",
-            "subdir": null,
-            "files": [
-              "<save_id>.A1.bin",
-              "<save_id>.B1.bin",
-              "<save_id>.C1.bin",
-              "<save_id>.D1.bin"
-            ],
-            "files_without_save_id": [
-              "<rom_stem>.A1.bin",
-              "<rom_stem>.B1.bin",
-              "<rom_stem>.C1.bin",
-              "<rom_stem>.D1.bin"
-            ],
-            "files_established_for": "console",
-            "files_citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)",
-            "granularity": "per-game-files"
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<save_id>.A1.bin",
+                  "<save_id>.B1.bin",
+                  "<save_id>.C1.bin",
+                  "<save_id>.D1.bin"
+                ],
+                "granularity": "per-game-files",
+                "files_without_save_id": [
+                  "<rom_stem>.A1.bin",
+                  "<rom_stem>.B1.bin",
+                  "<rom_stem>.C1.bin",
+                  "<rom_stem>.D1.bin"
+                ],
+                "files_established_for": "console",
+                "files_citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)",
+                "role": "memory-card"
+              }
+            ]
           }
         },
         "anchors": {
@@ -145,15 +166,25 @@
         "modes": {
           "per game": {
             "root": "savefile_directory",
-            "subdir": "opera/per_game",
-            "files": null,
-            "granularity": "per-game-file"
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
           },
           "shared": {
             "root": "savefile_directory",
-            "subdir": "opera/shared",
-            "files": null,
-            "granularity": "shared-card"
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": null,
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           }
         },
         "anchors": {
@@ -193,20 +224,30 @@
         "modes": {
           "enabled": {
             "root": "system_directory",
-            "subdir": "pcsx2/memcards",
-            "files": [
-              "Mcd001.ps2",
-              "Mcd002.ps2"
-            ],
-            "granularity": "shared-card"
+            "groups": [
+              {
+                "subdir": "pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2",
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
           },
           "disabled": {
             "root": "savefile_directory",
-            "subdir": null,
-            "files": [
-              "<rom_stem>.ps2"
-            ],
-            "granularity": "per-game-file"
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.ps2"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
           }
         },
         "anchors": {

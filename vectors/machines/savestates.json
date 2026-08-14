@@ -42,7 +42,8 @@
             "files": [
               "Golden Sun (USA).state"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -100,7 +101,8 @@
               "Golden Sun (USA).state.png",
               "Golden Sun (USA).state1"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -156,7 +158,8 @@
             "files": [
               "Golden Sun (USA).state"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": []
         }
@@ -200,7 +203,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -251,7 +255,8 @@
             "files": [
               "Golden Sun (USA).state"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -300,7 +305,8 @@
             "files": [
               "Golden Sun (USA).state"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -353,7 +359,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -410,7 +417,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -461,7 +469,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -508,7 +517,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -563,7 +573,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -616,7 +627,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -670,7 +682,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -727,7 +740,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -785,7 +799,8 @@
             "files": [
               "Golden Sun (USA).state"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -839,7 +854,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -896,7 +912,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": []
         }
@@ -945,7 +962,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": []
         }
@@ -996,7 +1014,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -1052,7 +1071,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -1110,7 +1130,8 @@
             "files": [
               "Golden Sun (USA).state"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": []
         }
@@ -1213,7 +1234,8 @@
               "file_set": {
                 "state": "unknown",
                 "files": [],
-                "complete": false
+                "complete": false,
+                "groups": []
               },
               "caveats": [
                 {
@@ -1241,7 +1263,8 @@
               "file_set": {
                 "state": "unknown",
                 "files": [],
-                "complete": false
+                "complete": false,
+                "groups": []
               },
               "caveats": [
                 {
@@ -1299,7 +1322,8 @@
             "files": [
               "Golden Sun (USA).state"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {

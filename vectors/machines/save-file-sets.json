@@ -55,7 +55,8 @@
             "files": [
               "Golden Sun (USA).srm"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [],
           "granularity": {
@@ -120,7 +121,8 @@
               "Pokemon Crystal (USA).srm",
               "Pokemon Crystal (USA).rtc"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -190,7 +192,8 @@
             "files": [
               "Golden Sun (USA).srm"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [],
           "granularity": {
@@ -256,7 +259,8 @@
               "Tetris (World).srm",
               "Tetris (World).rtc"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [],
           "granularity": {
@@ -318,7 +322,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [],
           "granularity": null
@@ -376,7 +381,8 @@
             "files": [
               "Golden Sun (USA).srm"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -444,7 +450,8 @@
             "files": [
               "Chrono Trigger (USA).srm"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -500,7 +507,8 @@
           "file_set": {
             "state": "unknown",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -574,7 +582,8 @@
             "files": [
               "Golden Sun (USA).srm"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [],
           "granularity": {
@@ -632,7 +641,8 @@
           "file_set": {
             "state": "declared",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -699,7 +709,8 @@
             "files": [
               "Mystic Balloon.srm"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -766,7 +777,8 @@
             "files": [
               "Phantasy Star IV (USA).srm"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -836,7 +848,8 @@
               "Chrono Trigger (USA).srm",
               "Chrono Trigger (USA).rtc"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -902,7 +915,8 @@
           "file_set": {
             "state": "declared",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -970,7 +984,8 @@
             "files": [
               "Sonic 3 & Knuckles.srm"
             ],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {
@@ -1035,7 +1050,8 @@
           "file_set": {
             "state": "declared",
             "files": [],
-            "complete": false
+            "complete": false,
+            "groups": []
           },
           "caveats": [
             {

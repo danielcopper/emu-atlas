@@ -59,6 +59,14 @@ DEPLOYED_CORES = Path(
 )
 
 
+def _mode(granularity: str, **group: object) -> dict[str, object]:
+    """The smallest mode a card can state: one group, in the save directory."""
+    return {
+        "root": "savefile_directory",
+        "groups": [{"granularity": granularity, "role": "battery", **group}],
+    }
+
+
 class TestCardLookup:
     def test_by_so_basename(self):
         card = lookup_card(so_basename="flycast_libretro.so", library_name=None)
@@ -173,6 +181,43 @@ class TestFlycastResolution:
         )
         assert p.file_set.state == "declared"
         assert "vmu_save_A1.bin" in p.file_set.files
+
+    def test_one_directory_is_split_into_what_it_is_and_whose_it_is(self):
+        # Flycast's shared mode keeps four memory cards and the console's own
+        # flash under one directory. They are not the same kind of thing, so
+        # they are two groups — and the flat list a client already read is
+        # their concatenation, unchanged by the split.
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+            }
+        )
+        groups = p.file_set.groups
+        assert [g.role for g in groups] == [atlas.ROLE_MEMORY_CARD, atlas.ROLE_BATTERY]
+        assert groups[1].files == ("dc_nvmem.bin",)
+        assert {g.dir for g in groups} == {"/mnt/sd/retrodeck/bios/dc"}
+        assert tuple(name for g in groups for name in g.files) == p.file_set.files
+
+    def test_a_client_that_ignores_groups_reads_the_directory_it_always_did(self):
+        # The invariant behind the split: `files` is every group under the
+        # answer's own directory, so no name left the answer when the card
+        # grew a second group.
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+            }
+        )
+        assert p.file_set.files == (
+            "vmu_save_A1.bin",
+            "vmu_save_B1.bin",
+            "vmu_save_C1.bin",
+            "vmu_save_D1.bin",
+            "dc_nvmem.bin",
+        )
 
     def test_slot2_vmus_are_observed_when_present(self):
         # The card's observe list is wider than the declared defaults: slot-2
@@ -1226,24 +1271,8 @@ class TestStrictLoaders:
             load_audit(text)
 
     def test_non_boolean_complete_is_rejected(self):
-        text = json.dumps(
-            {
-                "schema": 1,
-                "cores": {
-                    "x": {
-                        "identifiers": {"library_name": ["X"]},
-                        "saves": {
-                            "modes": {
-                                "always": {
-                                    "root": "system_directory",
-                                    "granularity": "shared-card",
-                                    "complete": "false",
-                                }
-                            }
-                        },
-                    }
-                },
-            }
+        text = self._mode_card(
+            {"root": "system_directory", "granularity": "shared-card", "complete": "false"}
         )
         with pytest.raises(ValueError, match="complete"):
             load_oddities(text)
@@ -1315,53 +1344,30 @@ class TestStrictLoaders:
     def test_unknown_file_template_is_rejected(self, field):
         # A token nobody fills would be stated as literal text in a filename —
         # the card language is the placement's hole vocabulary, nothing else.
-        text = json.dumps(
-            {
-                "schema": 1,
-                "cores": {
-                    "x": {
-                        "identifiers": {"library_name": ["X"]},
-                        "saves": {
-                            "modes": {
-                                "always": {
-                                    "root": "savefile_directory",
-                                    "granularity": "per-game-file",
-                                    "files": ["<save_id>.bin"],
-                                    field: ["<game_id>.bin"],
-                                }
-                            }
-                        },
-                    }
-                },
-            }
+        text = self._mode_card(
+            {"granularity": "per-game-file", "files": ["<save_id>.bin"], field: ["<game_id>.bin"]}
         )
         with pytest.raises(ValueError, match="unknown template"):
             load_oddities(text)
 
     def test_known_file_templates_are_kept_verbatim(self):
-        text = json.dumps(
-            {
-                "schema": 1,
-                "cores": {
-                    "x": {
-                        "identifiers": {"library_name": ["X"]},
-                        "saves": {
-                            "modes": {
-                                "always": {
-                                    "root": "savefile_directory",
-                                    "granularity": "per-game-file",
-                                    "files": ["<save_id>.A1.bin", "<rom_stem>.srm"],
-                                }
-                            }
-                        },
-                    }
-                },
-            }
+        text = self._mode_card(
+            {"granularity": "per-game-file", "files": ["<save_id>.A1.bin", "<rom_stem>.srm"]}
         )
         assert load_oddities(text)[0].modes["always"].files == ("<save_id>.A1.bin", "<rom_stem>.srm")
 
+    # Everything a mode used to carry now belongs to one of its groups, except
+    # the two fields that are still the mode's own. Splitting here keeps every
+    # case below written the way it was — what it asserts did not change.
+    _MODE_FIELDS = ("root", "also_under")
+
     def _mode_card(self, mode, *, anchors=None):
-        saves = {"modes": {"always": {"root": "savefile_directory", **mode}}}
+        group = {k: v for k, v in mode.items() if k not in self._MODE_FIELDS}
+        group.setdefault("role", "battery")
+        rest = {k: v for k, v in mode.items() if k in self._MODE_FIELDS}
+        saves = {
+            "modes": {"always": {"root": "savefile_directory", "groups": [group], **rest}}
+        }
         if anchors is not None:
             saves["anchors"] = anchors
         return json.dumps(
@@ -1379,7 +1385,7 @@ class TestStrictLoaders:
                 "cores": {
                     "x": {
                         "identifiers": {"so": ["x_libretro.so"], "library_name": ["X"]},
-                        "saves": {"modes": {"always": {"root": "savefile_directory", "granularity": "shared-card"}}},
+                        "saves": {"modes": {"always": _mode("shared-card")}},
                     }
                 },
             }
@@ -1443,14 +1449,13 @@ class TestStrictLoaders:
                         "saves": {
                             "governing_option": {"key": "x_storage"},
                             "modes": {
-                                "on": {
-                                    "root": "savefile_directory",
-                                    "subdir": "x/per_game",
-                                    "granularity": "per-game-files",
-                                    "files": ["<save_id>.srm"],
-                                    "files_without_save_id": ["<rom_stem>.srm"],
-                                    "observe": ["<save_id>.srm", "<save_id>.bak"],
-                                }
+                                "on": _mode(
+                                    "per-game-files",
+                                    subdir="x/per_game",
+                                    files=["<save_id>.srm"],
+                                    files_without_save_id=["<rom_stem>.srm"],
+                                    observe=["<save_id>.srm", "<save_id>.bak"],
+                                )
                             },
                         },
                     }
@@ -1545,11 +1550,8 @@ class TestStrictLoaders:
         "modes",
         [
             {},
-            {"enabled": {"root": "savefile_directory", "granularity": "shared-card"}},
-            {
-                "always": {"root": "savefile_directory", "granularity": "shared-card"},
-                "legacy": {"root": "savefile_directory", "granularity": "per-game-file"},
-            },
+            {"enabled": _mode("shared-card")},
+            {"always": _mode("shared-card"), "legacy": _mode("per-game-file")},
         ],
     )
     def test_a_card_that_governs_nothing_must_state_the_one_mode_it_applies(self, modes):
@@ -1585,7 +1587,7 @@ class TestStrictLoaders:
                         "identifiers": {"library_name": ["X"]},
                         "saves": {
                             "governing_option": {"key": "x_storage", "default": "enabled"},
-                            "modes": {"enabled": {"root": "savefile_directory", "granularity": "shared-card"}},
+                            "modes": {"enabled": _mode("shared-card")},
                         },
                     }
                 },

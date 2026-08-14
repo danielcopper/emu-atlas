@@ -138,9 +138,32 @@ PATCH_CONTINUATION_INDICES = tuple(range(1, 10))
 # value like every other closed set here, and the tuple is built from the names
 # so the vocabulary has one source rather than two that can drift.
 GRANULARITY_SHARED_CARD = "shared-card"
+GRANULARITY_SHARED_FILE = "shared-file"
 GRANULARITY_PER_GAME_FILE = "per-game-file"
 GRANULARITY_PER_GAME_FILES = "per-game-files"
-GRANULARITIES = (GRANULARITY_SHARED_CARD, GRANULARITY_PER_GAME_FILE, GRANULARITY_PER_GAME_FILES)
+GRANULARITIES = (
+    GRANULARITY_SHARED_CARD,
+    GRANULARITY_SHARED_FILE,
+    GRANULARITY_PER_GAME_FILE,
+    GRANULARITY_PER_GAME_FILES,
+)
+
+# What a group of files *is*, as against whom it belongs to. The two questions
+# are deliberately separate fields: a granularity says whether a file is this
+# game's or every game's, and a role says what kind of data it holds, so the
+# same fact is never spelled twice and the two can never contradict each other.
+# MAME writes its per-machine dip switches to ``<machine>.cfg`` and its
+# emulator-wide input defaults to ``default.cfg`` in one directory — same role,
+# different granularity — and that pair is why neither field can carry the
+# other's meaning.
+#
+# Closed and named per value like every other vocabulary here. A client syncing
+# save data takes every role but :data:`ROLE_SETTINGS`; see ``docs/how-to-use.md``.
+ROLE_BATTERY = "battery"
+ROLE_MEMORY_CARD = "memory-card"
+ROLE_DISK_DIFF = "disk-diff"
+ROLE_SETTINGS = "settings"
+ROLES = (ROLE_BATTERY, ROLE_MEMORY_CARD, ROLE_DISK_DIFF, ROLE_SETTINGS)
 
 
 def _freeze(mapping: Mapping[str, str]) -> Mapping[str, str]:
@@ -330,6 +353,39 @@ def needs_with_file_set(needs: Iterable[str], files: Iterable[str]) -> tuple[str
 
 
 @dataclass(frozen=True, slots=True)
+class FileGroup:
+    """One directory's worth of a save, with what it is and whom it belongs to.
+
+    A save is not always one list of files in one place. MAME keeps a machine's
+    battery memory under ``nvram/``, its dip switches under ``cfg/`` beside an
+    emulator-wide ``default.cfg``, and disk write-differences under ``diff/``;
+    FinalBurn Neo puts a per-game ``.fs`` and a ``shared.memcard`` in one
+    directory. Those are different data with different owners, and a single
+    ``(dir, files, granularity)`` triple has to lie about at least one of them.
+
+    Each group carries its own resolved ``dir`` — groups may sit under different
+    roots — its own ``granularity`` and its own ``role``. What a group never
+    carries is prose: what a file is *for* beyond its role belongs in the
+    answer's ``sources``, not in a field a client would have to parse.
+    """
+
+    dir: str
+    files: tuple[str, ...]
+    granularity: str
+    role: str
+
+    def __post_init__(self) -> None:
+        if self.granularity not in GRANULARITIES:
+            raise ValueError(
+                f"FileGroup: granularity must be one of {GRANULARITIES}, got {self.granularity!r}"
+            )
+        if self.role not in ROLES:
+            raise ValueError(f"FileGroup: role must be one of {ROLES}, got {self.role!r}")
+        if not self.files:
+            raise ValueError("FileGroup: a group with no files is not a group")
+
+
+@dataclass(frozen=True, slots=True)
 class FileSet:
     """The files a save consists of — observed, declared, or unknown.
 
@@ -358,18 +414,46 @@ class FileSet:
     a client must not read "not complete" as "atlas has no opinion", and the
     audit grind can earn a ``True`` here one card at a time without the shape
     of an answer changing.
+
+    ``groups`` decomposes a declared set whose parts differ in kind or owner —
+    see :class:`FileGroup`. It is empty wherever nothing decomposed the answer,
+    which is every observation, every unknown and every standard-rule
+    declaration; empty means *not decomposed*, never *no files*.
+
+    Where it is populated, ``files`` stays exactly what it always was — the
+    names lying in ``dir`` — and that is enforced: it must be every group under
+    the first group's directory, in order. So a client that never reads
+    ``groups`` sees no change when a card splits one list into two by role,
+    while a client that does gets the parts under the other directories too.
+    Cards state the save's own state first, so the first group is the one a
+    save-syncing client would have taken anyway.
     """
 
     state: FileSetState
     files: tuple[str, ...]
     provenance: str
     complete: bool = False
+    groups: tuple[FileGroup, ...] = ()
 
     def __post_init__(self) -> None:
         if self.state not in _FILE_SET_STATES:
             raise ValueError(f"FileSet: state must be one of {_FILE_SET_STATES}, got {self.state!r}")
         if self.state == "unknown" and (self.files or self.complete):
             raise ValueError("FileSet: an unknown set carries no files and no completeness claim")
+        if self.groups and self.state != FILE_SET_DECLARED:
+            raise ValueError("FileSet: only a declared set is decomposed into groups")
+        if self.groups:
+            here = tuple(
+                name
+                for group in self.groups
+                if group.dir == self.groups[0].dir
+                for name in group.files
+            )
+            if here != self.files:
+                raise ValueError(
+                    "FileSet: files must be every group in the answer's own directory, in order — "
+                    f"got {self.files}, groups say {here}"
+                )
 
 
 @dataclass(frozen=True, slots=True)

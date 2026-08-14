@@ -129,7 +129,8 @@ PATCH_CONTINUATIONS = 9
 # is stated only where a citation backs it and is null otherwise — never a claim
 # that the tree is undivided.
 KNOWN_KEYINGS = {"game-id", "serial", "title-id", "rom-name", "pack"}
-FILE_SET_FIELDS = {"state", "files", "complete"}
+FILE_SET_FIELDS = {"state", "files", "complete", "groups"}
+FILE_GROUP_FIELDS = {"dir", "files", "granularity", "role"}
 FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats"}
 FIRMWARE_CORE_FIELDS = {
     "core_so",
@@ -208,7 +209,8 @@ KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
 # unknown, because a client reads it as work it is supposed to do. Nothing a
 # config states belongs here either; that is atlas's own to resolve.
 KNOWN_HOLES = {"content_dir", "library_name", "save_id"}
-KNOWN_GRANULARITIES = {"shared-card", "per-game-file", "per-game-files"}
+KNOWN_GRANULARITIES = {"shared-card", "shared-file", "per-game-file", "per-game-files"}
+KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "settings"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone"}
 KNOWN_CAVEAT_CODES = {
@@ -730,6 +732,40 @@ def _validate_file_set(name: str, file_set: Any) -> None:
         fail(f"{name}: file_set.complete must be a boolean")
     if file_set["state"] == "unknown" and (file_set["files"] or file_set["complete"]):
         fail(f"{name}: an unknown file_set carries no files and no completeness claim")
+    _validate_file_groups(name, file_set)
+
+
+def _validate_one_file_group(name: str, group: Any) -> None:
+    """One group's own shape — its directory, its names, and its two words."""
+    _require_exact(name, group, FILE_GROUP_FIELDS, "file_set.groups[]")
+    if not isinstance(group["dir"], str) or not group["dir"]:
+        fail(f"{name}: every file group states a directory")
+    if not isinstance(group["files"], list) or not all(isinstance(f, str) for f in group["files"]):
+        fail(f"{name}: file group files must be a list of strings")
+    if not group["files"]:
+        fail(f"{name}: a file group with no files is not a group")
+    if group["granularity"] not in KNOWN_GRANULARITIES:
+        fail(f"{name}: file group granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
+    if group["role"] not in KNOWN_ROLES:
+        fail(f"{name}: file group role must be one of {sorted(KNOWN_ROLES)}")
+
+
+def _validate_file_groups(name: str, file_set: Any) -> None:
+    """A decomposed set, and the two ways it must agree with the flat one."""
+    groups = file_set["groups"]
+    if not isinstance(groups, list):
+        fail(f"{name}: file_set.groups must be a list")
+    if groups and file_set["state"] != "declared":
+        fail(f"{name}: only a declared file_set is decomposed into groups")
+    for group in groups:
+        _validate_one_file_group(name, group)
+    if groups:
+        here = [f for g in groups if g["dir"] == groups[0]["dir"] for f in g["files"]]
+        if here != file_set["files"]:
+            fail(
+                f"{name}: file_set.files must be every group in the answer's own directory, in "
+                f"order — got {file_set['files']}, groups say {here}"
+            )
 
 
 def _validate_granularity(name: str, granularity: Any) -> None:
