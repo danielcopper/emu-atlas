@@ -79,6 +79,11 @@
         ]
       },
       "systems": {
+        "atari5200": {
+          "memory_types": [],
+          "verified_core": "3.1.0 6a18cb2",
+          "citation": "[V] libretro/libretro-core.c:1502-1508 at libretro-atari800 6a18cb2 — only RETRO_MEMORY_SYSTEM_RAM answers (65536 bytes); every other id returns 0."
+        },
         "atari800": {
           "memory_types": [],
           "verified_core": "3.1.0 6a18cb2",
@@ -122,6 +127,11 @@
           "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
         },
         "msxturbor": {
+          "memory_types": [],
+          "verified_core": "git 036376d",
+          "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
+        },
+        "sg-1000": {
           "memory_types": [],
           "verified_core": "git 036376d",
           "citation": "[V] libretro.c:1723-1728 at blueMSX-libretro 036376d — only RETRO_MEMORY_SYSTEM_RAM answers (g_mainRamSize); every other id returns 0."
@@ -265,7 +275,37 @@
         ]
       },
       "systems": {
+        "arcade": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.29 77167ce",
+          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
+        },
+        "cps": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.29 77167ce",
+          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
+        },
+        "cps1": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.29 77167ce",
+          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
+        },
+        "cps2": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.29 77167ce",
+          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
+        },
+        "cps3": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.29 77167ce",
+          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
+        },
         "fba": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.29 77167ce",
+          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
+        },
+        "mame": {
           "memory_types": [],
           "verified_core": "v0.2.97.29 77167ce",
           "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
@@ -282,12 +322,52 @@
         ]
       },
       "systems": {
+        "arcade": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
+        "cps": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
+        "cps1": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
+        "cps2": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
+        "cps3": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
         "fbneo": {
           "memory_types": [],
           "verified_core": "v1.0.0.03  01e29d5",
           "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
         },
+        "mame": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
         "neogeo": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
+        "neogeocd": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
+        "neogeocdjp": {
           "memory_types": [],
           "verified_core": "v1.0.0.03  01e29d5",
           "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
@@ -383,7 +463,35 @@
         ]
       },
       "systems": {
+        "gamegear": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "3.8.5-12-gaf2652e",
+          "citation": "[V] platforms/libretro/libretro.cpp:372-383 at drhelius/Gearsystem af2652e — RETRO_MEMORY_SAVE_RAM answers the loaded cartridge's own RAM size (GetCurrentRule()->GetRamSize()), so RetroArch writes <rom_stem>.srm for a cartridge that has battery RAM. There is no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "mark3": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "3.8.5-12-gaf2652e",
+          "citation": "[V] platforms/libretro/libretro.cpp:372-383 at drhelius/Gearsystem af2652e — RETRO_MEMORY_SAVE_RAM answers the loaded cartridge's own RAM size (GetCurrentRule()->GetRamSize()), so RetroArch writes <rom_stem>.srm for a cartridge that has battery RAM. There is no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "mastersystem": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "3.8.5-12-gaf2652e",
+          "citation": "[V] platforms/libretro/libretro.cpp:372-383 at drhelius/Gearsystem af2652e — RETRO_MEMORY_SAVE_RAM answers the loaded cartridge's own RAM size (GetCurrentRule()->GetRamSize()), so RetroArch writes <rom_stem>.srm for a cartridge that has battery RAM. There is no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
         "multivision": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "3.8.5-12-gaf2652e",
+          "citation": "[V] platforms/libretro/libretro.cpp:372-383 at drhelius/Gearsystem af2652e — RETRO_MEMORY_SAVE_RAM answers the loaded cartridge's own RAM size (GetCurrentRule()->GetRamSize()), so RetroArch writes <rom_stem>.srm for a cartridge that has battery RAM. There is no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "sg-1000": {
           "memory_types": [
             "save_ram"
           ],
@@ -537,6 +645,31 @@
         ]
       },
       "systems": {
+        "arcade": {
+          "memory_types": [],
+          "verified_core": "v2.7.0 6709c1d",
+          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
+        },
+        "consolearcade": {
+          "memory_types": [],
+          "verified_core": "v2.7.0 6709c1d",
+          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
+        },
+        "mame": {
+          "memory_types": [],
+          "verified_core": "v2.7.0 6709c1d",
+          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
+        },
+        "saturn": {
+          "memory_types": [],
+          "verified_core": "v2.7.0 6709c1d",
+          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
+        },
+        "saturnjp": {
+          "memory_types": [],
+          "verified_core": "v2.7.0 6709c1d",
+          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
+        },
         "stv": {
           "memory_types": [],
           "verified_core": "v2.7.0 6709c1d",
@@ -626,6 +759,13 @@
           "verified_core": "v1.29.0 9a301c0",
           "citation": "[V] libretro.cpp:2082-2096 at beetle-pce-libretro 9a301c0 — RETRO_MEMORY_SAVE_RAM answers 2048 bytes, or 32768 for Populous, so the id is always filled and RetroArch writes <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
         },
+        "supergrafx": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.29.0 9a301c0",
+          "citation": "[V] libretro.cpp:2082-2096 at beetle-pce-libretro 9a301c0 — RETRO_MEMORY_SAVE_RAM answers 2048 bytes, or 32768 for Populous, so the id is always filled and RetroArch writes <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        },
         "tg-cd": {
           "memory_types": [
             "save_ram"
@@ -694,6 +834,13 @@
       },
       "systems": {
         "supergrafx": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.29.0 a776133",
+          "citation": "[V] libretro.cpp:2025-2046 at beetle-supergrafx-libretro a776133 — RETRO_MEMORY_SAVE_RAM answers 2048 bytes, or 32768 for Populous, so the id is always filled; no RETRO_MEMORY_RTC case exists."
+        },
+        "tg16": {
           "memory_types": [
             "save_ram"
           ],
@@ -790,7 +937,49 @@
         ]
       },
       "systems": {
+        "gb": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.4.0",
+          "citation": "[V] Libretro/libretro.cpp:778-793 at libretro/Mesen-S — RETRO_MEMORY_SAVE_RAM answers the cartridge's save-RAM size, taking the Game Boy cartridge's RAM where a Game Boy is loaded (the Super Game Boy case this system is) and the SNES cartridge's otherwise. No RETRO_MEMORY_RTC case exists."
+        },
+        "gbc": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.4.0",
+          "citation": "[V] Libretro/libretro.cpp:778-793 at libretro/Mesen-S — RETRO_MEMORY_SAVE_RAM answers the cartridge's save-RAM size, taking the Game Boy cartridge's RAM where a Game Boy is loaded (the Super Game Boy case this system is) and the SNES cartridge's otherwise. No RETRO_MEMORY_RTC case exists."
+        },
+        "satellaview": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.4.0",
+          "citation": "[V] Libretro/libretro.cpp:778-793 at libretro/Mesen-S — RETRO_MEMORY_SAVE_RAM answers the cartridge's save-RAM size, taking the Game Boy cartridge's RAM where a Game Boy is loaded (the Super Game Boy case this system is) and the SNES cartridge's otherwise. No RETRO_MEMORY_RTC case exists."
+        },
+        "sfc": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.4.0",
+          "citation": "[V] Libretro/libretro.cpp:778-793 at libretro/Mesen-S — RETRO_MEMORY_SAVE_RAM answers the cartridge's save-RAM size, taking the Game Boy cartridge's RAM where a Game Boy is loaded (the Super Game Boy case this system is) and the SNES cartridge's otherwise. No RETRO_MEMORY_RTC case exists."
+        },
         "sgb": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.4.0",
+          "citation": "[V] Libretro/libretro.cpp:778-793 at libretro/Mesen-S — RETRO_MEMORY_SAVE_RAM answers the cartridge's save-RAM size, taking the Game Boy cartridge's RAM where a Game Boy is loaded (the Super Game Boy case this system is) and the SNES cartridge's otherwise. No RETRO_MEMORY_RTC case exists."
+        },
+        "snes": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.4.0",
+          "citation": "[V] Libretro/libretro.cpp:778-793 at libretro/Mesen-S — RETRO_MEMORY_SAVE_RAM answers the cartridge's save-RAM size, taking the Game Boy cartridge's RAM where a Game Boy is loaded (the Super Game Boy case this system is) and the SNES cartridge's otherwise. No RETRO_MEMORY_RTC case exists."
+        },
+        "snesna": {
           "memory_types": [
             "save_ram"
           ],
@@ -809,13 +998,6 @@
         ]
       },
       "systems": {
-        "gba": {
-          "memory_types": [
-            "save_ram"
-          ],
-          "verified_core": "0.11-dev c758314",
-          "citation": "[V] src/platform/libretro/libretro.c:2338-2347 at mgba c758314 — for mPLATFORM_GBA the SAVE_RAM size is GBA_SIZE_FLASH1M while the save type is still GBA_SAVEDATA_AUTODETECT and GBASavedataSize() once it is detected, so the id is filled for any GBA content. RTC has no mPLATFORM_GBA branch and falls to 'default: break' (:2357-2370), returning 0 — which stops the write at save.c:480 even though the data pointer for that id is non-NULL (:2288-2302, a fall-through into the SYSTEM_RAM branch)."
-        },
         "gb": {
           "memory_types": [
             "save_ram",
@@ -824,6 +1006,13 @@
           "verified_core": "0.11-dev c758314",
           "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — for mPLATFORM_GB the SAVE_RAM size is the cartridge's sramSize, and the RTC size is sizeof(struct GBMBCRTCSaveBuffer) for a GB_MBC3_RTC cartridge and 0 for every other mapper. Both are read off the loaded cartridge, so each file appears for the games that carry the hardware."
         },
+        "gba": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.11-dev c758314",
+          "citation": "[V] src/platform/libretro/libretro.c:2338-2347 at mgba c758314 — for mPLATFORM_GBA the SAVE_RAM size is GBA_SIZE_FLASH1M while the save type is still GBA_SAVEDATA_AUTODETECT and GBASavedataSize() once it is detected, so the id is filled for any GBA content. RTC has no mPLATFORM_GBA branch and falls to 'default: break' (:2357-2370), returning 0 — which stops the write at save.c:480 even though the data pointer for that id is non-NULL (:2288-2302, a fall-through into the SYSTEM_RAM branch)."
+        },
         "gbc": {
           "memory_types": [
             "save_ram",
@@ -831,6 +1020,14 @@
           ],
           "verified_core": "0.11-dev c758314",
           "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — the Game Boy Color is the same mPLATFORM_GB branch as the Game Boy: mGBA distinguishes the two by the cartridge it loaded, not by a separate libretro platform, so the memory ids it fills are the same pair."
+        },
+        "sgb": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "0.11-dev c758314",
+          "citation": "[V] src/platform/libretro/libretro.c:2349-2351 and :2357-2366 at mgba c758314 — for mPLATFORM_GB the SAVE_RAM size is the cartridge's sramSize, and the RTC size is sizeof(struct GBMBCRTCSaveBuffer) for a GB_MBC3_RTC cartridge and 0 for every other mapper. Both are read off the loaded cartridge, so each file appears for the games that carry the hardware."
         }
       },
       "provenance": {
@@ -879,6 +1076,13 @@
       },
       "systems": {
         "n64": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.8-Vulkan 680e033",
+          "citation": "[V] libretro/libretro.c:2109-2120 at mupen64plus-libretro-nx 680e033 — RETRO_MEMORY_SAVE_RAM answers sizeof(saved_memory), the block holding the cartridge's EEPROM, SRAM, FlashRAM and the controller paks together, so RetroArch writes one <rom_stem>.srm for all of them. No RETRO_MEMORY_RTC case exists."
+        },
+        "n64dd": {
           "memory_types": [
             "save_ram"
           ],
@@ -962,6 +1166,13 @@
         ]
       },
       "systems": {
+        "n64": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.0-rc2 50d3ddd",
+          "citation": "[V] libretro/libretro.c:2014-2032 at parallel-n64 50d3ddd — RETRO_MEMORY_SAVE_RAM answers sizeof(saved_memory), less the disk region unless a 64DD disk is loaded, so RetroArch writes one <rom_stem>.srm covering the cartridge's save hardware. (The branch opens with a guard comparing type against the case it is already in, which can never be true; it changes nothing.) No RETRO_MEMORY_RTC case exists."
+        },
         "n64dd": {
           "memory_types": [
             "save_ram"
@@ -981,6 +1192,62 @@
         ]
       },
       "systems": {
+        "gamegear": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
+        "genesis": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
+        "mark3": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
+        "mastersystem": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
+        "megacd": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
+        "megacdjp": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
+        "megadrive": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
+        "megadrivejp": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
         "sega32x": {
           "memory_types": [
             "save_ram"
@@ -996,6 +1263,13 @@
           "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
         },
         "sega32xna": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.05-046e5ff",
+          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+        },
+        "segacd": {
           "memory_types": [
             "save_ram"
           ],
