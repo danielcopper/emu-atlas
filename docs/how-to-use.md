@@ -342,6 +342,13 @@ Pass the path the way RetroArch gets it, and atlas names the content the way Ret
 - `"unknown"` — atlas refuses to guess; `files` is empty. Fall back to your own knowledge, and treat that fallback as
   yours, not as atlas's answer.
 
+**A declared set can be empty, and that is not the same as `"unknown"`.** For most cores RetroArch writes no save file
+at all — they fill none of the two memory ids — and the answer says so: `state == "declared"` with `files == ()`. Read
+`state`, not the length of `files`: empty-and-declared means atlas established there are none, empty-and-unknown means
+atlas has not looked. The declared emptiness always carries `core-own-writes-unestablished`, because it is a statement
+about the **frontend** only: DeSmuME fills no memory id and still keeps Nintendo DS saves somewhere of its own. Treat it
+as "nothing to fetch through RetroArch's naming rule", never as "this content has no save".
+
 **Declared beats what is lying there, and that is the point.** For a core whose files are recorded, atlas does not look
 in the save directory at all: a file under the content's stem is evidence about the _past_ — what a core option wrote
 before it was switched, what another core left behind — and it cannot carry a claim about where this configuration

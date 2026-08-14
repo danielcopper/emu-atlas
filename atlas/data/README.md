@@ -290,6 +290,12 @@ which atlas never does.
 }
 ```
 
+- **An empty `memory_types` is the commonest claim, and it is a claim.** Most cores fill no id at all, so RetroArch
+  writes them no save file — the reading of one batch of ten found nine. `[]` records that; a system the record leaves
+  out records the opposite (nobody looked). The answer is a **declared set of no files**, which `file_set.state` keeps
+  apart from the unknown an unrecorded core gets, and it travels with `core-own-writes-unestablished`: the emptiness is
+  a fact about the _frontend_, never a claim that the content has no save. DeSmuME fills no id and still keeps DS saves
+  somewhere; where, is a rule card's question. No granularity rides along either — there is no save here to group.
 - **Why the system is part of the key.** A core is not one behaviour. mGBA answers a Game Boy cartridge's clock and a
   Game Boy Advance cartridge's not at all, so a record spelled `mgba` alone would have to be wrong about one of them.
   Where the caller did not name a system the resolver states nothing rather than picking one of a record's entries.

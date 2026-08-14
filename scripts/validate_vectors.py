@@ -233,6 +233,7 @@ KNOWN_CAVEAT_CODES = {
     "core-generation-mismatch",
     "core-generation-unestablished",
     "core-option-value-unestablished",
+    "core-own-writes-unestablished",
     "arrangement-unverified",
     "arrangement-version-drifted",
     "sandbox-path-untranslated",
