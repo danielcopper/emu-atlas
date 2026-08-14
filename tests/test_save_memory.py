@@ -165,7 +165,9 @@ class TestLookup:
         assert by_name.key == "mgba"
 
     def test_a_core_with_no_record_is_none_rather_than_an_empty_one(self):
-        assert lookup_save_memory(so_basename="snes9x_libretro.so", library_name="Snes9x") is None
+        # bsnes is shipped and catalogued, and is the default for no system — the records
+        # cover the default cores, so it stays outside them however far the reading gets.
+        assert lookup_save_memory(so_basename="bsnes_libretro.so", library_name="bsnes") is None
 
     def test_an_unnamed_system_narrows_nothing(self):
         record = lookup_save_memory(so_basename="mgba_libretro.so", library_name=None)

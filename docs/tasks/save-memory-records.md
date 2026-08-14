@@ -19,8 +19,8 @@ rather than the rule — nine of the first ten cores fell into the third.
    …_
 
 Outcomes 1 and 3 are cheap: one function in the core's source decides it, and both are recorded in the same file.
-Outcome 2 is a round of its own and belongs to the card family, so a core that turns out to be one is ticked here and
-opened there.
+Outcome 2 is a round of its own and belongs to the card family, so a core that turns out to be one stays open on this
+list, marked as the card candidate it is, and gets its issue over there.
 
 ## What a record has to carry
 
@@ -45,14 +45,13 @@ answer.
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (5 cores)
+## The list (4 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
 - [ ] **`mess2015`** — `mess`
-- [ ] **`snes9x`** — `satellaview`, `sfc`, `snes`, `snesna`, `sufami`
-- [ ] **`swanstation`** — `psx`
-- [ ] **`virtualjaguar`** — `atarijaguar`
+- [ ] **`swanstation`** — `psx` · read, and a card candidate: a core option decides the file set (#80)
+- [ ] **`virtualjaguar`** — `atarijaguar` · read, and a card candidate: it writes a second file of its own (#121)
 - [ ] **`mame`** — `apple2`, `apple2gs`, `arcade`, `astrocde`, `consolearcade`, `cps`, `cps1`, `cps2`, `cps3`, `daphne`,
       `fmtowns`, `gamate`, `gameandwatch`, `gamecom`, `gmaster`, `laserdisc`, `lcdgames`, `mame`, `model2`, `pv1000`,
       `scv`, `supracan`, `vsmile`
@@ -115,6 +114,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`same_cdi`** — frontend writes nothing on cdimono1
 - [x] **`sameduck`** — frontend writes nothing on megaduck
 - [x] **`scummvm`** — frontend writes nothing on scummvm
+- [x] **`snes9x`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`squirreljme`** — frontend writes nothing on j2me
 - [x] **`stella`** — frontend writes nothing on atari2600
 - [x] **`theodore`** — frontend writes nothing on moto, to8
