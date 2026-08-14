@@ -705,6 +705,58 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "mesen": {
+      "identifiers": {
+        "library_name": [
+          "Mesen"
+        ]
+      },
+      "systems": {
+        "famicom": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.9.9",
+          "citation": "[V] Libretro/libretro.cpp:1205-1213 at libretro/Mesen — RETRO_MEMORY_SAVE_RAM answers the loaded mapper's own save-RAM size (GetMemorySize(DebugMemoryType::SaveRam)), so a cartridge with battery RAM gets <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        },
+        "fds": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.9.9",
+          "citation": "[V] Libretro/libretro.cpp:1205-1213 at libretro/Mesen — RETRO_MEMORY_SAVE_RAM answers the loaded mapper's own save-RAM size (GetMemorySize(DebugMemoryType::SaveRam)), so a cartridge with battery RAM gets <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        },
+        "nes": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.9.9",
+          "citation": "[V] Libretro/libretro.cpp:1205-1213 at libretro/Mesen — RETRO_MEMORY_SAVE_RAM answers the loaded mapper's own save-RAM size (GetMemorySize(DebugMemoryType::SaveRam)), so a cartridge with battery RAM gets <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "mesen-s": {
+      "identifiers": {
+        "library_name": [
+          "Mesen-S"
+        ]
+      },
+      "systems": {
+        "sgb": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "0.4.0",
+          "citation": "[V] Libretro/libretro.cpp:778-793 at libretro/Mesen-S — RETRO_MEMORY_SAVE_RAM answers the cartridge's save-RAM size, taking the Game Boy cartridge's RAM where a Game Boy is loaded (the Super Game Boy case this system is) and the SNES cartridge's otherwise. No RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
     "mgba": {
       "identifiers": {
         "library_name": [
@@ -738,6 +790,105 @@
       },
       "provenance": {
         "source": "Read at the revision the installed binary names: the core reports library_version '0.11-dev c758314', which is the upstream commit, and the source was read there rather than at master (master's file differs by 31 lines)."
+      }
+    },
+    "mojozork": {
+      "identifiers": {
+        "library_name": [
+          "MojoZork"
+        ]
+      },
+      "systems": {
+        "zmachine": {
+          "memory_types": [],
+          "verified_core": "0.3",
+          "citation": "[V] mojozork-libretro.c:1975-1979 at icculus/mojozork — retro_get_memory_size discards the id and returns 0."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "mu": {
+      "identifiers": {
+        "library_name": [
+          "Mu"
+        ]
+      },
+      "systems": {
+        "palm": {
+          "memory_types": [],
+          "verified_core": "v1.3.3 d9766f1",
+          "citation": "[V] libretroBuildSystem/libretro.c:936-938 at libretro/Mu d9766f1 — retro_get_memory_size returns 0 for every id."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "neocd": {
+      "identifiers": {
+        "library_name": [
+          "NeoCD"
+        ]
+      },
+      "systems": {
+        "neogeocd": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2022 5eca2c8",
+          "citation": "[V] src/libretro.cpp:220-232 at neocd_libretro 5eca2c8 — RETRO_MEMORY_SAVE_RAM answers Memory::BACKUPRAM_SIZE, the Neo Geo CD's battery-backed memory, so RetroArch writes <rom_stem>.srm. No RETRO_MEMORY_RTC case exists."
+        },
+        "neogeocdjp": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2022 5eca2c8",
+          "citation": "[V] src/libretro.cpp:220-232 at neocd_libretro 5eca2c8 — RETRO_MEMORY_SAVE_RAM answers Memory::BACKUPRAM_SIZE, the Neo Geo CD's battery-backed memory, so RetroArch writes <rom_stem>.srm. No RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "np2kai": {
+      "identifiers": {
+        "library_name": [
+          "Neko Project II kai"
+        ]
+      },
+      "systems": {
+        "pc98": {
+          "memory_types": [],
+          "verified_core": "rev.22 cfac20d",
+          "citation": "[V] sdl/libretro/libretro.c:820-825 at NP2kai cfac20d — only RETRO_MEMORY_SYSTEM_RAM answers (CPU_EXTMEMSIZE); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "o2em": {
+      "identifiers": {
+        "library_name": [
+          "O2EM"
+        ]
+      },
+      "systems": {
+        "odyssey2": {
+          "memory_types": [],
+          "verified_core": "1.18 3ba4231",
+          "citation": "[V] libretro.c:1070-1075 at libretro-o2em 3ba4231 — only RETRO_MEMORY_SYSTEM_RAM answers; every other id returns 0."
+        },
+        "videopac": {
+          "memory_types": [],
+          "verified_core": "1.18 3ba4231",
+          "citation": "[V] libretro.c:1070-1075 at libretro-o2em 3ba4231 — only RETRO_MEMORY_SYSTEM_RAM answers; every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
       }
     }
   }
