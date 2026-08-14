@@ -224,6 +224,130 @@
         "source": "the binary names a release, not a commit, so the pin is that release rather than a revision"
       }
     },
+    "easyrpg": {
+      "identifiers": {
+        "library_name": [
+          "EasyRPG Player"
+        ]
+      },
+      "systems": {
+        "easyrpg": {
+          "memory_types": [],
+          "verified_core": "0.8.1.1-git+12@6a244c1",
+          "citation": "[V] src/platform/libretro/ui.cpp:541-544 at EasyRPG/Player 6a244c1 — retro_get_memory_size is a no-op returning 0 for every id, and the comment says so."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "ecwolf": {
+      "identifiers": {
+        "library_name": [
+          "ECWolf"
+        ]
+      },
+      "systems": {
+        "ports": {
+          "memory_types": [],
+          "verified_core": "v0.01",
+          "citation": "[V] src/libretro/libretro.cpp:2292-2295 at libretro/ecwolf — retro_get_memory_size returns 0 for every id."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "fbalpha2012": {
+      "identifiers": {
+        "library_name": [
+          "FB Alpha 2012"
+        ]
+      },
+      "systems": {
+        "fba": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.29 77167ce",
+          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "fbneo": {
+      "identifiers": {
+        "library_name": [
+          "FinalBurn Neo"
+        ]
+      },
+      "systems": {
+        "fbneo": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        },
+        "neogeo": {
+          "memory_types": [],
+          "verified_core": "v1.0.0.03  01e29d5",
+          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "freechaf": {
+      "identifiers": {
+        "library_name": [
+          "FreeChaF"
+        ]
+      },
+      "systems": {
+        "channelf": {
+          "memory_types": [],
+          "verified_core": "1.0 cdb8ad6",
+          "citation": "[V] src/libretro.c:663-684 at FreeChaF cdb8ad6 — the switch answers system RAM, video RAM and two core-private ids; the RETRO_MEMORY_SAVE_RAM and RETRO_MEMORY_RTC cases are present as commented-out lines, so both fall through to 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "freeintv": {
+      "identifiers": {
+        "library_name": [
+          "FreeIntv"
+        ]
+      },
+      "systems": {
+        "intellivision": {
+          "memory_types": [],
+          "verified_core": "1.2  1b51f41",
+          "citation": "[V] src/libretro.c:492-499 at FreeIntv 1b51f41 — only RETRO_MEMORY_SYSTEM_RAM answers (0x10000); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "fuse": {
+      "identifiers": {
+        "library_name": [
+          "fuse"
+        ]
+      },
+      "systems": {
+        "zxspectrum": {
+          "memory_types": [],
+          "verified_core": "1.6.0 cad85b7",
+          "citation": "[V] src/libretro.c:1021-1024 at fuse-libretro cad85b7 — retro_get_memory_size returns 0 for every id."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "gambatte": {
       "identifiers": {
         "library_name": [
@@ -250,6 +374,124 @@
       },
       "provenance": {
         "source": "Read at the revision the installed binary names: the core reports library_version 'v0.5.0-netlink 6924c76', which is the upstream commit. The shipped .info file's display_version disagrees with the binary on the sibling core and was not used."
+      }
+    },
+    "gearsystem": {
+      "identifiers": {
+        "library_name": [
+          "Gearsystem"
+        ]
+      },
+      "systems": {
+        "multivision": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "3.8.5-12-gaf2652e",
+          "citation": "[V] platforms/libretro/libretro.cpp:372-383 at drhelius/Gearsystem af2652e — RETRO_MEMORY_SAVE_RAM answers the loaded cartridge's own RAM size (GetCurrentRule()->GetRamSize()), so RetroArch writes <rom_stem>.srm for a cartridge that has battery RAM. There is no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "genesis_plus_gx": {
+      "identifiers": {
+        "library_name": [
+          "Genesis Plus GX"
+        ]
+      },
+      "systems": {
+        "gamegear": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "genesis": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "mark3": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "mastersystem": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "megacd": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "megacdjp": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "megadrive": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "megadrivejp": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "segacd": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        },
+        "sg-1000": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.7.4 46a5521",
+          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "handy": {
+      "identifiers": {
+        "library_name": [
+          "Handy"
+        ]
+      },
+      "systems": {
+        "atarilynx": {
+          "memory_types": [],
+          "verified_core": "0.97 fca2392",
+          "citation": "[V] libretro/libretro.cpp:1302-1307 at libretro-handy fca2392 — only RETRO_MEMORY_SYSTEM_RAM answers (64 KB); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
       }
     },
     "mgba": {

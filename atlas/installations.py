@@ -2311,25 +2311,33 @@ class _Declaration:
 
 def _drift_caveat(
     record: SaveMemoryRecord, entry: SystemMemory, *, system: str | None, core_version: str | None
-) -> tuple[Caveat, ...]:
-    """The tripwire both declaration shapes share: a build nobody read this against."""
+) -> Caveat | None:
+    """The tripwire both declaration shapes share: a build nobody read this against.
+
+    One caveat or none, rather than a tuple of nought or one: the caller splices
+    it into a list either way, and a return whose *length* carries the meaning
+    makes every call site read the shape before it reads the fact.
+    """
     if core_version is None or entry.verified_core == core_version:
-        return ()
-    return (
-        Caveat(
-            CAVEAT_UNVERIFIED_VERSION,
-            f"which save files {record.key!r} writes for {system} was read from core "
-            f"{entry.verified_core}, and this machine runs {core_version} — a build is exactly "
-            "what could add or drop a memory id, so the claim is not carried across the "
-            "difference unexamined",
-            {
-                "core": record.key,
-                "verification": "drifted",
-                "core_verified": entry.verified_core,
-                "core_live": core_version,
-            },
-        ),
+        return None
+    return Caveat(
+        CAVEAT_UNVERIFIED_VERSION,
+        f"which save files {record.key!r} writes for {system} was read from core "
+        f"{entry.verified_core}, and this machine runs {core_version} — a build is exactly "
+        "what could add or drop a memory id, so the claim is not carried across the "
+        "difference unexamined",
+        {
+            "core": record.key,
+            "verification": "drifted",
+            "core_verified": entry.verified_core,
+            "core_live": core_version,
+        },
     )
+
+
+def _as_tuple(caveat: Caveat | None) -> tuple[Caveat, ...]:
+    """One caveat or none, as the tuple an answer's caveat list is spliced from."""
+    return (caveat,) if caveat is not None else ()
 
 
 def _no_frontend_files(
@@ -2372,7 +2380,7 @@ def _no_frontend_files(
                 "claim that this content has no save",
                 {"core": record.key},
             ),
-            *_drift_caveat(record, entry, system=system, core_version=core_version),
+            *_as_tuple(_drift_caveat(record, entry, system=system, core_version=core_version)),
         ),
     )
 
@@ -2485,7 +2493,9 @@ def _standard_declaration(
             options_file=None,
             alternatives=(),
         ),
-        caveats=_drift_caveat(record, entry, system=query.system, core_version=core_version),
+        caveats=_as_tuple(
+            _drift_caveat(record, entry, system=query.system, core_version=core_version)
+        ),
     )
 
 
