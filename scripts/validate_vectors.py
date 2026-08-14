@@ -735,6 +735,21 @@ def _validate_file_set(name: str, file_set: Any) -> None:
     _validate_file_groups(name, file_set)
 
 
+def _validate_one_file_group(name: str, group: Any) -> None:
+    """One group's own shape — its directory, its names, and its two words."""
+    _require_exact(name, group, FILE_GROUP_FIELDS, "file_set.groups[]")
+    if not isinstance(group["dir"], str) or not group["dir"]:
+        fail(f"{name}: every file group states a directory")
+    if not isinstance(group["files"], list) or not all(isinstance(f, str) for f in group["files"]):
+        fail(f"{name}: file group files must be a list of strings")
+    if not group["files"]:
+        fail(f"{name}: a file group with no files is not a group")
+    if group["granularity"] not in KNOWN_GRANULARITIES:
+        fail(f"{name}: file group granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
+    if group["role"] not in KNOWN_ROLES:
+        fail(f"{name}: file group role must be one of {sorted(KNOWN_ROLES)}")
+
+
 def _validate_file_groups(name: str, file_set: Any) -> None:
     """A decomposed set, and the two ways it must agree with the flat one."""
     groups = file_set["groups"]
@@ -743,17 +758,7 @@ def _validate_file_groups(name: str, file_set: Any) -> None:
     if groups and file_set["state"] != "declared":
         fail(f"{name}: only a declared file_set is decomposed into groups")
     for group in groups:
-        _require_exact(name, group, FILE_GROUP_FIELDS, "file_set.groups[]")
-        if not isinstance(group["dir"], str) or not group["dir"]:
-            fail(f"{name}: every file group states a directory")
-        if not isinstance(group["files"], list) or not all(isinstance(f, str) for f in group["files"]):
-            fail(f"{name}: file group files must be a list of strings")
-        if not group["files"]:
-            fail(f"{name}: a file group with no files is not a group")
-        if group["granularity"] not in KNOWN_GRANULARITIES:
-            fail(f"{name}: file group granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
-        if group["role"] not in KNOWN_ROLES:
-            fail(f"{name}: file group role must be one of {sorted(KNOWN_ROLES)}")
+        _validate_one_file_group(name, group)
     if groups:
         here = [f for g in groups if g["dir"] == groups[0]["dir"] for f in g["files"]]
         if here != file_set["files"]:

@@ -358,6 +358,49 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     return SaveMode(root=root, groups=groups, also_under=also_under)
 
 
+def _id_less_alternative(alternative: Any, files: Any, where: str) -> tuple[str, ...] | None:
+    """The same set spelled for content that carries no platform-native id."""
+    if alternative is None:
+        return None
+    if files is None or not any(TEMPLATE_SAVE_ID in name for name in files):
+        raise ValueError(
+            f"{where}: 'files_without_save_id' is the set for content that carries no id, so "
+            f"'files' must declare the {TEMPLATE_SAVE_ID} case it is the alternative to"
+        )
+    names = _expect_file_names(alternative, f"{where}: files_without_save_id")
+    if any(TEMPLATE_SAVE_ID in name for name in names):
+        raise ValueError(
+            f"{where}: 'files_without_save_id' describes content without an id — it cannot "
+            f"name one with {TEMPLATE_SAVE_ID}"
+        )
+    return names
+
+
+def _file_list_scope(mode: Any, files: Any, where: str) -> tuple[str | None, str | None]:
+    """The content class a file list was established for, and the source for it.
+
+    Both are answer content rather than flags: an empty one would reach the
+    caller as an empty scope or an empty citation, which says nothing at all.
+    """
+    raw_scope = mode.get("files_established_for")
+    established_for = (
+        _expect_str(raw_scope, f"{where}: files_established_for") if raw_scope is not None else None
+    )
+    raw_citation = mode.get("files_citation")
+    citation = _expect_str(raw_citation, f"{where}: files_citation") if raw_citation is not None else None
+    if established_for is not None and files is None:
+        raise ValueError(
+            f"{where}: 'files_established_for' scopes a declared set — a mode that states no 'files' "
+            "has nothing to scope"
+        )
+    if citation is not None and established_for is None:
+        raise ValueError(
+            f"{where}: 'files_citation' cites the scope in 'files_established_for', which this mode "
+            "does not state"
+        )
+    return established_for, citation
+
+
 def _save_group(mode: Any, where: str) -> SaveGroup:
     """One group of a mode — its directory, its files, and what they are."""
     if not isinstance(mode, dict):
@@ -380,38 +423,8 @@ def _save_group(mode: Any, where: str) -> SaveGroup:
     if not isinstance(complete, bool):
         # bool("false") is True in Python — never coerce this claim.
         raise ValueError(f"{where}: 'complete' must be a JSON boolean")
-    alternative = mode.get("files_without_save_id")
-    alternative_names: tuple[str, ...] | None = None
-    if alternative is not None:
-        if files is None or not any(TEMPLATE_SAVE_ID in name for name in files):
-            raise ValueError(
-                f"{where}: 'files_without_save_id' is the set for content that carries no id, so "
-                f"'files' must declare the {TEMPLATE_SAVE_ID} case it is the alternative to"
-            )
-        alternative_names = _expect_file_names(alternative, f"{where}: files_without_save_id")
-        if any(TEMPLATE_SAVE_ID in name for name in alternative_names):
-            raise ValueError(
-                f"{where}: 'files_without_save_id' describes content without an id — it cannot "
-                f"name one with {TEMPLATE_SAVE_ID}"
-            )
-    # Both are answer content, not flags: an empty one would reach the caller as
-    # an empty scope or an empty citation, which says nothing at all.
-    raw_scope = mode.get("files_established_for")
-    established_for = (
-        _expect_str(raw_scope, f"{where}: files_established_for") if raw_scope is not None else None
-    )
-    raw_citation = mode.get("files_citation")
-    citation = _expect_str(raw_citation, f"{where}: files_citation") if raw_citation is not None else None
-    if established_for is not None and files is None:
-        raise ValueError(
-            f"{where}: 'files_established_for' scopes a declared set — a mode that states no 'files' "
-            "has nothing to scope"
-        )
-    if citation is not None and established_for is None:
-        raise ValueError(
-            f"{where}: 'files_citation' cites the scope in 'files_established_for', which this mode "
-            "does not state"
-        )
+    alternative_names = _id_less_alternative(mode.get("files_without_save_id"), files, where)
+    established_for, citation = _file_list_scope(mode, files, where)
     return SaveGroup(
         subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
         files=_expect_file_names(files, f"{where}: files") if files is not None else None,
