@@ -1307,6 +1307,110 @@
       "provenance": {
         "source": "read at the revision the installed binary names in its library_version"
       }
+    },
+    "vice_x64sc": {
+      "identifiers": {
+        "library_name": [
+          "VICE x64sc"
+        ]
+      },
+      "systems": {
+        "c64": {
+          "memory_types": [],
+          "verified_core": "3.9 e9f8ac0",
+          "citation": "[V] libretro/libretro-core.c:8803-8808 at vice-libretro e9f8ac0 — only RETRO_MEMORY_SYSTEM_RAM answers (mem_ram_size); every other id returns 0. All three VICE builds RetroDECK ships come from this one source tree and report the same revision, so the reading covers each of them. A Commodore machine's saves live on the disk and tape images the core mounts, which is outside what this record describes."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "vice_xplus4": {
+      "identifiers": {
+        "library_name": [
+          "VICE xplus4"
+        ]
+      },
+      "systems": {
+        "plus4": {
+          "memory_types": [],
+          "verified_core": "3.9 e9f8ac0",
+          "citation": "[V] libretro/libretro-core.c:8803-8808 at vice-libretro e9f8ac0 — only RETRO_MEMORY_SYSTEM_RAM answers (mem_ram_size); every other id returns 0. All three VICE builds RetroDECK ships come from this one source tree and report the same revision, so the reading covers each of them. A Commodore machine's saves live on the disk and tape images the core mounts, which is outside what this record describes."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "vice_xvic": {
+      "identifiers": {
+        "library_name": [
+          "VICE xvic"
+        ]
+      },
+      "systems": {
+        "vic20": {
+          "memory_types": [],
+          "verified_core": "3.9 e9f8ac0",
+          "citation": "[V] libretro/libretro-core.c:8803-8808 at vice-libretro e9f8ac0 — only RETRO_MEMORY_SYSTEM_RAM answers (mem_ram_size); every other id returns 0. All three VICE builds RetroDECK ships come from this one source tree and report the same revision, so the reading covers each of them. A Commodore machine's saves live on the disk and tape images the core mounts, which is outside what this record describes."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "vircon32": {
+      "identifiers": {
+        "library_name": [
+          "Vircon32"
+        ]
+      },
+      "systems": {
+        "vircon32": {
+          "memory_types": [],
+          "verified_core": "2025.1.18",
+          "citation": "[V] libretro.cpp:719-723 at vircon32/vircon32-libretro — retro_get_memory_size returns 0 for every id, with 'not implemented' as its only body comment."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "wasm4": {
+      "identifiers": {
+        "library_name": [
+          "WASM-4"
+        ]
+      },
+      "systems": {
+        "wasm4": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1",
+          "citation": "[V] runtimes/native/src/backend/main_libretro.c:170-179 at aduros/wasm4 — RETRO_MEMORY_SAVE_RAM answers sizeof(disk), the cartridge's persistent storage, so RetroArch writes <rom_stem>.srm. No RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "x1": {
+      "identifiers": {
+        "library_name": [
+          "X Millennium"
+        ]
+      },
+      "systems": {
+        "x1": {
+          "memory_types": [],
+          "verified_core": "0.60",
+          "citation": "[V] libretro/libretro.c:496-506 at libretro/xmil-libretro — only RETRO_MEMORY_SYSTEM_RAM answers (sizeof(mainmem)); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
     }
   }
 }
