@@ -4247,14 +4247,20 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Game.srm"
             ],
             "complete": false
           },
-          "granularity": null,
-          "caveats": []
+          "caveats": [],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
@@ -4330,13 +4336,12 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Game.srm"
             ],
             "complete": false
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "per-game-override",
@@ -4344,7 +4349,14 @@
                 "label": "ParaLLEl N64"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
@@ -4421,13 +4433,12 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Game.srm"
             ],
             "complete": false
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "per-game-override",
@@ -4435,7 +4446,14 @@
                 "label": "ParaLLEl N64"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
@@ -5382,13 +5400,12 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Paper Mario (USA).srm"
             ],
             "complete": false
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "arrangement-version-drifted",
@@ -5398,7 +5415,14 @@
                 "observed": "0.11.0b"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
