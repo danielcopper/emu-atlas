@@ -85,10 +85,8 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`kronos`** — frontend writes nothing on arcade, consolearcade, mame, saturn, saturnjp, stv
 - [x] **`lowresnx`** — fills `save_ram` on lowresnx
 - [x] **`lutro`** — frontend writes nothing on lutro
-- [x] **`mame`** — frontend writes nothing on apple2, apple2gs, arcade, arcadia, astrocde, atari7800, channelf,
-      consolearcade, cps, cps1, cps2, cps3, crvision, daphne, fmtowns, gamate, gameandwatch, gamecom, gmaster,
-      intellivision, laserdisc, lcdgames, mame, megaduck, model2, odyssey2, pv1000, scv, stv, supervision, supracan,
-      vectrex, videopac, vsmile
+- [x] **`mame`** — read, and it turned out to be outcome 2: three trees of its own below the save directory, so it
+      carries a rule card rather than a record
 - [x] **`mednafen_ngp`** — frontend writes nothing on ngp, ngpc
 - [x] **`mednafen_pce`** — fills `save_ram` on pcengine, pcenginecd, supergrafx, tg-cd, tg16
 - [x] **`mednafen_pcfx`** — fills `save_ram` on pcfx

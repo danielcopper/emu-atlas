@@ -72,6 +72,19 @@ consistency rules hold within one directory: its groups either all declare files
 silently shorten a list stated as the whole), and at most one of them may scope its list with `files_established_for`,
 since the mode's answer can carry only one scope.
 
+### A tree whose names cannot be derived — `unnamed`
+
+A group states `unnamed` instead of `files` when the directory is knowable and its file names are not. MAME's
+differencing images for CHD hard disks are the case it exists for: the name is the disk image's own entry in the
+machine's ROM table inside the binary, which is no read of _this_ machine, and upstream says on the line that builds it
+that the scheme "doesn't scale". Such a group never becomes a `FileGroup`; the answer names its directory in a
+`file-names-unestablished` caveat, with this text as `data["citation"]` and the group's `role` beside it.
+
+The alternative would have been silence, and silence there is the expensive kind: a client that never learns the
+directory exists loses the player's progress on every machine with a hard disk. The loader refuses `unnamed` together
+with `files` — the field's whole reason is that no list can be given — and a mode whose every group is unnamed, since
+that mode would state nothing at all.
+
 ### File names are templates in the placement's own hole vocabulary
 
 A declared name may carry exactly two tokens, and they are not local to this file: they are the holes

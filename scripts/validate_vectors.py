@@ -222,6 +222,7 @@ KNOWN_CAVEAT_CODES = {
     "symlink-loop",
     "filenames-unverified",
     "filenames-content-conditional",
+    "file-names-unestablished",
     "file-set-spans-roots",
     "unknown-option-value",
     "system-directory-cleared",

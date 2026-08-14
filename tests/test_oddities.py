@@ -2082,6 +2082,15 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("flycast", "<save_id>.C1.bin", "unprotected"),
             ("flycast", "<save_id>.D1.bin", "unprotected"),
             ("flycast", "dc_nvmem.bin", "unprotected"),
+            # MAME builds every one of these at run time: the tree segments come
+            # from one pooled static table, the directory between them is a
+            # build-time define, and the file names are the running machine's
+            # own basename. Each anchor says which whole string stands beside it.
+            ("mame", "<rom_stem>", "unprotected"),
+            ("mame", "<rom_stem>.cfg", "unprotected"),
+            ("mame", "cfg", "unprotected"),
+            ("mame", "diff", "unprotected"),
+            ("mame", "mame", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
         ], (
             "the set of recorded names no anchor watches has changed — every entry here is a name "

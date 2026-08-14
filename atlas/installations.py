@@ -118,6 +118,7 @@ from atlas.placement import (
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
+    CAVEAT_FILE_NAMES_UNESTABLISHED,
     CAVEAT_EMULATOR_CONFIG_UNREAD,
     CAVEAT_EMULATOR_READ_UNESTABLISHED,
     CAVEAT_FEATURE_SWITCH_ABSENT,
@@ -1860,6 +1861,30 @@ def _file_set_caveats(
     return ()
 
 
+def _unnamed_tree_caveats(card: CoreCard, mode: SaveMode, *, directory: str) -> tuple[Caveat, ...]:
+    """Directories this mode writes into whose file names atlas cannot derive.
+
+    Named rather than left out: a client that skips the directory loses whatever
+    is in it, and for MAME's differencing images that is the player's progress on
+    every machine with a hard disk. The names stay unstated because they come
+    from the machine's own ROM table inside the binary, which is no read of *this*
+    machine — and the card's reason for saying so travels as the citation.
+    """
+    base = _base_of(directory, mode.subdir)
+    caveats = []
+    for group in mode.unnamed:
+        where = os.path.join(base, *[s for s in (group.subdir or "").split("/") if s])
+        caveats.append(
+            Caveat(
+                CAVEAT_FILE_NAMES_UNESTABLISHED,
+                f"core {card.key!r} writes save data into {where}, and its file names do not follow "
+                "from anything atlas reads — the directory is stated, the names are not",
+                {"core": card.key, "dir": where, "role": group.role, "citation": group.unnamed or ""},
+            )
+        )
+    return tuple(caveats)
+
+
 @dataclass(frozen=True, slots=True)
 class _SystemRoot:
     """The directory RetroArch hands a core that asks for the system directory.
@@ -2090,6 +2115,7 @@ def _system_directory_placement(
                 also_under=mode.also_under,
             )
         )
+        all_caveats.extend(_unnamed_tree_caveats(card, mode, directory=directory))
     observable = root.reachable and not root.needs
     file_set = _card_file_set(
         machine, card=card, mode=mode, directory=directory, rom_stem=content.rom_stem, observable=observable
@@ -2235,7 +2261,7 @@ def _declared_groups(mode: SaveMode | None, *, directory: str, rom_stem: str) ->
         return ()
     base = _base_of(directory, mode.subdir)
     groups: list[FileGroup] = []
-    for group in mode.groups:
+    for group in mode.named:
         names = _card_files(group.files, rom_stem) if group.files is not None else None
         if not names:
             return ()
@@ -2739,6 +2765,10 @@ def _standard_placement(
         final_sources.extend(subdir_sources)
         all_caveats.extend(machine_caveats)
         file_set = looked_at or file_set
+    # After the filesystem step, because a card's own subtree is nested onto the
+    # directory there and this caveat names directories.
+    if card is not None and mode is not None and granularity is not None:
+        all_caveats.extend(_unnamed_tree_caveats(card, mode, directory=final_dir))
 
     return SavefilePlacement(
         dir=final_dir,

@@ -248,6 +248,100 @@
         }
       }
     },
+    "mame": {
+      "identifiers": {
+        "library_name": [
+          "MAME"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "mame_mame_paths_enable"
+        },
+        "modes": {
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "mame/nvram",
+                "files": [
+                  "<rom_stem>"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": "mame/cfg",
+                "files": [
+                  "<rom_stem>.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "mame/cfg",
+                "files": [
+                  "default.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "mame/diff",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "unnamed": "romload.cpp:1111-1123 at libretro/mame a90e86e1 — the differencing image for a CHD hard disk is named after the disk image's own entry in the machine's ROM table inside the binary (romp->name() + \".dif\"), which is no read of this machine. Upstream says so on the line above it: 'TODO: use system name and/or software list name in the path - the current setup doesn't scale'. The same directory is used by a mounted hard disk image (harddriv.cpp:196-200)."
+              }
+            ]
+          },
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "mame_mame_paths_enable": {
+            "literal": "mame_mame_paths_enable"
+          },
+          "mame": {
+            "unprotected": "the segment between the save directory and each tree is CORE_NAME, a build-time define rather than a string that names this directory (retro_init.cpp:565-567). The binary does carry the whole string 'mame', but as the emulator's own name in a hundred other places, so pinning the directory to it would check nothing"
+          },
+          "nvram": {
+            "literal": "nvram"
+          },
+          "cfg": {
+            "unprotected": "the tree names live in one static table (retro_init.cpp:110-127) and the compiler pooled this one, so no NUL-delimited string carries it alone. What is whole in the binary is the option flag beside it, '-cfg_directory', which a rename of the scheme would take with it"
+          },
+          "diff": {
+            "unprotected": "same table and the same pooling as 'cfg'; the whole string beside it is '-diff_directory' (retro_init.cpp:129-146)"
+          },
+          "<rom_stem>": {
+            "unprotected": "composed at run time: machine.cpp:1116-1147 builds the name from running_machine::basename(), which the glue sets from the content path (retro_init.cpp:158-207). No literal spells it"
+          },
+          "<rom_stem>.cfg": {
+            "unprotected": "composed at run time: config.cpp:114 appends '.cfg' to running_machine::basename(), and neither half is a whole string in the binary. Its sibling 'default.cfg' is, and is anchored"
+          },
+          "default.cfg": {
+            "literal": "default.cfg"
+          }
+        }
+      },
+      "provenance": {
+        "source": "MAME source at a90e86e1, the revision the shipped binary names in its library_version. The libretro glue points -nvram_directory, -cfg_directory and -diff_directory at <save_dir>/mame/{nvram,cfg,diff} (retro_init.cpp:110-153 and :559-577); MAME then names the NVRAM file after the running machine (machine.cpp:1116-1147, written at :1178-1186) and writes both default.cfg and <machine>.cfg on every save (config.cpp:108-114). The machine's name is the ROM's own basename: the glue derives it in parsePath and passes it as the system to run (retro_init.cpp:158-207, :652). Two things the file names cannot carry. A machine with more than one NVRAM device gets a *directory* <rom_stem>/ with one file per device tag instead of a single file (machine.cpp:1125-1145), and a non-default BIOS selection appends _<n> to the name (:1121-1122). And with mame_mame_paths_enable turned on the glue sets no paths at all (retro_init.cpp:554-555), leaving MAME to take them from its own ini, which atlas does not read — that mode therefore states no file names.",
+        "status": {
+          "disabled": "[D] The registered default and the only mode the frontend's own path setup reaches. Read from source; no save was watched being written, and the differencing tree is named without its files by design.",
+          "enabled": "[D] Read from source. The glue sets no paths in this mode, so what MAME uses is its own ini — unread, and therefore unstated rather than guessed."
+        }
+      }
+    },
     "opera": {
       "identifiers": {
         "library_name": [
