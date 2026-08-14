@@ -410,6 +410,13 @@ Take every role but `settings` — dip switches and input maps are configuration
 restoring one game's copy overwrites every other game's state in them. A tool making a _complete_ backup takes them all;
 that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
 
+**One limit worth knowing.** `granularity.value` and the `alternatives` pairs beside it state _one_ grouping per mode,
+which is the first group's — so a mode that mixes them (FinalBurn Neo's shared mode writes a per-game `.fs` beside a
+shared memory card) reports the first, and the parts are only in `groups`. That is exact for the mode in force and
+understated for the alternatives: switching to such a mode can add a shared file the pair does not mention. Read
+`groups` for the active mode; treat an alternative's grouping as the grouping of its main save, not of everything it
+writes.
+
 **Reading nothing of this keeps today's answer.** `groups` is empty unless a rule card decomposed the answer — every
 observation, every unknown and every standard-rule declaration has none, and empty means _not decomposed_, never _no
 files_. Where it is populated, `files` is still exactly the names lying in `dir`: every group under the first group's

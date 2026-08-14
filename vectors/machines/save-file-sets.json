@@ -871,27 +871,27 @@
     },
     {
       "name": "a-second-choice-core-answers-with-its-own-reading",
-      "rationale": "A frontend offers several emulators per system and a user picks one — for an arcade library that is routinely not the one the catalogue leads with. The record describes the core, not the position it holds in a menu, so the second entry answers from the same reading. FinalBurn Neo fills no memory id, so the answer is a declared emptiness with the rest of the story left open, exactly as it is on the system this core does lead.",
+      "rationale": "A frontend offers several emulators per system and a user picks one — for an arcade library that is routinely not the one the catalogue leads with. The record describes the core, not the position it holds in a menu, so the second entry answers from the same reading. FB Alpha 2012 fills no memory id, so the answer is a declared emptiness with the rest of the story left open, exactly as it is on the system this core does lead.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <command label=\"FB Alpha 2012\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbalpha2012_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/arcade/rtype.zip": "rom"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves"
         ],
         "cores": {
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbneo_libretro.so": {
-            "library_name": "FinalBurn Neo",
-            "library_version": "v1.0.0.03  01e29d5"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbalpha2012_libretro.so": {
+            "library_name": "FB Alpha 2012",
+            "library_version": "v0.2.97.29 77167ce"
           }
         },
         "entry_savefile_query": {
           "system": "arcade",
-          "label": "FinalBurn Neo",
+          "label": "FB Alpha 2012",
           "content_path": "/mnt/sd/retrodeck/roms/arcade/rtype.zip"
         }
       },
@@ -922,13 +922,13 @@
             {
               "code": "core-unaudited",
               "data": {
-                "core": "fbneo"
+                "core": "fbalpha2012"
               }
             },
             {
               "code": "core-own-writes-unestablished",
               "data": {
-                "core": "fbneo"
+                "core": "fbalpha2012"
               }
             }
           ],
@@ -1068,6 +1068,94 @@
             }
           ],
           "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-core-that-keeps-its-saves-in-a-subtree-of-its-own-says-so",
+      "rationale": "FinalBurn Neo answers no libretro memory id, and that is not the same as writing nothing: it keeps a driver's battery memory in a directory of its own below the save root. The card states the subtree, the file, what kind of data it is and whom it belongs to — and which option decides that, read live, with what the other values would mean. In the registered default no memory card exists at all, so the answer is one file and one group.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/arcade/rtype.zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/fbneo"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo",
+            "library_version": "v1.0.0.03  01e29d5"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "arcade",
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/rtype.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/fbneo",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "rtype.fs"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/fbneo",
+                "files": [
+                  "rtype.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "fbneo",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": "fbneo-memcard-mode",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "shared",
+                "per-game-file"
+              ],
+              [
+                "per-game",
+                "per-game-file"
+              ]
+            ]
+          }
         }
       }
     }

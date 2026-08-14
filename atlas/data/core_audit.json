@@ -24,6 +24,17 @@
       },
       "kind": "libretro"
     },
+    "fbneo": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] The shipped 01e29d5 generation writes its saves into a subtree of its own under the save directory: <rom_stem>.fs always, and a .memcard for Neo Geo cartridge content whose grouping fbneo-memcard-mode selects — one shared card, one per game, or none. The default sits in the card, which is where it can be read back (this core registers no options a probe can capture). No mode is live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "flycast": {
       "verdict": "card",
       "per_game_capable": true,

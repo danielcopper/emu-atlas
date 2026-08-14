@@ -315,68 +315,6 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
-    "fbneo": {
-      "identifiers": {
-        "library_name": [
-          "FinalBurn Neo"
-        ]
-      },
-      "systems": {
-        "arcade": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "cps": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "cps1": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "cps2": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "cps3": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "fbneo": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "mame": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "neogeo": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "neogeocd": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        },
-        "neogeocdjp": {
-          "memory_types": [],
-          "verified_core": "v1.0.0.03  01e29d5",
-          "citation": "[V] src/burner/libretro/retro_memory.cpp:189-192 at FBNeo 01e29d5 — the size is nMainRamSize for RETRO_MEMORY_SYSTEM_RAM and 0 for every other id, save RAM included."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "freechaf": {
       "identifiers": {
         "library_name": [

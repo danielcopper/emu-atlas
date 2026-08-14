@@ -7,6 +7,7 @@ import json
 import pytest
 
 from atlas import placement
+from atlas.oddities import load_oddities
 from atlas.save_memory import (
     MEMORY_RTC,
     MEMORY_SAVE_RAM,
@@ -177,6 +178,19 @@ class TestLookup:
 
 
 class TestPackagedRecords:
+    def test_no_core_carries_both_a_card_and_a_record(self):
+        """A card wins, so a record beside one is knowledge nothing can read.
+
+        Worse than dead: a carded core is a *deviating* core, and the record
+        would state the file names of a save the card has moved elsewhere —
+        right about the names, wrong about the save. `atlas/data/README.md`
+        says so; this is what keeps the two files from drifting into saying it
+        differently.
+        """
+        carded = {card.key for card in load_oddities()}
+        recorded = {record.key for record in load_save_memory()}
+        assert carded & recorded == set()
+
     def test_every_recorded_system_is_an_atlas_system_id(self):
         vocabulary = set(known_systems())
         for record in load_save_memory():
