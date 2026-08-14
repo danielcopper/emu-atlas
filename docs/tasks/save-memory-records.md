@@ -45,21 +45,10 @@ answer.
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (59 cores)
+## The list (49 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
-- [ ] **`easyrpg`** — `easyrpg`
-- [ ] **`ecwolf`** — `ports`
-- [ ] **`fbalpha2012`** — `fba`
-- [ ] **`fbneo`** — `fbneo`, `neogeo`
-- [ ] **`freechaf`** — `channelf`
-- [ ] **`freeintv`** — `intellivision`
-- [ ] **`fuse`** — `zxspectrum`
-- [ ] **`gearsystem`** — `multivision`
-- [ ] **`genesis_plus_gx`** — `gamegear`, `genesis`, `mark3`, `mastersystem`, `megacd`, `megacdjp`, `megadrive`,
-      `megadrivejp`, `segacd`, `sg-1000`
-- [ ] **`handy`** — `atarilynx`
 - [ ] **`hatari`** — `atarist`
 - [ ] **`jollycv`** — `crvision`
 - [ ] **`kronos`** — `stv`
@@ -126,5 +115,16 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`chailove`** — frontend writes nothing on chailove
 - [x] **`desmume`** — frontend writes nothing on nds
 - [x] **`dosbox_pure`** — frontend writes nothing on dos, pc, windows3x, windows9x
+- [x] **`easyrpg`** — frontend writes nothing on easyrpg
+- [x] **`ecwolf`** — frontend writes nothing on ports
+- [x] **`fbalpha2012`** — frontend writes nothing on fba
+- [x] **`fbneo`** — frontend writes nothing on fbneo, neogeo
+- [x] **`freechaf`** — frontend writes nothing on channelf
+- [x] **`freeintv`** — frontend writes nothing on intellivision
+- [x] **`fuse`** — frontend writes nothing on zxspectrum
 - [x] **`gambatte`** — fills `rtc`, `save_ram` on gb, gbc
+- [x] **`gearsystem`** — fills `save_ram` on multivision
+- [x] **`genesis_plus_gx`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megacd, megacdjp, megadrive,
+      megadrivejp, segacd, sg-1000
+- [x] **`handy`** — frontend writes nothing on atarilynx
 - [x] **`mgba`** — fills `rtc`, `save_ram` on gb, gba, gbc

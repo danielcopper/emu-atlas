@@ -87,7 +87,8 @@ installations + placements out.
 
 ## What does not live here
 
-- ROM identification — which game a file is and what its save will be called: sigil's territory.
+- ROM identification — which game a file is, and the platform-native id atlas leaves as the `<save_id>` hole in a
+  declared file name rather than opening a ROM to read it: sigil's territory.
 - Sync decisions — what to do when local and server disagree: gavel's territory.
 - File transfer, UI, per-client policy: the client's territory.
 

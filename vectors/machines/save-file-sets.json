@@ -718,6 +718,75 @@
           }
         }
       }
+    },
+    {
+      "name": "a-cartridge-with-battery-ram-names-one-file-across-ten-systems",
+      "rationale": "Genesis Plus GX is the busiest core on the default list: it is what RetroDECK launches for ten systems, from Mega Drive to Game Gear, and it fills the save-RAM id on every one of them. One record, ten entries, one name per game — and no .rtc, because the core has no clock branch at all.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megadrive</name><path>%ROMPATH%/megadrive</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
+            "library_name": "Genesis Plus GX",
+            "library_version": "v1.7.4 46a5521"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megadrive",
+          "content_path": "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Phantasy Star IV (USA).srm"
+            ],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-multi-option",
+              "data": {
+                "core": "genesis_plus_gx",
+                "verdict": "multi-option",
+                "options": "genesis_plus_gx_system_bram, genesis_plus_gx_cart_bram, genesis_plus_gx_cart_size"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }
