@@ -45,23 +45,13 @@ answer.
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (30 cores)
+## The list (20 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
 - [ ] **`mednafen_vb`** — `virtualboy`
 - [ ] **`mednafen_wswan`** — `wonderswan`, `wonderswancolor`
 - [ ] **`mess2015`** — `mess`
-- [ ] **`picodrive`** — `sega32x`, `sega32xjp`, `sega32xna`
-- [ ] **`pokemini`** — `pokemini`
-- [ ] **`potator`** — `supervision`
-- [ ] **`prosystem`** — `atari7800`
-- [ ] **`puae`** — `amiga`, `amiga1200`, `amiga600`, `amigacd32`, `cdtv`
-- [ ] **`px68k`** — `x68000`
-- [ ] **`quasi88`** — `pc88`
-- [ ] **`same_cdi`** — `cdimono1`
-- [ ] **`sameduck`** — `megaduck`
-- [ ] **`scummvm`** — `scummvm`
 - [ ] **`snes9x`** — `satellaview`, `sfc`, `snes`, `snesna`, `sufami`
 - [ ] **`squirreljme`** — `j2me`
 - [ ] **`stella`** — `atari2600`
@@ -128,3 +118,13 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`np2kai`** — frontend writes nothing on pc98
 - [x] **`o2em`** — frontend writes nothing on odyssey2, videopac
 - [x] **`parallel_n64`** — fills `save_ram` on n64dd
+- [x] **`picodrive`** — fills `save_ram` on sega32x, sega32xjp, sega32xna
+- [x] **`pokemini`** — frontend writes nothing on pokemini
+- [x] **`potator`** — frontend writes nothing on supervision
+- [x] **`prosystem`** — frontend writes nothing on atari7800
+- [x] **`puae`** — frontend writes nothing on amiga, amiga1200, amiga600, amigacd32, cdtv
+- [x] **`px68k`** — frontend writes nothing on x68000
+- [x] **`quasi88`** — frontend writes nothing on pc88
+- [x] **`same_cdi`** — frontend writes nothing on cdimono1
+- [x] **`sameduck`** — frontend writes nothing on megaduck
+- [x] **`scummvm`** — frontend writes nothing on scummvm
