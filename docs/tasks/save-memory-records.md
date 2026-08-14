@@ -45,22 +45,13 @@ answer.
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (20 cores)
+## The list (11 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
-- [ ] **`mednafen_vb`** — `virtualboy`
-- [ ] **`mednafen_wswan`** — `wonderswan`, `wonderswancolor`
 - [ ] **`mess2015`** — `mess`
 - [ ] **`snes9x`** — `satellaview`, `sfc`, `snes`, `snesna`, `sufami`
-- [ ] **`squirreljme`** — `j2me`
-- [ ] **`stella`** — `atari2600`
 - [ ] **`swanstation`** — `psx`
-- [ ] **`theodore`** — `moto`, `to8`
-- [ ] **`tic80`** — `tic80`
-- [ ] **`tyrquake`** — `quake`
-- [ ] **`uzem`** — `uzebox`
-- [ ] **`vecx`** — `vectrex`
 - [ ] **`vice_x64sc`** — `c64`
 - [ ] **`vice_xplus4`** — `plus4`
 - [ ] **`vice_xvic`** — `vic20`
@@ -108,6 +99,8 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mednafen_pcfx`** — fills `save_ram` on pcfx
 - [x] **`mednafen_saturn`** — frontend writes nothing on saturn, saturnjp
 - [x] **`mednafen_supergrafx`** — fills `save_ram` on supergrafx
+- [x] **`mednafen_vb`** — fills `save_ram` on virtualboy
+- [x] **`mednafen_wswan`** — fills `save_ram` on wonderswan, wonderswancolor
 - [x] **`mesen`** — fills `save_ram` on famicom, fds, nes
 - [x] **`mesen-s`** — fills `save_ram` on sgb
 - [x] **`mgba`** — fills `rtc`, `save_ram` on gb, gba, gbc
@@ -128,3 +121,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`same_cdi`** — frontend writes nothing on cdimono1
 - [x] **`sameduck`** — frontend writes nothing on megaduck
 - [x] **`scummvm`** — frontend writes nothing on scummvm
+- [x] **`squirreljme`** — frontend writes nothing on j2me
+- [x] **`stella`** — frontend writes nothing on atari2600
+- [x] **`theodore`** — frontend writes nothing on moto, to8
+- [x] **`tic80`** — fills `save_ram` on tic80
+- [x] **`tyrquake`** — frontend writes nothing on quake
+- [x] **`uzem`** — fills `save_ram` on uzebox
+- [x] **`vecx`** — frontend writes nothing on vectrex
