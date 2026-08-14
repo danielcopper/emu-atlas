@@ -70,7 +70,8 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`easyrpg`** — frontend writes nothing on easyrpg
 - [x] **`ecwolf`** — frontend writes nothing on ports
 - [x] **`fbalpha2012`** — frontend writes nothing on arcade, cps, cps1, cps2, cps3, fba, mame
-- [x] **`fbneo`** — frontend writes nothing on arcade, cps, cps1, cps2, cps3, fbneo, mame, neogeo, neogeocd, neogeocdjp
+- [x] **`fbneo`** — read, and it turned out to be outcome 2: it keeps its saves in a subtree of its own, so it carries a
+      rule card rather than a record (#123)
 - [x] **`freechaf`** — frontend writes nothing on channelf
 - [x] **`freeintv`** — frontend writes nothing on intellivision
 - [x] **`fuse`** — frontend writes nothing on zxspectrum

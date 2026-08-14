@@ -2,6 +2,101 @@
   "schema": 1,
   "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
+    "fbneo": {
+      "identifiers": {
+        "library_name": [
+          "FinalBurn Neo"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "fbneo-memcard-mode",
+          "default": "disabled"
+        },
+        "modes": {
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "fbneo",
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "fbneo",
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": "fbneo",
+                "files": [
+                  "shared.memcard"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "fbneo",
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": "fbneo",
+                "files": [
+                  "<rom_stem>.memcard"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "fbneo-memcard-mode": {
+            "literal": "fbneo-memcard-mode"
+          },
+          "fbneo": {
+            "literal": "%s%cfbneo%c"
+          },
+          "<rom_stem>.fs": {
+            "literal": "%s%cfbneo%c%s.fs"
+          },
+          "<rom_stem>.memcard": {
+            "literal": "%s%cfbneo%c%s.memcard"
+          },
+          "shared.memcard": {
+            "literal": "%s%cfbneo%c%s.memcard"
+          }
+        }
+      },
+      "provenance": {
+        "source": "FinalBurn Neo source at 01e29d5, the revision the shipped binary names in its library_version. The NVRAM/EEPROM path is built at libretro.cpp:2186 as <save_dir>/fbneo/<driver>.fs and written back when content unloads (:2512); the memory card at :2174 is built only for Neo Geo cartridge content and only while fbneo-memcard-mode is not disabled, named after the driver in per-game mode and the literal 'shared' otherwise, read and written through MemCardRead/MemCardWrite (:1888, :1897). Both hang off g_save_dir, which is GET_SAVE_DIRECTORY as the frontend hands it over. The option is defined in retro_common.cpp:392-406 with the values disabled, shared and per-game and the default disabled; this core registers its options too late for a probe to capture them, so the default is recorded in the card — the same reason LRPS2's card keeps one. Two edges the file names cannot carry: the driver name is the ROM's basename without its extension, prefixed from the *name of the directory the ROM lies in* for FinalBurn's console subsystems (md_, gg_, sms_, nes_, … libretro.cpp:2352-2424), and no arcade directory is in that table, so arcade content keeps its own name; and Neo Geo CD content takes the literal driver name 'neocdz' whatever the disc is (:2416-2421), so every Neo Geo CD game there shares one neocdz.fs.",
+        "status": {
+          "disabled": "[D] The registered default, and the only mode a machine reaches without a user changing it. Read from source; the .fs path and its write at unload are the same code every mode runs, but no save was watched being written.",
+          "shared": "[D] Read from source. The name is the ternary's literal 'shared' at libretro.cpp:2174; nobody has selected this mode on a machine and watched the file appear.",
+          "per-game": "[D] Read from source, same branch as 'shared' with the driver name in place of the literal. Not observed."
+        }
+      }
+    },
     "flycast": {
       "identifiers": {
         "library_name": [
