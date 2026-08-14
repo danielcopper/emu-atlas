@@ -705,6 +705,51 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "mednafen_vb": {
+      "identifiers": {
+        "library_name": [
+          "Beetle VB"
+        ]
+      },
+      "systems": {
+        "virtualboy": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.31.0 8f837eb",
+          "citation": "[V] libretro.cpp:2649-2662 at beetle-vb-libretro 8f837eb — RETRO_MEMORY_SAVE_RAM answers GPRAM_Mask + 1, the Virtual Boy cartridge's general-purpose RAM, so RetroArch writes <rom_stem>.srm. No RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "mednafen_wswan": {
+      "identifiers": {
+        "library_name": [
+          "Beetle Cygne"
+        ]
+      },
+      "systems": {
+        "wonderswan": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v0.9.35.1 2aeb47d",
+          "citation": "[V] libretro.c:1496-1513 at beetle-wswan-libretro 2aeb47d — RETRO_MEMORY_SAVE_RAM answers the cartridge's EEPROM size, or its SRAM size where there is no EEPROM, and 0 where the cartridge has neither. No RETRO_MEMORY_RTC case exists."
+        },
+        "wonderswancolor": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v0.9.35.1 2aeb47d",
+          "citation": "[V] libretro.c:1496-1513 at beetle-wswan-libretro 2aeb47d — RETRO_MEMORY_SAVE_RAM answers the cartridge's EEPROM size, or its SRAM size where there is no EEPROM, and 0 where the cartridge has neither. No RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "mesen": {
       "identifiers": {
         "library_name": [
@@ -1129,6 +1174,134 @@
           "memory_types": [],
           "verified_core": "686cdd1-2.10.0git",
           "citation": "[V] backends/platform/libretro/src/libretro-core.cpp:1109-1111 at libretro/scummvm 686cdd1 — retro_get_memory_size returns 0 for every id. ScummVM keeps its saves in its own directory, which RetroDECK configures separately and this record does not describe."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "squirreljme": {
+      "identifiers": {
+        "library_name": [
+          "SquirrelJME"
+        ]
+      },
+      "systems": {
+        "j2me": {
+          "memory_types": [],
+          "verified_core": "0.3.0",
+          "citation": "[V] nanocoat/frontend/libretro/save.c:42-45 at XerTheSquirrel/SquirrelJME — retro_get_memory_size returns 0 for every id."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "stella": {
+      "identifiers": {
+        "library_name": [
+          "Stella"
+        ]
+      },
+      "systems": {
+        "atari2600": {
+          "memory_types": [],
+          "verified_core": "8.0_pre 7c4e3b2",
+          "citation": "[V] src/os/libretro/libretro.cxx:956-966 at stella-emu/stella 7c4e3b2 — only RETRO_MEMORY_SYSTEM_RAM answers (stella.getRAMSize()); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "theodore": {
+      "identifiers": {
+        "library_name": [
+          "theodore"
+        ]
+      },
+      "systems": {
+        "moto": {
+          "memory_types": [],
+          "verified_core": "242e932",
+          "citation": "[V] libretro.c:850-858 at Zlika/theodore 242e932 — only RETRO_MEMORY_SYSTEM_RAM answers (RAM_SIZE); every other id returns 0."
+        },
+        "to8": {
+          "memory_types": [],
+          "verified_core": "242e932",
+          "citation": "[V] libretro.c:850-858 at Zlika/theodore 242e932 — only RETRO_MEMORY_SYSTEM_RAM answers (RAM_SIZE); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "tic80": {
+      "identifiers": {
+        "library_name": [
+          "TIC-80"
+        ]
+      },
+      "systems": {
+        "tic80": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "1.0.162-dev (e199ef2)",
+          "citation": "[V] libretro.c:1158-1169 at libretro/TIC-80 e199ef2 — RETRO_MEMORY_SAVE_RAM answers the size of the cartridge's persistent memory block, so RetroArch writes <rom_stem>.srm. No RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "tyrquake": {
+      "identifiers": {
+        "library_name": [
+          "TyrQuake"
+        ]
+      },
+      "systems": {
+        "quake": {
+          "memory_types": [],
+          "verified_core": "v0.62 dfdae65",
+          "citation": "[V] common/libretro.c:1195-1199 at libretro/tyrquake dfdae65 — retro_get_memory_size discards the id and returns 0. Quake's own save files are written by the game code into its data directory, which this record does not describe."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "uzem": {
+      "identifiers": {
+        "library_name": [
+          "Uzem"
+        ]
+      },
+      "systems": {
+        "uzebox": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v2.0",
+          "citation": "[V] uzem_libretro.cpp:416-426 at libretro/libretro-uzem — RETRO_MEMORY_SAVE_RAM answers eepromSize, the Uzebox's EEPROM, so RetroArch writes <rom_stem>.srm. No RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "vecx": {
+      "identifiers": {
+        "library_name": [
+          "vecx"
+        ]
+      },
+      "systems": {
+        "vectrex": {
+          "memory_types": [],
+          "verified_core": "1.2 841229a",
+          "citation": "[V] libretro.c:150-155 at libretro-vecx 841229a — only RETRO_MEMORY_SYSTEM_RAM answers (1024); every other id returns 0."
         }
       },
       "provenance": {
