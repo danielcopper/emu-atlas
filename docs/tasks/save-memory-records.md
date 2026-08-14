@@ -45,20 +45,14 @@ answer.
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (11 cores)
+## The list (5 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
 - [ ] **`mess2015`** — `mess`
 - [ ] **`snes9x`** — `satellaview`, `sfc`, `snes`, `snesna`, `sufami`
 - [ ] **`swanstation`** — `psx`
-- [ ] **`vice_x64sc`** — `c64`
-- [ ] **`vice_xplus4`** — `plus4`
-- [ ] **`vice_xvic`** — `vic20`
-- [ ] **`vircon32`** — `vircon32`
 - [ ] **`virtualjaguar`** — `atarijaguar`
-- [ ] **`wasm4`** — `wasm4`
-- [ ] **`x1`** — `x1`
 - [ ] **`mame`** — `apple2`, `apple2gs`, `arcade`, `astrocde`, `consolearcade`, `cps`, `cps1`, `cps2`, `cps3`, `daphne`,
       `fmtowns`, `gamate`, `gameandwatch`, `gamecom`, `gmaster`, `laserdisc`, `lcdgames`, `mame`, `model2`, `pv1000`,
       `scv`, `supracan`, `vsmile`
@@ -128,3 +122,9 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`tyrquake`** — frontend writes nothing on quake
 - [x] **`uzem`** — fills `save_ram` on uzebox
 - [x] **`vecx`** — frontend writes nothing on vectrex
+- [x] **`vice_x64sc`** — frontend writes nothing on c64
+- [x] **`vice_xplus4`** — frontend writes nothing on plus4
+- [x] **`vice_xvic`** — frontend writes nothing on vic20
+- [x] **`vircon32`** — frontend writes nothing on vircon32
+- [x] **`wasm4`** — fills `save_ram` on wasm4
+- [x] **`x1`** — frontend writes nothing on x1
