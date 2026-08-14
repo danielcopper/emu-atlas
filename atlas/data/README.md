@@ -299,6 +299,12 @@ which atlas never does.
 - **Why the system is part of the key.** A core is not one behaviour. mGBA answers a Game Boy cartridge's clock and a
   Game Boy Advance cartridge's not at all, so a record spelled `mgba` alone would have to be wrong about one of them.
   Where the caller did not name a system the resolver states nothing rather than picking one of a record's entries.
+- **Which systems a record carries**: every system the frontend catalogue offers that core for, not only the one it
+  leads with. A frontend lists several emulators per system and the user picks; an arcade library run on a FinalBurn
+  romset is the ordinary case, not an exotic one, and a record that stopped at the leading entry would answer _unknown_
+  for it while holding the reading that settles it. Each system still gets its own entry with the citation that covers
+  it — where a core's reading branches by platform, the branch decides which entry a system copies (mGBA's Super Game
+  Boy is Game Boy content and takes the Game Boy branch, clock file included).
 - **Every entry is an upper bound.** Whether _this_ cartridge carries a battery or a clock is a fact about the game —
   mGBA reads it out of the ROM, gambatte off header byte `0x147` — and no table can hold it. A record states which files
   can occur at all, which is the candidate set a save-syncing client needs.

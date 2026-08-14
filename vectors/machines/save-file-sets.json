@@ -855,6 +855,140 @@
           }
         }
       }
+    },
+    {
+      "name": "a-second-choice-core-answers-with-its-own-reading",
+      "rationale": "A frontend offers several emulators per system and a user picks one — for an arcade library that is routinely not the one the catalogue leads with. The record describes the core, not the position it holds in a menu, so the second entry answers from the same reading. FinalBurn Neo fills no memory id, so the answer is a declared emptiness with the rest of the story left open, exactly as it is on the system this core does lead.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/arcade/rtype.zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo",
+            "library_version": "v1.0.0.03  01e29d5"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "arcade",
+          "label": "FinalBurn Neo",
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/rtype.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "fbneo"
+              }
+            },
+            {
+              "code": "core-own-writes-unestablished",
+              "data": {
+                "core": "fbneo"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-second-choice-core-names-files-where-it-fills-the-interface",
+      "rationale": "The other half of the same rule, with names rather than an emptiness. PicoDrive is the catalogue's second offer for Mega Drive and fills the save-RAM id, so choosing it states the file the frontend writes — a system a core does not lead is not a system atlas knows less about.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megadrive</name><path>%ROMPATH%/megadrive</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n    <command label=\"PicoDrive\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/picodrive_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/megadrive/Sonic 3 & Knuckles.md": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/picodrive_libretro.so": {
+            "library_name": "PicoDrive",
+            "library_version": "2.05-046e5ff"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megadrive",
+          "label": "PicoDrive",
+          "content_path": "/mnt/sd/retrodeck/roms/megadrive/Sonic 3 & Knuckles.md"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Sonic 3 & Knuckles.srm"
+            ],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "picodrive"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

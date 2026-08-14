@@ -1885,13 +1885,12 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Paper Mario (USA).srm"
             ],
             "complete": false
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "core-unaudited",
@@ -1899,7 +1898,14 @@
                 "core": "parallel_n64"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
