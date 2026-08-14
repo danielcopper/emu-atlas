@@ -45,20 +45,10 @@ answer.
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (49 cores)
+## The list (39 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
-- [ ] **`hatari`** — `atarist`
-- [ ] **`jollycv`** — `crvision`
-- [ ] **`kronos`** — `stv`
-- [ ] **`lowresnx`** — `lowresnx`
-- [ ] **`lutro`** — `lutro`
-- [ ] **`mednafen_ngp`** — `ngp`, `ngpc`
-- [ ] **`mednafen_pce`** — `pcengine`, `pcenginecd`, `tg-cd`, `tg16`
-- [ ] **`mednafen_pcfx`** — `pcfx`
-- [ ] **`mednafen_saturn`** — `saturn`, `saturnjp`
-- [ ] **`mednafen_supergrafx`** — `supergrafx`
 - [ ] **`mednafen_vb`** — `virtualboy`
 - [ ] **`mednafen_wswan`** — `wonderswan`, `wonderswancolor`
 - [ ] **`mesen`** — `famicom`, `fds`, `nes`
@@ -127,4 +117,14 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`genesis_plus_gx`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megacd, megacdjp, megadrive,
       megadrivejp, segacd, sg-1000
 - [x] **`handy`** — frontend writes nothing on atarilynx
+- [x] **`hatari`** — frontend writes nothing on atarist
+- [x] **`jollycv`** — fills `save_ram` on crvision
+- [x] **`kronos`** — frontend writes nothing on stv
+- [x] **`lowresnx`** — fills `save_ram` on lowresnx
+- [x] **`lutro`** — frontend writes nothing on lutro
+- [x] **`mednafen_ngp`** — frontend writes nothing on ngp, ngpc
+- [x] **`mednafen_pce`** — fills `save_ram` on pcengine, pcenginecd, tg-cd, tg16
+- [x] **`mednafen_pcfx`** — fills `save_ram` on pcfx
+- [x] **`mednafen_saturn`** — frontend writes nothing on saturn, saturnjp
+- [x] **`mednafen_supergrafx`** — fills `save_ram` on supergrafx
 - [x] **`mgba`** — fills `rtc`, `save_ram` on gb, gba, gbc

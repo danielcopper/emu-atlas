@@ -494,6 +494,217 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "hatari": {
+      "identifiers": {
+        "library_name": [
+          "hatari"
+        ]
+      },
+      "systems": {
+        "atarist": {
+          "memory_types": [],
+          "verified_core": "1.8 7008194",
+          "citation": "[V] libretro/libretro.c:1782-1786 at libretro/hatari 7008194 — retro_get_memory_size discards the id and returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "jollycv": {
+      "identifiers": {
+        "library_name": [
+          "JollyCV"
+        ]
+      },
+      "systems": {
+        "crvision": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.0.0",
+          "citation": "[V] libretro/libretro.c:795-806 at libretro/jollycv — RETRO_MEMORY_SAVE_RAM answers jcv_memory_get_size(JCV_MEM_SAVEDATA), so RetroArch writes <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "kronos": {
+      "identifiers": {
+        "library_name": [
+          "Kronos"
+        ]
+      },
+      "systems": {
+        "stv": {
+          "memory_types": [],
+          "verified_core": "v2.7.0 6709c1d",
+          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "lowresnx": {
+      "identifiers": {
+        "library_name": [
+          "LowRes NX"
+        ]
+      },
+      "systems": {
+        "lowresnx": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "1.2",
+          "citation": "[V] libretro/libretro_main.c:548-557 at timoinutilis/lowres-nx — RETRO_MEMORY_SAVE_RAM answers PERSISTENT_RAM_SIZE unconditionally, so every program gets a <rom_stem>.srm; no other id answers."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "lutro": {
+      "identifiers": {
+        "library_name": [
+          "Lutro"
+        ]
+      },
+      "systems": {
+        "lutro": {
+          "memory_types": [],
+          "verified_core": "0.0.1 72c8754",
+          "citation": "[V] libretro.c:295-302 at libretro/libretro-lutro (master) — retro_get_memory_size returns 0, with the RETRO_MEMORY_SAVE_RAM branch and its game_data_size() call present as commented-out lines."
+        }
+      },
+      "provenance": {
+        "source": "the revision the binary names (72c8754) is not reachable upstream, so the reading is at master and the pin records what the binary claims rather than what was read"
+      }
+    },
+    "mednafen_ngp": {
+      "identifiers": {
+        "library_name": [
+          "Beetle NeoPop"
+        ]
+      },
+      "systems": {
+        "ngp": {
+          "memory_types": [],
+          "verified_core": "v1.29.0.0 139fe34",
+          "citation": "[V] libretro.c:785-790 at beetle-ngp-libretro 139fe34 — only RETRO_MEMORY_SYSTEM_RAM answers (16384); save RAM returns 0. The core keeps Neo Geo Pocket saves in a file of its own, which this record does not describe."
+        },
+        "ngpc": {
+          "memory_types": [],
+          "verified_core": "v1.29.0.0 139fe34",
+          "citation": "[V] libretro.c:785-790 at beetle-ngp-libretro 139fe34 — only RETRO_MEMORY_SYSTEM_RAM answers (16384); save RAM returns 0. The core keeps Neo Geo Pocket saves in a file of its own, which this record does not describe."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "mednafen_pce": {
+      "identifiers": {
+        "library_name": [
+          "Beetle PCE"
+        ]
+      },
+      "systems": {
+        "pcengine": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.29.0 9a301c0",
+          "citation": "[V] libretro.cpp:2082-2096 at beetle-pce-libretro 9a301c0 — RETRO_MEMORY_SAVE_RAM answers 2048 bytes, or 32768 for Populous, so the id is always filled and RetroArch writes <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        },
+        "pcenginecd": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.29.0 9a301c0",
+          "citation": "[V] libretro.cpp:2082-2096 at beetle-pce-libretro 9a301c0 — RETRO_MEMORY_SAVE_RAM answers 2048 bytes, or 32768 for Populous, so the id is always filled and RetroArch writes <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        },
+        "tg-cd": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.29.0 9a301c0",
+          "citation": "[V] libretro.cpp:2082-2096 at beetle-pce-libretro 9a301c0 — RETRO_MEMORY_SAVE_RAM answers 2048 bytes, or 32768 for Populous, so the id is always filled and RetroArch writes <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        },
+        "tg16": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.29.0 9a301c0",
+          "citation": "[V] libretro.cpp:2082-2096 at beetle-pce-libretro 9a301c0 — RETRO_MEMORY_SAVE_RAM answers 2048 bytes, or 32768 for Populous, so the id is always filled and RetroArch writes <rom_stem>.srm; there is no RETRO_MEMORY_RTC case."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "mednafen_pcfx": {
+      "identifiers": {
+        "library_name": [
+          "Beetle PC-FX"
+        ]
+      },
+      "systems": {
+        "pcfx": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v0.9.36.5 dd04cef",
+          "citation": "[V] libretro.cpp:1735-1748 at beetle-pcfx-libretro dd04cef — RETRO_MEMORY_SAVE_RAM answers sizeof(SaveRAM) unconditionally; no RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "mednafen_saturn": {
+      "identifiers": {
+        "library_name": [
+          "Beetle Saturn"
+        ]
+      },
+      "systems": {
+        "saturn": {
+          "memory_types": [],
+          "verified_core": "v1.29.0 ccba526",
+          "citation": "[V] libretro.cpp:1026-1036 at beetle-saturn-libretro ccba526 — the switch answers RETRO_MEMORY_SYSTEM_RAM alone and falls through to 'not supported' with 0 for everything else, save RAM included. The core writes Saturn saves itself, in files this record does not describe."
+        },
+        "saturnjp": {
+          "memory_types": [],
+          "verified_core": "v1.29.0 ccba526",
+          "citation": "[V] libretro.cpp:1026-1036 at beetle-saturn-libretro ccba526 — the switch answers RETRO_MEMORY_SYSTEM_RAM alone and falls through to 'not supported' with 0 for everything else, save RAM included. The core writes Saturn saves itself, in files this record does not describe."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "mednafen_supergrafx": {
+      "identifiers": {
+        "library_name": [
+          "Beetle SuperGrafx"
+        ]
+      },
+      "systems": {
+        "supergrafx": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.29.0 a776133",
+          "citation": "[V] libretro.cpp:2025-2046 at beetle-supergrafx-libretro a776133 — RETRO_MEMORY_SAVE_RAM answers 2048 bytes, or 32768 for Populous, so the id is always filled; no RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "mgba": {
       "identifiers": {
         "library_name": [
