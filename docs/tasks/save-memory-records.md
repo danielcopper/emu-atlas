@@ -43,21 +43,15 @@ covers the answer.
   **every system the catalogue offers it for**, because a user who picks the second entry for their arcade library is
   asking about the same core and deserves the same answer.
 
-## Order
+## The list (3 cores)
 
-Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
-round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
+Tick a core when all of its systems are in and the vector is green. What is left is not reading: two of the three are
+read and belong to the card family, and the third ships no binary to read.
 
-## The list (4 cores)
-
-Tick a core when all of its systems are in and the vector is green.
-
-- [ ] **`mess2015`** — `mess`
+- [ ] **`mess2015`** — `mess` · the catalogue declares it and no `.so` is shipped, so there is nothing to pin. A marker
+      for the day it ships.
 - [ ] **`swanstation`** — `psx` · read, and a card candidate: a core option decides the file set (#80)
 - [ ] **`virtualjaguar`** — `atarijaguar` · read, and a card candidate: it writes a second file of its own (#121)
-- [ ] **`mame`** — `apple2`, `apple2gs`, `arcade`, `astrocde`, `consolearcade`, `cps`, `cps1`, `cps2`, `cps3`, `daphne`,
-      `fmtowns`, `gamate`, `gameandwatch`, `gamecom`, `gmaster`, `laserdisc`, `lcdgames`, `mame`, `model2`, `pv1000`,
-      `scv`, `supracan`, `vsmile`
 
 ## Done
 
@@ -90,6 +84,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`kronos`** — frontend writes nothing on arcade, consolearcade, mame, saturn, saturnjp, stv
 - [x] **`lowresnx`** — fills `save_ram` on lowresnx
 - [x] **`lutro`** — frontend writes nothing on lutro
+- [x] **`mame`** — frontend writes nothing on apple2, apple2gs, arcade, arcadia, astrocde, atari7800, channelf,
+      consolearcade, cps, cps1, cps2, cps3, crvision, daphne, fmtowns, gamate, gameandwatch, gamecom, gmaster,
+      intellivision, laserdisc, lcdgames, mame, megaduck, model2, odyssey2, pv1000, scv, stv, supervision, supracan,
+      vectrex, videopac, vsmile
 - [x] **`mednafen_ngp`** — frontend writes nothing on ngp, ngpc
 - [x] **`mednafen_pce`** — fills `save_ram` on pcengine, pcenginecd, supergrafx, tg-cd, tg16
 - [x] **`mednafen_pcfx`** — fills `save_ram` on pcfx
