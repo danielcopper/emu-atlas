@@ -407,14 +407,14 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>snes</name><path>%ROMPATH%/snes</path>\n    <command label=\"Snes9x\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>snes</name><path>%ROMPATH%/snes</path>\n    <command label=\"bsnes\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/bsnes_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/snes/Chrono Trigger (USA).sfc": "rom",
           "/mnt/sd/retrodeck/saves/Chrono Trigger (USA).srm": "sram"
         },
         "cores": {
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/snes9x_libretro.so": {
-            "library_name": "Snes9x",
-            "library_version": "1.62.3 8f1e0d5"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/bsnes_libretro.so": {
+            "library_name": "bsnes",
+            "library_version": "115"
           }
         },
         "entry_savefile_query": {
@@ -450,7 +450,7 @@
             {
               "code": "core-unaudited",
               "data": {
-                "core": "snes9x"
+                "core": "bsnes"
               }
             }
           ],
@@ -780,6 +780,74 @@
           ],
           "granularity": {
             "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-clock-only-a-few-cartridges-carry-still-belongs-in-the-set",
+      "rationale": "Snes9x offers the frontend both memory ids, and the clock one answers a size only while the loaded cartridge drives S-RTC or the SPC7110 clock — a handful of games out of a library. The set is an upper bound over the system, so both names are stated: atlas does not read cartridges, and a caller looking for the second file finds it where it would be. One record serves every flavour of the machine the catalogue declares.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><path>%ROMPATH%/snes</path>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n  </system>\n  <system><name>satellaview</name><path>%ROMPATH%/satellaview</path>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/snes/Chrono Trigger (USA).sfc": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/snes9x_libretro.so": {
+            "library_name": "Snes9x",
+            "library_version": "1.63 5a40cd5"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "snes",
+          "content_path": "/mnt/sd/retrodeck/roms/snes/Chrono Trigger (USA).sfc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Chrono Trigger (USA).srm",
+              "Chrono Trigger (USA).rtc"
+            ],
+            "complete": false
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "snes9x"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
             "option_key": null,
             "option_value": null,
             "options_file": null,

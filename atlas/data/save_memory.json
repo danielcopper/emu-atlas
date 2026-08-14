@@ -1180,6 +1180,58 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "snes9x": {
+      "identifiers": {
+        "library_name": [
+          "Snes9x"
+        ]
+      },
+      "systems": {
+        "satellaview": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "1.63 5a40cd5",
+          "citation": "[V] libretro/libretro.cpp:2065-2097 at libretro/snes9x 5a40cd5 — RETRO_MEMORY_SAVE_RAM answers the cartridge's own SRAM size (capped at 128 KB) and RETRO_MEMORY_RTC answers 20 bytes whenever the loaded cartridge drives S-RTC or the SPC7110 clock, so RetroArch writes <rom_stem>.srm and <rom_stem>.rtc. Neither id is decided per system — one function serves all five, and which of the two a given cartridge fills is a fact about the cartridge. The core writes no save file of its own: S9xAutoSaveSRAM (:2362-2365) has an empty body and the shipped binary carries no save path format at all."
+        },
+        "sfc": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "1.63 5a40cd5",
+          "citation": "[V] libretro/libretro.cpp:2065-2097 at libretro/snes9x 5a40cd5 — RETRO_MEMORY_SAVE_RAM answers the cartridge's own SRAM size (capped at 128 KB) and RETRO_MEMORY_RTC answers 20 bytes whenever the loaded cartridge drives S-RTC or the SPC7110 clock, so RetroArch writes <rom_stem>.srm and <rom_stem>.rtc. Neither id is decided per system — one function serves all five, and which of the two a given cartridge fills is a fact about the cartridge. The core writes no save file of its own: S9xAutoSaveSRAM (:2362-2365) has an empty body and the shipped binary carries no save path format at all."
+        },
+        "snes": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "1.63 5a40cd5",
+          "citation": "[V] libretro/libretro.cpp:2065-2097 at libretro/snes9x 5a40cd5 — RETRO_MEMORY_SAVE_RAM answers the cartridge's own SRAM size (capped at 128 KB) and RETRO_MEMORY_RTC answers 20 bytes whenever the loaded cartridge drives S-RTC or the SPC7110 clock, so RetroArch writes <rom_stem>.srm and <rom_stem>.rtc. Neither id is decided per system — one function serves all five, and which of the two a given cartridge fills is a fact about the cartridge. The core writes no save file of its own: S9xAutoSaveSRAM (:2362-2365) has an empty body and the shipped binary carries no save path format at all."
+        },
+        "snesna": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "1.63 5a40cd5",
+          "citation": "[V] libretro/libretro.cpp:2065-2097 at libretro/snes9x 5a40cd5 — RETRO_MEMORY_SAVE_RAM answers the cartridge's own SRAM size (capped at 128 KB) and RETRO_MEMORY_RTC answers 20 bytes whenever the loaded cartridge drives S-RTC or the SPC7110 clock, so RetroArch writes <rom_stem>.srm and <rom_stem>.rtc. Neither id is decided per system — one function serves all five, and which of the two a given cartridge fills is a fact about the cartridge. The core writes no save file of its own: S9xAutoSaveSRAM (:2362-2365) has an empty body and the shipped binary carries no save path format at all."
+        },
+        "sufami": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "1.63 5a40cd5",
+          "citation": "[V] libretro/libretro.cpp:2065-2097 at libretro/snes9x 5a40cd5 — RETRO_MEMORY_SAVE_RAM answers the cartridge's own SRAM size (capped at 128 KB) and RETRO_MEMORY_RTC answers 20 bytes whenever the loaded cartridge drives S-RTC or the SPC7110 clock, so RetroArch writes <rom_stem>.srm and <rom_stem>.rtc. Neither id is decided per system — one function serves all five, and which of the two a given cartridge fills is a fact about the cartridge. The core writes no save file of its own: S9xAutoSaveSRAM (:2362-2365) has an empty body and the shipped binary carries no save path format at all."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "squirreljme": {
       "identifiers": {
         "library_name": [
