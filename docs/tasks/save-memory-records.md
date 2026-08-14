@@ -45,15 +45,13 @@ answer.
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (32 cores)
+## The list (30 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
 - [ ] **`mednafen_vb`** — `virtualboy`
 - [ ] **`mednafen_wswan`** — `wonderswan`, `wonderswancolor`
 - [ ] **`mess2015`** — `mess`
-- [ ] **`mupen64plus_next`** — `n64`
-- [ ] **`parallel_n64`** — `n64dd`
 - [ ] **`picodrive`** — `sega32x`, `sega32xjp`, `sega32xna`
 - [ ] **`pokemini`** — `pokemini`
 - [ ] **`potator`** — `supervision`
@@ -125,6 +123,8 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mgba`** — fills `rtc`, `save_ram` on gb, gba, gbc
 - [x] **`mojozork`** — frontend writes nothing on zmachine
 - [x] **`mu`** — frontend writes nothing on palm
+- [x] **`mupen64plus_next`** — fills `save_ram` on n64
 - [x] **`neocd`** — fills `save_ram` on neogeocd, neogeocdjp
 - [x] **`np2kai`** — frontend writes nothing on pc98
 - [x] **`o2em`** — frontend writes nothing on odyssey2, videopac
+- [x] **`parallel_n64`** — fills `save_ram` on n64dd

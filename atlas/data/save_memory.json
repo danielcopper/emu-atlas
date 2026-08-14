@@ -826,6 +826,25 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "mupen64plus_next": {
+      "identifiers": {
+        "library_name": [
+          "Mupen64Plus-Next"
+        ]
+      },
+      "systems": {
+        "n64": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.8-Vulkan 680e033",
+          "citation": "[V] libretro/libretro.c:2109-2120 at mupen64plus-libretro-nx 680e033 — RETRO_MEMORY_SAVE_RAM answers sizeof(saved_memory), the block holding the cartridge's EEPROM, SRAM, FlashRAM and the controller paks together, so RetroArch writes one <rom_stem>.srm for all of them. No RETRO_MEMORY_RTC case exists."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "neocd": {
       "identifiers": {
         "library_name": [
@@ -885,6 +904,25 @@
           "memory_types": [],
           "verified_core": "1.18 3ba4231",
           "citation": "[V] libretro.c:1070-1075 at libretro-o2em 3ba4231 — only RETRO_MEMORY_SYSTEM_RAM answers; every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "parallel_n64": {
+      "identifiers": {
+        "library_name": [
+          "ParaLLEl N64"
+        ]
+      },
+      "systems": {
+        "n64dd": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "2.0-rc2 50d3ddd",
+          "citation": "[V] libretro/libretro.c:2014-2032 at parallel-n64 50d3ddd — RETRO_MEMORY_SAVE_RAM answers sizeof(saved_memory), less the disk region unless a 64DD disk is loaded, so RetroArch writes one <rom_stem>.srm covering the cartridge's save hardware. (The branch opens with a guard comparing type against the case it is already in, which can never be true; it changes nothing.) No RETRO_MEMORY_RTC case exists."
         }
       },
       "provenance": {
