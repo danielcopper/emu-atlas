@@ -45,21 +45,14 @@ answer.
 Alphabetical, with `mame` last: it is the default for 23 systems whose save behaviour has little in common, so it is a
 round of its own rather than one line among many. The mednafen cores share a source tree and are quickest read together.
 
-## The list (39 cores)
+## The list (32 cores)
 
 Tick a core when all of its systems are in and the vector is green.
 
 - [ ] **`mednafen_vb`** — `virtualboy`
 - [ ] **`mednafen_wswan`** — `wonderswan`, `wonderswancolor`
-- [ ] **`mesen`** — `famicom`, `fds`, `nes`
-- [ ] **`mesen-s`** — `sgb`
 - [ ] **`mess2015`** — `mess`
-- [ ] **`mojozork`** — `zmachine`
-- [ ] **`mu`** — `palm`
 - [ ] **`mupen64plus_next`** — `n64`
-- [ ] **`neocd`** — `neogeocd`, `neogeocdjp`
-- [ ] **`np2kai`** — `pc98`
-- [ ] **`o2em`** — `odyssey2`, `videopac`
 - [ ] **`parallel_n64`** — `n64dd`
 - [ ] **`picodrive`** — `sega32x`, `sega32xjp`, `sega32xna`
 - [ ] **`pokemini`** — `pokemini`
@@ -127,4 +120,11 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mednafen_pcfx`** — fills `save_ram` on pcfx
 - [x] **`mednafen_saturn`** — frontend writes nothing on saturn, saturnjp
 - [x] **`mednafen_supergrafx`** — fills `save_ram` on supergrafx
+- [x] **`mesen`** — fills `save_ram` on famicom, fds, nes
+- [x] **`mesen-s`** — fills `save_ram` on sgb
 - [x] **`mgba`** — fills `rtc`, `save_ram` on gb, gba, gbc
+- [x] **`mojozork`** — frontend writes nothing on zmachine
+- [x] **`mu`** — frontend writes nothing on palm
+- [x] **`neocd`** — fills `save_ram` on neogeocd, neogeocdjp
+- [x] **`np2kai`** — frontend writes nothing on pc98
+- [x] **`o2em`** — frontend writes nothing on odyssey2, videopac
