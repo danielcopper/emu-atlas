@@ -23,31 +23,54 @@ check it.** Three consequences run through the format:
   `core-option-value-unestablished`.
 - Every file name and subdir fragment a card records is pinned to the binary it was read from — see _Anchors_ below.
 
-A mode — one value of the governing option — states the root it anchors at, an optional `subdir`, its `granularity`, and
-the files the save consists of. Three of those fields are closed vocabularies — all three the placement's own, imported
-by the loader rather than respelled here, so a card cannot select a value the contract cannot carry — and one is a type
-rule:
+A mode — one value of the governing option — states the root it anchors at and its **groups**: one entry per directory
+_and meaning_, because a save is not always one list of files that mean one thing. MAME keeps a machine's battery memory
+under `nvram/`, its dip switches under `cfg/` beside an emulator-wide `default.cfg`, and disk write-differences under
+`diff/`; Flycast's shared mode keeps four memory cards and the console's own flash side by side under `dc/`. A group
+carries its own `subdir`, its own `granularity`, a `role`, and its own file and evidence fields.
 
-| field         | accepted values                                                   |
-| ------------- | ----------------------------------------------------------------- |
-| `root`        | `savefile_directory`, `system_directory`, `content_directory`     |
-| `also_under`  | the same three, and not the mode's own `root`                     |
-| `granularity` | `shared-card`, `per-game-file`, `per-game-files`                  |
-| `complete`    | a JSON boolean, `true` or `false` — never a string, never coerced |
+Four of those fields are closed vocabularies — all four the placement's own, imported by the loader rather than
+respelled here, so a card cannot select a value the contract cannot carry — and one is a type rule:
 
-`granularity` reaches the caller as the contractual `Granularity.value`, so a misspelling would be stated as this
-machine's actual grouping; `complete` is a claim about the save, and `bool("false")` is `True` in Python, so a quoted
-boolean fails the load instead of silently asserting completeness.
+| field         | on    | accepted values                                                   |
+| ------------- | ----- | ----------------------------------------------------------------- |
+| `root`        | mode  | `savefile_directory`, `system_directory`, `content_directory`     |
+| `also_under`  | mode  | the same three, and not the mode's own `root`                     |
+| `granularity` | group | `shared-card`, `shared-file`, `per-game-file`, `per-game-files`   |
+| `role`        | group | `battery`, `memory-card`, `disk-diff`, `settings`                 |
+| `complete`    | group | a JSON boolean, `true` or `false` — never a string, never coerced |
+
+`granularity` and `role` reach the caller as contract values, so a misspelling would be stated as this machine's actual
+grouping or would send a save sync past real save data; `complete` is a claim about the save, and `bool("false")` is
+`True` in Python, so a quoted boolean fails the load instead of silently asserting completeness.
+
+**Why grouping and role are two fields.** They answer different questions — _whose is it_ and _what is it_ — and MAME's
+two `.cfg` files are the proof neither can carry the other's meaning: `<machine>.cfg` and `default.cfg` share a
+directory and a role and differ only in whom they belong to. A client syncing save data takes every role but `settings`,
+and never copies a `shared-*` group between machines blind.
 
 ```json
 "All VMUs": {
   "root": "savefile_directory",
-  "subdir": null,
-  "files": ["<save_id>.A1.bin", "<save_id>.B1.bin"],
-  "files_without_save_id": ["<rom_stem>.A1.bin", "<rom_stem>.B1.bin"],
-  "granularity": "per-game-files"
+  "groups": [
+    {
+      "subdir": null,
+      "files": ["<save_id>.A1.bin", "<save_id>.B1.bin"],
+      "files_without_save_id": ["<rom_stem>.A1.bin", "<rom_stem>.B1.bin"],
+      "granularity": "per-game-files",
+      "role": "memory-card"
+    }
+  ]
 }
 ```
+
+**The first group is the mode's own answer**, and the groups sharing its directory are what `dir` and `file_set.files`
+have always described — the names lying in one directory. Splitting such a list by role therefore moves no name out of
+an answer: the resolver states their concatenation, in card order, and both the loader and the vector validator refuse a
+card whose parts do not add back up. Groups in _other_ directories reach the caller through `file_set.groups` alone. Two
+consistency rules hold within one directory: its groups either all declare files or none do (one unverified part would
+silently shorten a list stated as the whole), and at most one of them may scope its list with `files_established_for`,
+since the mode's answer can carry only one scope.
 
 ### File names are templates in the placement's own hole vocabulary
 
@@ -81,9 +104,11 @@ placement vocabulary first. An empty list, an empty name and a literal angle bra
   caveat as data, so a client can tell "this list is scoped" from "this list is universal" without reading prose. The
   scope needs a declared `files` to scope, and the citation needs a scope to cite; the loader enforces both.
 - `also_under` — a second root this mode's save data lives under (Flycast's `VMU A1` moves one controller's VMU and
-  leaves the rest on the shared card). A card states one root per mode, so such a mode declares **no** `files` at all —
-  the loader refuses both together — and the answer carries `file-set-spans-roots` instead of offering the visible part
-  as the whole save. What the schema would need to state it properly is task 16 in `docs/tasks/save-detection.md`.
+  leaves the rest on the shared card). Groups divide one root, not several: they carry a `subdir`, and the root stays
+  the mode's, so a mode reaching a second root still declares **no** `files` in any group — the loader refuses both
+  together — and the answer carries `file-set-spans-roots` instead of offering the visible part as the whole save. What
+  is left of task 16 in `docs/tasks/save-detection.md` is exactly this half: a group that resolves against a root of its
+  own, which needs the resolver to resolve both roots on either route rather than a field in this file.
 
 `complete` is the explicit claim that the mode's candidate universe is closed. A template can in principle carry it —
 the hole is in the name, not in the membership — but only source-verified provenance earns it.
@@ -91,8 +116,9 @@ the hole is in the name, not in the membership — but only source-verified prov
 ### Anchors — every recorded name, pinned to the string it was read from
 
 A card names files and subdirectories that reach a caller as fact, and `saves.anchors` records where each of those names
-came from. One entry per recorded name — the governing option key, every segment of a `subdir`, and every name in
-`files`, `observe` and `files_without_save_id` — carrying exactly one of three kinds:
+came from. One entry per recorded name — the governing option key, and from **every group of every mode** each segment
+of its `subdir` and every name in its `files`, `observe` and `files_without_save_id` — carrying exactly one of three
+kinds:
 
 | kind          | means                                                                                |
 | ------------- | ------------------------------------------------------------------------------------ |

@@ -72,6 +72,15 @@ def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[s
             "state": placement.file_set.state,
             "files": list(placement.file_set.files),
             "complete": placement.file_set.complete,
+            "groups": [
+                {
+                    "dir": group.dir,
+                    "files": list(group.files),
+                    "granularity": group.granularity,
+                    "role": group.role,
+                }
+                for group in placement.file_set.groups
+            ],
         },
         "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
     }

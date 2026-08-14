@@ -28,7 +28,13 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from atlas.placement import GRANULARITIES, ROOT_KINDS, TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID
+from atlas.placement import (
+    GRANULARITIES,
+    ROLES,
+    ROOT_KINDS,
+    TEMPLATE_ROM_STEM,
+    TEMPLATE_SAVE_ID,
+)
 
 # Packaged-data schema versions. The loaders are strict: unknown schema or
 # malformed entries raise instead of coercing — a broken build must fail
@@ -47,6 +53,7 @@ MODE_ALWAYS = "always"
 # looks right would be stated as fact.
 _KNOWN_MODE_ROOTS = set(ROOT_KINDS)
 _KNOWN_GRANULARITIES = set(GRANULARITIES)
+_KNOWN_ROLES = set(ROLES)
 # A declared file name is a template in the placement's own hole grammar. Only
 # these tokens exist: one the resolver fills, one the caller does. A token
 # outside the set would travel into a stated filename and be read as literal
@@ -134,8 +141,55 @@ def _expect_file_names(value: object, where: str) -> tuple[str, ...]:
 
 
 @dataclass(frozen=True, slots=True)
+class SaveGroup:
+    """One directory's worth of a mode's save, with what it is and whom it belongs to.
+
+    A mode's save is not always one list of files that share a meaning. MAME
+    puts a machine's battery memory under ``nvram/``, its dip switches under
+    ``cfg/`` beside an emulator-wide ``default.cfg``, and disk write-differences
+    under ``diff/``; FinalBurn Neo writes a per-game ``.fs`` and a shared
+    ``shared.memcard`` into one directory. Each group therefore carries its own
+    ``subdir``, its own ``granularity`` and a ``role`` saying what kind of data
+    it holds — two fields rather than one, because "whose is it" and "what is
+    it" are different questions and MAME's two ``.cfg`` files answer them
+    differently while sharing a directory.
+
+    The evidence fields are per group for the same reason: a card can have
+    read one part of a save to the source and another only far enough to name
+    it, and a scope that covers the whole mode would be wrong about one of them.
+
+    ``files`` is the declared set, or ``None`` when the card marks it
+    unverified — the resolver then refuses to state filenames.
+    A name may be a template: ``<rom_stem>`` the resolver fills from the
+    content path, ``<save_id>`` it carries through as a hole for the caller.
+    ``observe`` optionally widens the *observation* candidates beyond the
+    declared defaults (e.g. Flycast's slot-2 VMUs, which exist only when a
+    controller port's slot 2 is configured as a VMU). ``complete`` asserts
+    that the group's candidate universe is closed — no other file can belong
+    to it; a card may claim it only with source-verified provenance.
+    """
+
+    subdir: str | None
+    files: tuple[str, ...] | None
+    granularity: str
+    role: str
+    observe: tuple[str, ...] | None = None
+    complete: bool = False
+    files_without_save_id: tuple[str, ...] | None = None
+    files_established_for: str | None = None
+    files_citation: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class SaveMode:
     """One value of the governing option and the behaviour it selects.
+
+    ``groups`` is what the save consists of, one entry per directory-and-meaning
+    (see :class:`SaveGroup`); the first is the mode's own state, the one a
+    save-syncing client would take if it read nothing else. The fields a mode
+    carried before the save could have several parts are still here as the
+    first group's, so one spelling stays one spelling — they are read off
+    ``groups[0]`` rather than stored twice.
 
     ``files`` is the declared file set for this mode, or ``None`` when the
     card marks it unverified — the resolver then refuses to state filenames.
@@ -170,15 +224,82 @@ class SaveMode:
     """
 
     root: str
-    subdir: str | None
-    files: tuple[str, ...] | None
-    granularity: str
-    observe: tuple[str, ...] | None = None
-    complete: bool = False
-    files_without_save_id: tuple[str, ...] | None = None
-    files_established_for: str | None = None
-    files_citation: str | None = None
+    groups: tuple[SaveGroup, ...]
     also_under: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.groups:
+            raise ValueError("SaveMode: a mode states at least one group")
+        here = [group for group in self.groups if group.subdir == self.groups[0].subdir]
+        if len({group.files is None for group in here}) != 1:
+            # The directory's answer is the groups in it taken together, so one
+            # unverified part would silently shorten a list stated as the whole.
+            raise ValueError(
+                "SaveMode: groups sharing a directory either all declare files or none do"
+            )
+        if sum(1 for group in here if group.files_without_save_id or group.files_established_for) > 1:
+            raise ValueError(
+                "SaveMode: two groups in one directory both scope their file list — the mode "
+                "cannot say which scope its answer carries"
+            )
+
+    @property
+    def primary(self) -> SaveGroup:
+        """The group the mode's own answer is about — the card states it first."""
+        return self.groups[0]
+
+    @property
+    def here(self) -> tuple[SaveGroup, ...]:
+        """Every group that lands in the mode's own directory.
+
+        A group is a directory *and* a meaning, so one directory can hold
+        several: Flycast's shared mode keeps four memory cards and the console's
+        own flash side by side under ``dc/``. The fields below answer for that
+        directory — which is what ``dir`` and ``file_set.files`` have always
+        been about — so splitting one list into two by role does not move a
+        single name out of an answer.
+        """
+        return tuple(group for group in self.groups if group.subdir == self.primary.subdir)
+
+    @property
+    def subdir(self) -> str | None:
+        return self.primary.subdir
+
+    @property
+    def files(self) -> tuple[str, ...] | None:
+        if self.primary.files is None:
+            return None
+        return tuple(name for group in self.here for name in group.files or ())
+
+    @property
+    def granularity(self) -> str:
+        return self.primary.granularity
+
+    @property
+    def observe(self) -> tuple[str, ...] | None:
+        if all(group.observe is None for group in self.here):
+            return None
+        return tuple(
+            name
+            for group in self.here
+            for name in (group.observe if group.observe is not None else group.files or ())
+        )
+
+    @property
+    def complete(self) -> bool:
+        return all(group.complete for group in self.here)
+
+    @property
+    def files_without_save_id(self) -> tuple[str, ...] | None:
+        return next((g.files_without_save_id for g in self.here if g.files_without_save_id), None)
+
+    @property
+    def files_established_for(self) -> str | None:
+        return next((g.files_established_for for g in self.here if g.files_established_for), None)
+
+    @property
+    def files_citation(self) -> str | None:
+        return next((g.files_citation for g in self.here if g.files_citation), None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,20 +332,12 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     root = _expect_str(mode.get("root"), f"{where}: root")
     if root not in _KNOWN_MODE_ROOTS:
         raise ValueError(f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
-    granularity = _expect_str(mode.get("granularity"), f"{where}: granularity")
-    if granularity not in _KNOWN_GRANULARITIES:
-        # It reaches the caller as the contractual Granularity.value, so a
-        # misspelling here would be stated as this machine's actual grouping.
-        raise ValueError(
-            f"{where}: granularity must be one of {sorted(_KNOWN_GRANULARITIES)}, got {granularity!r}"
-        )
-    files = mode.get("files")
-    observe = mode.get("observe")
-    complete = mode.get("complete", False)
-    if not isinstance(complete, bool):
-        # bool("false") is True in Python — never coerce this claim.
-        raise ValueError(f"{where}: 'complete' must be a JSON boolean")
-    alternative = mode.get("files_without_save_id")
+    raw_groups = mode.get("groups")
+    if not isinstance(raw_groups, list) or not raw_groups:
+        raise ValueError(f"{where}: 'groups' must be a non-empty list — a mode has at least one part")
+    groups = tuple(
+        _save_group(group, f"{where}: groups[{index}]") for index, group in enumerate(raw_groups)
+    )
     also_under = _expect_opt_str(mode.get("also_under"), f"{where}: also_under")
     if also_under is not None and also_under not in _KNOWN_MODE_ROOTS:
         raise ValueError(
@@ -235,13 +348,39 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
             f"{where}: also_under names this mode's own root ({root!r}) — it exists to name the "
             "*second* root the save reaches, and a root does not span itself"
         )
-    if also_under is not None and files is not None:
-        # The field exists because one file list cannot describe a save that
-        # lies under two roots — a card that states both contradicts itself.
+    if also_under is not None and any(group.files is not None for group in groups):
+        # The field exists because no list under this root can describe a save
+        # that also lies under another — a card stating both contradicts itself.
         raise ValueError(
             f"{where}: a mode with 'also_under' cannot declare 'files' — its save data reaches "
             "beyond this root, so the set is not statable here"
         )
+    return SaveMode(root=root, groups=groups, also_under=also_under)
+
+
+def _save_group(mode: Any, where: str) -> SaveGroup:
+    """One group of a mode — its directory, its files, and what they are."""
+    if not isinstance(mode, dict):
+        raise ValueError(f"{where}: a group must be an object")
+    granularity = _expect_str(mode.get("granularity"), f"{where}: granularity")
+    if granularity not in _KNOWN_GRANULARITIES:
+        # It reaches the caller as the contractual Granularity.value, so a
+        # misspelling here would be stated as this machine's actual grouping.
+        raise ValueError(
+            f"{where}: granularity must be one of {sorted(_KNOWN_GRANULARITIES)}, got {granularity!r}"
+        )
+    role = _expect_str(mode.get("role"), f"{where}: role")
+    if role not in _KNOWN_ROLES:
+        # It reaches the caller as the word a client filters a save sync on, so
+        # a misspelling here would drop real save data or sync a settings file.
+        raise ValueError(f"{where}: role must be one of {sorted(_KNOWN_ROLES)}, got {role!r}")
+    files = mode.get("files")
+    observe = mode.get("observe")
+    complete = mode.get("complete", False)
+    if not isinstance(complete, bool):
+        # bool("false") is True in Python — never coerce this claim.
+        raise ValueError(f"{where}: 'complete' must be a JSON boolean")
+    alternative = mode.get("files_without_save_id")
     alternative_names: tuple[str, ...] | None = None
     if alternative is not None:
         if files is None or not any(TEMPLATE_SAVE_ID in name for name in files):
@@ -273,17 +412,16 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
             f"{where}: 'files_citation' cites the scope in 'files_established_for', which this mode "
             "does not state"
         )
-    return SaveMode(
-        root=root,
+    return SaveGroup(
         subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
         files=_expect_file_names(files, f"{where}: files") if files is not None else None,
         granularity=granularity,
+        role=role,
         observe=_expect_file_names(observe, f"{where}: observe") if observe is not None else None,
         complete=complete,
         files_without_save_id=alternative_names,
         files_established_for=established_for,
         files_citation=citation,
-        also_under=also_under,
     )
 
 
@@ -303,10 +441,11 @@ def recorded_vocabulary(*, option_key: str | None, modes: Mapping[str, SaveMode]
     if option_key is not None:
         words.add(option_key)
     for mode in modes.values():
-        if mode.subdir is not None:
-            words.update(segment for segment in mode.subdir.split("/") if segment)
-        for names in (mode.files, mode.observe, mode.files_without_save_id):
-            words.update(names or ())
+        for group in mode.groups:
+            if group.subdir is not None:
+                words.update(segment for segment in group.subdir.split("/") if segment)
+            for names in (group.files, group.observe, group.files_without_save_id):
+                words.update(names or ())
     return frozenset(words)
 
 

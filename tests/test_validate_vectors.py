@@ -75,7 +75,7 @@ def _vector(expected=None, *, installed=False, **input_keys) -> Vector:
 
 
 def _file_set(**overrides) -> Vector:
-    return {"state": "unknown", "files": [], "complete": False, **overrides}
+    return {"state": "unknown", "files": [], "complete": False, "groups": [], **overrides}
 
 
 def _placement(**overrides) -> Vector:
@@ -1256,6 +1256,12 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_granularity_vocabularies_match(self):
         assert validate_vectors.KNOWN_GRANULARITIES == set(atlas.GRANULARITIES)
+
+    def test_the_role_vocabularies_match(self):
+        assert validate_vectors.KNOWN_ROLES == set(atlas.ROLES)
+
+    def test_the_role_constants_are_the_role_tuple(self):
+        assert self._exported("ROLE_") == set(atlas.ROLES)
 
     def test_the_granularity_constants_are_the_granularity_tuple(self):
         # Every other closed set here ships per-value names beside the tuple;
