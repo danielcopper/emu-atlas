@@ -277,6 +277,50 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "dice": {
+      "identifiers": {
+        "library_name": [
+          "dice"
+        ]
+      },
+      "systems": {
+        "arcade": {
+          "memory_types": [],
+          "verified_core": "0.4.2",
+          "citation": "[V] libretro.cpp:581-591 at mittonk/dice-libretro 0.4.2 — retro_get_memory_size returns 0 for every id and retro_get_memory_data returns NULL, both casting the id to void without looking at it, so RetroArch writes no save file. The unit opens no file at all: DICE simulates discrete-logic arcade boards, which predate battery-backed memory."
+        },
+        "mame": {
+          "memory_types": [],
+          "verified_core": "0.4.2",
+          "citation": "[V] libretro.cpp:581-591 at mittonk/dice-libretro 0.4.2 — retro_get_memory_size returns 0 for every id and retro_get_memory_data returns NULL, both casting the id to void without looking at it, so RetroArch writes no save file. The unit opens no file at all: DICE simulates discrete-logic arcade boards, which predate battery-backed memory."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
+    "dirksimple": {
+      "identifiers": {
+        "library_name": [
+          "dirksimple"
+        ]
+      },
+      "systems": {
+        "daphne": {
+          "memory_types": [],
+          "verified_core": "0.3",
+          "citation": "[V] dirksimple_libretro.c:875-885 at icculus/DirkSimple 0.3 — retro_get_memory_size returns 0 for every id and retro_get_memory_data returns NULL, so RetroArch writes no save file. The unit's only file access is a read (:165); nothing in it writes."
+        },
+        "laserdisc": {
+          "memory_types": [],
+          "verified_core": "0.3",
+          "citation": "[V] dirksimple_libretro.c:875-885 at icculus/DirkSimple 0.3 — retro_get_memory_size returns 0 for every id and retro_get_memory_data returns NULL, so RetroArch writes no save file. The unit's only file access is a read (:165); nothing in it writes."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
     "dosbox_pure": {
       "identifiers": {
         "library_name": [
@@ -388,6 +432,33 @@
       },
       "provenance": {
         "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "fbalpha2012_cps1": {
+      "identifiers": {
+        "library_name": [
+          "FB Alpha 2012 CPS-1"
+        ]
+      },
+      "systems": {
+        "cps": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.28",
+          "citation": "[V] src/burner/libretro/libretro.cpp:2250-2251 at libretro/fbalpha2012_cps1 v0.2.97.28 — retro_get_memory_size returns 0 for every id and its data twin returns 0 beside it, so RetroArch writes no save file. What makes this build a record rather than a card is a call it does not make: its three sibling builds from the same FB Alpha tree write <save_dir>/<driver>.fs themselves at unload through BurnStateSave, and this one has no BurnStateSave and no BurnStateLoad anywhere in the unit — it asks the frontend for a save directory (:2189-2198) and never writes into it. Whether some other translation unit does is what core-own-writes-unestablished leaves open."
+        },
+        "cps1": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.28",
+          "citation": "[V] src/burner/libretro/libretro.cpp:2250-2251 at libretro/fbalpha2012_cps1 v0.2.97.28 — retro_get_memory_size returns 0 for every id and its data twin returns 0 beside it, so RetroArch writes no save file. What makes this build a record rather than a card is a call it does not make: its three sibling builds from the same FB Alpha tree write <save_dir>/<driver>.fs themselves at unload through BurnStateSave, and this one has no BurnStateSave and no BurnStateLoad anywhere in the unit — it asks the frontend for a save directory (:2189-2198) and never writes into it. Whether some other translation unit does is what core-own-writes-unestablished leaves open."
+        },
+        "fba": {
+          "memory_types": [],
+          "verified_core": "v0.2.97.28",
+          "citation": "[V] src/burner/libretro/libretro.cpp:2250-2251 at libretro/fbalpha2012_cps1 v0.2.97.28 — retro_get_memory_size returns 0 for every id and its data twin returns 0 beside it, so RetroArch writes no save file. What makes this build a record rather than a card is a call it does not make: its three sibling builds from the same FB Alpha tree write <save_dir>/<driver>.fs themselves at unload through BurnStateSave, and this one has no BurnStateSave and no BurnStateLoad anywhere in the unit — it asks the frontend for a save directory (:2189-2198) and never writes into it. Whether some other translation unit does is what core-own-writes-unestablished leaves open."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
     "fceumm": {
