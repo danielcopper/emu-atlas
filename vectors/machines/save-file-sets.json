@@ -1006,8 +1006,8 @@
       }
     },
     {
-      "name": "the-core-with-the-most-systems-writes-no-frontend-file-on-any-of-them",
-      "rationale": "MAME is launched for more systems than any other core on the list and answers the same way on every one of them: its memory function computes a size only for system RAM, by scanning the running machine's address maps, and returns zero for the two ids that reach a file. So the frontend writes nothing, which is a declared emptiness rather than an unknown — and deliberately not the end of the story, because MAME keeps NVRAM, configuration and difference files in a tree of its own under the save directory. The caveat says that half is unestablished; the citation says where it goes.",
+      "name": "three-trees-one-save-and-one-of-them-cannot-be-named",
+      "rationale": "MAME answers no libretro memory id and still saves plenty — in three directories of its own. The battery memory is the save, the dip switches beside it are settings, and the emulator-wide default.cfg in the same directory belongs to every machine at once: three groups, two roles, two groupings, so a client can take the progress and leave the configuration. The fourth tree is the honest hole. MAME names a hard disk's differencing image after the disk's entry in the machine's own ROM table, which is no read of this machine — upstream calls the scheme unscalable on the line that builds it — so the answer names the directory and refuses the file names rather than guessing them, because a backup that skips it loses the progress of every machine with a hard disk.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1017,12 +1017,21 @@
           "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves/mame/nvram"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
             "library_name": "MAME",
-            "library_version": "0.282 (a90e86e1)"
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
           }
         },
         "entry_savefile_query": {
@@ -1042,32 +1051,75 @@
           }
         ],
         "entry_savefile_location": {
-          "dir": "/mnt/sd/retrodeck/saves",
+          "dir": "/mnt/sd/retrodeck/saves/mame/nvram",
           "root_kind": "savefile_directory",
           "needs": [],
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
             "state": "declared",
-            "files": [],
+            "files": [
+              "dkong"
+            ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame/nvram",
+                "files": [
+                  "dkong"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
+                "files": [
+                  "dkong.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
+                "files": [
+                  "default.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
           },
           "caveats": [
             {
-              "code": "core-unaudited",
+              "code": "unverified-version",
               "data": {
-                "core": "mame"
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
               }
             },
             {
-              "code": "core-own-writes-unestablished",
+              "code": "file-names-unestablished",
               "data": {
-                "core": "mame"
+                "core": "mame",
+                "dir": "/mnt/sd/retrodeck/saves/mame/diff",
+                "role": "disk-diff",
+                "citation": "romload.cpp:1111-1123 at libretro/mame a90e86e1 — the differencing image for a CHD hard disk is named after the disk image's own entry in the machine's ROM table inside the binary (romp->name() + \".dif\"), which is no read of this machine. Upstream says so on the line above it: 'TODO: use system name and/or software list name in the path - the current setup doesn't scale'. The same directory is used by a mounted hard disk image (harddriv.cpp:196-200)."
               }
             }
           ],
-          "granularity": null
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": "mame_mame_paths_enable",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "enabled",
+                "per-game-file"
+              ]
+            ]
+          }
         }
       }
     },

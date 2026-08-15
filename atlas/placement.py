@@ -182,6 +182,16 @@ CAVEAT_SORTED_DIR_MISSING = "sorted-dir-missing"
 CAVEAT_FILENAMES_UNVERIFIED = "filenames-unverified"
 CAVEAT_FILENAMES_CONTENT_CONDITIONAL = "filenames-content-conditional"
 CAVEAT_FILE_SET_SPANS_ROOTS = "file-set-spans-roots"
+# A directory this configuration writes save data into whose file names do not
+# follow from anything atlas reads. MAME's differencing images for CHD hard
+# disks are the case it was added for: the name is the disk image's own, taken
+# from the machine's ROM table inside the binary, and upstream says on the line
+# that builds it that the scheme "doesn't scale". The directory is named because
+# it is knowable and because a backup that skips it loses the player's progress
+# on every machine with a hard disk; the names are not, because guessing them
+# would be the failure this project exists to avoid. `data` carries `dir` and a
+# `citation` for the reading behind it.
+CAVEAT_FILE_NAMES_UNESTABLISHED = "file-names-unestablished"
 CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
 # Set to blank or the literal "default". Not the same as absent — an absent
 # key resolves to RetroArch's platform default on every route — and the

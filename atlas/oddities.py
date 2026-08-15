@@ -158,6 +158,17 @@ class SaveGroup:
     read one part of a save to the source and another only far enough to name
     it, and a scope that covers the whole mode would be wrong about one of them.
 
+    ``unnamed`` is the third state a group's file list can be in, and it is not
+    the same as the other two. A group with it states a directory this
+    configuration writes save data into whose **names do not follow from
+    anything atlas reads** — MAME's differencing images for CHD hard disks take
+    the disk image's own name out of the machine's ROM table inside the binary.
+    Such a group carries no ``files`` and never becomes a
+    :class:`~atlas.placement.FileGroup`; the answer names its directory in a
+    ``file-names-unestablished`` caveat instead, with this text as the citation.
+    Silence there would be worse than the caveat: a backup that skips the
+    directory loses the player's progress on every machine with a hard disk.
+
     ``files`` is the declared set, or ``None`` when the card marks it
     unverified — the resolver then refuses to state filenames.
     A name may be a template: ``<rom_stem>`` the resolver fills from the
@@ -178,6 +189,7 @@ class SaveGroup:
     files_without_save_id: tuple[str, ...] | None = None
     files_established_for: str | None = None
     files_citation: str | None = None
+    unnamed: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -230,7 +242,10 @@ class SaveMode:
     def __post_init__(self) -> None:
         if not self.groups:
             raise ValueError("SaveMode: a mode states at least one group")
-        here = [group for group in self.groups if group.subdir == self.groups[0].subdir]
+        named = [group for group in self.groups if group.unnamed is None]
+        if not named:
+            raise ValueError('SaveMode: a mode whose every group is unnamed states nothing')
+        here = [group for group in named if group.subdir == named[0].subdir]
         if len({group.files is None for group in here}) != 1:
             # The directory's answer is the groups in it taken together, so one
             # unverified part would silently shorten a list stated as the whole.
@@ -246,7 +261,17 @@ class SaveMode:
     @property
     def primary(self) -> SaveGroup:
         """The group the mode's own answer is about — the card states it first."""
-        return self.groups[0]
+        return self.named[0]
+
+    @property
+    def named(self) -> tuple[SaveGroup, ...]:
+        """The groups that state files. The rest name a directory and say why not."""
+        return tuple(group for group in self.groups if group.unnamed is None)
+
+    @property
+    def unnamed(self) -> tuple[SaveGroup, ...]:
+        """Directories this mode writes into whose names atlas cannot derive."""
+        return tuple(group for group in self.groups if group.unnamed is not None)
 
     @property
     def here(self) -> tuple[SaveGroup, ...]:
@@ -259,7 +284,7 @@ class SaveMode:
         been about — so splitting one list into two by role does not move a
         single name out of an answer.
         """
-        return tuple(group for group in self.groups if group.subdir == self.primary.subdir)
+        return tuple(group for group in self.named if group.subdir == self.primary.subdir)
 
     @property
     def subdir(self) -> str | None:
@@ -425,6 +450,15 @@ def _save_group(mode: Any, where: str) -> SaveGroup:
         raise ValueError(f"{where}: 'complete' must be a JSON boolean")
     alternative_names = _id_less_alternative(mode.get("files_without_save_id"), files, where)
     established_for, citation = _file_list_scope(mode, files, where)
+    raw_unnamed = mode.get("unnamed")
+    unnamed = _expect_str(raw_unnamed, f"{where}: unnamed") if raw_unnamed is not None else None
+    if unnamed is not None and files is not None:
+        # The field says the names cannot be derived at all. A list beside it
+        # would be the card contradicting its own reason for existing.
+        raise ValueError(
+            f"{where}: a group with 'unnamed' states no 'files' — the field exists because the "
+            "names do not follow from anything atlas reads"
+        )
     return SaveGroup(
         subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
         files=_expect_file_names(files, f"{where}: files") if files is not None else None,
@@ -435,6 +469,7 @@ def _save_group(mode: Any, where: str) -> SaveGroup:
         files_without_save_id=alternative_names,
         files_established_for=established_for,
         files_citation=citation,
+        unnamed=unnamed,
     )
 
 

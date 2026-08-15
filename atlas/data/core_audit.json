@@ -66,6 +66,17 @@
       },
       "kind": "libretro"
     },
+    "mame": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source] The shipped a90e86e1 generation answers no libretro memory id and keeps its saves in three trees of its own below the save directory: nvram (the machine's battery memory), cfg (its dip switches, beside an emulator-wide default.cfg) and diff (write differences against CHD hard disks). The diff names come from the machine's ROM table in the binary and are stated as unnameable rather than guessed. mame_mame_paths_enable hands path control back to MAME's own ini, and that mode states no names. Nothing is live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "mednafen_ngp": {
       "verdict": "standard-dir",
       "per_game_capable": true,
