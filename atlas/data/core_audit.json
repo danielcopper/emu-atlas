@@ -13,6 +13,39 @@
       },
       "kind": "libretro"
     },
+    "bsnes": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] The shipped 115 generation answers no libretro memory id by design — the source says so in a comment — and writes <rom_stem>.srm and <rom_stem>.rtc itself, into the directory the frontend hands it. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "bsnes-jg": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] The shipped 2.0.2 generation fills RETRO_MEMORY_SAVE_RAM, so the frontend writes <rom_stem>.srm, and writes <rom_stem>.rtc itself into the save directory — one save, two writers. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "bsnes_hd_beta": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] The shipped 10.6 generation answers no libretro memory id and writes <rom_stem>.srm and <rom_stem>.rtc itself, exactly as bsnes does. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "dolphin": {
       "verdict": "suspect",
       "per_game_capable": null,

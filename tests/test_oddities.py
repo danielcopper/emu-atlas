@@ -13,6 +13,7 @@ import atlas
 from atlas.machine import CoreOption, FixtureMachine, RealMachine
 from atlas.oddities import (
     ANCHOR_KINDS,
+    MODE_ALWAYS,
     CoreCard,
     load_audit,
     load_oddities,
@@ -1996,6 +1997,15 @@ class TestTheModeKeysAreTheDeployedCoresOwn:
     ):
         if not DEPLOYED_CORES.is_dir():
             pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        if card.option_key is None:
+            # Nothing selects between modes on such a card, so its one mode is
+            # not a value anything registers — there is no set to measure
+            # against rather than a measurement that came back empty.
+            assert sorted(card.modes) == [MODE_ALWAYS], (
+                f"card {card.key!r} governs nothing and still states modes {sorted(card.modes)} — "
+                f"the resolver takes {MODE_ALWAYS!r} and only that one"
+            )
+            return
         option = _registered_governing_option(prober, card)
         if option is None:
             pytest.skip(f"the deployed cores register no {card.option_key!r} for card {card.key!r}")
@@ -2107,6 +2117,15 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             if kind != "literal"
         )
         assert marked == [
+            # The higan family names its files from the content's stem at run
+            # time; what the binaries carry whole is the *resource* name the
+            # emulator asks its host for ("time.rtc"), not the file it gets
+            # back. bsnes-jg's .srm is not its name at all — the frontend
+            # writes that half, which is why no such literal is in its binary.
+            ("bsnes", "<rom_stem>.rtc", "unprotected"),
+            ("bsnes-jg", "<rom_stem>.rtc", "unprotected"),
+            ("bsnes-jg", "<rom_stem>.srm", "unprotected"),
+            ("bsnes_hd_beta", "<rom_stem>.rtc", "unprotected"),
             ("flycast", "<rom_stem>.A1.bin", "unprotected"),
             ("flycast", "<rom_stem>.B1.bin", "unprotected"),
             ("flycast", "<rom_stem>.C1.bin", "unprotected"),
