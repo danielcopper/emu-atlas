@@ -8592,7 +8592,7 @@
               }
             },
             {
-              "code": "core-unaudited",
+              "code": "core-generation-unestablished",
               "data": {
                 "core": "virtualjaguar"
               }
@@ -8673,7 +8673,7 @@
               }
             },
             {
-              "code": "core-unaudited",
+              "code": "core-generation-unestablished",
               "data": {
                 "core": "virtualjaguar"
               }
@@ -8868,16 +8868,31 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Tempest 2000.srm",
+              "Tempest 2000.cdrom.srm"
+            ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/retroarch/saves",
+                "files": [
+                  "Tempest 2000.srm",
+                  "Tempest 2000.cdrom.srm"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [
             {
-              "code": "core-unaudited",
+              "code": "unverified-version",
               "data": {
-                "core": "virtualjaguar"
+                "core": "virtualjaguar",
+                "arrangement": "emudeck",
+                "verification": "never-verified"
               }
             },
             {
@@ -8893,7 +8908,13 @@
               }
             }
           ],
-          "granularity": null
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
@@ -9399,16 +9420,31 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Tempest 2000.srm",
+              "Tempest 2000.cdrom.srm"
+            ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/retroarch/saves",
+                "files": [
+                  "Tempest 2000.srm",
+                  "Tempest 2000.cdrom.srm"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [
             {
-              "code": "core-unaudited",
+              "code": "unverified-version",
               "data": {
-                "core": "virtualjaguar"
+                "core": "virtualjaguar",
+                "arrangement": "emudeck",
+                "verification": "never-verified"
               }
             },
             {
@@ -9424,7 +9460,13 @@
               }
             }
           ],
-          "granularity": null
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },

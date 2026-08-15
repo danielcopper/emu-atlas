@@ -43,15 +43,14 @@ covers the answer.
   **every system the catalogue offers it for**, because a user who picks the second entry for their arcade library is
   asking about the same core and deserves the same answer.
 
-## The list (3 cores)
+## The list (2 cores)
 
-Tick a core when all of its systems are in and the vector is green. What is left is not reading: two of the three are
-read and belong to the card family, and the third ships no binary to read.
+Tick a core when all of its systems are in and the vector is green. What is left is not reading: one is read and belongs
+to the card family, and the other ships no binary to read.
 
 - [ ] **`mess2015`** — `mess` · the catalogue declares it and no `.so` is shipped, so there is nothing to pin. A marker
       for the day it ships.
 - [ ] **`swanstation`** — `psx` · read, and a card candidate: a core option decides the file set (#80)
-- [ ] **`virtualjaguar`** — `atarijaguar` · read, and a card candidate: it writes a second file of its own (#121)
 
 ## Done
 
@@ -127,5 +126,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`vice_xplus4`** — frontend writes nothing on plus4
 - [x] **`vice_xvic`** — frontend writes nothing on vic20
 - [x] **`vircon32`** — frontend writes nothing on vircon32
+- [x] **`virtualjaguar`** — read, and it turned out to be outcome 2: it writes both its EEPROM files itself, so it
+      carries a rule card rather than a record (#121)
 - [x] **`wasm4`** — fills `save_ram` on wasm4
 - [x] **`x1`** — frontend writes nothing on x1
