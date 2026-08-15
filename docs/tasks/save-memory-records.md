@@ -1,7 +1,9 @@
 # Save-memory records — the cores still to read
 
-A checklist for one grind: reading every core RetroDECK launches by default, so a standard core's savefile answer states
-its files instead of an honest `file_set: unknown`.
+A checklist for one grind: reading every core on the machine, so a standard core's savefile answer states its files
+instead of an honest `file_set: unknown`. It started with the cores RetroDECK launches by default and did not stop there
+— what a frontend leads with is a menu position, not a property of the core, and a user who picks the second entry is
+asking the same question.
 
 ## Three outcomes, not one
 
@@ -35,22 +37,36 @@ covers the answer.
 
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
-- **Cores that already carry a rule card** (`flycast`, `opera`). The card wins, and a record beside it would be a second
-  declaration of one file set.
-- **Cores that are not a default anywhere.** A system may offer several; this list picks the one RetroDECK declares
-  first. A core nobody leads with is not excluded from the family — it is just outside what this grind is scoped to.
-  Note the scope is a rule for picking _cores_, not for what a record then says: once a core is read, its record covers
-  **every system the catalogue offers it for**, because a user who picks the second entry for their arcade library is
-  asking about the same core and deserves the same answer.
+- **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, `mame`, `pcsx2`, `virtualjaguar`). The card
+  wins, and a record beside it would be a second declaration of one file set — a test enforces that no core carries
+  both.
 
-## The list (2 cores)
+Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
+is a menu position, and a user who picks the second entry is asking about the same core.
 
-Tick a core when all of its systems are in and the vector is green. What is left is not reading: one is read and belongs
-to the card family, and the other ships no binary to read.
+## The list
+
+### Cores RetroDECK launches by default — done but for two
+
+Neither is reading. One is read and belongs to the card family; the other ships no binary to read.
 
 - [ ] **`mess2015`** — `mess` · the catalogue declares it and no `.so` is shipped, so there is nothing to pin. A marker
       for the day it ships.
-- [ ] **`swanstation`** — `psx` · read, and a card candidate: a core option decides the file set (#80)
+- [ ] **`swanstation`** — `psx` · read, and a card candidate: two options, one per memory card slot, decide the file
+      set, which a card's single governing option cannot express (#80)
+
+### Cores the catalogue offers but never leads with
+
+The round that follows, and the reason it is worth it: a frontend lists several emulators per system and the user picks.
+Reading these is the same work as reading a default core, and each one answers for every system the catalogue offers it
+for. Measured on the reference machine, 87 catalogued cores had no record and no card when this round started; the order
+is by what a person is likely to choose, not alphabetical.
+
+### Cores shipped but never catalogued
+
+Roughly 50 more `.so` files ship that no ES-DE catalogue entry names. They are **not** out of scope: a bare RetroArch is
+a frontend of its own, atlas answers for it, and a user there loads any shipped core by hand. Same reading, no catalogue
+line to hang it off — so they come last, not never.
 
 ## Done
 
@@ -62,6 +78,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`arduous`** — fills `save_ram` on arduboy
 - [x] **`atari800`** — frontend writes nothing on atari5200, atari800, atarixe
 - [x] **`bluemsx`** — frontend writes nothing on colecovision, msx, msx1, msx2, msxturbor, sg-1000, spectravideo
+- [x] **`bsnes_mercury_accuracy`** — fills `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`cap32`** — frontend writes nothing on amstradcpc, gx4000
 - [x] **`chailove`** — frontend writes nothing on chailove
 - [x] **`desmume`** — frontend writes nothing on nds
@@ -71,6 +88,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`fbalpha2012`** — frontend writes nothing on arcade, cps, cps1, cps2, cps3, fba, mame
 - [x] **`fbneo`** — read, and it turned out to be outcome 2: it keeps its saves in a subtree of its own, so it carries a
       rule card rather than a record (#123)
+- [x] **`fceumm`** — fills `save_ram` on famicom, fds, nes
 - [x] **`freechaf`** — frontend writes nothing on channelf
 - [x] **`freeintv`** — frontend writes nothing on intellivision
 - [x] **`fuse`** — frontend writes nothing on zxspectrum
@@ -100,6 +118,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mu`** — frontend writes nothing on palm
 - [x] **`mupen64plus_next`** — fills `save_ram` on n64, n64dd
 - [x] **`neocd`** — fills `save_ram` on neogeocd, neogeocdjp
+- [x] **`nestopia`** — fills `save_ram` on famicom, fds, nes
 - [x] **`np2kai`** — frontend writes nothing on pc98
 - [x] **`o2em`** — frontend writes nothing on odyssey2, videopac
 - [x] **`parallel_n64`** — fills `save_ram` on n64, n64dd
@@ -111,16 +130,21 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`puae`** — frontend writes nothing on amiga, amiga1200, amiga600, amigacd32, cdtv
 - [x] **`px68k`** — frontend writes nothing on x68000
 - [x] **`quasi88`** — frontend writes nothing on pc88
+- [x] **`quicknes`** — fills `save_ram` on famicom, nes
 - [x] **`same_cdi`** — frontend writes nothing on cdimono1
 - [x] **`sameduck`** — frontend writes nothing on megaduck
 - [x] **`scummvm`** — frontend writes nothing on scummvm
 - [x] **`snes9x`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
+- [x] **`snes9x2005_plus`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
+- [x] **`snes9x2010`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`squirreljme`** — frontend writes nothing on j2me
 - [x] **`stella`** — frontend writes nothing on atari2600
 - [x] **`theodore`** — frontend writes nothing on moto, to8
 - [x] **`tic80`** — fills `save_ram` on tic80
 - [x] **`tyrquake`** — frontend writes nothing on quake
 - [x] **`uzem`** — fills `save_ram` on uzebox
+- [x] **`vba_next`** — fills `save_ram` on gba
+- [x] **`vbam`** — fills `rtc`, `save_ram` on gb, gbc; fills `save_ram` on gba
 - [x] **`vecx`** — frontend writes nothing on vectrex
 - [x] **`vice_x64sc`** — frontend writes nothing on c64
 - [x] **`vice_xplus4`** — frontend writes nothing on plus4

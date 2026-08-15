@@ -1210,6 +1210,145 @@
           }
         }
       }
+    },
+    {
+      "name": "a-second-choice-core-that-is-not-one-behaviour-answers-gb-on-its-own-terms",
+      "rationale": "VBA-M is the catalogue's alternative for both Game Boy and Game Boy Advance, and its memory function switches on the loaded image type before answering: the Game Boy branch has a clock case, the Game Boy Advance branch has none. So the same core states two files for one of its systems and one for the other — the second core in the records to do that, and the reason they are keyed by core *and* system rather than by core alone.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n  </system>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/gb/Zelda.gb": "rom",
+          "/mnt/sd/retrodeck/roms/gba/Zelda.gba": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
+            "library_name": "VBA-M",
+            "library_version": "2.2.3 d0787ae"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "gb",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Zelda.gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Zelda.srm",
+              "Zelda.rtc"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "vbam"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-second-choice-core-that-is-not-one-behaviour-answers-gba-on-its-own-terms",
+      "rationale": "VBA-M is the catalogue's alternative for both Game Boy and Game Boy Advance, and its memory function switches on the loaded image type before answering: the Game Boy branch has a clock case, the Game Boy Advance branch has none. So the same core states two files for one of its systems and one for the other — the second core in the records to do that, and the reason they are keyed by core *and* system rather than by core alone.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n  </system>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/gb/Zelda.gb": "rom",
+          "/mnt/sd/retrodeck/roms/gba/Zelda.gba": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
+            "library_name": "VBA-M",
+            "library_version": "2.2.3 d0787ae"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "gba",
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Zelda.gba"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Zelda.srm"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "vbam"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }
