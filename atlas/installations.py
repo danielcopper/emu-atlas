@@ -2423,7 +2423,7 @@ def _every_recorded_system(record: SaveMemoryRecord) -> str:
     return ", ".join(sorted(record.systems))
 
 
-def _across_systems_caveat(record: SaveMemoryRecord, *, system: str | None) -> tuple[Caveat, ...]:
+def _across_systems_caveat(record: SaveMemoryRecord, *, system: str | None) -> Caveat | None:
     """Said whenever a record answered without a system to key it by.
 
     The answer is not weaker for it — every system this record covers writes
@@ -2433,16 +2433,14 @@ def _across_systems_caveat(record: SaveMemoryRecord, *, system: str | None) -> t
     universal would carry that mistake into a system atlas never spoke about.
     """
     if system is not None:
-        return ()
+        return None
     systems = sorted(record.systems)
-    return (
-        Caveat(
-            CAVEAT_FILE_SET_ACROSS_SYSTEMS,
-            f"no system was named, and core {record.key!r} writes the same files for every system "
-            f"it is recorded for ({', '.join(systems)}) — so this answer holds for whichever of "
-            "them the content is, and states nothing about any other",
-            {"core": record.key, "systems": ", ".join(systems)},
-        ),
+    return Caveat(
+        CAVEAT_FILE_SET_ACROSS_SYSTEMS,
+        f"no system was named, and core {record.key!r} writes the same files for every system it "
+        f"is recorded for ({', '.join(systems)}) — so this answer holds for whichever of them the "
+        "content is, and states nothing about any other",
+        {"core": record.key, "systems": ", ".join(systems)},
     )
 
 
@@ -2561,7 +2559,7 @@ def _standard_declaration(
     # named it is that one; without, the record answered because every system
     # it covers agrees, and the scope is all of them.
     scope = query.system if query.system is not None else _every_recorded_system(record)
-    across = _across_systems_caveat(record, system=query.system)
+    across = _as_tuple(_across_systems_caveat(record, system=query.system))
     # Last, and deliberately after the system check: this is the only refusal
     # here that states a caveat, so it must fire exactly where a declaration
     # was actually withheld. Asked without a system the record could never
