@@ -19,6 +19,34 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "DoubleCherryGB": {
+      "identifiers": {
+        "library_name": [
+          "DoubleCherryGB"
+        ]
+      },
+      "systems": {
+        "gb": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "v0.17.0 5dbc8c9",
+          "citation": "[V] libretro/libretro.cpp:425-451 at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — a tgbdual fork with the same answer: RETRO_MEMORY_SAVE_RAM answers the cartridge's get_sram_size() and RETRO_MEMORY_RTC sizeof(render[id]->fixed_time), a compile-time 4 that never depends on the cartridge, so both files are written and the .rtc appears for every game. Worth noting for anyone re-reading it: both containers are indexed by the memory id rather than by the emulated device, and RETRO_MEMORY_SAVE_RAM is 0 while RETRO_MEMORY_RTC is 1, so the clock pointer comes from the second of the sixteen Game Boys retro_load_game builds (:173-187, max_gbs = 16 at libretro/inline/inline_variables.h:178) — all of which load the same ROM. It changes which instance the bytes come from, not which ids are filled."
+        },
+        "gbc": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "v0.17.0 5dbc8c9",
+          "citation": "[V] libretro/libretro.cpp:425-451 at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — the core has one code path for both handhelds and reads the model off the loaded cartridge (get_info()->gb_type), so the memory ids it fills are the same pair as for the Game Boy."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "a5200": {
       "identifiers": {
         "library_name": [
@@ -474,6 +502,34 @@
         "source": "Read at the revision the installed binary names: the core reports library_version 'v0.5.0-netlink 6924c76', which is the upstream commit. The shipped .info file's display_version disagrees with the binary on the sibling core and was not used."
       }
     },
+    "gearboy": {
+      "identifiers": {
+        "library_name": [
+          "Gearboy"
+        ]
+      },
+      "systems": {
+        "gb": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "3.7.4-8-g37c21f7",
+          "citation": "[V] platforms/libretro/libretro.cpp:573-586 at drhelius/Gearboy 37c21f7 — RETRO_MEMORY_SAVE_RAM answers the loaded cartridge's memory rule GetRamSize() and RETRO_MEMORY_RTC its GetRTCSize(), so RetroArch writes <rom_stem>.srm and <rom_stem>.rtc. Both are virtual and the base rule returns 0 for each (src/MemoryRule.cpp:56-66); the clock is overridden by MBC3 alone, and there only where the cartridge declares one (src/MBC3MemoryRule.cpp:379-382, IsRTCPresent), so the .rtc appears for exactly the games that carry the hardware."
+        },
+        "gbc": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "3.7.4-8-g37c21f7",
+          "citation": "[V] platforms/libretro/libretro.cpp:573-586 at drhelius/Gearboy 37c21f7 — the core has one code path for both handhelds and tells them apart by the loaded cartridge (core->IsCGB()), so the memory ids it fills are the same pair as for the Game Boy."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "gearsystem": {
       "identifiers": {
         "library_name": [
@@ -597,6 +653,25 @@
           ],
           "verified_core": "v1.7.4 46a5521",
           "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "gpsp": {
+      "identifiers": {
+        "library_name": [
+          "gpSP"
+        ]
+      },
+      "systems": {
+        "gba": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "v1.1.0-74db5e5",
+          "citation": "[V] libretro/libretro.c:1190-1198 at libretro/gpsp 74db5e5 — RETRO_MEMORY_SAVE_RAM answers a flat 0x20000 with the core's own comment on the line, \"Assume 128KiB, biggest possible save\", and the pointer is the static gamepak_backup buffer (:1180-1188, cleared at :1133). Neither depends on the cartridge, so RetroArch writes a 128 KiB <rom_stem>.srm for every game this core loads — including one whose hardware has no save at all, where the file is the 0xff fill. There is no RETRO_MEMORY_RTC case, so no .rtc is written."
         }
       },
       "provenance": {
@@ -1497,6 +1572,42 @@
         "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
+    "sameboy": {
+      "identifiers": {
+        "library_name": [
+          "SameBoy"
+        ]
+      },
+      "systems": {
+        "gb": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "1.0.2 be2c352",
+          "citation": "[V] libretro/libretro.c:1744-1774 at libretro/SameBoy be2c352 — for an ordinary single-cartridge launch RETRO_MEMORY_SAVE_RAM answers mbc_ram_size where the cartridge has a battery, and RETRO_MEMORY_RTC answers GB_SECTION_SIZE(rtc), a compile-time span between two struct offsets (Core/save_state.h:21). That case is gated on has_battery alone and not on the cartridge carrying a clock, so the .rtc appears for every battery cartridge rather than only for the MBC3 and HuC3 ones. The second branch of both functions belongs to the two-player link subsystem, which raises emulated_devices to 2 (:1540-1547) and answers its own ids — RetroArch registers .srm and .rtc for non-subsystem content only, so that branch never names these files."
+        },
+        "gbc": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "1.0.2 be2c352",
+          "citation": "[V] libretro/libretro.c:1744-1774 at libretro/SameBoy be2c352 — the core has one code path for every handheld it emulates and picks the model from the sameboy_model option, falling back to what the loaded cartridge says (:648-656, the option read at :757-773), so the memory ids it fills are the same pair as for the Game Boy."
+        },
+        "sgb": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "1.0.2 be2c352",
+          "citation": "[V] libretro/libretro.c:1744-1774 at libretro/SameBoy be2c352 — the core has one code path for every handheld it emulates and picks the model from the sameboy_model option, falling back to what the loaded cartridge says (:648-656, the option read at :757-773), so the memory ids it fills are the same pair as for the Game Boy."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "sameduck": {
       "identifiers": {
         "library_name": [
@@ -1715,6 +1826,34 @@
           "memory_types": [],
           "verified_core": "8.0_pre 7c4e3b2",
           "citation": "[V] src/os/libretro/libretro.cxx:956-966 at stella-emu/stella 7c4e3b2 — only RETRO_MEMORY_SYSTEM_RAM answers (stella.getRAMSize()); every other id returns 0."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "tgbdual": {
+      "identifiers": {
+        "library_name": [
+          "TGB Dual"
+        ]
+      },
+      "systems": {
+        "gb": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "v0.8.3 933707c",
+          "citation": "[V] libretro/libretro.cpp:484-508 at libretro/tgbdual-libretro 933707c — in the single-cartridge modes, which are the two retro_load_game can reach (:299-316), RETRO_MEMORY_SAVE_RAM answers the cartridge's own get_sram_size() and RETRO_MEMORY_RTC answers sizeof(render[0]->fixed_time). That field is a dword (libretro/dmy_renderer.h:40), so the clock size is a compile-time 4 and never depends on the cartridge: the .rtc appears for every game this core loads, clock hardware or not."
+        },
+        "gbc": {
+          "memory_types": [
+            "save_ram",
+            "rtc"
+          ],
+          "verified_core": "v0.8.3 933707c",
+          "citation": "[V] libretro/libretro.cpp:484-508 at libretro/tgbdual-libretro 933707c — the core has one code path for both handhelds and reads the model off the loaded cartridge (get_info()->gb_type), so the memory ids it fills are the same pair as for the Game Boy."
         }
       },
       "provenance": {
