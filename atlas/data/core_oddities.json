@@ -467,6 +467,45 @@
           "disabled": "root and slot-1 filename verified from source; slot-2 behaviour in this mode unestablished"
         }
       }
+    },
+    "virtualjaguar": {
+      "identifiers": {
+        "library_name": [
+          "Virtual Jaguar"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.srm",
+                  "<rom_stem>.cdrom.srm"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.srm": {
+            "literal": "%s%s.srm"
+          },
+          "<rom_stem>.cdrom.srm": {
+            "literal": "%s%s.cdrom.srm"
+          }
+        }
+      },
+      "provenance": {
+        "source": "Virtual Jaguar source at 48096c1, the revision the shipped binary names in its library_version. On load the core takes GET_SAVE_DIRECTORY into vjs.EEPROMPath and the content's basename into vjs.romName (libretro.c:883-895), and builds two paths from them: <save_dir>/<rom_stem>.srm for the cartridge EEPROM and <save_dir>/<rom_stem>.cdrom.srm for the JagCD one (eeprom.c:99-109). Both are written whenever the game writes its EEPROM — the state machine calls EEPROMSave on a word write and on a write-all with writes enabled (eeprom.c:148-167, reached from :299-308 and :336-344), which is the ordinary in-game save rather than a shutdown path. The core also answers RETRO_MEMORY_SAVE_RAM with the same 128 bytes (libretro.c:958-965), so RetroArch writes <rom_stem>.srm as well: one path, two writers, and not the same bytes — the core stores the words as big-endian pairs (eeprom.c:42-53, mirrored by its reader at :57-65) while the frontend writes the memory block raw. Which one a file ends up holding depends on who wrote last; that is an emulator question, and it is stated here because a client comparing two machines' files will meet it. Two conditions the file names cannot carry: content whose CRC32 is 0xFDF37F47 — the Memory Track device — is exempt and gets no EEPROM files at all (eeprom.c:90-96), and content loaded without a path falls back to naming both files after the ROM's CRC32 (<CRC32>.srm, <CRC32>.cdrom.srm, eeprom.c:106-108); no launcher on either arrangement is known to load Jaguar content that way.",
+        "status": {
+          "always": "[D] Read from source. The core governs its save layout with no option, so there is one mode and nothing selects between modes; no save was watched being written."
+        }
+      }
     }
   }
 }

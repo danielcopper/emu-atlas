@@ -1889,6 +1889,16 @@ class TestADefaultIsRecordedOnlyWhereTheCoreStatesNone:
     ):
         if not DEPLOYED_CORES.is_dir():
             pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        if card.option_key is None:
+            # A card whose core governs its layout with no option at all: one
+            # mode, always in force, so there is no value to select with and no
+            # default to state. The rule below is about a value that decides
+            # between modes, and this card has no such decision to get wrong.
+            assert card.option_default is None, (
+                f"card {card.key!r} governs nothing and still records a default — there is no "
+                "option for it to be the default of"
+            )
+            return
         option = _registered_governing_option(prober, card)
         # What decides the invariant is whether a *default* was registered, not
         # whether the option was. A core can register the key and declare no

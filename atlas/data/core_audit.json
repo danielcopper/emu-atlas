@@ -280,6 +280,17 @@
         "bare": null
       },
       "kind": "libretro"
+    },
+    "virtualjaguar": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] The shipped 48096c1 generation fills RETRO_MEMORY_SAVE_RAM with the Jaguar's 128-byte EEPROM and *also* writes both that file and a .cdrom.srm twin itself, from paths it builds out of the save directory and the content's basename. The frontend and the core therefore write one of the two files in different byte orders. No option governs any of it. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
     }
   }
 }
