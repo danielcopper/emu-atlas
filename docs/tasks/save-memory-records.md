@@ -62,10 +62,24 @@ Reading these is the same work as reading a default core, and each one answers f
 for. Measured on the reference machine, 87 catalogued cores had no record and no card when this round started; the order
 is by what a person is likely to choose, not alphabetical.
 
-One core from this tier is read and waiting on the card family rather than on a reading:
+Some of this tier is read and waiting on the card family rather than on a reading. The arcade round turned out to be
+mostly this: nine of its twelve cores write past the frontend, which is the opposite ratio to every round before it and
+follows from what the hardware is — an arcade board's memory is NVRAM the machine owns, not a cartridge save the
+frontend can name.
 
-- [ ] **`noods`** — `gba` · read, and outcome 2: it fills no id the frontend writes and keeps its own
-      `<save_dir>/<rom_stem>.sav`, which no record can state
+- [ ] **`noods`** — `gba` · fills no id the frontend writes and keeps its own `<save_dir>/<rom_stem>.sav`
+- [ ] **`mame2000`** — trees of its own under `<save_dir>/mame2000/` (`nvram`, `hi`, `cfg`, `memcard`, `snap`)
+- [ ] **`mame2003`** — the same shape, its layout built from the frontend's save path
+- [ ] **`mame2003_plus`** — the same shape
+- [ ] **`mame2010`** — trees of its own under `<save_dir>/<core name>/` (`nvram`, `hi`, `cfg`, `memcard`, `diff`, …)
+- [ ] **`geolith`** — writes four files of its own per game (`.nv`, `.srm`, `.mcr`, `.brm`), one of which collides with
+      the name RetroArch would give a save-RAM file
+- [ ] **`fbalpha2012_cps2`** — writes `<save_dir>/<driver>.fs` at unload, keyed by the driver rather than the ROM file
+- [ ] **`fbalpha2012_cps3`** — the same
+- [ ] **`fbalpha2012_neogeo`** — the same
+- [ ] **`fbalpha2012`** — already carries a record, and it is not wrong: the frontend really does write nothing, and the
+      record says so with `core-own-writes-unestablished` beside it. That open half is now answered — the core writes
+      `<save_dir>/<driver>.fs` itself — so the record is due to be replaced by a card.
 
 ### Cores shipped but never catalogued
 
@@ -93,10 +107,13 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`cap32`** — frontend writes nothing on amstradcpc, gx4000
 - [x] **`chailove`** — frontend writes nothing on chailove
 - [x] **`desmume`** — frontend writes nothing on nds
+- [x] **`dice`** — frontend writes nothing on arcade, mame
+- [x] **`dirksimple`** — frontend writes nothing on daphne, laserdisc
 - [x] **`dosbox_pure`** — frontend writes nothing on dos, pc, windows3x, windows9x
 - [x] **`easyrpg`** — frontend writes nothing on easyrpg
 - [x] **`ecwolf`** — frontend writes nothing on ports
 - [x] **`fbalpha2012`** — frontend writes nothing on arcade, cps, cps1, cps2, cps3, fba, mame
+- [x] **`fbalpha2012_cps1`** — frontend writes nothing on cps, cps1, fba
 - [x] **`fbneo`** — read, and it turned out to be outcome 2: it keeps its saves in a subtree of its own, so it carries a
       rule card rather than a record (#123)
 - [x] **`fceumm`** — fills `save_ram` on famicom, fds, nes
