@@ -78,6 +78,11 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`arduous`** — fills `save_ram` on arduboy
 - [x] **`atari800`** — frontend writes nothing on atari5200, atari800, atarixe
 - [x] **`bluemsx`** — frontend writes nothing on colecovision, msx, msx1, msx2, msxturbor, sg-1000, spectravideo
+- [x] **`bsnes`** — read, and it turned out to be outcome 2: the source says in a comment that it stays out of the
+      memory interface on purpose and writes both its files itself, so it carries a rule card
+- [x] **`bsnes-jg`** — read, and outcome 2 for a reason of its own: the frontend writes its `.srm` and the core writes
+      its `.rtc`, which no record can state together
+- [x] **`bsnes_hd_beta`** — read, and outcome 2: the same code as bsnes
 - [x] **`bsnes_mercury_accuracy`** — fills `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`cap32`** — frontend writes nothing on amstradcpc, gx4000
 - [x] **`chailove`** — frontend writes nothing on chailove

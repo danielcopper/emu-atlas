@@ -2,6 +2,123 @@
   "schema": 1,
   "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
+    "bsnes": {
+      "identifiers": {
+        "library_name": [
+          "bsnes"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.srm",
+                  "<rom_stem>.rtc"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.srm": {
+            "literal": ".srm"
+          },
+          "<rom_stem>.rtc": {
+            "unprotected": "composed at run time from the content's own stem and '.rtc' (program.cpp, the time.rtc branch). The whole string beside it in the binary is the resource name 'time.rtc', which is what the emulator asks its host for; the file it is answered with is named after the content"
+          }
+        }
+      },
+      "provenance": {
+        "source": "bsnes source at the version the shipped binary names (115). This core takes itself out of the libretro save interface deliberately and says so above the two functions: 'there is no safe/sensible way to use the memory interface without severe hackery. Rely on higan to load and save SRAM until there is really compelling reason not to' — retro_get_memory_data returns nullptr and retro_get_memory_size returns 0 for every id (bsnes/target-libretro/libretro.cpp:1037-1047), so RetroArch writes nothing at all. The core writes both files itself: its host resolves the emulator's 'save.ram' resource to <save_dir>/<rom_stem>.srm and 'time.rtc' to <save_dir>/<rom_stem>.rtc, both from GET_SAVE_DIRECTORY and both falling back to the content's own directory where the frontend names none (bsnes/target-libretro/program.cpp:503-530), and retro_unload_game calls the core's save() (libretro.cpp:1026-1030). Game Boy content, which this core is also launched for, takes the same two names through its own path (program.cpp:613-650). A cartridge without a clock is never asked for time.rtc, so the second name is an upper bound like every other file set here.",
+        "status": {
+          "always": "[D] Read from source at the shipped version. One mode, nothing selects between modes, and no save was watched being written."
+        }
+      }
+    },
+    "bsnes-jg": {
+      "identifiers": {
+        "library_name": [
+          "bsnes-jg"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.srm",
+                  "<rom_stem>.rtc"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.srm": {
+            "unprotected": "not the core's name at all: this half is written by RetroArch's standard rule from the content's stem (runloop.c:8720-8723), which is why no '.srm' literal is in this binary while its siblings' carry one — the core hands the frontend the memory and declines the resource (libretro/libretro.cpp:425-427)"
+          },
+          "<rom_stem>.rtc": {
+            "unprotected": "composed at run time from the content's own stem and '.rtc' (program.cpp, the time.rtc branch). The whole string beside it in the binary is the resource name 'time.rtc', which is what the emulator asks its host for; the file it is answered with is named after the content"
+          }
+        }
+      },
+      "provenance": {
+        "source": "bsnes-jg source at the libretro branch, version 2.0.2 as the shipped binary names it. This one splits the save between the two writers, which is why it needs a card rather than a record: RETRO_MEMORY_SAVE_RAM answers the cartridge's RAM size (libretro/libretro.cpp:1082-1089), so RetroArch writes <rom_stem>.srm by its own rule, and the core declines the emulator's 'save.ram' resource for that very reason — 'libretro handles this via raw memory' (:425-427). The clock is the opposite: the RTC memory case is commented out (:1090-1094) and the core writes the file itself, at <save_dir>/<rom_stem>.rtc, with the name taken from the content path's basename (:486-487, :533-534, :969-971). A record could state only the first of the two.",
+        "status": {
+          "always": "[D] Read from source at the branch the shipped binary is built from. One mode, and no save was watched being written."
+        }
+      }
+    },
+    "bsnes_hd_beta": {
+      "identifiers": {
+        "library_name": [
+          "bsnes-hd beta"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.srm",
+                  "<rom_stem>.rtc"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.srm": {
+            "literal": ".srm"
+          },
+          "<rom_stem>.rtc": {
+            "unprotected": "composed at run time from the content's own stem and '.rtc' (program.cpp, the time.rtc branch). The whole string beside it in the binary is the resource name 'time.rtc', which is what the emulator asks its host for; the file it is answered with is named after the content"
+          }
+        }
+      },
+      "provenance": {
+        "source": "bsnes-hd source at the version the shipped binary names (10.6). A fork of bsnes and unchanged in this respect: retro_get_memory_size returns 0 for every id (bsnes/target-libretro/libretro.cpp:1135-1138), so RetroArch writes nothing, and the core's host resolves 'save.ram' to <save_dir>/<rom_stem>.srm and 'time.rtc' to <save_dir>/<rom_stem>.rtc, both from GET_SAVE_DIRECTORY with the content's own directory as the fallback (bsnes/target-libretro/program.cpp:522-558).",
+        "status": {
+          "always": "[D] Read from source at the shipped version, and the same code as bsnes's. Not observed."
+        }
+      }
+    },
     "fbneo": {
       "identifiers": {
         "library_name": [
