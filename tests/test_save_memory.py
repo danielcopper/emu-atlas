@@ -219,9 +219,13 @@ class TestPackagedRecords:
         records = list(load_save_memory())
         answers = [record for record in records if record.unanimous() is not None]
         silent = sorted(record.key for record in records if record.unanimous() is None)
-        assert len(records) == 66
-        assert len(answers) == 65
-        assert silent == ["mgba"]
+        assert len(records) == 74
+        assert len(answers) == 72
+        # Both switch on the loaded content's platform before answering, which
+        # is the whole reason the records are keyed by system: mGBA answers a
+        # Game Boy cartridge's clock and a Game Boy Advance cartridge's not at
+        # all, and VBA-M's function branches on the image type first.
+        assert silent == ["mgba", "vbam"]
 
     def test_every_recorded_system_is_an_atlas_system_id(self):
         vocabulary = set(known_systems())
