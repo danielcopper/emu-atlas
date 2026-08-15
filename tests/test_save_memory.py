@@ -170,11 +170,26 @@ class TestLookup:
         # cover the default cores, so it stays outside them however far the reading gets.
         assert lookup_save_memory(so_basename="bsnes_libretro.so", library_name="bsnes") is None
 
-    def test_an_unnamed_system_narrows_nothing(self):
+    def test_an_unnamed_system_narrows_nothing_where_the_systems_disagree(self):
+        # mGBA is the record the (core, system) key was designed around: the
+        # Game Boy branch answers the clock id and the Game Boy Advance one does
+        # not, so there is no one answer to give without knowing which it is.
         record = lookup_save_memory(so_basename="mgba_libretro.so", library_name=None)
         assert record is not None
         assert record.for_system(None) is None
         assert record.for_system("n64") is None
+
+    def test_an_unnamed_system_answers_where_every_recorded_system_agrees(self):
+        # Gambatte covers gb and gbc and writes the same two files for both, so
+        # whichever of them the content is, the answer is the same — the case
+        # an arrangement without a frontend catalogue is always in.
+        record = lookup_save_memory(so_basename="gambatte_libretro.so", library_name=None)
+        assert record is not None
+        entry = record.for_system(None)
+        named = record.for_system("gb")
+        assert entry is not None
+        assert named is not None
+        assert entry.memory_types == named.memory_types
 
 
 class TestPackagedRecords:
@@ -190,6 +205,23 @@ class TestPackagedRecords:
         carded = {card.key for card in load_oddities()}
         recorded = {record.key for record in load_save_memory()}
         assert carded & recorded == set()
+
+    def test_how_many_records_answer_without_a_system_is_pinned(self):
+        """The unanimity route's reach, as a number rather than as a hope.
+
+        Answering an unnamed system rests on a property of today's data — every
+        system a record covers writing the same files — not on a structural
+        guarantee. A record added later that disagrees silently shrinks what
+        atlas can say on a catalogue-less arrangement, and nothing else would
+        notice. So the count is pinned: a change here is a deliberate edit with
+        a reason, not a side effect.
+        """
+        records = list(load_save_memory())
+        answers = [record for record in records if record.unanimous() is not None]
+        silent = sorted(record.key for record in records if record.unanimous() is None)
+        assert len(records) == 66
+        assert len(answers) == 65
+        assert silent == ["mgba"]
 
     def test_every_recorded_system_is_an_atlas_system_id(self):
         vocabulary = set(known_systems())

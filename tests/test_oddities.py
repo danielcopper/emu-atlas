@@ -1056,7 +1056,16 @@ class TestAuditVerdictCaveats:
             },
             cores={f"{DEPLOY}/{core_so}": {"library_name": library_name}},
         )
-        return placed(rd.savefile_location(content_path=f"/mnt/sd/retrodeck/roms/{system}/{rom}", core_so=core_so))
+        # The system is named, because these cases are about a verdict rather
+        # than about answering without one — unnamed, a record answers across
+        # its systems and says so, which is a different question.
+        return placed(
+            rd.savefile_location(
+                content_path=f"/mnt/sd/retrodeck/roms/{system}/{rom}",
+                core_so=core_so,
+                system=system,
+            )
+        )
 
     def test_multi_option_verdict_names_the_options_that_decide_granularity(self):
         p = self._query(
@@ -1075,6 +1084,13 @@ class TestAuditVerdictCaveats:
             "swanstation_MemoryCards_UsePlaylistTitle",
         ]
 
+    # What these two cases are about: an audit verdict that adds nothing of its
+    # own. `core-unaudited`, `core-suspect` and `core-multi-option` are the
+    # three a verdict can contribute, so their absence is the assertion — not
+    # an empty caveat list, which would also fail the day the *record* starts
+    # speaking, as it now does once the system is named.
+    VERDICT_CAVEATS = {"core-unaudited", "core-suspect", "core-multi-option"}
+
     def test_standard_verdict_stays_silent(self):
         # The pair from issue #23: same empty granularity, different meaning.
         p = self._query(
@@ -1083,13 +1099,20 @@ class TestAuditVerdictCaveats:
             system="gba",
             rom="Golden Sun (USA).zip",
         )
-        assert p.granularity is None
-        assert p.caveats == ()
+        assert {c.code for c in p.caveats} & self.VERDICT_CAVEATS == set()
 
-    def test_standard_dir_verdict_stays_silent_and_observes_the_core_written_set(self):
-        # standard-dir means the file set is core-owned, not that anything is
-        # withheld: no core option governs it, the files are content-keyed, and
-        # the literal <rom_stem>.* observation reports all of them.
+    def test_standard_dir_verdict_stays_silent_and_the_record_speaks_over_the_disk(self):
+        # standard-dir means the file set is core-owned, and the verdict itself
+        # still adds no caveat. What changed with the record: Beetle Saturn is
+        # recorded as filling no memory id, so the answer is the declared
+        # emptiness — a statement about the *frontend* — and the three
+        # core-written files lying right there are no longer reported.
+        #
+        # Seen, deferred: those files are the core's own, not stale frontend
+        # ones, so the declaration and the observation are not actually in
+        # conflict. Whether a declared emptiness should suppress an observation
+        # of core-written files is its own question; pinned here so a change to
+        # it is deliberate.
         stem = "Sega Rally Championship (USA)"
         p = self._query(
             core_so="mednafen_saturn_libretro.so",
@@ -1102,9 +1125,10 @@ class TestAuditVerdictCaveats:
                 f"/mnt/sd/retrodeck/saves/saturn/{stem}.smpc": "smpc",
             },
         )
-        assert p.caveats == ()
-        assert p.file_set.state == "observed"
-        assert p.file_set.files == (f"{stem}.bcr", f"{stem}.bkr", f"{stem}.smpc")
+        assert {c.code for c in p.caveats} & self.VERDICT_CAVEATS == set()
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ()
+        assert any(c.code == "core-own-writes-unestablished" for c in p.caveats)
 
 
 class TestStrictLoaders:

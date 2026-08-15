@@ -192,6 +192,12 @@ CAVEAT_FILE_SET_SPANS_ROOTS = "file-set-spans-roots"
 # would be the failure this project exists to avoid. `data` carries `dir` and a
 # `citation` for the reading behind it.
 CAVEAT_FILE_NAMES_UNESTABLISHED = "file-names-unestablished"
+# The caller named no system, and the answer holds anyway because every system
+# the core's record covers writes the same files. The claim is scoped to those
+# systems — `data["systems"]` lists them — because a core run for a system its
+# record never names has established nothing here. It is the honest answer on
+# an arrangement with no frontend catalogue, where no system is ever named.
+CAVEAT_FILE_SET_ACROSS_SYSTEMS = "file-set-across-systems"
 CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
 # Set to blank or the literal "default". Not the same as absent — an absent
 # key resolves to RetroArch's platform default on every route — and the

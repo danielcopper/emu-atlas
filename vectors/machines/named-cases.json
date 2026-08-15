@@ -2999,17 +2999,27 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
-            "files": [
-              "Sega Rally Championship (USA).bcr",
-              "Sega Rally Championship (USA).bkr",
-              "Sega Rally Championship (USA).smpc"
-            ],
+            "state": "declared",
+            "files": [],
             "complete": false,
             "groups": []
           },
           "granularity": null,
-          "caveats": []
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mednafen_saturn",
+                "systems": "saturn, saturnjp"
+              }
+            },
+            {
+              "code": "core-own-writes-unestablished",
+              "data": {
+                "core": "mednafen_saturn"
+              }
+            }
+          ]
         }
       }
     },
@@ -5446,14 +5456,20 @@
               "fallback_dir": null,
               "physical_dir": null,
               "file_set": {
-                "state": "observed",
+                "state": "declared",
                 "files": [
                   "Paper Mario (USA).srm"
                 ],
                 "complete": false,
                 "groups": []
               },
-              "granularity": null,
+              "granularity": {
+                "value": "per-game-file",
+                "option_key": null,
+                "option_value": null,
+                "options_file": null,
+                "alternatives": []
+              },
               "caveats": [
                 {
                   "code": "arrangement-version-drifted",
@@ -5461,6 +5477,13 @@
                     "kind": "retrodeck",
                     "verified": "0.10.9b",
                     "observed": "0.11.0b"
+                  }
+                },
+                {
+                  "code": "file-set-across-systems",
+                  "data": {
+                    "core": "mupen64plus_next",
+                    "systems": "n64, n64dd"
                   }
                 }
               ]
@@ -5474,14 +5497,20 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Paper Mario (USA).srm"
             ],
             "complete": false,
             "groups": []
           },
-          "granularity": null,
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          },
           "caveats": [
             {
               "code": "arrangement-version-drifted",
@@ -5489,6 +5518,13 @@
                 "kind": "retrodeck",
                 "verified": "0.10.9b",
                 "observed": "0.11.0b"
+              }
+            },
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
               }
             }
           ]
@@ -5627,15 +5663,29 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Paper Mario (USA).srm"
             ],
             "complete": false,
             "groups": []
           },
-          "granularity": null,
-          "caveats": []
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          },
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
+            }
+          ]
         },
         "firmware": {
           "root": "/mnt/sd/retrodeck/bios",
@@ -5704,15 +5754,29 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Paper Mario (USA).srm"
             ],
             "complete": false,
             "groups": []
           },
-          "granularity": null,
-          "caveats": []
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          },
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
+            }
+          ]
         }
       }
     },
@@ -5764,15 +5828,29 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Paper Mario (USA).srm"
             ],
             "complete": false,
             "groups": []
           },
-          "granularity": null,
-          "caveats": []
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          },
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
+            }
+          ]
         }
       }
     },
@@ -5824,20 +5902,33 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
+            "state": "declared",
             "files": [
               "Paper Mario (USA).srm"
             ],
             "complete": false,
             "groups": []
           },
-          "granularity": null,
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          },
           "caveats": [
             {
               "code": "marker-invalid",
               "data": {
                 "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
                 "key": "version"
+              }
+            },
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
               }
             }
           ]
@@ -7774,13 +7865,29 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Game.srm"
+            ],
             "complete": false,
             "groups": []
           },
-          "caveats": [],
-          "granularity": null
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         },
         "savestate_location": {
           "dir": "/mnt/sd/retrodeck/states",
@@ -7883,13 +7990,29 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Game.srm"
+            ],
             "complete": false,
             "groups": []
           },
-          "caveats": [],
-          "granularity": null
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
@@ -7942,13 +8065,29 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Game.srm"
+            ],
             "complete": false,
             "groups": []
           },
-          "caveats": [],
-          "granularity": null
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
@@ -7998,8 +8137,10 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Game.srm"
+            ],
             "complete": false,
             "groups": []
           },
@@ -8011,9 +8152,22 @@
                 "configured": "~/saves",
                 "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
               }
+            },
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
             }
           ],
-          "granularity": null
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
@@ -8064,13 +8218,29 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Game.srm"
+            ],
             "complete": false,
             "groups": []
           },
-          "caveats": [],
-          "granularity": null
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
         }
       }
     },
@@ -10080,13 +10250,29 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Game.srm"
+            ],
             "complete": false,
             "groups": []
           },
-          "granularity": null,
-          "caveats": []
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          },
+          "caveats": [
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
+              }
+            }
+          ]
         }
       }
     },
@@ -10132,18 +10318,33 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Game.srm"
+            ],
             "complete": false,
             "groups": []
           },
-          "granularity": null,
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          },
           "caveats": [
             {
               "code": "sandbox-path-untranslated",
               "data": {
                 "key": "savefile_directory",
                 "path": "/app/retrodeck/saves"
+              }
+            },
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "mupen64plus_next",
+                "systems": "n64, n64dd"
               }
             }
           ]

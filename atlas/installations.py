@@ -119,6 +119,7 @@ from atlas.placement import (
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_FILE_NAMES_UNESTABLISHED,
+    CAVEAT_FILE_SET_ACROSS_SYSTEMS,
     CAVEAT_EMULATOR_CONFIG_UNREAD,
     CAVEAT_EMULATOR_READ_UNESTABLISHED,
     CAVEAT_FEATURE_SWITCH_ABSENT,
@@ -2416,8 +2417,40 @@ def _as_tuple(caveat: Caveat | None) -> tuple[Caveat, ...]:
     return (caveat,) if caveat is not None else ()
 
 
+
+def _every_recorded_system(record: SaveMemoryRecord) -> str:
+    """How an answer names the systems it is about when the caller named none."""
+    return ", ".join(sorted(record.systems))
+
+
+def _across_systems_caveat(record: SaveMemoryRecord, *, system: str | None) -> Caveat | None:
+    """Said whenever a record answered without a system to key it by.
+
+    The answer is not weaker for it — every system this record covers writes
+    the same files, which is why it could be given at all — but it is *scoped*,
+    and the scope is the record's own systems. A core run for a system nobody
+    recorded has established nothing here, and a client reading the names as
+    universal would carry that mistake into a system atlas never spoke about.
+    """
+    if system is not None:
+        return None
+    systems = sorted(record.systems)
+    return Caveat(
+        CAVEAT_FILE_SET_ACROSS_SYSTEMS,
+        f"no system was named, and core {record.key!r} writes the same files for every system it "
+        f"is recorded for ({', '.join(systems)}) — so this answer holds for whichever of them the "
+        "content is, and states nothing about any other",
+        {"core": record.key, "systems": ", ".join(systems)},
+    )
+
+
 def _no_frontend_files(
-    record: SaveMemoryRecord, entry: SystemMemory, *, system: str | None, core_version: str | None
+    record: SaveMemoryRecord,
+    entry: SystemMemory,
+    *,
+    system: str | None,
+    core_version: str | None,
+    extra: tuple[Caveat, ...] = (),
 ) -> _Declaration:
     """The established emptiness: RetroArch writes this core no save file at all.
 
@@ -2448,6 +2481,7 @@ def _no_frontend_files(
             ),
         ),
         caveats=(
+            *extra,
             Caveat(
                 CAVEAT_CORE_OWN_WRITES_UNESTABLISHED,
                 f"RetroArch writes no save file for core {record.key!r} on {system}, which is "
@@ -2521,6 +2555,11 @@ def _standard_declaration(
     entry = record.for_system(query.system)
     if entry is None:
         return _Declaration()
+    # Named or not, the answer has to say which systems it is about. With one
+    # named it is that one; without, the record answered because every system
+    # it covers agrees, and the scope is all of them.
+    scope = query.system if query.system is not None else _every_recorded_system(record)
+    across = _as_tuple(_across_systems_caveat(record, system=query.system))
     # Last, and deliberately after the system check: this is the only refusal
     # here that states a caveat, so it must fire exactly where a declaration
     # was actually withheld. Asked without a system the record could never
@@ -2531,7 +2570,7 @@ def _standard_declaration(
             caveats=(
                 Caveat(
                     CAVEAT_CORE_GENERATION_UNESTABLISHED,
-                    f"which save files core {record.key!r} writes for {query.system} is recorded, "
+                    f"which save files core {record.key!r} writes for {scope} is recorded, "
                     "but the installed core could not be read — which build is here was never "
                     "established, so the recorded file set is not applied and the answer names "
                     "no files",
@@ -2544,7 +2583,9 @@ def _standard_declaration(
     if files is None:
         return _Declaration()
     if entry.frontend_writes_nothing:
-        return _no_frontend_files(record, entry, system=query.system, core_version=core_version)
+        return _no_frontend_files(
+            record, entry, system=scope, core_version=core_version, extra=across
+        )
     return _Declaration(
         file_set=FileSet(
             state=FILE_SET_DECLARED,
@@ -2552,7 +2593,7 @@ def _standard_declaration(
             provenance=(
                 f"declared by the standard rule: RetroArch names the save after the content "
                 f"(runloop.c:8720-8723) and writes only .srm and .rtc (save.c:710-724), and core "
-                f"'{record.key}' on {query.system} fills {', '.join(entry.memory_types)} — "
+                f"'{record.key}' on {scope} fills {', '.join(entry.memory_types)} — "
                 f"{entry.citation}"
             ),
         ),
@@ -2564,14 +2605,13 @@ def _standard_declaration(
             option_value=None,
             option_provenance=(
                 f"RetroArch's standard rule keys every save file by the content, and '{record.key}' "
-                f"on {query.system} fills {len(files)} of them — no core option governs this"
+                f"on {scope} fills {len(files)} of them — no core option governs this"
             ),
             options_file=None,
             alternatives=(),
         ),
-        caveats=_as_tuple(
-            _drift_caveat(record, entry, system=query.system, core_version=core_version)
-        ),
+        caveats=across
+        + _as_tuple(_drift_caveat(record, entry, system=scope, core_version=core_version)),
     )
 
 
@@ -6157,14 +6197,20 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     def savefile_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        system: str | None = None,
     ) -> SavefilePlacement | Unresolved:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.
 
         ``core_so`` is the core's ``.so`` basename (e.g.
         ``"mupen64plus_next_libretro.so"``) or a full path; atlas resolves
-        ``library_name`` from the binary. Both arguments are optional — missing
-        ones leave holes and stated caveats, never guesses.
+        ``library_name`` from the binary. ``system`` is the content's system in
+        ES-DE's vocabulary, which is what keys a core's recorded file set. All
+        three are optional — missing ones leave holes and stated caveats, never
+        guesses.
         """
         config, marker_issues = self._read_marker()
         return self._savefile_location_from(
@@ -6172,6 +6218,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             marker_issues,
             content_path=content_path,
             core_so=core_so,
+            system=system,
         )
 
     def savestate_location(
@@ -7512,11 +7559,26 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     def savefile_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        system: str | None = None,
     ) -> SavefilePlacement | Unresolved:
-        """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg."""
+        """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg.
+
+        *system* is the content's system in ES-DE's vocabulary
+        (:func:`atlas.known_systems`). It is what keys a core's recorded file
+        set: one core is not one behaviour, so without it the names stay
+        unstated unless every system the record covers agrees. Naming it is the
+        only way to get file names on an arrangement with no frontend
+        catalogue, and it is never guessed from the core — a core's own
+        metadata says which systems it *can* run, never which one this content
+        is.
+        """
         return _retroarch_savefile_location(
-            self._machine, self._query(content_path=content_path, core_so=core_so)
+            self._machine,
+            self._query(content_path=content_path, core_so=core_so, system=system),
         )
 
     def savestate_location(
@@ -7759,7 +7821,9 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         """
         return _Sandbox(self._machine, self._home, self._app_id, expansion_home=self._home)
 
-    def _query(self, *, content_path: str | None, core_so: str | None) -> _SaveQuery:
+    def _query(
+        self, *, content_path: str | None, core_so: str | None, system: str | None = None
+    ) -> _SaveQuery:
         """The placement question, over one read of this install's cfg."""
         cfg = self._machine.read_text(self._cfg_path())
         health = self._health_from(cfg.status)
@@ -7773,6 +7837,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             defaults=UPSTREAM_DEFAULTS,
             content_path=content_path,
             core_so=core_so,
+            system=system,
             core_path_resolver=lambda so: _core_path_from(sandbox, cfg.text, so),
             arrangement="bare",
             arrangement_version=None,
@@ -7780,11 +7845,26 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         )
 
     def savefile_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        system: str | None = None,
     ) -> SavefilePlacement | Unresolved:
-        """Where this RetroArch install keeps the save for *content_path* under *core_so*."""
+        """Where this RetroArch install keeps the save for *content_path* under *core_so*.
+
+        *system* is the content's system in ES-DE's vocabulary
+        (:func:`atlas.known_systems`). It is what keys a core's recorded file
+        set: one core is not one behaviour, so without it the names stay
+        unstated unless every system the record covers agrees. Naming it is the
+        only way to get file names on an arrangement with no frontend
+        catalogue, and it is never guessed from the core — a core's own
+        metadata says which systems it *can* run, never which one this content
+        is.
+        """
         return _retroarch_savefile_location(
-            self._machine, self._query(content_path=content_path, core_so=core_so)
+            self._machine,
+            self._query(content_path=content_path, core_so=core_so, system=system),
         )
 
     def savestate_location(
@@ -7906,7 +7986,11 @@ class Installation(Protocol):
     def health(self) -> Health: ...
 
     def savefile_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        system: str | None = None,
     ) -> SavefilePlacement | Unresolved: ...
 
     def savestate_location(

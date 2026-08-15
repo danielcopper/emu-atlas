@@ -196,13 +196,37 @@ class SaveMemoryRecord:
     def for_system(self, system: str | None) -> SystemMemory | None:
         """This record's entry for *system*, or ``None`` where it states none.
 
-        ``None`` for an unnamed system too: a record covering two systems that
-        disagree cannot be collapsed into one answer, and picking either would
-        be the guess this package refuses.
+        For an unnamed system this falls to :meth:`unanimous`, which answers
+        only where every system the record covers writes the same files.
         """
         if system is None:
-            return None
+            return self.unanimous()
         return self.systems.get(system)
+
+    def unanimous(self) -> SystemMemory | None:
+        """The one answer this record gives for every system it covers, if it gives one.
+
+        A record is keyed by core *and* system because one core is not one
+        behaviour — but most cores are: 65 of the 66 shipped records state the
+        same memory ids for every system they cover, and mGBA, the record the
+        key was designed around, is the one that does not. Where they agree,
+        the answer holds whichever of those systems the content turns out to
+        be, and stating it is a reading of the record rather than a guess about
+        the content.
+
+        Where they disagree this is ``None``, and the caller who wants an
+        answer names the system. That is not a formality: mGBA answers a Game
+        Boy cartridge's clock and a Game Boy Advance cartridge's not at all, so
+        collapsing the two would be wrong for one of them.
+
+        The claim is scoped to the systems the record covers. The resolver says
+        so with ``file-set-across-systems``, because a core run for a system
+        the record never names has established nothing here.
+        """
+        distinct = {entry.memory_types for entry in self.systems.values()}
+        if len(distinct) != 1:
+            return None
+        return next(iter(self.systems.values()), None)
 
 
 def _system_memory(value: object, where: str) -> SystemMemory:
