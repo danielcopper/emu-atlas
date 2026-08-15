@@ -80,6 +80,13 @@ frontend can name.
 - [ ] **`fbalpha2012`** — already carries a record, and it is not wrong: the frontend really does write nothing, and the
       record says so with `core-own-writes-unestablished` beside it. That open half is now answered — the core writes
       `<save_dir>/<driver>.fs` itself — so the record is due to be replaced by a card.
+- [ ] **`melonds`** — writes `<save_dir>/<rom_stem>.sav` itself
+- [ ] **`desmume2015`** — writes `<rom_stem>.dsv` through DeSmuME's own path machinery, which this build never points at
+      the frontend's save directory, so where the file lands is the card's first question
+- [ ] **`race`** — writes `<save_dir>/<rom_stem>.ngf` itself, the Neo Geo Pocket flash save
+
+One more is read and blocked on something else. `gearlynx` fills `save_ram` and would be a plain record, but no
+catalogue entry names it, so there is no system to key the record by — the third tier's whole problem, tracked in #133.
 
 ### Cores shipped but never catalogued
 
@@ -128,12 +135,14 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`gpsp`** — fills `save_ram` on gba
 - [x] **`handy`** — frontend writes nothing on atarilynx
 - [x] **`hatari`** — frontend writes nothing on atarist
+- [x] **`holani`** — frontend writes nothing on atarilynx
 - [x] **`jollycv`** — fills `save_ram` on crvision
 - [x] **`kronos`** — frontend writes nothing on arcade, consolearcade, mame, saturn, saturnjp, stv
 - [x] **`lowresnx`** — fills `save_ram` on lowresnx
 - [x] **`lutro`** — frontend writes nothing on lutro
 - [x] **`mame`** — read, and it turned out to be outcome 2: three trees of its own below the save directory, so it
       carries a rule card rather than a record
+- [x] **`mednafen_lynx`** — frontend writes nothing on atarilynx
 - [x] **`mednafen_ngp`** — frontend writes nothing on ngp, ngpc
 - [x] **`mednafen_pce`** — fills `save_ram` on pcengine, pcenginecd, supergrafx, tg-cd, tg16
 - [x] **`mednafen_pcfx`** — fills `save_ram` on pcfx
@@ -141,6 +150,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mednafen_supergrafx`** — fills `save_ram` on supergrafx, tg16
 - [x] **`mednafen_vb`** — fills `save_ram` on virtualboy
 - [x] **`mednafen_wswan`** — fills `save_ram` on wonderswan, wonderswancolor
+- [x] **`melondsds`** — fills `save_ram` on nds
 - [x] **`mesen`** — fills `save_ram` on famicom, fds, nes
 - [x] **`mesen-s`** — fills `save_ram` on gb, gbc, satellaview, sfc, sgb, snes, snesna
 - [x] **`mgba`** — fills `rtc`, `save_ram` on gb, gbc, sgb; fills `save_ram` on gba

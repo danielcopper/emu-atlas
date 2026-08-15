@@ -783,6 +783,23 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "holani": {
+      "identifiers": {
+        "library_name": [
+          "holani"
+        ]
+      },
+      "systems": {
+        "atarilynx": {
+          "memory_types": [],
+          "verified_core": "0.9.6-1",
+          "citation": "[V] src/lib.rs:144-163 at LLeny/holani-retro 0.9.6-1 — the core is written in Rust and implements GetMemoryRegionCore rather than exporting the C functions itself. get_memory_size names all four standard ids and answers 0 for SaveRam, RTC and VideoRam, and the Lynx's RAM size for SystemRam; get_memory_data returns None for the same three. So RetroArch writes no save file. The core's only file access is a read of lynxboot.img out of the system directory (:85-92)."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "jollycv": {
       "identifiers": {
         "library_name": [
@@ -878,6 +895,23 @@
       },
       "provenance": {
         "source": "the revision the binary names (72c8754) is not reachable upstream, so the reading is at master and the pin records what the binary claims rather than what was read"
+      }
+    },
+    "mednafen_lynx": {
+      "identifiers": {
+        "library_name": [
+          "Beetle Lynx"
+        ]
+      },
+      "systems": {
+        "atarilynx": {
+          "memory_types": [],
+          "verified_core": "v1.24.0 efd1797",
+          "citation": "[V] libretro.cpp:612-624 at libretro/beetle-lynx-libretro efd1797 — only RETRO_MEMORY_SYSTEM_RAM answers, with 64 KiB of the Lynx's RAM; RETRO_MEMORY_SAVE_RAM and RETRO_MEMORY_RTC fall past both conditions and return 0 and NULL, so RetroArch writes no save file. The unit asks the frontend for no save directory and opens no file of its own."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
       }
     },
     "mednafen_ngp": {
@@ -1059,6 +1093,25 @@
       },
       "provenance": {
         "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "melondsds": {
+      "identifiers": {
+        "library_name": [
+          "melonDS DS"
+        ]
+      },
+      "systems": {
+        "nds": {
+          "memory_types": [
+            "save_ram"
+          ],
+          "verified_core": "1.2.0",
+          "citation": "[V] src/libretro/core/core.cpp:937-960 at JesseTG/melonds-ds v1.2.0 — RETRO_MEMORY_SAVE_RAM answers the save manager's SramLength(), so RetroArch writes <rom_stem>.srm. Every other id, RETRO_MEMORY_RTC among them, falls to the switch's default and returns 0. The exported function is a one-line forward to it (src/libretro/libretro.cpp:264-268). This is the only Nintendo DS core read so far that puts its save through the libretro interface at all — melonDS, DeSmuME and DeSmuME 2015 each keep a file of their own instead. A guard above the switch returns 0 for every id while the core is showing an error screen (:938-939), so the claim is about a loaded game."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
     "mesen": {
