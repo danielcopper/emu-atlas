@@ -1349,6 +1349,273 @@
           }
         }
       }
+    },
+    {
+      "name": "the-fifth-emulator-a-system-offers-answers-like-the-first",
+      "rationale": "Game Boy is the first system whose whole emulator list answers. The catalogue offers five libretro cores for it and a person scrolling that list is as likely to stop at the last as at the first, so the last one is what this asks: DoubleCherryGB fills both memory ids and states the same pair of names Gambatte states from position one. Position in a menu is not a property of a core, and it is not a reason for atlas to know less.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n    <command label=\"Gearboy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gearboy_libretro.so %ROM%</command>\n    <command label=\"TGB Dual\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/tgbdual_libretro.so %ROM%</command>\n    <command label=\"DoubleCherryGB\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/DoubleCherryGB_libretro.so %ROM%</command>\n  </system>\n  <system><name>sgb</name><path>%ROMPATH%/sgb</path>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n  </system>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"gpSP\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gpsp_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/gb/Tetris (World).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/sameboy_libretro.so": {
+            "library_name": "SameBoy",
+            "library_version": "1.0.2 be2c352"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gearboy_libretro.so": {
+            "library_name": "Gearboy",
+            "library_version": "3.7.4-8-g37c21f7"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/tgbdual_libretro.so": {
+            "library_name": "TGB Dual",
+            "library_version": "v0.8.3 933707c"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/DoubleCherryGB_libretro.so": {
+            "library_name": "DoubleCherryGB",
+            "library_version": "v0.17.0 5dbc8c9"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gpsp_libretro.so": {
+            "library_name": "gpSP",
+            "library_version": "v1.1.0-74db5e5"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "gb",
+          "label": "DoubleCherryGB",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Tetris (World).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Tetris (World).srm",
+              "Tetris (World).rtc"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "DoubleCherryGB"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-super-game-boy-entry-names-both-files",
+      "rationale": "SameBoy is offered for three systems and the third is the Super Game Boy, which the core reaches through the same code path as the other two — the model comes from an option and the loaded cartridge, not from a branch in the memory function. So the Super Game Boy entry states the same pair, and the record says so for that system rather than leaving it to be inferred from the two beside it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n    <command label=\"Gearboy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gearboy_libretro.so %ROM%</command>\n    <command label=\"TGB Dual\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/tgbdual_libretro.so %ROM%</command>\n    <command label=\"DoubleCherryGB\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/DoubleCherryGB_libretro.so %ROM%</command>\n  </system>\n  <system><name>sgb</name><path>%ROMPATH%/sgb</path>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n  </system>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"gpSP\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gpsp_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/sgb/Donkey Kong (World).sgb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/sameboy_libretro.so": {
+            "library_name": "SameBoy",
+            "library_version": "1.0.2 be2c352"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gearboy_libretro.so": {
+            "library_name": "Gearboy",
+            "library_version": "3.7.4-8-g37c21f7"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/tgbdual_libretro.so": {
+            "library_name": "TGB Dual",
+            "library_version": "v0.8.3 933707c"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/DoubleCherryGB_libretro.so": {
+            "library_name": "DoubleCherryGB",
+            "library_version": "v0.17.0 5dbc8c9"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gpsp_libretro.so": {
+            "library_name": "gpSP",
+            "library_version": "v1.1.0-74db5e5"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "sgb",
+          "content_path": "/mnt/sd/retrodeck/roms/sgb/Donkey Kong (World).sgb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Donkey Kong (World).srm",
+              "Donkey Kong (World).rtc"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "sameboy"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-core-that-assumes-the-largest-save-still-names-one-file",
+      "rationale": "gpSP answers the save-RAM id with a flat 128 KiB and its own comment says why — it assumes the biggest save a Game Boy Advance cartridge could carry rather than reading the one loaded. So the file is written for every game, including one whose hardware has no save at all. The answer is unchanged by that: the set is an upper bound over the system, which is what it has always been, and a caller looking for that name will find it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n    <command label=\"Gearboy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gearboy_libretro.so %ROM%</command>\n    <command label=\"TGB Dual\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/tgbdual_libretro.so %ROM%</command>\n    <command label=\"DoubleCherryGB\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/DoubleCherryGB_libretro.so %ROM%</command>\n  </system>\n  <system><name>sgb</name><path>%ROMPATH%/sgb</path>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n  </system>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"gpSP\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gpsp_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/sameboy_libretro.so": {
+            "library_name": "SameBoy",
+            "library_version": "1.0.2 be2c352"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gearboy_libretro.so": {
+            "library_name": "Gearboy",
+            "library_version": "3.7.4-8-g37c21f7"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/tgbdual_libretro.so": {
+            "library_name": "TGB Dual",
+            "library_version": "v0.8.3 933707c"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/DoubleCherryGB_libretro.so": {
+            "library_name": "DoubleCherryGB",
+            "library_version": "v0.17.0 5dbc8c9"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gpsp_libretro.so": {
+            "library_name": "gpSP",
+            "library_version": "v1.1.0-74db5e5"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "gba",
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Golden Sun (USA).srm"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "gpsp"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

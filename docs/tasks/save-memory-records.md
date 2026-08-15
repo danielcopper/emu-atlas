@@ -62,6 +62,11 @@ Reading these is the same work as reading a default core, and each one answers f
 for. Measured on the reference machine, 87 catalogued cores had no record and no card when this round started; the order
 is by what a person is likely to choose, not alphabetical.
 
+One core from this tier is read and waiting on the card family rather than on a reading:
+
+- [ ] **`noods`** — `gba` · read, and outcome 2: it fills no id the frontend writes and keeps its own
+      `<save_dir>/<rom_stem>.sav`, which no record can state
+
 ### Cores shipped but never catalogued
 
 Roughly 50 more `.so` files ship that no ES-DE catalogue entry names. They are **not** out of scope: a bare RetroArch is
@@ -73,6 +78,7 @@ line to hang it off — so they come last, not never.
 Systems as the record states them, with the outcome each turned out to be.
 
 - [x] **`81`** — frontend writes nothing on zx81
+- [x] **`DoubleCherryGB`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`a5200`** — frontend writes nothing on atari5200
 - [x] **`amiarcadia`** — frontend writes nothing on arcadia
 - [x] **`arduous`** — fills `save_ram` on arduboy
@@ -98,9 +104,11 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`freeintv`** — frontend writes nothing on intellivision
 - [x] **`fuse`** — frontend writes nothing on zxspectrum
 - [x] **`gambatte`** — fills `rtc`, `save_ram` on gb, gbc
+- [x] **`gearboy`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`gearsystem`** — fills `save_ram` on gamegear, mark3, mastersystem, multivision, sg-1000
 - [x] **`genesis_plus_gx`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megacd, megacdjp, megadrive,
       megadrivejp, segacd, sg-1000
+- [x] **`gpsp`** — fills `save_ram` on gba
 - [x] **`handy`** — frontend writes nothing on atarilynx
 - [x] **`hatari`** — frontend writes nothing on atarist
 - [x] **`jollycv`** — fills `save_ram` on crvision
@@ -137,6 +145,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`quasi88`** — frontend writes nothing on pc88
 - [x] **`quicknes`** — fills `save_ram` on famicom, nes
 - [x] **`same_cdi`** — frontend writes nothing on cdimono1
+- [x] **`sameboy`** — fills `rtc`, `save_ram` on gb, gbc, sgb
 - [x] **`sameduck`** — frontend writes nothing on megaduck
 - [x] **`scummvm`** — frontend writes nothing on scummvm
 - [x] **`snes9x`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
@@ -144,6 +153,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`snes9x2010`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`squirreljme`** — frontend writes nothing on j2me
 - [x] **`stella`** — frontend writes nothing on atari2600
+- [x] **`tgbdual`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`theodore`** — frontend writes nothing on moto, to8
 - [x] **`tic80`** — fills `save_ram` on tic80
 - [x] **`tyrquake`** — frontend writes nothing on quake
