@@ -114,7 +114,11 @@ class EveryInstallation:
         return self._ask(lambda installation: installation.health())
 
     def savefile_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        system: str | None = None,
     ) -> tuple[InstallationAnswer[SavefilePlacement | Unresolved], ...]:
         """Where each installation keeps this save — one placement per arrangement.
 
@@ -125,7 +129,7 @@ class EveryInstallation:
         """
         return self._ask(
             lambda installation: installation.savefile_location(
-                content_path=content_path, core_so=core_so
+                content_path=content_path, core_so=core_so, system=system
             )
         )
 

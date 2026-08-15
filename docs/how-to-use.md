@@ -368,6 +368,39 @@ entry.savefile_location(content_path=rom).file_set    # declared: ('Game.srm', '
 install.savefile_location(content_path=rom, core_so="mgba_libretro.so").file_set   # unknown — no system
 ```
 
+### Naming the system yourself
+
+The catalogue is where a system normally comes from, and one arrangement has none: a **bare RetroArch** carries no
+frontend catalogue at all, so `emulators_for` there answers `emulator-catalogue-unavailable` and nothing ever names a
+system. Say it yourself and the answer follows:
+
+```python
+install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system="gb")
+#   file_set: declared ('Game.srm', 'Game.rtc')
+install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system="gba")
+#   file_set: declared ('Game.srm',)          — same core, same ROM path, different system
+install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system="n64")
+#   file_set: unknown ()                       — the record covers no such system; nothing is invented
+```
+
+`system` speaks the same vocabulary every other question here does — ES-DE's ids, `atlas.known_systems()` — and it is
+never derived from the core. A core's own metadata says which systems it _can_ run (mGBA declares Game Boy, Game Boy
+Color and Game Boy Advance); it cannot say which one the content in your hand is, and guessing would answer a Game Boy
+question with Game Boy Advance behaviour. Name it, or accept the answer below.
+
+**Without a system, a record still answers where its systems agree.** Most cores are one behaviour: of the 66 recorded
+cores, 65 write the same files for every system they cover, so the answer holds whichever of them the content is. It
+comes with `file-set-across-systems`, whose `data["systems"]` lists exactly the systems the claim is scoped to:
+
+```python
+c = next(c for c in placement.caveats if c.code == "file-set-across-systems")
+c.data["systems"]      # 'gb, gbc' — the answer holds for these, and states nothing about any other
+```
+
+The one core where the systems disagree is mGBA, which is also the reason the records are keyed by system at all — it
+answers a Game Boy cartridge's clock and a Game Boy Advance cartridge's not at all. There the set stays `unknown` until
+you name one.
+
 ```python
 fs = placement.file_set
 if fs.state in ("observed", "declared") and not placement.needs:
@@ -513,6 +546,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope            |
 | `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated          |
 | `file-names-unestablished`                  | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole |
+| `file-set-across-systems`                   | no system was named; the set holds for every system in `data["systems"]` and for no other         |
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain              |
 | `core-generation-mismatch`                  | the recorded deviation names an option this core does not register — not applied, standard frame  |
 | `core-generation-unestablished`             | the core could not be read, so its generation is unknown — the recorded deviation is not applied  |
