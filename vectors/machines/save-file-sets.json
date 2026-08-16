@@ -1105,6 +1105,16 @@
               }
             },
             {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "mame",
+                "mode": "disabled",
+                "files": "dkong",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.cpp:74, m_basename(_config.gamedrv().name)) and every name below is built on it, while the glue finds the driver from the content's basename (retro_init.cpp:285-305). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "citation": "machine.cpp:74 and :1116-1147 at libretro/mame a90e86e1"
+              }
+            },
+            {
               "code": "file-names-unestablished",
               "data": {
                 "core": "mame",
@@ -2061,6 +2071,297 @@
             "option_value": null,
             "options_file": null,
             "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-core-whose-options-a-probe-cannot-reach-still-answers-from-its-own-default",
+      "rationale": "MAME 2003 puts its whole save tree under a subfolder or directly under the save directory, and an option decides which. That option is one a probe of the shipped binary cannot see — the core registers its options later than a probe reaches — so nothing on this machine states the value. The card records the default the core's own source declares, which is what a recorded default is for: it is kept only for a core that registers none, so it can never become a second, ageing copy of something the machine already says. The answer is the subfolder, and the alternative is named beside it with the value that would reach it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME 2003\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame2003_libretro.so %ROM%</command>\n    <command label=\"MAME 2003-Plus\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame2003_plus_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/mame2003/nvram"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2003_libretro.so": {
+            "library_name": "MAME 2003",
+            "library_version": "0.78 3570605"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2003_plus_libretro.so": {
+            "library_name": "MAME 2003-Plus",
+            "library_version": " 62c7089"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "arcade",
+          "label": "MAME 2003",
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/mame2003/nvram",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "dkong.nv"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2003/nvram",
+                "files": [
+                  "dkong.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2003/hi",
+                "files": [
+                  "dkong.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2003/cfg",
+                "files": [
+                  "dkong.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2003/memcard",
+                "files": null,
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2003/diff",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "disk-diff"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame2003",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "mame2003",
+                "mode": "enabled",
+                "files": "dkong.nv",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "citation": "mame.c:497 and :530 at libretro/mame2003-libretro 3570605"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "mame2003",
+                "dir": "/mnt/sd/retrodeck/saves/mame2003/memcard",
+                "role": "memory-card",
+                "citation": "machine/neogeo_machine.c:808-837 at libretro/mame2003-libretro 3570605 — a card is 'MEMCARD.%03d' after an index the player picks in the emulator's own memory-card menu (usrintrf.c:2962, offered only for Neo Geo content at :3147-3150), 2 KiB each. The index is no read of this machine, and the cards are not keyed by game: one directory holds every card ever created, which is what makes the group shared."
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "mame2003",
+                "dir": "/mnt/sd/retrodeck/saves/mame2003/diff",
+                "role": "disk-diff",
+                "citation": "mame.c:1451 at libretro/mame2003-libretro 3570605 — the differencing image for a CHD hard disk is opened through the CHD interface with a name that comes from the disk image rather than from the driver, so it follows from nothing atlas reads."
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": "mame2003_core_save_subfolder",
+            "option_value": "enabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "per-game-file"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-value-set-on-the-machine-beats-the-cards-recorded-default",
+      "rationale": "The same core with the option turned off in the frontend's own core-options file. A recorded default is a fallback and never an override: the machine states a value, so the answer takes it and the whole tree moves up one level, into the save directory itself. Same six groups, same roles, one less path segment — which is exactly what a client would otherwise have had to guess at.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME 2003\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame2003_libretro.so %ROM%</command>\n    <command label=\"MAME 2003-Plus\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame2003_plus_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame2003-plus_core_save_subfolder = \"disabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/nvram"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2003_libretro.so": {
+            "library_name": "MAME 2003",
+            "library_version": "0.78 3570605"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2003_plus_libretro.so": {
+            "library_name": "MAME 2003-Plus",
+            "library_version": " 62c7089"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "arcade",
+          "label": "MAME 2003-Plus",
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/nvram",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "dkong.nv"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/nvram",
+                "files": [
+                  "dkong.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/hi",
+                "files": [
+                  "dkong.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/cfg",
+                "files": [
+                  "dkong.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/memcard",
+                "files": null,
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/diff",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "disk-diff"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame2003_plus",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "mame2003_plus",
+                "mode": "disabled",
+                "files": "dkong.nv",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "citation": "mame.c:497 and :530 at libretro/mame2003-plus-libretro 62c7089"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "mame2003_plus",
+                "dir": "/mnt/sd/retrodeck/saves/memcard",
+                "role": "memory-card",
+                "citation": "machine/neogeo_machine.c:808-837 at libretro/mame2003-plus-libretro 62c7089 — a card is 'MEMCARD.%03d' after an index the player picks in the emulator's own memory-card menu (usrintrf.c:2962, offered only for Neo Geo content at :3147-3150), 2 KiB each. The index is no read of this machine, and the cards are not keyed by game: one directory holds every card ever created, which is what makes the group shared."
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "mame2003_plus",
+                "dir": "/mnt/sd/retrodeck/saves/diff",
+                "role": "disk-diff",
+                "citation": "mame.c:1451 at libretro/mame2003-plus-libretro 62c7089 — the differencing image for a CHD hard disk is opened through the CHD interface with a name that comes from the disk image rather than from the driver, so it follows from nothing atlas reads."
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": "mame2003-plus_core_save_subfolder",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "enabled",
+                "per-game-file"
+              ]
+            ]
           }
         }
       }

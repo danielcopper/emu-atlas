@@ -2214,6 +2214,21 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("mame2000", "<rom_stem>.nv", "unprotected"),
             ("mame2000", "cfg", "unprotected"),
             ("mame2000", "mame2000", "unprotected"),
+            # The 2003 pair pools its short tree names hardest — 'hi' and 'cfg'
+            # in the plain build, 'memcard' in both — so each of those anchors
+            # names the longer whole string that would go with a rename: the
+            # writer's own log line, the option key that moves the tree, or the
+            # file name 'MEMCARD.%03d' itself.
+            ("mame2003", "<rom_stem>.cfg", "unprotected"),
+            ("mame2003", "<rom_stem>.hi", "unprotected"),
+            ("mame2003", "<rom_stem>.nv", "unprotected"),
+            ("mame2003", "cfg", "unprotected"),
+            ("mame2003", "hi", "unprotected"),
+            ("mame2003", "memcard", "unprotected"),
+            ("mame2003_plus", "<rom_stem>.cfg", "unprotected"),
+            ("mame2003_plus", "<rom_stem>.hi", "unprotected"),
+            ("mame2003_plus", "<rom_stem>.nv", "unprotected"),
+            ("mame2003_plus", "memcard", "unprotected"),
             ("mame2010", "<rom_stem>.cfg", "unprotected"),
             ("mame2010", "<rom_stem>.hi", "unprotected"),
             ("mame2010", "<rom_stem>.nv", "unprotected"),

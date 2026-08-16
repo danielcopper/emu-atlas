@@ -121,6 +121,28 @@
       },
       "kind": "libretro"
     },
+    "mame2003": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] The shipped generation answers no libretro memory id and keeps its own trees below the save directory, under 'mame2003' by default and directly under it where the core's subfolder option is turned off: nvram, hi and cfg by driver name, plus a shared memcard tree and a diff tree whose names atlas cannot derive. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "mame2003_plus": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] The shipped generation answers no libretro memory id and keeps its own trees below the save directory, under 'mame2003-plus' by default and directly under it where the core's subfolder option is turned off: nvram, hi and cfg by driver name, plus a shared memcard tree and a diff tree whose names atlas cannot derive. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "mame2010": {
       "verdict": "card",
       "per_game_capable": true,
