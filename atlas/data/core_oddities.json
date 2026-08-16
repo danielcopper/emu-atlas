@@ -459,6 +459,177 @@
         }
       }
     },
+    "mame2000": {
+      "identifiers": {
+        "library_name": [
+          "MAME 2000"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "mame2000/nvram",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. The file is named after the driver, not after the ROM file: MAME 2000 matches the content's basename against its driver table case-insensitively (libretro.c:862-871, and a miss refuses the load), and then writes the table's own spelling. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_citation": "libretro/fileio.c:763 at libretro/mame2000-libretro 2ec60f6"
+              },
+              {
+                "subdir": "mame2000/hi",
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              },
+              {
+                "subdir": "mame2000/cfg",
+                "files": [
+                  "<rom_stem>.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "mame2000": {
+            "unprotected": "the segment between the save directory and each tree is written into a format string rather than standing alone: '%s%cmame2000' is whole in the binary (libretro.c:838) and the bare word is not"
+          },
+          "nvram": {
+            "literal": "nvram"
+          },
+          "hi": {
+            "literal": "hi"
+          },
+          "cfg": {
+            "unprotected": "the compiler pooled this one, so no NUL-delimited string carries it alone. What is whole beside it is the composition itself, '%s/%s.cfg' (fileio.c:820), which a rename of the scheme would take with it"
+          },
+          "<rom_stem>.nv": {
+            "unprotected": "composed at run time from the driver name and the directory: the whole string in the binary is the format '%s/%s.nv' (fileio.c:763)"
+          },
+          "<rom_stem>.hi": {
+            "unprotected": "composed at run time; the whole string is '%s/%s.hi' (fileio.c:793)"
+          },
+          "<rom_stem>.cfg": {
+            "unprotected": "composed at run time; the whole string is '%s/%s.cfg' (fileio.c:820)"
+          }
+        }
+      },
+      "provenance": {
+        "source": "MAME 2000 source at 2ec60f6, the revision the shipped binary names in its library_version ('0.37b5 2ec60f6'). The libretro glue takes GET_SAVE_DIRECTORY and builds <save_dir>/mame2000 from it, falling back to the content's own directory where the frontend names none (libretro.c:828-838); under that it creates nvram, hi, cfg, snap and memcard (:881-897). The file layer then composes <nvdir>/<driver>.nv (fileio.c:763), <hidir>/<driver>.hi (:793) and <cfgdir>/<driver>.cfg (:820) — the source says on the line above what the name is: 'gamename holds the driver name' (:237). Two directories are created and never written into: memcard has no caller in this fork at all, which the binary confirms — 'memcard' is a whole string only as the directory, and the 'memcard.%03d' the later builds carry is absent — and snap holds screenshots, which are not save data (#142). This build predates hard-disk support, so there is no diff tree, and it writes no emulator-wide default.cfg.",
+        "status": {
+          "always": "[D] Read from source and confirmed against the shipped binary's strings. One mode: nothing selects between modes, the paths are fixed in the glue and the core registers no option that moves them. No save was watched being written."
+        }
+      }
+    },
+    "mame2010": {
+      "identifiers": {
+        "library_name": [
+          "MAME 2010"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "mame2010/nvram",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.c:183, m_basename(driver.name)) and every name below is built on it, while the glue finds the driver from the content's basename (retromain.c). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_citation": "src/emu/machine/generic.c:325-331 at libretro/mame2010-libretro c5b413b"
+              },
+              {
+                "subdir": "mame2010/hi",
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              },
+              {
+                "subdir": "mame2010/cfg",
+                "files": [
+                  "<rom_stem>.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "mame2010/cfg",
+                "files": [
+                  "default.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "mame2010/memcard",
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "unnamed": "src/emu/machine/generic.c:476-478 at libretro/mame2010-libretro c5b413b — a memory card is named 'memcard.%03d' after an index the player picks in the emulator's own interface (memcard_create at :487-515, memcard_insert at :528), which is no read of this machine. The cards are not keyed by game either: one directory holds every card the machine has ever created, which is what makes the group shared rather than per-game."
+              },
+              {
+                "subdir": "mame2010/diff",
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "unnamed": "the differencing image for a CHD hard disk is named after the disk image's own entry in the machine's ROM table inside the binary, the same scheme the current MAME still uses and still calls unscalable. The directory is set at retromain.c:253 at libretro/mame2010-libretro c5b413b."
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "mame2010": {
+            "literal": "mame2010"
+          },
+          "nvram": {
+            "literal": "nvram"
+          },
+          "hi": {
+            "literal": "hi"
+          },
+          "cfg": {
+            "literal": "cfg"
+          },
+          "memcard": {
+            "literal": "memcard"
+          },
+          "diff": {
+            "literal": "diff"
+          },
+          "default.cfg": {
+            "literal": "default.cfg"
+          },
+          "<rom_stem>.nv": {
+            "unprotected": "composed at run time: generic.c:327 appends '.nv' to running_machine::basename(). The whole string beside it is '.nv'"
+          },
+          "<rom_stem>.hi": {
+            "unprotected": "composed at run time: hiscore.c:213 and :246 append '.hi' to the same basename. The whole string beside it is '.hi'"
+          },
+          "<rom_stem>.cfg": {
+            "unprotected": "composed at run time: config.c:141 appends '.cfg' to the same basename, and neither half is a whole string. Its sibling 'default.cfg' is, and is anchored"
+          }
+        }
+      },
+      "provenance": {
+        "source": "MAME 2010 source at c5b413b, the revision the shipped binary names in its library_version ('0.139 c5b413b'). The libretro glue builds <save_dir>/<core_name> from GET_SAVE_DIRECTORY, with core_name the compiled-in \"mame2010\" (retromain.c:36, :218), and points MAME's own path options at subdirectories of it (:239-257). MAME then names each file after the running machine, whose basename is the driver's own name (machine.c:183): NVRAM as <basename>.nv (src/emu/machine/generic.c:325-331), the score table as <basename>.hi (src/emu/hiscore.c:213 loading, :246 saving), and the configuration as both default.cfg and <basename>.cfg on every save (src/emu/config.c:133, :141-142). Two trees are stated without their files. Memory cards are 'memcard.%03d' by an index the player chooses (generic.c:476-478), shared across every game rather than keyed by one. Differencing images for CHD hard disks are named from the machine's own ROM table. Five more directories the glue creates hold nothing this question is about — ctrlr, ini, input, image and comment — and whether atlas should answer for them at all is #142. The mame-external_hiscore option chooses where the hiscore *database* is read from and does not move the save (hiscore.c:353), so it is not a governing option.",
+        "status": {
+          "always": "[D] Read from source and confirmed against the shipped binary's strings, 'memcard.%03d' among them. One mode: the paths are fixed in the glue and no registered option moves them. No save was watched being written, and two trees are named without their files by design."
+        }
+      }
+    },
     "opera": {
       "identifiers": {
         "library_name": [

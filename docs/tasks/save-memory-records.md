@@ -37,9 +37,9 @@ covers the answer.
 
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
-- **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, `mame`, `pcsx2`, `virtualjaguar`). The card
-  wins, and a record beside it would be a second declaration of one file set — a test enforces that no core carries
-  both.
+- **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, `mame`, `mame2000`, `mame2010`, `pcsx2`,
+  `virtualjaguar`, and the three bsnes builds). The card wins, and a record beside it would be a second declaration of
+  one file set — a test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -68,10 +68,9 @@ follows from what the hardware is — an arcade board's memory is NVRAM the mach
 frontend can name.
 
 - [ ] **`noods`** — `gba` · fills no id the frontend writes and keeps its own `<save_dir>/<rom_stem>.sav`
-- [ ] **`mame2000`** — trees of its own under `<save_dir>/mame2000/` (`nvram`, `hi`, `cfg`, `memcard`, `snap`)
-- [ ] **`mame2003`** — the same shape, its layout built from the frontend's save path
-- [ ] **`mame2003_plus`** — the same shape
-- [ ] **`mame2010`** — trees of its own under `<save_dir>/<core name>/` (`nvram`, `hi`, `cfg`, `memcard`, `diff`, …)
+- [ ] **`mame2003`** — the same shape, its layout built from the frontend's save path, with the tree's top level under
+      an option (`mame2003_core_save_subfolder`) so the card has two modes
+- [ ] **`mame2003_plus`** — the same shape, under its own `mame2003-plus_core_save_subfolder`
 - [ ] **`geolith`** — writes four files of its own per game (`.nv`, `.srm`, `.mcr`, `.brm`), one of which collides with
       the name RetroArch would give a save-RAM file
 - [ ] **`fbalpha2012_cps2`** — writes `<save_dir>/<driver>.fs` at unload, keyed by the driver rather than the ROM file
@@ -142,6 +141,9 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`lutro`** — frontend writes nothing on lutro
 - [x] **`mame`** — read, and it turned out to be outcome 2: three trees of its own below the save directory, so it
       carries a rule card rather than a record
+- [x] **`mame2000`** — outcome 2, and a card: three trees of its own (`nvram`, `hi`, `cfg`), every file named after the
+      driver, nothing refused
+- [x] **`mame2010`** — outcome 2, and a card: six groups, two of which state a directory without its file names
 - [x] **`mednafen_lynx`** — frontend writes nothing on atarilynx
 - [x] **`mednafen_ngp`** — frontend writes nothing on ngp, ngpc
 - [x] **`mednafen_pce`** — fills `save_ram` on pcengine, pcenginecd, supergrafx, tg-cd, tg16

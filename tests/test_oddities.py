@@ -2202,6 +2202,21 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("mame", "cfg", "unprotected"),
             ("mame", "diff", "unprotected"),
             ("mame", "mame", "unprotected"),
+            # The two older MAME builds compose their names the same way, and
+            # each anchor names the whole string that stands beside it. MAME
+            # 2000 is the one with something to say: its three file names are
+            # carried in the binary as the sprintf formats that build them
+            # ("%s/%s.nv" and its siblings), which is a stronger thing to watch
+            # than the extension alone, and its 'cfg' and 'mame2000' segments
+            # were pooled into longer strings by the compiler.
+            ("mame2000", "<rom_stem>.cfg", "unprotected"),
+            ("mame2000", "<rom_stem>.hi", "unprotected"),
+            ("mame2000", "<rom_stem>.nv", "unprotected"),
+            ("mame2000", "cfg", "unprotected"),
+            ("mame2000", "mame2000", "unprotected"),
+            ("mame2010", "<rom_stem>.cfg", "unprotected"),
+            ("mame2010", "<rom_stem>.hi", "unprotected"),
+            ("mame2010", "<rom_stem>.nv", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
         ], (
             "the set of recorded names no anchor watches has changed — every entry here is a name "
