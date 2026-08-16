@@ -38,8 +38,9 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
-  builds that write past the frontend, `pcsx2`, `virtualjaguar`, and the three bsnes builds). The card wins, and a
-  record beside it would be a second declaration of one file set — a test enforces that no core carries both.
+  builds that write past the frontend, `melonds`, `race`, `pcsx2`, `virtualjaguar`, and the three bsnes builds). The
+  card wins, and a record beside it would be a second declaration of one file set — a test enforces that no core carries
+  both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -70,10 +71,9 @@ frontend can name.
 - [ ] **`noods`** — `gba` · fills no id the frontend writes and keeps its own `<save_dir>/<rom_stem>.sav`
 - [ ] **`geolith`** — writes four files of its own per game (`.nv`, `.srm`, `.mcr`, `.brm`), one of which collides with
       the name RetroArch would give a save-RAM file
-- [ ] **`melonds`** — writes `<save_dir>/<rom_stem>.sav` itself
-- [ ] **`desmume2015`** — writes `<rom_stem>.dsv` through DeSmuME's own path machinery, which this build never points at
-      the frontend's save directory, so where the file lands is the card's first question
-- [ ] **`race`** — writes `<save_dir>/<rom_stem>.ngf` itself, the Neo Geo Pocket flash save
+- [ ] **`desmume2015`** — writes `<rom_stem>.dsv`, and the card cannot state where: DeSmuME composes the path from a
+      variable this build never sets, so the file lands relative to the process's working directory. A card's every mode
+      names a root, and there is no root to name (#148)
 
 One more is read and blocked on something else. `gearlynx` fills `save_ram` and would be a plain record, but no
 catalogue entry names it, so there is no system to key the record by — the third tier's whole problem, tracked in #133.
@@ -150,6 +150,8 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mednafen_supergrafx`** — fills `save_ram` on supergrafx, tg16
 - [x] **`mednafen_vb`** — fills `save_ram` on virtualboy
 - [x] **`mednafen_wswan`** — fills `save_ram` on wonderswan, wonderswancolor
+- [x] **`melonds`** — outcome 2, and a card: it builds `<save_dir>/<rom_stem>.sav` itself and hands the path to the
+      emulator
 - [x] **`melondsds`** — fills `save_ram` on nds
 - [x] **`mesen`** — fills `save_ram` on famicom, fds, nes
 - [x] **`mesen-s`** — fills `save_ram` on gb, gbc, satellaview, sfc, sgb, snes, snesna
@@ -171,6 +173,8 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`px68k`** — frontend writes nothing on x68000
 - [x] **`quasi88`** — frontend writes nothing on pc88
 - [x] **`quicknes`** — fills `save_ram` on famicom, nes
+- [x] **`race`** — outcome 2, and a card: it writes the Neo Geo Pocket's flash memory as `<save_dir>/<rom_stem>.ngf`,
+      naming it by replacing the content file's extension
 - [x] **`same_cdi`** — frontend writes nothing on cdimono1
 - [x] **`sameboy`** — fills `rtc`, `save_ram` on gb, gbc, sgb
 - [x] **`sameduck`** — frontend writes nothing on megaduck

@@ -268,6 +268,17 @@
       },
       "kind": "libretro"
     },
+    "melonds": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id and writes <save_dir>/<rom_stem>.sav itself, the DS card's SRAM. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "mgba": {
       "verdict": "standard",
       "per_game_capable": true,
@@ -375,6 +386,17 @@
       "verdict": "suspect",
       "per_game_capable": null,
       "note": "[O] The shipped sort override is known, but PPSSPP's libretro save subtree and granularity have not been established.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "race": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id and writes <save_dir>/<rom_stem>.ngf itself, the Neo Geo Pocket's flash memory. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,

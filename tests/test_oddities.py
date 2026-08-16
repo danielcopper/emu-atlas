@@ -2244,7 +2244,13 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("mame2010", "<rom_stem>.cfg", "unprotected"),
             ("mame2010", "<rom_stem>.hi", "unprotected"),
             ("mame2010", "<rom_stem>.nv", "unprotected"),
+            ("melonds", "<rom_stem>.sav", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
+            # RACE's is the one name in this list the binary carries no trace of,
+            # not even the extension: 'ngf' is three characters, which a compiler
+            # stores as an immediate rather than as a string. Its anchor names the
+            # build file that proves the unit is linked instead.
+            ("race", "<rom_stem>.ngf", "unprotected"),
         ], (
             "the set of recorded names no anchor watches has changed — every entry here is a name "
             "the byte tripwire cannot reach, so confirm the new one really cannot be pinned to a "

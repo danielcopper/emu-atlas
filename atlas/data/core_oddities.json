@@ -1160,6 +1160,41 @@
         }
       }
     },
+    "melonds": {
+      "identifiers": {
+        "library_name": [
+          "melonDS"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.sav": {
+            "unprotected": "composed at run time from the content's basename with its extension removed (libretro.cpp:887-895). The whole string beside it in the binary is the extension '.sav'"
+          }
+        }
+      },
+      "provenance": {
+        "source": "melonDS source at 7a3c11f, the revision the shipped binary names in its library_version ('0.9.3 7a3c11f'). retro_get_memory_size answers only RETRO_MEMORY_SYSTEM_RAM (libretro.cpp:1011-1017), so RetroArch writes no save file. The core builds one itself: retro_load_game takes the content's basename, removes the extension and joins it to the frontend's save directory as <save_dir>/<rom_stem>.sav (:887-895, the directory read at :94-95), hands that path to NDS::LoadROM (:902) and flushes it through NDSCart_SRAMManager (:769). One more path exists and is not this question's: booting a Game Boy Advance cartridge in slot 2 alongside the DS card writes a second file, <save_dir>/<gba_stem>.srm (:906-917). That is retro_load_game_special's subsystem route, which a catalogue entry does not launch, and it names the *other* content's stem — so it is recorded here rather than stated as a group of an answer about the DS card.",
+        "status": {
+          "always": "[D] Read from source and confirmed against the shipped binary's '.sav'. One mode: nothing selects between modes and the core registers no option that moves the file. Not live-observed."
+        }
+      }
+    },
     "opera": {
       "identifiers": {
         "library_name": [
@@ -1283,6 +1318,41 @@
         "status": {
           "enabled": "root verified via RetroDECK arrangement; filenames from format strings + PCSX2 defaults, not yet live-observed",
           "disabled": "root and slot-1 filename verified from source; slot-2 behaviour in this mode unestablished"
+        }
+      }
+    },
+    "race": {
+      "identifiers": {
+        "library_name": [
+          "RACE"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.ngf"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.ngf": {
+            "unprotected": "the extension is a three-character literal a compiler stores as one immediate rather than as a string — 'ngf' is nowhere in the binary, and neither is any other literal from flash.c, because that unit has none longer than this one. What establishes the unit is linked at all is the build: Makefile.common:16 lists flash.c among SOURCES_C. The name itself is composed at run time from the content's own file name (flash.c:175-206)"
+          }
+        }
+      },
+      "provenance": {
+        "source": "RACE source at 171950e, the revision the shipped binary names in its library_version ('v2.16 171950e'). retro_get_memory_size returns 0 for every id (libretro/libretro.c:591-594), so RetroArch writes no save file. The core writes the Neo Geo Pocket's flash memory itself: setupNGFfilename joins the frontend's save directory to the content's own file name and replaces the extension after its last dot with 'ngf' (flash.c:175-206, the directory taken at libretro.c:216-220 and falling back to nothing where the frontend names none), and writeSaveGameFile writes the dirty blocks there (:208 onwards), reached from flashShutdown at unload. Two edges worth recording: the extension is replaced rather than appended, so the name follows the content's own spelling exactly; and content whose whole path carries no dot at all gets no save file, because the function returns early (:202-203).",
+        "status": {
+          "always": "[D] Read from source, with the build confirming the unit is compiled in. One mode: the core registers four options and none of them moves or adds a file. Not live-observed, and the file name is one the byte tripwire cannot reach."
         }
       }
     },
