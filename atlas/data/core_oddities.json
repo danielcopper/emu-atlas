@@ -613,6 +613,74 @@
         }
       }
     },
+    "geolith": {
+      "identifiers": {
+        "library_name": [
+          "geolith"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.mcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.nv": {
+            "unprotected": "composed at run time: the extension comes from a four-entry table, { \"nv\", \"srm\", \"mcr\", \"brm\" } (libretro.c:1331, :1422), and the name from the format '%s%c%s.%s' beside it — both whole strings in the binary, the joined name never"
+          },
+          "<rom_stem>.srm": {
+            "unprotected": "same table and the same format; 'srm' is whole in the binary, the joined name is not"
+          },
+          "<rom_stem>.mcr": {
+            "unprotected": "same table and the same format; 'mcr' is whole in the binary, the joined name is not"
+          },
+          "<rom_stem>.brm": {
+            "unprotected": "same table and the same format, but this entry is not even a string of its own: 'brm' is three characters, which a compiler stores as one immediate. Its three siblings in the same table are whole, which is what establishes the table is there"
+          }
+        }
+      },
+      "provenance": {
+        "source": "geolith source at version 0.2.2, which the shipped binary names without a commit, so the pin is that version. The core answers RETRO_MEMORY_SAVE_RAM with 8 KiB while it is in CD mode and 0 otherwise (libretro.c:1497-1518, its data twin at :1478-1495), and CD mode follows the content's own file extension — '.chd' or '.cue' turn it on (:1205-1218). Whatever the frontend does, the core writes four files of its own: for each of four save kinds it joins the frontend's save directory to the content's stem and one of { \"nv\", \"srm\", \"mcr\", \"brm\" }, reading them when the game loads (:1329-1343) and writing them in retro_unload_game (:1419-1434). The comment above the second names them: NVRAM, cartridge RAM, memory card, CD backup RAM. The stem is the content's basename with its last extension cut (:313-320), and the save directory comes from GET_SAVE_DIRECTORY (:1326-1327).\n\nThe second name is the reason this core needed a card rather than a record, and it is worth stating plainly: for CD content the core writes <rom_stem>.srm at unload AND RetroArch writes <rom_stem>.srm for the memory id the core just filled. One path, two writers. Every other two-writer case read so far kept them apart by name — Virtual Jaguar's second file is '.cdrom.srm', FB Alpha's is keyed by the driver. Whether the two encodings agree needs a live run and is open (#139). For cartridge content there is no collision at all: the id is empty, RetroArch writes nothing, and the four files are the core's alone.\n\nThe set is an upper bound like every other: a machine without a memory card slot writes no .mcr, and the save function distinguishes 'nothing to save' from a failure by its return code.",
+        "status": {
+          "always": "[D] Read from source at the shipped version and confirmed against the binary's strings. One mode: the core registers eleven options and none of them moves or adds a file. Not live-observed — and the one question that needs a live run is recorded above rather than guessed at."
+        }
+      }
+    },
     "mame": {
       "identifiers": {
         "library_name": [

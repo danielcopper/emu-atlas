@@ -38,9 +38,9 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
-  builds that write past the frontend, `melonds`, `race`, `pcsx2`, `virtualjaguar`, and the three bsnes builds). The
-  card wins, and a record beside it would be a second declaration of one file set — a test enforces that no core carries
-  both.
+  builds that write past the frontend, `geolith`, `melonds`, `race`, `pcsx2`, `virtualjaguar`, and the three bsnes
+  builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces that no
+  core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -69,8 +69,6 @@ follows from what the hardware is — an arcade board's memory is NVRAM the mach
 frontend can name.
 
 - [ ] **`noods`** — `gba` · fills no id the frontend writes and keeps its own `<save_dir>/<rom_stem>.sav`
-- [ ] **`geolith`** — writes four files of its own per game (`.nv`, `.srm`, `.mcr`, `.brm`), one of which collides with
-      the name RetroArch would give a save-RAM file
 - [ ] **`desmume2015`** — writes `<rom_stem>.dsv`, and the card cannot state where: DeSmuME composes the path from a
       variable this build never sets, so the file lands relative to the process's working directory. A card's every mode
       names a root, and there is no root to name (#148)
@@ -124,6 +122,8 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`gambatte`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`gearboy`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`gearsystem`** — fills `save_ram` on gamegear, mark3, mastersystem, multivision, sg-1000
+- [x] **`geolith`** — outcome 2, and a card: four files of its own per game, one of them under the name RetroArch gives
+      a save-RAM file
 - [x] **`genesis_plus_gx`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megacd, megacdjp, megadrive,
       megadrivejp, segacd, sg-1000
 - [x] **`gpsp`** — fills `save_ram` on gba
