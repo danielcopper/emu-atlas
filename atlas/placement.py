@@ -159,11 +159,27 @@ GRANULARITIES = (
 #
 # Closed and named per value like every other vocabulary here. A client syncing
 # save data takes every role but :data:`ROLE_SETTINGS`; see ``docs/how-to-use.md``.
+#
+# :data:`ROLE_HIGH_SCORE` is the arcade family's, and it is a separate value
+# rather than a battery because the *merge* differs, which is the one thing a
+# role exists to tell a client. Two devices that both played a game hold two
+# saves and the newer one wins; they hold two score tables and neither wins —
+# the higher entries do. A machine keeps one table for everyone who ever played
+# it, so it is not one player's progress the way a battery save is. Folding it
+# into :data:`ROLE_BATTERY` would state something true (it is save data, back it
+# up) while losing the only part a client could act on.
 ROLE_BATTERY = "battery"
 ROLE_MEMORY_CARD = "memory-card"
 ROLE_DISK_DIFF = "disk-diff"
+ROLE_HIGH_SCORE = "high-score"
 ROLE_SETTINGS = "settings"
-ROLES = (ROLE_BATTERY, ROLE_MEMORY_CARD, ROLE_DISK_DIFF, ROLE_SETTINGS)
+ROLES = (
+    ROLE_BATTERY,
+    ROLE_MEMORY_CARD,
+    ROLE_DISK_DIFF,
+    ROLE_HIGH_SCORE,
+    ROLE_SETTINGS,
+)
 
 
 def _freeze(mapping: Mapping[str, str]) -> Mapping[str, str]:

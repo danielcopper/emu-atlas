@@ -210,7 +210,7 @@ KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
 # config states belongs here either; that is atlas's own to resolve.
 KNOWN_HOLES = {"content_dir", "library_name", "save_id"}
 KNOWN_GRANULARITIES = {"shared-card", "shared-file", "per-game-file", "per-game-files"}
-KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "settings"}
+KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone"}
 KNOWN_CAVEAT_CODES = {
