@@ -385,7 +385,9 @@
                   "<rom_stem>"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.cpp:74, m_basename(_config.gamedrv().name)) and every name below is built on it, while the glue finds the driver from the content's basename (retro_init.cpp:285-305). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_citation": "machine.cpp:74 and :1116-1147 at libretro/mame a90e86e1"
               },
               {
                 "subdir": "mame/cfg",
@@ -527,6 +529,286 @@
         "source": "MAME 2000 source at 2ec60f6, the revision the shipped binary names in its library_version ('0.37b5 2ec60f6'). The libretro glue takes GET_SAVE_DIRECTORY and builds <save_dir>/mame2000 from it, falling back to the content's own directory where the frontend names none (libretro.c:828-838); under that it creates nvram, hi, cfg, snap and memcard (:881-897). The file layer then composes <nvdir>/<driver>.nv (fileio.c:763), <hidir>/<driver>.hi (:793) and <cfgdir>/<driver>.cfg (:820) — the source says on the line above what the name is: 'gamename holds the driver name' (:237). Two directories are created and never written into: memcard has no caller in this fork at all, which the binary confirms — 'memcard' is a whole string only as the directory, and the 'memcard.%03d' the later builds carry is absent — and snap holds screenshots, which are not save data (#142). This build predates hard-disk support, so there is no diff tree, and it writes no emulator-wide default.cfg.",
         "status": {
           "always": "[D] Read from source and confirmed against the shipped binary's strings. One mode: nothing selects between modes, the paths are fixed in the glue and the core registers no option that moves them. No save was watched being written."
+        }
+      }
+    },
+    "mame2003": {
+      "identifiers": {
+        "library_name": [
+          "MAME 2003"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "mame2003_core_save_subfolder",
+          "default": "enabled"
+        },
+        "modes": {
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "mame2003/nvram",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_citation": "mame.c:497 and :530 at libretro/mame2003-libretro 3570605"
+              },
+              {
+                "subdir": "mame2003/hi",
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              },
+              {
+                "subdir": "mame2003/cfg",
+                "files": [
+                  "<rom_stem>.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "mame2003/memcard",
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "unnamed": "machine/neogeo_machine.c:808-837 at libretro/mame2003-libretro 3570605 — a card is 'MEMCARD.%03d' after an index the player picks in the emulator's own memory-card menu (usrintrf.c:2962, offered only for Neo Geo content at :3147-3150), 2 KiB each. The index is no read of this machine, and the cards are not keyed by game: one directory holds every card ever created, which is what makes the group shared."
+              },
+              {
+                "subdir": "mame2003/diff",
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "unnamed": "mame.c:1451 at libretro/mame2003-libretro 3570605 — the differencing image for a CHD hard disk is opened through the CHD interface with a name that comes from the disk image rather than from the driver, so it follows from nothing atlas reads."
+              }
+            ]
+          },
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "nvram",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_citation": "mame.c:497 and :530 at libretro/mame2003-libretro 3570605"
+              },
+              {
+                "subdir": "hi",
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              },
+              {
+                "subdir": "cfg",
+                "files": [
+                  "<rom_stem>.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "memcard",
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "unnamed": "machine/neogeo_machine.c:808-837 at libretro/mame2003-libretro 3570605 — a card is 'MEMCARD.%03d' after an index the player picks in the emulator's own memory-card menu (usrintrf.c:2962, offered only for Neo Geo content at :3147-3150), 2 KiB each. The index is no read of this machine, and the cards are not keyed by game: one directory holds every card ever created, which is what makes the group shared."
+              },
+              {
+                "subdir": "diff",
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "unnamed": "mame.c:1451 at libretro/mame2003-libretro 3570605 — the differencing image for a CHD hard disk is opened through the CHD interface with a name that comes from the disk image rather than from the driver, so it follows from nothing atlas reads."
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "mame2003_core_save_subfolder": {
+            "literal": "mame2003_core_save_subfolder"
+          },
+          "mame2003": {
+            "literal": "mame2003"
+          },
+          "nvram": {
+            "literal": "nvram"
+          },
+          "hi": {
+            "unprotected": "the compiler pooled this two-letter tree name, so no NUL-delimited string carries it alone. What is whole beside it is the log line the writer emits, 'saving %s.hi hiscore memory file...' (hiscore.c:209)"
+          },
+          "cfg": {
+            "unprotected": "pooled like 'hi'; the whole strings beside it are the option key 'mame2003_core_save_subfolder', which moves the tree, and the extension table's 'cfg' entry in fileio.c:874-876"
+          },
+          "memcard": {
+            "unprotected": "pooled into the path composition; the whole string beside it is the file name itself, 'MEMCARD.%03d' (neogeo_machine.c:813, :830)"
+          },
+          "diff": {
+            "literal": "diff"
+          },
+          "<rom_stem>.nv": {
+            "unprotected": "composed at run time: fileio.c appends the extension table's 'nv' to the driver name (:862-864, dispatched at :121-122). The whole string beside it is the tree name 'nvram'"
+          },
+          "<rom_stem>.hi": {
+            "unprotected": "composed at run time from the driver name and the extension table's 'hi' (fileio.c:866-868). The whole string beside it is the writer's own log line, 'saving %s.hi hiscore memory file...'"
+          },
+          "<rom_stem>.cfg": {
+            "unprotected": "composed at run time from the driver name and the extension table's 'cfg' (fileio.c:874-876)"
+          }
+        }
+      },
+      "provenance": {
+        "source": "MAME 2003 source at 3570605, the revision the shipped binary names in its library_version. The glue hands GET_SAVE_DIRECTORY to the file layer (mame2003.c), which composes every save path below it and puts the whole tree under 'mame2003' when mame2003_core_save_subfolder is enabled and directly under the save directory when it is not (fileio.c:188-199). Under that come nvram, hi, cfg, memcard, diff and ctrlr (:218-243), and the extension table gives each its suffix (:826-884). MAME then names the per-game files after the running driver: NVRAM at mame.c:497 and :530, the score table at hiscore.c:166 and :203, the configuration through the same dispatch. Two trees are stated without their files — memory cards by a player-chosen index, differencing images by a name the CHD layer supplies. Unlike the current MAME and MAME 2010 this generation writes no emulator-wide default.cfg, which the binaries confirm: 'default.cfg' is not a string in either of them. The ctrlr tree holds controller profiles, which are configuration rather than save data and are open in #142.",
+        "status": {
+          "enabled": "[D] The core's own default, read from its option definition (core_options.c, 'mame2003_core_save_subfolder' defaulting to 'enabled'). A probe of the shipped binary enumerates no options at all — this core registers them later than a probe can reach — so the card records the default the source states and a value set on the machine still wins over it. No save was watched being written.",
+          "disabled": "[D] Read from source. Reached where the option is turned off on the machine, which moves the whole tree up one level and nothing else."
+        }
+      }
+    },
+    "mame2003_plus": {
+      "identifiers": {
+        "library_name": [
+          "MAME 2003-Plus"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "mame2003-plus_core_save_subfolder",
+          "default": "enabled"
+        },
+        "modes": {
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "mame2003-plus/nvram",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_citation": "mame.c:497 and :530 at libretro/mame2003-plus-libretro 62c7089"
+              },
+              {
+                "subdir": "mame2003-plus/hi",
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              },
+              {
+                "subdir": "mame2003-plus/cfg",
+                "files": [
+                  "<rom_stem>.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "mame2003-plus/memcard",
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "unnamed": "machine/neogeo_machine.c:808-837 at libretro/mame2003-plus-libretro 62c7089 — a card is 'MEMCARD.%03d' after an index the player picks in the emulator's own memory-card menu (usrintrf.c:2962, offered only for Neo Geo content at :3147-3150), 2 KiB each. The index is no read of this machine, and the cards are not keyed by game: one directory holds every card ever created, which is what makes the group shared."
+              },
+              {
+                "subdir": "mame2003-plus/diff",
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "unnamed": "mame.c:1451 at libretro/mame2003-plus-libretro 62c7089 — the differencing image for a CHD hard disk is opened through the CHD interface with a name that comes from the disk image rather than from the driver, so it follows from nothing atlas reads."
+              }
+            ]
+          },
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "nvram",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_citation": "mame.c:497 and :530 at libretro/mame2003-plus-libretro 62c7089"
+              },
+              {
+                "subdir": "hi",
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              },
+              {
+                "subdir": "cfg",
+                "files": [
+                  "<rom_stem>.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "memcard",
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "unnamed": "machine/neogeo_machine.c:808-837 at libretro/mame2003-plus-libretro 62c7089 — a card is 'MEMCARD.%03d' after an index the player picks in the emulator's own memory-card menu (usrintrf.c:2962, offered only for Neo Geo content at :3147-3150), 2 KiB each. The index is no read of this machine, and the cards are not keyed by game: one directory holds every card ever created, which is what makes the group shared."
+              },
+              {
+                "subdir": "diff",
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "unnamed": "mame.c:1451 at libretro/mame2003-plus-libretro 62c7089 — the differencing image for a CHD hard disk is opened through the CHD interface with a name that comes from the disk image rather than from the driver, so it follows from nothing atlas reads."
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "mame2003-plus_core_save_subfolder": {
+            "literal": "mame2003-plus_core_save_subfolder"
+          },
+          "mame2003-plus": {
+            "literal": "mame2003-plus"
+          },
+          "nvram": {
+            "literal": "nvram"
+          },
+          "hi": {
+            "literal": "hi"
+          },
+          "cfg": {
+            "literal": "cfg"
+          },
+          "memcard": {
+            "unprotected": "pooled into the path composition; the whole string beside it is the file name itself, 'MEMCARD.%03d' (neogeo_machine.c:813, :830)"
+          },
+          "diff": {
+            "literal": "diff"
+          },
+          "<rom_stem>.nv": {
+            "unprotected": "composed at run time: fileio.c appends the extension table's 'nv' to the driver name (:862-864, dispatched at :121-122). The whole string beside it is the tree name 'nvram'"
+          },
+          "<rom_stem>.hi": {
+            "unprotected": "composed at run time from the driver name and the extension table's 'hi' (fileio.c:866-868). The whole string beside it is the writer's own log line, 'saving %s.hi hiscore memory file...'"
+          },
+          "<rom_stem>.cfg": {
+            "unprotected": "composed at run time from the driver name and the extension table's 'cfg' (fileio.c:874-876)"
+          }
+        }
+      },
+      "provenance": {
+        "source": "MAME 2003-Plus source at 62c7089, the revision the shipped binary names in its library_version. The glue hands GET_SAVE_DIRECTORY to the file layer (mame2003.c), which composes every save path below it and puts the whole tree under 'mame2003-plus' when mame2003-plus_core_save_subfolder is enabled and directly under the save directory when it is not (fileio.c:188-199). Under that come nvram, hi, cfg, memcard, diff and ctrlr (:218-243), and the extension table gives each its suffix (:826-884). MAME then names the per-game files after the running driver: NVRAM at mame.c:497 and :530, the score table at hiscore.c:166 and :203, the configuration through the same dispatch. Two trees are stated without their files — memory cards by a player-chosen index, differencing images by a name the CHD layer supplies. Unlike the current MAME and MAME 2010 this generation writes no emulator-wide default.cfg, which the binaries confirm: 'default.cfg' is not a string in either of them. The ctrlr tree holds controller profiles, which are configuration rather than save data and are open in #142.",
+        "status": {
+          "enabled": "[D] The core's own default, read from its option definition (core_options.c, 'mame2003-plus_core_save_subfolder' defaulting to 'enabled'). A probe of the shipped binary enumerates no options at all — this core registers them later than a probe can reach — so the card records the default the source states and a value set on the machine still wins over it. No save was watched being written.",
+          "disabled": "[D] Read from source. Reached where the option is turned off on the machine, which moves the whole tree up one level and nothing else."
         }
       }
     },
