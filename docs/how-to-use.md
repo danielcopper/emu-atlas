@@ -425,7 +425,7 @@ for g in placement.file_set.groups:
     g.dir          # '/…/saves/arcade/mame/cfg'  — resolved, this group's own directory
     g.files        # ('default.cfg',)            — basenames within it
     g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'shared-card' | 'shared-file'
-    g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'settings'
+    g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings'
 ```
 
 **The two fields are separate because they are different facts**, and MAME is the case that proves it: `<machine>.cfg`
@@ -442,6 +442,13 @@ Take every role but `settings` — dip switches and input maps are configuration
 `shared-card` or `shared-file` group between machines without thinking: those files belong to every game at once, so
 restoring one game's copy overwrites every other game's state in them. A tool making a _complete_ backup takes them all;
 that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
+
+**`high-score` is in that set, and it is the one role whose merge is different.** An arcade machine keeps one score
+table for everyone who ever played it, so it is not one player's progress the way a battery save is. When two devices
+have both played the same game, a battery save merges by taking the newer one — and a score table does not: neither
+side's is stale, and the right answer is the higher entries from both. A client that treats every non-`settings` group
+alike still does no harm here, because copying the newer table only loses scores rather than a save; a client that reads
+the role can merge instead of overwrite. That difference is the whole reason it is not spelled `battery`.
 
 **A directory can be stated without its files.** Where an emulator writes save data under names that follow from nothing
 atlas reads — MAME names a hard disk's differencing image after the disk's entry in the machine's own ROM table — the

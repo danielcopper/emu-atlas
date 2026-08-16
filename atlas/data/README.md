@@ -37,7 +37,7 @@ respelled here, so a card cannot select a value the contract cannot carry — an
 | `root`        | mode  | `savefile_directory`, `system_directory`, `content_directory`     |
 | `also_under`  | mode  | the same three, and not the mode's own `root`                     |
 | `granularity` | group | `shared-card`, `shared-file`, `per-game-file`, `per-game-files`   |
-| `role`        | group | `battery`, `memory-card`, `disk-diff`, `settings`                 |
+| `role`        | group | `battery`, `memory-card`, `disk-diff`, `high-score`, `settings`   |
 | `complete`    | group | a JSON boolean, `true` or `false` — never a string, never coerced |
 
 `granularity` and `role` reach the caller as contract values, so a misspelling would be stated as this machine's actual
@@ -48,6 +48,14 @@ grouping or would send a save sync past real save data; `complete` is a claim ab
 two `.cfg` files are the proof neither can carry the other's meaning: `<machine>.cfg` and `default.cfg` share a
 directory and a role and differ only in whom they belong to. A client syncing save data takes every role but `settings`,
 and never copies a `shared-*` group between machines blind.
+
+**Which role to pick.** `battery` is the cartridge or board memory a game saves its own progress into, `memory-card` a
+removable card the console writes several games onto, `disk-diff` the changes written back to a disk image, `settings`
+configuration the emulator keeps beside the saves. `high-score` is the arcade family's, and it is separate from
+`battery` for one reason: the merge. A machine keeps one score table for everyone who ever played it, so two devices
+that both played a game hold two tables of which neither is stale — the answer is the higher entries, not the newer
+file. Anything that is genuinely one player's progress is `battery` even where the hardware is unusual; the score table
+is the case that is not.
 
 ```json
 "All VMUs": {

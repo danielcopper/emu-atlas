@@ -1260,6 +1260,18 @@ class TestTheVocabularyIsOneVocabulary:
     def test_the_role_vocabularies_match(self):
         assert validate_vectors.KNOWN_ROLES == set(atlas.ROLES)
 
+    def test_the_role_vocabulary_itself_is_pinned(self):
+        """A role is consumer surface, so growing the set is a deliberate edit.
+
+        The tests around this one keep the three spellings of the vocabulary
+        from drifting apart, which is a different guarantee: they would all
+        agree just as happily about a fifth value nobody meant to add. A client
+        branches on these strings, and one more of them is a thing it has never
+        seen — so the list is written out here and a change to it has to be
+        made twice, on purpose.
+        """
+        assert atlas.ROLES == ("battery", "memory-card", "disk-diff", "high-score", "settings")
+
     def test_the_role_constants_are_the_role_tuple(self):
         assert self._exported("ROLE_") == set(atlas.ROLES)
 
