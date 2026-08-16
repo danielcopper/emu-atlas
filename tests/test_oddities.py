@@ -2184,6 +2184,18 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("bsnes-jg", "<rom_stem>.rtc", "unprotected"),
             ("bsnes-jg", "<rom_stem>.srm", "unprotected"),
             ("bsnes_hd_beta", "<rom_stem>.rtc", "unprotected"),
+            # The FB Alpha family names both its files after the loaded driver at
+            # run time. What each binary carries whole is the format that builds
+            # them — "%s%c%s.fs" and "%s%c%s.hi" — which is what a rename of the
+            # scheme would take with it, and a stronger thing to watch than the
+            # extension alone.
+            ("fbalpha2012", "<rom_stem>.fs", "unprotected"),
+            ("fbalpha2012", "<rom_stem>.hi", "unprotected"),
+            ("fbalpha2012_cps2", "<rom_stem>.fs", "unprotected"),
+            ("fbalpha2012_cps2", "<rom_stem>.hi", "unprotected"),
+            ("fbalpha2012_cps3", "<rom_stem>.fs", "unprotected"),
+            ("fbalpha2012_cps3", "<rom_stem>.hi", "unprotected"),
+            ("fbalpha2012_neogeo", "<rom_stem>.fs", "unprotected"),
             ("flycast", "<rom_stem>.A1.bin", "unprotected"),
             ("flycast", "<rom_stem>.B1.bin", "unprotected"),
             ("flycast", "<rom_stem>.C1.bin", "unprotected"),

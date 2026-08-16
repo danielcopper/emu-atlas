@@ -37,9 +37,9 @@ covers the answer.
 
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
-- **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, `pcsx2`, `virtualjaguar`,
-  and the three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a
-  test enforces that no core carries both.
+- **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
+  builds that write past the frontend, `pcsx2`, `virtualjaguar`, and the three bsnes builds). The card wins, and a
+  record beside it would be a second declaration of one file set — a test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -70,12 +70,6 @@ frontend can name.
 - [ ] **`noods`** — `gba` · fills no id the frontend writes and keeps its own `<save_dir>/<rom_stem>.sav`
 - [ ] **`geolith`** — writes four files of its own per game (`.nv`, `.srm`, `.mcr`, `.brm`), one of which collides with
       the name RetroArch would give a save-RAM file
-- [ ] **`fbalpha2012_cps2`** — writes `<save_dir>/<driver>.fs` at unload, keyed by the driver rather than the ROM file
-- [ ] **`fbalpha2012_cps3`** — the same
-- [ ] **`fbalpha2012_neogeo`** — the same
-- [ ] **`fbalpha2012`** — already carries a record, and it is not wrong: the frontend really does write nothing, and the
-      record says so with `core-own-writes-unestablished` beside it. That open half is now answered — the core writes
-      `<save_dir>/<driver>.fs` itself — so the record is due to be replaced by a card.
 - [ ] **`melonds`** — writes `<save_dir>/<rom_stem>.sav` itself
 - [ ] **`desmume2015`** — writes `<rom_stem>.dsv` through DeSmuME's own path machinery, which this build never points at
       the frontend's save directory, so where the file lands is the card's first question
@@ -115,8 +109,12 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`dosbox_pure`** — frontend writes nothing on dos, pc, windows3x, windows9x
 - [x] **`easyrpg`** — frontend writes nothing on easyrpg
 - [x] **`ecwolf`** — frontend writes nothing on ports
-- [x] **`fbalpha2012`** — frontend writes nothing on arcade, cps, cps1, cps2, cps3, fba, mame
+- [x] **`fbalpha2012`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
+      core keeps `<driver>.fs` and, behind its hiscore option, `<driver>.hi`. Its record was replaced by a card
 - [x] **`fbalpha2012_cps1`** — frontend writes nothing on cps, cps1, fba
+- [x] **`fbalpha2012_cps2`** — outcome 2, and a card: `<driver>.fs` plus `<driver>.hi` behind its hiscore option
+- [x] **`fbalpha2012_cps3`** — the same card shape under its own option key
+- [x] **`fbalpha2012_neogeo`** — outcome 2, and the one build of the family with no high scores: `<driver>.fs` alone
 - [x] **`fbneo`** — read, and it turned out to be outcome 2: it keeps its saves in a subtree of its own, so it carries a
       rule card rather than a record (#123)
 - [x] **`fceumm`** — fills `save_ram` on famicom, fds, nes

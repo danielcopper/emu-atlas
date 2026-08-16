@@ -119,6 +119,254 @@
         }
       }
     },
+    "fbalpha2012": {
+      "identifiers": {
+        "library_name": [
+          "FB Alpha 2012"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_citation": "svn-current/trunk/src/burner/libretro/libretro.cpp:800 (write) and :1006 (read) at libretro/fbalpha2012 77167ce"
+              },
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              }
+            ]
+          },
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_citation": "svn-current/trunk/src/burner/libretro/libretro.cpp:800 (write) and :1006 (read) at libretro/fbalpha2012 77167ce"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.fs": {
+            "unprotected": "composed at run time from the driver name: the whole string in the binary is the format that builds it, '%s%c%s.fs'"
+          },
+          "<rom_stem>.hi": {
+            "unprotected": "composed at run time from the driver name; the whole string beside it is the format '%s%c%s.hi'"
+          },
+          "fbneo-hiscores": {
+            "literal": "fbneo-hiscores"
+          }
+        },
+        "governing_option": {
+          "key": "fbneo-hiscores",
+          "default": "enabled"
+        }
+      },
+      "provenance": {
+        "source": "FB Alpha 2012 source at 77167ce, the revision the shipped binary names in its library_version ('v0.2.97.29 77167ce'). The core answers no libretro memory id (retro_get_memory_size returns 0 for every one of them), so RetroArch writes no save file at all. What it does instead is call BurnStateSave with bAll=0 in retro_unload_game — FB Alpha's own term for the non-volatile half of a machine's state, its NVRAM and EEPROM — into <save_dir>/<driver>.fs, and read the same path back when the driver is initialised. The save directory is the frontend's own, taken from GET_SAVE_DIRECTORY and falling back to the content's directory where the frontend names none; unlike FinalBurn Neo this generation puts no subdirectory of its own between them. High scores are a second file, <save_dir>/<driver>.hi, written by the same generation's hiscore module — which in a libretro build takes the frontend's save directory rather than the szAppHiscorePath the standalone builds use. The whole feature is off unless the core's hiscore option is on, which is why that option governs the file set. Worth writing down for whoever reads this build next: its option keys are NOT the ones libretro.cpp appears to declare. That file builds names from CORE_OPTION_NAME (:14-24) and none of those keys is in the binary; the keys that are come from a second table in retro_common.cpp:76-91, which is the one actually registered (:229, :287) and read (:447). Both tables' description strings land in the binary, so the binary alone looks contradictory — 'fbneo-hiscores' is the live key and 'Hiscores; enabled|disabled' is its value list, from the same struct.",
+        "status": {
+          "enabled": "[D] The core's own default, the first value of its option's list. A probe of the shipped binary enumerates no options, so the card records the default the source states and a value set on the machine still wins over it. Not live-observed.",
+          "disabled": "[D] Read from source. Reached where the option is turned off; the .hi is not written."
+        }
+      }
+    },
+    "fbalpha2012_cps2": {
+      "identifiers": {
+        "library_name": [
+          "FB Alpha 2012 CPS-2"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_citation": "src/burner/libretro/libretro.cpp:1036 (write) and :858 (read) at libretro/fbalpha2012_cps2 v0.2.97.28"
+              },
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              }
+            ]
+          },
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_citation": "src/burner/libretro/libretro.cpp:1036 (write) and :858 (read) at libretro/fbalpha2012_cps2 v0.2.97.28"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.fs": {
+            "unprotected": "composed at run time from the driver name: the whole string in the binary is the format that builds it, '%s%c%s.fs'"
+          },
+          "<rom_stem>.hi": {
+            "unprotected": "composed at run time from the driver name; the whole string beside it is the format '%s%c%s.hi'"
+          },
+          "fba2012cps2_hiscores": {
+            "literal": "fba2012cps2_hiscores"
+          }
+        },
+        "governing_option": {
+          "key": "fba2012cps2_hiscores"
+        }
+      },
+      "provenance": {
+        "source": "FB Alpha 2012 CPS-2 source at the version the shipped binary names ('v0.2.97.28'). The core answers no libretro memory id (retro_get_memory_size returns 0 for every one of them), so RetroArch writes no save file at all. What it does instead is call BurnStateSave with bAll=0 in retro_unload_game — FB Alpha's own term for the non-volatile half of a machine's state, its NVRAM and EEPROM — into <save_dir>/<driver>.fs, and read the same path back when the driver is initialised. The save directory is the frontend's own, taken from GET_SAVE_DIRECTORY and falling back to the content's directory where the frontend names none; unlike FinalBurn Neo this generation puts no subdirectory of its own between them. High scores are a second file, <save_dir>/<driver>.hi, written by the same generation's hiscore module — which in a libretro build takes the frontend's save directory rather than the szAppHiscorePath the standalone builds use. The whole feature is off unless the core's hiscore option is on, which is why that option governs the file set. No recorded default: this build registers its option, so the machine states the value and a card copy would be a second, ageing one.",
+        "status": {
+          "enabled": "[D] Read from source. Reached where the core's hiscore option is on. Not live-observed.",
+          "disabled": "[D] Read from source, and this build's own default. Only the .fs is written."
+        }
+      }
+    },
+    "fbalpha2012_cps3": {
+      "identifiers": {
+        "library_name": [
+          "FB Alpha 2012 CPS-3"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_citation": "svn-current/trunk/src/burner/libretro/libretro.cpp:626 (write) and :1024 (read) at libretro/fbalpha2012_cps3 v0.2.97.29"
+              },
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              }
+            ]
+          },
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_citation": "svn-current/trunk/src/burner/libretro/libretro.cpp:626 (write) and :1024 (read) at libretro/fbalpha2012_cps3 v0.2.97.29"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.fs": {
+            "unprotected": "composed at run time from the driver name: the whole string in the binary is the format that builds it, '%s%c%s.fs'"
+          },
+          "<rom_stem>.hi": {
+            "unprotected": "composed at run time from the driver name; the whole string beside it is the format '%s%c%s.hi'"
+          },
+          "fbalpha2012_cps3_hiscores": {
+            "literal": "fbalpha2012_cps3_hiscores"
+          }
+        },
+        "governing_option": {
+          "key": "fbalpha2012_cps3_hiscores"
+        }
+      },
+      "provenance": {
+        "source": "FB Alpha 2012 CPS-3 source at the version the shipped binary names ('v0.2.97.29'). The core answers no libretro memory id (retro_get_memory_size returns 0 for every one of them), so RetroArch writes no save file at all. What it does instead is call BurnStateSave with bAll=0 in retro_unload_game — FB Alpha's own term for the non-volatile half of a machine's state, its NVRAM and EEPROM — into <save_dir>/<driver>.fs, and read the same path back when the driver is initialised. The save directory is the frontend's own, taken from GET_SAVE_DIRECTORY and falling back to the content's directory where the frontend names none; unlike FinalBurn Neo this generation puts no subdirectory of its own between them. High scores are a second file, <save_dir>/<driver>.hi, written by the same generation's hiscore module — which in a libretro build takes the frontend's save directory rather than the szAppHiscorePath the standalone builds use. The whole feature is off unless the core's hiscore option is on, which is why that option governs the file set. No recorded default: this build registers its option, and it defaults to enabled.",
+        "status": {
+          "enabled": "[D] Read from source, and this build's own default. Both files are written. Not live-observed.",
+          "disabled": "[D] Read from source. Reached where the option is turned off; only the .fs is written."
+        }
+      }
+    },
+    "fbalpha2012_neogeo": {
+      "identifiers": {
+        "library_name": [
+          "FB Alpha 2012 Neo Geo"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_citation": "src/burner/libretro/libretro.cpp:1429 (write) and :2899 (read) at libretro/fbalpha2012_neogeo fa3bf50"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.fs": {
+            "unprotected": "composed at run time from the driver name: the whole string in the binary is the format that builds it, '%s%c%s.fs'"
+          }
+        }
+      },
+      "provenance": {
+        "source": "FB Alpha 2012 Neo Geo source at fa3bf50, the revision the shipped binary names in its library_version ('v0.2.97.29 fa3bf50'). The core answers no libretro memory id (retro_get_memory_size returns 0 for every one of them), so RetroArch writes no save file at all. What it does instead is call BurnStateSave with bAll=0 in retro_unload_game — FB Alpha's own term for the non-volatile half of a machine's state, its NVRAM and EEPROM — into <save_dir>/<driver>.fs, and read the same path back when the driver is initialised. The save directory is the frontend's own, taken from GET_SAVE_DIRECTORY and falling back to the content's directory where the frontend names none; unlike FinalBurn Neo this generation puts no subdirectory of its own between them. This is the one build of the four with no high-score support at all — the word does not occur in its libretro unit and no '%s%c%s.hi' is in its binary — so it has one file and one mode. It has no memory-card support either, which is worth saying for a Neo Geo core: the option FinalBurn Neo carries for that is absent here, and so is any .memcard string.",
+        "status": {
+          "always": "[D] Read from source and confirmed against the shipped binary's strings. One mode: nothing selects between modes and the core registers no option that moves or adds a file. Not live-observed."
+        }
+      }
+    },
     "fbneo": {
       "identifiers": {
         "library_name": [

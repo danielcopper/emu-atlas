@@ -57,6 +57,50 @@
       },
       "kind": "libretro"
     },
+    "fbalpha2012": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id and writes past the frontend: the NVRAM half of the machine state as <save_dir>/<driver>.fs, plus a <driver>.hi where its hiscore option is on. Named after the driver, which its exact lookup makes equal to the content's stem. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "fbalpha2012_cps2": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id and writes past the frontend: the NVRAM half of the machine state as <save_dir>/<driver>.fs, plus a <driver>.hi where its hiscore option is on. Named after the driver, which its exact lookup makes equal to the content's stem. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "fbalpha2012_cps3": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id and writes past the frontend: the NVRAM half of the machine state as <save_dir>/<driver>.fs, plus a <driver>.hi where its hiscore option is on. Named after the driver, which its exact lookup makes equal to the content's stem. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "fbalpha2012_neogeo": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id and writes past the frontend: the NVRAM half of the machine state as <save_dir>/<driver>.fs, and nothing else — this build has neither high scores nor memory cards. Named after the driver, which its exact lookup makes equal to the content's stem. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "fbneo": {
       "verdict": "card",
       "per_game_capable": true,
