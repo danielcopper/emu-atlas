@@ -1616,6 +1616,190 @@
           }
         }
       }
+    },
+    {
+      "name": "the-one-ds-core-that-uses-the-interface-names-its-file",
+      "rationale": "Every Nintendo DS core read before this one answers no memory id at all — DeSmuME keeps its save past the frontend and so do its siblings — so the honest answer for the system has been an empty set or an unknown. melonDS DS is the exception: it answers the save-RAM id with the save manager's own length, so RetroArch writes the file and the answer names it. One system, four emulators, and which one is chosen decides whether a file with that name exists at all.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume_libretro.so %ROM%</command>\n    <command label=\"DeSmuME 2015\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume2015_libretro.so %ROM%</command>\n    <command label=\"melonDS DS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melondsds_libretro.so %ROM%</command>\n    <command label=\"melonDS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melonds_libretro.so %ROM%</command>\n  </system>\n  <system><name>atarilynx</name><path>%ROMPATH%/atarilynx</path>\n    <command label=\"Handy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/handy_libretro.so %ROM%</command>\n    <command label=\"Beetle Lynx\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_lynx_libretro.so %ROM%</command>\n    <command label=\"Holani\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/holani_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
+            "library_name": "DeSmuME",
+            "library_version": "git 7f05a8d"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
+            "library_name": "DeSmuME 2015",
+            "library_version": "git af397ff"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melondsds_libretro.so": {
+            "library_name": "melonDS DS",
+            "library_version": "1.2.0"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
+            "library_name": "melonDS",
+            "library_version": "0.9.3 7a3c11f"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/handy_libretro.so": {
+            "library_name": "Handy",
+            "library_version": "0.95"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_lynx_libretro.so": {
+            "library_name": "Beetle Lynx",
+            "library_version": "v1.24.0 efd1797"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/holani_libretro.so": {
+            "library_name": "holani",
+            "library_version": "0.9.6-1"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "nds",
+          "label": "melonDS DS",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Castlevania (USA).srm"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "melondsds"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-handheld-whose-three-emulators-all-answer-with-no-file",
+      "rationale": "Atari Lynx is the second system whose whole emulator list answers, and the answer is the same from all three: no memory id filled, so RetroArch writes nothing. Holani is asked here because it is the last of the three and reaches the claim by a different road — it is written in Rust and names all four standard ids explicitly rather than falling past a condition. A declared set of no files is an answer; the caveat beside it is what keeps it from being read as 'nothing to back up'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume_libretro.so %ROM%</command>\n    <command label=\"DeSmuME 2015\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume2015_libretro.so %ROM%</command>\n    <command label=\"melonDS DS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melondsds_libretro.so %ROM%</command>\n    <command label=\"melonDS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melonds_libretro.so %ROM%</command>\n  </system>\n  <system><name>atarilynx</name><path>%ROMPATH%/atarilynx</path>\n    <command label=\"Handy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/handy_libretro.so %ROM%</command>\n    <command label=\"Beetle Lynx\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_lynx_libretro.so %ROM%</command>\n    <command label=\"Holani\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/holani_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/atarilynx/Chip's Challenge (USA).lnx": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
+            "library_name": "DeSmuME",
+            "library_version": "git 7f05a8d"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
+            "library_name": "DeSmuME 2015",
+            "library_version": "git af397ff"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melondsds_libretro.so": {
+            "library_name": "melonDS DS",
+            "library_version": "1.2.0"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
+            "library_name": "melonDS",
+            "library_version": "0.9.3 7a3c11f"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/handy_libretro.so": {
+            "library_name": "Handy",
+            "library_version": "0.95"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_lynx_libretro.so": {
+            "library_name": "Beetle Lynx",
+            "library_version": "v1.24.0 efd1797"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/holani_libretro.so": {
+            "library_name": "holani",
+            "library_version": "0.9.6-1"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "atarilynx",
+          "label": "Holani",
+          "content_path": "/mnt/sd/retrodeck/roms/atarilynx/Chip's Challenge (USA).lnx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "holani"
+              }
+            },
+            {
+              "code": "core-own-writes-unestablished",
+              "data": {
+                "core": "holani"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
     }
   ]
 }
