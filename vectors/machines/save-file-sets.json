@@ -2586,6 +2586,174 @@
           }
         }
       }
+    },
+    {
+      "name": "a-ds-core-that-writes-past-the-frontend-still-names-its-file",
+      "rationale": "Three of the four emulators a Nintendo DS library offers keep their save past the frontend, and until now each answered with a declared emptiness and an open half. melonDS is the first of them read far enough to close it: the core builds <save_dir>/<rom_stem>.sav itself and hands that path to the emulator, so the answer names the file rather than saying no file exists. Same directory a frontend-written save would have used, different writer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"melonDS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melonds_libretro.so %ROM%</command>\n  </system>\n  <system><name>ngp</name><path>%ROMPATH%/ngp</path>\n    <command label=\"RACE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/race_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
+            "library_name": "melonDS",
+            "library_version": "0.9.3 7a3c11f"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/race_libretro.so": {
+            "library_name": "RACE",
+            "library_version": "v2.16 171950e"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "nds",
+          "label": "melonDS",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Castlevania (USA).sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Castlevania (USA).sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "melonds",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-handheld-whose-save-name-replaces-the-content-extension",
+      "rationale": "RACE keeps the Neo Geo Pocket's flash memory itself, and it builds the name by replacing the content file's extension rather than appending to a stem. The result is the same string for ordinary content, which is why the answer states <rom_stem>.ngf — but the route matters for one case the card records: content whose whole path carries no dot gets no save file at all.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"melonDS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melonds_libretro.so %ROM%</command>\n  </system>\n  <system><name>ngp</name><path>%ROMPATH%/ngp</path>\n    <command label=\"RACE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/race_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/ngp/Metal Slug 2nd Mission.ngp": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
+            "library_name": "melonDS",
+            "library_version": "0.9.3 7a3c11f"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/race_libretro.so": {
+            "library_name": "RACE",
+            "library_version": "v2.16 171950e"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "ngp",
+          "label": "RACE",
+          "content_path": "/mnt/sd/retrodeck/roms/ngp/Metal Slug 2nd Mission.ngp"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Metal Slug 2nd Mission.ngf"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Metal Slug 2nd Mission.ngf"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "race",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }
