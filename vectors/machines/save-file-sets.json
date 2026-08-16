@@ -871,27 +871,27 @@
     },
     {
       "name": "a-second-choice-core-answers-with-its-own-reading",
-      "rationale": "A frontend offers several emulators per system and a user picks one — for an arcade library that is routinely not the one the catalogue leads with. The record describes the core, not the position it holds in a menu, so the second entry answers from the same reading. FB Alpha 2012 fills no memory id, so the answer is a declared emptiness with the rest of the story left open, exactly as it is on the system this core does lead.",
+      "rationale": "A frontend offers several emulators per system and a user picks one — for an arcade library that is routinely not the one the catalogue leads with. The record describes the core, not the position it holds in a menu, so the second entry answers from the same reading. DICE fills no memory id, so the answer is a declared emptiness with the rest of the story left open, exactly as it is on the system this core does lead. It took this case over from FB Alpha 2012, which turned out to write past the frontend after all and now carries a card — and a card is the opposite of the emptiness this vector is about.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <command label=\"FB Alpha 2012\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbalpha2012_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <command label=\"DICE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/dice_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/arcade/rtype.zip": "rom"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves"
         ],
         "cores": {
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbalpha2012_libretro.so": {
-            "library_name": "FB Alpha 2012",
-            "library_version": "v0.2.97.29 77167ce"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/dice_libretro.so": {
+            "library_name": "dice",
+            "library_version": "0.4.2"
           }
         },
         "entry_savefile_query": {
           "system": "arcade",
-          "label": "FB Alpha 2012",
+          "label": "DICE",
           "content_path": "/mnt/sd/retrodeck/roms/arcade/rtype.zip"
         }
       },
@@ -922,13 +922,13 @@
             {
               "code": "core-unaudited",
               "data": {
-                "core": "fbalpha2012"
+                "core": "dice"
               }
             },
             {
               "code": "core-own-writes-unestablished",
               "data": {
-                "core": "fbalpha2012"
+                "core": "dice"
               }
             }
           ],
@@ -2362,6 +2362,227 @@
                 "per-game-file"
               ]
             ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-arcade-core-whose-score-table-is-a-second-file-behind-an-option",
+      "rationale": "FB Alpha keeps the non-volatile half of a machine's state in <driver>.fs, and where its hiscore option is on it keeps the score table beside it in <driver>.hi. Two files, two roles, one directory — and the second only exists because a switch says so, which is why the option governs the file set rather than merely appearing next to it. The option is on here through the frontend's own core-options file; this build ships with it off.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps2</name><path>%ROMPATH%/cps2</path>\n    <command label=\"FB Alpha 2012 CPS-2\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbalpha2012_cps2_libretro.so %ROM%</command>\n  </system>\n  <system><name>fba</name><path>%ROMPATH%/fba</path>\n    <command label=\"FB Alpha 2012 Neo Geo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbalpha2012_neogeo_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/cps2/ssf2t.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "fba2012cps2_hiscores = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbalpha2012_cps2_libretro.so": {
+            "library_name": "FB Alpha 2012 CPS-2",
+            "library_version": "v0.2.97.28",
+            "options": {
+              "fba2012cps2_hiscores": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbalpha2012_neogeo_libretro.so": {
+            "library_name": "FB Alpha 2012 Neo Geo",
+            "library_version": "v0.2.97.29 fa3bf50"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "cps2",
+          "label": "FB Alpha 2012 CPS-2",
+          "content_path": "/mnt/sd/retrodeck/roms/cps2/ssf2t.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "ssf2t.fs",
+              "ssf2t.hi"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "ssf2t.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "ssf2t.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "fbalpha2012_cps2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "fbalpha2012_cps2",
+                "mode": "enabled",
+                "files": "ssf2t.fs, ssf2t.hi",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "citation": "src/burner/libretro/libretro.cpp:1036 (write) and :858 (read) at libretro/fbalpha2012_cps2 v0.2.97.28"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": "fba2012cps2_hiscores",
+            "option_value": "enabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "per-game-file"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "the-one-build-of-a-family-that-keeps-only-its-machine-state",
+      "rationale": "The same family, the build with no high scores at all — the word does not occur in its libretro unit and no format for the name is in its binary, so there is one file and one mode. Worth pinning beside its siblings: a family shares a source tree and still answers differently, and the difference is not something a caller could infer from the name.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps2</name><path>%ROMPATH%/cps2</path>\n    <command label=\"FB Alpha 2012 CPS-2\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbalpha2012_cps2_libretro.so %ROM%</command>\n  </system>\n  <system><name>fba</name><path>%ROMPATH%/fba</path>\n    <command label=\"FB Alpha 2012 Neo Geo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbalpha2012_neogeo_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/fba/mslug.zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbalpha2012_cps2_libretro.so": {
+            "library_name": "FB Alpha 2012 CPS-2",
+            "library_version": "v0.2.97.28",
+            "options": {
+              "fba2012cps2_hiscores": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbalpha2012_neogeo_libretro.so": {
+            "library_name": "FB Alpha 2012 Neo Geo",
+            "library_version": "v0.2.97.29 fa3bf50"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "fba",
+          "label": "FB Alpha 2012 Neo Geo",
+          "content_path": "/mnt/sd/retrodeck/roms/fba/mslug.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "mslug.fs"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "mslug.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "fbalpha2012_neogeo",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "fbalpha2012_neogeo",
+                "mode": "",
+                "files": "mslug.fs",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "citation": "src/burner/libretro/libretro.cpp:1429 (write) and :2899 (read) at libretro/fbalpha2012_neogeo fa3bf50"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
           }
         }
       }

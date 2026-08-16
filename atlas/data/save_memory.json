@@ -387,53 +387,6 @@
         "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
-    "fbalpha2012": {
-      "identifiers": {
-        "library_name": [
-          "FB Alpha 2012"
-        ]
-      },
-      "systems": {
-        "arcade": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.29 77167ce",
-          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
-        },
-        "cps": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.29 77167ce",
-          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
-        },
-        "cps1": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.29 77167ce",
-          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
-        },
-        "cps2": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.29 77167ce",
-          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
-        },
-        "cps3": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.29 77167ce",
-          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
-        },
-        "fba": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.29 77167ce",
-          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
-        },
-        "mame": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.29 77167ce",
-          "citation": "[V] svn-current/trunk/src/burner/libretro/libretro.cpp:1212-1215 at fbalpha2012 77167ce — retro_get_memory_size returns 0 for every id."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "fbalpha2012_cps1": {
       "identifiers": {
         "library_name": [
