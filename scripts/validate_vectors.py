@@ -742,10 +742,16 @@ def _validate_one_file_group(name: str, group: Any) -> None:
     _require_exact(name, group, FILE_GROUP_FIELDS, "file_set.groups[]")
     if not isinstance(group["dir"], str) or not group["dir"]:
         fail(f"{name}: every file group states a directory")
-    if not isinstance(group["files"], list) or not all(isinstance(f, str) for f in group["files"]):
-        fail(f"{name}: file group files must be a list of strings")
-    if not group["files"]:
-        fail(f"{name}: a file group with no files is not a group")
+    if group["files"] is not None:
+        if not isinstance(group["files"], list) or not all(
+            isinstance(f, str) for f in group["files"]
+        ):
+            fail(f"{name}: file group files must be a list of strings, or null")
+        if not group["files"]:
+            # null is the directory whose names are not established; an empty
+            # list would claim the directory holds nothing, which is the one
+            # thing such a group does not say.
+            fail(f"{name}: a file group with no files is not a group — use null")
     if group["granularity"] not in KNOWN_GRANULARITIES:
         fail(f"{name}: file group granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
     if group["role"] not in KNOWN_ROLES:
@@ -762,11 +768,16 @@ def _validate_file_groups(name: str, file_set: Any) -> None:
     for group in groups:
         _validate_one_file_group(name, group)
     if groups:
-        here = [f for g in groups if g["dir"] == groups[0]["dir"] for f in g["files"]]
+        here = [
+            f
+            for g in groups
+            if g["dir"] == groups[0]["dir"] and g["files"] is not None
+            for f in g["files"]
+        ]
         if here != file_set["files"]:
             fail(
-                f"{name}: file_set.files must be every group in the answer's own directory, in "
-                f"order — got {file_set['files']}, groups say {here}"
+                f"{name}: file_set.files must be every group in the answer's own directory whose "
+                f"names are established, in order — got {file_set['files']}, groups say {here}"
             )
 
 

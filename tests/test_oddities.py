@@ -146,6 +146,64 @@ def _flycast_query(files):
     return placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
 
 
+MAME_ROM = "/mnt/sd/retrodeck/roms/arcade/dkong.zip"
+MAME_REGISTERED = {
+    "mame_mame_paths_enable": {"default": "disabled", "values": ["disabled", "enabled"]}
+}
+MAME_CORE = {"library_name": "MAME", "options": MAME_REGISTERED}
+
+
+def _mame_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/mame_libretro.so": MAME_CORE})
+    return placed(rd.savefile_location(content_path=MAME_ROM, core_so="mame_libretro.so"))
+
+
+class TestADirectoryWhoseNamesAreNotEstablished:
+    """MAME's differencing tree: stated as a place, refused as a list of names."""
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, SAVES_KEEP: ""}
+
+    def test_it_is_a_group_like_any_other_place_the_save_lives(self):
+        # The point of the shape: one walk over `groups` reaches every directory
+        # the card knows about. Before, this one was reachable only by scanning
+        # the caveats, which is a second structure to correlate and the kind of
+        # thing a client silently skips.
+        p = _mame_query(self.FILES)
+        unnamed = [g for g in p.file_set.groups if g.files is None]
+        assert len(unnamed) == 1
+        assert unnamed[0].dir.endswith("/diff")
+        assert unnamed[0].role == atlas.ROLE_DISK_DIFF
+
+    def test_the_flat_list_is_untouched_by_it(self):
+        # `files` stays the names a caller can look for, so a group without
+        # names contributes nothing to it and no name moved.
+        p = _mame_query(self.FILES)
+        here = tuple(
+            name
+            for g in p.file_set.groups
+            if g.dir == p.file_set.groups[0].dir and g.files is not None
+            for name in g.files
+        )
+        assert here == p.file_set.files
+
+    def test_the_caveat_still_travels_with_the_reason(self):
+        # The group carries the place; the caveat carries the sentence a person
+        # reads and the citation behind it. Both, not one instead of the other.
+        p = _mame_query(self.FILES)
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert caveat.data["dir"].endswith("/diff")
+        assert caveat.data["role"] == atlas.ROLE_DISK_DIFF
+        assert caveat.data["citation"]
+        assert caveat.message
+
+    def test_every_directory_the_caveats_name_is_also_a_group(self):
+        p = _mame_query(self.FILES)
+        flagged = {
+            c.data["dir"] for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED
+        }
+        assert flagged <= {g.dir for g in p.file_set.groups}
+
+
 class TestFlycastResolution:
     def test_default_shared_vmus_in_system_directory(self):
         p = _flycast_query(
@@ -199,7 +257,7 @@ class TestFlycastResolution:
         assert [g.role for g in groups] == [atlas.ROLE_MEMORY_CARD, atlas.ROLE_BATTERY]
         assert groups[1].files == ("dc_nvmem.bin",)
         assert {g.dir for g in groups} == {"/mnt/sd/retrodeck/bios/dc"}
-        assert tuple(name for g in groups for name in g.files) == p.file_set.files
+        assert tuple(name for g in groups for name in g.files or ()) == p.file_set.files
 
     def test_a_client_that_ignores_groups_reads_the_directory_it_always_did(self):
         # The invariant behind the split: `files` is every group under the
