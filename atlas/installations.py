@@ -2254,17 +2254,24 @@ def _base_of(directory: str, subdir: str | None) -> str:
 def _declared_groups(mode: SaveMode | None, *, directory: str, rom_stem: str) -> tuple[FileGroup, ...]:
     """The card's own decomposition of a declared set, each part in its directory.
 
-    Stated only where every part can be stated: a mode with one group whose
-    names do not fill is not half-answered, and the flat set already says what
-    the answer's own directory holds.
+    **Every group the card knows about**, including the ones whose file names
+    follow from nothing atlas reads — those carry ``files=None``. That is what
+    makes one walk over ``groups`` reach every place a save lives, rather than a
+    walk plus a scan of the caveats for the directories the walk left out. The
+    caveat still travels, because it carries the citation and the sentence a
+    person reads; it is no longer the only carrier.
+
+    A mode that states no file list of its own is not decomposed at all: there
+    is no first group for the flat set to agree with, and a decomposition whose
+    parts nobody can order is not one.
     """
     if mode is None or mode.files is None:
         return ()
     base = _base_of(directory, mode.subdir)
     groups: list[FileGroup] = []
-    for group in mode.named:
+    for group in mode.groups:
         names = _card_files(group.files, rom_stem) if group.files is not None else None
-        if not names:
+        if group.unnamed is None and not names:
             return ()
         groups.append(
             FileGroup(

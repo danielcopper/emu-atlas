@@ -417,16 +417,20 @@ its dip switches in `mame/cfg/` beside an emulator-wide `default.cfg`, and hard-
 Handing that back as one flat list would tell you the names and hide which of them are the player's progress and which
 belong to every game at once.
 
-`groups` is that decomposition. Each entry carries its own resolved `dir`, its own `files`, and two fields that answer
-two different questions:
+`groups` is that decomposition, and it is **the complete list of places** — `dir` and `files` are one of them, the
+first. Each entry carries its own resolved `dir`, its own `files`, and two fields that answer two different questions:
 
 ```python
 for g in placement.file_set.groups:
     g.dir          # '/…/saves/arcade/mame/cfg'  — resolved, this group's own directory
-    g.files        # ('default.cfg',)            — basenames within it
+    g.files        # ('default.cfg',)            — basenames within it, or None (see below)
     g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'shared-card' | 'shared-file'
     g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings'
 ```
+
+One walk over `groups` reaches every directory the answer knows about. `placement.dir` and `placement.file_set.files`
+stay exactly what they always were — the first group's directory and the names in it — so a client that reads only those
+keeps working unchanged and gets the save's own state, which is the part cards state first.
 
 **The two fields are separate because they are different facts**, and MAME is the case that proves it: `<machine>.cfg`
 and `default.cfg` sit in one directory with the same role and differ only in whom they belong to. So neither field can
@@ -450,12 +454,24 @@ side's is stale, and the right answer is the higher entries from both. A client 
 alike still does no harm here, because copying the newer table only loses scores rather than a save; a client that reads
 the role can merge instead of overwrite. That difference is the whole reason it is not spelled `battery`.
 
-**A directory can be stated without its files.** Where an emulator writes save data under names that follow from nothing
-atlas reads — MAME names a hard disk's differencing image after the disk's entry in the machine's own ROM table — the
-answer names the directory in a `file-names-unestablished` caveat rather than leaving it out or guessing at it. `data`
-carries `dir`, the `role` of what lives there, and the `citation` behind the reading. Treat it as "there is save data
-here and I cannot list it": a backup takes the directory whole, and a name-based sync knows it is blind there instead of
-silently skipping the player's progress.
+**A directory can be stated without its files, and it is still a group.** Where an emulator writes save data under names
+that follow from nothing atlas reads — MAME names a hard disk's differencing image after the disk's entry in the
+machine's own ROM table, and its memory cards after an index chosen in the emulator's own interface — the group carries
+`files=None`:
+
+```python
+for g in placement.file_set.groups:
+    if g.files is None:
+        take_whole_directory(g.dir)      # there is save data here and I cannot list it
+    else:
+        take(g.dir, g.files)
+```
+
+`None` is not `()`. An empty list would say _this directory holds nothing_, which is the one thing such a group does not
+say. A group with `None` contributes nothing to the flat `files`, which keeps that list exactly the names you can look
+for. The reason travels beside the answer as a `file-names-unestablished` caveat carrying `dir`, `role` and the
+`citation` behind the reading — that is where the sentence a person reads lives, but it is no longer the only place the
+directory appears, so one loop over `groups` is enough and there is no second structure to correlate.
 
 **One limit worth knowing.** `granularity.value` and the `alternatives` pairs beside it state _one_ grouping per mode,
 which is the first group's — so a mode that mixes them (FinalBurn Neo's shared mode writes a per-game `.fs` beside a

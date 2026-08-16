@@ -399,10 +399,23 @@ class FileGroup:
     roots — its own ``granularity`` and its own ``role``. What a group never
     carries is prose: what a file is *for* beyond its role belongs in the
     answer's ``sources``, not in a field a client would have to parse.
+
+    ``files`` is ``None`` where the emulator writes save data into this directory
+    under names that follow from nothing atlas reads — MAME names a hard disk's
+    differencing image after the disk's entry in the machine's own ROM table, and
+    its memory cards after an index chosen in the emulator's own interface.
+    ``None`` and ``()`` are different claims and the difference is the point:
+    ``()`` would say *this directory holds nothing*, which is exactly what such a
+    group does not say. Read it as "there is save data here and I cannot list
+    it": a backup takes the directory whole, and a name-based sync knows it is
+    blind there instead of silently skipping the player's progress. The reason
+    travels beside the answer as ``file-names-unestablished``, which carries the
+    citation; the group is where the directory itself belongs, so that one walk
+    over ``groups`` reaches every place a save lives.
     """
 
     dir: str
-    files: tuple[str, ...]
+    files: tuple[str, ...] | None
     granularity: str
     role: str
 
@@ -413,8 +426,11 @@ class FileGroup:
             )
         if self.role not in ROLES:
             raise ValueError(f"FileGroup: role must be one of {ROLES}, got {self.role!r}")
-        if not self.files:
-            raise ValueError("FileGroup: a group with no files is not a group")
+        if self.files is not None and not self.files:
+            raise ValueError(
+                "FileGroup: a group with no files is not a group — a directory whose names are "
+                "not established carries None, which is a different claim"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -454,11 +470,18 @@ class FileSet:
 
     Where it is populated, ``files`` stays exactly what it always was — the
     names lying in ``dir`` — and that is enforced: it must be every group under
-    the first group's directory, in order. So a client that never reads
-    ``groups`` sees no change when a card splits one list into two by role,
-    while a client that does gets the parts under the other directories too.
-    Cards state the save's own state first, so the first group is the one a
-    save-syncing client would have taken anyway.
+    the first group's directory whose names are established, in order. So a
+    client that never reads ``groups`` sees no change when a card splits one
+    list into two by role, while a client that does gets the parts under the
+    other directories too. Cards state the save's own state first, so the first
+    group is the one a save-syncing client would have taken anyway.
+
+    **``groups`` is the complete list of places, and ``files`` is one of them.**
+    A group whose names are not established carries ``files=None`` and still
+    appears here, so a single walk over ``groups`` reaches every directory the
+    card knows about — there is no second structure to correlate. A group with
+    ``None`` contributes nothing to ``files``, which is what keeps the flat list
+    exactly the set of names a caller can look for.
     """
 
     state: FileSetState
@@ -478,13 +501,13 @@ class FileSet:
             here = tuple(
                 name
                 for group in self.groups
-                if group.dir == self.groups[0].dir
+                if group.dir == self.groups[0].dir and group.files is not None
                 for name in group.files
             )
             if here != self.files:
                 raise ValueError(
-                    "FileSet: files must be every group in the answer's own directory, in order — "
-                    f"got {self.files}, groups say {here}"
+                    "FileSet: files must be every group in the answer's own directory whose names "
+                    f"are established, in order — got {self.files}, groups say {here}"
                 )
 
 

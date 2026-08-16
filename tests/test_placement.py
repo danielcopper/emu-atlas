@@ -11,6 +11,7 @@ from atlas.placement import (
     ROOT_SAVESTATE_DIRECTORY,
     STATE_ROOT_CONTENT_DIRECTORY,
     UNKNOWN_FILE_SET,
+    FileGroup,
     FileSet,
     SavefilePlacement,
     SavestatePlacement,
@@ -39,6 +40,48 @@ class TestInvariants:
     def test_file_set_state_vocabulary_is_closed(self):
         with pytest.raises(ValueError):
             FileSet("guessed", (), "no such state")  # type: ignore[arg-type]
+
+    def test_a_group_with_an_empty_file_list_is_refused(self):
+        """``()`` and ``None`` are different claims, and only one of them is a group.
+
+        An empty list would say *this directory holds nothing*, which is the one
+        thing a group never says — a group exists because save data is there.
+        The directory whose names are not established says so with ``None``.
+        """
+        with pytest.raises(ValueError):
+            FileGroup(dir="/saves/mame/diff", files=(), granularity="per-game-files", role="disk-diff")
+
+    def test_a_group_may_state_a_directory_without_its_names(self):
+        group = FileGroup(
+            dir="/saves/mame/diff", files=None, granularity="per-game-files", role="disk-diff"
+        )
+        assert group.files is None
+
+    def test_a_group_without_names_contributes_nothing_to_the_flat_list(self):
+        """The flat list stays the names a caller can actually look for.
+
+        Both groups sit in the answer's own directory, but only one of them has
+        names — so ``files`` is that one's, and the other is reachable through
+        ``groups`` rather than being folded in or dropped.
+        """
+        named = FileGroup(
+            dir="/saves/mame", files=("dkong",), granularity="per-game-file", role="battery"
+        )
+        unnamed = FileGroup(
+            dir="/saves/mame", files=None, granularity="per-game-files", role="disk-diff"
+        )
+        file_set = FileSet("declared", ("dkong",), "card", groups=(named, unnamed))
+        assert [g.files for g in file_set.groups] == [("dkong",), None]
+
+    def test_the_flat_list_must_still_match_the_named_groups_beside_it(self):
+        unnamed = FileGroup(
+            dir="/saves/mame", files=None, granularity="per-game-files", role="disk-diff"
+        )
+        named = FileGroup(
+            dir="/saves/mame", files=("dkong",), granularity="per-game-file", role="battery"
+        )
+        with pytest.raises(ValueError):
+            FileSet("declared", ("something-else",), "card", groups=(unnamed, named))
 
     def test_root_kind_vocabulary_is_closed(self):
         with pytest.raises(ValueError):

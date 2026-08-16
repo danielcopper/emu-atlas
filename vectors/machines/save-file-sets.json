@@ -1086,6 +1086,12 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame/diff",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "disk-diff"
               }
             ]
           },

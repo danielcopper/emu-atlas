@@ -75,7 +75,7 @@ def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[s
             "groups": [
                 {
                     "dir": group.dir,
-                    "files": list(group.files),
+                    "files": None if group.files is None else list(group.files),
                     "granularity": group.granularity,
                     "role": group.role,
                 }
