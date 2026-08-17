@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. A subdir segment may be exactly one of the placement's subdir templates — <rom_stem>, or <content_dir_name>, the basename of the content's directory — whole-segment only (the resolver's segment arithmetic depends on one template filling to one segment) and only under the savefile_directory root; the resolver fills it from the content path, and a content-less question keeps the token in the path with its hole in needs. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
+  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. A subdir segment may be exactly one of the placement's subdir templates — <rom_stem>, or <content_dir_name>, the basename of the content's directory — whole-segment only (the resolver's segment arithmetic depends on one template filling to one segment) and only under the savefile_directory root; the resolver fills it from the content path, and a content-less question keeps the token in the path with its hole in needs. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory | working_directory (and a mode does not span its own root; working_directory is the launch's own directory — the answer stays a <cwd> template with its hole in needs), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
     "boom3": {
       "identifiers": {
@@ -247,6 +247,45 @@
         "source": "Cannonball source at the revision the shipped binary names, which reports only 'git' as its library_version, so the pin is that build. retro_get_memory_size returns 0 for every id (src/main/libretro/main.c:1128-1131), so RetroArch writes no save file. The core builds three paths of its own at load: retro_build_save_paths joins the frontend's save directory to 'hiscores', 'hiscores_timetrial' and 'hiscores_continuous' (:945-971), and Config_save_scores and its siblings write them through config_open_write, which appends '.sav' to whatever it is handed (src/main/frontend/config.c:75-81, :181-216). The comment above the three joins warns that they are not full paths — the suffix is added elsewhere — which is exactly what that append is.\n\nAll three are one group because they are one directory and one meaning: three score tables for the game's three modes. They are shared-file rather than per-game because nothing in the name follows the content — this core runs one arcade game, and a second copy of that game's data would write the same three files. That makes it the first shipped card whose whole save is a score table, and the reason the high-score role exists: a client merging two devices takes the higher entries here rather than the newer file.\n\nWhere the frontend hands over no save directory the core falls back to the content's own directory (:957-959), which is the same fallback the standard rule already has.",
         "status": {
           "always": "[D] Read from source and confirmed against the shipped binary's strings — all three base names are whole. One mode: the core registers no option that moves or adds a file. Not live-observed."
+        }
+      }
+    },
+    "desmume2015": {
+      "identifiers": {
+        "library_name": [
+          "DeSmuME 2015"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "working_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.dsv",
+                  "<rom_stem>.dsv.bak"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.dsv": {
+            "literal": ".dsv"
+          },
+          "<rom_stem>.dsv.bak": {
+            "literal": ".dsv.bak"
+          }
+        }
+      },
+      "provenance": {
+        "source": "DeSmuME 2015 source at af397ff, the revision the shipped binary names ('git af397ff'). retro_get_memory_size answers only RETRO_MEMORY_SYSTEM_RAM (desmume/src/libretro/libretro.cpp:1771-1778), so RetroArch writes no save file. The core builds its own: path.getpathnoext(path.BATTERY) plus '.dsv' (desmume/src/mc.cpp:237-240), the name being the content's file name without its extension (path.h:307-311, :417-422), and it renames an existing file to '.dsv.bak' before writing anew (mc.cpp:248) — so the pair is the upper bound, and the .bak exists only once a save was overwritten. getpath(BATTERY) returns pathToBattery (path.h:222-224), a member the class fills from an ini via ReadKey (:185) — **and the libretro unit never fills it**: no setpath, no ReadPathSettings, no assignment to pathToBattery anywhere in that translation unit. The whole path machinery belongs to DeSmuME's own frontends, and this build uses none of them, so the prefix is the empty string and the file lands relative to the working directory of whatever process loaded the core. That is a property of the launch, not of the machine, which is what the working_directory root says: the answer is a <cwd> template, the caller fills the hole, and the save-dir-launch-dependent caveat carries the sentence.\n\nBoth extensions are whole strings in the shipped binary, as is the message 'DeSmuME .dsv save file not found. Trying to load an old raw .sav file.' — the code is real and reached. The registered options govern video and input, none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at the revision the shipped binary names. Not live-observed — and not observable: the directory depends on the launch."
         }
       }
     },

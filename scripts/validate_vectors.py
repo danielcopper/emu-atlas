@@ -199,7 +199,7 @@ KNOWN_HEALTH_ISSUES = {
     "companion-config-missing",
     "config-unreadable",
 }
-KNOWN_ROOT_KINDS = {"savefile_directory", "content_directory", "system_directory"}
+KNOWN_ROOT_KINDS = {"savefile_directory", "content_directory", "system_directory", "working_directory"}
 # Closed around its own question: a savestate is never anchored at the saves
 # root, and never at a core's system directory — no card can move it there.
 KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
@@ -208,7 +208,7 @@ KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
 # sharpest reason of them all: a hole nobody can fill is worse than a stated
 # unknown, because a client reads it as work it is supposed to do. Nothing a
 # config states belongs here either; that is atlas's own to resolve.
-KNOWN_HOLES = {"content_dir", "content_dir_name", "library_name", "rom_stem", "save_id"}
+KNOWN_HOLES = {"content_dir", "content_dir_name", "cwd", "library_name", "rom_stem", "save_id"}
 KNOWN_GRANULARITIES = {"shared-card", "shared-file", "per-game-file", "per-game-files"}
 KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
@@ -284,6 +284,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-content-unstated",
     "firmware-scan-incomplete",
     "core-enumeration-incomplete",
+    "save-dir-launch-dependent",
     "save-dir-unlistable",
     "emulator-read-unestablished",
     "emulator-config-unread",

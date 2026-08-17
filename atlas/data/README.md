@@ -32,17 +32,23 @@ carries its own `subdir`, its own `granularity`, a `role`, and its own file and 
 Four of those fields are closed vocabularies — all four the placement's own, imported by the loader rather than
 respelled here, so a card cannot select a value the contract cannot carry — and one is a type rule:
 
-| field         | on    | accepted values                                                   |
-| ------------- | ----- | ----------------------------------------------------------------- |
-| `root`        | mode  | `savefile_directory`, `system_directory`, `content_directory`     |
-| `also_under`  | mode  | the same three, and not the mode's own `root`                     |
-| `granularity` | group | `shared-card`, `shared-file`, `per-game-file`, `per-game-files`   |
-| `role`        | group | `battery`, `memory-card`, `disk-diff`, `high-score`, `settings`   |
-| `complete`    | group | a JSON boolean, `true` or `false` — never a string, never coerced |
+| field         | on    | accepted values                                                                    |
+| ------------- | ----- | ---------------------------------------------------------------------------------- |
+| `root`        | mode  | `savefile_directory`, `system_directory`, `content_directory`, `working_directory` |
+| `also_under`  | mode  | the same set, and not the mode's own `root`                                        |
+| `granularity` | group | `shared-card`, `shared-file`, `per-game-file`, `per-game-files`                    |
+| `role`        | group | `battery`, `memory-card`, `disk-diff`, `high-score`, `settings`                    |
+| `complete`    | group | a JSON boolean, `true` or `false` — never a string, never coerced                  |
 
 `granularity` and `role` reach the caller as contract values, so a misspelling would be stated as this machine's actual
 grouping or would send a save sync past real save data; `complete` is a claim about the save, and `bool("false")` is
 `True` in Python, so a quoted boolean fails the load instead of silently asserting completeness.
+
+`working_directory` is the root that is a property of the launch rather than of the machine: DeSmuME 2015 composes its
+save path from a variable its build never fills, so the file lands relative to wherever the launching process was
+started. Such a mode's answer is always the `<cwd>` template with the `cwd` hole in `needs` — the file names are stated,
+the directory is the caller's to fill — and it rides the `save-dir-launch-dependent` caveat. Nothing on the machine is
+read for it: a template names nothing to observe.
 
 **Why grouping and role are two fields.** They answer different questions — _whose is it_ and _what is it_ — and MAME's
 two `.cfg` files are the proof neither can carry the other's meaning: `<machine>.cfg` and `default.cfg` share a

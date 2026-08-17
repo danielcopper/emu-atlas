@@ -71,7 +71,7 @@ from atlas.retroarch_cfg import RetroArchCfg
 # anchored at a core's system directory (no card can move it — see the module
 # docstring), so a shared union would hand every client values its own branch
 # can never see.
-RootKind = Literal["savefile_directory", "content_directory", "system_directory"]
+RootKind = Literal["savefile_directory", "content_directory", "system_directory", "working_directory"]
 StateRootKind = Literal["savestate_directory", "content_directory"]
 FileSetState = Literal["observed", "declared", "unknown"]
 
@@ -86,6 +86,14 @@ FILE_SET_UNKNOWN: FileSetState = "unknown"
 ROOT_SAVEFILE_DIRECTORY: RootKind = "savefile_directory"
 ROOT_CONTENT_DIRECTORY: RootKind = "content_directory"
 ROOT_SYSTEM_DIRECTORY: RootKind = "system_directory"
+# The root that is a property of the launch rather than of the machine: the
+# working directory of the process that loads the core. DeSmuME 2015 composes
+# its .dsv path from a variable its libretro build never fills, so the file
+# lands relative to wherever RetroArch was started — knowable to whoever did
+# the starting, which is why the answer is a ``<cwd>`` template with a hole
+# rather than a refusal: a hole is something the caller fills, and the caller
+# often IS the launcher.
+ROOT_WORKING_DIRECTORY: RootKind = "working_directory"
 
 ROOT_SAVESTATE_DIRECTORY: StateRootKind = "savestate_directory"
 # The content root is the one value both questions share, and it is the same
@@ -93,7 +101,7 @@ ROOT_SAVESTATE_DIRECTORY: StateRootKind = "savestate_directory"
 # in-content-dir flag or by a root that resolved to nothing.
 STATE_ROOT_CONTENT_DIRECTORY: StateRootKind = "content_directory"
 
-ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory")
+ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory", "working_directory")
 STATE_ROOT_KINDS = ("savestate_directory", "content_directory")
 _FILE_SET_STATES = ("observed", "declared", "unknown")
 
@@ -253,6 +261,11 @@ CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
 CAVEAT_DEAD_SYMLINK = "dead-symlink"
 CAVEAT_SYMLINK_LOOP = "symlink-loop"
 CAVEAT_SAVE_DIR_UNLISTABLE = "save-dir-unlistable"
+# The working_directory root's rider: the directory is a property of how the
+# emulator is launched, not of anything on disk, so no read of the machine can
+# resolve it — the answer stays a template whose one hole only the launcher
+# can fill.
+CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT = "save-dir-launch-dependent"
 CAVEAT_SANDBOX_PATH_UNTRANSLATED = "sandbox-path-untranslated"
 CAVEAT_APP_RELATIVE_PATH_UNEXPANDED = "app-relative-path-unexpanded"
 CAVEAT_CFG_LINE_DROPPED = "cfg-line-dropped"
@@ -350,6 +363,10 @@ HOLE_SAVE_ID = "save_id"
 # and the ``content_dir`` the sorted root keeps.
 HOLE_ROM_STEM = "rom_stem"
 HOLE_CONTENT_DIR_NAME = "content_dir_name"
+# The one hole no content can fill: the working directory of the process that
+# will load the core. It exists for the ``working_directory`` root and is
+# genuinely the caller's to fill — a frontend knows what cwd it launches with.
+HOLE_CWD = "cwd"
 
 # The template tokens a rule card's declared file names may carry, and the hole
 # each leaves behind. ``<rom_stem>`` the resolver fills itself from the content
@@ -567,7 +584,9 @@ class SavefilePlacement:
     holes a declared file-set template keeps, so ``needs`` is the answer's
     holes, not the directory's alone. ``root_kind``
     names the anchor (:data:`ROOT_SAVEFILE_DIRECTORY`,
-    :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`).
+    :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`, or
+    :data:`ROOT_WORKING_DIRECTORY` — the launch's own directory, always a
+    ``<cwd>`` template with its hole in ``needs``).
     ``file_set`` is observed or unknown, never guessed. ``sources`` is the
     provenance trail; ``caveats`` states every degradation explicitly.
 
