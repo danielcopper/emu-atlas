@@ -287,6 +287,41 @@
         }
       }
     },
+    "desmume": {
+      "identifiers": {
+        "library_name": [
+          "DeSmuME"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.dsv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.dsv": {
+            "literal": ".dsv"
+          }
+        }
+      },
+      "provenance": {
+        "source": "DeSmuME source at 7f05a8d, the revision the shipped binary names in its library_version ('git 7f05a8d'). retro_get_memory answers only system RAM (frontend/libretro/libretro.cpp:2473-2488), so RetroArch writes no save file. The core's backup device builds one itself: the battery path defaults to the module path (path.cpp:265-277, :246-262), which the libretro build fills with the frontend's save directory — falling back to the system directory and then the content's own when no save directory is named (LoadModulePath, path.cpp:196-222) — and the file is that path joined with the content's stem and '.dsv' (mc.cpp:232-235, the stem via getpathnoext, path.cpp:417-421). Where no .dsv exists, a '<rom_stem>.sav' lying beside it is imported once and the state dumped back out as the .dsv (mc.cpp:270-283) — the .sav is read, never written. This build writes no '.dsv.bak': the copy is gated on a setting only the Windows frontend reads, and its default is off (mc.cpp:241, NDSSystem.h:534, frontend/windows/main.cpp:1962) — where DeSmuME 2015's card declares the pair, this generation declares the one file. The registered options govern firmware, CPU and video ('desmume_cpu_mode', 'desmume_internal_resolution', …), none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at 7f05a8d, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
     "desmume2015": {
       "identifiers": {
         "library_name": [
@@ -323,6 +358,54 @@
         "source": "DeSmuME 2015 source at af397ff, the revision the shipped binary names ('git af397ff'). retro_get_memory_size answers only RETRO_MEMORY_SYSTEM_RAM (desmume/src/libretro/libretro.cpp:1771-1778), so RetroArch writes no save file. The core builds its own: path.getpathnoext(path.BATTERY) plus '.dsv' (desmume/src/mc.cpp:237-240), the name being the content's file name without its extension (path.h:307-311, :417-422), and it renames an existing file to '.dsv.bak' before writing anew (mc.cpp:248) — so the pair is the upper bound, and the .bak exists only once a save was overwritten. getpath(BATTERY) returns pathToBattery (path.h:222-224), a member the class fills from an ini via ReadKey (:185) — **and the libretro unit never fills it**: no setpath, no ReadPathSettings, no assignment to pathToBattery anywhere in that translation unit. The whole path machinery belongs to DeSmuME's own frontends, and this build uses none of them, so the prefix is the empty string and the file lands relative to the working directory of whatever process loaded the core. That is a property of the launch, not of the machine, which is what the working_directory root says: the answer is a <cwd> template, the caller fills the hole, and the save-dir-launch-dependent caveat carries the sentence.\n\nBoth extensions are whole strings in the shipped binary, as is the message 'DeSmuME .dsv save file not found. Trying to load an old raw .sav file.' — the code is real and reached. The registered options govern video and input, none moves a file — one mode.",
         "status": {
           "always": "[D] Read from source at the revision the shipped binary names. Not live-observed — and not observable: the directory depends on the launch."
+        }
+      }
+    },
+    "dosbox_pure": {
+      "identifiers": {
+        "library_name": [
+          "DOSBox-pure"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.pure.zip"
+                ],
+                "observe": [
+                  "<rom_stem>.pure.zip",
+                  "<rom_stem>.sav",
+                  "<rom_stem>-CDRIVE.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content without a save-name redirect or a legacy save. A <name>.SAVENAME file on the emulated C: drive renames the save to <name>.pure.zip so several contents share one; an existing legacy <rom_stem>.sav keeps being used unless the strict-mode option forbids it; a 'Boot OS' setup keeps its virtual disks beside the save, '<rom_stem>-CDRIVE.sav' and hash-keyed '.sav' spellings whose names follow the installation",
+                "files_citation": "dosbox_pure_libretro.cpp:826-844 at libretro/dosbox-pure ed5e809 ('Set version to 1.0-preview4', the version the shipped binary names) — DBP_GetSaveFile joins the save directory, the content's stem and '.pure.zip'; :808-824 finds the .SAVENAME redirect, :835-839 the legacy fallback, :845-875 the Boot OS disk spellings"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.pure.zip": {
+            "literal": ".pure.zip"
+          },
+          "<rom_stem>.sav": {
+            "unprotected": "the legacy spelling is composed by replacing 'pure.zip' with 'sav' in the built path (dosbox_pure_libretro.cpp:838) — the binary carries the search pattern '*.sav' and the replacement fragments whole, and the '.pure.zip' literal beside them is what a rename of the scheme would take"
+          },
+          "<rom_stem>-CDRIVE.sav": {
+            "literal": "-CDRIVE.sav"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/dosbox-pure at ed5e809 ('Set version to 1.0-preview4' — the version string the shipped binary names; every build until the next bump reports it unchanged, so the read is bound by the version plus the whole strings '.pure.zip', '-CDRIVE.sav' and 'dosbox_pure_strict_mode', all in the shipped .so). The memory interface answers nothing (dosbox_pure_libretro.cpp:3833-3834), and the save is DOSBox Pure's own: the emulated C: drive is a union of the read-only content and one writable overlay, and the overlay is the save file. DBP_GetSaveFile joins the frontend's save directory with the content's stem and '.pure.zip' (:826-844; the stem from DBP_ExtractPathInfo, :731-768), and init_dosbox hands the result to the union drive (:2683, :2699-2700). Every file DOS writes or changes on C: lands in that zip — created on the first modification and rewritten on a five-second schedule from then on (src/dos/drive_union.cpp:355-373), so it appears only once a game writes. Two redirections scope the name: a '<name>.SAVENAME' file on the mounted drive renames the save to '<name>.pure.zip' so several contents share one (:808-824, swapped in at :2696-2697), and an existing legacy '<rom_stem>.sav' keeps being used unless 'dosbox_pure_strict_mode' forbids it (:835-839, the option read at :2276). A 'Boot OS' setup keeps its virtual disks beside the save — '<rom_stem>-CDRIVE.sav' and hash-keyed '<rom_stem>-%08X.sav' spellings (:845-875) — and installs OS images into the system directory (:877-884), that feature's own tree rather than this answer's. Loading a bare .conf mounts no drive and writes no save (:2658-2665). The registered options otherwise govern machine, audio and video; none moves the save file — one mode.",
+        "status": {
+          "always": "[D] Read from source at ed5e809, the version the shipped binary names. Not live-observed."
         }
       }
     },

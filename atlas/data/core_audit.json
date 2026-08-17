@@ -90,6 +90,17 @@
       },
       "kind": "libretro"
     },
+    "desmume": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers only system RAM. Writes <save dir>/<rom_stem>.dsv itself through its backup device — the battery path defaults to the save directory this build fills, with system-directory and content-directory fallbacks; a legacy .sav is imported once, never written. No .dsv.bak in this build: the copy is gated on a Windows-frontend-only setting whose default is off — the difference to the desmume2015 card's pair. Supersedes the 07-24 queue triage. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "desmume2015": {
       "verdict": "card",
       "per_game_capable": true,
@@ -105,6 +116,17 @@
       "verdict": "suspect",
       "per_game_capable": null,
       "note": "[O] RetroDECK's prepared dolphin-emu save subtree suggests a different root; no core-written save has been observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "dosbox_pure": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no memory id. The emulated C: drive is a union of the read-only content and one writable overlay, and the overlay is the save: <save dir>/<rom_stem>.pure.zip, created on first modification, rewritten on a five-second schedule. A .SAVENAME file redirects the name for shared saves, a legacy <rom_stem>.sav keeps being used unless strict mode forbids it, Boot OS setups keep -CDRIVE.sav and hash-keyed disks beside it and install OS images into the system directory. Supersedes the 07-24 queue triage. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,
@@ -555,6 +577,17 @@
       "verdict": "card",
       "per_game_capable": true,
       "note": "[V-source/binary] Answers no libretro memory id and writes <save_dir>/<rom_stem>.ngf itself, the Neo Geo Pocket's flash memory. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "scummvm": {
+      "verdict": "standard-dir",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no memory id. Saves are ScummVM's own slot files, named per engine from the ScummVM *target* — launcher configuration, not the content path — written by its DefaultSaveFileManager into ScummVM's 'savepath' setting, whose registered default is the frontend's save directory, flat (libretro-os-base.cpp:47, libretro-os-utils.cpp:212-221 at 686cdd1, the revision the shipped binary names); an unset or invalid setting falls back the same way. The setting is the user's, changeable in the core's own GUI and persisted in <system dir>/scummvm.ini (libretro-os-utils.cpp:64-69), so the truthful resolver route is reading that ini the way the emulator does — a code rule rather than a card — and the slot names are nothing atlas reads, so a card also needs the mode form that states a directory without naming files. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,

@@ -598,27 +598,26 @@
     },
     {
       "name": "a-core-that-fills-no-memory-id-says-so-and-says-what-stays-open",
-      "rationale": "The commonest shape once the reading starts: DeSmuME answers no libretro memory id, so RetroArch writes it no save file at all. That is a declared emptiness, not an unknown — atlas looked. And it is deliberately not the whole story: DS games do have saves, DeSmuME keeps them past the frontend, and the caveat says that half is unestablished so nobody reads 'no files' as 'nothing to back up'. No granularity travels with it: there is no save here to group.",
+      "rationale": "The commonest shape once the reading starts: blueMSX answers no libretro memory id, so RetroArch writes it no save file at all. That is a declared emptiness, not an unknown — atlas looked. And it is deliberately not the whole story: MSX games do have battery and disk saves, an emulator can keep them past the frontend, and the caveat says that half is unestablished so nobody reads 'no files' as 'nothing to back up'. No granularity travels with it: there is no save here to group. (This vector rode on DeSmuME until its read established the core's own .dsv and a card replaced the record.)",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume_libretro.so %ROM%</command>\n  </system>\n  <system><name>arduboy</name><path>%ROMPATH%/arduboy</path>\n    <command label=\"Arduous\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/arduous_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
-          "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds": "rom"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>msx</name><path>%ROMPATH%/msx</path>\n    <command label=\"blueMSX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/bluemsx_libretro.so %ROM%</command>\n  </system>\n  <system><name>arduboy</name><path>%ROMPATH%/arduboy</path>\n    <command label=\"Arduous\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/arduous_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/msx/Puzzle Game (Japan).rom": "rom"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves"
         ],
         "cores": {
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
-            "library_name": "DeSmuME",
-            "library_version": "git 7f05a8d"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/bluemsx_libretro.so": {
+            "library_name": "blueMSX"
           }
         },
         "entry_savefile_query": {
-          "system": "nds",
-          "content_path": "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds"
+          "system": "msx",
+          "content_path": "/mnt/sd/retrodeck/roms/msx/Puzzle Game (Japan).rom"
         }
       },
       "expected": {
@@ -648,13 +647,13 @@
             {
               "code": "core-unaudited",
               "data": {
-                "core": "desmume"
+                "core": "bluemsx"
               }
             },
             {
               "code": "core-own-writes-unestablished",
               "data": {
-                "core": "desmume"
+                "core": "bluemsx"
               }
             }
           ],

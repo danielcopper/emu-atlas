@@ -17,8 +17,7 @@ rather than the rule — nine of the first ten cores fell into the third.
    expensive kind of work. _flycast, opera, LRPS2._
 3. **The frontend writes nothing.** The core fills no id, so no `.srm` and no `.rtc` exist. A record with an empty
    `memory_types`, which the answer states as a declared set of no files plus `core-own-writes-unestablished` — because
-   whether the core writes its own is a separate question that outcome does not settle. _desmume, dosbox_pure, bluemsx,
-   …_
+   whether the core writes its own is a separate question that outcome does not settle. _bluemsx, atari800, vecx, …_
 
 Outcomes 1 and 3 are cheap: one function in the core's source decides it, and both are recorded in the same file.
 Outcome 2 is a round of its own and belongs to the card family, so a core that turns out to be one stays open on this
@@ -38,10 +37,10 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
-  builds, `cannonball`, `cap32`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`, `openlara`, `pokemini`, `prboom`,
-  `quasi88`, `race`, `pcsx2`, `tyrquake`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3
-  builds, `desmume2015`, and the three bsnes builds). The card wins, and a record beside it would be a second
-  declaration of one file set — a test enforces that no core carries both.
+  builds, `cannonball`, `cap32`, `desmume`, `dosbox_pure`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`,
+  `openlara`, `pokemini`, `prboom`, `quasi88`, `race`, `pcsx2`, `tyrquake`, `virtualjaguar`, the four vitaquake2 builds,
+  `vitaquake3`, the two boom3 builds, `desmume2015`, and the three bsnes builds). The card wins, and a record beside it
+  would be a second declaration of one file set — a test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -101,12 +100,17 @@ Systems as the record states them, with the outcome each turned out to be.
       `Game.dsk.sav`), written only when the disk was altered. Its record became a card
 - [x] **`chailove`** — frontend writes nothing on chailove
 - [x] **`craft`** — frontend writes nothing on ports
-- [x] **`desmume`** — frontend writes nothing on nds
+- [x] **`desmume`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
+      core's backup device writes `<save_dir>/<rom_stem>.dsv` itself — no `.dsv.bak` in this build, unlike the 2015
+      generation's pair, because the copy is gated on a setting only the Windows frontend reads. Its record became a
+      card
 - [x] **`desmume2015`** — outcome 2, and a card: `<rom_stem>.dsv` (with a `.dsv.bak` once overwritten) relative to the
       launching process's working directory — the `working_directory` root's first and only core
 - [x] **`dice`** — frontend writes nothing on arcade, mame
 - [x] **`dirksimple`** — frontend writes nothing on daphne, laserdisc
-- [x] **`dosbox_pure`** — frontend writes nothing on dos, pc, windows3x, windows9x
+- [x] **`dosbox_pure`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
+      emulated C: drive's writable overlay IS the save — `<save_dir>/<rom_stem>.pure.zip`, with a `.SAVENAME` redirect
+      for shared saves, a legacy `.sav` fallback, and Boot-OS disks beside it. Its record became a card
 - [x] **`easyrpg`** — frontend writes nothing on easyrpg
 - [x] **`ecwolf`** — frontend writes nothing on ports
 - [x] **`fbalpha2012`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
@@ -202,7 +206,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`same_cdi`** — frontend writes nothing on cdimono1
 - [x] **`sameboy`** — fills `rtc`, `save_ram` on gb, gbc, sgb
 - [x] **`sameduck`** — frontend writes nothing on megaduck
-- [x] **`scummvm`** — frontend writes nothing on scummvm
+- [x] **`scummvm`** — frontend writes nothing on scummvm, and the core's saves are its own target-keyed slot files in
+      ScummVM's `savepath` setting, whose default is the frontend's save directory and whose truth lives in
+      `<system_dir>/scummvm.ini`. The record stays; a card needs both the ini-reading code rule and the mode form that
+      states a directory without naming files (#170)
 - [x] **`snes9x`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`snes9x2005_plus`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`snes9x2010`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami

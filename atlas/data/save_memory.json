@@ -255,23 +255,6 @@
         "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
-    "desmume": {
-      "identifiers": {
-        "library_name": [
-          "DeSmuME"
-        ]
-      },
-      "systems": {
-        "nds": {
-          "memory_types": [],
-          "verified_core": "git 7f05a8d",
-          "citation": "[V] desmume/src/frontend/libretro/libretro.cpp:2473-2488 at desmume 7f05a8d — retro_get_memory_data answers only RETRO_MEMORY_SYSTEM_RAM (MMU.MAIN_MEM) and retro_get_memory_size only its size; RETRO_MEMORY_SAVE_RAM answers NULL and 0. The core also never asks for GET_SAVE_DIRECTORY, so where it keeps a DS save is a separate question this record does not answer."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "dice": {
       "identifiers": {
         "library_name": [
@@ -314,38 +297,6 @@
       },
       "provenance": {
         "source": "the binary names a version without a commit, so the pin is that version"
-      }
-    },
-    "dosbox_pure": {
-      "identifiers": {
-        "library_name": [
-          "DOSBox-pure"
-        ]
-      },
-      "systems": {
-        "dos": {
-          "memory_types": [],
-          "verified_core": "1.0-preview4",
-          "citation": "[V] dosbox_pure_libretro.cpp:3833-3834 at libretro/dosbox-pure (release 1.0-preview4) — both retro_get_memory_data and retro_get_memory_size are one-liners returning NULL and 0 for every id."
-        },
-        "pc": {
-          "memory_types": [],
-          "verified_core": "1.0-preview4",
-          "citation": "[V] dosbox_pure_libretro.cpp:3833-3834 at libretro/dosbox-pure (release 1.0-preview4) — both retro_get_memory_data and retro_get_memory_size are one-liners returning NULL and 0 for every id."
-        },
-        "windows3x": {
-          "memory_types": [],
-          "verified_core": "1.0-preview4",
-          "citation": "[V] dosbox_pure_libretro.cpp:3833-3834 at libretro/dosbox-pure (release 1.0-preview4) — both retro_get_memory_data and retro_get_memory_size are one-liners returning NULL and 0 for every id."
-        },
-        "windows9x": {
-          "memory_types": [],
-          "verified_core": "1.0-preview4",
-          "citation": "[V] dosbox_pure_libretro.cpp:3833-3834 at libretro/dosbox-pure (release 1.0-preview4) — both retro_get_memory_data and retro_get_memory_size are one-liners returning NULL and 0 for every id."
-        }
-      },
-      "provenance": {
-        "source": "the binary names a release, not a commit, so the pin is that release rather than a revision"
       }
     },
     "easyrpg": {
