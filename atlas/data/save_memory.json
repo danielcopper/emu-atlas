@@ -1548,23 +1548,6 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
-    "quasi88": {
-      "identifiers": {
-        "library_name": [
-          "QUASI88"
-        ]
-      },
-      "systems": {
-        "pc88": {
-          "memory_types": [],
-          "verified_core": "0.6.4 42be798",
-          "citation": "[V] src/LIBRETRO/libretro.c:902-915 at quasi88-libretro 42be798 — the switch answers system RAM, video RAM and the core's own PC-88 ids; RETRO_MEMORY_SAVE_RAM is not among them and falls through to 0."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "quicknes": {
       "identifiers": {
         "library_name": [

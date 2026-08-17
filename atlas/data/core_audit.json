@@ -514,6 +514,17 @@
       },
       "kind": "libretro"
     },
+    "quasi88": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no save memory id. Floppy writes are option-routed: 'q88_save_to_disk_image' disabled (default) keeps a differencing file per opened disk image as <save dir>/<image stem>.srm — created empty at launch, the frontend's spelling without the frontend — and enabled writes the sectors into the loaded image itself, no separate file anywhere. Supersedes the 07-24 queue triage. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "race": {
       "verdict": "card",
       "per_game_capable": true,

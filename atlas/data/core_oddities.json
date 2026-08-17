@@ -1962,6 +1962,66 @@
         }
       }
     },
+    "quasi88": {
+      "identifiers": {
+        "library_name": [
+          "QUASI88"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "q88_save_to_disk_image"
+        },
+        "modes": {
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "files_established_for": "content loaded as a single disk image. Every disk the core opens gets a differencing file named after that image's own stem — an .m3u playlist's member images each bring theirs, and the core's built-in menu can open further images with theirs",
+                "files_citation": "src/LIBRETRO/file-op.c:252-254 at libretro/quasi88-libretro 42be798 — the diff is named after the opened image's basename; libretro.c:684-685 inserts the content path, load_m3u (:616-670) appends each playlist member, menu.c:2469 opens what the menu picks"
+              }
+            ]
+          },
+          "enabled": {
+            "root": "content_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.d88"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "files_established_for": "content loaded as a single .d88 image. With the option on, every sector write lands in the loaded image itself — the save is the modified content file, no file of the core's own appears anywhere. An .m3u playlist's member images take the writes instead of the playlist, and anything the built-in menu opens takes its own",
+                "files_citation": "src/LIBRETRO/file-op.c:441-445 at libretro/quasi88-libretro 42be798 — with the diff off the write falls through to the plain write on the opened image; the core accepts only d88 and m3u content (libretro.c:742)"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "q88_save_to_disk_image": {
+            "literal": "q88_save_to_disk_image"
+          },
+          "<rom_stem>.srm": {
+            "unprotected": "composed at run time from the opened image's basename and the format '%s%c%s.srm' (file-op.c:254), whole in the shipped binary — a rename of the scheme would take the format with it"
+          },
+          "<rom_stem>.d88": {
+            "unprotected": "the content's own name — nothing about it is the core's to spell; what the binary carries whole is the extension registration 'd88|m3u' (libretro.c:742) and the spelling '.d88', which is what tightening the accepted content would take with it"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/quasi88-libretro at 42be798, the revision the shipped binary names in its library_version ('0.6.4 42be798'). The core answers no save memory id (libretro.c:885-915: system RAM and video RAM only), and its save story is the floppy write path. osd_fopen opens every disk image the emulation inserts (fdc.c:542, reached from retro_load_game via quasi88_disk_insert for the content path, libretro.c:684-685, from load_m3u for each playlist member, :616-670, and from the core's own menu, menu.c:2469), and the governing option decides where writes land. With 'q88_save_to_disk_image' disabled — the registered default — opening a disk creates <save dir>/<image stem>.srm as a differencing file (file-op.c:249-258): an empty file appears at launch before anything is saved, sector writes land there as byte differences (osd_fwrite_diff, :415-430, routed at :441-445) and reads overlay them back (:434-438), while the image stays untouched. With the option enabled the same route falls through to the plain write and the sectors land in the loaded disk image itself — the modified content is the save, and no file of the core's own appears anywhere. GET_SAVE_DIRECTORY is taken at init, and a frontend that names no save directory forces the in-place mode regardless of the option (libretro.c:597-600); RetroArch always names one, so the option is the switch.\n\nThe diff list is scoped, not absolute: each opened image gets its own diff named after that image's stem, so a single-image content matches <rom_stem>.srm while an .m3u playlist's members and anything the built-in menu opens bring their own names — which spell exactly what the frontend would write for a core that fills save_ram, without the frontend writing anything. The other registered options govern hardware and video ('q88_basic_mode', 'q88_cpu_clock', …), none else moves a file.",
+        "status": {
+          "disabled": "[D] Read from source at 42be798, the revision the shipped binary names. Not live-observed.",
+          "enabled": "[D] Read from source at 42be798, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
     "race": {
       "identifiers": {
         "library_name": [

@@ -177,7 +177,15 @@ carries, ordered by what is at stake:
    `s0.sav`-`s11.sav` from the menu's twelve slots (the console's `save` takes a free name, `.sav` defaulted) beside a
    written-back `config.cfg` at teardown. `COM_WriteFile`, the one writer into the content tree, has no caller in this
    build. The record was true ("frontend writes nothing") and is retired by the card.
-5. **`quasi88`** — `%s%c%s.srm`: an own writer spelling the frontend's extension.
+5. ~~**`quasi88`**~~ — read 2026-08-17, carded: the collision shape confirmed, with an option behind it. The core
+   answers no save id (its ids are system and video RAM), and floppy writes are routed by `q88_save_to_disk_image`:
+   disabled (the registered default) creates `<save dir>/<image stem>.srm` as a _differencing file_ at first open —
+   empty at launch, byte differences on write, the image untouched (file-op.c:249-258, :415-445 at 42be798, the revision
+   the binary's `library_version` names) — so the file spells exactly what the frontend would write for a `save_ram`
+   core, without the frontend writing anything; enabled writes the sectors into the loaded `.d88` itself, and the
+   modified content is the save. Each _opened_ image gets its own diff (m3u members, menu picks), which is the scope on
+   the declared `<rom_stem>.srm`. The record was true and is retired by the card — the first whose two modes stand on
+   different roots.
 6. **`cap32`** (`%s%s%s.sav`) and **`hatari`** (`%s%cauto.sav`, `.A%s%chatari.sav`) — tiered "likely-internal (symbols
    only)" above; the join formats retire that tier for both.
 7. **`pokemini`** — `%s%c%s.eep` beside a bare `.eep`.

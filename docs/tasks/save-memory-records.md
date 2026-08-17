@@ -38,10 +38,10 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
-  builds, `cannonball`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`, `race`, `pcsx2`,
-  `tyrquake`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and the
-  three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a test
-  enforces that no core carries both.
+  builds, `cannonball`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`, `quasi88`, `race`,
+  `pcsx2`, `tyrquake`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`,
+  and the three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a
+  test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -184,7 +184,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`prosystem`** — frontend writes nothing on atari7800
 - [x] **`puae`** — frontend writes nothing on amiga, amiga1200, amiga600, amigacd32, cdtv
 - [x] **`px68k`** — frontend writes nothing on x68000
-- [x] **`quasi88`** — frontend writes nothing on pc88
+- [x] **`quasi88`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
+      core's floppy writes are option-routed — the default keeps a differencing file per opened disk image as
+      `<save_dir>/<image stem>.srm` (created empty at launch; the frontend's spelling without the frontend), the
+      `q88_save_to_disk_image` option instead writes the sectors into the loaded image itself. Its record became a card
 - [x] **`quicknes`** — fills `save_ram` on famicom, nes
 - [x] **`race`** — outcome 2, and a card: it writes the Neo Geo Pocket's flash memory as `<save_dir>/<rom_stem>.ngf`,
       naming it by replacing the content file's extension
