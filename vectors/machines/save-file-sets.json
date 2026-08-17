@@ -3695,6 +3695,204 @@
           }
         }
       }
+    },
+    {
+      "name": "a-disk-diff-that-spells-the-frontends-name",
+      "rationale": "quasi88 answers no save memory id, and with its governing option at the registered default it keeps a differencing file per opened disk image as <save dir>/<image stem>.srm — created empty at launch, byte differences on write, the image untouched. The name spells exactly what the frontend would write for a core that fills save_ram, without the frontend writing anything, which is why only the card can say whose file it is. The declared name is scoped: an .m3u playlist's members and anything the core's own menu opens bring their own stems.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>pc88</name><path>%ROMPATH%/pc88</path>\n    <command label=\"QUASI88\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/quasi88_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/pc88/Game (Japan).d88": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/quasi88_libretro.so": {
+            "library_name": "QUASI88",
+            "library_version": "0.6.4 42be798",
+            "options": {
+              "q88_save_to_disk_image": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "pc88",
+          "content_path": "/mnt/sd/retrodeck/roms/pc88/Game (Japan).d88"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Game (Japan).srm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Game (Japan).srm"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "quasi88",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "quasi88",
+                "mode": "disabled",
+                "files": "Game (Japan).srm",
+                "files_established_for": "content loaded as a single disk image. Every disk the core opens gets a differencing file named after that image's own stem — an .m3u playlist's member images each bring theirs, and the core's built-in menu can open further images with theirs",
+                "citation": "src/LIBRETRO/file-op.c:252-254 at libretro/quasi88-libretro 42be798 — the diff is named after the opened image's basename; libretro.c:684-685 inserts the content path, load_m3u (:616-670) appends each playlist member, menu.c:2469 opens what the menu picks"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": "q88_save_to_disk_image",
+            "option_value": "disabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "enabled",
+                "per-game-files"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-option-that-moves-the-writes-into-the-image-itself",
+      "rationale": "The first card whose two modes stand on different roots: quasi88's q88_save_to_disk_image enabled abandons the differencing file and writes the sectors into the loaded .d88 itself — the save is the modified content file, and the answer names exactly that file in the content's own tree, because a sync that wants the save must carry the image.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>pc88</name><path>%ROMPATH%/pc88</path>\n    <command label=\"QUASI88\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/quasi88_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/pc88/Game (Japan).d88": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "q88_save_to_disk_image = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/quasi88_libretro.so": {
+            "library_name": "QUASI88",
+            "library_version": "0.6.4 42be798",
+            "options": {
+              "q88_save_to_disk_image": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "pc88",
+          "content_path": "/mnt/sd/retrodeck/roms/pc88/Game (Japan).d88"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/pc88",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game (Japan).d88"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "quasi88",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "quasi88",
+                "mode": "enabled",
+                "files": "Game (Japan).d88",
+                "files_established_for": "content loaded as a single .d88 image. With the option on, every sector write lands in the loaded image itself — the save is the modified content file, no file of the core's own appears anywhere. An .m3u playlist's member images take the writes instead of the playlist, and anything the built-in menu opens takes its own",
+                "citation": "src/LIBRETRO/file-op.c:441-445 at libretro/quasi88-libretro 42be798 — with the diff off the write falls through to the plain write on the opened image; the core accepts only d88 and m3u content (libretro.c:742)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": "q88_save_to_disk_image",
+            "option_value": "enabled",
+            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "alternatives": [
+              [
+                "disabled",
+                "per-game-files"
+              ]
+            ]
+          }
+        }
+      }
     }
   ]
 }

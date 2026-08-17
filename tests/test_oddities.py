@@ -418,6 +418,69 @@ class TestACardRootedInTheLaunchsWorkingDirectory:
         assert p.fallback_dir is None
 
 
+class TestAnOptionThatMovesTheRootItself:
+    """quasi88: the same option picks between the save root and the content's own tree.
+
+    The first card whose modes stand on different roots — disabled keeps a
+    differencing file under the save directory, enabled writes the sectors into
+    the loaded disk image itself, so the mode selection has to carry the answer
+    through two different routes.
+    """
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, SAVES_KEEP: ""}
+    PC88_ROM = "/mnt/sd/retrodeck/roms/pc88/Game (Japan).d88"
+
+    def _query(self, files):
+        rd = _retrodeck(
+            files,
+            cores={
+                f"{DEPLOY}/quasi88_libretro.so": {
+                    "library_name": "QUASI88",
+                    "options": {
+                        "q88_save_to_disk_image": {
+                            "default": "disabled",
+                            "values": ["enabled", "disabled"],
+                        }
+                    },
+                }
+            },
+        )
+        return placed(
+            rd.savefile_location(content_path=self.PC88_ROM, core_so="quasi88_libretro.so")
+        )
+
+    def test_the_default_keeps_a_diff_under_the_save_root(self):
+        p = self._query(self.FILES)
+        assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
+        # Content sorting keys the root by the content's directory; the card
+        # nests nothing below it, and the diff spells the frontend's own .srm
+        # for a core where the frontend writes no such file.
+        assert p.dir == "/mnt/sd/retrodeck/saves/pc88"
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ("Game (Japan).srm",)
+        assert [g.role for g in p.file_set.groups] == [atlas.ROLE_DISK_DIFF]
+        assert p.granularity is not None
+        assert p.granularity.option_value == "disabled"
+
+    def test_the_enabled_option_moves_the_writes_into_the_image_itself(self):
+        files = {**self.FILES, OPTIONS_CFG: 'q88_save_to_disk_image = "enabled"\n'}
+        p = self._query(files)
+        assert p.root_kind == atlas.ROOT_CONTENT_DIRECTORY
+        assert p.dir == "/mnt/sd/retrodeck/roms/pc88"
+        # No file of the core's own exists in this mode — the save is the
+        # modified content file, and the answer names exactly that file.
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ("Game (Japan).d88",)
+        assert p.granularity is not None
+        assert p.granularity.option_value == "enabled"
+        assert ("disabled", "per-game-files") in p.granularity.alternatives
+
+    def test_the_open_diff_set_is_scoped_by_a_caveat(self):
+        p = self._query(self.FILES)
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL)
+        assert "m3u" in caveat.data["files_established_for"]
+
+
 class TestFlycastResolution:
     def test_default_shared_vmus_in_system_directory(self):
         p = _flycast_query(
@@ -2552,6 +2615,12 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("prboom", "prbmsav5.dsg", "unprotected"),
             ("prboom", "prbmsav6.dsg", "unprotected"),
             ("prboom", "prbmsav7.dsg", "unprotected"),
+            # quasi88's two names are the opened disk image's own: the diff is
+            # composed from the whole format '%s%c%s.srm', and the in-place
+            # target is the content file itself — the binary carries the
+            # extension registration 'd88|m3u' that admits it.
+            ("quasi88", "<rom_stem>.d88", "unprotected"),
+            ("quasi88", "<rom_stem>.srm", "unprotected"),
             # RACE's is the one name in this list the binary carries no trace of,
             # not even the extension: 'ngf' is three characters, which a compiler
             # stores as an immediate rather than as a string. Its anchor names the
