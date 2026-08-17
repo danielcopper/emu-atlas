@@ -119,6 +119,49 @@
         }
       }
     },
+    "cannonball": {
+      "identifiers": {
+        "library_name": [
+          "Cannonball"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "hiscores.sav",
+                  "hiscores_timetrial.sav",
+                  "hiscores_continuous.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "high-score"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "hiscores.sav": {
+            "unprotected": "the base name 'hiscores' is whole in the binary; the '.sav' the writer appends is not, because config_open_write builds it with the format '%s.sav' (config.c:75-81) and that literal is short enough for the compiler to fold. The three base names beside each other are what a rename would take"
+          },
+          "hiscores_timetrial.sav": {
+            "unprotected": "same composition; the base name 'hiscores_timetrial' is whole in the binary"
+          },
+          "hiscores_continuous.sav": {
+            "unprotected": "same composition; the base name 'hiscores_continuous' is whole in the binary"
+          }
+        }
+      },
+      "provenance": {
+        "source": "Cannonball source at the revision the shipped binary names, which reports only 'git' as its library_version, so the pin is that build. retro_get_memory_size returns 0 for every id (src/main/libretro/main.c:1128-1131), so RetroArch writes no save file. The core builds three paths of its own at load: retro_build_save_paths joins the frontend's save directory to 'hiscores', 'hiscores_timetrial' and 'hiscores_continuous' (:945-971), and Config_save_scores and its siblings write them through config_open_write, which appends '.sav' to whatever it is handed (src/main/frontend/config.c:75-81, :181-216). The comment above the three joins warns that they are not full paths — the suffix is added elsewhere — which is exactly what that append is.\n\nAll three are one group because they are one directory and one meaning: three score tables for the game's three modes. They are shared-file rather than per-game because nothing in the name follows the content — this core runs one arcade game, and a second copy of that game's data would write the same three files. That makes it the first shipped card whose whole save is a score table, and the reason the high-score role exists: a client merging two devices takes the higher entries here rather than the newer file.\n\nWhere the frontend hands over no save directory the core falls back to the content's own directory (:957-959), which is the same fallback the standard rule already has.",
+        "status": {
+          "always": "[D] Read from source and confirmed against the shipped binary's strings — all three base names are whole. One mode: the core registers no option that moves or adds a file. Not live-observed."
+        }
+      }
+    },
     "fbalpha2012": {
       "identifiers": {
         "library_name": [

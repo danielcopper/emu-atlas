@@ -2184,6 +2184,12 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("bsnes-jg", "<rom_stem>.rtc", "unprotected"),
             ("bsnes-jg", "<rom_stem>.srm", "unprotected"),
             ("bsnes_hd_beta", "<rom_stem>.rtc", "unprotected"),
+            # Cannonball's three names are whole in its binary; the ".sav" its
+            # writer appends is short enough for the compiler to fold, so each
+            # anchor points at the base name the rename would have to touch.
+            ("cannonball", "hiscores.sav", "unprotected"),
+            ("cannonball", "hiscores_continuous.sav", "unprotected"),
+            ("cannonball", "hiscores_timetrial.sav", "unprotected"),
             # The FB Alpha family names both its files after the loaded driver at
             # run time. What each binary carries whole is the format that builds
             # them — "%s%c%s.fs" and "%s%c%s.hi" — which is what a rename of the

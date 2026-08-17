@@ -46,6 +46,17 @@
       },
       "kind": "libretro"
     },
+    "cannonball": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] Answers no libretro memory id and writes three score tables of its own into the frontend's save directory — hiscores.sav, hiscores_timetrial.sav and hiscores_continuous.sav — under fixed names that follow nothing about the content. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "dolphin": {
       "verdict": "suspect",
       "per_game_capable": null,
