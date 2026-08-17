@@ -1263,6 +1263,41 @@
         }
       }
     },
+    "noods": {
+      "identifiers": {
+        "library_name": [
+          "NooDS"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.sav": {
+            "unprotected": "composed at run time from the content's basename with its extension cut (libretro.cpp:155-164, joined at :674). The whole string beside it in the binary is the extension '.sav'"
+          }
+        }
+      },
+      "provenance": {
+        "source": "NooDS source at b0f658c, which is the whole of what the shipped binary reports as its library_version. retro_get_memory_size answers only RETRO_MEMORY_SYSTEM_RAM (libretro.cpp:1080-1096), so RetroArch writes neither .srm nor .rtc. The core keeps its own file: getSaveFileDesc builds savesPath + <stem> + '.sav' and opens it O_RDWR (:672-687), and createCore hands that descriptor to the emulator, which writes into it directly rather than through any frontend call (:698-709). savesPath is GET_SAVE_DIRECTORY normalized with a trailing separator (:220-229, :824), and the stem is the content's basename with its last extension cut and any archive-member suffix ('.zip#', '.7z#', '.apk#') removed first (:155-164) — for a plain file that is the same stem RetroArch would have used.\n\nTwo things this core does that are worth knowing and are not file names. The save file is created on first launch whether or not the game ever writes one: where it does not exist, getSaveFileDesc creates it and seeds it with a single 0xFF byte (:678-683). And where the frontend hands over no save directory at all, getSaveDir falls back to the relative literal 'NooDS' (:226), which resolves against the working directory of whatever process loaded the core — not a path atlas can state, and not a state RetroArch reaches, since it always names one.\n\nOne thing that looks like a second file and is not. updateConfig points Settings::basePath at <save_dir>/noods (:322), and the binary carries '/saves', '/states' and '/cheats' beside it — but those belong to Settings::load, which creates those directories and reads noods.ini, and this build calls neither Settings::load nor Settings::save. 'noods.ini' is not a string in the binary at all. The core writes exactly one file.",
+        "status": {
+          "always": "[D] Read from source at the revision the binary names, and confirmed against its strings — '.sav' and the 'NooDS' fallback are whole, 'noods.ini' is absent. One mode: the core registers a long option list and none of its entries moves or adds a file. Not live-observed."
+        }
+      }
+    },
     "opera": {
       "identifiers": {
         "library_name": [

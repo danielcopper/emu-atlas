@@ -38,9 +38,9 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
-  builds that write past the frontend, `geolith`, `melonds`, `race`, `pcsx2`, `virtualjaguar`, and the three bsnes
-  builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces that no
-  core carries both.
+  builds that write past the frontend, `geolith`, `melonds`, `noods`, `race`, `pcsx2`, `virtualjaguar`, and the three
+  bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces
+  that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -68,7 +68,6 @@ mostly this: nine of its twelve cores write past the frontend, which is the oppo
 follows from what the hardware is — an arcade board's memory is NVRAM the machine owns, not a cartridge save the
 frontend can name.
 
-- [ ] **`noods`** — `gba` · fills no id the frontend writes and keeps its own `<save_dir>/<rom_stem>.sav`
 - [ ] **`desmume2015`** — writes `<rom_stem>.dsv`, and the card cannot state where: DeSmuME composes the path from a
       variable this build never sets, so the file lands relative to the process's working directory. A card's every mode
       names a root, and there is no root to name (#148)
@@ -161,6 +160,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mupen64plus_next`** — fills `save_ram` on n64, n64dd
 - [x] **`neocd`** — fills `save_ram` on neogeocd, neogeocdjp
 - [x] **`nestopia`** — fills `save_ram` on famicom, fds, nes
+- [x] **`noods`** — outcome 2, and a card: `<save_dir>/<rom_stem>.sav`, opened as a descriptor the emulator writes into
 - [x] **`np2kai`** — frontend writes nothing on pc98
 - [x] **`o2em`** — frontend writes nothing on odyssey2, videopac
 - [x] **`parallel_n64`** — fills `save_ram` on n64, n64dd

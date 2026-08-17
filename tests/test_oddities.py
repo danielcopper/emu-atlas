@@ -2253,6 +2253,7 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("mame2010", "<rom_stem>.hi", "unprotected"),
             ("mame2010", "<rom_stem>.nv", "unprotected"),
             ("melonds", "<rom_stem>.sav", "unprotected"),
+            ("noods", "<rom_stem>.sav", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
             # RACE's is the one name in this list the binary carries no trace of,
             # not even the extension: 'ngf' is three characters, which a compiler
