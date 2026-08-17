@@ -3428,6 +3428,74 @@
           }
         }
       }
+    },
+    {
+      "name": "a-cd-system-where-the-interface-claim-was-unreachable",
+      "rationale": "Genesis Plus GX really fills save_ram — for cartridges. On the CD systems that code is unreachable: SYSTEM_MCD initializes the CD hardware instead of the cartridge hardware, sram.on never sets, and the memory interface answers 0, so RetroArch writes nothing. The record's megacd rows used to claim save_ram anyway, citing the reachable memory switch without tracing which systems reach it — the audit's first wrong shipped row. This vector pins the corrected answer: a declared set of no files, with core-own-writes-unestablished carrying what that outcome cannot settle. What the core does write there — its BRAM tree under three interacting options — is the multi-option card work the audit queue carries.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megacd</name><path>%ROMPATH%/megacd</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/megacd/Game (Europe).chd": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
+            "library_name": "Genesis Plus GX",
+            "library_version": "v1.7.4 46a5521"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megacd",
+          "content_path": "/mnt/sd/retrodeck/roms/megacd/Game (Europe).chd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-multi-option",
+              "data": {
+                "core": "genesis_plus_gx",
+                "verdict": "multi-option",
+                "options": "genesis_plus_gx_system_bram, genesis_plus_gx_cart_bram, genesis_plus_gx_cart_size"
+              }
+            },
+            {
+              "code": "core-own-writes-unestablished",
+              "data": {
+                "core": "genesis_plus_gx"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
     }
   ]
 }

@@ -152,11 +152,15 @@ superbroswar takes the directory and reads it nowhere) or three-character coinci
 above. What remains is the open half of the `core-own-writes-unestablished` caveat each of these records honestly
 carries, ordered by what is at stake:
 
-1. **`genesis_plus_gx`** — the sharpest hit, because its records are _filled_, and a filled `memory_types` carries no
-   own-writes caveat: the megacd/segacd entries state `save_ram` while the binary carries the core's own BRAM names
-   (`scd_E.brm`, `scd_J.brm`, `_128Kbit_cart.brm` … `_4Mbit_cart.brm`) and the 07-24 note above already says "per-game
-   Sega CD BRAM modes". If those paths are reached, the CD systems' answer is silently incomplete — the geolith shape,
-   uncaught.
+1. ~~**`genesis_plus_gx`**~~ — read 2026-08-17, and the hit was real, one step worse than flagged: the CD rows were not
+   incomplete but **unreachable**. `SYSTEM_MCD` runs `scd_init()` instead of `md_cart_init()` (core/genesis.c:162-175 at
+   46a5521), so `sram_init` never runs and the memory interface answers 0 on CD content; the record's
+   megacd/megacdjp/segacd rows were corrected to `memory_types: []` — the audit's first wrong shipped row, produced by
+   citing the reachable memory switch without tracing which systems reach it. What remains is the card: the CD save is
+   the core's own BRAM tree under **three** interacting options (`genesis_plus_gx_system_bram`, `_cart_bram`,
+   `_cart_size` — shared region-keyed `scd_E/U/J.brm` or per-game `<rom>.brm`, plus the RAM cart's `<size>Kbit_cart.brm`
+   spellings; libretro.c:1383-1500, written by bram_load/bram_save at :3675/:3730), which is the multi-option shape the
+   single-option card schema cannot express — the same gap swanstation sits on.
 2. **`fbalpha2012_cps1`** — carries the family's own join formats `%s%c%s.hi` and `%s%c%s.nv` (no `.fs` hit) while its
    four siblings are carded: the family boundary may have been drawn one build too small.
 3. **`kronos`** — unchanged from above: own subtree `%s%ckronos%csaturn%c%s(-ext*).ram`, `stv` beside it, 47 hits.

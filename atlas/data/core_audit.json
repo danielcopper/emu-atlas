@@ -174,7 +174,7 @@
     "genesis_plus_gx": {
       "verdict": "multi-option",
       "per_game_capable": true,
-      "note": "[V-source/binary] libretro.c:1383-1500,3746-3765 proves frontend SRAM and per-game Sega CD BRAM modes; shipped strings match, but the upstream-to-binary binding is [D] and never live-observed.",
+      "note": "[V-source/binary] Frontend SRAM is real for the cartridge systems, and unreachable for the CD ones: SYSTEM_MCD runs scd_init() instead of md_cart_init() (core/genesis.c:162-175), so sram.on never sets and the memory interface answers 0 — the record's CD rows were corrected to say so. The CD save is the core's own BRAM tree under three interacting options (genesis_plus_gx_system_bram, _cart_bram, _cart_size; libretro.c:1383-1500), written by bram_load/bram_save (libretro.c:3675, :3730) — the multi-option shape the single-option card schema cannot express. Never live-observed.",
       "save_options": [
         "genesis_plus_gx_system_bram",
         "genesis_plus_gx_cart_bram",

@@ -122,8 +122,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`gambatte`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`gearboy`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`gearsystem`** — fills `save_ram` on gamegear, mark3, mastersystem, multivision, sg-1000
-- [x] **`genesis_plus_gx`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megacd, megacdjp, megadrive,
-      megadrivejp, segacd, sg-1000
+- [x] **`genesis_plus_gx`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megadrive, megadrivejp,
+      sg-1000; frontend writes nothing on megacd, megacdjp, segacd — the CD path never reaches `sram_init`, and the
+      earlier `save_ram` claim there was the audit's first shipped wrong row, corrected 2026-08-17. The CD save is the
+      core's own BRAM tree under three interacting options — multi-option card work, queued in the audit doc
 - [x] **`geolith`** — outcome 2, and a card: four files of its own per game, one of them under the name RetroArch gives
       a save-RAM file
 - [x] **`gpsp`** — fills `save_ram` on gba
