@@ -207,7 +207,7 @@ class SaveMemoryRecord:
         """The one answer this record gives for every system it covers, if it gives one.
 
         A record is keyed by core *and* system because one core is not one
-        behaviour — but most cores are: 82 of the 84 shipped records state the
+        behaviour — but most cores are: 85 of the 87 shipped records state the
         same memory ids for every system they cover. The two that do not are
         mGBA, the record the key was designed around, and VBA-M, whose memory
         function switches on the loaded image type first. Where they agree,

@@ -356,6 +356,17 @@
       },
       "kind": "libretro"
     },
+    "nxengine": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] Answers no libretro memory id and exports the frontend's save directory to the game's own code, which keeps five Cave Story profiles there — profile.dat and profile2.dat through profile5.dat, under names that follow nothing about the content. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "opera": {
       "verdict": "card",
       "per_game_capable": true,

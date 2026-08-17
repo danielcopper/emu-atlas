@@ -260,6 +260,23 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
+    "craft": {
+      "identifiers": {
+        "library_name": [
+          "Craft"
+        ]
+      },
+      "systems": {
+        "ports": {
+          "memory_types": [],
+          "verified_core": "675c",
+          "citation": "[V] libretro/libretro.c:446-449 at libretro/Craft — retro_get_memory_size returns 0 for every id, so RetroArch writes no save file. This unit asks the frontend for no save directory at all and contains no file write: no fopen, no mkdir, no GET_SAVE_DIRECTORY. Where this port keeps a world is therefore unestablished rather than established as nowhere."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
+      }
+    },
     "desmume": {
       "identifiers": {
         "library_name": [
@@ -1221,6 +1238,23 @@
         "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
+    "mrboom": {
+      "identifiers": {
+        "library_name": [
+          "Mr.Boom"
+        ]
+      },
+      "systems": {
+        "ports": {
+          "memory_types": [],
+          "verified_core": "5.5 d011acf",
+          "citation": "[V] libretro/retro.cpp:695-699 at libretro/mrboom-libretro d011acf — retro_get_memory_size returns 0 for every id, so RetroArch writes no save file. The core takes the frontend's save directory into a static buffer (:144-153) and never reads it again: 'retro_save_directory' occurs three times in the unit and all three are the declaration and its two assignments. Whether anything else in the build writes a save is what core-own-writes-unestablished leaves open."
+        }
+      },
+      "provenance": {
+        "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
     "mu": {
       "identifiers": {
         "library_name": [
@@ -1907,6 +1941,23 @@
       },
       "provenance": {
         "source": "read at the revision the installed binary names in its library_version"
+      }
+    },
+    "superbroswar": {
+      "identifiers": {
+        "library_name": [
+          "Super Bros War"
+        ]
+      },
+      "systems": {
+        "ports": {
+          "memory_types": [],
+          "verified_core": "0.1",
+          "citation": "[V] libretro/libretro.cpp:606-610 at libretro/superbroswar-libretro — retro_get_memory_size returns 0 for every id, so RetroArch writes no save file. The save directory is taken in the boilerplate block many cores copy verbatim, beside the system and content directories (:459-463), and the variable is not read anywhere in the unit; the game's own file layer (src/common/FileIO.cpp) does not mention it either. That is not the same as establishing the core writes nothing, which is what the caveat beside this record says."
+        }
+      },
+      "provenance": {
+        "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
     "tgbdual": {

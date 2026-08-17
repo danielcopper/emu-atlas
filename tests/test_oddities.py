@@ -2260,6 +2260,14 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("mame2010", "<rom_stem>.nv", "unprotected"),
             ("melonds", "<rom_stem>.sav", "unprotected"),
             ("noods", "<rom_stem>.sav", "unprotected"),
+            # NXEngine's five profile names come from one format the binary
+            # carries whole, "profile%d.dat" — except slot 0's, which the source
+            # writes as its own literal and the binary does not carry at all.
+            ("nxengine", "profile.dat", "unprotected"),
+            ("nxengine", "profile2.dat", "unprotected"),
+            ("nxengine", "profile3.dat", "unprotected"),
+            ("nxengine", "profile4.dat", "unprotected"),
+            ("nxengine", "profile5.dat", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
             # RACE's is the one name in this list the binary carries no trace of,
             # not even the extension: 'ngf' is three characters, which a compiler
