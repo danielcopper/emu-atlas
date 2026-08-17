@@ -208,7 +208,7 @@ KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
 # sharpest reason of them all: a hole nobody can fill is worse than a stated
 # unknown, because a client reads it as work it is supposed to do. Nothing a
 # config states belongs here either; that is atlas's own to resolve.
-KNOWN_HOLES = {"content_dir", "library_name", "save_id"}
+KNOWN_HOLES = {"content_dir", "content_dir_name", "library_name", "rom_stem", "save_id"}
 KNOWN_GRANULARITIES = {"shared-card", "shared-file", "per-game-file", "per-game-files"}
 KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}

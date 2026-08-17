@@ -587,7 +587,7 @@ PLACEMENT_CASES = [
     case(_base_placement(dir=""), "savefile_location.dir must be a non-empty string", id="placement-empty-dir"),
     case(_base_placement(root_kind="nope"), "savefile_location.root_kind must be one of", id="placement-root-kind"),
     case(_base_placement(needs="content_dir"), "savefile_location.needs must be a list", id="placement-needs-not-list"),
-    case(_base_placement(needs=["rom_stem"]), "savefile_location.needs must be holes from", id="placement-unknown-hole"),
+    case(_base_placement(needs=["rom_step"]), "savefile_location.needs must be holes from", id="placement-unknown-hole"),
     case(_base_placement(fallback_dir=""), "must be null or a non-empty string", id="placement-empty-fallback"),
     case(_base_placement(physical_dir=7), "must be null or a non-empty string", id="placement-physical-type"),
     case(_vector({"savefile_location": {**_placement(), "stray": 1}}, installed=True, savefile_query={"content_path": ROM}),
@@ -616,7 +616,7 @@ PLACEMENT_CASES = [
 TEXTURE_CASES = [
     case(_base_texture(dir=""), "texture_pack_location.dir must be a non-empty string", id="texture-empty-dir"),
     case(_base_texture(needs="content_dir"), "texture_pack_location.needs must be a list", id="texture-needs-not-list"),
-    case(_base_texture(needs=["rom_stem"]), "texture_pack_location.needs must be holes from", id="texture-unknown-hole"),
+    case(_base_texture(needs=["rom_step"]), "texture_pack_location.needs must be holes from", id="texture-unknown-hole"),
     case(_base_texture(physical_dir=""), "must be null or a non-empty string", id="texture-empty-physical"),
     # Nothing can be link-resolved through a hole, so a vector stating both
     # pins an answer the resolver cannot give.
@@ -659,7 +659,7 @@ MOD_CASES = [
     case(_base_mods(trees=[_mod_tree(dir="/a", role="same"), _mod_tree(dir="/b", role="same")]),
          "each names its own distinct role", id="mods-repeated-roles"),
     case(_base_mods(needs="content_dir"), "mod_location.needs must be a list", id="mods-needs-not-list"),
-    case(_base_mods(needs=["rom_stem"]), "mod_location.needs must be holes from", id="mods-unknown-hole"),
+    case(_base_mods(needs=["rom_step"]), "mod_location.needs must be holes from", id="mods-unknown-hole"),
     # Nothing can be link-resolved through a hole, whichever tree states it.
     case(_base_mods(needs=["content_dir"], trees=[_mod_tree(physical_dir="/real")]),
          "physical_dir for a directory that is still a template", id="mods-physical-through-a-hole"),

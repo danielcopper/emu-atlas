@@ -3039,6 +3039,212 @@
           }
         }
       }
+    },
+    {
+      "name": "a-per-content-directory-keyed-by-the-contents-stem",
+      "rationale": "prboom answers no libretro memory id and creates a directory of its own under the frontend's save root, named after the content's stem — the card's subdir is the template <rom_stem>, filled by the resolver from the content path. Everything inside is nameable: eight menu-slot savegames (role battery, scoped by the DeHackEd caveat because a .deh may rename their base) and a written-back prboom.cfg (role settings) share the one directory, so the flat list is their concatenation and the roles keep a save sync from carrying the config.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>doom</name><path>%ROMPATH%/doom</path>\n    <command label=\"PrBoom\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/doom/Doom (USA).wad": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/prboom_libretro.so": {
+            "library_name": "PrBoom",
+            "library_version": "v2.5.0"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "doom",
+          "content_path": "/mnt/sd/retrodeck/roms/doom/Doom (USA).wad"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/Doom (USA)",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "prbmsav0.dsg",
+              "prbmsav1.dsg",
+              "prbmsav2.dsg",
+              "prbmsav3.dsg",
+              "prbmsav4.dsg",
+              "prbmsav5.dsg",
+              "prbmsav6.dsg",
+              "prbmsav7.dsg",
+              "prboom.cfg"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/Doom (USA)",
+                "files": [
+                  "prbmsav0.dsg",
+                  "prbmsav1.dsg",
+                  "prbmsav2.dsg",
+                  "prbmsav3.dsg",
+                  "prbmsav4.dsg",
+                  "prbmsav5.dsg",
+                  "prbmsav6.dsg",
+                  "prbmsav7.dsg"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/Doom (USA)",
+                "files": [
+                  "prboom.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "prboom",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "prboom",
+                "mode": "",
+                "files": "prbmsav0.dsg, prbmsav1.dsg, prbmsav2.dsg, prbmsav3.dsg, prbmsav4.dsg, prbmsav5.dsg, prbmsav6.dsg, prbmsav7.dsg, prboom.cfg",
+                "files_established_for": "content whose DeHackEd patch does not rename the savegame base",
+                "citation": "d_deh.c:492 sets the base to 'prbmsav'; :840 lists SAVEGAMENAME among the strings a .deh may replace, and the loader passes a matching .deh found beside the content (libretro.c:2399, :2611)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-per-content-directory-keyed-by-the-directorys-name",
+      "rationale": "The vitaquake2 family keys its directory by the basename of the content's directory — the card's subdir is the template <content_dir_name>, and for content in baseq2/ the save root gains a baseq2/ of its own. Inside it the two kinds part ways: config.cfg is nameable (role settings, shared by everything that shares the directory), while Quake 2's save/ slot tree holds per-map level states whose names follow the maps the player visited — so that group states the directory, refuses the names, and the file-names-unestablished caveat carries the reason.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>quake2</name><path>%ROMPATH%/quake2</path>\n    <command label=\"vitaQuake 2\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vitaquake2_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/quake2/baseq2/pak0.pak": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vitaquake2_libretro.so": {
+            "library_name": "vitaQuakeII",
+            "library_version": "v2.3"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "quake2",
+          "content_path": "/mnt/sd/retrodeck/roms/quake2/baseq2/pak0.pak"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/baseq2",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "config.cfg"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/baseq2",
+                "files": [
+                  "config.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/baseq2/save",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "vitaquake2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "vitaquake2",
+                "dir": "/mnt/sd/retrodeck/saves/baseq2/save",
+                "role": "battery",
+                "citation": "Quake 2's slot layout below it: while playing, every level crossed writes save/current/<map>.sav and <map>.sv2 (sv_init.c:193, :206); a save copies them into save/<slot>/ beside a server.ssv and game.ssv (sv_ccmds.c:219-227). The per-map names follow the maps the player visited and the slot set is open ('current', 'quick', 'save0' on up), which is nothing atlas reads"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

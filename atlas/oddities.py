@@ -32,6 +32,8 @@ from atlas.placement import (
     GRANULARITIES,
     ROLES,
     ROOT_KINDS,
+    ROOT_SAVEFILE_DIRECTORY,
+    SUBDIR_TEMPLATE_HOLES,
     TEMPLATE_ROM_STEM,
     TEMPLATE_SAVE_ID,
 )
@@ -59,6 +61,11 @@ _KNOWN_ROLES = set(ROLES)
 # outside the set would travel into a stated filename and be read as literal
 # text, so it fails the load instead.
 _KNOWN_FILE_TEMPLATES = (TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID)
+# A subdir segment is either a fixed name or exactly one of the placement's
+# subdir templates — the same one-grammar rule as file names, plus a whole-
+# segment requirement: ``_base_of`` undoes a subdir by counting segments, and
+# that arithmetic stays exact only while one template fills to exactly one.
+_KNOWN_SUBDIR_TEMPLATES = frozenset(SUBDIR_TEMPLATE_HOLES)
 # How a libretro core's ``.so`` is spelled. Derived from the card key rather
 # than restated in the card: the key IS that basename, so a second spelling
 # could only ever be a way for the two to disagree.
@@ -106,6 +113,30 @@ def _expect_str_list(value: object, where: str) -> tuple[str, ...]:
     if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
         raise ValueError(f"{where}: expected a list of strings, got {value!r}")
     return tuple(value)
+
+
+def _expect_subdir(value: object, where: str) -> str | None:
+    """A card's subdir — fixed segments, or exactly one known template per segment.
+
+    The whole-segment rule is load-bearing twice over: ``_base_of`` undoes a
+    subdir by counting segments, which stays exact only while one template
+    fills to exactly one segment; and an affixed token (``pre<rom_stem>``)
+    would be a spelling no read core writes. Any other angle bracket is the
+    same typo risk :func:`_expect_file_names` refuses in file names — a token
+    that only looks right would be stated as a literal directory name.
+    """
+    text = _expect_opt_str(value, where)
+    if text is None:
+        return None
+    for segment in text.split("/"):
+        if segment in _KNOWN_SUBDIR_TEMPLATES:
+            continue
+        if "<" in segment or ">" in segment:
+            raise ValueError(
+                f"{where}: segment {segment!r} — a template must be the whole segment, one of "
+                f"{sorted(_KNOWN_SUBDIR_TEMPLATES)}"
+            )
+    return text
 
 
 def _expect_file_names(value: object, where: str) -> tuple[str, ...]:
@@ -163,11 +194,13 @@ class SaveGroup:
     configuration writes save data into whose **names do not follow from
     anything atlas reads** — MAME's differencing images for CHD hard disks take
     the disk image's own name out of the machine's ROM table inside the binary.
-    Such a group carries no ``files`` and never becomes a
-    :class:`~atlas.placement.FileGroup`; the answer names its directory in a
-    ``file-names-unestablished`` caveat instead, with this text as the citation.
-    Silence there would be worse than the caveat: a backup that skips the
-    directory loses the player's progress on every machine with a hard disk.
+    Such a group reaches the answer as a :class:`~atlas.placement.FileGroup`
+    with ``files=None``, so one walk over ``groups`` covers every place the
+    save lives, and the ``file-names-unestablished`` caveat rides beside it
+    with this text as the citation — the sentence a person reads and the
+    reason behind it. Silence would be worse than either: a backup that skips
+    the directory loses the player's progress on every machine with a hard
+    disk.
 
     ``files`` is the declared set, or ``None`` when the card marks it
     unverified — the resolver then refuses to state filenames.
@@ -380,6 +413,19 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
             f"{where}: a mode with 'also_under' cannot declare 'files' — its save data reaches "
             "beyond this root, so the set is not statable here"
         )
+    if root != ROOT_SAVEFILE_DIRECTORY and any(
+        segment in _KNOWN_SUBDIR_TEMPLATES
+        for group in groups
+        for segment in (group.subdir or "").split("/")
+    ):
+        # The two templated behaviours read so far both key a directory the
+        # frontend's *save* root hands the core. A template under another root
+        # would state a content-keyed system or content directory no reading
+        # has established — refuse it until a core shows that behaviour.
+        raise ValueError(
+            f"{where}: a subdir template is established only under {ROOT_SAVEFILE_DIRECTORY!r} — "
+            f"no read core keys a {root!r} subdirectory on the content"
+        )
     return SaveMode(root=root, groups=groups, also_under=also_under)
 
 
@@ -460,7 +506,7 @@ def _save_group(mode: Any, where: str) -> SaveGroup:
             "names do not follow from anything atlas reads"
         )
     return SaveGroup(
-        subdir=_expect_opt_str(mode.get("subdir"), f"{where}: subdir"),
+        subdir=_expect_subdir(mode.get("subdir"), f"{where}: subdir"),
         files=_expect_file_names(files, f"{where}: files") if files is not None else None,
         granularity=granularity,
         role=role,

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
+  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. A subdir segment may be exactly one of the placement's subdir templates — <rom_stem>, or <content_dir_name>, the basename of the content's directory — whole-segment only (the resolver's segment arithmetic depends on one template filling to one segment) and only under the savefile_directory root; the resolver fills it from the content path, and a content-less question keeps the token in the path with its hole in needs. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
     "bsnes": {
       "identifiers": {
@@ -1556,6 +1556,85 @@
         }
       }
     },
+    "prboom": {
+      "identifiers": {
+        "library_name": [
+          "PrBoom"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "<rom_stem>",
+                "files": [
+                  "prbmsav0.dsg",
+                  "prbmsav1.dsg",
+                  "prbmsav2.dsg",
+                  "prbmsav3.dsg",
+                  "prbmsav4.dsg",
+                  "prbmsav5.dsg",
+                  "prbmsav6.dsg",
+                  "prbmsav7.dsg"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery",
+                "files_established_for": "content whose DeHackEd patch does not rename the savegame base",
+                "files_citation": "d_deh.c:492 sets the base to 'prbmsav'; :840 lists SAVEGAMENAME among the strings a .deh may replace, and the loader passes a matching .deh found beside the content (libretro.c:2399, :2611)"
+              },
+              {
+                "subdir": "<rom_stem>",
+                "files": [
+                  "prboom.cfg"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>": {
+            "unprotected": "the placement's own template — the segment is the content's stem, composed at load (libretro.c:2633); nothing about it is a literal the binary could carry"
+          },
+          "prbmsav0.dsg": {
+            "unprotected": "composed at run time from the base 'prbmsav' (d_deh.c:492) and the format '%s%c%s%d.dsg' (g_game.c:2396), both whole in the shipped binary — a rename of the scheme would take either with it"
+          },
+          "prbmsav1.dsg": {
+            "unprotected": "composed at run time from the base 'prbmsav' (d_deh.c:492) and the format '%s%c%s%d.dsg' (g_game.c:2396), both whole in the shipped binary — a rename of the scheme would take either with it"
+          },
+          "prbmsav2.dsg": {
+            "unprotected": "composed at run time from the base 'prbmsav' (d_deh.c:492) and the format '%s%c%s%d.dsg' (g_game.c:2396), both whole in the shipped binary — a rename of the scheme would take either with it"
+          },
+          "prbmsav3.dsg": {
+            "unprotected": "composed at run time from the base 'prbmsav' (d_deh.c:492) and the format '%s%c%s%d.dsg' (g_game.c:2396), both whole in the shipped binary — a rename of the scheme would take either with it"
+          },
+          "prbmsav4.dsg": {
+            "unprotected": "composed at run time from the base 'prbmsav' (d_deh.c:492) and the format '%s%c%s%d.dsg' (g_game.c:2396), both whole in the shipped binary — a rename of the scheme would take either with it"
+          },
+          "prbmsav5.dsg": {
+            "unprotected": "composed at run time from the base 'prbmsav' (d_deh.c:492) and the format '%s%c%s%d.dsg' (g_game.c:2396), both whole in the shipped binary — a rename of the scheme would take either with it"
+          },
+          "prbmsav6.dsg": {
+            "unprotected": "composed at run time from the base 'prbmsav' (d_deh.c:492) and the format '%s%c%s%d.dsg' (g_game.c:2396), both whole in the shipped binary — a rename of the scheme would take either with it"
+          },
+          "prbmsav7.dsg": {
+            "unprotected": "composed at run time from the base 'prbmsav' (d_deh.c:492) and the format '%s%c%s%d.dsg' (g_game.c:2396), both whole in the shipped binary — a rename of the scheme would take either with it"
+          },
+          "prboom.cfg": {
+            "literal": ".prboom.cfg"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro-prboom source at c180d47 — the shipped binary names only 'prboom v2.5.0', which every release of this fork reports, so the read is bound to it by whole strings instead: 'prbmsav', '%s%c%s%d.dsg', '-baseconfig' and '.prboom.cfg' are all in the shipped .so, and the cited lines carry them. retro_load_game joins the frontend's save directory and the content's stem, creating the result: <save dir>/<rom_stem>/ (libretro.c:2633-2638); where the frontend names no save directory or the create fails, the content's own directory takes its place (:2643-2644). I_DoomExeDir answers that directory (libretro.c:4019-4022), and both writers build on it. Savegames: G_SaveGameName composes <basesavegame>/<base><slot>.dsg (g_game.c:2396) with basesavegame = I_DoomExeDir (d_main.c:1043) and the base 'prbmsav' (d_deh.c:492); the menu offers eight slots, 0 through 7 (m_menu.c:1139-1150). Settings: M_LoadDefaults builds <I_DoomExeDir>/prboom.cfg when no -config was passed (m_misc.c:1113-1119) — the loader passes only -baseconfig, a read-side seed (libretro.c:2411, :2618) — and M_SaveDefaults writes it back in the teardown chain (m_misc.c:898, d_main.c:1968).\n\nThe savegame list is scoped, not absolute: a DeHackEd patch may replace SAVEGAMENAME (d_deh.c:840), and the loader passes a .deh found beside the content (libretro.c:2399), so for such content the eight names carry a different base. The registered options govern video and input ('prboom-resolution', 'prboom-mouse_on', …), none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at c180d47, bound to the shipped binary by its whole strings. Not live-observed."
+        }
+      }
+    },
     "race": {
       "identifiers": {
         "library_name": [
@@ -1627,6 +1706,194 @@
         "source": "Virtual Jaguar source at 48096c1, the revision the shipped binary names in its library_version. On load the core takes GET_SAVE_DIRECTORY into vjs.EEPROMPath and the content's basename into vjs.romName (libretro.c:883-895), and builds two paths from them: <save_dir>/<rom_stem>.srm for the cartridge EEPROM and <save_dir>/<rom_stem>.cdrom.srm for the JagCD one (eeprom.c:99-109). Both are written whenever the game writes its EEPROM — the state machine calls EEPROMSave on a word write and on a write-all with writes enabled (eeprom.c:148-167, reached from :299-308 and :336-344), which is the ordinary in-game save rather than a shutdown path. The core also answers RETRO_MEMORY_SAVE_RAM with the same 128 bytes (libretro.c:958-965), so RetroArch writes <rom_stem>.srm as well: one path, two writers, and not the same bytes — the core stores the words as big-endian pairs (eeprom.c:42-53, mirrored by its reader at :57-65) while the frontend writes the memory block raw. Which one a file ends up holding depends on who wrote last; that is an emulator question, and it is stated here because a client comparing two machines' files will meet it. Two conditions the file names cannot carry: content whose CRC32 is 0xFDF37F47 — the Memory Track device — is exempt and gets no EEPROM files at all (eeprom.c:90-96), and content loaded without a path falls back to naming both files after the ROM's CRC32 (<CRC32>.srm, <CRC32>.cdrom.srm, eeprom.c:106-108); no launcher on either arrangement is known to load Jaguar content that way.",
         "status": {
           "always": "[D] Read from source. The core governs its save layout with no option, so there is one mode and nothing selects between modes; no save was watched being written."
+        }
+      }
+    },
+    "vitaquake2": {
+      "identifiers": {
+        "library_name": [
+          "vitaQuakeII"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "<content_dir_name>",
+                "files": [
+                  "config.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "<content_dir_name>/save",
+                "granularity": "per-game-files",
+                "role": "battery",
+                "unnamed": "Quake 2's slot layout below it: while playing, every level crossed writes save/current/<map>.sav and <map>.sv2 (sv_init.c:193, :206); a save copies them into save/<slot>/ beside a server.ssv and game.ssv (sv_ccmds.c:219-227). The per-map names follow the maps the player visited and the slot set is open ('current', 'quick', 'save0' on up), which is nothing atlas reads"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<content_dir_name>": {
+            "unprotected": "the placement's own template — the segment is the basename of the content's directory, composed at load (libretro.c:2259-2262); nothing about it is a literal the binary could carry"
+          },
+          "config.cfg": {
+            "literal": "%s/config.cfg"
+          },
+          "save": {
+            "literal": "%s/save/%s/"
+          }
+        }
+      },
+      "provenance": {
+        "source": "vitaquake2 source at 59a5115, the revision the shipped binaries' 'v2.3' (libretro.c:2054) belongs to, bound to them by whole strings: '%s/config.cfg', '%s/save/current/', '%s/save/save%i/server.ssv' and their siblings are in every shipped build. All four builds compile the same libretro unit and file layer; they differ in the game code (the base campaign), not in where anything lands. retro_load_game takes the content's directory (libretro.c:2249), joins the frontend's save directory with that directory's basename and creates the result: <save dir>/<content dir name>/ (:2259-2267); where the frontend names none or the create fails, the content's own tree takes its place (FS_Gamedir fallbacks at each writer). The filesystem adds that directory as the write root (FS_AddGameDirectory(g_save_dir), files.c:891-892), and the writers build on it: CL_WriteConfiguration writes <dir>/config.cfg at shutdown (cl_main.c:1586, called at :1815), the server writes the save tree under <dir>/save/ — per-map level states into save/current/ (sv_init.c:193, :206) and per-slot copies beside server.ssv and game.ssv (sv_ccmds.c:219-227).\n\nconfig.cfg is one file per save subdirectory, shared by everything that shares it — shared-file, role settings. The save/ subtree is the campaign's own progress — role battery — and its file names are not derivable, so the group states the directory and refuses the names. The registered options govern renderer and input, none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at 59a5115, bound to the shipped binary by its whole strings. Not live-observed."
+        }
+      }
+    },
+    "vitaquake2-rogue": {
+      "identifiers": {
+        "library_name": [
+          "vitaQuakeII"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "<content_dir_name>",
+                "files": [
+                  "config.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "<content_dir_name>/save",
+                "granularity": "per-game-files",
+                "role": "battery",
+                "unnamed": "Quake 2's slot layout below it: while playing, every level crossed writes save/current/<map>.sav and <map>.sv2 (sv_init.c:193, :206); a save copies them into save/<slot>/ beside a server.ssv and game.ssv (sv_ccmds.c:219-227). The per-map names follow the maps the player visited and the slot set is open ('current', 'quick', 'save0' on up), which is nothing atlas reads"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<content_dir_name>": {
+            "unprotected": "the placement's own template — the segment is the basename of the content's directory, composed at load (libretro.c:2259-2262); nothing about it is a literal the binary could carry"
+          },
+          "config.cfg": {
+            "literal": "%s/config.cfg"
+          },
+          "save": {
+            "literal": "%s/save/%s/"
+          }
+        }
+      },
+      "provenance": {
+        "source": "vitaquake2 source at 59a5115, the revision the shipped binaries' 'v2.3' (libretro.c:2054) belongs to, bound to them by whole strings: '%s/config.cfg', '%s/save/current/', '%s/save/save%i/server.ssv' and their siblings are in every shipped build. All four builds compile the same libretro unit and file layer; they differ in the game code (the Ground Zero mission pack, -DROGUE), not in where anything lands. retro_load_game takes the content's directory (libretro.c:2249), joins the frontend's save directory with that directory's basename and creates the result: <save dir>/<content dir name>/ (:2259-2267); where the frontend names none or the create fails, the content's own tree takes its place (FS_Gamedir fallbacks at each writer). The filesystem adds that directory as the write root (FS_AddGameDirectory(g_save_dir), files.c:891-892), and the writers build on it: CL_WriteConfiguration writes <dir>/config.cfg at shutdown (cl_main.c:1586, called at :1815), the server writes the save tree under <dir>/save/ — per-map level states into save/current/ (sv_init.c:193, :206) and per-slot copies beside server.ssv and game.ssv (sv_ccmds.c:219-227).\n\nconfig.cfg is one file per save subdirectory, shared by everything that shares it — shared-file, role settings. The save/ subtree is the campaign's own progress — role battery — and its file names are not derivable, so the group states the directory and refuses the names. The registered options govern renderer and input, none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at 59a5115, bound to the shipped binary by its whole strings. Not live-observed."
+        }
+      }
+    },
+    "vitaquake2-xatrix": {
+      "identifiers": {
+        "library_name": [
+          "vitaQuakeII"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "<content_dir_name>",
+                "files": [
+                  "config.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "<content_dir_name>/save",
+                "granularity": "per-game-files",
+                "role": "battery",
+                "unnamed": "Quake 2's slot layout below it: while playing, every level crossed writes save/current/<map>.sav and <map>.sv2 (sv_init.c:193, :206); a save copies them into save/<slot>/ beside a server.ssv and game.ssv (sv_ccmds.c:219-227). The per-map names follow the maps the player visited and the slot set is open ('current', 'quick', 'save0' on up), which is nothing atlas reads"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<content_dir_name>": {
+            "unprotected": "the placement's own template — the segment is the basename of the content's directory, composed at load (libretro.c:2259-2262); nothing about it is a literal the binary could carry"
+          },
+          "config.cfg": {
+            "literal": "%s/config.cfg"
+          },
+          "save": {
+            "literal": "%s/save/%s/"
+          }
+        }
+      },
+      "provenance": {
+        "source": "vitaquake2 source at 59a5115, the revision the shipped binaries' 'v2.3' (libretro.c:2054) belongs to, bound to them by whole strings: '%s/config.cfg', '%s/save/current/', '%s/save/save%i/server.ssv' and their siblings are in every shipped build. All four builds compile the same libretro unit and file layer; they differ in the game code (the Reckoning mission pack, -DXATRIX), not in where anything lands. retro_load_game takes the content's directory (libretro.c:2249), joins the frontend's save directory with that directory's basename and creates the result: <save dir>/<content dir name>/ (:2259-2267); where the frontend names none or the create fails, the content's own tree takes its place (FS_Gamedir fallbacks at each writer). The filesystem adds that directory as the write root (FS_AddGameDirectory(g_save_dir), files.c:891-892), and the writers build on it: CL_WriteConfiguration writes <dir>/config.cfg at shutdown (cl_main.c:1586, called at :1815), the server writes the save tree under <dir>/save/ — per-map level states into save/current/ (sv_init.c:193, :206) and per-slot copies beside server.ssv and game.ssv (sv_ccmds.c:219-227).\n\nconfig.cfg is one file per save subdirectory, shared by everything that shares it — shared-file, role settings. The save/ subtree is the campaign's own progress — role battery — and its file names are not derivable, so the group states the directory and refuses the names. The registered options govern renderer and input, none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at 59a5115, bound to the shipped binary by its whole strings. Not live-observed."
+        }
+      }
+    },
+    "vitaquake2-zaero": {
+      "identifiers": {
+        "library_name": [
+          "vitaQuakeII"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "<content_dir_name>",
+                "files": [
+                  "config.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "<content_dir_name>/save",
+                "granularity": "per-game-files",
+                "role": "battery",
+                "unnamed": "Quake 2's slot layout below it: while playing, every level crossed writes save/current/<map>.sav and <map>.sv2 (sv_init.c:193, :206); a save copies them into save/<slot>/ beside a server.ssv and game.ssv (sv_ccmds.c:219-227). The per-map names follow the maps the player visited and the slot set is open ('current', 'quick', 'save0' on up), which is nothing atlas reads"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<content_dir_name>": {
+            "unprotected": "the placement's own template — the segment is the basename of the content's directory, composed at load (libretro.c:2259-2262); nothing about it is a literal the binary could carry"
+          },
+          "config.cfg": {
+            "literal": "%s/config.cfg"
+          },
+          "save": {
+            "literal": "%s/save/%s/"
+          }
+        }
+      },
+      "provenance": {
+        "source": "vitaquake2 source at 59a5115, the revision the shipped binaries' 'v2.3' (libretro.c:2054) belongs to, bound to them by whole strings: '%s/config.cfg', '%s/save/current/', '%s/save/save%i/server.ssv' and their siblings are in every shipped build. All four builds compile the same libretro unit and file layer; they differ in the game code (the Zaero mission pack, -DZAERO), not in where anything lands. retro_load_game takes the content's directory (libretro.c:2249), joins the frontend's save directory with that directory's basename and creates the result: <save dir>/<content dir name>/ (:2259-2267); where the frontend names none or the create fails, the content's own tree takes its place (FS_Gamedir fallbacks at each writer). The filesystem adds that directory as the write root (FS_AddGameDirectory(g_save_dir), files.c:891-892), and the writers build on it: CL_WriteConfiguration writes <dir>/config.cfg at shutdown (cl_main.c:1586, called at :1815), the server writes the save tree under <dir>/save/ — per-map level states into save/current/ (sv_init.c:193, :206) and per-slot copies beside server.ssv and game.ssv (sv_ccmds.c:219-227).\n\nconfig.cfg is one file per save subdirectory, shared by everything that shares it — shared-file, role settings. The save/ subtree is the campaign's own progress — role battery — and its file names are not derivable, so the group states the directory and refuses the names. The registered options govern renderer and input, none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at 59a5115, bound to the shipped binary by its whole strings. Not live-observed."
         }
       }
     }

@@ -448,6 +448,17 @@
       },
       "kind": "libretro"
     },
+    "prboom": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id. Creates <save dir>/<rom_stem>/ at load and keeps eight menu-slot savegames (prbmsav0.dsg-prbmsav7.dsg) plus a written-back prboom.cfg there; a DeHackEd patch may rename the savegame base, and the card scopes for it. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "race": {
       "verdict": "card",
       "per_game_capable": true,
@@ -483,6 +494,50 @@
       "verdict": "card",
       "per_game_capable": true,
       "note": "[V-source/binary] The shipped 48096c1 generation fills RETRO_MEMORY_SAVE_RAM with the Jaguar's 128-byte EEPROM and *also* writes both that file and a .cdrom.srm twin itself, from paths it builds out of the save directory and the content's basename. The frontend and the core therefore write one of the two files in different byte orders. No option governs any of it. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "vitaquake2": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] Answers no libretro memory id. Creates <save dir>/<content dir name>/ at load and writes config.cfg plus Quake 2's save/ slot tree there; the per-map level states are names atlas cannot derive, so that group is stated as a directory. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "vitaquake2-rogue": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] The Ground Zero build of the same source; answers no libretro memory id. Creates <save dir>/<content dir name>/ at load and writes config.cfg plus Quake 2's save/ slot tree there; the per-map level states are names atlas cannot derive, so that group is stated as a directory. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "vitaquake2-xatrix": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] The Reckoning build of the same source; answers no libretro memory id. Creates <save dir>/<content dir name>/ at load and writes config.cfg plus Quake 2's save/ slot tree there; the per-map level states are names atlas cannot derive, so that group is stated as a directory. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "vitaquake2-zaero": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] The Zaero build of the same source; answers no libretro memory id. Creates <save dir>/<content dir name>/ at load and writes config.cfg plus Quake 2's save/ slot tree there; the per-map level states are names atlas cannot derive, so that group is stated as a directory. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,

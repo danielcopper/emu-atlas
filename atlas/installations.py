@@ -150,6 +150,8 @@ from atlas.placement import (
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     STATE_ROOT_CONTENT_DIRECTORY,
+    SUBDIR_TEMPLATE_HOLES,
+    TEMPLATE_CONTENT_DIR_NAME,
     TEMPLATE_ROM_STEM,
     FILE_SET_DECLARED,
     FILE_SET_OBSERVED,
@@ -1755,6 +1757,7 @@ def _card_file_set(
     mode: SaveMode,
     directory: str,
     rom_stem: str | None,
+    content_dir_name: str | None,
     observable: bool,
 ) -> FileSet:
     """What the card says lies in its own directory — declared, or observed there.
@@ -1767,7 +1770,9 @@ def _card_file_set(
     declared = _card_files(mode.files, rom_stem) if mode.files is not None else None
     if declared is None:
         return UNKNOWN_FILE_SET
-    groups = _declared_groups(mode, directory=directory, rom_stem=rom_stem or "")
+    groups = _declared_groups(
+        mode, directory=directory, rom_stem=rom_stem or "", content_dir_name=content_dir_name
+    )
     if not observable or file_set_holes(declared):
         return FileSet(
             "declared",
@@ -1862,7 +1867,14 @@ def _file_set_caveats(
     return ()
 
 
-def _unnamed_tree_caveats(card: CoreCard, mode: SaveMode, *, directory: str) -> tuple[Caveat, ...]:
+def _unnamed_tree_caveats(
+    card: CoreCard,
+    mode: SaveMode,
+    *,
+    directory: str,
+    rom_stem: str | None,
+    content_dir_name: str | None,
+) -> tuple[Caveat, ...]:
     """Directories this mode writes into whose file names atlas cannot derive.
 
     Named rather than left out: a client that skips the directory loses whatever
@@ -1874,7 +1886,10 @@ def _unnamed_tree_caveats(card: CoreCard, mode: SaveMode, *, directory: str) -> 
     base = _base_of(directory, mode.subdir)
     caveats = []
     for group in mode.unnamed:
-        where = os.path.join(base, *[s for s in (group.subdir or "").split("/") if s])
+        subdir, _ = _fill_subdir(
+            group.subdir or "", rom_stem=rom_stem, content_dir_name=content_dir_name
+        )
+        where = os.path.join(base, *[s for s in subdir.split("/") if s])
         caveats.append(
             Caveat(
                 CAVEAT_FILE_NAMES_UNESTABLISHED,
@@ -2116,10 +2131,24 @@ def _system_directory_placement(
                 also_under=mode.also_under,
             )
         )
-        all_caveats.extend(_unnamed_tree_caveats(card, mode, directory=directory))
+        all_caveats.extend(
+            _unnamed_tree_caveats(
+                card,
+                mode,
+                directory=directory,
+                rom_stem=content.rom_stem,
+                content_dir_name=content.dir_name,
+            )
+        )
     observable = root.reachable and not root.needs
     file_set = _card_file_set(
-        machine, card=card, mode=mode, directory=directory, rom_stem=content.rom_stem, observable=observable
+        machine,
+        card=card,
+        mode=mode,
+        directory=directory,
+        rom_stem=content.rom_stem,
+        content_dir_name=content.dir_name,
+        observable=observable,
     )
     physical_dir = None
     if observable:
@@ -2186,6 +2215,7 @@ def _observed_file_set(
     *,
     directory: str,
     rom_stem: str,
+    content_dir_name: str | None,
     content_path: str | None,
     card: CoreCard | None,
     mode: SaveMode | None,
@@ -2225,7 +2255,17 @@ def _observed_file_set(
         # holding, the matches would be a partly-read directory presented as an
         # observed set, which a `complete` rule card could then close over.
         return UNKNOWN_FILE_SET, caveats
-    return _file_set_of(matches, directory=directory, rom_stem=rom_stem, card=card, mode=mode), caveats
+    return (
+        _file_set_of(
+            matches,
+            directory=directory,
+            rom_stem=rom_stem,
+            content_dir_name=content_dir_name,
+            card=card,
+            mode=mode,
+        ),
+        caveats,
+    )
 
 
 def _unlistable_caveat(path: str) -> Caveat:
@@ -2235,6 +2275,29 @@ def _unlistable_caveat(path: str) -> Caveat:
         "saves there is unknown — an empty file set would be a claim about a directory atlas never read",
         {"path": path},
     )
+
+
+def _fill_subdir(
+    subdir: str, *, rom_stem: str | None, content_dir_name: str | None
+) -> tuple[str, tuple[str, ...]]:
+    """A card subdir with its template segments filled from the content at hand.
+
+    Returns the filled subdir and the holes the content could not fill. A
+    content-less question keeps the token in the path and reports its hole —
+    the same shape the sorted root's ``<content_dir>`` template has always had,
+    so a caller that fills holes already knows what to do with these. The
+    loader guarantees a template is a whole segment, which is what keeps
+    :func:`_base_of`'s segment counting exact over the filled result.
+    """
+    values = {TEMPLATE_ROM_STEM: rom_stem, TEMPLATE_CONTENT_DIR_NAME: content_dir_name}
+    segments: list[str] = []
+    holes: list[str] = []
+    for segment in subdir.split("/"):
+        value = values.get(segment)
+        if segment in values and value is None:
+            holes.append(SUBDIR_TEMPLATE_HOLES[segment])
+        segments.append(value if value is not None else segment)
+    return "/".join(segments), tuple(dict.fromkeys(holes))
 
 
 def _base_of(directory: str, subdir: str | None) -> str:
@@ -2251,7 +2314,9 @@ def _base_of(directory: str, subdir: str | None) -> str:
     return directory
 
 
-def _declared_groups(mode: SaveMode | None, *, directory: str, rom_stem: str) -> tuple[FileGroup, ...]:
+def _declared_groups(
+    mode: SaveMode | None, *, directory: str, rom_stem: str, content_dir_name: str | None
+) -> tuple[FileGroup, ...]:
     """The card's own decomposition of a declared set, each part in its directory.
 
     **Every group the card knows about**, including the ones whose file names
@@ -2273,9 +2338,12 @@ def _declared_groups(mode: SaveMode | None, *, directory: str, rom_stem: str) ->
         names = _card_files(group.files, rom_stem) if group.files is not None else None
         if group.unnamed is None and not names:
             return ()
+        subdir, _ = _fill_subdir(
+            group.subdir or "", rom_stem=rom_stem or None, content_dir_name=content_dir_name
+        )
         groups.append(
             FileGroup(
-                dir=os.path.join(base, *[s for s in (group.subdir or "").split("/") if s]),
+                dir=os.path.join(base, *[s for s in subdir.split("/") if s]),
                 files=names,
                 granularity=group.granularity,
                 role=group.role,
@@ -2289,6 +2357,7 @@ def _file_set_of(
     *,
     directory: str,
     rom_stem: str,
+    content_dir_name: str | None,
     card: CoreCard | None,
     mode: SaveMode | None,
 ) -> FileSet:
@@ -2313,7 +2382,9 @@ def _file_set_of(
             files=declared,
             provenance=f"declared by rule card '{card.key}' (none present yet)",
             complete=mode.complete if mode is not None else False,
-            groups=_declared_groups(mode, directory=directory, rom_stem=rom_stem),
+            groups=_declared_groups(
+                mode, directory=directory, rom_stem=rom_stem, content_dir_name=content_dir_name
+            ),
         )
     return FileSet(
         state=FILE_SET_UNKNOWN,
@@ -2323,24 +2394,35 @@ def _file_set_of(
 
 
 def _nest_card_subdir(
-    directory: str, fallback_dir: str | None, *, card: CoreCard | None, mode: SaveMode | None
-) -> tuple[str, str | None, tuple[str, ...]]:
+    directory: str,
+    fallback_dir: str | None,
+    *,
+    card: CoreCard | None,
+    mode: SaveMode | None,
+    rom_stem: str | None,
+    content_dir_name: str | None,
+) -> tuple[str, str | None, tuple[str, ...], tuple[str, ...]]:
     """Nest a card core's own subtree under the effective save directory.
 
     GET_SAVE_DIRECTORY hands the core the redirected (sorted,
     fallback-resolved) dir (runloop.c:2001, set at runloop.c:8977), and the
     core appends its subdir to whatever it received — so the subdir follows the
-    fallback too. A mode that nests nothing leaves both paths alone.
+    fallback too. A mode that nests nothing leaves both paths alone. A subdir
+    may template a segment on the content (prboom keys the directory by the
+    content's stem, the vitaquake2 family by its directory's basename); the
+    filled spelling is what lands in the answer, and what the content could
+    not fill stays a token in the path with its hole in the fourth element.
     """
     if mode is None or not mode.subdir or mode.root == ROOT_SYSTEM_DIRECTORY:
-        return directory, fallback_dir, ()
+        return directory, fallback_dir, (), ()
+    subdir, holes = _fill_subdir(mode.subdir, rom_stem=rom_stem, content_dir_name=content_dir_name)
     sources: tuple[str, ...] = ()
     if card is not None:
         sources = (
-            f"rule card '{card.key}': core nests its saves under '{mode.subdir}/' in the save directory",
+            f"rule card '{card.key}': core nests its saves under '{subdir}/' in the save directory",
         )
-    nested_fallback = os.path.join(fallback_dir, mode.subdir) if fallback_dir is not None else None
-    return os.path.join(directory, mode.subdir), nested_fallback, sources
+    nested_fallback = os.path.join(fallback_dir, subdir) if fallback_dir is not None else None
+    return os.path.join(directory, subdir), nested_fallback, sources, holes
 
 
 def _content_dir_caveat(directory: str) -> Caveat:
@@ -2647,6 +2729,7 @@ def _observed_at(
             machine,
             directory=directory,
             rom_stem=content.rom_stem,
+            content_dir_name=content.dir_name,
             content_path=content_path,
             card=card,
             mode=mode,
@@ -2670,7 +2753,7 @@ def _against_the_filesystem(
     mode: SaveMode | None,
     declared: FileSet | None,
     reachable: bool,
-) -> tuple[str, str | None, str | None, FileSet | None, tuple[str, ...], tuple[Caveat, ...]]:
+) -> tuple[str, str | None, str | None, FileSet | None, tuple[str, ...], tuple[str, ...], tuple[Caveat, ...]]:
     """What the machine does to a resolved directory: fallback, nesting, and the look.
 
     Split out of :func:`_standard_placement` because it is the one part of that
@@ -2683,6 +2766,10 @@ def _against_the_filesystem(
     Returns ``None`` for the file set where nothing was looked at, so the
     caller keeps whatever it already stated rather than having an unknown
     written over a declaration.
+
+    A card subdir the content could not fill gates the look the same way
+    *reachable* does: the path still carries a template token, so there is no
+    directory to read — the holes travel back for ``needs`` instead.
     """
     fallback_dir: str | None = None
     physical_dir: str | None = None
@@ -2699,10 +2786,15 @@ def _against_the_filesystem(
             machine, intended_dir=final_dir, effective_root=effective_root
         )
         caveats.extend(sorted_dir_caveats)
-    final_dir, fallback_dir, subdir_sources = _nest_card_subdir(
-        final_dir, fallback_dir, card=card, mode=mode
+    final_dir, fallback_dir, subdir_sources, subdir_holes = _nest_card_subdir(
+        final_dir,
+        fallback_dir,
+        card=card,
+        mode=mode,
+        rom_stem=content.rom_stem,
+        content_dir_name=content.dir_name,
     )
-    if reachable:
+    if reachable and not subdir_holes:
         file_set, physical_dir, link_caveats = _observed_at(
             machine,
             directory=final_dir,
@@ -2713,7 +2805,7 @@ def _against_the_filesystem(
             declared=declared,
         )
         caveats.extend(link_caveats)
-    return final_dir, fallback_dir, physical_dir, file_set, subdir_sources, tuple(caveats)
+    return final_dir, fallback_dir, physical_dir, file_set, subdir_sources, subdir_holes, tuple(caveats)
 
 
 def _standard_placement(
@@ -2793,8 +2885,9 @@ def _standard_placement(
     # adding to it, so the files the previous mode wrote are left behind stale.
     if card is not None and mode is not None:
         final_sources.append(f"rule card '{card.key}' governs this placement — {card.provenance}")
+    subdir_holes: tuple[str, ...] = ()
     if not placement.needs:
-        final_dir, fallback_dir, physical_dir, looked_at, subdir_sources, machine_caveats = (
+        final_dir, fallback_dir, physical_dir, looked_at, subdir_sources, subdir_holes, machine_caveats = (
             _against_the_filesystem(
                 machine,
                 intended_dir=final_dir,
@@ -2815,12 +2908,20 @@ def _standard_placement(
     # After the filesystem step, because a card's own subtree is nested onto the
     # directory there and this caveat names directories.
     if card is not None and mode is not None and granularity is not None:
-        all_caveats.extend(_unnamed_tree_caveats(card, mode, directory=final_dir))
+        all_caveats.extend(
+            _unnamed_tree_caveats(
+                card,
+                mode,
+                directory=final_dir,
+                rom_stem=content.rom_stem,
+                content_dir_name=content.dir_name,
+            )
+        )
 
     return SavefilePlacement(
         dir=final_dir,
         root_kind=placement.root_kind,
-        needs=needs_with_file_set(placement.needs, file_set.files),
+        needs=needs_with_file_set([*placement.needs, *subdir_holes], file_set.files),
         file_set=file_set,
         sources=tuple(final_sources),
         caveats=tuple(all_caveats),
