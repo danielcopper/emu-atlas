@@ -1997,6 +1997,101 @@
         }
       }
     },
+    "tyrquake": {
+      "identifiers": {
+        "library_name": [
+          "TyrQuake"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "<content_dir_name>",
+                "files": [
+                  "s0.sav",
+                  "s1.sav",
+                  "s2.sav",
+                  "s3.sav",
+                  "s4.sav",
+                  "s5.sav",
+                  "s6.sav",
+                  "s7.sav",
+                  "s8.sav",
+                  "s9.sav",
+                  "s10.sav",
+                  "s11.sav"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery",
+                "files_established_for": "saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them",
+                "files_citation": "common/menu.c:643 at libretro/tyrquake dfdae65 stuffs 'save s%i' for the twelve slots (MAX_SAVEGAMES, menu.c:487); host_cmd.c:512-513 joins the save directory with the given name and defaults the extension"
+              },
+              {
+                "subdir": "<content_dir_name>",
+                "files": [
+                  "config.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<content_dir_name>": {
+            "unprotected": "the placement's own template — the segment is the basename of the content's directory, composed at load (libretro.c:995-998); nothing about it is a literal the binary could carry"
+          },
+          "config.cfg": {
+            "literal": "%s/config.cfg"
+          },
+          "s0.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s1.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s2.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s3.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s4.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s5.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s6.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s7.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s8.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s9.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s10.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          },
+          "s11.sav": {
+            "unprotected": "composed at run time: the menu stuffs 'save s%i' (menu.c:643) and the save command appends the default extension '.sav' (host_cmd.c:513); the menu's own scan format '%s%cs%i.sav' (menu.c:510) is whole in the shipped binary — a rename of the scheme would take it with it"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/tyrquake at dfdae65, the revision the shipped binary names in its library_version ('v0.62 dfdae65'). retro_load_game takes the content's directory, joins the frontend's save directory with that directory's basename and creates the result: <save dir>/<content dir name>/ (libretro.c:990-1007); where the frontend names no save directory or the create fails, the content's own directory takes its place (:1009-1013). That join happens before the engine re-roots its base directory for content inside a known game directory (id1, hipnotic, rogue, quoth — :1028-1041), so the save subdirectory keeps the content directory's own name — for the usual layout <base>/id1/pak0.pak that is 'id1'. COM_InitFilesystem copies the result into com_savedir (common.c:1854) and every writer builds on it: the save command joins it with the given name and defaults the extension to .sav (host_cmd.c:512-513) — the menu drives that command as 'save s0' through 'save s11' (menu.c:643, twelve slots per MAX_SAVEGAMES at :487) — and Host_WriteConfiguration writes config.cfg beside the slots when the core is torn down (host.c:276, reached from retro_deinit via Sys_Quit and Host_Shutdown — libretro.c:430, :318, host.c:855).\n\nThe slot list is scoped, not absolute: the console's save command accepts any name, so hand-named saves land beside the twelve with the same extension. config.cfg is one file per save subdirectory, shared by everything that shares it — shared-file, role settings. The registered options govern video and input ('tyrquake_resolution', 'tyrquake_rumble', …), none moves a file — one mode. The core answers no memory id (libretro.c:1189-1199 discard the id), which is what the retired record said.",
+        "status": {
+          "always": "[D] Read from source at dfdae65, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
     "virtualjaguar": {
       "identifiers": {
         "library_name": [

@@ -1954,23 +1954,6 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
-    "tyrquake": {
-      "identifiers": {
-        "library_name": [
-          "TyrQuake"
-        ]
-      },
-      "systems": {
-        "quake": {
-          "memory_types": [],
-          "verified_core": "v0.62 dfdae65",
-          "citation": "[V] common/libretro.c:1195-1199 at libretro/tyrquake dfdae65 — retro_get_memory_size discards the id and returns 0. Quake's own save files are written by the game code into its data directory, which this record does not describe."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "uzem": {
       "identifiers": {
         "library_name": [
