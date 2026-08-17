@@ -38,10 +38,10 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
-  builds, `cannonball`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`, `quasi88`, `race`,
-  `pcsx2`, `tyrquake`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`,
-  and the three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a
-  test enforces that no core carries both.
+  builds, `cannonball`, `cap32`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`, `openlara`, `pokemini`, `prboom`,
+  `quasi88`, `race`, `pcsx2`, `tyrquake`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3
+  builds, `desmume2015`, and the three bsnes builds). The card wins, and a record beside it would be a second
+  declaration of one file set — a test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -96,7 +96,9 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`bsnes_hd_beta`** — read, and outcome 2: the same code as bsnes
 - [x] **`bsnes_mercury_accuracy`** — fills `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`cannonball`** — outcome 2, and a card: three score tables under fixed names, shared by everything the core runs
-- [x] **`cap32`** — frontend writes nothing on amstradcpc, gx4000
+- [x] **`cap32`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the core
+      keeps a track-level differencing file per drive-A floppy as `<save_dir>/<image name>.sav` (extension kept —
+      `Game.dsk.sav`), written only when the disk was altered. Its record became a card
 - [x] **`chailove`** — frontend writes nothing on chailove
 - [x] **`craft`** — frontend writes nothing on ports
 - [x] **`desmume`** — frontend writes nothing on nds
@@ -132,7 +134,11 @@ Systems as the record states them, with the outcome each turned out to be.
       a save-RAM file
 - [x] **`gpsp`** — fills `save_ram` on gba
 - [x] **`handy`** — frontend writes nothing on atarilynx
-- [x] **`hatari`** — frontend writes nothing on atarist
+- [x] **`hatari`** — frontend writes nothing on atarist, and the core's own save is write-back into the content itself:
+      a modified floppy lands in its own image at eject and shutdown unless `hatari_writeprotect_floppy` says otherwise,
+      hard-disk content takes writes in place, and Falcon/TT machines keep `hatari.nvram` under `$HOME/.hatari` — a root
+      the card format cannot state. The record stays; the card waits on the mode form that names no file of the core's
+      own (the save is the content file, whose spelling varies with the format)
 - [x] **`holani`** — frontend writes nothing on atarilynx
 - [x] **`jollycv`** — fills `save_ram` on crvision
 - [x] **`kronos`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the core
@@ -177,7 +183,9 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`parallel_n64`** — fills `save_ram` on n64, n64dd
 - [x] **`picodrive`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megacd, megacdjp, megadrive,
       megadrivejp, sega32x, sega32xjp, sega32xna, segacd
-- [x] **`pokemini`** — frontend writes nothing on pokemini
+- [x] **`pokemini`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
+      core writes `<save_dir>/<rom_stem>.eep` itself at unload, only when the cartridge EEPROM was touched — the one
+      card whose placement was live-observed before the card existed. Its record became a card
 - [x] **`potator`** — frontend writes nothing on supervision
 - [x] **`prboom`** — outcome 2, and a card: `<save_dir>/<rom_stem>/` with eight `prbmsav<slot>.dsg` and a written-back
       `prboom.cfg`, all nameable — the `<rom_stem>` subdir template's first core
