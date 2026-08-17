@@ -38,7 +38,7 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
-  builds, `cannonball`, `geolith`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`, `race`, `pcsx2`,
+  builds, `cannonball`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`, `race`, `pcsx2`,
   `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and the three bsnes
   builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces that no
   core carries both.
@@ -135,7 +135,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`hatari`** — frontend writes nothing on atarist
 - [x] **`holani`** — frontend writes nothing on atarilynx
 - [x] **`jollycv`** — fills `save_ram` on crvision
-- [x] **`kronos`** — frontend writes nothing on arcade, consolearcade, mame, saturn, saturnjp, stv
+- [x] **`kronos`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the core
+      keeps its own tree — `kronos/saturn/<stem>.ram` plus optional `-ext*.ram` cartridges, `kronos/stv/<stem>.ram`
+      beside the board eeprom `<romset>.nv`, or Beetle Saturn's flat `.bkr`/`.bcr` behind its share-saves option. Its
+      record became a card
 - [x] **`lowresnx`** — fills `save_ram` on lowresnx
 - [x] **`lutro`** — frontend writes nothing on lutro
 - [x] **`mame`** — read, and it turned out to be outcome 2: three trees of its own below the save directory, so it

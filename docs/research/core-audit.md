@@ -166,7 +166,10 @@ carries, ordered by what is at stake:
    `<driver>.nv` at teardown for the sets that have one (cps_run.cpp:161: Q-Sound/CPS1.5, Pang hardware, EEPROM
    bootlegs), beside the family's option-gated `<driver>.hi`. The record was true ("frontend writes nothing") and is
    retired by the fifth family card.
-3. **`kronos`** — unchanged from above: own subtree `%s%ckronos%csaturn%c%s(-ext*).ram`, `stv` beside it, 47 hits.
+3. ~~**`kronos`**~~ — read 2026-08-17, carded: the tree was real and richer than the hits — `kronos/saturn/<stem>.ram`
+   plus option-keyed `-ext*.ram` cartridges, `kronos/stv/<stem>.ram` beside the board eeprom `<romset>.nv`, and a
+   `kronos_use_beetle_saves` option that moves the Saturn pair to Beetle Saturn's flat `.bkr`/`.bcr` spellings so the
+   two cores can share a library. Both subtrees are created blind at `retro_init`, whichever kind of content ever runs.
 4. **`tyrquake`** — `%s%cs%i.sav`: another port, Quake's own slot saves.
 5. **`quasi88`** — `%s%c%s.srm`: an own writer spelling the frontend's extension.
 6. **`cap32`** (`%s%s%s.sav`) and **`hatari`** (`%s%cauto.sav`, `.A%s%chatari.sav`) — tiered "likely-internal (symbols

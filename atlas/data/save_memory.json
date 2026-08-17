@@ -756,48 +756,6 @@
         "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
-    "kronos": {
-      "identifiers": {
-        "library_name": [
-          "Kronos"
-        ]
-      },
-      "systems": {
-        "arcade": {
-          "memory_types": [],
-          "verified_core": "v2.7.0 6709c1d",
-          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
-        },
-        "consolearcade": {
-          "memory_types": [],
-          "verified_core": "v2.7.0 6709c1d",
-          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
-        },
-        "mame": {
-          "memory_types": [],
-          "verified_core": "v2.7.0 6709c1d",
-          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
-        },
-        "saturn": {
-          "memory_types": [],
-          "verified_core": "v2.7.0 6709c1d",
-          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
-        },
-        "saturnjp": {
-          "memory_types": [],
-          "verified_core": "v2.7.0 6709c1d",
-          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
-        },
-        "stv": {
-          "memory_types": [],
-          "verified_core": "v2.7.0 6709c1d",
-          "citation": "[V] yabause/src/libretro/libretro.c:1758-1761 at libretro/yabause 6709c1d — retro_get_memory_size returns 0 for every id."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "lowresnx": {
       "identifiers": {
         "library_name": [

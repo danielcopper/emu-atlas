@@ -2448,6 +2448,17 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("geolith", "<rom_stem>.mcr", "unprotected"),
             ("geolith", "<rom_stem>.nv", "unprotected"),
             ("geolith", "<rom_stem>.srm", "unprotected"),
+            # Kronos composes every file name at run time from whole path
+            # formats — the segments and option key are literals, the names are
+            # not. The .nv is doubly composed: format plus the ST-V romset name.
+            ("kronos", "<rom_stem>-ext1M.ram", "unprotected"),
+            ("kronos", "<rom_stem>-ext2M.ram", "unprotected"),
+            ("kronos", "<rom_stem>-ext4M.ram", "unprotected"),
+            ("kronos", "<rom_stem>-ext512K.ram", "unprotected"),
+            ("kronos", "<rom_stem>.bcr", "unprotected"),
+            ("kronos", "<rom_stem>.bkr", "unprotected"),
+            ("kronos", "<rom_stem>.nv", "unprotected"),
+            ("kronos", "<rom_stem>.ram", "unprotected"),
             # MAME builds every one of these at run time: the tree segments come
             # from one pooled static table, the directory between them is a
             # build-time define, and the file names are the running machine's
