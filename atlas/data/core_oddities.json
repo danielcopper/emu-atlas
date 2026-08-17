@@ -250,6 +250,43 @@
         }
       }
     },
+    "cap32": {
+      "identifiers": {
+        "library_name": [
+          "cap32"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.dsk.sav"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "files_established_for": "content loaded as a single .dsk floppy image. Every disk attached to drive A gets a differencing file named after that image's own full name, extension kept — a playlist's or an archive's member disks bring their inner names. Tapes, snapshots and cartridges write nothing here, and drive B has no differencing file",
+                "files_citation": "libretro/retro_disk_control.c:90 at libretro-cap32 a5d96c5 — '%s%s%s.' EXT_DIFF_DSK joined from the save directory and path_basename of the attached file, with EXT_DIFF_DSK 'sav' (libretro-core.h:230)"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.dsk.sav": {
+            "literal": "%s%s%s.sav"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro-cap32 at a5d96c5, the revision the shipped binary names in its library_version ('4.5.4 a5d96c5 HI'). The memory interface answers system RAM alone (libretro/libretro-core.c:1525-1535), so RetroArch writes nothing; the core's own save is the floppy differencing file. retro_attach_disk composes <save dir>/<image basename>.sav — the attached file's full name, extension kept — from the format the compiler joined whole into the binary as '%s%s%s.sav' (retro_disk_control.c:90), and every disk inserted into drive A rides through it (retro_insert_image, :113); drive B gets none. attach_disk overlays an existing diff onto the freshly loaded image (cap32/cap32.c:1962-1971, dsk_diff_load at cap32/slots.c:638), and detach_disk writes the file only when the disk was altered, re-reading the original and storing track-level differences (cap32.c:1981-1992, dsk_diff at slots.c:558) — reached at every eject or swap (retro_disk_control.c:147) and at teardown (libretro-core.c:1281, 'disk diff before clean up'). Unlike quasi88's, the file appears only after a write. Where the frontend names no save directory, the system directory takes its place (libretro-core.c:1178-1188). The registered options govern machine, input and video ('cap32_model', 'cap32_ram', …), none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at a5d96c5, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
     "desmume2015": {
       "identifiers": {
         "library_name": [
@@ -1880,6 +1917,41 @@
         "status": {
           "enabled": "root verified via RetroDECK arrangement; filenames from format strings + PCSX2 defaults, not yet live-observed",
           "disabled": "root and slot-1 filename verified from source; slot-2 behaviour in this mode unestablished"
+        }
+      }
+    },
+    "pokemini": {
+      "identifiers": {
+        "library_name": [
+          "PokeMini"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.eep"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.eep": {
+            "literal": "%s%c%s.eep"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/PokeMini source — the shipped binary names only 'v0.60', which every build of this fork reports, so the read is bound to it by whole strings instead: '%s%c%s.eep', '%s%cbios.min' and the registered option keys are all in the shipped .so, and the cited lines carry them. retro_get_memory answers only system RAM (libretro/libretro.c:895-909), so RetroArch writes no save file. The core builds one itself: retro_load_game takes the content's basename, removes the extension (extract_basename, :194-212) and joins it to the frontend's save directory as <save dir>/<rom_stem>.eep (:556-561, the directory read at :551); an existing file is read back at load (:1283-1289), and retro_unload_game writes it out only when the cartridge EEPROM was actually written (:1343-1351) — an untouched game leaves no file. EEPROM sharing is compiled off with no option to turn it on (:500-501), so the file is one per game. A frontend that names no save directory gets an error log and no fallback (:551-555); RetroArch always names one. The registered options govern video, audio and input ('pokemini_video_scale', 'pokemini_lcdfilter', …), none moves a file — one mode.",
+        "status": {
+          "always": "[V-live] A content-keyed .eep was observed in the standard save directory on a RetroDECK arrangement (2026-07-23, the audit's observation). The derivation is read from source, bound to the shipped binary by its whole strings."
         }
       }
     },

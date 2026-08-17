@@ -221,28 +221,6 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
-    "cap32": {
-      "identifiers": {
-        "library_name": [
-          "cap32"
-        ]
-      },
-      "systems": {
-        "amstradcpc": {
-          "memory_types": [],
-          "verified_core": "4.5.4 a5d96c5 HI",
-          "citation": "[V] libretro/libretro-core.c:1525-1535 at libretro-cap32 a5d96c5 — the switch answers RETRO_MEMORY_SYSTEM_RAM alone and falls through to 'not supported' with 0 for everything else."
-        },
-        "gx4000": {
-          "memory_types": [],
-          "verified_core": "4.5.4 a5d96c5 HI",
-          "citation": "[V] libretro/libretro-core.c:1525-1535 at libretro-cap32 a5d96c5 — the switch answers RETRO_MEMORY_SYSTEM_RAM alone and falls through to 'not supported' with 0 for everything else."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "chailove": {
       "identifiers": {
         "library_name": [
@@ -1441,23 +1419,6 @@
       },
       "provenance": {
         "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
-    "pokemini": {
-      "identifiers": {
-        "library_name": [
-          "PokeMini"
-        ]
-      },
-      "systems": {
-        "pokemini": {
-          "memory_types": [],
-          "verified_core": "v0.60",
-          "citation": "[V] libretro/libretro.c:904-909 at libretro/PokeMini — only RETRO_MEMORY_SYSTEM_RAM answers (0x2000); every other id returns 0. The core writes Pokemon Mini EEPROM saves itself, in a file this record does not describe."
-        }
-      },
-      "provenance": {
-        "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
     "potator": {

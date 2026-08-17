@@ -186,9 +186,18 @@ carries, ordered by what is at stake:
    modified content is the save. Each _opened_ image gets its own diff (m3u members, menu picks), which is the scope on
    the declared `<rom_stem>.srm`. The record was true and is retired by the card — the first whose two modes stand on
    different roots.
-6. **`cap32`** (`%s%s%s.sav`) and **`hatari`** (`%s%cauto.sav`, `.A%s%chatari.sav`) — tiered "likely-internal (symbols
-   only)" above; the join formats retire that tier for both.
-7. **`pokemini`** — `%s%c%s.eep` beside a bare `.eep`.
+6. ~~**`cap32`** and **`hatari`**~~ — read 2026-08-17, one carded, one blocked. `cap32`: the binary's `%s%s%s.sav` is
+   the compile-time join of `"%s%s%s." EXT_DIFF_DSK` (retro_disk_control.c:90 at a5d96c5) — a track-level differencing
+   file per drive-A floppy, `<save dir>/<image name>.sav` with the extension kept, written only when the disk was
+   altered (dsk_diff, slots.c:558), at eject, swap and teardown; carded. `hatari`: the `auto.sav`/`hatari.sav` hits are
+   memory-snapshot (savestate) defaults reachable only through the core's own GUI — but the read found the real story:
+   write-back into the content itself (floppy.c:599-634 at 7008194, governed by `hatari_writeprotect_floppy`, default
+   off), hard-disk content written in place, and Falcon/TT `hatari.nvram` under `$HOME/.hatari` — a root the card format
+   cannot state. Audited **multi-option**; the card waits on the mode form that names no file of the core's own.
+7. ~~**`pokemini`**~~ — read 2026-08-17, carded: `%s%c%s.eep` joins the save directory and the content's stem
+   (libretro.c:556-561), read back at load, written at unload only when the cartridge EEPROM was touched (:1343-1351);
+   EEPROM sharing is compiled off. The audit's 07-23 live observation of a content-keyed `.eep` was this chain — the
+   standard-dir verdict became the card that states the file.
 8. **`scummvm`**, **`dosbox_pure`**, **`desmume`**, **`easyrpg`**, **`mednafen_saturn`** — own save schemes as tiered
    above; `easyrpg` and `mednafen_saturn` (`BSC.MCR`) are new since 07-24. `handy` and `mesen` (`.eeprom*`) are
    confirmed where the old tiers put them.
