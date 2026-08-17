@@ -2422,6 +2422,10 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             # extension alone.
             ("fbalpha2012", "<rom_stem>.fs", "unprotected"),
             ("fbalpha2012", "<rom_stem>.hi", "unprotected"),
+            # The CPS-1 build's pair: the same run-time composition, with the
+            # EEPROM's "%s%c%s.nv" format standing where its siblings' ".fs" is.
+            ("fbalpha2012_cps1", "<rom_stem>.hi", "unprotected"),
+            ("fbalpha2012_cps1", "<rom_stem>.nv", "unprotected"),
             ("fbalpha2012_cps2", "<rom_stem>.fs", "unprotected"),
             ("fbalpha2012_cps2", "<rom_stem>.hi", "unprotected"),
             ("fbalpha2012_cps3", "<rom_stem>.fs", "unprotected"),
