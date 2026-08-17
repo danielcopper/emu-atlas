@@ -178,6 +178,26 @@ carries, ordered by what is at stake:
 From the card side, `bsnes_hd_beta` joins: its provenance leans on "unchanged in this respect" toward bsnes rather than
 tracing its own chain — the thinnest citation among the shipped cards.
 
+### The reachability pass over the filled records — 2026-08-17
+
+The genesis_plus_gx wrong row defined a class — a **filled** `memory_types` on a system whose hardware never reaches the
+claimed id — so the whole record set was swept for its two mechanical tells: a record spanning a cartridge family and a
+disc family with the disc rows filled, and one citation string copied verbatim across every system. Four candidates, all
+four read to the source:
+
+- `picodrive` (megacd/megacdjp/segacd) — **correct**, and the instructive twin: its memory interface has an explicit
+  Sega CD branch (libretro.c:1706-1711 at 046e5ff), so RetroArch's `.srm` _is_ the CD backup RAM. Same hardware as
+  genesis_plus_gx, opposite wiring; the copied cartridge-only citations on those rows were strengthened to say so.
+- `mednafen_pce` (tg-cd) and `mednafen_pcfx` — **correct**: the backup RAM is console hardware, answered unconditionally
+  through the interface (beetle-pce libretro.cpp:2066-2070, beetle-pcfx libretro.cpp:1724-1725), so the disc systems
+  reach it exactly as the card systems do.
+- `neocd` — its filled rows come from the 07-24 audit itself ("double persistence"); the own-files half of that verdict
+  sits in the tiers above, not in this class.
+
+One wrong row set in 87 records, corrected in #162. The tell that found it stays cheap to re-run: mixed hardware
+families plus a copied citation is grounds for a per-system reachability trace, and a citation that names reachable code
+still has to name who reaches it.
+
 ## The verification matrix is data, and maintenance is enforced
 
 `atlas/data/core_audit.json` holds this table's machine-readable core: per core, the verdict, a concise evidence `note`,
