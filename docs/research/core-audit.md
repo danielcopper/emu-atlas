@@ -142,6 +142,38 @@ rest:
 19. scanless remainder (`gambatte`, `snes9x*`, `nestopia`, `fceumm`, …) — expected standard via the libretro SRAM
     interface; verdict only after per-core source check
 
+### Refreshed 2026-08-17 — `scripts/sweep_save_literals.py`
+
+The triage above, re-measured mechanically after the record and port-core rounds — the sweep script scans every
+record-covered `.so` for save-looking literals, so the pass now repeats in one command. Of the card suspects above,
+fbneo, geolith, virtualjaguar, melonds, the MAME block and the FB Alpha block are audited and carded. 40 of 87 record
+cores carry hits; most are the libretro-common `retro_save_directory` variable name alone (an _ask_, not a write —
+superbroswar takes the directory and reads it nowhere) or three-character coincidences, and those stay in the tiers
+above. What remains is the open half of the `core-own-writes-unestablished` caveat each of these records honestly
+carries, ordered by what is at stake:
+
+1. **`genesis_plus_gx`** — the sharpest hit, because its records are _filled_, and a filled `memory_types` carries no
+   own-writes caveat: the megacd/segacd entries state `save_ram` while the binary carries the core's own BRAM names
+   (`scd_E.brm`, `scd_J.brm`, `_128Kbit_cart.brm` … `_4Mbit_cart.brm`) and the 07-24 note above already says "per-game
+   Sega CD BRAM modes". If those paths are reached, the CD systems' answer is silently incomplete — the geolith shape,
+   uncaught.
+2. **`fbalpha2012_cps1`** — carries the family's own join formats `%s%c%s.hi` and `%s%c%s.nv` (no `.fs` hit) while its
+   four siblings are carded: the family boundary may have been drawn one build too small.
+3. **`kronos`** — unchanged from above: own subtree `%s%ckronos%csaturn%c%s(-ext*).ram`, `stv` beside it, 47 hits.
+4. **`tyrquake`** — `%s%cs%i.sav`: another port, Quake's own slot saves.
+5. **`quasi88`** — `%s%c%s.srm`: an own writer spelling the frontend's extension.
+6. **`cap32`** (`%s%s%s.sav`) and **`hatari`** (`%s%cauto.sav`, `.A%s%chatari.sav`) — tiered "likely-internal (symbols
+   only)" above; the join formats retire that tier for both.
+7. **`pokemini`** — `%s%c%s.eep` beside a bare `.eep`.
+8. **`scummvm`**, **`dosbox_pure`**, **`desmume`**, **`easyrpg`**, **`mednafen_saturn`** — own save schemes as tiered
+   above; `easyrpg` and `mednafen_saturn` (`BSC.MCR`) are new since 07-24. `handy` and `mesen` (`.eeprom*`) are
+   confirmed where the old tiers put them.
+9. **`melondsds`** — the one flagged core that fills `save_ram`: its `.sav` hits are DSi-NAND-internal paths
+   (`0:/title/%08x/%08x/data/…`), and the open question is whether host files appear beside the frontend's `.srm`.
+
+From the card side, `bsnes_hd_beta` joins: its provenance leans on "unchanged in this respect" toward bsnes rather than
+tracing its own chain — the thinnest citation among the shipped cards.
+
 ## The verification matrix is data, and maintenance is enforced
 
 `atlas/data/core_audit.json` holds this table's machine-readable core: per core, the verdict, a concise evidence `note`,
@@ -231,6 +263,18 @@ as one immediate, and where no other literal in `flash.c` is longer, so the whol
 The answer is not another sweep. **Ask the build**: `Makefile.common` lists its translation units, and a unit named
 there is compiled in whatever the strings say. An anchor for such a name records that, and says why no literal backs it
 — which is the difference between a gap that is understood and one that is merely unexplained.
+
+**A built path is not a written path.** Found 2026-08-17, twice in one reading round: boom3 and vitaquake3 both take
+`GET_SAVE_DIRECTORY`, append a subdirectory, create it with `path_mkdir` — and nothing ever reads the result. boom3's
+`Sys_GetPath(PATH_SAVE)` answers `BUILD_DATADIR`, the ROM tree (checked at the shipped revision too); vitaquake3's
+`homePath` static is never filled, so `fs_homepath` falls back to the ROM tree. The block reads like the placement, and
+the directory even _appears on disk_ — a live observation would "confirm" it — while every byte of it is dead. So step 2
+does not end where a path is built: **trace who reads the variable the block fills.** The tell that found both: grep the
+unit for the variable and compare assignments against reads — a variable only ever assigned is dead, and an `extern`
+array needs that check across every unit the build actually compiles (ask the build, as above). The same round's
+openlara mirror — a reading that stopped at "lets its engine write inside it" when the engine names exactly one
+establishable file — says it from the other side: the shell/engine boundary is where readings die early. Carry the chain
+to the write call, in both directions.
 
 Version drift is real and recorded: LRPS2 changed its option scheme between generations (`pcsx2_memcard_slot_1/2` →
 `pcsx2_shared_memory_cards`), observed in a live `retroarch-core-options.cfg`. Cards state which shipped version they
