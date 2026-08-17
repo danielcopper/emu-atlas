@@ -220,6 +220,17 @@ verdict here:
   cost a wrong absence: "no texture path literal in any encoding" was recorded for LRPS2 when both components were in
   the binary all along. **Search raw bytes, not tokens** — `data.find(b"textures")` over the whole file, then read back
   the enclosing NUL-delimited run to see what the name is a suffix of.
+- The **scan itself** hides things, which is the one failure above that is not the build's doing. A pass that keeps only
+  runs of printable ASCII drops every literal carrying a newline or a tab — which is most format strings and all log
+  lines, exactly the material step 1 exists to find. Keep `\t`, `\n` and `\r` inside a run and cut only on NUL.
+
+**What to do when a name is too short to be a string at all.** The three mechanisms above say absence proves nothing;
+they do not say what proves presence, and knowing only the first half is what makes this mistake repeatable. It was made
+twice more after the list was written — for RACE, whose `.ngf` extension is a three-character literal a compiler stores
+as one immediate, and where no other literal in `flash.c` is longer, so the whole unit leaves no trace a scan can see.
+The answer is not another sweep. **Ask the build**: `Makefile.common` lists its translation units, and a unit named
+there is compiled in whatever the strings say. An anchor for such a name records that, and says why no literal backs it
+— which is the difference between a gap that is understood and one that is merely unexplained.
 
 Version drift is real and recorded: LRPS2 changed its option scheme between generations (`pcsx2_memcard_slot_1/2` →
 `pcsx2_shared_memory_cards`), observed in a live `retroarch-core-options.cfg`. Cards state which shipped version they
