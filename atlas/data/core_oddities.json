@@ -919,6 +919,138 @@
         }
       }
     },
+    "kronos": {
+      "identifiers": {
+        "library_name": [
+          "Kronos"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "kronos_use_beetle_saves"
+        },
+        "modes": {
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "kronos/saturn",
+                "files": [
+                  "<rom_stem>.ram"
+                ],
+                "observe": [
+                  "<rom_stem>.ram",
+                  "<rom_stem>-ext512K.ram",
+                  "<rom_stem>-ext1M.ram",
+                  "<rom_stem>-ext2M.ram",
+                  "<rom_stem>-ext4M.ram"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              },
+              {
+                "subdir": "kronos/stv",
+                "files": [
+                  "<rom_stem>.ram"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": "kronos/stv",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "ST-V content whose file stem is the set's own name. The eeprom file is named after the romset the zip's contents identified as (STVGetSingle), not after the zip — for sets named as the driver list names them, the two are equal",
+                "files_citation": "ctrl/src/stv.c:3075 (write) and :3052 (read) at FCare/Kronos 6709c1d — '%s/%s.nv' joined from the eeprom directory and the romset name"
+              }
+            ]
+          },
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.bkr"
+                ],
+                "observe": [
+                  "<rom_stem>.bkr",
+                  "<rom_stem>.bcr"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              },
+              {
+                "subdir": "kronos/stv",
+                "files": [
+                  "<rom_stem>.ram"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": "kronos/stv",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "ST-V content whose file stem is the set's own name. The eeprom file is named after the romset the zip's contents identified as (STVGetSingle), not after the zip — for sets named as the driver list names them, the two are equal",
+                "files_citation": "ctrl/src/stv.c:3075 (write) and :3052 (read) at FCare/Kronos 6709c1d — '%s/%s.nv' joined from the eeprom directory and the romset name"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "kronos_use_beetle_saves": {
+            "literal": "kronos_use_beetle_saves"
+          },
+          "kronos": {
+            "literal": "%s%ckronos%csaturn%c%s.ram"
+          },
+          "saturn": {
+            "literal": "%s%ckronos%csaturn%c%s.ram"
+          },
+          "stv": {
+            "literal": "%s%ckronos%cstv%c%s.ram"
+          },
+          "<rom_stem>.ram": {
+            "unprotected": "composed at run time from the content's stem and the whole formats '%s%ckronos%csaturn%c%s.ram' / '%s%ckronos%cstv%c%s.ram'"
+          },
+          "<rom_stem>-ext512K.ram": {
+            "unprotected": "composed from '%s%ckronos%csaturn%c%s-ext512K.ram', whole in the binary"
+          },
+          "<rom_stem>-ext1M.ram": {
+            "unprotected": "composed from '%s%ckronos%csaturn%c%s-ext1M.ram', whole in the binary"
+          },
+          "<rom_stem>-ext2M.ram": {
+            "unprotected": "composed from '%s%ckronos%csaturn%c%s-ext2M.ram', whole in the binary"
+          },
+          "<rom_stem>-ext4M.ram": {
+            "unprotected": "composed from '%s%ckronos%csaturn%c%s-ext4M.ram', whole in the binary"
+          },
+          "<rom_stem>.nv": {
+            "unprotected": "composed from '%s/%s.nv', whole in the binary, and the romset name"
+          },
+          "<rom_stem>.bkr": {
+            "unprotected": "composed from '%s%c%s.bkr', whole in the binary"
+          },
+          "<rom_stem>.bcr": {
+            "unprotected": "composed from '%s%c%s.bcr', whole in the binary"
+          }
+        }
+      },
+      "provenance": {
+        "source": "Kronos source at 6709c1d, the revision the shipped binary names ('v2.7.0 6709c1d'). retro_get_memory_size returns 0 for every id (yabause/src/libretro/libretro.c:1758-1761), so RetroArch writes no save file; the retired record said so and the card replaces it. The core takes GET_SAVE_DIRECTORY with no fallback (:1540-1543) and creates both of its subtrees blind at retro_init (:1545-1549) — a Saturn-only machine carries an empty kronos/stv/ and an ST-V-only one an empty kronos/saturn/.\n\nSaturn content: the internal backup RAM is one file per game, kronos/saturn/<stem>.ram (:1712), handed to the emulator as its backup path (:1588, BackupInit at ctrl/src/yabause.c:272; the writer is BackupFlush, sys/memory/src/memory.c:1319, fopen 'wb' at :1246). A backup-RAM addon cartridge adds kronos/saturn/<stem>-ext{512K,1M,2M,4M}.ram, keyed by the kronos_addon_cartridge option (:1309-1315, option values at :926-946) — and the emulator may auto-select a cartridge per game (yinit.auto_cart, :1596), so all four spellings ride as observation candidates while only the certain .ram is declared. With kronos_use_beetle_saves enabled the same two saves move to Beetle Saturn's flat spellings in the save root — <stem>.bkr for the internal RAM (:1710) and <stem>.bcr for the cartridge (:1304) — so a library shared between the two cores reads one set of files; the option registers 'disabled' as its default and the probe reads it.\n\nST-V content (a zip the driver list identifies, :1646-1650) ignores the option: the machine's backup RAM is kronos/stv/<stem>.ram (:1684) and the board's eeprom is written beside it as <romset>.nv (ctrl/src/stv.c:3075) — named after the identified romset, which equals the stem for sets named as the driver list names them, and the scope says so.",
+        "status": {
+          "disabled": "[D] Read from source at the revision the shipped binary names, and this build's own default. Not live-observed.",
+          "enabled": "[D] Read from source at the same revision. Beetle Saturn's spellings, chosen to share a library with that core. Not live-observed."
+        }
+      }
+    },
     "mame": {
       "identifiers": {
         "library_name": [

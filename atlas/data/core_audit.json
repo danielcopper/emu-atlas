@@ -209,6 +209,17 @@
       },
       "kind": "libretro"
     },
+    "kronos": {
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro",
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id. Writes its own tree under the save root: kronos/saturn/<stem>.ram plus optional -ext*.ram addon cartridges, kronos/stv/<stem>.ram plus the board eeprom <romset>.nv — or Beetle Saturn's flat <stem>.bkr/.bcr when kronos_use_beetle_saves is on. Both subtrees are created blind at retro_init. Supersedes the 07-24 queue triage. Not live-observed."
+    },
     "mame": {
       "verdict": "card",
       "per_game_capable": true,

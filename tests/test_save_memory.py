@@ -219,8 +219,8 @@ class TestPackagedRecords:
         records = list(load_save_memory())
         answers = [record for record in records if record.unanimous() is not None]
         silent = sorted(record.key for record in records if record.unanimous() is None)
-        assert len(records) == 86
-        assert len(answers) == 83
+        assert len(records) == 85
+        assert len(answers) == 82
         # All three switch on the loaded content's platform before answering,
         # which is the whole reason the records are keyed by system: mGBA
         # answers a Game Boy cartridge's clock and a Game Boy Advance
