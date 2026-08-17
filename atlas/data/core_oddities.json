@@ -360,6 +360,74 @@
         }
       }
     },
+    "fbalpha2012_cps1": {
+      "identifiers": {
+        "library_name": [
+          "FB Alpha 2012 CPS-1"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "fba2012cps1_hiscores"
+        },
+        "modes": {
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_citation": "src/burn/devices/eeprom.cpp:110 (write, fopen 'wb' at :116) and :88 (read) at libretro/fbalpha2012_cps1 v0.2.97.28"
+              },
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.hi"
+                ],
+                "granularity": "per-game-file",
+                "role": "high-score"
+              }
+            ]
+          },
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.nv": {
+            "unprotected": "composed at run time from the driver's name and '%s%c%s.nv', which is whole in the shipped binary — a rename of the scheme would take the format with it"
+          },
+          "<rom_stem>.hi": {
+            "unprotected": "composed at run time from the driver's name and '%s%c%s.hi', which is whole in the shipped binary — the same format its four carded siblings anchor"
+          },
+          "fba2012cps1_hiscores": {
+            "literal": "fba2012cps1_hiscores"
+          }
+        }
+      },
+      "provenance": {
+        "source": "FB Alpha 2012 CPS-1 source at the version the shipped binary names ('v0.2.97.28'). The core answers no libretro memory id (retro_get_memory_size returns 0, src/burner/libretro/libretro.cpp:2251), so RetroArch writes no save file. Unlike its four carded siblings this build carries no BurnStateSave call and no '.fs' format at all — its non-volatile half is the boards' EEPROM: EEPROMExit writes <save dir>/<driver>.nv at driver teardown (src/burn/devices/eeprom.cpp:102-121, the path at :110), and the teardown reaches it exactly for the boards that have one — Q-Sound/CPS1.5 sets, Pang-hardware sets and EEPROM bootlegs (src/burn/drv/capcom/cps_run.cpp:161: PangEEP || Cps1Qs == 1 || CpsBootlegEEPROM). For plain dipswitch CPS-1 boards no .nv ever appears — the set is an upper bound as always. The save directory comes from GET_SAVE_DIRECTORY with the content's own directory as the fallback (libretro.cpp:2191-2198).\n\nThe '.hi' score table is the family's: HiscoreExit writes <save dir>/<driver>.hi (src/burn/hiscore.cpp:400-415) from BurnDrvExit (src/burn/burn.cpp:492), and nothing is collected or written while the hiscore option is off (hiscore.cpp:206, EnableHiscores read at libretro.cpp:1725-1731).",
+        "status": {
+          "enabled": "[D] Read from source. Reached where the core's hiscore option is on; the .nv half is independent of it. Not live-observed.",
+          "disabled": "[D] Read from source. Only the boards' EEPROM is written, and only for boards that have one. Not live-observed."
+        }
+      }
+    },
     "fbalpha2012_cps2": {
       "identifiers": {
         "library_name": [

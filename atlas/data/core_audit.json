@@ -112,6 +112,17 @@
       },
       "kind": "libretro"
     },
+    "fbalpha2012_cps1": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id. The family's fifth carded build, with a shape of its own: no BurnStateSave and no '.fs' — the non-volatile half is the boards' EEPROM, written as <driver>.nv at teardown for the sets that have one (Q-Sound/CPS1.5, Pang hardware, EEPROM bootlegs), beside the family's option-gated <driver>.hi. The record that said 'frontend writes nothing' was true and is retired by the card. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "fbalpha2012_cps2": {
       "verdict": "card",
       "per_game_capable": true,

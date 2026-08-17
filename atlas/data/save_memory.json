@@ -404,33 +404,6 @@
         "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
-    "fbalpha2012_cps1": {
-      "identifiers": {
-        "library_name": [
-          "FB Alpha 2012 CPS-1"
-        ]
-      },
-      "systems": {
-        "cps": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.28",
-          "citation": "[V] src/burner/libretro/libretro.cpp:2250-2251 at libretro/fbalpha2012_cps1 v0.2.97.28 — retro_get_memory_size returns 0 for every id and its data twin returns 0 beside it, so RetroArch writes no save file. What makes this build a record rather than a card is a call it does not make: its three sibling builds from the same FB Alpha tree write <save_dir>/<driver>.fs themselves at unload through BurnStateSave, and this one has no BurnStateSave and no BurnStateLoad anywhere in the unit — it asks the frontend for a save directory (:2189-2198) and never writes into it. Whether some other translation unit does is what core-own-writes-unestablished leaves open."
-        },
-        "cps1": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.28",
-          "citation": "[V] src/burner/libretro/libretro.cpp:2250-2251 at libretro/fbalpha2012_cps1 v0.2.97.28 — retro_get_memory_size returns 0 for every id and its data twin returns 0 beside it, so RetroArch writes no save file. What makes this build a record rather than a card is a call it does not make: its three sibling builds from the same FB Alpha tree write <save_dir>/<driver>.fs themselves at unload through BurnStateSave, and this one has no BurnStateSave and no BurnStateLoad anywhere in the unit — it asks the frontend for a save directory (:2189-2198) and never writes into it. Whether some other translation unit does is what core-own-writes-unestablished leaves open."
-        },
-        "fba": {
-          "memory_types": [],
-          "verified_core": "v0.2.97.28",
-          "citation": "[V] src/burner/libretro/libretro.cpp:2250-2251 at libretro/fbalpha2012_cps1 v0.2.97.28 — retro_get_memory_size returns 0 for every id and its data twin returns 0 beside it, so RetroArch writes no save file. What makes this build a record rather than a card is a call it does not make: its three sibling builds from the same FB Alpha tree write <save_dir>/<driver>.fs themselves at unload through BurnStateSave, and this one has no BurnStateSave and no BurnStateLoad anywhere in the unit — it asks the frontend for a save directory (:2189-2198) and never writes into it. Whether some other translation unit does is what core-own-writes-unestablished leaves open."
-        }
-      },
-      "provenance": {
-        "source": "the binary names a version without a commit, so the pin is that version"
-      }
-    },
     "fceumm": {
       "identifiers": {
         "library_name": [

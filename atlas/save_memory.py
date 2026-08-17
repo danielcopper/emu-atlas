@@ -207,13 +207,14 @@ class SaveMemoryRecord:
         """The one answer this record gives for every system it covers, if it gives one.
 
         A record is keyed by core *and* system because one core is not one
-        behaviour — but most cores are: 85 of the 87 shipped records state the
-        same memory ids for every system they cover. The two that do not are
-        mGBA, the record the key was designed around, and VBA-M, whose memory
-        function switches on the loaded image type first. Where they agree,
-        the answer holds whichever of those systems the content turns out to
-        be, and stating it is a reading of the record rather than a guess about
-        the content.
+        behaviour — but most cores are: 83 of the 86 shipped records state the
+        same memory ids for every system they cover. The three that do not are
+        mGBA, the record the key was designed around, VBA-M, whose memory
+        function switches on the loaded image type first, and Genesis Plus GX,
+        whose CD systems never reach the id its cartridge systems fill. Where
+        they agree, the answer holds whichever of those systems the content
+        turns out to be, and stating it is a reading of the record rather than
+        a guess about the content.
 
         Where they disagree this is ``None``, and the caller who wants an
         answer names the system. That is not a formality: mGBA answers a Game

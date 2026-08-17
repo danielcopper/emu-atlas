@@ -37,11 +37,11 @@ covers the answer.
 
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
-- **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
-  builds that write past the frontend, `cannonball`, `geolith`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`,
-  `race`, `pcsx2`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and
-  the three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a test
-  enforces that no core carries both.
+- **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
+  builds, `cannonball`, `geolith`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`, `race`, `pcsx2`,
+  `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and the three bsnes
+  builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces that no
+  core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -109,7 +109,9 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`ecwolf`** — frontend writes nothing on ports
 - [x] **`fbalpha2012`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
       core keeps `<driver>.fs` and, behind its hiscore option, `<driver>.hi`. Its record was replaced by a card
-- [x] **`fbalpha2012_cps1`** — frontend writes nothing on cps, cps1, fba
+- [x] **`fbalpha2012_cps1`** — read as outcome 3 first and re-read as outcome 2, like `fbalpha2012` before it: the
+      frontend really writes nothing, and the core keeps the boards' EEPROM as `<driver>.nv` (for the sets that have
+      one) beside the family's option-gated `<driver>.hi`. No `.fs` in this build — its record became the fifth card
 - [x] **`fbalpha2012_cps2`** — outcome 2, and a card: `<driver>.fs` plus `<driver>.hi` behind its hiscore option
 - [x] **`fbalpha2012_cps3`** — the same card shape under its own option key
 - [x] **`fbalpha2012_neogeo`** — outcome 2, and the one build of the family with no high scores: `<driver>.fs` alone

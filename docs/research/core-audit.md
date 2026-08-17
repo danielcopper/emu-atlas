@@ -161,8 +161,11 @@ carries, ordered by what is at stake:
    `_cart_size` — shared region-keyed `scd_E/U/J.brm` or per-game `<rom>.brm`, plus the RAM cart's `<size>Kbit_cart.brm`
    spellings; libretro.c:1383-1500, written by bram_load/bram_save at :3675/:3730), which is the multi-option shape the
    single-option card schema cannot express — the same gap swanstation sits on.
-2. **`fbalpha2012_cps1`** — carries the family's own join formats `%s%c%s.hi` and `%s%c%s.nv` (no `.fs` hit) while its
-   four siblings are carded: the family boundary may have been drawn one build too small.
+2. ~~**`fbalpha2012_cps1`**~~ — read 2026-08-17 (#158): the boundary really was one build too small, with a shape of its
+   own — no `BurnStateSave` and no `.fs` in this build; the non-volatile half is the boards' EEPROM, written as
+   `<driver>.nv` at teardown for the sets that have one (cps_run.cpp:161: Q-Sound/CPS1.5, Pang hardware, EEPROM
+   bootlegs), beside the family's option-gated `<driver>.hi`. The record was true ("frontend writes nothing") and is
+   retired by the fifth family card.
 3. **`kronos`** — unchanged from above: own subtree `%s%ckronos%csaturn%c%s(-ext*).ram`, `stv` beside it, 47 hits.
 4. **`tyrquake`** — `%s%cs%i.sav`: another port, Quake's own slot saves.
 5. **`quasi88`** — `%s%c%s.srm`: an own writer spelling the frontend's extension.
