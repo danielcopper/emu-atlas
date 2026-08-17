@@ -348,6 +348,45 @@ class TestACardRootedInTheContentsOwnTree:
         assert p.file_set.files == ("libretro.cfg",)
 
 
+class TestACardRootedInTheLaunchsWorkingDirectory:
+    """DeSmuME 2015 writes relative to the launching process's cwd — a launch property."""
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, SAVES_KEEP: ""}
+    DS_ROM = "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds"
+
+    def _query(self, files):
+        rd = _retrodeck(
+            files,
+            cores={f"{DEPLOY}/desmume2015_libretro.so": {"library_name": "DeSmuME 2015"}},
+        )
+        return placed(
+            rd.savefile_location(content_path=self.DS_ROM, core_so="desmume2015_libretro.so")
+        )
+
+    def test_the_directory_is_the_launchs_and_stays_a_hole(self):
+        p = self._query(self.FILES)
+        assert p.root_kind == atlas.ROOT_WORKING_DIRECTORY
+        assert p.dir == "<cwd>"
+        assert p.needs == (atlas.HOLE_CWD,)
+        # The names are established even though the directory is not — that is
+        # the whole reason this root exists rather than a refusal.
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ("Game (Europe).dsv", "Game (Europe).dsv.bak")
+        assert [g.dir for g in p.file_set.groups] == ["<cwd>"]
+
+    def test_the_caveat_says_whose_property_the_directory_is(self):
+        p = self._query(self.FILES)
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT)
+        assert caveat.data["core"] == "desmume2015"
+
+    def test_nothing_on_the_machine_is_read_for_a_template(self):
+        # A path that is still a template names nothing to look at: no
+        # observation, no link view, no fallback — the machine has no say here.
+        p = self._query(self.FILES)
+        assert p.physical_dir is None
+        assert p.fallback_dir is None
+
+
 class TestFlycastResolution:
     def test_default_shared_vmus_in_system_directory(self):
         p = _flycast_query(

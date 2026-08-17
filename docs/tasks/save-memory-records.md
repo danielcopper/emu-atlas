@@ -39,9 +39,9 @@ covers the answer.
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
   builds that write past the frontend, `cannonball`, `geolith`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`,
-  `race`, `pcsx2`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, and the three bsnes
-  builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces that no
-  core carries both.
+  `race`, `pcsx2`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and
+  the three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a test
+  enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -64,17 +64,10 @@ Reading these is the same work as reading a default core, and each one answers f
 for. Measured on the reference machine, 87 catalogued cores had no record and no card when this round started; the order
 is by what a person is likely to choose, not alphabetical.
 
-Some of this tier is read and waiting on the card family rather than on a reading. The arcade round turned out to be
-mostly this: nine of its twelve cores write past the frontend, which is the opposite ratio to every round before it and
-follows from what the hardware is — an arcade board's memory is NVRAM the machine owns, not a cartridge save the
-frontend can name.
-
-- [ ] **`desmume2015`** — writes `<rom_stem>.dsv`, and the card cannot state where: DeSmuME composes the path from a
-      variable this build never sets, so the file lands relative to the process's working directory. A card's every mode
-      names a root, and there is no root to name (#148)
-
-One more is read and blocked on something else. `gearlynx` fills `save_ram` and would be a plain record, but no
-catalogue entry names it, so there is no system to key the record by — the third tier's whole problem, tracked in #133.
+Nothing in this tier waits on the card family any more — every read card candidate is carded, the last of them
+(`desmume2015`) once the `working_directory` root existed to state it. One core is read and blocked on something else:
+`gearlynx` fills `save_ram` and would be a plain record, but no catalogue entry names it, so there is no system to key
+the record by — the third tier's whole problem, tracked in #133.
 
 ### Cores shipped but never catalogued
 
@@ -107,6 +100,8 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`chailove`** — frontend writes nothing on chailove
 - [x] **`craft`** — frontend writes nothing on ports
 - [x] **`desmume`** — frontend writes nothing on nds
+- [x] **`desmume2015`** — outcome 2, and a card: `<rom_stem>.dsv` (with a `.dsv.bak` once overwritten) relative to the
+      launching process's working directory — the `working_directory` root's first and only core
 - [x] **`dice`** — frontend writes nothing on arcade, mame
 - [x] **`dirksimple`** — frontend writes nothing on daphne, laserdisc
 - [x] **`dosbox_pure`** — frontend writes nothing on dos, pc, windows3x, windows9x

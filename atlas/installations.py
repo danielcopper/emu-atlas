@@ -139,16 +139,19 @@ from atlas.placement import (
     CAVEAT_PATCH_FORMATS_UNESTABLISHED,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
     CAVEAT_SOFT_PATCHING_APPLIES,
+    CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
     CAVEAT_SAVE_DIR_UNLISTABLE,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     HOLE_CONTENT_DIR,
+    HOLE_CWD,
     PATCH_FORMATS,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
+    ROOT_WORKING_DIRECTORY,
     STATE_ROOT_CONTENT_DIRECTORY,
     SUBDIR_TEMPLATE_HOLES,
     TEMPLATE_CONTENT_DIR_NAME,
@@ -3152,6 +3155,67 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
     )
 
 
+def _working_directory_placement(
+    machine: Machine,
+    *,
+    sandbox: _Sandbox,
+    cfg_label: str,
+    card: CoreCard,
+    mode: SaveMode,
+    granularity: Granularity | None,
+    layers: Sequence[_CfgLayer],
+    content: _Content,
+    retroarch_config_dir: str,
+    sources: tuple[str, ...],
+    caveats: tuple[Caveat, ...],
+) -> SavefilePlacement:
+    """The placement for a card whose core writes relative to the launch's cwd.
+
+    DeSmuME 2015 composes its save path from a variable its libretro build
+    never fills, so the file lands relative to the working directory of
+    whatever process loaded the core — a property of the launch, not of the
+    machine, so no read here can resolve it. The answer stays a ``<cwd>``
+    template with its hole in ``needs``: the caller is often the launcher,
+    and the launcher knows its own working directory. The caveat carries the
+    sentence, so the template is never mistaken for a directory atlas merely
+    failed to fill.
+
+    The unused parameters keep the three diverted routes one signature, which
+    is what lets the router pick a route instead of a call shape.
+    """
+    del sandbox, cfg_label, layers, retroarch_config_dir
+    root = _SystemRoot(
+        "<cwd>",
+        ROOT_WORKING_DIRECTORY,
+        needs=(HOLE_CWD,),
+        reachable=False,
+        sources=(
+            f"rule card '{card.key}': the core writes relative to the launching process's "
+            "working directory",
+        ),
+    )
+    launch_caveat = Caveat(
+        CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
+        f"core {card.key!r} composes its save path from a location its build never sets, so the "
+        "file lands relative to the working directory of whatever process loads the core — a "
+        "property of the launch, not of the machine. The file names are stated; fill 'cwd' with "
+        "the launcher's working directory to complete the path",
+        {"core": card.key},
+    )
+    return _card_root_placement(
+        machine,
+        root=root,
+        root_sentence="core writes relative to the launching process's working directory",
+        also_under=mode.also_under,
+        card=card,
+        mode=mode,
+        granularity=granularity,
+        content=content,
+        sources=sources,
+        caveats=(*caveats, launch_caveat),
+    )
+
+
 def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> SavefilePlacement | Unresolved:
     """Where the savefile lands: the shared chain, then the per-core rule cards.
 
@@ -3208,11 +3272,11 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
         caveats.extend(applied.caveats)
 
     if card is not None and card_mode is not None and card_mode.root != ROOT_SAVEFILE_DIRECTORY:
-        diverted = (
-            _system_directory_placement
-            if card_mode.root == ROOT_SYSTEM_DIRECTORY
-            else _content_directory_placement
-        )
+        diverted = {
+            ROOT_SYSTEM_DIRECTORY: _system_directory_placement,
+            ROOT_CONTENT_DIRECTORY: _content_directory_placement,
+            ROOT_WORKING_DIRECTORY: _working_directory_placement,
+        }[card_mode.root]
         return diverted(
             machine,
             sandbox=query.sandbox,

@@ -3339,6 +3339,95 @@
           }
         }
       }
+    },
+    {
+      "name": "a-save-whose-directory-is-the-launchs-own",
+      "rationale": "DeSmuME 2015 composes its save path from a variable its libretro build never fills, so <rom_stem>.dsv (and the .dsv.bak the core makes before overwriting) lands relative to the working directory of whatever process loaded the core. That is a property of the launch, not of the machine, so the answer's root is working_directory: dir is the <cwd> template, needs carries the cwd hole only the launcher can fill, the file names are stated anyway — the reading is not wasted — and the save-dir-launch-dependent caveat carries the sentence. Nothing on the machine is read for a template: no observation, no link view, no fallback.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME 2015\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume2015_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
+            "library_name": "DeSmuME 2015",
+            "library_version": "git af397ff"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "<cwd>",
+          "root_kind": "working_directory",
+          "needs": [
+            "cwd"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Game (Europe).dsv",
+              "Game (Europe).dsv.bak"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "<cwd>",
+                "files": [
+                  "Game (Europe).dsv",
+                  "Game (Europe).dsv.bak"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "desmume2015",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "core": "desmume2015"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }
