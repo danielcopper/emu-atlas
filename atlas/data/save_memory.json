@@ -654,18 +654,14 @@
           "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
         },
         "megacd": {
-          "memory_types": [
-            "save_ram"
-          ],
+          "memory_types": [],
           "verified_core": "v1.7.4 46a5521",
-          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+          "citation": "[V] core/genesis.c:162-175 at Genesis-Plus-GX 46a5521 — for SYSTEM_MCD the init runs scd_init() instead of md_cart_init(), so sram_init() (md_cart.c:403) never runs and sram.on stays 0 (sram.c:65); retro_get_memory_size therefore answers 0 for every id on CD content (libretro.c:3765-3769) and RetroArch writes no file. The earlier save_ram claim cited the memory switch alone, which is reachable code — but not on this system. The console's backup RAM is the core's own writing: bram_load/bram_save at load and unload (libretro.c:3675, :3730), under names three interacting options select (libretro.c:1383-1500) — card-family work, queued in docs/research/core-audit.md."
         },
         "megacdjp": {
-          "memory_types": [
-            "save_ram"
-          ],
+          "memory_types": [],
           "verified_core": "v1.7.4 46a5521",
-          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+          "citation": "[V] core/genesis.c:162-175 at Genesis-Plus-GX 46a5521 — for SYSTEM_MCD the init runs scd_init() instead of md_cart_init(), so sram_init() (md_cart.c:403) never runs and sram.on stays 0 (sram.c:65); retro_get_memory_size therefore answers 0 for every id on CD content (libretro.c:3765-3769) and RetroArch writes no file. The earlier save_ram claim cited the memory switch alone, which is reachable code — but not on this system. The console's backup RAM is the core's own writing: bram_load/bram_save at load and unload (libretro.c:3675, :3730), under names three interacting options select (libretro.c:1383-1500) — card-family work, queued in docs/research/core-audit.md."
         },
         "megadrive": {
           "memory_types": [
@@ -682,11 +678,9 @@
           "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
         },
         "segacd": {
-          "memory_types": [
-            "save_ram"
-          ],
+          "memory_types": [],
           "verified_core": "v1.7.4 46a5521",
-          "citation": "[V] libretro/libretro.c:3759-3784 at Genesis-Plus-GX 46a5521 — RETRO_MEMORY_SAVE_RAM answers 0 where the cartridge has no SRAM (!sram.on), the maximum 0x10000 while no game is running, and otherwise the length of the SRAM actually written; so the file exists for cartridges with battery RAM and only once something has been saved. The switch has no RETRO_MEMORY_RTC case, so no .rtc is ever written."
+          "citation": "[V] core/genesis.c:162-175 at Genesis-Plus-GX 46a5521 — for SYSTEM_MCD the init runs scd_init() instead of md_cart_init(), so sram_init() (md_cart.c:403) never runs and sram.on stays 0 (sram.c:65); retro_get_memory_size therefore answers 0 for every id on CD content (libretro.c:3765-3769) and RetroArch writes no file. The earlier save_ram claim cited the memory switch alone, which is reachable code — but not on this system. The console's backup RAM is the core's own writing: bram_load/bram_save at load and unload (libretro.c:3675, :3730), under names three interacting options select (libretro.c:1383-1500) — card-family work, queued in docs/research/core-audit.md."
         },
         "sg-1000": {
           "memory_types": [
