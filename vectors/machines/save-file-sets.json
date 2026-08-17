@@ -3496,6 +3496,205 @@
           "granularity": null
         }
       }
+    },
+    {
+      "name": "a-quake-port-keyed-by-the-contents-directory",
+      "rationale": "tyrquake answers no libretro memory id and joins the frontend's save directory with the basename of the content's directory — for the usual layout <base>/id1/pak0.pak that is 'id1', kept even when the engine re-roots its basedir one level up. Inside, everything is nameable: Quake's twelve menu-slot savegames s0.sav-s11.sav (role battery, scoped because the console's save command takes a free name) beside a written-back config.cfg (role settings), so the flat list is their concatenation and the roles keep a save sync from carrying the config.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>quake</name><path>%ROMPATH%/quake</path>\n    <command label=\"TyrQuake\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/tyrquake_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/quake/id1/pak0.pak": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/tyrquake_libretro.so": {
+            "library_name": "TyrQuake",
+            "library_version": "v0.62 dfdae65"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "quake",
+          "content_path": "/mnt/sd/retrodeck/roms/quake/id1/pak0.pak"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/id1",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "s0.sav",
+              "s1.sav",
+              "s2.sav",
+              "s3.sav",
+              "s4.sav",
+              "s5.sav",
+              "s6.sav",
+              "s7.sav",
+              "s8.sav",
+              "s9.sav",
+              "s10.sav",
+              "s11.sav",
+              "config.cfg"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/id1",
+                "files": [
+                  "s0.sav",
+                  "s1.sav",
+                  "s2.sav",
+                  "s3.sav",
+                  "s4.sav",
+                  "s5.sav",
+                  "s6.sav",
+                  "s7.sav",
+                  "s8.sav",
+                  "s9.sav",
+                  "s10.sav",
+                  "s11.sav"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/id1",
+                "files": [
+                  "config.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "tyrquake",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "tyrquake",
+                "mode": "",
+                "files": "s0.sav, s1.sav, s2.sav, s3.sav, s4.sav, s5.sav, s6.sav, s7.sav, s8.sav, s9.sav, s10.sav, s11.sav, config.cfg",
+                "files_established_for": "saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them",
+                "citation": "common/menu.c:643 at libretro/tyrquake dfdae65 stuffs 'save s%i' for the twelve slots (MAX_SAVEGAMES, menu.c:487); host_cmd.c:512-513 joins the save directory with the given name and defaults the extension"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-sorted-root-hole-keeps-the-cards-subdir",
+      "rationale": "Content sorting with no content named leaves a hole in the base directory — which withholds every observation, not the card's subtree: the core appends its subdirectory to whatever GET_SAVE_DIRECTORY hands it, sorted or not. The answer must carry both template segments with both holes; stating the parent as the final directory was the wiring the live check caught.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>quake</name><path>%ROMPATH%/quake</path>\n    <command label=\"TyrQuake\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/tyrquake_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/tyrquake_libretro.so": {
+            "library_name": "TyrQuake",
+            "library_version": "v0.62 dfdae65"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "quake"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/<content_dir>/<content_dir_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "content_dir",
+            "content_dir_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "tyrquake",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "tyrquake",
+                "mode": "",
+                "files": "s0.sav, s1.sav, s2.sav, s3.sav, s4.sav, s5.sav, s6.sav, s7.sav, s8.sav, s9.sav, s10.sav, s11.sav, config.cfg",
+                "files_established_for": "saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them",
+                "citation": "common/menu.c:643 at libretro/tyrquake dfdae65 stuffs 'save s%i' for the twelve slots (MAX_SAVEGAMES, menu.c:487); host_cmd.c:512-513 joins the save directory with the given name and defaults the extension"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

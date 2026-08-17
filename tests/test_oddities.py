@@ -290,6 +290,37 @@ class TestASubdirNamedAfterTheContent:
         assert "rom_stem" in p.needs
         assert p.file_set.state == "unknown"
 
+    def test_a_hole_in_the_base_does_not_swallow_the_cards_subdir(self):
+        # Content sorting with no content named leaves a hole in the base —
+        # which withholds the observation, not the nesting: the core appends
+        # its subdirectory to whatever the frontend hands it, so the answer
+        # must carry both template segments with both holes, never state the
+        # parent as the final directory.
+        machine = FixtureMachine(
+            {
+                "/home/deck/.config/retroarch/retroarch.cfg": (
+                    'savefile_directory = "/home/deck/saves"\n'
+                    'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+                    'libretro_directory = "/home/deck/cores"\n'
+                ),
+                "/home/deck/saves/.keep": "",
+            },
+            cores={
+                "/home/deck/cores/prboom_libretro.so": {"library_name": "PrBoom"},
+                "/home/deck/cores/tyrquake_libretro.so": {"library_name": "TyrQuake"},
+            },
+        )
+        bare = atlas.BareRetroArchNative(HOME, machine)
+        p = placed(bare.savefile_location(core_so="prboom_libretro.so"))
+        assert p.dir == "/home/deck/saves/<content_dir>/<rom_stem>"
+        assert "content_dir" in p.needs
+        assert "rom_stem" in p.needs
+        p = placed(bare.savefile_location(core_so="tyrquake_libretro.so"))
+        assert p.dir == "/home/deck/saves/<content_dir>/<content_dir_name>"
+        assert "content_dir" in p.needs
+        assert "content_dir_name" in p.needs
+        assert p.file_set.state == "unknown"
+
 
 BOOM3_ROM = "/mnt/sd/retrodeck/roms/doom3/base/pak000.pk4"
 VQ3_ROM = "/mnt/sd/retrodeck/roms/quake3/baseq3/pak0.pk3"
@@ -2526,6 +2557,24 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             # stores as an immediate rather than as a string. Its anchor names the
             # build file that proves the unit is linked instead.
             ("race", "<rom_stem>.ngf", "unprotected"),
+            # TyrQuake's subdirectory is the basename-of-the-content's-directory
+            # template, and its twelve slot names are composed from the menu's
+            # 'save s%i' command and the save command's defaulted '.sav'
+            # extension; the binary carries the menu's scan format
+            # '%s%cs%i.sav' whole, which is what a rename would take with it.
+            ("tyrquake", "<content_dir_name>", "unprotected"),
+            ("tyrquake", "s0.sav", "unprotected"),
+            ("tyrquake", "s1.sav", "unprotected"),
+            ("tyrquake", "s10.sav", "unprotected"),
+            ("tyrquake", "s11.sav", "unprotected"),
+            ("tyrquake", "s2.sav", "unprotected"),
+            ("tyrquake", "s3.sav", "unprotected"),
+            ("tyrquake", "s4.sav", "unprotected"),
+            ("tyrquake", "s5.sav", "unprotected"),
+            ("tyrquake", "s6.sav", "unprotected"),
+            ("tyrquake", "s7.sav", "unprotected"),
+            ("tyrquake", "s8.sav", "unprotected"),
+            ("tyrquake", "s9.sav", "unprotected"),
             # The vitaquake2 family's subdirectory is the placement's other
             # template — the basename of the content's directory, composed at
             # load; the four builds share the one libretro unit.

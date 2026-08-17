@@ -170,7 +170,13 @@ carries, ordered by what is at stake:
    plus option-keyed `-ext*.ram` cartridges, `kronos/stv/<stem>.ram` beside the board eeprom `<romset>.nv`, and a
    `kronos_use_beetle_saves` option that moves the Saturn pair to Beetle Saturn's flat `.bkr`/`.bcr` spellings so the
    two cores can share a library. Both subtrees are created blind at `retro_init`, whichever kind of content ever runs.
-4. **`tyrquake`** — `%s%cs%i.sav`: another port, Quake's own slot saves.
+4. ~~**`tyrquake`**~~ — read 2026-08-17, carded: the familiar port shape, keyed like vitaquake2 by the content's
+   directory. `retro_load_game` joins the frontend's save directory with the content directory's basename
+   (libretro.c:990-1007 at dfdae65, the revision the binary's `library_version` names) — before the engine re-roots its
+   basedir for id1/hipnotic/rogue/quoth content, so the subdir keeps the content directory's own name. Inside:
+   `s0.sav`-`s11.sav` from the menu's twelve slots (the console's `save` takes a free name, `.sav` defaulted) beside a
+   written-back `config.cfg` at teardown. `COM_WriteFile`, the one writer into the content tree, has no caller in this
+   build. The record was true ("frontend writes nothing") and is retired by the card.
 5. **`quasi88`** — `%s%c%s.srm`: an own writer spelling the frontend's extension.
 6. **`cap32`** (`%s%s%s.sav`) and **`hatari`** (`%s%cauto.sav`, `.A%s%chatari.sav`) — tiered "likely-internal (symbols
    only)" above; the join formats retire that tier for both.

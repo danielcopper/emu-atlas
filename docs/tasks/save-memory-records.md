@@ -39,9 +39,9 @@ covers the answer.
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
   builds, `cannonball`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`, `race`, `pcsx2`,
-  `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and the three bsnes
-  builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces that no
-  core carries both.
+  `tyrquake`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and the
+  three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a test
+  enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -201,7 +201,9 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`tgbdual`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`theodore`** — frontend writes nothing on moto, to8
 - [x] **`tic80`** — fills `save_ram` on tic80
-- [x] **`tyrquake`** — frontend writes nothing on quake
+- [x] **`tyrquake`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
+      engine keeps `<save_dir>/<content_dir_name>/` — Quake's twelve menu-slot saves `s0.sav`-`s11.sav` (the console's
+      save command may add free names) beside a written-back `config.cfg`. Its record became a card
 - [x] **`uzem`** — fills `save_ram` on uzebox
 - [x] **`vba_next`** — fills `save_ram` on gba
 - [x] **`vbam`** — fills `rtc`, `save_ram` on gb, gbc; fills `save_ram` on gba

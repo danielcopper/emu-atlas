@@ -2998,6 +2998,20 @@ def _standard_placement(
         final_sources.extend(subdir_sources)
         all_caveats.extend(machine_caveats)
         file_set = looked_at or file_set
+    else:
+        # A hole in the base withholds every observation, not the card's own
+        # subtree: the core appends its subdir to whatever GET_SAVE_DIRECTORY
+        # hands it, sorted or not, so the path math still applies — without it
+        # the answer would name the parent as the final directory.
+        final_dir, _, subdir_sources, subdir_holes = _nest_card_subdir(
+            final_dir,
+            None,
+            card=card,
+            mode=mode,
+            rom_stem=content.rom_stem,
+            content_dir_name=content.dir_name,
+        )
+        final_sources.extend(subdir_sources)
     # After the filesystem step, because a card's own subtree is nested onto the
     # directory there and this caveat names directories.
     if card is not None and mode is not None and granularity is not None:
