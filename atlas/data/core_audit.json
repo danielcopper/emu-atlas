@@ -334,6 +334,17 @@
       },
       "kind": "libretro"
     },
+    "noods": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no libretro memory id and keeps its own <save_dir>/<rom_stem>.sav, opened as a descriptor the emulator writes into directly. Created and seeded on first launch whether the game saves or not. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "opera": {
       "verdict": "card",
       "per_game_capable": true,
