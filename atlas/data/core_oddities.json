@@ -2,6 +2,94 @@
   "schema": 1,
   "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. A subdir segment may be exactly one of the placement's subdir templates — <rom_stem>, or <content_dir_name>, the basename of the content's directory — whole-segment only (the resolver's segment arithmetic depends on one template filling to one segment) and only under the savefile_directory root; the resolver fills it from the content path, and a content-less question keeps the token in the path with its hole in needs. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
+    "boom3": {
+      "identifiers": {
+        "library_name": [
+          "boom3"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "content_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "libretro.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "savegames",
+                "granularity": "per-game-files",
+                "role": "battery",
+                "unnamed": "Doom 3 names a savegame after what the player typed into the save dialog, scrubbed, with a .tga preview and a .txt description beside it (framework/Session.cpp:2236-2249) — three files per save under names that are nothing atlas reads"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "libretro.cfg": {
+            "literal": "libretro.cfg"
+          },
+          "savegames": {
+            "literal": "savegames/"
+          }
+        }
+      },
+      "provenance": {
+        "source": "boom3 source at 0feba6c — the shipped binaries name no revision (display_version 'git'; both carry ENGINE_VERSION 'dhewm3 1.5.1pre'), so the read is bound to them by whole strings ('savegames/%s.save' and its .tga/.txt siblings, 'libretro.cfg', 'savegames/'), and the wiring was re-read at the shipped era (28a19ef~1, before the doom_game option the binaries do not carry): identical. This build compiles the base game (its debug paths name neo/game/), so the game folder is base. retro_load_game strips the content path twice — the content's directory, then its parent — and hands the parent to the engine as its data root (neo/sys/libretro/libretro.cpp:2300, :2368-2369). Sys_GetPath answers that root for PATH_BASE, PATH_CONFIG and PATH_SAVE alike (:1477-1497), fs_savepath falls back to it (neo/framework/FileSystem.cpp:2779-2780), and every write lands under <that root>/<game folder>/ — the content's own directory when the game data sits where retail installs keep it. Two writers build on it: the savegame dialog (framework/Session.cpp:2236-2249, the unnamed group) and WriteConfiguration, which writes the config back whenever an archived cvar changed (framework/Common.cpp:929-944), CONFIG_FILE spelled 'libretro.cfg' in the shipped builds.\n\nThe directory the loader builds under the frontend's save root (libretro.cpp:2331-2352) is assigned, created and never read again — at the shipped era as at HEAD — so an empty directory named after the content's directory can appear under the save root and never fill. The placement is the content tree, not that directory.",
+        "status": {
+          "always": "[D] Read from source at 0feba6c and re-read at 28a19ef~1 for the shipped era; bound to the shipped binary by its whole strings. Not live-observed."
+        }
+      }
+    },
+    "boom3_xp": {
+      "identifiers": {
+        "library_name": [
+          "boom3"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "content_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "libretro.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "savegames",
+                "granularity": "per-game-files",
+                "role": "battery",
+                "unnamed": "Doom 3 names a savegame after what the player typed into the save dialog, scrubbed, with a .tga preview and a .txt description beside it (framework/Session.cpp:2236-2249) — three files per save under names that are nothing atlas reads"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "libretro.cfg": {
+            "literal": "libretro.cfg"
+          },
+          "savegames": {
+            "literal": "savegames/"
+          }
+        }
+      },
+      "provenance": {
+        "source": "boom3 source at 0feba6c — the shipped binaries name no revision (display_version 'git'; both carry ENGINE_VERSION 'dhewm3 1.5.1pre'), so the read is bound to them by whole strings ('savegames/%s.save' and its .tga/.txt siblings, 'libretro.cfg', 'savegames/'), and the wiring was re-read at the shipped era (28a19ef~1, before the doom_game option the binaries do not carry): identical. This build compiles the Resurrection of Evil game code (its debug paths name neo/d3xp/ where boom3's name neo/game/), so the game folder is d3xp and the writes land in RoE's own directory. retro_load_game strips the content path twice — the content's directory, then its parent — and hands the parent to the engine as its data root (neo/sys/libretro/libretro.cpp:2300, :2368-2369). Sys_GetPath answers that root for PATH_BASE, PATH_CONFIG and PATH_SAVE alike (:1477-1497), fs_savepath falls back to it (neo/framework/FileSystem.cpp:2779-2780), and every write lands under <that root>/<game folder>/ — the content's own directory when the game data sits where retail installs keep it. Two writers build on it: the savegame dialog (framework/Session.cpp:2236-2249, the unnamed group) and WriteConfiguration, which writes the config back whenever an archived cvar changed (framework/Common.cpp:929-944), CONFIG_FILE spelled 'libretro.cfg' in the shipped builds.\n\nThe directory the loader builds under the frontend's save root (libretro.cpp:2331-2352) is assigned, created and never read again — at the shipped era as at HEAD — so an empty directory named after the content's directory can appear under the save root and never fill. The placement is the content tree, not that directory.",
+        "status": {
+          "always": "[D] Read from source at 0feba6c and re-read at 28a19ef~1 for the shipped era; bound to the shipped binary by its whole strings. Not live-observed."
+        }
+      }
+    },
     "bsnes": {
       "identifiers": {
         "library_name": [
@@ -1894,6 +1982,41 @@
         "source": "vitaquake2 source at 59a5115, the revision the shipped binaries' 'v2.3' (libretro.c:2054) belongs to, bound to them by whole strings: '%s/config.cfg', '%s/save/current/', '%s/save/save%i/server.ssv' and their siblings are in every shipped build. All four builds compile the same libretro unit and file layer; they differ in the game code (the Zaero mission pack, -DZAERO), not in where anything lands. retro_load_game takes the content's directory (libretro.c:2249), joins the frontend's save directory with that directory's basename and creates the result: <save dir>/<content dir name>/ (:2259-2267); where the frontend names none or the create fails, the content's own tree takes its place (FS_Gamedir fallbacks at each writer). The filesystem adds that directory as the write root (FS_AddGameDirectory(g_save_dir), files.c:891-892), and the writers build on it: CL_WriteConfiguration writes <dir>/config.cfg at shutdown (cl_main.c:1586, called at :1815), the server writes the save tree under <dir>/save/ — per-map level states into save/current/ (sv_init.c:193, :206) and per-slot copies beside server.ssv and game.ssv (sv_ccmds.c:219-227).\n\nconfig.cfg is one file per save subdirectory, shared by everything that shares it — shared-file, role settings. The save/ subtree is the campaign's own progress — role battery — and its file names are not derivable, so the group states the directory and refuses the names. The registered options govern renderer and input, none moves a file — one mode.",
         "status": {
           "always": "[D] Read from source at 59a5115, bound to the shipped binary by its whole strings. Not live-observed."
+        }
+      }
+    },
+    "vitaquake3": {
+      "identifiers": {
+        "library_name": [
+          "vitaQuakeIII"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "content_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "q3config.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "q3config.cfg": {
+            "literal": "q3config.cfg"
+          }
+        }
+      },
+      "provenance": {
+        "source": "vitaquake3 source at 8ab09d1, the revision the shipped binary's 'v0.8' (libretro.c:1091) belongs to, bound to it by whole strings ('q3config.cfg', 'fs_homepath', '%s/q3key'). retro_load_game strips the content path twice and hands the parent to the engine as its install path (code/libretro/libretro.c:1449, :1487, :1508); Sys_DefaultHomePath returns a static nothing ever fills (:1624, :1641-1643), so FS_Startup falls back to fs_basepath — that same parent — for fs_homepath (code/qcommon/files.c:3409-3415). Every write lands under <that parent>/<fs_game>/ — the content's own directory for baseq3 content, and the game directory the content itself selects for Team Arena, Urban Terror or Q3 Rally (libretro.c:1549-1558). What is written is one file: Com_WriteConfiguration writes q3config.cfg back whenever an archived cvar changed (code/qcommon/common.c:2942-2954). The role is settings and the file holds more than settings: Quake 3 keeps its arena progress — g_spScores1 through 5, g_spAwards, g_spSkill — as archived cvars (code/ui/ui_main.c:177-184), so the campaign's unlocks travel inside the config, and a client that wants them takes the settings file. That is the trade MAME's <machine>.cfg already made: a configuration file whose contents matter to the game stays role settings, with the fact stated. The CD-key file q3key lands beside it (common.c:2962-2965) and is neither settings nor save data.\n\nThe directory the loader builds under the frontend's save root (libretro.c:1453-1483) is assigned, created and never read — like the homePath static, a dead end — so an empty directory named after the content's directory can appear under the save root and never fill. The placement is the content tree.",
+        "status": {
+          "always": "[D] Read from source at 8ab09d1, bound to the shipped binary by its whole strings. Not live-observed."
         }
       }
     }

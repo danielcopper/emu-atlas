@@ -2082,53 +2082,41 @@ def _also_under_root(
     ).root_kind
 
 
-def _system_directory_placement(
+def _card_root_placement(
     machine: Machine,
     *,
-    sandbox: _Sandbox,
-    cfg_label: str,
+    root: _SystemRoot,
+    root_sentence: str,
+    also_under: str | None,
     card: CoreCard,
     mode: SaveMode,
     granularity: Granularity | None,
-    layers: Sequence[_CfgLayer],
     content: _Content,
-    retroarch_config_dir: str,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement:
-    """The placement for a card whose core roots its saves in the system directory.
+    """The placement for a card mode rooted somewhere the standard rule is not.
 
-    The card states which directory the core *asks* for; which directory that
-    is on this machine is RetroArch's answer, not the cfg key's value
-    (:func:`_core_system_root`) — so this route's ``root_kind`` follows the root
-    the core is actually handed.
+    Shared by the system-directory and content-directory routes, because what
+    differs between them is only which root was resolved and how the answer
+    says so — everything below the root (the subdir join, the caveats, the
+    look at the directory, the link view) is the same question.
     """
-    root = _core_system_root(
-        sandbox=sandbox,
-        cfg_label=cfg_label,
-        layers=layers,
-        content=content,
-        retroarch_config_dir=retroarch_config_dir,
-    )
     directory = os.path.join(root.base, mode.subdir) if mode.subdir else root.base
     card_sources = [
         *sources,
         *root.sources,
-        f"rule card '{card.key}': core keeps saves under the directory RetroArch hands it as the "
-        f"system directory — {card.provenance}",
+        f"rule card '{card.key}': {root_sentence} — {card.provenance}",
     ]
     all_caveats = [*caveats, *root.caveats]
     if granularity is not None:
-        # A mode routed here is rooted in the system directory itself, and a
-        # second root naming that same one is refused when the card is loaded —
-        # so nothing here needs the resolution _also_under_root performs.
         all_caveats.extend(
             _file_set_caveats(
                 card,
                 mode,
                 mode_value=granularity.option_value or "",
                 rom_stem=content.rom_stem,
-                also_under=mode.also_under,
+                also_under=also_under,
             )
         )
         all_caveats.extend(
@@ -2163,6 +2151,105 @@ def _system_directory_placement(
         caveats=tuple(all_caveats),
         granularity=granularity,
         physical_dir=physical_dir,
+    )
+
+
+def _system_directory_placement(
+    machine: Machine,
+    *,
+    sandbox: _Sandbox,
+    cfg_label: str,
+    card: CoreCard,
+    mode: SaveMode,
+    granularity: Granularity | None,
+    layers: Sequence[_CfgLayer],
+    content: _Content,
+    retroarch_config_dir: str,
+    sources: tuple[str, ...],
+    caveats: tuple[Caveat, ...],
+) -> SavefilePlacement:
+    """The placement for a card whose core roots its saves in the system directory.
+
+    The card states which directory the core *asks* for; which directory that
+    is on this machine is RetroArch's answer, not the cfg key's value
+    (:func:`_core_system_root`) — so this route's ``root_kind`` follows the root
+    the core is actually handed.
+    """
+    root = _core_system_root(
+        sandbox=sandbox,
+        cfg_label=cfg_label,
+        layers=layers,
+        content=content,
+        retroarch_config_dir=retroarch_config_dir,
+    )
+    return _card_root_placement(
+        machine,
+        root=root,
+        root_sentence=(
+            "core keeps saves under the directory RetroArch hands it as the system directory"
+        ),
+        # A mode routed here is rooted in the system directory itself, and a
+        # second root naming that same one is refused when the card is loaded —
+        # so nothing here needs the resolution _also_under_root performs.
+        also_under=mode.also_under,
+        card=card,
+        mode=mode,
+        granularity=granularity,
+        content=content,
+        sources=sources,
+        caveats=caveats,
+    )
+
+
+def _content_directory_placement(
+    machine: Machine,
+    *,
+    sandbox: _Sandbox,
+    cfg_label: str,
+    card: CoreCard,
+    mode: SaveMode,
+    granularity: Granularity | None,
+    layers: Sequence[_CfgLayer],
+    content: _Content,
+    retroarch_config_dir: str,
+    sources: tuple[str, ...],
+    caveats: tuple[Caveat, ...],
+) -> SavefilePlacement:
+    """The placement for a card whose core writes into the content's own tree.
+
+    boom3 hands its engine the ROM tree as the save path, and vitaquake3's
+    filesystem falls back to it — neither ever reads the directory it builds
+    under the frontend's save root. The root is the content's own directory,
+    resolved the way the content-dir cases have always been: concrete when the
+    caller named content, the ``<content_dir>`` template with its hole when
+    not (:func:`_content_system_root`).
+    """
+    root = _content_system_root(
+        content,
+        provenance=(
+            f"rule card '{card.key}': the core's writes land in the content's own directory"
+        ),
+    )
+    return _card_root_placement(
+        machine,
+        root=root,
+        root_sentence="core writes into the content's own tree",
+        # The one root kind an ``also_under`` cannot name itself is the system
+        # directory — resolve it the way the spanning caveat expects.
+        also_under=_also_under_root(
+            mode,
+            sandbox=sandbox,
+            cfg_label=cfg_label,
+            layers=layers,
+            content=content,
+            retroarch_config_dir=retroarch_config_dir,
+        ),
+        card=card,
+        mode=mode,
+        granularity=granularity,
+        content=content,
+        sources=sources,
+        caveats=caveats,
     )
 
 
@@ -2413,7 +2500,10 @@ def _nest_card_subdir(
     filled spelling is what lands in the answer, and what the content could
     not fill stays a token in the path with its hole in the fourth element.
     """
-    if mode is None or not mode.subdir or mode.root == ROOT_SYSTEM_DIRECTORY:
+    if mode is None or not mode.subdir or mode.root != ROOT_SAVEFILE_DIRECTORY:
+        # Only a savefile-rooted mode's subdir belongs on this route's
+        # directory — the other roots resolve on their own routes, and nesting
+        # their subdir onto the save directory would state a path nobody uses.
         return directory, fallback_dir, (), ()
     subdir, holes = _fill_subdir(mode.subdir, rom_stem=rom_stem, content_dir_name=content_dir_name)
     sources: tuple[str, ...] = ()
@@ -3117,8 +3207,13 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
         card, card_mode, granularity = applied.card, applied.mode, applied.granularity
         caveats.extend(applied.caveats)
 
-    if card is not None and card_mode is not None and card_mode.root == ROOT_SYSTEM_DIRECTORY:
-        return _system_directory_placement(
+    if card is not None and card_mode is not None and card_mode.root != ROOT_SAVEFILE_DIRECTORY:
+        diverted = (
+            _system_directory_placement
+            if card_mode.root == ROOT_SYSTEM_DIRECTORY
+            else _content_directory_placement
+        )
+        return diverted(
             machine,
             sandbox=query.sandbox,
             cfg_label=query.cfg_label,

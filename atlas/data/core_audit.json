@@ -13,6 +13,28 @@
       },
       "kind": "libretro"
     },
+    "boom3": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] Answers no libretro memory id. Writes into the content's own tree — user-named savegames under savegames/ beside a written-back libretro.cfg — because PATH_SAVE answers the ROM tree; the subdirectory it creates under the frontend's save root is never written. Confirmed at the shipped era (28a19ef~1). Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "boom3_xp": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] The Resurrection of Evil build of the same tree; answers no libretro memory id. Writes into the content's own tree — user-named savegames under savegames/ beside a written-back libretro.cfg — because PATH_SAVE answers the ROM tree; the subdirectory it creates under the frontend's save root is never written. Confirmed at the shipped era (28a19ef~1). Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "bsnes": {
       "verdict": "card",
       "per_game_capable": true,
@@ -538,6 +560,17 @@
       "verdict": "card",
       "per_game_capable": false,
       "note": "[V-source/binary] The Zaero build of the same source; answers no libretro memory id. Creates <save dir>/<content dir name>/ at load and writes config.cfg plus Quake 2's save/ slot tree there; the per-map level states are names atlas cannot derive, so that group is stated as a directory. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "vitaquake3": {
+      "verdict": "card",
+      "per_game_capable": false,
+      "note": "[V-source/binary] Answers no libretro memory id. Writes q3config.cfg into the content's own tree — fs_homepath falls back to the ROM tree because the homePath static is never filled — and the arena progress rides inside it as archived cvars; the subdirectory it creates under the frontend's save root is never written. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,

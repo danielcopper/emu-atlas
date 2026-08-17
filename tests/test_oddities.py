@@ -291,6 +291,63 @@ class TestASubdirNamedAfterTheContent:
         assert p.file_set.state == "unknown"
 
 
+BOOM3_ROM = "/mnt/sd/retrodeck/roms/doom3/base/pak000.pk4"
+VQ3_ROM = "/mnt/sd/retrodeck/roms/quake3/baseq3/pak0.pk3"
+
+
+class TestACardRootedInTheContentsOwnTree:
+    """boom3 and vitaquake3 write beside the content — the card's root is content_directory."""
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, SAVES_KEEP: ""}
+
+    def _boom3_query(self, files, content_path=BOOM3_ROM):
+        rd = _retrodeck(files, cores={f"{DEPLOY}/boom3_libretro.so": {"library_name": "boom3"}})
+        return placed(rd.savefile_location(content_path=content_path, core_so="boom3_libretro.so"))
+
+    def test_the_answer_roots_in_the_contents_directory(self):
+        # The live check that found the gap this class closes: a card may say
+        # content_directory, and the resolver must not answer the save root.
+        p = self._boom3_query(self.FILES)
+        assert p.root_kind == atlas.ROOT_CONTENT_DIRECTORY
+        assert p.dir == "/mnt/sd/retrodeck/roms/doom3/base"
+        assert p.file_set.files == ("libretro.cfg",)
+        unnamed = [g for g in p.file_set.groups if g.files is None]
+        assert len(unnamed) == 1
+        assert unnamed[0].dir == "/mnt/sd/retrodeck/roms/doom3/base/savegames"
+        assert unnamed[0].role == atlas.ROLE_BATTERY
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert caveat.data["dir"] == "/mnt/sd/retrodeck/roms/doom3/base/savegames"
+
+    def test_an_observed_config_is_seen_where_it_lies(self):
+        p = self._boom3_query(
+            {**self.FILES, "/mnt/sd/retrodeck/roms/doom3/base/libretro.cfg": "cfg"}
+        )
+        assert p.file_set.state == "observed"
+        assert p.file_set.files == ("libretro.cfg",)
+
+    def test_vitaquake3_states_one_settings_file(self):
+        rd = _retrodeck(
+            self.FILES,
+            cores={f"{DEPLOY}/vitaquake3_libretro.so": {"library_name": "vitaQuakeIII"}},
+        )
+        p = placed(rd.savefile_location(content_path=VQ3_ROM, core_so="vitaquake3_libretro.so"))
+        assert p.root_kind == atlas.ROOT_CONTENT_DIRECTORY
+        assert p.dir == "/mnt/sd/retrodeck/roms/quake3/baseq3"
+        assert [g.role for g in p.file_set.groups] == [atlas.ROLE_SETTINGS]
+
+    def test_without_content_the_directory_is_the_hole(self):
+        rd = _retrodeck(
+            self.FILES, cores={f"{DEPLOY}/boom3_libretro.so": {"library_name": "boom3"}}
+        )
+        p = placed(rd.savefile_location(core_so="boom3_libretro.so"))
+        assert p.dir == "<content_dir>"
+        assert atlas.HOLE_CONTENT_DIR in p.needs
+        # The names are fixed, so the declaration stands even without content —
+        # only the directory is the hole, exactly as the template says.
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ("libretro.cfg",)
+
+
 class TestFlycastResolution:
     def test_default_shared_vmus_in_system_directory(self):
         p = _flycast_query(

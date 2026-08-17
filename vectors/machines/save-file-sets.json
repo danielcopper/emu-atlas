@@ -3245,6 +3245,100 @@
           }
         }
       }
+    },
+    {
+      "name": "a-card-rooted-in-the-contents-own-tree",
+      "rationale": "boom3 hands its engine the ROM tree as the save path and never writes into the directory it builds under the frontend's save root — so the card's root is content_directory, and the answer lives beside the content: a written-back libretro.cfg (role settings) and the savegames/ subtree whose user-typed names atlas cannot derive (files null, role battery, with the file-names-unestablished caveat carrying the reason). The live check that prompted this vector caught the resolver answering the save root for exactly this card, because no earlier card had ever used the content root.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>doom3</name><path>%ROMPATH%/doom3</path>\n    <command label=\"boom3\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/boom3_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/doom3/base/pak000.pk4": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/boom3_libretro.so": {
+            "library_name": "boom3",
+            "library_version": "git"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "doom3",
+          "content_path": "/mnt/sd/retrodeck/roms/doom3/base/pak000.pk4"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/doom3/base",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "libretro.cfg"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/roms/doom3/base",
+                "files": [
+                  "libretro.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/doom3/base/savegames",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "boom3",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "boom3",
+                "dir": "/mnt/sd/retrodeck/roms/doom3/base/savegames",
+                "role": "battery",
+                "citation": "Doom 3 names a savegame after what the player typed into the save dialog, scrubbed, with a .tga preview and a .txt description beside it (framework/Session.cpp:2236-2249) — three files per save under names that are nothing atlas reads"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

@@ -39,8 +39,9 @@ covers the answer.
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
   builds that write past the frontend, `cannonball`, `geolith`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`,
-  `race`, `pcsx2`, `virtualjaguar`, the four vitaquake2 builds, and the three bsnes builds). The card wins, and a record
-  beside it would be a second declaration of one file set — a test enforces that no core carries both.
+  `race`, `pcsx2`, `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, and the three bsnes
+  builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces that no
+  core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -71,10 +72,6 @@ frontend can name.
 - [ ] **`desmume2015`** — writes `<rom_stem>.dsv`, and the card cannot state where: DeSmuME composes the path from a
       variable this build never sets, so the file lands relative to the process's working directory. A card's every mode
       names a root, and there is no root to name (#148)
-- [ ] **`boom3`, `boom3_xp`, `vitaquake3`** — read to the write call: all three create a subdirectory under the save
-      root and never write into it. Their saves live in the content's own tree (boom3's `PATH_SAVE` answers the ROM
-      directory; vitaquake3's `homePath` static is never filled), which the existing `content_directory` root already
-      expresses — cards pending, no contract work in the way
 
 One more is read and blocked on something else. `gearlynx` fills `save_ram` and would be a plain record, but no
 catalogue entry names it, so there is no system to key the record by — the third tier's whole problem, tracked in #133.
@@ -96,6 +93,9 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`arduous`** — fills `save_ram` on arduboy
 - [x] **`atari800`** — frontend writes nothing on atari5200, atari800, atarixe
 - [x] **`bluemsx`** — frontend writes nothing on colecovision, msx, msx1, msx2, msxturbor, sg-1000, spectravideo
+- [x] **`boom3`** — outcome 2, and a card: user-named savegames and a written-back `libretro.cfg` in the content's own
+      tree; the directory it creates under the save root is never written
+- [x] **`boom3_xp`** — outcome 2, and a card: the Resurrection of Evil build of the same tree and layout
 - [x] **`bsnes`** — read, and it turned out to be outcome 2: the source says in a comment that it stays out of the
       memory interface on purpose and writes both its files itself, so it carries a rule card
 - [x] **`bsnes-jg`** — read, and outcome 2 for a reason of its own: the frontend writes its `.srm` and the core writes
@@ -215,5 +215,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`vitaquake2-rogue`** — outcome 2, and a card: the Ground Zero build of the same source and layout
 - [x] **`vitaquake2-xatrix`** — outcome 2, and a card: the Reckoning build of the same source and layout
 - [x] **`vitaquake2-zaero`** — outcome 2, and a card: the Zaero build of the same source and layout
+- [x] **`vitaquake3`** — outcome 2, and a card: one `q3config.cfg` in the content's own tree, carrying the arena
+      progress as archived cvars; the directory it creates under the save root is never written
 - [x] **`wasm4`** — fills `save_ram` on wasm4
 - [x] **`x1`** — frontend writes nothing on x1
