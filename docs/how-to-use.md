@@ -48,13 +48,16 @@ Rules that hold for every answer:
   parse it). An answer without caveats is as good as atlas can make it; an answer with caveats is still an answer, just
   with stated limits.
 - **A hole is not an unknown.** `needs` lists holes _you_ fill: `content_dir` from the content at hand, `library_name`
-  when the core would not load, and `save_id` when the core names the save after the content's own id. Every hole is
-  filled from the content — a value the configs state is never one, because you could not supply it either; atlas
-  resolves those itself or states a caveat. Holes are not confined to the directory: a declared file set can be a
-  template too. An unknown is something atlas refuses to state — it never guesses to keep a field non-empty. Branch on
-  `atlas.HOLE_CONTENT_DIR` / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` rather than the strings, the way you would on any
-  other closed set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in
-  `atlas.ROOT_KINDS`, `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
+  when the core would not load, and `save_id` when the core names the save after the content's own id. Two more appear
+  only on a content-less question about a core whose card keys a directory on the content — `rom_stem` (prboom names its
+  save directory after the content's stem) and `content_dir_name` (the vitaquake2 family names it after the content's
+  directory); name the content and the resolver fills both itself. Every hole is filled from the content — a value the
+  configs state is never one, because you could not supply it either; atlas resolves those itself or states a caveat.
+  Holes are not confined to the directory: a declared file set can be a template too. An unknown is something atlas
+  refuses to state — it never guesses to keep a field non-empty. Branch on `atlas.HOLE_CONTENT_DIR` /
+  `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` / `HOLE_ROM_STEM` / `HOLE_CONTENT_DIR_NAME` rather than the strings, the way you
+  would on any other closed set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY`
+  … in `atlas.ROOT_KINDS`, `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
 - **Arguments follow one rule: the question's subject may be positional, everything else is keyword-only.** The subject

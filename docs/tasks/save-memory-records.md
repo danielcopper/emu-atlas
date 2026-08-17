@@ -38,9 +38,9 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
-  builds that write past the frontend, `cannonball`, `geolith`, `melonds`, `noods`, `nxengine`, `openlara`, `race`,
-  `pcsx2`, `virtualjaguar`, and the three bsnes builds). The card wins, and a record beside it would be a second
-  declaration of one file set — a test enforces that no core carries both.
+  builds that write past the frontend, `cannonball`, `geolith`, `melonds`, `noods`, `nxengine`, `openlara`, `prboom`,
+  `race`, `pcsx2`, `virtualjaguar`, the four vitaquake2 builds, and the three bsnes builds). The card wins, and a record
+  beside it would be a second declaration of one file set — a test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -71,10 +71,10 @@ frontend can name.
 - [ ] **`desmume2015`** — writes `<rom_stem>.dsv`, and the card cannot state where: DeSmuME composes the path from a
       variable this build never sets, so the file lands relative to the process's working directory. A card's every mode
       names a root, and there is no root to name (#148)
-- [ ] **the port cores** — `prboom`, `boom3`, `boom3_xp`, `vitaquake2` with `-rogue`, `-xatrix` and `-zaero`, and
-      `vitaquake3` all create `<save_dir>/<rom_stem>/` and let their engine write inside it under its own names. The
-      card format refuses both halves of that — a mode whose every group is unnamed, and a subdirectory named after the
-      content (#153)
+- [ ] **`boom3`, `boom3_xp`, `vitaquake3`** — read to the write call: all three create a subdirectory under the save
+      root and never write into it. Their saves live in the content's own tree (boom3's `PATH_SAVE` answers the ROM
+      directory; vitaquake3's `homePath` static is never filled), which the existing `content_directory` root already
+      expresses — cards pending, no contract work in the way
 
 One more is read and blocked on something else. `gearlynx` fills `save_ram` and would be a plain record, but no
 catalogue entry names it, so there is no system to key the record by — the third tier's whole problem, tracked in #133.
@@ -177,6 +177,8 @@ Systems as the record states them, with the outcome each turned out to be.
       megadrivejp, sega32x, sega32xjp, sega32xna, segacd
 - [x] **`pokemini`** — frontend writes nothing on pokemini
 - [x] **`potator`** — frontend writes nothing on supervision
+- [x] **`prboom`** — outcome 2, and a card: `<save_dir>/<rom_stem>/` with eight `prbmsav<slot>.dsg` and a written-back
+      `prboom.cfg`, all nameable — the `<rom_stem>` subdir template's first core
 - [x] **`prosystem`** — frontend writes nothing on atari7800
 - [x] **`puae`** — frontend writes nothing on amiga, amiga1200, amiga600, amigacd32, cdtv
 - [x] **`px68k`** — frontend writes nothing on x68000
@@ -208,5 +210,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`vircon32`** — frontend writes nothing on vircon32
 - [x] **`virtualjaguar`** — read, and it turned out to be outcome 2: it writes both its EEPROM files itself, so it
       carries a rule card rather than a record (#121)
+- [x] **`vitaquake2`** — outcome 2, and a card: `<save_dir>/<content_dir_name>/` with a named `config.cfg` beside the
+      unnameable `save/` slot tree — the `<content_dir_name>` subdir template's family
+- [x] **`vitaquake2-rogue`** — outcome 2, and a card: the Ground Zero build of the same source and layout
+- [x] **`vitaquake2-xatrix`** — outcome 2, and a card: the Reckoning build of the same source and layout
+- [x] **`vitaquake2-zaero`** — outcome 2, and a card: the Zaero build of the same source and layout
 - [x] **`wasm4`** — fills `save_ram` on wasm4
 - [x] **`x1`** — frontend writes nothing on x1

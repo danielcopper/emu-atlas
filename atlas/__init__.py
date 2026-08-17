@@ -246,7 +246,9 @@ from atlas.placement import (
     GRANULARITY_SHARED_CARD,
     GRANULARITY_SHARED_FILE,
     HOLE_CONTENT_DIR,
+    HOLE_CONTENT_DIR_NAME,
     HOLE_LIBRARY_NAME,
+    HOLE_ROM_STEM,
     HOLE_SAVE_ID,
     KEYINGS,
     KEYING_GAME_ID,
@@ -399,7 +401,9 @@ __all__ = [
     # acts on lives in `atlas`) their vocabularies are consumer surface too;
     # without them the only way to branch was a hardcoded string.
     "HOLE_CONTENT_DIR",
+    "HOLE_CONTENT_DIR_NAME",
     "HOLE_LIBRARY_NAME",
+    "HOLE_ROM_STEM",
     "HOLE_SAVE_ID",
     "GRANULARITY_SHARED_CARD",
     "GRANULARITY_SHARED_FILE",

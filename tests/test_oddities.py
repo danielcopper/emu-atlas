@@ -204,6 +204,93 @@ class TestADirectoryWhoseNamesAreNotEstablished:
         assert flagged <= {g.dir for g in p.file_set.groups}
 
 
+PRBOOM_ROM = "/mnt/sd/retrodeck/roms/doom/Doom (USA).wad"
+VQ2_ROM = "/mnt/sd/retrodeck/roms/quake2/baseq2/pak0.pak"
+
+
+def _prboom_query(files, content_path=PRBOOM_ROM):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/prboom_libretro.so": {"library_name": "PrBoom"}})
+    return placed(rd.savefile_location(content_path=content_path, core_so="prboom_libretro.so"))
+
+
+def _vitaquake2_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/vitaquake2_libretro.so": {"library_name": "vitaQuakeII"}})
+    return placed(rd.savefile_location(content_path=VQ2_ROM, core_so="vitaquake2_libretro.so"))
+
+
+class TestASubdirNamedAfterTheContent:
+    """The two subdir templates: prboom keys by stem, vitaquake2 by directory name."""
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, SAVES_KEEP: ""}
+
+    def test_the_stem_template_fills_from_the_content(self):
+        p = _prboom_query(self.FILES)
+        # RetroDECK's content sorting puts the root at saves/doom, and the
+        # core's own subdirectory — the content's stem — nests on top of it,
+        # exactly the order the frontend hands directories to cores.
+        assert p.dir == "/mnt/sd/retrodeck/saves/doom/Doom (USA)"
+        assert p.needs == ()
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == (
+            "prbmsav0.dsg",
+            "prbmsav1.dsg",
+            "prbmsav2.dsg",
+            "prbmsav3.dsg",
+            "prbmsav4.dsg",
+            "prbmsav5.dsg",
+            "prbmsav6.dsg",
+            "prbmsav7.dsg",
+            "prboom.cfg",
+        )
+
+    def test_one_directory_splits_into_progress_and_settings(self):
+        p = _prboom_query(self.FILES)
+        assert [g.role for g in p.file_set.groups] == [atlas.ROLE_BATTERY, atlas.ROLE_SETTINGS]
+        assert {g.dir for g in p.file_set.groups} == {"/mnt/sd/retrodeck/saves/doom/Doom (USA)"}
+
+    def test_the_dehacked_scope_travels_as_a_caveat(self):
+        # The eight savegame names hold unless a .deh the loader passes renames
+        # the base — a fact about the content, so it rides machine-readably.
+        p = _prboom_query(self.FILES)
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL)
+        assert "DeHackEd" in caveat.data["files_established_for"]
+
+    def test_the_directory_name_template_fills_from_the_contents_directory(self):
+        p = _vitaquake2_query(self.FILES)
+        # Sorting keys by the content's directory name and so does the core, so
+        # the segment really appears twice — that is what the machine does.
+        assert p.dir == "/mnt/sd/retrodeck/saves/baseq2/baseq2"
+        assert p.file_set.files == ("config.cfg",)
+        unnamed = [g for g in p.file_set.groups if g.files is None]
+        assert len(unnamed) == 1
+        assert unnamed[0].dir == "/mnt/sd/retrodeck/saves/baseq2/baseq2/save"
+        assert unnamed[0].role == atlas.ROLE_BATTERY
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert caveat.data["dir"] == "/mnt/sd/retrodeck/saves/baseq2/baseq2/save"
+
+    def test_an_unfilled_template_is_a_hole_not_a_guess(self):
+        # Without content the token cannot fill; the answer keeps it in the
+        # path and names the hole — the shape <content_dir> already has — and
+        # nothing is observed at a path that is still a template.
+        machine = FixtureMachine(
+            {
+                "/home/deck/.config/retroarch/retroarch.cfg": (
+                    'savefile_directory = "/home/deck/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                    'libretro_directory = "/home/deck/cores"\n'
+                ),
+                "/home/deck/saves/.keep": "",
+            },
+            cores={"/home/deck/cores/prboom_libretro.so": {"library_name": "PrBoom"}},
+        )
+        p = placed(
+            atlas.BareRetroArchNative(HOME, machine).savefile_location(core_so="prboom_libretro.so")
+        )
+        assert p.dir == "/home/deck/saves/<rom_stem>"
+        assert "rom_stem" in p.needs
+        assert p.file_set.state == "unknown"
+
+
 class TestFlycastResolution:
     def test_default_shared_vmus_in_system_directory(self):
         p = _flycast_query(
@@ -1439,6 +1526,48 @@ class TestStrictLoaders:
         )
         assert load_oddities(text)[0].modes["always"].files == ("<save_id>.A1.bin", "<rom_stem>.srm")
 
+    def test_a_subdir_template_must_be_the_whole_segment(self):
+        # An affixed token is a spelling no read core writes, and _base_of's
+        # segment arithmetic is exact only while one template fills to one
+        # segment — so the loader refuses it rather than stating it.
+        text = self._mode_card(
+            {"granularity": "per-game-file", "files": ["a.srm"], "subdir": "pre<rom_stem>"}
+        )
+        with pytest.raises(ValueError, match="whole segment"):
+            load_oddities(text)
+
+    def test_an_unknown_subdir_token_is_rejected(self):
+        text = self._mode_card(
+            {"granularity": "per-game-file", "files": ["a.srm"], "subdir": "<rom_step>"}
+        )
+        with pytest.raises(ValueError, match="whole segment"):
+            load_oddities(text)
+
+    def test_a_subdir_template_under_another_root_is_rejected(self):
+        # Both read behaviours key a directory the *save* root hands the core;
+        # a content-keyed system directory is a behaviour no reading
+        # established, so a card stating one fails to load.
+        text = self._mode_card(
+            {
+                "root": "system_directory",
+                "granularity": "per-game-file",
+                "files": ["a.srm"],
+                "subdir": "<rom_stem>",
+            }
+        )
+        with pytest.raises(ValueError, match="subdir template"):
+            load_oddities(text)
+
+    def test_the_known_subdir_templates_load_verbatim(self):
+        text = self._mode_card(
+            {
+                "granularity": "per-game-file",
+                "files": ["a.srm"],
+                "subdir": "<content_dir_name>/save",
+            }
+        )
+        assert load_oddities(text)[0].modes["always"].subdir == "<content_dir_name>/save"
+
     # Everything a mode used to carry now belongs to one of its groups, except
     # the two fields that are still the mode's own. Splitting here keeps every
     # case below written the way it was — what it asserts did not change.
@@ -2269,11 +2398,30 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("nxengine", "profile4.dat", "unprotected"),
             ("nxengine", "profile5.dat", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
+            # prboom's subdirectory is the placement's own template, and its
+            # eight savegame names are composed from a base and a format the
+            # binary carries whole ('prbmsav', '%s%c%s%d.dsg').
+            ("prboom", "<rom_stem>", "unprotected"),
+            ("prboom", "prbmsav0.dsg", "unprotected"),
+            ("prboom", "prbmsav1.dsg", "unprotected"),
+            ("prboom", "prbmsav2.dsg", "unprotected"),
+            ("prboom", "prbmsav3.dsg", "unprotected"),
+            ("prboom", "prbmsav4.dsg", "unprotected"),
+            ("prboom", "prbmsav5.dsg", "unprotected"),
+            ("prboom", "prbmsav6.dsg", "unprotected"),
+            ("prboom", "prbmsav7.dsg", "unprotected"),
             # RACE's is the one name in this list the binary carries no trace of,
             # not even the extension: 'ngf' is three characters, which a compiler
             # stores as an immediate rather than as a string. Its anchor names the
             # build file that proves the unit is linked instead.
             ("race", "<rom_stem>.ngf", "unprotected"),
+            # The vitaquake2 family's subdirectory is the placement's other
+            # template — the basename of the content's directory, composed at
+            # load; the four builds share the one libretro unit.
+            ("vitaquake2", "<content_dir_name>", "unprotected"),
+            ("vitaquake2-rogue", "<content_dir_name>", "unprotected"),
+            ("vitaquake2-xatrix", "<content_dir_name>", "unprotected"),
+            ("vitaquake2-zaero", "<content_dir_name>", "unprotected"),
         ], (
             "the set of recorded names no anchor watches has changed — every entry here is a name "
             "the byte tripwire cannot reach, so confirm the new one really cannot be pinned to a "

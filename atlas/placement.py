@@ -342,6 +342,14 @@ class Caveat:
 HOLE_CONTENT_DIR = "content_dir"
 HOLE_LIBRARY_NAME = "library_name"
 HOLE_SAVE_ID = "save_id"
+# The two the resolver fills itself whenever the caller names content, so they
+# reach ``needs`` only on a content-less question: the content file's own stem,
+# and the basename of the directory it lies in. Two holes rather than one,
+# because they are different facts about the same path and a caller fills each
+# by itself — exactly the split between ``<rom_stem>`` in a declared file name
+# and the ``content_dir`` the sorted root keeps.
+HOLE_ROM_STEM = "rom_stem"
+HOLE_CONTENT_DIR_NAME = "content_dir_name"
 
 # The template tokens a rule card's declared file names may carry, and the hole
 # each leaves behind. ``<rom_stem>`` the resolver fills itself from the content
@@ -352,7 +360,17 @@ HOLE_SAVE_ID = "save_id"
 # So the id stays a hole for whoever knows it, exactly like ``content_dir``.
 TEMPLATE_ROM_STEM = "<rom_stem>"
 TEMPLATE_SAVE_ID = "<save_id>"
+# A card's *subdir* may template a whole segment on the content, because two
+# read cores key the directory itself that way: prboom creates
+# ``<save_dir>/<rom_stem>/`` (libretro.c:2633), the vitaquake2 family
+# ``<save_dir>/<basename of the content's directory>/`` (libretro.c:2259-2262).
+# A token must be the whole segment — ``_base_of`` undoes a subdir by counting
+# segments, and that stays exact only while one template fills to exactly one.
+TEMPLATE_CONTENT_DIR_NAME = "<content_dir_name>"
 _FILE_NAME_HOLES: Mapping[str, str] = MappingProxyType({TEMPLATE_SAVE_ID: HOLE_SAVE_ID})
+SUBDIR_TEMPLATE_HOLES: Mapping[str, str] = MappingProxyType(
+    {TEMPLATE_ROM_STEM: HOLE_ROM_STEM, TEMPLATE_CONTENT_DIR_NAME: HOLE_CONTENT_DIR_NAME}
+)
 
 
 def _holes(named: list[str]) -> tuple[str, ...]:

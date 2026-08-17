@@ -117,6 +117,15 @@ the point of keeping one vocabulary: a card is data, and without the check a typ
 states as fact — the failure mode the "never guess" rule exists to prevent. A card that needs a new hole adds it to the
 placement vocabulary first. An empty list, an empty name and a literal angle bracket are refused for the same reason.
 
+A `subdir` segment may be a template too, from its own two-token vocabulary: `<rom_stem>` (prboom creates
+`<save dir>/<rom_stem>/`) and `<content_dir_name>` — the basename of the content's directory (the vitaquake2 family
+creates `<save dir>/baseq2/` for content in `baseq2/`). A token must be the **whole segment**: the resolver undoes a
+subdir by counting segments, and that arithmetic is exact only while one template fills to exactly one segment. Both are
+established only under the `savefile_directory` root — the loader refuses them elsewhere, because no read core keys a
+system or content subdirectory on the content. The resolver fills them from the content path; a content-less question
+keeps the token in `dir` and puts `rom_stem` / `content_dir_name` into `needs`, the shape `<content_dir>` has always
+had.
+
 ### Two fields for what one file list cannot say
 
 - `files_without_save_id` — the same set as the emulator names it when the content carries **no** id. Flycast's
