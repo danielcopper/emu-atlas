@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
+  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory (and a mode does not span its own root), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
     "bsnes": {
       "identifiers": {
@@ -1389,6 +1389,44 @@
         "source": "NXEngine source at the version the shipped binary names ('1.0.0.6'). retro_get_memory_size returns 0 for every id (nxengine/libretro/libretro.cpp:449), so RetroArch writes no save file. The core exports its save directory to the game's own code instead (retro_get_save_dir, :454-462), and Cave Story's profile handling builds the names from it: slot 0 is 'profile.dat' and the rest are 'profile%d.dat' with the slot number plus one, joined to that directory (nxengine/profile.c:237-250). There are five slots — the loop that copies pre-existing profiles out of the content directory runs to five (nxengine/libretro/libretro_shared.c:48-61) and profile.c says so in a comment.\n\nThe names follow nothing about the content, which is what makes them shared-file: this core runs one game, and a second copy of its data would use the same five names. The set is an upper bound as always — a player who never uses slot 4 has no profile5.dat.",
         "status": {
           "always": "[D] Read from source at the shipped version. One mode: the core registers no option that moves or adds a file. Not live-observed, and slot 0's name is one the byte tripwire cannot reach."
+        }
+      }
+    },
+    "openlara": {
+      "identifiers": {
+        "library_name": [
+          "OpenLara"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "openlara",
+                "files": [
+                  "savegame.dat"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "openlara": {
+            "literal": "openlara"
+          },
+          "savegame.dat": {
+            "literal": "savegame.dat"
+          }
+        }
+      },
+      "provenance": {
+        "source": "OpenLara source at libretro/OpenLara e4ce52e — the shipped binary names no revision (library_version is the constant 'v1', platform/libretro/main.cpp:244), so the read is bound to it by whole strings instead: 'openlara', 'savegame.dat', the '[openlara]:' log lines and both registered option keys are all in the shipped .so. retro_get_memory_data answers NULL and retro_get_memory_size 0 for every id (main.cpp:738-748), so RetroArch writes no save file. At retro_init the core asks for the frontend's save directory and appends one fixed segment, creating the result on the spot: '<save dir>/openlara/' (main.cpp:174, 200-211). The engine keeps exactly one file there. Saving serializes every slot into one buffer and hands it to osWriteSlot under SAVE_FILENAME, 'savegame.dat' (savegame.h:9, level.h:322; loading is the same name back, game.h:146), and osWriteSlot is fopen(saveDir + name) (utils.h:2369-2371, 2323-2327). That layer is the one compiled here: core.h:11 defines OS_FILEIO_CACHE and only the Emscripten branch takes it back (core.h:140), and the build is a single translation unit (platform/libretro/Makefile.common:33), so the saveDir the engine writes under is the global retro_init filled (utils.h:1697).\n\nThe name follows nothing about the content — every game and every slot land in the one file, which is what makes it shared-file. Settings and the streamed level cache go elsewhere, under 'openlara/cache/' in the system directory (main.cpp:177-197, utils.h:2361-2367), and are not save data. If the subdirectory cannot be created the core zeroes its save path and the write lands relative to the process's working directory (main.cpp:207-210) — the failure branch of a directory RetroArch just handed it, not the placement.",
+        "status": {
+          "always": "[D] Read from source at e4ce52e, bound to the shipped binary by its whole strings. The two registered options govern resolution and framerate (libretro_core_options.h:31, :64), neither moves a file — one mode. Not live-observed."
         }
       }
     },
