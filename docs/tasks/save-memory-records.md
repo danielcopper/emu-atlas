@@ -38,9 +38,9 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
-  builds that write past the frontend, `geolith`, `melonds`, `noods`, `race`, `pcsx2`, `virtualjaguar`, and the three
-  bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces
-  that no core carries both.
+  builds that write past the frontend, `cannonball`, `geolith`, `melonds`, `noods`, `race`, `pcsx2`, `virtualjaguar`,
+  and the three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a
+  test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -71,6 +71,12 @@ frontend can name.
 - [ ] **`desmume2015`** — writes `<rom_stem>.dsv`, and the card cannot state where: DeSmuME composes the path from a
       variable this build never sets, so the file lands relative to the process's working directory. A card's every mode
       names a root, and there is no root to name (#148)
+- [ ] **the port cores** — `prboom`, `boom3`, `boom3_xp`, `vitaquake2` with `-rogue`, `-xatrix` and `-zaero`, and
+      `vitaquake3` all create `<save_dir>/<rom_stem>/` and let their engine write inside it under its own names. The
+      card format refuses both halves of that — a mode whose every group is unnamed, and a subdirectory named after the
+      content (#153)
+- [ ] **`nxengine`, `mrboom`, `superbroswar`, `craft`, `openlara`** — read as far as the memory interface, which none of
+      them fills, and each takes the frontend's save directory. What they write into it is not read yet
 
 One more is read and blocked on something else. `gearlynx` fills `save_ram` and would be a plain record, but no
 catalogue entry names it, so there is no system to key the record by — the third tier's whole problem, tracked in #133.
@@ -98,6 +104,7 @@ Systems as the record states them, with the outcome each turned out to be.
       its `.rtc`, which no record can state together
 - [x] **`bsnes_hd_beta`** — read, and outcome 2: the same code as bsnes
 - [x] **`bsnes_mercury_accuracy`** — fills `save_ram` on satellaview, sfc, snes, snesna, sufami
+- [x] **`cannonball`** — outcome 2, and a card: three score tables under fixed names, shared by everything the core runs
 - [x] **`cap32`** — frontend writes nothing on amstradcpc, gx4000
 - [x] **`chailove`** — frontend writes nothing on chailove
 - [x] **`desmume`** — frontend writes nothing on nds

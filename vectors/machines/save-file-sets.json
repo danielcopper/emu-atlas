@@ -2956,6 +2956,89 @@
           }
         }
       }
+    },
+    {
+      "name": "a-save-that-is-nothing-but-score-tables",
+      "rationale": "Cannonball is a port of one arcade game, and everything it keeps is a score table: three of them, for the game's three modes, under fixed names that follow nothing about the content. So the whole save is one group with the high-score role and shared-file granularity — the first shipped card where that is the entire answer rather than one part of it. A client syncing saves takes them, because the rule is every role but settings; a client that reads the role knows to merge the higher entries rather than overwrite with the newer file, which is the only case where that distinction changes what to do.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path>\n    <command label=\"Cannonball\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/cannonball_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/ports/outrun.zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/cannonball_libretro.so": {
+            "library_name": "Cannonball",
+            "library_version": "git"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "ports",
+          "content_path": "/mnt/sd/retrodeck/roms/ports/outrun.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "hiscores.sav",
+              "hiscores_timetrial.sav",
+              "hiscores_continuous.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "hiscores.sav",
+                  "hiscores_timetrial.sav",
+                  "hiscores_continuous.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "high-score"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "cannonball",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }
