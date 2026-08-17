@@ -2205,6 +2205,14 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("flycast", "<save_id>.C1.bin", "unprotected"),
             ("flycast", "<save_id>.D1.bin", "unprotected"),
             ("flycast", "dc_nvmem.bin", "unprotected"),
+            # geolith joins a stem to one of four extensions from a table. Three
+            # of the four are whole strings and the fourth, "brm", is three
+            # characters a compiler stores as an immediate — its siblings are
+            # what establish the table is in the binary at all.
+            ("geolith", "<rom_stem>.brm", "unprotected"),
+            ("geolith", "<rom_stem>.mcr", "unprotected"),
+            ("geolith", "<rom_stem>.nv", "unprotected"),
+            ("geolith", "<rom_stem>.srm", "unprotected"),
             # MAME builds every one of these at run time: the tree segments come
             # from one pooled static table, the directory between them is a
             # build-time define, and the file names are the running machine's

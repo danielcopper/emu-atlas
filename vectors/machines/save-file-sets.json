@@ -2754,6 +2754,112 @@
           }
         }
       }
+    },
+    {
+      "name": "four-files-for-one-game-and-one-of-them-shares-the-frontends-name",
+      "rationale": "Geolith writes four files of its own per game — the board's NVRAM, the cartridge RAM, a memory card and the CD backup RAM — into the frontend's own save directory. Three roles across four names, so a client can tell the memory card from the rest. The second name is why this is a card and not a record: for CD content the core also fills the save-RAM id, so RetroArch writes <rom_stem>.srm onto the same path the core writes at unload. Every other two-writer case read so far kept the two apart by name. The answer states the set either way, because the names are the core's and it writes them for cartridge content too.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>neogeo</name><path>%ROMPATH%/neogeo</path>\n    <command label=\"Geolith\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/geolith_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/neogeo/mslug.zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/geolith_libretro.so": {
+            "library_name": "geolith",
+            "library_version": "0.2.2"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "neogeo",
+          "content_path": "/mnt/sd/retrodeck/roms/neogeo/mslug.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "mslug.nv",
+              "mslug.srm",
+              "mslug.mcr",
+              "mslug.brm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "mslug.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "mslug.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "mslug.mcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "mslug.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "geolith",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "option_key": null,
+            "option_value": null,
+            "options_file": null,
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

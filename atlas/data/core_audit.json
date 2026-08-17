@@ -143,6 +143,17 @@
       },
       "kind": "libretro"
     },
+    "geolith": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Writes four files of its own per game into the frontend's save directory — <rom_stem>.nv, .srm, .mcr and .brm — and for CD content also fills RETRO_MEMORY_SAVE_RAM, so RetroArch writes a <rom_stem>.srm onto the same path the core writes. Not live-observed; whether the two agree about the bytes is open (#139).",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
     "mame": {
       "verdict": "card",
       "per_game_capable": true,
