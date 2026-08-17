@@ -1456,14 +1456,14 @@
             "save_ram"
           ],
           "verified_core": "2.05-046e5ff",
-          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+          "citation": "[V] platform/libretro/libretro.c:1706-1711, :1740-1746 at libretro/picodrive 046e5ff — the memory interface has an explicit Sega CD branch: for CD content (PAHW_MCD with no cartridge loaded) RETRO_MEMORY_SAVE_RAM answers the console's internal backup RAM (Pico_mcd->bram, 0x2000), and with the RAM-cart option enabled the combined buffer (Pico.sv.data, 0x12000). RetroArch's .srm therefore IS the Sega CD backup RAM here — the opposite wiring from Genesis Plus GX, whose CD path never reaches the interface and writes its own .brm files instead."
         },
         "megacdjp": {
           "memory_types": [
             "save_ram"
           ],
           "verified_core": "2.05-046e5ff",
-          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+          "citation": "[V] platform/libretro/libretro.c:1706-1711, :1740-1746 at libretro/picodrive 046e5ff — the memory interface has an explicit Sega CD branch: for CD content (PAHW_MCD with no cartridge loaded) RETRO_MEMORY_SAVE_RAM answers the console's internal backup RAM (Pico_mcd->bram, 0x2000), and with the RAM-cart option enabled the combined buffer (Pico.sv.data, 0x12000). RetroArch's .srm therefore IS the Sega CD backup RAM here — the opposite wiring from Genesis Plus GX, whose CD path never reaches the interface and writes its own .brm files instead."
         },
         "megadrive": {
           "memory_types": [
@@ -1505,7 +1505,7 @@
             "save_ram"
           ],
           "verified_core": "2.05-046e5ff",
-          "citation": "[V] platform/libretro/libretro.c:1732-1762 at libretro/picodrive 046e5ff — RETRO_MEMORY_SAVE_RAM answers the cartridge's SRAM size, but only once the game has written to it: the core scans the buffer and returns 0 while it is still blank, with the reason in its own comment, so RetroArch does not write out a zeroed .srm. A Mega CD without a cartridge answers its backup RAM instead (0x12000 with the RAM cart option on, 0x2000 otherwise). No RETRO_MEMORY_RTC case exists."
+          "citation": "[V] platform/libretro/libretro.c:1706-1711, :1740-1746 at libretro/picodrive 046e5ff — the memory interface has an explicit Sega CD branch: for CD content (PAHW_MCD with no cartridge loaded) RETRO_MEMORY_SAVE_RAM answers the console's internal backup RAM (Pico_mcd->bram, 0x2000), and with the RAM-cart option enabled the combined buffer (Pico.sv.data, 0x12000). RetroArch's .srm therefore IS the Sega CD backup RAM here — the opposite wiring from Genesis Plus GX, whose CD path never reaches the interface and writes its own .brm files instead."
         }
       },
       "provenance": {
