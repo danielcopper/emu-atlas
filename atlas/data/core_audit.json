@@ -38,7 +38,7 @@
     "bsnes": {
       "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] The shipped 115 generation answers no libretro memory id by design — the source says so in a comment — and writes <rom_stem>.srm and <rom_stem>.rtc itself, into the directory the frontend hands it. Not live-observed.",
+      "note": "[V-source/binary] The shipped 115 generation answers no libretro memory id by design — the source says so — and writes <rom_stem>.srm itself. The .rtc the card once declared is not written for Super Famicom content: the 'time.rtc' branch lives only in the Game Boy handler, reached solely through the Super Game Boy subsystem, and the history shows it never lived anywhere else — a cartridge clock resets every launch. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,
@@ -60,7 +60,7 @@
     "bsnes_hd_beta": {
       "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] The shipped 10.6 generation answers no libretro memory id and writes <rom_stem>.srm and <rom_stem>.rtc itself, exactly as bsnes does. Not live-observed.",
+      "note": "[V-source/binary] The shipped 10.6 generation answers no libretro memory id and writes <rom_stem>.srm itself — read in its own tree at beta_10_6 rather than carried over from bsnes. Like bsnes, its 'time.rtc' branch lives only in the Game Boy handler behind the Super Game Boy subsystem; a Super Famicom cartridge clock is never persisted, and the .rtc the card once declared is retired with the same correction. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,
@@ -127,6 +127,17 @@
       "verdict": "card",
       "per_game_capable": true,
       "note": "[V-source/binary] Answers no memory id. The emulated C: drive is a union of the read-only content and one writable overlay, and the overlay is the save: <save dir>/<rom_stem>.pure.zip, created on first modification, rewritten on a five-second schedule. A .SAVENAME file redirects the name for shared saves, a legacy <rom_stem>.sav keeps being used unless strict mode forbids it, Boot OS setups keep -CDRIVE.sav and hash-keyed disks beside it and install OS images into the system directory. Supersedes the 07-24 queue triage. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "easyrpg": {
+      "verdict": "card",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Answers no memory id, and the libretro port names no save path: the save filesystem is the game's own directory, so RPG Maker's fifteen Save##.lsd slots land beside the game files — or, for archived content, in a sibling '<archive name>.save/' directory the player creates. The frontend's save directory never enters the answer. Supersedes the 07-24 queue triage. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,
@@ -379,9 +390,9 @@
       "kind": "libretro"
     },
     "mednafen_saturn": {
-      "verdict": "standard-dir",
+      "verdict": "multi-option",
       "per_game_capable": true,
-      "note": "[V-live] RetroDECK 0.10.9b contains three content-keyed Sega Rally Championship .bcr/.bkr/.smpc files in the standard save directory.",
+      "note": "[V-live + V-source/binary] Answers system RAM alone; writes its three files itself, flat in the save directory — <stem>.bkr (internal backup RAM, mednafen/ss/ss.cpp:1037-1044 at ccba526), <stem>.bcr (backup cartridge, cart/backup.cpp:62) and <stem>.smpc (RTC and language, ss.cpp:1142) — live-observed content-keyed on a RetroDECK arrangement (2026-07-23). Each stem swaps to 'mednafen_saturn_libretro_shared' under its own option: 'beetle_saturn_shared_int' for the internal pair, 'beetle_saturn_shared_ext' for the cartridge (libretro.cpp:1045-1073, options read at :257-276) — two independent options over one file set, the Beetle PSX shape the single-option card cannot express. The 08-17 queue's 'BSC.MCR' hit is the SH-2 bus controller's register name in the debugger's vocabulary, not a file. Mednafen's rotating sav backups are stubbed out in this port (ss.cpp:1032-1035).",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -391,12 +402,27 @@
         "emudeck": null,
         "bare": null
       },
-      "kind": "libretro"
+      "kind": "libretro",
+      "save_options": [
+        "beetle_saturn_shared_int",
+        "beetle_saturn_shared_ext"
+      ]
     },
     "melonds": {
       "verdict": "card",
       "per_game_capable": true,
       "note": "[V-source/binary] Answers no libretro memory id and writes <save_dir>/<rom_stem>.sav itself, the DS card's SRAM. Not live-observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
+    },
+    "melondsds": {
+      "verdict": "standard",
+      "per_game_capable": true,
+      "note": "[V-source/binary] Fills save_ram, so RetroArch writes <rom_stem>.srm — and no host file appears beside it on the catalogue route: the binary's DSi '.sav' paths are NAND-internal spellings inside the image kept in the system directory, firmware and Wi-Fi settings flush to the system directory (core/tasks.cpp:263-292 at v1.2.0), and the GBA slot writes back to the save file the subsystem was handed at its own path (tasks.cpp:239-260) — a route no catalogue entry launches. The 07-24 side question is closed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,

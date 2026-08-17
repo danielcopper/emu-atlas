@@ -37,10 +37,10 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
-  builds, `cannonball`, `cap32`, `desmume`, `dosbox_pure`, `geolith`, `kronos`, `melonds`, `noods`, `nxengine`,
-  `openlara`, `pokemini`, `prboom`, `quasi88`, `race`, `pcsx2`, `tyrquake`, `virtualjaguar`, the four vitaquake2 builds,
-  `vitaquake3`, the two boom3 builds, `desmume2015`, and the three bsnes builds). The card wins, and a record beside it
-  would be a second declaration of one file set — a test enforces that no core carries both.
+  builds, `cannonball`, `cap32`, `desmume`, `dosbox_pure`, `easyrpg`, `geolith`, `kronos`, `melonds`, `noods`,
+  `nxengine`, `openlara`, `pokemini`, `prboom`, `quasi88`, `race`, `pcsx2`, `tyrquake`, `virtualjaguar`, the four
+  vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and the three bsnes builds). The card wins, and
+  a record beside it would be a second declaration of one file set — a test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -89,10 +89,13 @@ Systems as the record states them, with the outcome each turned out to be.
       tree; the directory it creates under the save root is never written
 - [x] **`boom3_xp`** — outcome 2, and a card: the Resurrection of Evil build of the same tree and layout
 - [x] **`bsnes`** — read, and it turned out to be outcome 2: the source says in a comment that it stays out of the
-      memory interface on purpose and writes both its files itself, so it carries a rule card
+      memory interface on purpose and writes its file itself, so it carries a rule card. Re-read 2026-08-17: the `.rtc`
+      the card once declared is written only on the Super Game Boy subsystem route — the Super Famicom handler answers
+      no rtc request, so a cartridge clock is never persisted and the card now states the `.srm` alone
 - [x] **`bsnes-jg`** — read, and outcome 2 for a reason of its own: the frontend writes its `.srm` and the core writes
       its `.rtc`, which no record can state together
-- [x] **`bsnes_hd_beta`** — read, and outcome 2: the same code as bsnes
+- [x] **`bsnes_hd_beta`** — read, and outcome 2: the same shape as bsnes, re-read 2026-08-17 in its own tree at the
+      shipped beta 10.6 — its card cites its own lines now and retires the `.rtc` with the same correction as bsnes
 - [x] **`bsnes_mercury_accuracy`** — fills `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`cannonball`** — outcome 2, and a card: three score tables under fixed names, shared by everything the core runs
 - [x] **`cap32`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the core
@@ -111,7 +114,9 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`dosbox_pure`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
       emulated C: drive's writable overlay IS the save — `<save_dir>/<rom_stem>.pure.zip`, with a `.SAVENAME` redirect
       for shared saves, a legacy `.sav` fallback, and Boot-OS disks beside it. Its record became a card
-- [x] **`easyrpg`** — frontend writes nothing on easyrpg
+- [x] **`easyrpg`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
+      libretro port names no save path at all — RPG Maker's fifteen `Save##.lsd` slots land beside the game's own files
+      (or, for archived content, in a sibling `<archive>.save/` directory). Its record became a card
 - [x] **`ecwolf`** — frontend writes nothing on ports
 - [x] **`fbalpha2012`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
       core keeps `<driver>.fs` and, behind its hiscore option, `<driver>.hi`. Its record was replaced by a card
@@ -163,7 +168,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mednafen_ngp`** — frontend writes nothing on ngp, ngpc
 - [x] **`mednafen_pce`** — fills `save_ram` on pcengine, pcenginecd, supergrafx, tg-cd, tg16
 - [x] **`mednafen_pcfx`** — fills `save_ram` on pcfx
-- [x] **`mednafen_saturn`** — frontend writes nothing on saturn, saturnjp
+- [x] **`mednafen_saturn`** — frontend writes nothing on saturn, saturnjp, and the core's three flat files
+      (`<stem>.bkr`/`.bcr`/`.smpc`, live-observed) each swap to a shared stem under their own option — two independent
+      options, so the audit says **multi-option** (the old "registers no option" claim was refuted by the binary) and
+      the record stays until #163's route exists
 - [x] **`mednafen_supergrafx`** — fills `save_ram` on supergrafx, tg16
 - [x] **`mednafen_vb`** — fills `save_ram` on virtualboy
 - [x] **`mednafen_wswan`** — fills `save_ram` on wonderswan, wonderswancolor
