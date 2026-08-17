@@ -1341,6 +1341,57 @@
         }
       }
     },
+    "nxengine": {
+      "identifiers": {
+        "library_name": [
+          "NXEngine"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "profile.dat",
+                  "profile2.dat",
+                  "profile3.dat",
+                  "profile4.dat",
+                  "profile5.dat"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "profile.dat": {
+            "unprotected": "slot 0's name is written as its own literal (profile.c:243-244) and is not a whole string in the shipped binary; what is whole beside it is the format its four siblings are built from, 'profile%d.dat', which a rename of the scheme would take with it"
+          },
+          "profile2.dat": {
+            "unprotected": "composed at run time from 'profile%d.dat', which is whole in the binary"
+          },
+          "profile3.dat": {
+            "unprotected": "composed at run time from 'profile%d.dat', which is whole in the binary"
+          },
+          "profile4.dat": {
+            "unprotected": "composed at run time from 'profile%d.dat', which is whole in the binary"
+          },
+          "profile5.dat": {
+            "unprotected": "composed at run time from 'profile%d.dat', which is whole in the binary"
+          }
+        }
+      },
+      "provenance": {
+        "source": "NXEngine source at the version the shipped binary names ('1.0.0.6'). retro_get_memory_size returns 0 for every id (nxengine/libretro/libretro.cpp:449), so RetroArch writes no save file. The core exports its save directory to the game's own code instead (retro_get_save_dir, :454-462), and Cave Story's profile handling builds the names from it: slot 0 is 'profile.dat' and the rest are 'profile%d.dat' with the slot number plus one, joined to that directory (nxengine/profile.c:237-250). There are five slots — the loop that copies pre-existing profiles out of the content directory runs to five (nxengine/libretro/libretro_shared.c:48-61) and profile.c says so in a comment.\n\nThe names follow nothing about the content, which is what makes them shared-file: this core runs one game, and a second copy of its data would use the same five names. The set is an upper bound as always — a player who never uses slot 4 has no profile5.dat.",
+        "status": {
+          "always": "[D] Read from source at the shipped version. One mode: the core registers no option that moves or adds a file. Not live-observed, and slot 0's name is one the byte tripwire cannot reach."
+        }
+      }
+    },
     "opera": {
       "identifiers": {
         "library_name": [

@@ -38,9 +38,9 @@ covers the answer.
 - **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the four FB Alpha 2012
-  builds that write past the frontend, `cannonball`, `geolith`, `melonds`, `noods`, `race`, `pcsx2`, `virtualjaguar`,
-  and the three bsnes builds). The card wins, and a record beside it would be a second declaration of one file set — a
-  test enforces that no core carries both.
+  builds that write past the frontend, `cannonball`, `geolith`, `melonds`, `noods`, `nxengine`, `race`, `pcsx2`,
+  `virtualjaguar`, and the three bsnes builds). The card wins, and a record beside it would be a second declaration of
+  one file set — a test enforces that no core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -75,8 +75,9 @@ frontend can name.
       `vitaquake3` all create `<save_dir>/<rom_stem>/` and let their engine write inside it under its own names. The
       card format refuses both halves of that — a mode whose every group is unnamed, and a subdirectory named after the
       content (#153)
-- [ ] **`nxengine`, `mrboom`, `superbroswar`, `craft`, `openlara`** — read as far as the memory interface, which none of
-      them fills, and each takes the frontend's save directory. What they write into it is not read yet
+- [ ] **`openlara`** — creates `<save_dir>/openlara/` and lets its engine write inside it. It needs only the first half
+      of #153: the subdirectory is a fixed name, so the content template is not the problem — a mode that states a
+      directory without naming its files is
 
 One more is read and blocked on something else. `gearlynx` fills `save_ram` and would be a plain record, but no
 catalogue entry names it, so there is no system to key the record by — the third tier's whole problem, tracked in #133.
@@ -107,6 +108,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`cannonball`** — outcome 2, and a card: three score tables under fixed names, shared by everything the core runs
 - [x] **`cap32`** — frontend writes nothing on amstradcpc, gx4000
 - [x] **`chailove`** — frontend writes nothing on chailove
+- [x] **`craft`** — frontend writes nothing on ports
 - [x] **`desmume`** — frontend writes nothing on nds
 - [x] **`dice`** — frontend writes nothing on arcade, mame
 - [x] **`dirksimple`** — frontend writes nothing on daphne, laserdisc
@@ -128,10 +130,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`gambatte`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`gearboy`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`gearsystem`** — fills `save_ram` on gamegear, mark3, mastersystem, multivision, sg-1000
-- [x] **`geolith`** — outcome 2, and a card: four files of its own per game, one of them under the name RetroArch gives
-      a save-RAM file
 - [x] **`genesis_plus_gx`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megacd, megacdjp, megadrive,
       megadrivejp, segacd, sg-1000
+- [x] **`geolith`** — outcome 2, and a card: four files of its own per game, one of them under the name RetroArch gives
+      a save-RAM file
 - [x] **`gpsp`** — fills `save_ram` on gba
 - [x] **`handy`** — frontend writes nothing on atarilynx
 - [x] **`hatari`** — frontend writes nothing on atarist
@@ -163,12 +165,14 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`mesen-s`** — fills `save_ram` on gb, gbc, satellaview, sfc, sgb, snes, snesna
 - [x] **`mgba`** — fills `rtc`, `save_ram` on gb, gbc, sgb; fills `save_ram` on gba
 - [x] **`mojozork`** — frontend writes nothing on zmachine
+- [x] **`mrboom`** — frontend writes nothing on ports
 - [x] **`mu`** — frontend writes nothing on palm
 - [x] **`mupen64plus_next`** — fills `save_ram` on n64, n64dd
 - [x] **`neocd`** — fills `save_ram` on neogeocd, neogeocdjp
 - [x] **`nestopia`** — fills `save_ram` on famicom, fds, nes
 - [x] **`noods`** — outcome 2, and a card: `<save_dir>/<rom_stem>.sav`, opened as a descriptor the emulator writes into
 - [x] **`np2kai`** — frontend writes nothing on pc98
+- [x] **`nxengine`** — outcome 2, and a card: five Cave Story profiles under fixed names in the save directory
 - [x] **`o2em`** — frontend writes nothing on odyssey2, videopac
 - [x] **`parallel_n64`** — fills `save_ram` on n64, n64dd
 - [x] **`picodrive`** — fills `save_ram` on gamegear, genesis, mark3, mastersystem, megacd, megacdjp, megadrive,
@@ -191,6 +195,7 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`snes9x2010`** — fills `rtc`, `save_ram` on satellaview, sfc, snes, snesna, sufami
 - [x] **`squirreljme`** — frontend writes nothing on j2me
 - [x] **`stella`** — frontend writes nothing on atari2600
+- [x] **`superbroswar`** — frontend writes nothing on ports
 - [x] **`tgbdual`** — fills `rtc`, `save_ram` on gb, gbc
 - [x] **`theodore`** — frontend writes nothing on moto, to8
 - [x] **`tic80`** — fills `save_ram` on tic80
