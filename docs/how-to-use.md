@@ -620,6 +620,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `core-option-value-unestablished`           | the core fits the card, but nothing states the value governing it — not applied, standard frame     |
 | `core-mode-unestablished`                   | the card's selection rule could not decide (`data["reason"]` says why) — not applied                |
 | `save-inside-content`                       | no separate save file exists: the loaded content file itself takes the writes — your call           |
+| `save-inside-image`                         | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file    |
 | `save-writes-discarded`                     | nothing keeps a save at all: the writes are discarded — the granularity block names the way out     |
 | `save-root-redirected`                      | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip     |
 | `save-root-unresolvable`                    | the save trees anchor at the frontend _process's_ state (its working directory) — `data` names them |
@@ -654,10 +655,11 @@ extensions; `complete` is `false`, and deciding which of those files are yours t
 ### Where a standalone emulator's saves live
 
 A standalone catalogue entry answers `savefile_location` where a **standalone save card** covers the emulator its launch
-command names — Dolphin today, keyed by the `%EMULATOR_…%` token the way the texture cards are. No frontend hands these
-emulators a save directory, so the answer's `root_kind` is `emulator_directory`: the emulator's own tree below the XDG
-base the arrangement pins, its shape read from the emulator's own configuration the way the emulator reads it (Dolphin's
-`Dolphin.ini`, at the shipped release), and rerouted with symlinks the answer walks.
+command names — Dolphin, PPSSPP, xemu and Cemu today, keyed by the `%EMULATOR_…%` token the way the texture cards are.
+No frontend hands these emulators a save directory, so the answer's `root_kind` is `emulator_directory`: the emulator's
+own tree, its shape read from the emulator's own configuration the way the emulator reads it (Dolphin's `Dolphin.ini`,
+xemu's `xemu.toml`, Cemu's `settings.xml` — each at the shipped release; PPSSPP's Linux memstick is fixed by the build,
+so its card names no config at all), and rerouted with symlinks the answer walks.
 
 ```python
 entry = inst.emulators_for("gc").entries[0]   # 'Dolphin (Standalone)'
@@ -673,10 +675,18 @@ The granularity block is the same machinery the rule cards use: the readings nam
 (`SlotA = 8` is the GCI-folder device) and the alternative names the one edit to the other scheme — `SlotA = 1`, the raw
 card, where every game of a region shares one `MemoryCardA.<region>.raw` and the granularity says so. The Wii answer
 (`system="wii"`) is the NAND's `title/` tree: one unnamed directory per title, `file-names-unestablished` carrying the
-citation, and `physical_dir` pointing at the real tree behind the arrangement's symlink. A Dolphin.ini that exists and
-cannot be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside
-to. Savestates stay refused (`standalone-unsupported`): the states tree is its own wiring, deliberately outside the save
+citation, and `physical_dir` pointing at the real tree behind the arrangement's symlink. A config that exists and cannot
+be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside to.
+Savestates stay refused (`standalone-unsupported`): the states tree is its own wiring, deliberately outside the save
 card.
+
+The other three cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
+`PSP/SAVEDATA`. Cemu is one unnamed subtree per title id below the MLC's `usr/save`, the MLC resolved the way the
+emulator resolves it (an `--mlc` launch flag outranks `settings.xml`, and the answer says so when it sees one). xemu is
+the boundary case: every game's save lives **inside** the emulated Xbox hard disk, so the answer names the image as one
+shared file and `save-inside-image` carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id>`)
+— a file-level client backs the image up whole or leaves it, a tool that parses FATX has the layout stated instead of
+rediscovered, and per-game sync is honestly not on offer from outside.
 
 ## Where do this ROM's savestates live?
 

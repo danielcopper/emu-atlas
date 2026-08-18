@@ -322,6 +322,14 @@ CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT = "save-dir-launch-dependent"
 # decides for itself what to make of a content file that doubles as the save
 # (back it up, copy it, leave it); atlas states the fact and stops there.
 CAVEAT_SAVE_INSIDE_CONTENT = "save-inside-content"
+# The inside-content statement's console-shaped sibling: the saves live inside
+# a disk image the answer names as a file — xemu's emulated Xbox hard disk
+# holds every game's save on its FATX filesystem. Per-game structure exists
+# *inside* the image (``data`` carries the layout, one directory per title id)
+# but nothing outside it is addressable, so a file-level client backs the
+# image up whole or leaves it, and a tool that parses the image's filesystem
+# has the layout stated machine-readably instead of rediscovering it.
+CAVEAT_SAVE_INSIDE_IMAGE = "save-inside-image"
 # The inside-content statement's harder sibling: this configuration keeps no
 # save at all — the writes are discarded (hatari with write protection on
 # throws the modified image away at eject). The declared emptiness is the

@@ -1167,6 +1167,91 @@ class TestDolphinStandaloneSaves:
         assert refusal.code == atlas.UNRESOLVED_STANDALONE
 
 
+TRIO_ESDE = (
+    '<?xml version="1.0"?><systemList>'
+    "<system><name>psp</name><path>%ROMPATH%/psp</path><extension>.iso</extension>"
+    '<command label="PPSSPP (Standalone)">%EMULATOR_PPSSPP% %ROM%</command></system>'
+    "<system><name>xbox</name><path>%ROMPATH%/xbox</path><extension>.iso</extension>"
+    '<command label="xemu (Standalone)">%EMULATOR_XEMU% %ROM%</command></system>'
+    "<system><name>wiiu</name><path>%ROMPATH%/wiiu</path><extension>.wua</extension>"
+    '<command label="Cemu (Standalone)">%EMULATOR_CEMU% --mlc /tmp/other %ROM%</command></system>'
+    "</systemList>"
+)
+XEMU_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
+CEMU_XML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml"
+
+
+class TestMoreStandaloneSaves:
+    """The ppsspp/xemu/cemu corners the vector family does not carry."""
+
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: TRIO_ESDE,
+    }
+
+    def _answer(self, system, files=None, **kwargs):
+        rd = _retrodeck({**self.BASE, **(files or {})}, dirs=["/mnt/sd/retrodeck/saves"], **kwargs)
+        return rd.emulators_for(system).entries[0].savefile_location()
+
+    def test_ppsspp_answers_from_the_build_alone(self):
+        # No config governs the memstick on Linux — the answer needs no file.
+        p = self._answer("psp")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir.endswith("/config/ppsspp/PSP/SAVEDATA")
+        assert p.granularity is not None
+        assert p.granularity.readings == ()
+
+    def test_xemu_without_a_toml_states_the_missing_disk(self):
+        p = self._answer("xbox")
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_xemu_with_a_disk_carries_the_inside_image_layout(self):
+        p = self._answer(
+            "xbox",
+            files={XEMU_TOML_PATH: "[sys.files]\nhdd_path = '/mnt/sd/hdd.qcow2'\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_INSIDE_IMAGE]
+        assert stated
+        assert stated[0].data["image"] == "/mnt/sd/hdd.qcow2"
+        assert stated[0].data["layout"] == "UDATA/<title id>"
+
+    def test_xemu_without_an_hdd_path_refuses_to_invent_a_disk(self):
+        p = self._answer(
+            "xbox",
+            files={
+                XEMU_TOML_PATH: "[sys.files]\neeprom_path = '/mnt/sd/eeprom.bin'\n"
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "hdd_path" in stated[0].data["reason"]
+
+    def test_xemu_with_unparseable_toml_refuses(self):
+        p = self._answer("xbox", files={XEMU_TOML_PATH: "[sys.files\nnot toml"})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_cemu_without_a_settings_xml_answers_the_default_mlc(self):
+        # The catalogue command carries --mlc, which outranks the config — the
+        # answer still stands, with the caveat saying so.
+        p = self._answer("wiiu")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir.endswith("/data/Cemu/mlc01/usr/save")
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "--mlc" in stated[0].data["reason"]
+
+    def test_cemu_with_unparseable_xml_refuses(self):
+        p = self._answer("wiiu", files={CEMU_XML_PATH: "<content><mlc_path>"})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+
 class TestEmuDeck:
     def test_settings_parse_and_roots(self):
         machine = FixtureMachine(

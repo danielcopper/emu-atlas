@@ -367,6 +367,249 @@
           }
         }
       }
+    },
+    {
+      "name": "ppsspp-keeps-one-savedata-directory-per-game-on-its-memstick",
+      "rationale": "PPSSPP's memory stick on Linux is fixed by the build — the XDG config tree itself, no setting names it — so the card names no governing config and the answer is a path join plus the links: SAVEDATA is rerouted by the arrangement, and physical_dir says where. One directory per game, named by the game itself from its own id, so the tree is stated and its entries refused.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/PSP/PPSSPP-SA"
+        ],
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/SAVEDATA": "/mnt/sd/retrodeck/saves/PSP/PPSSPP-SA"
+        },
+        "entry_savefile_query": {
+          "system": "psp"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/SAVEDATA",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/PSP/PPSSPP-SA",
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/SAVEDATA",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "PPSSPP",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/SAVEDATA",
+                "role": "battery",
+                "citation": "the game names its savedata directory; the tree is <memstick>/PSP/SAVEDATA (PathUtil.cpp:52,:62-63 at ppsspp v1.20.4)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "memstick",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "xemus-saves-live-inside-the-emulated-hard-disk",
+      "rationale": "Every Xbox save lives on the emulated hard disk — a disk image xemu.toml names, which the arrangement keeps beside the firmware. The image is one shared file; per-title structure exists only inside its FATX filesystem, so the save-inside-image caveat states the layout machine-readably (UDATA/<title id>) for a tool that can parse it, and a file-level client backs the image up whole. The EEPROM rides as its own named settings group.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\neeprom_path = '/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin'\nhdd_path = '/mnt/sd/retrodeck/bios/xbox_hdd.qcow2'\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios",
+                "files": [
+                  "xbox_hdd.qcow2"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/xbox/xemu",
+                "files": [
+                  "xbox-eeprom.bin"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "save-inside-image",
+              "data": {
+                "emulator": "XEMU",
+                "image": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                "layout": "UDATA/<title id>"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "hdd",
+            "readings": [
+              {
+                "key": "hdd_path",
+                "value": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
+              },
+              {
+                "key": "eeprom_path",
+                "value": "/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "cemus-mlc-holds-one-save-subtree-per-title",
+      "rationale": "The Wii U's internal storage (MLC) holds every save, and settings.xml says where it lives — the arrangement points it at the firmware tree and reroutes usr/save into the saves root with a symlink the answer walks. One subtree per title id below usr/save, the id the game's own: the shipped binary carries the scheme as the whole literal 'usr/save/{:08X}/{:08X}/user/', so the tree is stated and its entries refused.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<content>\n  <mlc_path>/mnt/sd/retrodeck/bios/cemu</mlc_path>\n</content>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/wiiu/cemu"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/cemu/usr/save": "/mnt/sd/retrodeck/saves/wiiu/cemu"
+        },
+        "entry_savefile_query": {
+          "system": "wiiu"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/wiiu/cemu",
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "CEMU",
+                "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save",
+                "role": "battery",
+                "citation": "the shipped binary composes 'usr/save/{:08X}/{:08X}/user/' (whole literal in Cemu 2.6)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "mlc",
+            "readings": [
+              {
+                "key": "mlc_path",
+                "value": "/mnt/sd/retrodeck/bios/cemu",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }
