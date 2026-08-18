@@ -1707,14 +1707,7 @@
             "complete": false,
             "groups": []
           },
-          "caveats": [
-            {
-              "code": "core-unaudited",
-              "data": {
-                "core": "melondsds"
-              }
-            }
-          ],
+          "caveats": [],
           "granularity": {
             "value": "per-game-file",
             "option_key": null,

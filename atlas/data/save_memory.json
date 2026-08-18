@@ -299,23 +299,6 @@
         "source": "the binary names a version without a commit, so the pin is that version"
       }
     },
-    "easyrpg": {
-      "identifiers": {
-        "library_name": [
-          "EasyRPG Player"
-        ]
-      },
-      "systems": {
-        "easyrpg": {
-          "memory_types": [],
-          "verified_core": "0.8.1.1-git+12@6a244c1",
-          "citation": "[V] src/platform/libretro/ui.cpp:541-544 at EasyRPG/Player 6a244c1 — retro_get_memory_size is a no-op returning 0 for every id, and the comment says so."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "ecwolf": {
       "identifiers": {
         "library_name": [

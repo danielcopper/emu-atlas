@@ -1,8 +1,8 @@
 {
   "family": "machines",
   "schema": 3,
-  "spec": "DESIGN.md \u2014 installations, the machine seam, save locations",
-  "description": "Whole fixture machines (files, dirs, symlinks, core answers) in; the canonical contract serializations (atlas/contract.py) out, asserted with exact equality: installations (kind, kinds, root, health issue codes) and \u2014 per query \u2014 the full SavefilePlacement (dir, root_kind, needs, fallback_dir, physical_dir, file_set incl. completeness, granularity incl. option identity and alternatives, caveat codes + data), catalogue entries, and entry-route outcomes incl. Unresolved. Prose (sources, messages) is non-contractual. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h and the shipped RetroDECK/EmuDeck configs; see docs/research/retrodeck-save-placement.md.",
+  "spec": "DESIGN.md — installations, the machine seam, save locations",
+  "description": "Whole fixture machines (files, dirs, symlinks, core answers) in; the canonical contract serializations (atlas/contract.py) out, asserted with exact equality: installations (kind, kinds, root, health issue codes) and — per query — the full SavefilePlacement (dir, root_kind, needs, fallback_dir, physical_dir, file_set incl. completeness, granularity incl. option identity and alternatives, caveat codes + data), catalogue entries, and entry-route outcomes incl. Unresolved. Prose (sources, messages) is non-contractual. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h and the shipped RetroDECK/EmuDeck configs; see docs/research/retrodeck-save-placement.md.",
   "vectors": [
     {
       "name": "retrodeck-sort-by-content-concrete",
@@ -56,7 +56,7 @@
     },
     {
       "name": "retrodeck-multi-disc-m3u-folder",
-      "rationale": "The multi-disc convention: the ROM's parent directory is named '<title>.m3u'. content_dir is the parent directory name (runloop.c:8781), so the save lands under saves/<title>.m3u/ \u2014 observed on a real installation.",
+      "rationale": "The multi-disc convention: the ROM's parent directory is named '<title>.m3u'. content_dir is the parent directory name (runloop.c:8781), so the save lands under saves/<title>.m3u/ — observed on a real installation.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -106,7 +106,7 @@
     },
     {
       "name": "retrodeck-core-override-flips-sort",
-      "rationale": "RetroDECK ships config/PPSSPP/PPSSPP.cfg with sort_savefiles_by_content_enable=false \u2014 a stock installation where the core override flips the layout flat for PPSSPP-libretro. The override directory is keyed by library_name (PPSSPP), resolved live from the core binary.",
+      "rationale": "RetroDECK ships config/PPSSPP/PPSSPP.cfg with sort_savefiles_by_content_enable=false — a stock installation where the core override flips the layout flat for PPSSPP-libretro. The override directory is keyed by library_name (PPSSPP), resolved live from the core binary.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -164,7 +164,7 @@
     },
     {
       "name": "retrodeck-game-override-wins-over-core-override",
-      "rationale": "The chain stacks core \u2192 content-dir \u2192 game, later wins (configuration.c:7095). The core override turns sorting off; the game override turns it back on \u2014 the game override must win.",
+      "rationale": "The chain stacks core → content-dir → game, later wins (configuration.c:7095). The core override turns sorting off; the game override turns it back on — the game override must win.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -223,7 +223,7 @@
     },
     {
       "name": "retrodeck-sort-by-core-resolves-library-name",
-      "rationale": "Sorting by core appends library_name \u2014 the core's self-reported display name (mGBA), not the .so basename (mgba). Resolved live via query_core through the /app\u2192Flatpak-deployment translation; the existing save is observed through it.",
+      "rationale": "Sorting by core appends library_name — the core's self-reported display name (mGBA), not the .so basename (mgba). Resolved live via query_core through the /app→Flatpak-deployment translation; the existing save is observed through it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -274,7 +274,7 @@
     },
     {
       "name": "retrodeck-sort-by-core-without-core-leaves-hole",
-      "rationale": "Sorting by core needs library_name; without a named core the hole stays open (a hole is not an unknown \u2014 the caller can fill it), and a caveat states that per-core overrides were not checked.",
+      "rationale": "Sorting by core needs library_name; without a named core the hole stays open (a hole is not an unknown — the caller can fill it), and a caveat states that per-core overrides were not checked.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -433,7 +433,7 @@
     },
     {
       "name": "emudeck-flat-layout",
-      "rationale": "EmuDeck: settings.sh is the truth, the bare org.libretro.RetroArch Flatpak is its RetroArch, the shipped layout is flat (sort keys false). One handle for both descriptions \u2014 no separate bare installation.",
+      "rationale": "EmuDeck: settings.sh is the truth, the bare org.libretro.RetroArch Flatpak is its RetroArch, the shipped layout is flat (sort keys false). One handle for both descriptions — no separate bare installation.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -484,7 +484,7 @@
     },
     {
       "name": "standalone-flatpak-upstream-default-sorts-by-core",
-      "rationale": "RetroArch's upstream compile-time default is sort_savefiles_enable=true (config.def.h:982). A bare Flatpak whose cfg sets only the directory sorts by core \u2014 the placement needs library_name.",
+      "rationale": "RetroArch's upstream compile-time default is sort_savefiles_enable=true (config.def.h:982). A bare Flatpak whose cfg sets only the directory sorts by core — the placement needs library_name.",
       "input": {
         "home": "/home/user",
         "files": {
@@ -539,7 +539,7 @@
     },
     {
       "name": "standalone-flatpak-savefile-directory-absent",
-      "rationale": "An unset savefile_directory means the RetroArch platform default \u2014 'saves' under the config tree (platform_unix.c:2133-2134) \u2014 never the ROM's directory; upstream compile defaults then sort by core.",
+      "rationale": "An unset savefile_directory means the RetroArch platform default — 'saves' under the config tree (platform_unix.c:2133-2134) — never the ROM's directory; upstream compile defaults then sort by core.",
       "input": {
         "home": "/home/user",
         "files": {
@@ -652,7 +652,7 @@
     },
     {
       "name": "unloadable-core-is-stated-not-guessed",
-      "rationale": "A core that is present but unloadable (missing host library \u2014 the applewin case) yields library_name unknown: the hole stays open and the caveat states it. Never a guess from the .so filename. This core carries no card, so nothing was retired and no core-generation-unestablished rides here \u2014 core-unqueryable already says the read failed, and a second caveat would announce the loss of knowledge that never existed.",
+      "rationale": "A core that is present but unloadable (missing host library — the applewin case) yields library_name unknown: the hole stays open and the caveat states it. Never a guess from the .so filename. This core carries no card, so nothing was retired and no core-generation-unestablished rides here — core-unqueryable already says the read failed, and a second caveat would announce the loss of knowledge that never existed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -809,7 +809,7 @@
     },
     {
       "name": "emudeck-claims-standalone-flatpak",
-      "rationale": "EmuDeck is a configured org.libretro.RetroArch \u2014 the same RetroArch under two descriptions. One handle carrying both, never a second handle for the same installation.",
+      "rationale": "EmuDeck is a configured org.libretro.RetroArch — the same RetroArch under two descriptions. One handle carrying both, never a second handle for the same installation.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -834,7 +834,7 @@
     },
     {
       "name": "emudeck-marker-paths-partially-quoted",
-      "rationale": "What the app-driven installer actually writes: every path key quotes only its jq-read prefix (jsonToBashVars.sh:116-123 @ 863ab69) and source concatenates the segments into one word. The marker-derived root comes out quote-free and health does not false-alarm root-missing on a healthy machine \u2014 observed on a live EmuDeck installation.",
+      "rationale": "What the app-driven installer actually writes: every path key quotes only its jq-read prefix (jsonToBashVars.sh:116-123 @ 863ab69) and source concatenates the segments into one word. The marker-derived root comes out quote-free and health does not false-alarm root-missing on a healthy machine — observed on a live EmuDeck installation.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -943,7 +943,7 @@
     },
     {
       "name": "flycast-per-game-vmu-mode",
-      "rationale": "The same core with reicast_per_content_vmus = 'VMU A1' switches to per-game VMUs rooted in the standard savefile_directory \u2014 granularity and root flip on one live-read option. Per-content applies to port A1 alone (oslib.cpp:40-41), so B1..D1 and the console flash keep using the shared card under system_directory: the save lies under two roots, which a card describing one cannot state. The file set therefore stays unknown and 'file-set-spans-roots' says why, instead of offering the single visible file as the whole save.",
+      "rationale": "The same core with reicast_per_content_vmus = 'VMU A1' switches to per-game VMUs rooted in the standard savefile_directory — granularity and root flip on one live-read option. Per-content applies to port A1 alone (oslib.cpp:40-41), so B1..D1 and the console flash keep using the shared card under system_directory: the save lies under two roots, which a card describing one cannot state. The file set therefore stays unknown and 'file-set-spans-roots' says why, instead of offering the single visible file as the whole save.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1025,7 +1025,7 @@
     },
     {
       "name": "flycast-per-content-vmus-are-named-after-the-disc-id",
-      "rationale": "reicast_per_content_vmus = 'All VMUs' writes one VMU per connected port into the save directory the frontend hands the core \u2014 the content-sorted one, no subdirectory of the core's own \u2014 named after the disc's product id (flycast@1dac369 oslib.cpp:38-67, libretro.cpp:2142-2148; live-verified on RetroDECK 0.10.9b). The id is written in the disc header, which atlas does not read: the file set is stated as the template it is and 'save_id' joins needs. Content without such an id \u2014 arcade, or a disc header stating none \u2014 is named after the ROM by the same function (oslib.cpp:62); atlas cannot decide which case it has, so 'filenames-content-conditional' carries both spellings, the alternative filled from the content path. A per-game VMU already lying in that directory is deliberately NOT attributed to this content \u2014 a content-sorted directory holds every game of one ROM directory, so reading a name back as this save would be a guess.",
+      "rationale": "reicast_per_content_vmus = 'All VMUs' writes one VMU per connected port into the save directory the frontend hands the core — the content-sorted one, no subdirectory of the core's own — named after the disc's product id (flycast@1dac369 oslib.cpp:38-67, libretro.cpp:2142-2148; live-verified on RetroDECK 0.10.9b). The id is written in the disc header, which atlas does not read: the file set is stated as the template it is and 'save_id' joins needs. Content without such an id — arcade, or a disc header stating none — is named after the ROM by the same function (oslib.cpp:62); atlas cannot decide which case it has, so 'filenames-content-conditional' carries both spellings, the alternative filled from the content path. A per-game VMU already lying in that directory is deliberately NOT attributed to this content — a content-sorted directory holds every game of one ROM directory, so reading a name back as this save would be a guess.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1123,7 +1123,7 @@
     },
     {
       "name": "flycast-system-files-in-the-content-dir-move-the-shared-vmus",
-      "rationale": "RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY hands the core the CONTENT directory when systemfiles_in_content_dir is set (runloop.c:1963-1985), so a card rooted in the system directory resolves under the ROM's own directory and states content_directory as its root kind \u2014 the configured system_directory is not where this core writes.",
+      "rationale": "RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY hands the core the CONTENT directory when systemfiles_in_content_dir is set (runloop.c:1963-1985), so a card rooted in the system directory resolves under the ROM's own directory and states content_directory as its root kind — the configured system_directory is not where this core writes.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1195,7 +1195,7 @@
     },
     {
       "name": "flycast-system-files-in-the-content-dir-without-content-names-the-hole",
-      "rationale": "Same machine, no content named: the root is the content's own directory, so what is left is the content_dir hole the CALLER fills \u2014 not a configured value nobody can supply. The file set stands declared because there is nowhere to look yet.",
+      "rationale": "Same machine, no content named: the root is the content's own directory, so what is left is the content_dir hole the CALLER fills — not a configured value nobody can supply. The file set stands declared because there is nowhere to look yet.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1289,7 +1289,7 @@
     },
     {
       "name": "flycast-a-cleared-system-directory-hands-the-core-the-content-dir",
-      "rationale": "A blank system_directory clears the setting \u2014 the key passes handle_setting=true, so the generic path loop writes the empty value through (configuration.c:1691, :6532-6538, config_file.c:1202-1216) \u2014 and an empty system directory sends the core to the content's directory. The opposite of savefile_directory, where a blank value keeps the standing root.",
+      "rationale": "A blank system_directory clears the setting — the key passes handle_setting=true, so the generic path loop writes the empty value through (configuration.c:1691, :6532-6538, config_file.c:1202-1216) — and an empty system directory sends the core to the content's directory. The opposite of savefile_directory, where a blank value keeps the standing root.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1431,7 +1431,7 @@
     },
     {
       "name": "flycast-a-sandbox-only-system-directory-is-stated-not-a-hole",
-      "rationale": "The configured directory exists only inside the Flatpak sandbox: atlas answers the spelling the emulator writes to, states sandbox-path-untranslated, and performs no observation there \u2014 the same shape an unreachable saves root gets. A hole would ask the caller for a value no caller has.",
+      "rationale": "The configured directory exists only inside the Flatpak sandbox: atlas answers the spelling the emulator writes to, states sandbox-path-untranslated, and performs no observation there — the same shape an unreachable saves root gets. A hole would ask the caller for a value no caller has.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1531,7 +1531,7 @@
     },
     {
       "name": "flycast-a-spanning-modes-second-root-is-resolved-not-the-cards-spelling",
-      "rationale": "In 'VMU A1' only port A1 moves to the save directory; the rest keeps using the shared card, which the card calls the system directory. With systemfiles_in_content_dir set, that shared card is under the CONTENT directory (runloop.c:1963-1985), so file-set-spans-roots reports also_under: content_directory \u2014 the same reading root_kind performs, because a consumer following the card's own spelling back to the cfg key would look where this core never writes.",
+      "rationale": "In 'VMU A1' only port A1 moves to the save directory; the rest keeps using the shared card, which the card calls the system directory. With systemfiles_in_content_dir set, that shared card is under the CONTENT directory (runloop.c:1963-1985), so file-set-spans-roots reports also_under: content_directory — the same reading root_kind performs, because a consumer following the card's own spelling back to the cfg key would look where this core never writes.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1701,7 +1701,7 @@
     },
     {
       "name": "catalogue-gamelist-selection-promotes-default",
-      "rationale": "The user's saved per-system emulator choice lives in the gamelist.xml header as <alternativeEmulator><label> \u2014 written by ES-DE as two root elements (not well-formed XML, observed live). A matching label promotes that entry to effective default; the declared default stays as alternative.",
+      "rationale": "The user's saved per-system emulator choice lives in the gamelist.xml header as <alternativeEmulator><label> — written by ES-DE as two root elements (not well-formed XML, observed live). A matching label promotes that entry to effective default; the declared default stays as alternative.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1753,7 +1753,7 @@
     },
     {
       "name": "catalogue-gamelist-selection-inside-gamelist-promotes-default",
-      "rationale": "The same saved choice, written where ES-DE is moving it: <alternativeEmulator> as a child of <gameList> instead of a second root element (ES-DE reads both, document level first \u2014 GamelistFileParser.cpp:190-192; the nested shape is what RetroDECK 0.10.9b carries live). Where the element sits must not change which emulator atlas calls the effective default.",
+      "rationale": "The same saved choice, written where ES-DE is moving it: <alternativeEmulator> as a child of <gameList> instead of a second root element (ES-DE reads both, document level first — GamelistFileParser.cpp:190-192; the nested shape is what RetroDECK 0.10.9b carries live). Where the element sits must not change which emulator atlas calls the effective default.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1871,7 +1871,7 @@
     },
     {
       "name": "retrodeck-cfg-missing-platform-default-applies",
-      "rationale": "A RetroDECK whose retroarch.cfg is missing: RetroArch initializes platform defaults before config load (platform_unix.c:2133-2134), so the effective root is 'saves' under the config tree \u2014 never the ROM's directory \u2014 and the upstream compile defaults govern sorting (sort_savefiles_enable=true, config.def.h:982).",
+      "rationale": "A RetroDECK whose retroarch.cfg is missing: RetroArch initializes platform defaults before config load (platform_unix.c:2133-2134), so the effective root is 'saves' under the config tree — never the ROM's directory — and the upstream compile defaults govern sorting (sort_savefiles_enable=true, config.def.h:982).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1922,7 +1922,7 @@
     },
     {
       "name": "entry-route-selection-to-placement",
-      "rationale": "The natural client route: catalogue entry (with the gamelist selection applied) to its save placement in one ask. The promoted ParaLLEl entry resolves with its own core \u2014 the no-core caveat class does not exist on this path; the core is unaudited and the answer says so.",
+      "rationale": "The natural client route: catalogue entry (with the gamelist selection applied) to its save placement in one ask. The promoted ParaLLEl entry resolves with its own core — the no-core caveat class does not exist on this path; the core is unaudited and the answer says so.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1988,7 +1988,7 @@
     },
     {
       "name": "entry-route-standalone-is-unresolved",
-      "rationale": "A standalone catalogue entry asked for its save location is a domain outcome with a stable code \u2014 outside current coverage, never a guess and never an exception.",
+      "rationale": "A standalone catalogue entry asked for its save location is a domain outcome with a stable code — outside current coverage, never a guess and never an exception.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2028,7 +2028,7 @@
     },
     {
       "name": "secondary-handle-answers-its-own-config",
-      "rationale": "Coexisting installations: the query names the native handle explicitly, and the answer comes from the native cfg alone \u2014 no cross-installation fall-through from the higher-priority RetroDECK.",
+      "rationale": "Coexisting installations: the query names the native handle explicitly, and the answer comes from the native cfg alone — no cross-installation fall-through from the higher-priority RetroDECK.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2097,7 +2097,7 @@
     },
     {
       "name": "retrodeck-marker-unreadable-is-present-and-broken",
-      "rationale": "An unreadable marker is a PRESENT, broken RetroDECK \u2014 detection triggers on existence, and health separates the read failure from the root fallout instead of hiding the installation.",
+      "rationale": "An unreadable marker is a PRESENT, broken RetroDECK — detection triggers on existence, and health separates the read failure from the root fallout instead of hiding the installation.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2164,7 +2164,7 @@
     },
     {
       "name": "a-roms-path-atlas-no-longer-reads-cannot-make-the-marker-invalid",
-      "rationale": "roms_path is type-checked nowhere any more, because nothing reads it: the ROM root comes off ES-DE's own ROMDirectory, and retrodeck.json's copy is only the value RetroDECK seds into that setting. The scoping rule is that atlas reports on what it reads, so a key no read touches cannot make an installation unhealthy \u2014 reporting it would be a claim about who wrote the file. This machine is healthy with a roms_path that is not even a string, which is exactly the answer a marker-invalid finding here would get wrong.",
+      "rationale": "roms_path is type-checked nowhere any more, because nothing reads it: the ROM root comes off ES-DE's own ROMDirectory, and retrodeck.json's copy is only the value RetroDECK seds into that setting. The scoping rule is that atlas reports on what it reads, so a key no read touches cannot make an installation unhealthy — reporting it would be a claim about who wrote the file. This machine is healthy with a roms_path that is not even a string, which is exactly the answer a marker-invalid finding here would get wrong.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2189,7 +2189,7 @@
     },
     {
       "name": "sorted-dir-blocked-by-file-reverts-to-root",
-      "rationale": "A file where the sorted directory belongs: RetroArch's mkdir MUST fail and it reverts to the unsorted root (runloop.c:8844) \u2014 the fallback is not conditional, it is the known answer.",
+      "rationale": "A file where the sorted directory belongs: RetroArch's mkdir MUST fail and it reverts to the unsorted root (runloop.c:8844) — the fallback is not conditional, it is the known answer.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2244,7 +2244,7 @@
     },
     {
       "name": "lrps2-dead-memcard-link-is-stated",
-      "rationale": "The dir_prep link into an unmounted volume: the emulator-side memcards path is dead. The answer keeps the emulator-side directory and states the dead link with its target \u2014 physical_dir stays null because there is no existing backing path.",
+      "rationale": "The dir_prep link into an unmounted volume: the emulator-side memcards path is dead. The answer keeps the emulator-side directory and states the dead link with its target — physical_dir stays null because there is no existing backing path.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2332,7 +2332,7 @@
     },
     {
       "name": "lrps2-memcard-link-cycle-is-stated",
-      "rationale": "The other way a dir_prep link ends nowhere: the chain closes on itself, so the kernel answers ELOOP for the whole resolution rather than reaching any path at all. It is its own code next to dead-symlink because the two need different repairs \u2014 a dead link points at a name somebody can create, a cycle is one somebody has to break \u2014 and a consumer that branches only on dead-symlink to find an unwritable directory must miss this one. physical_dir stays null: there is no backing path, not even a half-resolved one to name.",
+      "rationale": "The other way a dir_prep link ends nowhere: the chain closes on itself, so the kernel answers ELOOP for the whole resolution rather than reaching any path at all. It is its own code next to dead-symlink because the two need different repairs — a dead link points at a name somebody can create, a cycle is one somebody has to break — and a consumer that branches only on dead-symlink to find an unwritable directory must miss this one. physical_dir stays null: there is no backing path, not even a half-resolved one to name.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2456,7 +2456,7 @@
     },
     {
       "name": "opera-nvram-subdir-unanswered-when-no-mode-is-established",
-      "rationale": "3DO NVRAM (rule card 'opera') on a core the probe could not read: it loaded and answered, but registered no options this probe captured, so it declared no default for opera_nvram_storage. The opera card records none either \u2014 a default is written down only for a core that registers none, and this one normally does. With no options file on the machine, nothing states which mode is in force, so the card cannot pick between opera/per_game and opera/shared and steps aside rather than nesting a subdirectory on the strength of nothing. core-option-value-unestablished says which half is missing; the version comparison still runs and still reports that this card was never verified on any arrangement. The per_game answer this machine used to give lives on in opera-nvram-subdir-from-the-cores-own-default, where the core states its default.",
+      "rationale": "3DO NVRAM (rule card 'opera') on a core the probe could not read: it loaded and answered, but registered no options this probe captured, so it declared no default for opera_nvram_storage. The opera card records none either — a default is written down only for a core that registers none, and this one normally does. With no options file on the machine, nothing states which mode is in force, so the card cannot pick between opera/per_game and opera/shared and steps aside rather than nesting a subdirectory on the strength of nothing. core-option-value-unestablished says which half is missing; the version comparison still runs and still reports that this card was never verified on any arrangement. The per_game answer this machine used to give lives on in opera-nvram-subdir-from-the-cores-own-default, where the core states its default.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2521,7 +2521,7 @@
     },
     {
       "name": "opera-nvram-subdir-from-the-cores-own-default",
-      "rationale": "The same 3DO machine with the core read as the shipped binary really answers: opera registers opera_nvram_storage and declares 'per game' as its default. No options file states a value, so that live default governs \u2014 a machine fact, not a recorded one \u2014 and the core nests opera/per_game under the effective save directory it receives from GET_SAVE_DIRECTORY (runloop.c:2001/8977). The file name carries the opera_nvram_version option, so the set is observed, never declared. The card was never live-verified on any arrangement, and the answer says so. This is the guarantee opera-nvram-subdir-unanswered-when-no-mode-is-established held while the card still carried a copy of the default.",
+      "rationale": "The same 3DO machine with the core read as the shipped binary really answers: opera registers opera_nvram_storage and declares 'per game' as its default. No options file states a value, so that live default governs — a machine fact, not a recorded one — and the core nests opera/per_game under the effective save directory it receives from GET_SAVE_DIRECTORY (runloop.c:2001/8977). The file name carries the opera_nvram_version option, so the set is observed, never declared. The card was never live-verified on any arrangement, and the answer says so. This is the guarantee opera-nvram-subdir-unanswered-when-no-mode-is-established held while the card still carried a copy of the default.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2608,7 +2608,7 @@
     },
     {
       "name": "opera-shared-nvram-subdir",
-      "rationale": "The same core with opera_nvram_storage = shared switches to opera/shared with one card for every game \u2014 granularity and directory flip on one live-read option.",
+      "rationale": "The same core with opera_nvram_storage = shared switches to opera/shared with one card for every game — granularity and directory flip on one live-read option.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2687,7 +2687,7 @@
     },
     {
       "name": "feature-detection-confirms-card-over-version-drift",
-      "rationale": "The generation question decided by evidence, not version strings: the arrangement version drifted from the card's pin, but the probe shows the core REGISTERS the governing option with the card's value set \u2014 the card applies, no unverified-version alarm; the demotion is recorded in prose provenance (non-contractual). The arrangement-level tripwire is a different claim and still fires: observing one core option says nothing about whether the rest of atlas's RetroDECK knowledge still holds on 0.11.0, so the answer states that re-verification is pending while the placement itself stands.",
+      "rationale": "The generation question decided by evidence, not version strings: the arrangement version drifted from the card's pin, but the probe shows the core REGISTERS the governing option with the card's value set — the card applies, no unverified-version alarm; the demotion is recorded in prose provenance (non-contractual). The arrangement-level tripwire is a different claim and still fires: observing one core option says nothing about whether the rest of atlas's RetroDECK knowledge still holds on 0.11.0, so the answer states that re-verification is pending while the placement itself stands.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2777,7 +2777,7 @@
     },
     {
       "name": "feature-detection-retires-mismatched-card",
-      "rationale": "The LRPS2 lesson, structurally: this core generation does not register the card's governing option \u2014 the card describes another generation and steps aside instead of guessing. The answer is the standard frame with a core-generation-mismatch caveat; granularity is honestly absent. The core itself answered here, which is what separates this from the unreadable core's core-generation-unestablished.",
+      "rationale": "The LRPS2 lesson, structurally: this core generation does not register the card's governing option — the card describes another generation and steps aside instead of guessing. The answer is the standard frame with a core-generation-mismatch caveat; granularity is honestly absent. The core itself answered here, which is what separates this from the unreadable core's core-generation-unestablished.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2853,7 +2853,7 @@
     },
     {
       "name": "multi-option-core-names-the-options-that-decide-granularity",
-      "rationale": "SwanStation's audit verdict is multi-option: the directory follows the standard rule, but MemoryCards_Card1Type/Card2Type/UsePlaylistTitle decide whether the save is a per-game .srm, a serial- or title-keyed .mcd, or one card shared by every game. atlas does not interpret those options, so granularity stays null \u2014 and the caveat is what keeps that deliberate silence apart from a standard core's nothing-to-report, naming the options so a consumer can ask about them instead of assuming per-game.",
+      "rationale": "SwanStation's audit verdict is multi-option: the directory follows the standard rule, but MemoryCards_Card1Type/Card2Type/UsePlaylistTitle decide whether the save is a per-game .srm, a serial- or title-keyed .mcd, or one card shared by every game. atlas does not interpret those options, so granularity stays null — and the caveat is what keeps that deliberate silence apart from a standard core's nothing-to-report, naming the options so a consumer can ask about them instead of assuming per-game.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2911,7 +2911,7 @@
     },
     {
       "name": "standard-core-states-no-granularity-caveat",
-      "rationale": "The negative control for the multi-option caveat, same layout and same empty granularity: mGBA's verdict is standard \u2014 RetroArch itself writes the save, per game, and nothing about the answer is being withheld. An empty caveat list here is what makes the multi-option caveat readable as 'deliberately unstated' rather than noise on every core.",
+      "rationale": "The negative control for the multi-option caveat, same layout and same empty granularity: mGBA's verdict is standard — RetroArch itself writes the save, per game, and nothing about the answer is being withheld. An empty caveat list here is what makes the multi-option caveat readable as 'deliberately unstated' rather than noise on every core.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2959,8 +2959,8 @@
       }
     },
     {
-      "name": "standard-dir-core-observes-its-core-written-file-set",
-      "rationale": "Beetle Saturn's verdict is standard-dir: the directory follows the rule and the file set is core-owned (.bcr/.bkr/.smpc, not RetroArch's .srm). No core option governs it \u2014 the shipped core registers none \u2014 so there is nothing deliberately unstated and no multi-option caveat: the files are content-keyed, the literal <rom_stem>.* observation reports all three, and the answer a per-game consumer reads is correct as it stands.",
+      "name": "multi-option-core-observes-its-core-written-file-set",
+      "rationale": "Beetle Saturn's verdict was standard-dir on the claim that the shipped core registers no option — refuted by the binary, which registers both sharing switches with their UI labels. The verdict is multi-option now and the caveat names the two options that swap the three files' stems to a shared spelling. Unchanged beneath it: the file set is core-owned (.bcr/.bkr/.smpc, not RetroArch's .srm), the record's declared emptiness is a statement about the frontend, and the three core-written files lying in the directory stay unreported — seen, deferred, pinned.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3004,8 +3004,15 @@
             "complete": false,
             "groups": []
           },
-          "granularity": null,
           "caveats": [
+            {
+              "code": "core-multi-option",
+              "data": {
+                "core": "mednafen_saturn",
+                "verdict": "multi-option",
+                "options": "beetle_saturn_shared_int, beetle_saturn_shared_ext"
+              }
+            },
             {
               "code": "file-set-across-systems",
               "data": {
@@ -3019,7 +3026,8 @@
                 "core": "mednafen_saturn"
               }
             }
-          ]
+          ],
+          "granularity": null
         }
       }
     },
@@ -3160,7 +3168,7 @@
     },
     {
       "name": "retrodeck-untranslatable-sandbox-path-is-stated",
-      "rationale": "Same machine, but the override directory is configured under /var/db \u2014 inside the sandbox that is the runtime's own filesystem, which has no host location at all. The override cannot be read, so the sort-by-content layout stands, and the answer says why instead of presenting itself as complete.",
+      "rationale": "Same machine, but the override directory is configured under /var/db — inside the sandbox that is the runtime's own filesystem, which has no host location at all. The override cannot be read, so the sort-by-content layout stands, and the answer says why instead of presenting itself as complete.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3228,7 +3236,7 @@
     },
     {
       "name": "ostree-home-under-var-is-not-a-sandbox-path",
-      "rationale": "On an ostree host (Fedora Silverblue, Bazzite \u2014 both ship RetroDECK) /home is a symlink to /var/home, so real home directories live under /var. The machine's own configured directories must stay host paths there, while /var/config remains the sandbox bind of the app's config directory \u2014 which on this host resolves into that same /var/home. Both halves hold at once: the stock PPSSPP override is found through the sandbox spelling and flips the layout flat, and nothing is reported as untranslatable.",
+      "rationale": "On an ostree host (Fedora Silverblue, Bazzite — both ship RetroDECK) /home is a symlink to /var/home, so real home directories live under /var. The machine's own configured directories must stay host paths there, while /var/config remains the sandbox bind of the app's config directory — which on this host resolves into that same /var/home. Both halves hold at once: the stock PPSSPP override is found through the sandbox spelling and flips the layout flat, and nothing is reported as untranslatable.",
       "input": {
         "home": "/var/home/deck",
         "files": {
@@ -3286,7 +3294,7 @@
     },
     {
       "name": "cfg-line-without-space-before-equals-is-dropped",
-      "rationale": "A hand-edited cfg writes savefile_directory=\"\u2026\" with no space before the '='. RetroArch's key scan reads a run of isgraph characters, and '=' is one of them, so the key becomes the whole text and the line is refused (config_file.c:596-623): the saves root is NOT set, and the platform default under the config tree governs. Reading that line would attest a directory this RetroArch never writes to.",
+      "rationale": "A hand-edited cfg writes savefile_directory=\"…\" with no space before the '='. RetroArch's key scan reads a run of isgraph characters, and '=' is one of them, so the key becomes the whole text and the line is refused (config_file.c:596-623): the saves root is NOT set, and the platform default under the config tree governs. Reading that line would attest a directory this RetroArch never writes to.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3350,7 +3358,7 @@
     },
     {
       "name": "override-with-unknown-boolean-value-is-a-no-op",
-      "rationale": "The core override spells sort_savefiles_by_content_enable = \"yes\". config_get_bool accepts exactly 1/true/0/false case-sensitively (config_file.c:1227-1262) and the bool loop writes nothing when it refuses (configuration.c:6412-6417), so the global layer's \"true\" still governs \u2014 the override does not turn the setting off. The rejected spelling is stated: nothing in the answer shows it otherwise.",
+      "rationale": "The core override spells sort_savefiles_by_content_enable = \"yes\". config_get_bool accepts exactly 1/true/0/false case-sensitively (config_file.c:1227-1262) and the bool loop writes nothing when it refuses (configuration.c:6412-6417), so the global layer's \"true\" still governs — the override does not turn the setting off. The rejected spelling is stated: nothing in the answer shows it otherwise.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3418,7 +3426,7 @@
     },
     {
       "name": "cleared-rgui-config-directory-moves-overrides-one-level-up",
-      "rationale": "rgui_config_directory = \"default\" clears the setting (configuration.c:6825-6826), and fill_pathname_application_special then falls back to the directory of the loaded retroarch.cfg (file_path_special.c:196-207) \u2014 one level above the platform default 'config' subdirectory. The override that governs is therefore <config dir>/PPSSPP/PPSSPP.cfg; the file in config/PPSSPP/ is the decoy that a wrong fallback would read.",
+      "rationale": "rgui_config_directory = \"default\" clears the setting (configuration.c:6825-6826), and fill_pathname_application_special then falls back to the directory of the loaded retroarch.cfg (file_path_special.c:196-207) — one level above the platform default 'config' subdirectory. The override that governs is therefore <config dir>/PPSSPP/PPSSPP.cfg; the file in config/PPSSPP/ is the decoy that a wrong fallback would read.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3477,7 +3485,7 @@
     },
     {
       "name": "app-relative-save-directory-is-stated-unexpanded",
-      "rationale": "RetroArch's own config save writes ':' paths on some platforms: fill_pathname_expand_special resolves the prefix against the directory of the running RetroArch executable (file_path.c:1066-1101 \u2192 /proc/<pid>/exe, file_path.c:1421-1455). That directory is a property of the process, not of this disk, so atlas keeps the value as configured, states it, and does not run the existing-directory test on a path it would have had to invent.",
+      "rationale": "RetroArch's own config save writes ':' paths on some platforms: fill_pathname_expand_special resolves the prefix against the directory of the running RetroArch executable (file_path.c:1066-1101 → /proc/<pid>/exe, file_path.c:1421-1455). That directory is a property of the process, not of this disk, so atlas keeps the value as configured, states it, and does not run the existing-directory test on a path it would have had to invent.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3999,7 +4007,7 @@
     },
     {
       "name": "content-dir-observation-states-what-it-saw",
-      "rationale": "savefiles_in_content_dir: the observation runs in the ROM's own directory, where everything the content consists of carries the ROM's name \u2014 the second disc track and the cover art match the same glob as the save. atlas states the whole set and says with a caveat that it may be wider than the save; filtering by extension would be a guess (REVIEW M10).",
+      "rationale": "savefiles_in_content_dir: the observation runs in the ROM's own directory, where everything the content consists of carries the ROM's name — the second disc track and the cover art match the same glob as the save. atlas states the whole set and says with a caveat that it may be wider than the save; filtering by extension would be a guess (REVIEW M10).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4060,7 +4068,7 @@
     },
     {
       "name": "content-dir-root-and-sort-name-one-hole-once",
-      "rationale": "With savefiles_in_content_dir and sort-by-content both on, RetroArch really nests the content directory under itself (runloop.c:8789 then :8827) \u2014 but the caller fills one value, so the template carries two positions and 'needs' names the hole once (REVIEW L4).",
+      "rationale": "With savefiles_in_content_dir and sort-by-content both on, RetroArch really nests the content directory under itself (runloop.c:8789 then :8827) — but the caller fills one value, so the template carries two positions and 'needs' names the hole once (REVIEW L4).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4109,7 +4117,7 @@
     },
     {
       "name": "trailing-slash-content-path-names-the-same-file",
-      "rationale": "A trailing slash disappears in RetroArch's own math: path_basename returns nothing (file_path.c:692-700) and the last dot is cut all the same (runloop.c:8710), so 'roms/psx/Game.cue/' is the same ROM as 'roms/psx/Game.cue' \u2014 same directory, same observed save (REVIEW L11).",
+      "rationale": "A trailing slash disappears in RetroArch's own math: path_basename returns nothing (file_path.c:692-700) and the last dot is cut all the same (runloop.c:8710), so 'roms/psx/Game.cue/' is the same ROM as 'roms/psx/Game.cue' — same directory, same observed save (REVIEW L11).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4159,7 +4167,7 @@
     },
     {
       "name": "content-path-without-a-name-is-refused",
-      "rationale": "A path whose last component is empty and carries no dot leaves RetroArch's basename empty \u2014 it would write a save called '.srm' (file_path.c:345-358). Naming files after an empty stem would report every dotfile in the save directory as the save, so atlas observes nothing and states the refusal; the directory still resolves (REVIEW L11).",
+      "rationale": "A path whose last component is empty and carries no dot leaves RetroArch's basename empty — it would write a save called '.srm' (file_path.c:345-358). Naming files after an empty stem would report every dotfile in the save directory as the save, so atlas observes nothing and states the refusal; the directory still resolves (REVIEW L11).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4213,7 +4221,7 @@
     },
     {
       "name": "dotted-directory-truncates-the-way-retroarch-does",
-      "rationale": "The truncation at runloop.c:8710-8711 cuts at the last dot of the whole path, guarded only by 'not at index 0'. An extensionless ROM under a directory whose name carries a dot is therefore named after the directory's first half, one level up \u2014 atlas mirrors it, because the answer has to name the file this emulator writes.",
+      "rationale": "The truncation at runloop.c:8710-8711 cuts at the last dot of the whole path, guarded only by 'not at index 0'. An extensionless ROM under a directory whose name carries a dot is therefore named after the directory's first half, one level up — atlas mirrors it, because the answer has to name the file this emulator writes.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4263,7 +4271,7 @@
     },
     {
       "name": "trailing-slash-content-path-keeps-the-content-out-of-the-set",
-      "rationale": "Same machine and same ROM as 'content-dir-observation-states-what-it-saw', named with a trailing slash: RetroArch derives the same name from both (path_basename returns nothing, the dot is cut all the same), so the answer must be the same down to the file set \u2014 in particular the content file itself stays out of it, which only holds if the slash is normalized on the filtering side too.",
+      "rationale": "Same machine and same ROM as 'content-dir-observation-states-what-it-saw', named with a trailing slash: RetroArch derives the same name from both (path_basename returns nothing, the dot is cut all the same), so the answer must be the same down to the file set — in particular the content file itself stays out of it, which only holds if the slash is normalized on the filtering side too.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4324,7 +4332,7 @@
     },
     {
       "name": "per-game-selection-stops-at-the-game-that-declares-it",
-      "rationale": "The live psx gamelist's shape (RetroDECK 0.10.9b): a root-level ./<name>.m3u carrying the <altemulator>, a <folder> of the same name, and inside it a second <name>.m3u carrying none. Gamelist paths are relative to the system's ROM directory, so they are resolved against it and compared as whole paths \u2014 matched by suffix at any depth, the nested namesake inherits a selection ES-DE would never give it: a promoted first entry for the wrong emulator, and a per-game-override caveat on a game that carries no override.",
+      "rationale": "The live psx gamelist's shape (RetroDECK 0.10.9b): a root-level ./<name>.m3u carrying the <altemulator>, a <folder> of the same name, and inside it a second <name>.m3u carrying none. Gamelist paths are relative to the system's ROM directory, so they are resolved against it and compared as whole paths — matched by suffix at any depth, the nested namesake inherits a selection ES-DE would never give it: a promoted first entry for the wrong emulator, and a per-game-override caveat on a game that carries no override.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4413,7 +4421,7 @@
     },
     {
       "name": "per-game-selection-reaches-the-game-that-declares-it",
-      "rationale": "The other half of the anchor: the same machine asked about the game the <altemulator> is written on. Its emulator leads the entry list with the per-game provenance, and the entry route for a different emulator states the override the caller is about to contradict \u2014 anchoring must not cost the match it is there to place correctly. The settings file carries the ROM root because the frontend builds the directory those gamelist paths hang off from its own ROMDirectory \u2014 a fixture with a ROM tree and no ROMDirectory models a machine RetroDECK cannot produce, since its own component_prepare.sh seds roms_path into that setting on every prepare.",
+      "rationale": "The other half of the anchor: the same machine asked about the game the <altemulator> is written on. Its emulator leads the entry list with the per-game provenance, and the entry route for a different emulator states the override the caller is about to contradict — anchoring must not cost the match it is there to place correctly. The settings file carries the ROM root because the frontend builds the directory those gamelist paths hang off from its own ROMDirectory — a fixture with a ROM tree and no ROMDirectory models a machine RetroDECK cannot produce, since its own component_prepare.sh seds roms_path into that setting on every prepare.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4510,7 +4518,7 @@
     },
     {
       "name": "the-per-game-anchor-follows-es-de-s-rom-directory-not-the-markers",
-      "rationale": "The two ROM paths a machine can carry, pointed at different trees. retrodeck.json's roms_path is only the value RetroDECK seds INTO ES-DE's ROMDirectory and never reads back, so where a user has moved them apart the frontend launches from ROMDirectory alone \u2014 and the directory a gamelist's ./Game.m3u hangs off is the one ES-DE built, not the one RetroDECK wrote down. The game under ROMDirectory therefore carries its per-game override, and this fixture pins that: anchoring on the marker would hand the override to a file ES-DE never launches. The other half \u2014 the same machine asked about the file sitting under the marker's path, which carries no override \u2014 is a unit test, because one vector asks one query.",
+      "rationale": "The two ROM paths a machine can carry, pointed at different trees. retrodeck.json's roms_path is only the value RetroDECK seds INTO ES-DE's ROMDirectory and never reads back, so where a user has moved them apart the frontend launches from ROMDirectory alone — and the directory a gamelist's ./Game.m3u hangs off is the one ES-DE built, not the one RetroDECK wrote down. The game under ROMDirectory therefore carries its per-game override, and this fixture pins that: anchoring on the marker would hand the override to a file ES-DE never launches. The other half — the same machine asked about the file sitting under the marker's path, which carries no override — is a unit test, because one vector asks one query.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4608,7 +4616,7 @@
     },
     {
       "name": "retrodeck-marker-path-of-the-wrong-type",
-      "rationale": "retrodeck.json is editable and its paths drive every read that follows, so a value that is not a path string makes the marker invalid \u2014 the same present-but-broken state malformed JSON produces. Handed on unchecked it reaches the seam as a path: os.stat reads an int as a file descriptor, so the answer can describe something that is not a path at all. The fallback roots still answer, and health says which state this is.",
+      "rationale": "retrodeck.json is editable and its paths drive every read that follows, so a value that is not a path string makes the marker invalid — the same present-but-broken state malformed JSON produces. Handed on unchecked it reaches the seam as a path: os.stat reads an int as a file descriptor, so the answer can describe something that is not a path at all. The fallback roots still answer, and health says which state this is.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4641,7 +4649,7 @@
     },
     {
       "name": "retrodeck-a-save-directory-that-cannot-be-listed-is-not-an-empty-one",
-      "rationale": "The card is still mounted enough to be a directory and its contents cannot be read \u2014 the state a save directory reaches when the SD card starts failing. An empty file set here would be the same answer a genuinely empty directory earns, and a client acting on it would report the save as gone and offer to restore over it. The set is unknown, and the caveat names the directory that could not be read.",
+      "rationale": "The card is still mounted enough to be a directory and its contents cannot be read — the state a save directory reaches when the SD card starts failing. An empty file set here would be the same answer a genuinely empty directory earns, and a client acting on it would report the save as gone and offer to restore over it. The set is unknown, and the caveat names the directory that could not be read.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4702,7 +4710,7 @@
     },
     {
       "name": "catalogue-that-could-not-be-read-is-not-an-empty-one",
-      "rationale": "The shipped es_systems.xml cannot be read, so which emulators RetroDECK knows is unknown. The old answer was a bare empty tuple, indistinguishable from a catalogue that was read and declares nothing for this system \u2014 the same silent-empty failure the firmware route already refused. Both the per-system answer and the systems list carry the caveat, because the read that failed is the same one.",
+      "rationale": "The shipped es_systems.xml cannot be read, so which emulators RetroDECK knows is unknown. The old answer was a bare empty tuple, indistinguishable from a catalogue that was read and declares nothing for this system — the same silent-empty failure the firmware route already refused. Both the per-system answer and the systems list carry the caveat, because the read that failed is the same one.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4754,7 +4762,7 @@
     },
     {
       "name": "catalogue-a-bare-retroarch-has-none-and-says-so",
-      "rationale": "An established fact about the arrangement: RetroArch ships no frontend catalogue, so there is no launch entry to answer with and never will be. Every handle answers the catalogue question now, and answering it with a reason is what makes the protocol honest \u2014 a consumer no longer has to isinstance-narrow to RetroDECK and guess what the others would have said.",
+      "rationale": "An established fact about the arrangement: RetroArch ships no frontend catalogue, so there is no launch entry to answer with and never will be. Every handle answers the catalogue question now, and answering it with a reason is what makes the protocol honest — a consumer no longer has to isinstance-narrow to RetroDECK and guess what the others would have said.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4797,7 +4805,7 @@
     },
     {
       "name": "catalogue-an-emudeck-arrangement-is-not-established",
-      "rationale": "The other kind of no-entries, and the distinction the two codes exist for. EmuDeck installs a frontend \u2014 ES-DE, Pegasus or Steam ROM Manager \u2014 so it may well have a catalogue; atlas has not established where. That is a statement about atlas, not about the machine, and a client reading it as \"no emulators\" would be told something nobody checked. Distinct code, never the arrangement-has-none one.",
+      "rationale": "The other kind of no-entries, and the distinction the two codes exist for. EmuDeck installs a frontend — ES-DE, Pegasus or Steam ROM Manager — so it may well have a catalogue; atlas has not established where. That is a statement about atlas, not about the machine, and a client reading it as \"no emulators\" would be told something nobody checked. Distinct code, never the arrangement-has-none one.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4838,7 +4846,7 @@
     },
     {
       "name": "catalogue-an-overlay-alone-does-not-make-an-unread-catalogue-read",
-      "rationale": "The custom_systems overlay reads fine and declares n64; the shipped es_systems.xml does not read at all. Only the bundled layer decides whether a catalogue was read, so both answers refuse and the entry the overlay declared is not handed out. The overlay is genuinely optional \u2014 RetroDECK ships it fully commented out, so it parses to zero systems by design and can never stand in for the shipped file; an answer built from it alone would look like a whole catalogue with the frontend's own systems silently missing. The firmware route decides the same way.",
+      "rationale": "The custom_systems overlay reads fine and declares n64; the shipped es_systems.xml does not read at all. Only the bundled layer decides whether a catalogue was read, so both answers refuse and the entry the overlay declared is not handed out. The overlay is genuinely optional — RetroDECK ships it fully commented out, so it parses to zero systems by design and can never stand in for the shipped file; an answer built from it alone would look like a whole catalogue with the frontend's own systems silently missing. The firmware route decides the same way.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4891,7 +4899,7 @@
     },
     {
       "name": "catalogue-the-named-handle-answers-not-the-first-one",
-      "rationale": "Coexisting installations: the catalogue query names the native handle, and the native handle answers \u2014 its own settled 'this arrangement ships no catalogue', not the RetroDECK handle's 'could not read one'. The two refusals carry different codes, so an answer taken from the first detected installation instead of the named one fails this vector.",
+      "rationale": "Coexisting installations: the catalogue query names the native handle, and the native handle answers — its own settled 'this arrangement ships no catalogue', not the RetroDECK handle's 'could not read one'. The two refusals carry different codes, so an answer taken from the first detected installation instead of the named one fails this vector.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4948,7 +4956,7 @@
     },
     {
       "name": "aggregate-every-installation-answers-with-its-own-config",
-      "rationale": "Asking every installation instead of choosing one: a machine carrying RetroDECK and a native RetroArch answers the same save question twice \u2014 the card root the RetroDECK cfg names, the home root the native cfg names \u2014 each labelled with the handle that produced it, in detection order. Nothing is merged and nothing is preferred: an answer that carried only the first installation's placement, or one placement for both labels, fails this vector.",
+      "rationale": "Asking every installation instead of choosing one: a machine carrying RetroDECK and a native RetroArch answers the same save question twice — the card root the RetroDECK cfg names, the home root the native cfg names — each labelled with the handle that produced it, in detection order. Nothing is merged and nothing is preferred: an answer that carried only the first installation's placement, or one placement for both labels, fails this vector.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5060,7 +5068,7 @@
     },
     {
       "name": "aggregate-each-arrangement-states-its-own-catalogue-refusal",
-      "rationale": "The labels are load-bearing. Asked the same catalogue question, the two arrangements refuse for different reasons \u2014 RetroDECK could not read the catalogue it has, the native install ships none at all \u2014 and both refusals survive the fan-out. Collapsing them into one answer would report a claim about atlas as a fact about the machine, or the reverse.",
+      "rationale": "The labels are load-bearing. Asked the same catalogue question, the two arrangements refuse for different reasons — RetroDECK could not read the catalogue it has, the native install ships none at all — and both refusals survive the fan-out. Collapsing them into one answer would report a claim about atlas as a fact about the machine, or the reverse.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5219,7 +5227,7 @@
     },
     {
       "name": "aggregate-an-empty-machine-answers-nothing",
-      "rationale": "Nothing installed is a truthful answer, not an error: detection finds no marker, so the aggregate answers for nobody. This is the one expectation in the family that stands without a detected installation \u2014 asking every installation on a machine that has none is a question with an empty answer, not a question nobody can answer.",
+      "rationale": "Nothing installed is a truthful answer, not an error: detection finds no marker, so the aggregate answers for nobody. This is the one expectation in the family that stands without a detected installation — asking every installation on a machine that has none is a question with an empty answer, not a question nobody can answer.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5237,7 +5245,7 @@
     },
     {
       "name": "evidence-two-verified-arrangements-on-one-machine",
-      "rationale": "The evidence caveat belongs to the arrangement's record: RetroDECK and EmuDeck were each confirmed against a live installation, and neither machine here states a version (no retrodeck.json version, no backend checkout on disk), so both answers say nothing \u2014 the state a record change retires the caveat into, with no resolver change.",
+      "rationale": "The evidence caveat belongs to the arrangement's record: RetroDECK and EmuDeck were each confirmed against a live installation, and neither machine here states a version (no retrodeck.json version, no backend checkout on disk), so both answers say nothing — the state a record change retires the caveat into, with no resolver change.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5349,7 +5357,7 @@
     },
     {
       "name": "evidence-a-drifted-arrangement-states-it-on-every-answer",
-      "rationale": "The version-drift tripwire, on the whole answer surface: RetroDECK's knowledge was verified against 0.10.9b and this machine states 0.11.0b, so every caveat-bearing answer of the arrangement carries arrangement-version-drifted exactly once \u2014 the placement, the catalogue, the systems listing, all three firmware routes, the entry route and the aggregate. What drifted is atlas's evidence, not the machine: the cfg is still read the same way, so the placement is the same concrete directory with the same observed save, and health stays empty because an evidence note is not a defect. The caveat names both sides (verified, observed) so a client can tell how far apart they are.",
+      "rationale": "The version-drift tripwire, on the whole answer surface: RetroDECK's knowledge was verified against 0.10.9b and this machine states 0.11.0b, so every caveat-bearing answer of the arrangement carries arrangement-version-drifted exactly once — the placement, the catalogue, the systems listing, all three firmware routes, the entry route and the aggregate. What drifted is atlas's evidence, not the machine: the cfg is still read the same way, so the placement is the same concrete directory with the same observed save, and health stays empty because an evidence note is not a defect. The caveat names both sides (verified, observed) so a client can tell how far apart they are.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5612,7 +5620,7 @@
     },
     {
       "name": "evidence-the-verified-version-states-nothing",
-      "rationale": "The other direction, and the one that makes the tripwire worth having: the same machine running the version the record pins says nothing at all. A caveat that fired either way would be noise a client learns to ignore, so silence here is the contract \u2014 proven, not assumed.",
+      "rationale": "The other direction, and the one that makes the tripwire worth having: the same machine running the version the record pins says nothing at all. A caveat that fired either way would be noise a client learns to ignore, so silence here is the contract — proven, not assumed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5708,7 +5716,7 @@
     },
     {
       "name": "evidence-a-marker-that-names-no-version-establishes-no-drift",
-      "rationale": "A marker with no version key: the comparison needs both sides, and this machine states nothing to compare, so the answer is silent. The silence means no drift was ESTABLISHED, not that there is none \u2014 atlas refuses to claim a comparison it could not make, which is the same rule that keeps every other unknown out of an answer. Where a missing live version does decide something, the per-card unverified-version caveat states it at the point it matters.",
+      "rationale": "A marker with no version key: the comparison needs both sides, and this machine states nothing to compare, so the answer is silent. The silence means no drift was ESTABLISHED, not that there is none — atlas refuses to claim a comparison it could not make, which is the same rule that keeps every other unknown out of an answer. Where a missing live version does decide something, the per-card unverified-version caveat states it at the point it matters.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5856,7 +5864,7 @@
     },
     {
       "name": "evidence-a-version-that-is-not-a-string-costs-the-comparison-not-the-roots",
-      "rationale": "A defect scoped to what it actually costs. The marker's version is a key atlas reads, so a number there is a stated health finding (marker-invalid, key: version) rather than a crash or a silence \u2014 but unlike a malformed path it takes nothing else with it: the roots still resolve from the paths section (/mnt/sd/retrodeck, not the ~/retrodeck fallback), the save still lands where the cfg says, and only the version comparison falls away. Nothing claims drift against a value that is not a version.",
+      "rationale": "A defect scoped to what it actually costs. The marker's version is a key atlas reads, so a number there is a stated health finding (marker-invalid, key: version) rather than a crash or a silence — but unlike a malformed path it takes nothing else with it: the roots still resolve from the paths section (/mnt/sd/retrodeck, not the ~/retrodeck fallback), the save still lands where the cfg says, and only the version comparison falls away. Nothing claims drift against a value that is not a version.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5937,7 +5945,7 @@
     },
     {
       "name": "health-findings-ride-directly-in-the-answers-caveats",
-      "rationale": "A broken installation that still answers: the marker names a non-string path, so RetroDECK's roots fall back to defaults that do not exist, and the three findings \u2014 which marker key is invalid, which root is missing, which saves root \u2014 reach the placement as themselves, each under its own stable code with its own data. Nothing wraps them in a category code with the condition nested in data, and the same three findings serialize identically in installations[].health. The cfg still decides the directory: a broken marker degrades the answer, it does not replace it.",
+      "rationale": "A broken installation that still answers: the marker names a non-string path, so RetroDECK's roots fall back to defaults that do not exist, and the three findings — which marker key is invalid, which root is missing, which saves root — reach the placement as themselves, each under its own stable code with its own data. Nothing wraps them in a category code with the condition nested in data, and the same three findings serialize identically in installations[].health. The cfg still decides the directory: a broken marker degrades the answer, it does not replace it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6026,7 +6034,7 @@
     },
     {
       "name": "a-broken-arrangement-states-both-facts-in-one-list",
-      "rationale": "Two features meet in one caveat list, and their order is the contract: the health finding first (EmuDeck's settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then what the query itself could not resolve. A machine fact and a missing argument are two different claims that must not merge, reorder, or crowd each other out \u2014 and the cfg still answers the directory, because an unreadable marker degrades the answer rather than replacing it.",
+      "rationale": "Two features meet in one caveat list, and their order is the contract: the health finding first (EmuDeck's settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then what the query itself could not resolve. A machine fact and a missing argument are two different claims that must not merge, reorder, or crowd each other out — and the cfg still answers the directory, because an unreadable marker degrades the answer rather than replacing it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6094,7 +6102,7 @@
     },
     {
       "name": "a-broken-installation-states-its-findings-on-every-answer",
-      "rationale": "One broken installation, three questions, three answers that all say so: the marker names a non-string path, so RetroDECK's roots fall back to defaults that do not exist, and the catalogue, the systems listing and the firmware answer each open with the same three findings in the same order. The point is that the findings are orthogonal to the answer: the cfg is still the truth, so the catalogue is read and names its emulator, the systems listing is populated, and the firmware root resolves \u2014 a broken installation degrades an answer, it does not empty it. An answer that stated the findings only where they happened to matter would leave a client reading the catalogue with no idea the installation is broken.",
+      "rationale": "One broken installation, three questions, three answers that all say so: the marker names a non-string path, so RetroDECK's roots fall back to defaults that do not exist, and the catalogue, the systems listing and the firmware answer each open with the same three findings in the same order. The point is that the findings are orthogonal to the answer: the cfg is still the truth, so the catalogue is read and names its emulator, the systems listing is populated, and the firmware root resolves — a broken installation degrades an answer, it does not empty it. An answer that stated the findings only where they happened to matter would leave a client reading the catalogue with no idea the installation is broken.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6260,7 +6268,7 @@
     },
     {
       "name": "a-standalone-emulator-reads-the-same-on-both-routes",
-      "rationale": "One machine, one standalone emulator, both questions: the placement route answers the typed Unresolved outcome 'standalone-unsupported', and the firmware route answers declaration 'unsupported' with the caveat code 'standalone-unsupported'. Same word for the same fact \u2014 the emulator is installed and atlas has no source for its rules \u2014 so a client that learned it on one route reads the other. It is not the evidence axis: nothing here was read and left unconfirmed, there was nothing to read.",
+      "rationale": "One machine, one standalone emulator, both questions: the placement route answers the typed Unresolved outcome 'standalone-unsupported', and the firmware route answers declaration 'unsupported' with the caveat code 'standalone-unsupported'. Same word for the same fact — the emulator is installed and atlas has no source for its rules — so a client that learned it on one route reads the other. It is not the evidence axis: nothing here was read and left unconfirmed, there was nothing to read.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6341,7 +6349,7 @@
     },
     {
       "name": "firmware-an-absent-system-directory-resolves-to-the-platform-default",
-      "rationale": "An absent system_directory is not a gap: RetroArch seeds 'system' under the config tree before it reads any config (configuration.c:5746-5749, platform_unix.c:2137-2143), so the firmware route resolves it and answers fully \u2014 the root, the core's declaration, and the BIOS found at that resolved path. It used to refuse this machine outright, which told a client 'no root to check against' about a directory RetroArch had already chosen. The card route has resolved it since item 14; this is the same fact answered the same way.",
+      "rationale": "An absent system_directory is not a gap: RetroArch seeds 'system' under the config tree before it reads any config (configuration.c:5746-5749, platform_unix.c:2137-2143), so the firmware route resolves it and answers fully — the root, the core's declaration, and the BIOS found at that resolved path. It used to refuse this machine outright, which told a client 'no root to check against' about a directory RetroArch had already chosen. The card route has resolved it since item 14; this is the same fact answered the same way.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6417,7 +6425,7 @@
     },
     {
       "name": "firmware-a-cleared-system-directory-keeps-a-precise-refusal",
-      "rationale": "The other half of the split: the key is present and cleared, which is not the same as absent. RetroArch then hands a core the content's own directory when content is loaded (runloop.c:1958-1997), so what the firmware root is depends on the run and no question here names content \u2014 the answer refuses, and 'system-directory-cleared' says precisely that rather than spelling it the way an absent key used to be spelled.",
+      "rationale": "The other half of the split: the key is present and cleared, which is not the same as absent. RetroArch then hands a core the content's own directory when content is loaded (runloop.c:1958-1997), so what the firmware root is depends on the run and no question here names content — the answer refuses, and 'system-directory-cleared' says precisely that rather than spelling it the way an absent key used to be spelled.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6470,7 +6478,7 @@
     },
     {
       "name": "firmware-a-dropped-system-directory-line-is-stated-not-swallowed",
-      "rationale": "The line the user wrote sets nothing \u2014 no space before the '=', so RetroArch's parser refuses it (config_file.c:596-623) \u2014 and the key is then absent, which resolves to the platform default. Both halves are in the answer: the root is the default one and 'cfg-line-dropped' names the line that tried to say otherwise. Silence here would be the worst of the two worlds this split created: the answer would look like an ordinary resolved one while the configured '/mnt/sd/bios' went unmentioned, and the BIOS the user put there would read as missing. The card route has stated this since item 14 for the same reason.",
+      "rationale": "The line the user wrote sets nothing — no space before the '=', so RetroArch's parser refuses it (config_file.c:596-623) — and the key is then absent, which resolves to the platform default. Both halves are in the answer: the root is the default one and 'cfg-line-dropped' names the line that tried to say otherwise. Silence here would be the worst of the two worlds this split created: the answer would look like an ordinary resolved one while the configured '/mnt/sd/bios' went unmentioned, and the BIOS the user put there would read as missing. The card route has stated this since item 14 for the same reason.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6554,7 +6562,7 @@
     },
     {
       "name": "catalogue-entry-caveats-carry-their-data",
-      "rationale": "The system-level ask on a system whose gamelist carries a per-game override: every entry says so, and the caveat's data says how many games it is about \u2014 one, here. Bare codes could not carry that count, which is the whole difference between 'this answer may be wrong for some game' and knowing how much of the system it concerns. The entry also names its own system, so an entry that travels out of the call that produced it still says what it launches.",
+      "rationale": "The system-level ask on a system whose gamelist carries a per-game override: every entry says so, and the caveat's data says how many games it is about — one, here. Bare codes could not carry that count, which is the whole difference between 'this answer may be wrong for some game' and knowing how much of the system it concerns. The entry also names its own system, so an entry that travels out of the call that produced it still says what it launches.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6621,7 +6629,7 @@
     },
     {
       "name": "a-core-that-cannot-be-read-does-not-get-its-card",
-      "rationale": "The core is present but will not load, so nothing about it was established \u2014 not its library_name, not its option registrations, not its version. The .so file name alone is what remains, and a card selected on a file name would state a recorded deviation as though the generation carrying it had been confirmed. So the card steps aside, exactly as it does for a core that answers for another generation, and core-generation-unestablished says which of the two happened. The answer is the standard frame: the saves root sorted by content directory, granularity honestly absent. The system-directory placement the card would have given is the one this machine cannot be shown to deserve.",
+      "rationale": "The core is present but will not load, so nothing about it was established — not its library_name, not its option registrations, not its version. The .so file name alone is what remains, and a card selected on a file name would state a recorded deviation as though the generation carrying it had been confirmed. So the card steps aside, exactly as it does for a core that answers for another generation, and core-generation-unestablished says which of the two happened. The answer is the standard frame: the saves root sorted by content directory, granularity honestly absent. The system-directory placement the card would have given is the one this machine cannot be shown to deserve.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6689,7 +6697,7 @@
     },
     {
       "name": "an-option-value-no-card-knows-with-no-default-to-fall-back-to",
-      "rationale": "A value outside the card's vocabulary is not a reason to guess \u2014 and neither is having no value at all. The options file sets the governing option to something no mode of the card describes, so RetroArch would keep the core's own default; but this core registered no options the probe could capture, so it declared no default, and flycast's card records none because the shipped core normally states one. There is nothing to fall back to, so the card steps aside with core-option-value-unestablished instead of reporting an unknown-option-value it could recover from. Stepping aside moves the answer from the card's system-directory root to the standard sorted save directory, which this machine never created \u2014 so sorted-dir-missing rides along, naming the fallback, exactly as it would for any other core here. The fallback answer this machine used to give lives on in an-option-value-no-card-knows-falls-back-to-the-live-default, where the core states its default and the fallback really is available.",
+      "rationale": "A value outside the card's vocabulary is not a reason to guess — and neither is having no value at all. The options file sets the governing option to something no mode of the card describes, so RetroArch would keep the core's own default; but this core registered no options the probe could capture, so it declared no default, and flycast's card records none because the shipped core normally states one. There is nothing to fall back to, so the card steps aside with core-option-value-unestablished instead of reporting an unknown-option-value it could recover from. Stepping aside moves the answer from the card's system-directory root to the standard sorted save directory, which this machine never created — so sorted-dir-missing rides along, naming the fallback, exactly as it would for any other core here. The fallback answer this machine used to give lives on in an-option-value-no-card-knows-falls-back-to-the-live-default, where the core states its default and the fallback really is available.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6756,7 +6764,7 @@
     },
     {
       "name": "an-option-value-no-card-knows-falls-back-to-the-live-default",
-      "rationale": "A value outside the card's vocabulary is not a reason to guess. The options file sets the governing option to something no mode of the card describes, and the core \u2014 read as the shipped binary answers \u2014 registers reicast_per_content_vmus with 'disabled' as its default and the three values the card knows. RetroArch's option manager keeps that declared default for a persisted value it cannot validate, so the answer falls back to the matching mode and states unknown-option-value with the value it read: a client learns the layout may be wrong for this exact configuration instead of being handed a mode nobody verified. The fallback is available because the core states the default, not because a card recorded one \u2014 which is the whole difference from an-option-value-no-card-knows-with-no-default-to-fall-back-to, the same machine with the core's registration unread.",
+      "rationale": "A value outside the card's vocabulary is not a reason to guess. The options file sets the governing option to something no mode of the card describes, and the core — read as the shipped binary answers — registers reicast_per_content_vmus with 'disabled' as its default and the three values the card knows. RetroArch's option manager keeps that declared default for a persisted value it cannot validate, so the answer falls back to the matching mode and states unknown-option-value with the value it read: a client learns the layout may be wrong for this exact configuration instead of being handed a mode nobody verified. The fallback is available because the core states the default, not because a card recorded one — which is the whole difference from an-option-value-no-card-knows-with-no-default-to-fall-back-to, the same machine with the core's registration unread.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6844,7 +6852,7 @@
     },
     {
       "name": "a-governing-option-value-nothing-establishes",
-      "rationale": "The card fits the core \u2014 the core answered, and nothing contradicts the recorded deviation \u2014 but which of its modes is active was never established: this machine's configuration states no value for the governing option, and the core registered no options at all, so it declared no default either. A default is written down only for a core that registers none, so there is nothing left to fall back on. Choosing a mode anyway would state a save location on the strength of nothing, so the card steps aside and core-option-value-unestablished says which half is missing: not the generation (core-generation-unestablished is a core that could not be read at all) and not the vocabulary (core-generation-mismatch is a core answering for another generation), but the setting. The standard frame answers below it, granularity honestly absent.",
+      "rationale": "The card fits the core — the core answered, and nothing contradicts the recorded deviation — but which of its modes is active was never established: this machine's configuration states no value for the governing option, and the core registered no options at all, so it declared no default either. A default is written down only for a core that registers none, so there is nothing left to fall back on. Choosing a mode anyway would state a save location on the strength of nothing, so the card steps aside and core-option-value-unestablished says which half is missing: not the generation (core-generation-unestablished is a core that could not be read at all) and not the vocabulary (core-generation-mismatch is a core answering for another generation), but the setting. The standard frame answers below it, granularity honestly absent.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6903,7 +6911,7 @@
     },
     {
       "name": "a-bare-retroarch-whose-config-cannot-be-read-says-so",
-      "rationale": "A cfg whose bytes cannot be read is a PRESENT, broken installation \u2014 not an absent one. Detection still finds the bare RetroArch (the marker exists), health states config-unreadable, and the answer carries that finding beside its own limits, so nothing about the machine is inferred from a file nobody could read. The placement falls back to RetroArch's own platform default, which is what it would do with no savefile_directory configured.",
+      "rationale": "A cfg whose bytes cannot be read is a PRESENT, broken installation — not an absent one. Detection still finds the bare RetroArch (the marker exists), health states config-unreadable, and the answer carries that finding beside its own limits, so nothing about the machine is inferred from a file nobody could read. The placement falls back to RetroArch's own platform default, which is what it would do with no savefile_directory configured.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6977,7 +6985,7 @@
     },
     {
       "name": "catalogue-a-standalone-entry-carries-no-core",
-      "rationale": "The catalogue's two kinds, in one answer and in ES-DE's own declared order: the standalone entry carries no core_so, the libretro one does. Asking the standalone entry where the save lives is a domain outcome, not an error and not a guess \u2014 Unresolved with standalone-unsupported, naming the emulator and the system so a client can say which emulator it cannot answer for yet.",
+      "rationale": "The catalogue's two kinds, in one answer and in ES-DE's own declared order: the standalone entry carries no core_so, the libretro one does. Asking the standalone entry where the save lives is a domain outcome, not an error and not a guess — Unresolved with standalone-unsupported, naming the emulator and the system so a client can say which emulator it cannot answer for yet.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7038,7 +7046,7 @@
     },
     {
       "name": "a-core-that-registers-no-options-is-not-a-core-nobody-asked",
-      "rationale": "Two different unknowns about a core's options, told apart by the fixture: a core answer with no 'options' key means the probe never captured them, and the card applies on its pinned evidence; an options map that IS captured and is empty is evidence \u2014 this core registers nothing, so it cannot be the generation whose governing option the card describes, and the card steps aside with core-generation-mismatch rather than answering for another core's behaviour.",
+      "rationale": "Two different unknowns about a core's options, told apart by the fixture: a core answer with no 'options' key means the probe never captured them, and the card applies on its pinned evidence; an options map that IS captured and is empty is evidence — this core registers nothing, so it cannot be the generation whose governing option the card describes, and the card steps aside with core-generation-mismatch rather than answering for another core's behaviour.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7105,7 +7113,7 @@
     },
     {
       "name": "rom-location-resolves-the-declared-path-through-es-de-s-own-setting",
-      "rationale": "Where a system's ROMs live is declared in the catalogue as '%ROMPATH%/n64' and resolved the way ES-DE resolves it: the token is substituted from ROMDirectory in es_settings.xml \u2014 ES-DE's OWN setting, not RetroDECK's roms_path, which is a different file stating the same thing and the one a user can move apart from it. The declared extensions ride along verbatim, both cases as the file lists them, because which files launch is the frontend's declaration and not a filter atlas applies.",
+      "rationale": "Where a system's ROMs live is declared in the catalogue as '%ROMPATH%/n64' and resolved the way ES-DE resolves it: the token is substituted from ROMDirectory in es_settings.xml — ES-DE's OWN setting, not RetroDECK's roms_path, which is a different file stating the same thing and the one a user can move apart from it. The declared extensions ride along verbatim, both cases as the file lists them, because which files launch is the frontend's declaration and not a filter atlas applies.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7155,7 +7163,7 @@
     },
     {
       "name": "rom-location-says-when-the-catalogue-declares-no-path",
-      "rationale": "A read catalogue that declares the system but gives it no <path>. This empty is a fact about the declaration, not about atlas's ability to look \u2014 which is what separates rom-path-undeclared from the three emulator-catalogue-* codes, and why a client may act on it.",
+      "rationale": "A read catalogue that declares the system but gives it no <path>. This empty is a fact about the declaration, not about atlas's ability to look — which is what separates rom-path-undeclared from the three emulator-catalogue-* codes, and why a client may act on it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7249,7 +7257,7 @@
     },
     {
       "name": "rom-location-answers-both-views-when-the-roms-tree-is-symlinked",
-      "rationale": "The distribution wires trees into place with symlinks, so a ROM directory can be a link like a saves directory can. Both answers are true and they answer different questions: dir is the path the frontend uses and the one a config states, physical_dir is where the bytes actually land \u2014 a client copying a ROM in may need either, and collapsing them would pick for it. Same pair, same convention, same resolution helper as SavefilePlacement; a placement that traverses nothing keeps physical_dir null rather than repeating dir.",
+      "rationale": "The distribution wires trees into place with symlinks, so a ROM directory can be a link like a saves directory can. Both answers are true and they answer different questions: dir is the path the frontend uses and the one a config states, physical_dir is where the bytes actually land — a client copying a ROM in may need either, and collapsing them would pick for it. Same pair, same convention, same resolution helper as SavefilePlacement; a placement that traverses nothing keeps physical_dir null rather than repeating dir.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7302,7 +7310,7 @@
     },
     {
       "name": "rom-location-resolves-the-frontends-own-default-when-the-setting-is-unset",
-      "rationale": "ROMDirectory is set to nothing at all \u2014 the state RetroDECK's own shipped template is in before its first sed writes the real value, so this branch is reachable rather than theoretical. atlas resolves it instead of refusing, because the fallback is knowable and not a guess: ES-DE uses <home>/ROMs when the setting is empty, and its home is not the user's \u2014 RetroDECK's only launch path passes --home \"${XDG_CONFIG_HOME}\" unconditionally, which outranks portable.txt and $HOME alike. So the answer is the app's own config home plus /ROMs, resolved from the same tree the settings were read out of. Resolving is not asserting: nothing here stats the directory, and an absent one is the ordinary missing-directory state.",
+      "rationale": "ROMDirectory is set to nothing at all — the state RetroDECK's own shipped template is in before its first sed writes the real value, so this branch is reachable rather than theoretical. atlas resolves it instead of refusing, because the fallback is knowable and not a guess: ES-DE uses <home>/ROMs when the setting is empty, and its home is not the user's — RetroDECK's only launch path passes --home \"${XDG_CONFIG_HOME}\" unconditionally, which outranks portable.txt and $HOME alike. So the answer is the app's own config home plus /ROMs, resolved from the same tree the settings were read out of. Resolving is not asserting: nothing here stats the directory, and an absent one is the ordinary missing-directory state.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7352,7 +7360,7 @@
     },
     {
       "name": "an-xdg-override-is-inert-and-the-unset-default-resolves",
-      "rationale": "A Flatpak override redefining XDG_CONFIG_HOME never reaches the app: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 \u2014 the request to lift it \u2014 was closed as not planned). The frontend's --home \"${XDG_CONFIG_HOME}\" therefore stays exactly where atlas read the settings from, the unset-ROMDirectory default resolves against it, and the answer carries no caveat \u2014 the retired refusal stated doubt about which tree is in force, and the pinned source refutes the doubt: the tree atlas reads is the one in force, override or no.",
+      "rationale": "A Flatpak override redefining XDG_CONFIG_HOME never reaches the app: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 — the request to lift it — was closed as not planned). The frontend's --home \"${XDG_CONFIG_HOME}\" therefore stays exactly where atlas read the settings from, the unset-ROMDirectory default resolves against it, and the answer carries no caveat — the retired refusal stated doubt about which tree is in force, and the pinned source refutes the doubt: the tree atlas reads is the one in force, override or no.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7403,7 +7411,7 @@
     },
     {
       "name": "a-home-override-cannot-move-the-config-home",
-      "rationale": "flatpak override with no app id writes <installation>/overrides/global, and the system installation's copy speaks here because the system installation deploys this app (flatpak-dir.c:3053-3083). Its HOME redefinition does reach the sandbox \u2014 HOME passes through from the host environment and the override lands on top of it with nothing reapplied after (flatpak-run.c:3055, :3352) \u2014 but nothing this answer reads resolves against HOME: the marker, the cfg and ES-DE's settings are all keyed off the pinned XDG_CONFIG_HOME (all_vars.sh:4, component_functions.sh:3), and ES-DE derives its unset-ROMDirectory default from the launcher's --home \"${XDG_CONFIG_HOME}\" (component_launcher.sh:10). So the default resolves exactly as with no override file at all; HOME's one remaining consequence is the ~ in retroarch.cfg values, and this machine's cfg carries none.",
+      "rationale": "flatpak override with no app id writes <installation>/overrides/global, and the system installation's copy speaks here because the system installation deploys this app (flatpak-dir.c:3053-3083). Its HOME redefinition does reach the sandbox — HOME passes through from the host environment and the override lands on top of it with nothing reapplied after (flatpak-run.c:3055, :3352) — but nothing this answer reads resolves against HOME: the marker, the cfg and ES-DE's settings are all keyed off the pinned XDG_CONFIG_HOME (all_vars.sh:4, component_functions.sh:3), and ES-DE derives its unset-ROMDirectory default from the launcher's --home \"${XDG_CONFIG_HOME}\" (component_launcher.sh:10). So the default resolves exactly as with no override file at all; HOME's one remaining consequence is the ~ in retroarch.cfg values, and this machine's cfg carries none.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7454,7 +7462,7 @@
     },
     {
       "name": "rom-location-states-settings-it-could-not-read-rather-than-the-default",
-      "rationale": "The settings file is there and its bytes cannot be read. That is not the unset case and must not fall through to it: ES-DE reads this file fine, so whatever ROMDirectory it holds is the value in force, and answering the frontend's empty-setting default here would state a directory belonging to a configuration nobody established. The refusal is a statement about atlas, so it carries its own code and names the read status \u2014 a client that sees frontend-settings-unreadable knows to look at the file, not at the catalogue.",
+      "rationale": "The settings file is there and its bytes cannot be read. That is not the unset case and must not fall through to it: ES-DE reads this file fine, so whatever ROMDirectory it holds is the value in force, and answering the frontend's empty-setting default here would state a directory belonging to a configuration nobody established. The refusal is a statement about atlas, so it carries its own code and names the read status — a client that sees frontend-settings-unreadable knows to look at the file, not at the catalogue.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7515,7 +7523,7 @@
     },
     {
       "name": "rom-location-reads-a-settings-file-that-starts-with-a-byte-order-mark",
-      "rationale": "ES-DE parses this file with pugixml, which detects the encoding from a UTF-8 BOM and reads such a file normally \u2014 so the ROMDirectory in it is the one in force, and calling the file unreadable would make atlas answer about a configuration the frontend is not using. The mark is stripped before the synthetic root goes on, which it has to be either way: left in place it pushes the XML declaration off the front of the wrapped document.",
+      "rationale": "ES-DE parses this file with pugixml, which detects the encoding from a UTF-8 BOM and reads such a file normally — so the ROMDirectory in it is the one in force, and calling the file unreadable would make atlas answer about a configuration the frontend is not using. The mark is stripped before the synthetic root goes on, which it has to be either way: left in place it pushes the XML declaration off the front of the wrapped document.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7526,7 +7534,7 @@
           "/mnt/sd/retrodeck/bios/.keep": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/mnt/sd/retrodeck/roms/n64/.keep": "",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "\ufeff<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "﻿<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n"
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
@@ -7565,7 +7573,7 @@
     },
     {
       "name": "rom-location-absorbs-a-trailing-separator-on-the-configured-directory",
-      "rationale": "ROMDirectory is spelled with a trailing slash, which is a setting a user really writes. ES-DE appends the separator only where it is missing (FileData::getROMDirectory) and then collapses // unconditionally, so the directory it opens is the single-slash spelling \u2014 and a client comparing atlas's answer against its own paths would find roms//n64 matching nothing.",
+      "rationale": "ROMDirectory is spelled with a trailing slash, which is a setting a user really writes. ES-DE appends the separator only where it is missing (FileData::getROMDirectory) and then collapses // unconditionally, so the directory it opens is the single-slash spelling — and a client comparing atlas's answer against its own paths would find roms//n64 matching nothing.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7615,7 +7623,7 @@
     },
     {
       "name": "rom-location-expands-a-tilde-romdirectory-the-way-the-frontend-does",
-      "rationale": "The setting holds a ~-prefixed value, and ES-DE expands it: getROMDirectory hands the configured value to expandHomePath (FileData.cpp:289, v3.4.1), whose whole body is String::replace(path, \"~\", getHomePath()) (FileSystemUtil.cpp:663-675) \u2014 and this frontend's home is the launcher's --home \"${XDG_CONFIG_HOME}\", the per-app config home the empty-setting default already derives from, not the user's. So the answer lands under .var/app/net.retrodeck.retrodeck/config: refusing here made atlas stricter than the original it mirrors, and expanding against $HOME instead would name a real directory the frontend never launches from. What ES-DE does not resolve keeps its refusal \u2014 a relative value stays rom-path-unresolved.",
+      "rationale": "The setting holds a ~-prefixed value, and ES-DE expands it: getROMDirectory hands the configured value to expandHomePath (FileData.cpp:289, v3.4.1), whose whole body is String::replace(path, \"~\", getHomePath()) (FileSystemUtil.cpp:663-675) — and this frontend's home is the launcher's --home \"${XDG_CONFIG_HOME}\", the per-app config home the empty-setting default already derives from, not the user's. So the answer lands under .var/app/net.retrodeck.retrodeck/config: refusing here made atlas stricter than the original it mirrors, and expanding against $HOME instead would name a real directory the frontend never launches from. What ES-DE does not resolve keeps its refusal — a relative value stays rom-path-unresolved.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7665,7 +7673,7 @@
     },
     {
       "name": "rom-location-refuses-a-relative-romdirectory",
-      "rationale": "What remains under rom-path-unresolved now that ~ expands: a relative value resolves against the ES-DE process's own working directory, which atlas has not established \u2014 a fact about the machine, whose remedy is to fix the setting. The declared path and the setting's own unexpanded text travel in the data so a caller who knows their own setup can finish the substitution atlas refused to guess at.",
+      "rationale": "What remains under rom-path-unresolved now that ~ expands: a relative value resolves against the ES-DE process's own working directory, which atlas has not established — a fact about the machine, whose remedy is to fix the setting. The declared path and the setting's own unexpanded text travel in the data so a caller who knows their own setup can finish the substitution atlas refused to guess at.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7724,7 +7732,7 @@
     },
     {
       "name": "an-xdg-override-does-not-stop-the-tilde-expansion",
-      "rationale": "~ expands against the same home the unset default derives from \u2014 the frontend's --home \"${XDG_CONFIG_HOME}\" \u2014 and no override can move that base: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 \u2014 the request to lift it \u2014 was closed as not planned). The expansion therefore proceeds against the per-app config home on every machine, and the retired refusal, which stopped it whenever an override file named XDG_CONFIG_HOME, was refusing a resolution the frontend performs identically with and without the override.",
+      "rationale": "~ expands against the same home the unset default derives from — the frontend's --home \"${XDG_CONFIG_HOME}\" — and no override can move that base: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 — the request to lift it — was closed as not planned). The expansion therefore proceeds against the per-app config home on every machine, and the retired refusal, which stopped it whenever an override file named XDG_CONFIG_HOME, was refusing a resolution the frontend performs identically with and without the override.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7775,7 +7783,7 @@
     },
     {
       "name": "an-xdg-override-leaves-every-retrodeck-answer-untouched",
-      "rationale": "The retired relocation guard rode every answer of exactly this machine; the evidence retired it: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 \u2014 the request to lift it \u2014 was closed as not planned), so the per-app config tree the answers were read from is exactly the one in force and every answer \u2014 the catalogue, the placements, the firmware \u2014 is byte-identical to the machine without the override file. The one thing an override still decides (the sandbox's HOME, and with it the ~ expansion base in retroarch.cfg values) decides nothing here: this override names only XDG_CONFIG_HOME.",
+      "rationale": "The retired relocation guard rode every answer of exactly this machine; the evidence retired it: flatpak force-pins the XDG_*_HOME variables to the per-app directories AFTER applying every override and --env (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the override env applied at :3352, both with overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 — the request to lift it — was closed as not planned), so the per-app config tree the answers were read from is exactly the one in force and every answer — the catalogue, the placements, the firmware — is byte-identical to the machine without the override file. The one thing an override still decides (the sandbox's HOME, and with it the ~ expansion base in retroarch.cfg values) decides nothing here: this override names only XDG_CONFIG_HOME.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7924,7 +7932,7 @@
     },
     {
       "name": "a-home-override-leaves-the-esde-answers-untouched",
-      "rationale": "The same relocated-looking machine through the HOME spelling: the system-global overrides file redefines HOME, which does reach the sandbox \u2014 and moves none of these answers. ES-DE's unset-ROMDirectory default derives from --home \"${XDG_CONFIG_HOME}\", which the pin keeps at the per-app config home; the marker and the cfg are read from that same pinned tree; and the cfg's savefile_directory is absolute, so the one thing HOME decides \u2014 what RetroArch substitutes for a ~ in a cfg value (file_path.c:1066-1101, :1457-1468) \u2014 has nothing to decide. The retired refusal answered no directory for the unset ROMDirectory; the frontend resolves it the same on every machine.",
+      "rationale": "The same relocated-looking machine through the HOME spelling: the system-global overrides file redefines HOME, which does reach the sandbox — and moves none of these answers. ES-DE's unset-ROMDirectory default derives from --home \"${XDG_CONFIG_HOME}\", which the pin keeps at the per-app config home; the marker and the cfg are read from that same pinned tree; and the cfg's savefile_directory is absolute, so the one thing HOME decides — what RetroArch substitutes for a ~ in a cfg value (file_path.c:1066-1101, :1457-1468) — has nothing to decide. The retired refusal answered no directory for the unset ROMDirectory; the frontend resolves it the same on every machine.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8018,7 +8026,7 @@
     },
     {
       "name": "a-home-override-moves-the-cfg-tilde-expansion",
-      "rationale": "HOME is the one override key that reaches the app, and the one thing it decides among this handle's reads: RetroArch substitutes getenv(\"HOME\") for the leading ~ in a cfg value (fill_pathname_expand_special, file_path.c:1066-1101, via fill_pathname_home_dir :1457-1468, RetroArch a79435a). The override value is applied literally \u2014 flatpak expands no $ \u2014 and it composes across files in flatpak's own merge order (system-global, system-app, user-global, user-app, each later file overwriting per key: flatpak-dir.c:1518-1567, flatpak-context.c:1077-1079), so the user-app /mnt/elsewhere wins over the user-global /mnt/userglobal. /home/deck/saves exists too, and is the discriminating direction: a resolver still expanding against the machine home would answer it.",
+      "rationale": "HOME is the one override key that reaches the app, and the one thing it decides among this handle's reads: RetroArch substitutes getenv(\"HOME\") for the leading ~ in a cfg value (fill_pathname_expand_special, file_path.c:1066-1101, via fill_pathname_home_dir :1457-1468, RetroArch a79435a). The override value is applied literally — flatpak expands no $ — and it composes across files in flatpak's own merge order (system-global, system-app, user-global, user-app, each later file overwriting per key: flatpak-dir.c:1518-1567, flatpak-context.c:1077-1079), so the user-app /mnt/elsewhere wins over the user-global /mnt/userglobal. /home/deck/saves exists too, and is the discriminating direction: a resolver still expanding against the machine home would answer it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8093,7 +8101,7 @@
     },
     {
       "name": "an-unset-home-leaves-the-cfg-tilde-verbatim",
-      "rationale": "unset-environment removes HOME from the sandbox environment (flatpak-context.c:1950-1972; a NULL value unsets, flatpak-run.c:752-755). getenv(\"HOME\") is then NULL, fill_pathname_home_dir leaves its buffer empty, and the substitution block is skipped \u2014 the value passes through as the literal ~/saves (file_path.c:1081, :1100, :1457-1468). RetroArch's own path_is_directory test refuses that read (configuration.c:6914-6960) and the root that stood before it stands: the platform default under the pinned config tree. /home/deck/saves exists, which is what a resolver still expanding ~ against the machine home would answer.",
+      "rationale": "unset-environment removes HOME from the sandbox environment (flatpak-context.c:1950-1972; a NULL value unsets, flatpak-run.c:752-755). getenv(\"HOME\") is then NULL, fill_pathname_home_dir leaves its buffer empty, and the substitution block is skipped — the value passes through as the literal ~/saves (file_path.c:1081, :1100, :1457-1468). RetroArch's own path_is_directory test refuses that read (configuration.c:6914-6960) and the root that stood before it stands: the platform default under the pinned config tree. /home/deck/saves exists, which is what a resolver still expanding ~ against the machine home would answer.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8173,7 +8181,7 @@
     },
     {
       "name": "a-system-override-does-not-speak-for-a-user-deployed-app",
-      "rationale": "Which installation deploys the app decides which overrides files flatpak loads: the deploy search puts the user installation first (flatpak-dir-utils.c:294-317, the first hit wins :278-285), and the system installation's overrides are loaded only for a system deploy (flatpak-dir.c:3053-3083). This app is deployed under ~/.local/share/flatpak, so the system-global file's HOME=/mnt/elsewhere \u2014 which moves the expansion on a system deploy \u2014 speaks for nothing here, and the ~ expands against the machine home. /mnt/elsewhere/saves exists too, and is the discriminating direction: a resolver reading every overrides file unscoped would answer it.",
+      "rationale": "Which installation deploys the app decides which overrides files flatpak loads: the deploy search puts the user installation first (flatpak-dir-utils.c:294-317, the first hit wins :278-285), and the system installation's overrides are loaded only for a system deploy (flatpak-dir.c:3053-3083). This app is deployed under ~/.local/share/flatpak, so the system-global file's HOME=/mnt/elsewhere — which moves the expansion on a system deploy — speaks for nothing here, and the ~ expands against the machine home. /mnt/elsewhere/saves exists too, and is the discriminating direction: a resolver reading every overrides file unscoped would answer it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8246,7 +8254,7 @@
     },
     {
       "name": "emudeck-rom-location-expands-a-tilde-romdirectory-against-the-plain-home",
-      "rationale": "The same expansion against the other arrangement's home: EmuDeck's ES-DE runs with no --home, so getHomePath() is the user's own $HOME, and ~/Emulation/roms lands exactly where EmuDeck's own sed of the absolute value would have put it. Together with the RetroDECK vector this pins that the home is per arrangement \u2014 one tilde answer lands under the per-app config home, this one under /home/deck \u2014 and the sealed and unverified statements ride unchanged, because expanding the root says nothing about the catalogue layer nobody could read.",
+      "rationale": "The same expansion against the other arrangement's home: EmuDeck's ES-DE runs with no --home, so getHomePath() is the user's own $HOME, and ~/Emulation/roms lands exactly where EmuDeck's own sed of the absolute value would have put it. Together with the RetroDECK vector this pins that the home is per arrangement — one tilde answer lands under the per-app config home, this one under /home/deck — and the sealed and unverified statements ride unchanged, because expanding the root says nothing about the catalogue layer nobody could read.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8305,7 +8313,7 @@
     },
     {
       "name": "emudeck-esde-answers-from-the-on-disk-layers",
-      "rationale": "EmuDeck deploys upstream ES-DE as an AppImage and wires it through plain files under ~/ES-DE (dragoonDorise/EmuDeck @ 863ab69; ES-DE v3.4.1). The catalogue answers come from the readable layers \u2014 the custom_systems overlay EmuDeck writes, the gamelist selections it seeds, es_settings.xml's ROMDirectory \u2014 and every one carries emulator-catalogue-sealed, because the bundled es_systems.xml is embedded in the AppImage (INSTALL.md v3.4.1:1470) and atlas does not open it. An overlay system answers fully (ES-DE's merge replaces a same-name bundled system entirely), the gamelist's alternativeEmulator promotes Virtual Jaguar over the declared order, and %ROMPATH% resolves against the ROMDirectory EmuDeck itself wrote (emuDeckESDE.sh:407-409).",
+      "rationale": "EmuDeck deploys upstream ES-DE as an AppImage and wires it through plain files under ~/ES-DE (dragoonDorise/EmuDeck @ 863ab69; ES-DE v3.4.1). The catalogue answers come from the readable layers — the custom_systems overlay EmuDeck writes, the gamelist selections it seeds, es_settings.xml's ROMDirectory — and every one carries emulator-catalogue-sealed, because the bundled es_systems.xml is embedded in the AppImage (INSTALL.md v3.4.1:1470) and atlas does not open it. An overlay system answers fully (ES-DE's merge replaces a same-name bundled system entirely), the gamelist's alternativeEmulator promotes Virtual Jaguar over the declared order, and %ROMPATH% resolves against the ROMDirectory EmuDeck itself wrote (emuDeckESDE.sh:407-409).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8410,7 +8418,7 @@
     },
     {
       "name": "emudeck-esde-sealed-is-not-declares-none",
-      "rationale": "The discriminating direction of the sealed caveat: gb is not in EmuDeck's overlay, and the bundled layer that almost certainly declares it is sealed inside the AppImage. The empty answer carries emulator-catalogue-sealed \u2014 'nothing readable declares this', a statement about atlas \u2014 and never reads as 'the frontend knows no emulator for gb'. Same for the ROM placement: no rom-path-undeclared, because that code claims the catalogue WAS read and declares nothing.",
+      "rationale": "The discriminating direction of the sealed caveat: gb is not in EmuDeck's overlay, and the bundled layer that almost certainly declares it is sealed inside the AppImage. The empty answer carries emulator-catalogue-sealed — 'nothing readable declares this', a statement about atlas — and never reads as 'the frontend knows no emulator for gb'. Same for the ROM placement: no rom-path-undeclared, because that code claims the catalogue WAS read and declares nothing.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8477,7 +8485,7 @@
     },
     {
       "name": "emudeck-esde-on-disk-outranks-a-marker-that-says-no",
-      "rationale": "settings.sh records the installer's frontend choice (jsonToBashVars.sh:71 writes doInstallESDE), and the disk records what is actually here \u2014 EmuDeck's own installed-test is the AppImage stat (ESDE_IsInstalled, emuDeckESDE.sh:488-494). The disk decides: the catalogue answers from the ES-DE that is present, and frontend-marker-mismatch states the stale record instead of following it.",
+      "rationale": "settings.sh records the installer's frontend choice (jsonToBashVars.sh:71 writes doInstallESDE), and the disk records what is actually here — EmuDeck's own installed-test is the AppImage stat (ESDE_IsInstalled, emuDeckESDE.sh:488-494). The disk decides: the catalogue answers from the ES-DE that is present, and frontend-marker-mismatch states the stale record instead of following it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8552,7 +8560,7 @@
     },
     {
       "name": "emudeck-marker-promises-an-esde-the-disk-does-not-have",
-      "rationale": "doInstallESDE=true with no AppImage and no ~/ES-DE tree: the refusal stays the unestablished one \u2014 no ES-DE answers here, and where Pegasus or Steam ROM Manager would keep a catalogue is not established \u2014 while frontend-marker-mismatch states that the marker's record and the disk disagree. The disk decides; the record is stated, never followed.",
+      "rationale": "doInstallESDE=true with no AppImage and no ~/ES-DE tree: the refusal stays the unestablished one — no ES-DE answers here, and where Pegasus or Steam ROM Manager would keep a catalogue is not established — while frontend-marker-mismatch states that the marker's record and the disk disagree. The disk decides; the record is stated, never followed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8603,7 +8611,7 @@
     },
     {
       "name": "emudeck-esde-portable-txt-makes-the-tree-suspect",
-      "rationale": "A portable.txt next to the AppImage may relocate ES-DE's application data directory (ES-DE v3.4.1 main.cpp:149-192 \u2014 ES-DE validates the target and ignores the file when it points nowhere, so presence alone states a suspicion); EmuDeck writes none, a user can. Every answer read from ~/ES-DE then carries config-home-relocated \u2014 the files atlas read may not be the ones in force \u2014 and the home-derived ROMDirectory default (~/ROMs, FileData.cpp:283-284) is refused rather than resolved, because the home it derives from is exactly what the portable.txt may have moved. The enumeration itself is still stated: what the on-disk tree declares is a fact, and the caveat carries the doubt.",
+      "rationale": "A portable.txt next to the AppImage may relocate ES-DE's application data directory (ES-DE v3.4.1 main.cpp:149-192 — ES-DE validates the target and ignores the file when it points nowhere, so presence alone states a suspicion); EmuDeck writes none, a user can. Every answer read from ~/ES-DE then carries config-home-relocated — the files atlas read may not be the ones in force — and the home-derived ROMDirectory default (~/ROMs, FileData.cpp:283-284) is refused rather than resolved, because the home it derives from is exactly what the portable.txt may have moved. The enumeration itself is still stated: what the on-disk tree declares is a fact, and the caveat carries the doubt.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8688,7 +8696,7 @@
     },
     {
       "name": "emudeck-entry-route-carries-the-relocated-config-home-with-it",
-      "rationale": "The same portable.txt machine, asked through a catalogue entry: config-home-relocated is not only the arrangement-level statement about what atlas read, it rides the entry route's placements too. The entry re-reads the ES-DE side per query, so the doubt about which files are in force reaches the placement the entry hands out \u2014 on both save families, and only where content is named, because that is what makes the entry route ask the ES-DE question at all. The direct question on the same machine is the contrast, and the reason this vector asks it too: same content, same core, the same placement and the same two core caveats, and neither the sealed catalogue nor the relocation \u2014 the direct route reads no ES-DE, so it carries neither. No per-game statement rides along: on a relocated tree the home-derived ROMDirectory default is refused (FileData.cpp:283-284), so the per-game check has no anchor to resolve this game's path against.",
+      "rationale": "The same portable.txt machine, asked through a catalogue entry: config-home-relocated is not only the arrangement-level statement about what atlas read, it rides the entry route's placements too. The entry re-reads the ES-DE side per query, so the doubt about which files are in force reaches the placement the entry hands out — on both save families, and only where content is named, because that is what makes the entry route ask the ES-DE question at all. The direct question on the same machine is the contrast, and the reason this vector asks it too: same content, same core, the same placement and the same two core caveats, and neither the sealed catalogue nor the relocation — the direct route reads no ES-DE, so it carries neither. No per-game statement rides along: on a relocated tree the home-derived ROMDirectory default is refused (FileData.cpp:283-284), so the per-game check has no anchor to resolve this game's path against.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8935,7 +8943,7 @@
     },
     {
       "name": "emudeck-esde-broken-shadow-is-an-unreadable-catalogue",
-      "rationale": "The shadow is the file ES-DE loads instead of the embedded copy, so a shadow that exists and cannot be read means what the catalogue says is unknown \u2014 emulator-catalogue-unreadable, the same claim RetroDECK's unreadable bundled layer makes, never sealed (sealed says the readable part answered) and never an enumeration from the overlay alone.",
+      "rationale": "The shadow is the file ES-DE loads instead of the embedded copy, so a shadow that exists and cannot be read means what the catalogue says is unknown — emulator-catalogue-unreadable, the same claim RetroDECK's unreadable bundled layer makes, never sealed (sealed says the readable part answered) and never an enumeration from the overlay alone.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8985,7 +8993,7 @@
     },
     {
       "name": "emudeck-entry-route-carries-the-sealed-catalogue-with-it",
-      "rationale": "The placement asked through an EmuDeck catalogue entry: the core comes from the entry, the placement from the companion RetroArch cfg, and the ES-DE side rides as caveats \u2014 the sealed statement (the entry came out of a partly-sealed catalogue) and the per-game check: this game's gamelist entry selects BigPEmu (Proton), so the Virtual Jaguar entry answers its placement while stating that ES-DE would launch the other emulator.",
+      "rationale": "The placement asked through an EmuDeck catalogue entry: the core comes from the entry, the placement from the companion RetroArch cfg, and the ES-DE side rides as caveats — the sealed statement (the entry came out of a partly-sealed catalogue) and the per-game check: this game's gamelist entry selects BigPEmu (Proton), so the Virtual Jaguar entry answers its placement while stating that ES-DE would launch the other emulator.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9090,7 +9098,7 @@
     },
     {
       "name": "catalogue-loadexclusive-answers-the-custom-layer-alone",
-      "rationale": "A document-level <loadExclusive/> in the custom es_systems.xml makes ES-DE skip the bundled file wholesale (SystemData::loadConfig, es-app/src/SystemData.cpp:858-895, ES-DE v3.4.1; INSTALL.md v3.4.1:1466): the catalogue in force is the custom layer alone, and it is complete. Every catalogue-derived answer states the fact through emulator-catalogue-exclusive \u2014 the enumeration, the per-system entries, the ROM placement resolved from the custom <path>, and the firmware route, where the statement lands in the catalogue-status slot right after the context's own caveats. The documented placement is a second document-level element beside <systemList> \u2014 a double-rooted file the wrap-parse reads the way pugixml does.",
+      "rationale": "A document-level <loadExclusive/> in the custom es_systems.xml makes ES-DE skip the bundled file wholesale (SystemData::loadConfig, es-app/src/SystemData.cpp:858-895, ES-DE v3.4.1; INSTALL.md v3.4.1:1466): the catalogue in force is the custom layer alone, and it is complete. Every catalogue-derived answer states the fact through emulator-catalogue-exclusive — the enumeration, the per-system entries, the ROM placement resolved from the custom <path>, and the firmware route, where the statement lands in the catalogue-status slot right after the context's own caveats. The documented placement is a second document-level element beside <systemList> — a double-rooted file the wrap-parse reads the way pugixml does.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9225,7 +9233,7 @@
     },
     {
       "name": "catalogue-loadexclusive-a-bundled-system-is-not-loaded",
-      "rationale": "The other half of honoring the tag: a system only the bundled layer declares does not exist for this frontend \u2014 ES-DE never opens the bundled file (SystemData.cpp:858-862, v3.4.1). Its emulator enumeration is empty with the exclusive statement saying why, and its ROM placement is rom-path-undeclared: the catalogue in force was read and declares no <path>, a real absence, not a failed look.",
+      "rationale": "The other half of honoring the tag: a system only the bundled layer declares does not exist for this frontend — ES-DE never opens the bundled file (SystemData.cpp:858-862, v3.4.1). Its emulator enumeration is empty with the exclusive statement saying why, and its ROM placement is rom-path-undeclared: the catalogue in force was read and declares no <path>, a real absence, not a failed look.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9288,7 +9296,7 @@
     },
     {
       "name": "catalogue-loadexclusive-inside-systemlist-is-not-document-level",
-      "rationale": "ES-DE finds the tag with doc.child(\"loadExclusive\") \u2014 document-level children only (SystemData.cpp:884, v3.4.1). Inside <systemList> it is not a document child: the frontend ignores it there, so atlas does too \u2014 the layers merge normally (the custom gbc joins the bundled systems) and no exclusive statement rides.",
+      "rationale": "ES-DE finds the tag with doc.child(\"loadExclusive\") — document-level children only (SystemData.cpp:884, v3.4.1). Inside <systemList> it is not a document child: the frontend ignores it there, so atlas does too — the layers merge normally (the custom gbc joins the bundled systems) and no exclusive statement rides.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9340,7 +9348,7 @@
     },
     {
       "name": "catalogue-loadexclusive-in-the-bundled-layer-is-ignored",
-      "rationale": "A <loadExclusive/> in the bundled es_systems.xml is ignored with a LogWarning \u2014 \"this is only supposed to be used for the custom es_systems.xml file\" (SystemData.cpp:886-895, v3.4.1) \u2014 so the catalogue answers normally. The document-level tag also makes the bundled file double-rooted, so this pins the wrap-parse on the bundled layer too: xml.etree without the wrap refused the whole file and answered emulator-catalogue-unreadable for a catalogue the frontend reads fine.",
+      "rationale": "A <loadExclusive/> in the bundled es_systems.xml is ignored with a LogWarning — \"this is only supposed to be used for the custom es_systems.xml file\" (SystemData.cpp:886-895, v3.4.1) — so the catalogue answers normally. The document-level tag also makes the bundled file double-rooted, so this pins the wrap-parse on the bundled layer too: xml.etree without the wrap refused the whole file and answered emulator-catalogue-unreadable for a catalogue the frontend reads fine.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9398,7 +9406,7 @@
     },
     {
       "name": "emudeck-loadexclusive-suppresses-the-sealed-caveat",
-      "rationale": "On EmuDeck the bundled layer is sealed inside the AppImage \u2014 but with a document-level <loadExclusive/> in the overlay the frontend never opens it, embedded or resource-shadow alike (SystemData.cpp:858-895,1338-1362, v3.4.1), so nothing is sealed away: the overlay is the whole catalogue in force. The sealed hedge would state a falsehood here and stands down; emulator-catalogue-exclusive rides instead and the enumeration counts as complete. The gamelist's alternativeEmulator still promotes Virtual Jaguar.",
+      "rationale": "On EmuDeck the bundled layer is sealed inside the AppImage — but with a document-level <loadExclusive/> in the overlay the frontend never opens it, embedded or resource-shadow alike (SystemData.cpp:858-895,1338-1362, v3.4.1), so nothing is sealed away: the overlay is the whole catalogue in force. The sealed hedge would state a falsehood here and stands down; emulator-catalogue-exclusive rides instead and the enumeration counts as complete. The gamelist's alternativeEmulator still promotes Virtual Jaguar.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9479,7 +9487,7 @@
     },
     {
       "name": "emudeck-loadexclusive-an-undeclared-system-is-a-real-absence",
-      "rationale": "A complete catalogue changes what an undeclared system means: under the sealed hedge an id the readable layers do not declare answers silently, because the declaration may sit in the layer nobody could read \u2014 but under <loadExclusive/> the overlay is the whole catalogue, a system it does not declare has no <path> anywhere, and the answer states rom-path-undeclared beside the exclusive statement.",
+      "rationale": "A complete catalogue changes what an undeclared system means: under the sealed hedge an id the readable layers do not declare answers silently, because the declaration may sit in the layer nobody could read — but under <loadExclusive/> the overlay is the whole catalogue, a system it does not declare has no <path> anywhere, and the answer states rom-path-undeclared beside the exclusive statement.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9537,7 +9545,7 @@
     },
     {
       "name": "emudeck-loadexclusive-rides-the-entry-route",
-      "rationale": "The sealed entry-route vector's exclusive twin: a placement asked through an EmuDeck catalogue entry carries the catalogue-status statement of the catalogue the entry came out of \u2014 here emulator-catalogue-exclusive instead of sealed, in the same position \u2014 and the per-game check still finds that this game's gamelist entry selects BigPEmu (Proton).",
+      "rationale": "The sealed entry-route vector's exclusive twin: a placement asked through an EmuDeck catalogue entry carries the catalogue-status statement of the catalogue the entry came out of — here emulator-catalogue-exclusive instead of sealed, in the same position — and the per-game check still finds that this game's gamelist entry selects BigPEmu (Proton).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9642,12 +9650,12 @@
     },
     {
       "name": "catalogue-reads-a-layer-that-starts-with-a-byte-order-mark",
-      "rationale": "pugixml detects the encoding from a UTF-8 byte-order mark and reads the file normally, so a BOM'd es_systems.xml is the catalogue in force \u2014 the same reason the es_settings reader strips it. The document-level wrap the loadExclusive read requires would otherwise place the mark mid-document and refuse a layer whose mark expat used to skip by itself: without the strip, this machine answers emulator-catalogue-unreadable on a catalogue the frontend reads fine.",
+      "rationale": "pugixml detects the encoding from a UTF-8 byte-order mark and reads the file normally, so a BOM'd es_systems.xml is the catalogue in force — the same reason the es_settings reader strips it. The document-level wrap the loadExclusive read requires would otherwise place the mark mid-document and refuse a layer whose mark expat used to skip by itself: without the strip, this machine answers emulator-catalogue-unreadable on a catalogue the frontend reads fine.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "\ufeff<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "﻿<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves"
@@ -9700,7 +9708,7 @@
     },
     {
       "name": "emudeck-backend-head-matching-the-pin-states-nothing",
-      "rationale": "The runtime half of EmuDeck's anchor: the backend checkout's HEAD, read as the two plain files git keeps it in (.git/HEAD symref, then the loose ref \u2014 no git invocation), compared against the record's pin. Equal, so the answer states nothing: the arrangement is verified and this machine runs what it was verified against. The silence differs from an anchorless machine's only in what produced it \u2014 here the comparison ran \u2014 which is why this fixture models the files.",
+      "rationale": "The runtime half of EmuDeck's anchor: the backend checkout's HEAD, read as the two plain files git keeps it in (.git/HEAD symref, then the loose ref — no git invocation), compared against the record's pin. Equal, so the answer states nothing: the arrangement is verified and this machine runs what it was verified against. The silence differs from an anchorless machine's only in what produced it — here the comparison ran — which is why this fixture models the files.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9753,7 +9761,7 @@
     },
     {
       "name": "emudeck-backend-head-drift-rides-between-health-and-the-query-hole",
-      "rationale": "Three claims meet in one caveat list, and their order is the contract: the health finding first (settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then the arrangement's evidence statement \u2014 the backend checkout names a commit the record never verified, the detached spelling of .git/HEAD, the second form the anchor read speaks \u2014 then what the query itself could not resolve. A machine fact, a fact about atlas's record, and a missing argument must not merge, reorder, or crowd each other out; and the cfg still answers the directory, because neither degradation replaces the answer.",
+      "rationale": "Three claims meet in one caveat list, and their order is the contract: the health finding first (settings.sh exists and its bytes cannot be read, so the finding carries the path and the read status), then the arrangement's evidence statement — the backend checkout names a commit the record never verified, the detached spelling of .git/HEAD, the second form the anchor read speaks — then what the query itself could not resolve. A machine fact, a fact about atlas's record, and a missing argument must not merge, reorder, or crowd each other out; and the cfg still answers the directory, because neither degradation replaces the answer.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9830,7 +9838,7 @@
     },
     {
       "name": "emudeck-unreadable-anchor-establishes-no-drift",
-      "rationale": "The anchor sources unreadable on a machine is the same state an unreadable retrodeck.json version leaves RetroDECK in: the machine states no version, and the comparison nobody could run is claimed in neither direction \u2014 no drift caveat (that would claim a comparison), and no unverified caveat either (the arrangement has been observed; that record does not age with one machine's disk). The silence spells 'no drift established', never 'no drift'.",
+      "rationale": "The anchor sources unreadable on a machine is the same state an unreadable retrodeck.json version leaves RetroDECK in: the machine states no version, and the comparison nobody could run is claimed in neither direction — no drift caveat (that would claim a comparison), and no unverified caveat either (the arrangement has been observed; that record does not age with one machine's disk). The silence spells 'no drift established', never 'no drift'.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9884,7 +9892,7 @@
     },
     {
       "name": "evidence-a-verified-and-an-unverified-arrangement-on-one-machine",
-      "rationale": "The evidence caveat belongs to the arrangement, and one machine shows both sides at once: RetroDECK's placement was confirmed against a live installation and states nothing, while the native RetroArch's is derived from upstream configuration alone and says so \u2014 same question, same machine, same detection order, two different evidence states. A caveat attached to the query rather than to the arrangement would appear on both answers; one attached to nothing would appear on neither.",
+      "rationale": "The evidence caveat belongs to the arrangement, and one machine shows both sides at once: RetroDECK's placement was confirmed against a live installation and states nothing, while the native RetroArch's is derived from upstream configuration alone and says so — same question, same machine, same detection order, two different evidence states. A caveat attached to the query rather than to the arrangement would appear on both answers; one attached to nothing would appear on neither.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9996,7 +10004,7 @@
     },
     {
       "name": "a-core-this-installation-does-not-have-is-refused-not-placed",
-      "rationale": "The case measured on a live machine: an EmuDeck arrangement whose RetroArch ships some cores and not the PS2 one. The core directory the cfg names is read, the .so is not in it, and that is an established absence \u2014 so there is no location to give. Answering the standard save root here would name a directory for a core that cannot run, which is invention, not a reading. The refusal carries the firmware route's word for the same fact, core-not-installed, and nothing else: no card was in play, so nothing reports a retired one.",
+      "rationale": "The case measured on a live machine: an EmuDeck arrangement whose RetroArch ships some cores and not the PS2 one. The core directory the cfg names is read, the .so is not in it, and that is an established absence — so there is no location to give. Answering the standard save root here would name a directory for a core that cannot run, which is invention, not a reading. The refusal carries the firmware route's word for the same fact, core-not-installed, and nothing else: no card was in play, so nothing reports a retired one.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -10084,7 +10092,7 @@
     },
     {
       "name": "a-core-directory-that-cannot-be-read-establishes-no-absence",
-      "rationale": "The boundary the refusal rests on. The same machine, with the core directory unreadable: the stat on it fails, so 'this core is not in it' was never read and absence was never established. Claiming the core is not installed would be a claim about a place nobody could look into, so the answer stays the placement it always was \u2014 with core-unqueryable for the read that failed and core-generation-unestablished for the recorded deviation that cannot be applied to a generation nobody saw.",
+      "rationale": "The boundary the refusal rests on. The same machine, with the core directory unreadable: the stat on it fails, so 'this core is not in it' was never read and absence was never established. Claiming the core is not installed would be a claim about a place nobody could look into, so the answer stays the placement it always was — with core-unqueryable for the read that failed and core-generation-unestablished for the recorded deviation that cannot be applied to a generation nobody saw.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -10151,7 +10159,7 @@
     },
     {
       "name": "both-flatpak-deploys-the-user-tree-is-the-one-that-runs",
-      "rationale": "The same app is installed in both flatpak installations, and the two deploys differ: the user tree ships the n64 catalogue and an mGBA core, the system tree a psx catalogue and the Mupen64Plus-Next core the query asks for. Flatpak starts the user deploy \u2014 the deploy search puts the user installation at the front of the list and stops at the first hit (flatpak_find_deploy_for_ref, flatpak-dir-utils.c:300-316, :278-285 @ 1.16.6) \u2014 so every \"/app/...\" the cfg names is a file in the user tree: the catalogue read is that tree's, and the core sitting in the system tree is one no run of this app loads, which makes it not installed.",
+      "rationale": "The same app is installed in both flatpak installations, and the two deploys differ: the user tree ships the n64 catalogue and an mGBA core, the system tree a psx catalogue and the Mupen64Plus-Next core the query asks for. Flatpak starts the user deploy — the deploy search puts the user installation at the front of the list and stops at the first hit (flatpak_find_deploy_for_ref, flatpak-dir-utils.c:300-316, :278-285 @ 1.16.6) — so every \"/app/...\" the cfg names is a file in the user tree: the catalogue read is that tree's, and the core sitting in the system tree is one no run of this app loads, which makes it not installed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -10205,7 +10213,7 @@
     },
     {
       "name": "a-system-only-flatpak-deploy-is-the-one-that-runs",
-      "rationale": "The other direction of the same rule: with no user deploy the search reaches the system installation, and that tree is what the app runs from \u2014 the catalogue it ships is the one read and the core it deploys is installed. Preferring the user installation is a choice between two deploys, never a refusal of the system one.",
+      "rationale": "The other direction of the same rule: with no user deploy the search reaches the system installation, and that tree is what the app runs from — the catalogue it ships is the one read and the core it deploys is installed. Preferring the user installation is a choice between two deploys, never a refusal of the system one.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -10278,7 +10286,7 @@
     },
     {
       "name": "an-inaccessible-flatpak-deploy-tree-establishes-no-running-deploy",
-      "rationale": "The one deploy this machine has cannot be stat'd \u2014 a mode-000 parent, an unplugged mount \u2014 so which deploy runs is not established, and the cfg's \"/app/retrodeck/saves\" gets no host location: the answer states the sandbox spelling it was given and says atlas cannot read what the emulator reads there. Taking the stat failure for a deploy would compose a host path out of it and hand that to RetroArch's directory test, which refuses everything it cannot read \u2014 turning the host's blindness into a claim about the sandbox and quietly relocating the saves to the platform default.",
+      "rationale": "The one deploy this machine has cannot be stat'd — a mode-000 parent, an unplugged mount — so which deploy runs is not established, and the cfg's \"/app/retrodeck/saves\" gets no host location: the answer states the sandbox spelling it was given and says atlas cannot read what the emulator reads there. Taking the stat failure for a deploy would compose a host path out of it and hand that to RetroArch's directory test, which refuses everything it cannot read — turning the host's blindness into a claim about the sandbox and quietly relocating the saves to the platform default.",
       "input": {
         "home": "/home/deck",
         "files": {

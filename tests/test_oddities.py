@@ -1437,18 +1437,15 @@ class TestAuditVerdictCaveats:
         )
         assert {c.code for c in p.caveats} & self.VERDICT_CAVEATS == set()
 
-    def test_standard_dir_verdict_stays_silent_and_the_record_speaks_over_the_disk(self):
-        # standard-dir means the file set is core-owned, and the verdict itself
-        # still adds no caveat. What changed with the record: Beetle Saturn is
-        # recorded as filling no memory id, so the answer is the declared
-        # emptiness — a statement about the *frontend* — and the three
-        # core-written files lying right there are no longer reported.
-        #
-        # Seen, deferred: those files are the core's own, not stale frontend
-        # ones, so the declaration and the observation are not actually in
-        # conflict. Whether a declared emptiness should suppress an observation
-        # of core-written files is its own question; pinned here so a change to
-        # it is deliberate.
+    def test_multi_option_saturn_names_its_two_sharing_options(self):
+        # Beetle Saturn rode as standard-dir on the claim that the shipped core
+        # registers no option — refuted by the binary itself, which registers
+        # both sharing switches with their UI labels. The verdict is
+        # multi-option now, and the caveat names the two options that swap the
+        # three files' stems to a shared spelling. The record still speaks over
+        # the disk: the declared emptiness is a statement about the *frontend*,
+        # and the three core-written files lying right there stay unreported —
+        # seen, deferred, pinned as before.
         stem = "Sega Rally Championship (USA)"
         p = self._query(
             core_so="mednafen_saturn_libretro.so",
@@ -1461,7 +1458,12 @@ class TestAuditVerdictCaveats:
                 f"/mnt/sd/retrodeck/saves/saturn/{stem}.smpc": "smpc",
             },
         )
-        assert {c.code for c in p.caveats} & self.VERDICT_CAVEATS == set()
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MULTI_OPTION]
+        assert stated
+        assert stated[0].data["options"].split(", ") == [
+            "beetle_saturn_shared_int",
+            "beetle_saturn_shared_ext",
+        ]
         assert p.file_set.state == "declared"
         assert p.file_set.files == ()
         assert any(c.code == "core-own-writes-unestablished" for c in p.caveats)
@@ -2494,15 +2496,16 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             if kind != "literal"
         )
         assert marked == [
-            # The higan family names its files from the content's stem at run
-            # time; what the binaries carry whole is the *resource* name the
-            # emulator asks its host for ("time.rtc"), not the file it gets
-            # back. bsnes-jg's .srm is not its name at all — the frontend
-            # writes that half, which is why no such literal is in its binary.
-            ("bsnes", "<rom_stem>.rtc", "unprotected"),
+            # bsnes-jg names its files from the content's stem at run time;
+            # what the binary carries whole is the *resource* name the emulator
+            # asks its host for ("time.rtc"), not the file it gets back. Its
+            # .srm is not its name at all — the frontend writes that half,
+            # which is why no such literal is in its binary. bsnes and
+            # bsnes_hd_beta no longer record an .rtc: their branch is reachable
+            # only through the Super Game Boy subsystem, so the cards retired
+            # the claim.
             ("bsnes-jg", "<rom_stem>.rtc", "unprotected"),
             ("bsnes-jg", "<rom_stem>.srm", "unprotected"),
-            ("bsnes_hd_beta", "<rom_stem>.rtc", "unprotected"),
             # Cannonball's three names are whole in its binary; the ".sav" its
             # writer appends is short enough for the compiler to fold, so each
             # anchor points at the base name the rename would have to touch.
@@ -2513,6 +2516,25 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             # '.pure.zip' literal beside it is what the byte check watches, and
             # the '*.sav' search pattern is the legacy name's own whole trace.
             ("dosbox_pure", "<rom_stem>.sav", "unprotected"),
+            # EasyRPG's fifteen slot names come from one fmt format the
+            # compiler pooled into a longer string — visible in the binary but
+            # not NUL-delimited; the whole '.save' archive-redirect suffix
+            # beside it is what the byte check can hold.
+            ("easyrpg", "Save01.lsd", "unprotected"),
+            ("easyrpg", "Save02.lsd", "unprotected"),
+            ("easyrpg", "Save03.lsd", "unprotected"),
+            ("easyrpg", "Save04.lsd", "unprotected"),
+            ("easyrpg", "Save05.lsd", "unprotected"),
+            ("easyrpg", "Save06.lsd", "unprotected"),
+            ("easyrpg", "Save07.lsd", "unprotected"),
+            ("easyrpg", "Save08.lsd", "unprotected"),
+            ("easyrpg", "Save09.lsd", "unprotected"),
+            ("easyrpg", "Save10.lsd", "unprotected"),
+            ("easyrpg", "Save11.lsd", "unprotected"),
+            ("easyrpg", "Save12.lsd", "unprotected"),
+            ("easyrpg", "Save13.lsd", "unprotected"),
+            ("easyrpg", "Save14.lsd", "unprotected"),
+            ("easyrpg", "Save15.lsd", "unprotected"),
             # The FB Alpha family names both its files after the loaded driver at
             # run time. What each binary carries whole is the format that builds
             # them — "%s%c%s.fs" and "%s%c%s.hi" — which is what a rename of the

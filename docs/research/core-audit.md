@@ -198,23 +198,37 @@ carries, ordered by what is at stake:
    (libretro.c:556-561), read back at load, written at unload only when the cartridge EEPROM was touched (:1343-1351);
    EEPROM sharing is compiled off. The audit's 07-23 live observation of a content-keyed `.eep` was this chain — the
    standard-dir verdict became the card that states the file.
-8. ~~**`scummvm`**, **`dosbox_pure`**, **`desmume`**~~ — the three big reads, done 2026-08-17; **`easyrpg`**,
-   **`mednafen_saturn`** (`BSC.MCR`) remain, new since 07-24, and `handy` / `mesen` (`.eeprom*`) stay confirmed where
-   the old tiers put them. `dosbox_pure`: carded — the emulated C: drive is a union of read-only content and one
-   writable overlay, and the overlay is the save, `<save dir>/<rom_stem>.pure.zip` (DBP_GetSaveFile,
-   dosbox_pure_libretro.cpp:826-844 at ed5e809), created on first write, rewritten on a five-second schedule; a
-   `.SAVENAME` redirect shares saves between contents, a legacy `.sav` keeps being used unless strict mode forbids it,
-   Boot-OS setups add `-CDRIVE.sav` and hash-keyed disks. `desmume`: carded — its backup device writes
-   `<save dir>/<rom_stem>.dsv` (mc.cpp:232-235 at 7f05a8d) with the battery path defaulting to the save directory this
-   generation fills (path.cpp:196-222); no `.dsv.bak` here, the copy is gated on a Windows-only setting — the 2015
-   card's pair shrinks to one file. `scummvm`: audited **standard-dir**, not carded — saves are target-keyed slot files
-   in ScummVM's own `savepath` setting (default: the save directory, flat; truth in `<system dir>/scummvm.ini`,
-   libretro-os-utils.cpp:64-69, :212-221 at 686cdd1) — a card needs the ini-reading code rule plus #170's mode form.
-9. **`melondsds`** — the one flagged core that fills `save_ram`: its `.sav` hits are DSi-NAND-internal paths
-   (`0:/title/%08x/%08x/data/…`), and the open question is whether host files appear beside the frontend's `.srm`.
+8. ~~**`scummvm`**, **`dosbox_pure`**, **`desmume`**, **`easyrpg`**, **`mednafen_saturn`**~~ — all read; `handy` /
+   `mesen` (`.eeprom*`) stay confirmed where the old tiers put them. `easyrpg` (read 2026-08-17): carded — the libretro
+   port names no save path at all, so RPG Maker's fifteen `Save##.lsd` slots (scene_save.cpp:69 at 6a244c1) land beside
+   the game's own files, and archived content gets a sibling `<archive name>.save/` directory (filefinder.cpp:88-127) —
+   the frontend's save directory never enters the answer. `mednafen_saturn` (read 2026-08-17): the `BSC.MCR` hit was the
+   SH-2 bus controller's register name in the debugger's vocabulary, not a file — but the read corrected the audit
+   anyway: the shipped binary registers **both** sharing options with their UI labels, refuting the standard-dir
+   verdict's "registers none", so Beetle Saturn is **multi-option** now (`beetle_saturn_shared_int`,
+   `beetle_saturn_shared_ext` swap the three live-observed files' stems to a shared spelling). `dosbox_pure`: carded —
+   the emulated C: drive is a union of read-only content and one writable overlay, and the overlay is the save,
+   `<save dir>/<rom_stem>.pure.zip` (DBP_GetSaveFile, dosbox_pure_libretro.cpp:826-844 at ed5e809), created on first
+   write, rewritten on a five-second schedule; a `.SAVENAME` redirect shares saves between contents, a legacy `.sav`
+   keeps being used unless strict mode forbids it, Boot-OS setups add `-CDRIVE.sav` and hash-keyed disks. `desmume`:
+   carded — its backup device writes `<save dir>/<rom_stem>.dsv` (mc.cpp:232-235 at 7f05a8d) with the battery path
+   defaulting to the save directory this generation fills (path.cpp:196-222); no `.dsv.bak` here, the copy is gated on a
+   Windows-only setting — the 2015 card's pair shrinks to one file. `scummvm`: audited **standard-dir**, not carded —
+   saves are target-keyed slot files in ScummVM's own `savepath` setting (default: the save directory, flat; truth in
+   `<system dir>/scummvm.ini`, libretro-os-utils.cpp:64-69, :212-221 at 686cdd1) — a card needs the ini-reading code
+   rule plus #170's mode form.
+9. ~~**`melondsds`**~~ — closed 2026-08-17: no host file appears beside the frontend's `.srm` on the catalogue route.
+   The `.sav` hits are NAND-internal spellings inside the image kept in the system directory, firmware and Wi-Fi
+   settings flush to the system directory (core/tasks.cpp:263-292 at v1.2.0), and the GBA slot writes back to the save
+   file the subsystem was handed at its own path (tasks.cpp:239-260) — a route no catalogue entry launches.
 
-From the card side, `bsnes_hd_beta` joins: its provenance leans on "unchanged in this respect" toward bsnes rather than
-tracing its own chain — the thinnest citation among the shipped cards.
+~~From the card side, `bsnes_hd_beta` joins~~ — read 2026-08-17 in its own tree at beta_10_6, and the trace found more
+than thin provenance: in **both** bsnes and bsnes-hd the `time.rtc` branch lives only in the Game Boy handler
+(program.cpp:565-601 mainline, :541-580 hd), reached solely through the Super Game Boy subsystem, and the pickaxe shows
+it never lived anywhere else — a Super Famicom cartridge's real-time clock is never persisted. Both cards declared
+`<rom_stem>.rtc` and both retire it; bsnes-jg's is real (its generic file-write callback serves any system's rtc,
+libretro/libretro.cpp:527-544) and stays. The audit era's tally of corrected shipped claims: genesis_plus_gx's CD rows,
+the bsnes pair's `.rtc`, Beetle Saturn's "registers none".
 
 ### The reachability pass over the filled records — 2026-08-17
 

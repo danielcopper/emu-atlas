@@ -104,10 +104,9 @@
               {
                 "subdir": null,
                 "files": [
-                  "<rom_stem>.srm",
-                  "<rom_stem>.rtc"
+                  "<rom_stem>.srm"
                 ],
-                "granularity": "per-game-files",
+                "granularity": "per-game-file",
                 "role": "battery"
               }
             ]
@@ -116,14 +115,11 @@
         "anchors": {
           "<rom_stem>.srm": {
             "literal": ".srm"
-          },
-          "<rom_stem>.rtc": {
-            "unprotected": "composed at run time from the content's own stem and '.rtc' (program.cpp, the time.rtc branch). The whole string beside it in the binary is the resource name 'time.rtc', which is what the emulator asks its host for; the file it is answered with is named after the content"
           }
         }
       },
       "provenance": {
-        "source": "bsnes source at the version the shipped binary names (115). This core takes itself out of the libretro save interface deliberately and says so above the two functions: 'there is no safe/sensible way to use the memory interface without severe hackery. Rely on higan to load and save SRAM until there is really compelling reason not to' — retro_get_memory_data returns nullptr and retro_get_memory_size returns 0 for every id (bsnes/target-libretro/libretro.cpp:1037-1047), so RetroArch writes nothing at all. The core writes both files itself: its host resolves the emulator's 'save.ram' resource to <save_dir>/<rom_stem>.srm and 'time.rtc' to <save_dir>/<rom_stem>.rtc, both from GET_SAVE_DIRECTORY and both falling back to the content's own directory where the frontend names none (bsnes/target-libretro/program.cpp:503-530), and retro_unload_game calls the core's save() (libretro.cpp:1026-1030). Game Boy content, which this core is also launched for, takes the same two names through its own path (program.cpp:613-650). A cartridge without a clock is never asked for time.rtc, so the second name is an upper bound like every other file set here.",
+        "source": "bsnes source at the version the shipped binary names (115). This core takes itself out of the libretro save interface deliberately and says so above the two functions: 'there is no safe/sensible way to use the memory interface without severe hackery. Rely on higan to load and save SRAM until there is really compelling reason not to' — retro_get_memory_data returns nullptr and retro_get_memory_size returns 0 for every id (bsnes/target-libretro/libretro.cpp:1037-1047), so RetroArch writes nothing at all. The core writes its file itself: the Super Famicom handler resolves the emulator's 'save.ram' resource to <save_dir>/<rom_stem>.srm, from GET_SAVE_DIRECTORY with the content's own directory as the fallback (program.cpp:518-544), and retro_unload_game calls the core's save().\n\nWhat this handler does NOT resolve is 'time.rtc': the branch exists only in the Game Boy handler (program.cpp:565-601), reached solely through the Super Game Boy subsystem — a route no catalogue entry launches — and the history shows it never lived anywhere else (one commit introduced it, already in the Game Boy function). A Super Famicom cartridge with a real-time clock asks for the file, is answered with nothing, and its clock resets every launch — so this card no longer states an .rtc, where it once carried the claim across from the two names' spellings without tracing which content reaches the second.",
         "status": {
           "always": "[D] Read from source at the shipped version. One mode, nothing selects between modes, and no save was watched being written."
         }
@@ -182,10 +178,9 @@
               {
                 "subdir": null,
                 "files": [
-                  "<rom_stem>.srm",
-                  "<rom_stem>.rtc"
+                  "<rom_stem>.srm"
                 ],
-                "granularity": "per-game-files",
+                "granularity": "per-game-file",
                 "role": "battery"
               }
             ]
@@ -194,14 +189,11 @@
         "anchors": {
           "<rom_stem>.srm": {
             "literal": ".srm"
-          },
-          "<rom_stem>.rtc": {
-            "unprotected": "composed at run time from the content's own stem and '.rtc' (program.cpp, the time.rtc branch). The whole string beside it in the binary is the resource name 'time.rtc', which is what the emulator asks its host for; the file it is answered with is named after the content"
           }
         }
       },
       "provenance": {
-        "source": "bsnes-hd source at the version the shipped binary names (10.6). A fork of bsnes and unchanged in this respect: retro_get_memory_size returns 0 for every id (bsnes/target-libretro/libretro.cpp:1135-1138), so RetroArch writes nothing, and the core's host resolves 'save.ram' to <save_dir>/<rom_stem>.srm and 'time.rtc' to <save_dir>/<rom_stem>.rtc, both from GET_SAVE_DIRECTORY with the content's own directory as the fallback (bsnes/target-libretro/program.cpp:522-558).",
+        "source": "bsnes-hd source at beta_10_6 (de27b9e), the version the shipped binary names (10.6), read in its own tree rather than leaning on bsnes: retro_get_memory_data returns nullptr and retro_get_memory_size returns 0 for every id (bsnes/target-libretro/libretro.cpp:1085-1094), so RetroArch writes nothing. The Super Famicom handler resolves 'save.ram' to <save_dir>/<rom_stem>.srm, from GET_SAVE_DIRECTORY with the content's own directory as the fallback (bsnes/target-libretro/program.cpp:494-539).\n\nAs in bsnes, the 'time.rtc' branch exists only in the Game Boy handler (program.cpp:541-580), reached solely through the Super Game Boy subsystem (registered at libretro.cpp:617-645) — a route no catalogue entry launches — and the Super Famicom handler answers an rtc request with nothing (Program::open dispatch, program.cpp:112-168), so a cartridge clock is never persisted. This card no longer states an .rtc either.",
         "status": {
           "always": "[D] Read from source at the shipped version, and the same code as bsnes's. Not observed."
         }
@@ -406,6 +398,98 @@
         "source": "libretro/dosbox-pure at ed5e809 ('Set version to 1.0-preview4' — the version string the shipped binary names; every build until the next bump reports it unchanged, so the read is bound by the version plus the whole strings '.pure.zip', '-CDRIVE.sav' and 'dosbox_pure_strict_mode', all in the shipped .so). The memory interface answers nothing (dosbox_pure_libretro.cpp:3833-3834), and the save is DOSBox Pure's own: the emulated C: drive is a union of the read-only content and one writable overlay, and the overlay is the save file. DBP_GetSaveFile joins the frontend's save directory with the content's stem and '.pure.zip' (:826-844; the stem from DBP_ExtractPathInfo, :731-768), and init_dosbox hands the result to the union drive (:2683, :2699-2700). Every file DOS writes or changes on C: lands in that zip — created on the first modification and rewritten on a five-second schedule from then on (src/dos/drive_union.cpp:355-373), so it appears only once a game writes. Two redirections scope the name: a '<name>.SAVENAME' file on the mounted drive renames the save to '<name>.pure.zip' so several contents share one (:808-824, swapped in at :2696-2697), and an existing legacy '<rom_stem>.sav' keeps being used unless 'dosbox_pure_strict_mode' forbids it (:835-839, the option read at :2276). A 'Boot OS' setup keeps its virtual disks beside the save — '<rom_stem>-CDRIVE.sav' and hash-keyed '<rom_stem>-%08X.sav' spellings (:845-875) — and installs OS images into the system directory (:877-884), that feature's own tree rather than this answer's. Loading a bare .conf mounts no drive and writes no save (:2658-2665). The registered options otherwise govern machine, audio and video; none moves the save file — one mode.",
         "status": {
           "always": "[D] Read from source at ed5e809, the version the shipped binary names. Not live-observed."
+        }
+      }
+    },
+    "easyrpg": {
+      "identifiers": {
+        "library_name": [
+          "EasyRPG Player"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "content_directory",
+            "groups": [
+              {
+                "files": [
+                  "Save01.lsd",
+                  "Save02.lsd",
+                  "Save03.lsd",
+                  "Save04.lsd",
+                  "Save05.lsd",
+                  "Save06.lsd",
+                  "Save07.lsd",
+                  "Save08.lsd",
+                  "Save09.lsd",
+                  "Save10.lsd",
+                  "Save11.lsd",
+                  "Save12.lsd",
+                  "Save13.lsd",
+                  "Save14.lsd",
+                  "Save15.lsd"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery",
+                "files_established_for": "content loaded as an unpacked game directory (or a file inside one), where the slots land beside the game files themselves. An archive (.zip, .easyrpg) cannot be written, so the player creates a sibling directory named after the archive's own full name with '.save' appended and the slots land in there — a directory whose name atlas cannot state as a template",
+                "files_citation": "src/scene_save.cpp:69 at EasyRPG/Player 6a244c1 writes 'Save{:02d}.lsd' into FileFinder::Save(); src/filefinder.cpp:402 bounds the slots at 15; :88-127 derives the .save redirect for unwritable game filesystems"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "Save01.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save02.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save03.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save04.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save05.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save06.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save07.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save08.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save09.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save10.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save11.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save12.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save13.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save14.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          },
+          "Save15.lsd": {
+            "unprotected": "composed at run time from the format 'Save{:02d}.lsd' (scene_save.cpp:69), which the compiler pooled into a longer string — visible in the shipped binary but not as a NUL-delimited literal the byte test can watch; the whole '.save' redirect suffix beside it is what the tripwire holds"
+          }
+        }
+      },
+      "provenance": {
+        "source": "EasyRPG/Player at 6a244c1, the revision the shipped binary names in its library_version ('0.8.1.1-git+12@6a244c1'). retro_get_memory is a no-op (src/platform/libretro/ui.cpp:541-544), so RetroArch writes nothing — and the libretro port never names a save path at all: retro_load_game mounts the content as the game filesystem (ui.cpp:432-468) and passes no --save-path, so FileFinder::Save() answers the game filesystem itself when it is writable (src/filefinder.cpp:74-127). RPG Maker's fifteen slots, written as Save01.lsd through Save15.lsd (src/scene_save.cpp:69, the count at filefinder.cpp:402), therefore land beside the game's own files — the frontend's save directory never enters the answer. Where the game filesystem cannot be written (a .zip or .easyrpg archive), the player walks up to the first writable parent — the content's directory — and creates a sibling named after the archive with '.save' appended (filefinder.cpp:88-127), so an archived game keeps its slots in '<archive name>.save/' next to the archive. The registered options govern video and input; none moves a file — one mode.",
+        "status": {
+          "always": "[D] Read from source at 6a244c1, the revision the shipped binary names. Not live-observed."
         }
       }
     },
