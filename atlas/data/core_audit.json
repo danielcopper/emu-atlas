@@ -227,14 +227,9 @@
       "kind": "libretro"
     },
     "genesis_plus_gx": {
-      "verdict": "multi-option",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] Frontend SRAM is real for the cartridge systems, and unreachable for the CD ones: SYSTEM_MCD runs scd_init() instead of md_cart_init() (core/genesis.c:162-175), so sram.on never sets and the memory interface answers 0 — the record's CD rows were corrected to say so. The CD save is the core's own BRAM tree under three interacting options (genesis_plus_gx_system_bram, _cart_bram, _cart_size; libretro.c:1383-1500), written by bram_load/bram_save (libretro.c:3675, :3730) — the multi-option shape the single-option card schema cannot express. Never live-observed.",
-      "save_options": [
-        "genesis_plus_gx_system_bram",
-        "genesis_plus_gx_cart_bram",
-        "genesis_plus_gx_cart_size"
-      ],
+      "note": "[V-source/binary] Frontend SRAM is real for the cartridge systems, and unreachable for the CD ones: SYSTEM_MCD runs scd_init() instead of md_cart_init() (core/genesis.c:162-175), so sram.on never sets and the memory interface answers 0 — the record's CD rows were corrected to say so. The CD save is the core's own BRAM tree under three interacting options (genesis_plus_gx_system_bram, _cart_bram, _cart_size; libretro.c:1383-1500), written by bram_load/bram_save (libretro.c:3675, :3730) — the multi-option shape the single-option card schema cannot express. Never live-observed. Card shipped: the rule dispatches on the content's class and reads the three BRAM options for CD content.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,
@@ -346,14 +341,9 @@
       "kind": "libretro"
     },
     "mednafen_psx": {
-      "verdict": "multi-option",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] beetle-psx-libretro@d6383bf writes every memory card into retro_save_directory (libretro.cpp:5234-5249): slot 0 either reaches RetroArch through the libretro SRAM interface as an .srm (libretro.cpp:5129-5145) or is written by the core as <stem>.<idx>.mcr (:2145-2163), slot 1 adds a second .mcr once a game dirties it (:2459-2485), and sharing swaps the content stem for mednafen_psx_libretro_shared (:5247). Which of those applies is what the three options decide; the shipped core registers their defaults.",
-      "save_options": [
-        "beetle_psx_use_mednafen_memcard0_method",
-        "beetle_psx_enable_memcard1",
-        "beetle_psx_shared_memory_cards"
-      ],
+      "note": "[V-source/binary] beetle-psx-libretro@d6383bf writes every memory card into retro_save_directory (libretro.cpp:5234-5249): slot 0 either reaches RetroArch through the libretro SRAM interface as an .srm (libretro.cpp:5129-5145) or is written by the core as <stem>.<idx>.mcr (:2145-2163), slot 1 adds a second .mcr once a game dirties it (:2459-2485), and sharing swaps the content stem for mednafen_psx_libretro_shared (:5247). Which of those applies is what the three options decide; the shipped core registers their defaults. Issue #80 settled from the same source: the card-image index options supply the digit in <stem>.<idx>.mcr (libretro.cpp:2159-2164), so the card's names hold for the registered defaults and its rule steps aside for any other selection. Card shipped.",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -366,14 +356,9 @@
       "kind": "libretro"
     },
     "mednafen_psx_hw": {
-      "verdict": "multi-option",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] Same implementation as Beetle PSX at the same revision (d6383bf), reached through the beetle_psx_hw_ option prefix.",
-      "save_options": [
-        "beetle_psx_hw_use_mednafen_memcard0_method",
-        "beetle_psx_hw_enable_memcard1",
-        "beetle_psx_hw_shared_memory_cards"
-      ],
+      "note": "[V-source/binary] Same implementation as Beetle PSX at the same revision (d6383bf), reached through the beetle_psx_hw_ option prefix. Card shipped alongside mednafen_psx's, through the hw option prefix.",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -614,14 +599,9 @@
       "kind": "libretro"
     },
     "swanstation": {
-      "verdict": "multi-option",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] The shipped 4d309c0 registers both card-type options; the libretro .srm, shared, game-code and game-title modes are established from source (src/libretro/libretro_host_interface.cpp:396-415, src/core/system.cpp:1457-1486). Not live-observed.",
-      "save_options": [
-        "swanstation_MemoryCards_Card1Type",
-        "swanstation_MemoryCards_Card2Type",
-        "swanstation_MemoryCards_UsePlaylistTitle"
-      ],
+      "note": "[V-source/binary] The shipped 4d309c0 registers both card-type options; the libretro .srm, shared, game-code and game-title modes are established from source (src/libretro/libretro_host_interface.cpp:396-415, src/core/system.cpp:1457-1486). Not live-observed. Card shipped: the mode is the pair of slot types, selected by the card's rule.",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",

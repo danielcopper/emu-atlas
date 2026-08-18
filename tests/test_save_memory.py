@@ -219,16 +219,15 @@ class TestPackagedRecords:
         records = list(load_save_memory())
         answers = [record for record in records if record.unanimous() is not None]
         silent = sorted(record.key for record in records if record.unanimous() is None)
-        assert len(records) == 75
+        assert len(records) == 74
         assert len(answers) == 72
-        # All three switch on the loaded content's platform before answering,
-        # which is the whole reason the records are keyed by system: mGBA
-        # answers a Game Boy cartridge's clock and a Game Boy Advance
-        # cartridge's not at all, VBA-M's function branches on the image type
-        # first, and Genesis Plus GX fills the interface for cartridges while
-        # its CD systems never reach sram_init at all — the row that used to
-        # claim otherwise cited reachable code on an unreachable path.
-        assert silent == ["genesis_plus_gx", "mgba", "vbam"]
+        # Both switch on the loaded content's platform before answering, which
+        # is the whole reason the records are keyed by system: mGBA answers a
+        # Game Boy cartridge's clock and a Game Boy Advance cartridge's not at
+        # all, and VBA-M's function branches on the image type first. Genesis
+        # Plus GX used to be the third — its CD systems never reach sram_init —
+        # and that split is exactly what its rule card now answers instead.
+        assert silent == ["mgba", "vbam"]
 
     def test_every_recorded_system_is_an_atlas_system_id(self):
         vocabulary = set(known_systems())

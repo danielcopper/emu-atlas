@@ -175,10 +175,13 @@ second name would make a sync client treat the ROM as a save. What to make of a 
 
 The inside-content statement's harder sibling: hatari with write protection on throws the modified image away at eject,
 so no save exists _anywhere_ — not beside the content, not inside it. Same construction (required prose instead of
-`groups`, `root` must be `content_directory`, the two statements refuse to ride one mode together), its own caveat
-`save-writes-discarded`, and one difference a client reads: the granularity value is `none`, the one value no file group
-may ever carry, because a group is a place save data lives and this mode says none does. The granularity block still
-travels — its readings and alternatives are how a caller sees which switch would make saves exist again.
+`groups`, the two statements refuse to ride one mode together), its own caveat `save-writes-discarded`, and one
+difference a client reads: the granularity value is `none`, the one value no file group may ever carry, because a group
+is a place save data lives and this mode says none does. The granularity block still travels — its readings and
+alternatives are how a caller sees which switch would make saves exist again. The root is where the writes would have
+landed: the content's own tree for hatari, and the frontend's save root for SwanStation with both memory-card slots set
+to none — the one root kind `inside_content` can never take, since that statement is about the loaded content file
+itself.
 
 ### `governing_rule` — modes a rule selects instead of one option's value
 
@@ -198,11 +201,13 @@ installed core, or the card steps aside as a generation mismatch exactly as a si
 
 The answer's granularity block records the decision so a client can act on it: one reading per switch the rule actually
 consulted (its live value, its provenance, the file where it would change — hatari reads one of its two write-protect
-options, never both, because which one governs is the content's class), and one alternative per other reachable mode
-with the full option combination that selects it. A rule that cannot decide selects nothing and says why —
-`core-mode-unestablished` with the reason, or the sharper codes where they exist (`core-option-value-unestablished` per
-unreadable switch, `save-root-redirected` where ScummVM's `savepath` points outside every root kind the format can
-anchor, with the configured path in the caveat's data).
+options, never both, because which one governs is the content's class), and alternatives with the full option
+combination that selects each. Which other modes an answer lists is the rule's judgment: a small space lists every other
+mode (Beetle Saturn's three), a large one the one-edit neighbours — every switch, changed once — rather than the whole
+product (SwanStation's twenty, Genesis Plus GX's twenty-six CD combinations). A rule that cannot decide selects nothing
+and says why — `core-mode-unestablished` with the reason, or the sharper codes where they exist
+(`core-option-value-unestablished` per unreadable switch, `save-root-redirected` where ScummVM's `savepath` points
+outside every root kind the format can anchor, with the configured path in the caveat's data).
 
 ### Anchors — every recorded name, pinned to the string it was read from
 

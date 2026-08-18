@@ -723,8 +723,8 @@
       }
     },
     {
-      "name": "a-cartridge-with-battery-ram-names-one-file-across-ten-systems",
-      "rationale": "Genesis Plus GX is the busiest core on the default list: it is what RetroDECK launches for ten systems, from Mega Drive to Game Gear, and it fills the save-RAM id on every one of them. One record, ten entries, one name per game — and no .rtc, because the core has no clock branch at all.",
+      "name": "a-cartridge-fills-the-frontends-interface-through-the-card",
+      "rationale": "Genesis Plus GX is the busiest core on the default list, and for cartridge content its rule card answers what the record used to: the content class is the cartridge family, no option is read, and the save is the frontend's one .srm. The granularity block names the mode so a client can tell this apart from the CD world the same core keeps next door.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -739,7 +739,35 @@
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
             "library_name": "Genesis Plus GX",
-            "library_version": "v1.7.4 46a5521"
+            "library_version": "v1.7.4 46a5521",
+            "options": {
+              "genesis_plus_gx_system_bram": {
+                "default": "per bios",
+                "values": [
+                  "per bios",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_bram": {
+                "default": "per cart",
+                "values": [
+                  "per cart",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_size": {
+                "default": "4meg",
+                "values": [
+                  "disabled",
+                  "128k",
+                  "256k",
+                  "512k",
+                  "1meg",
+                  "2meg",
+                  "4meg"
+                ]
+              }
+            }
           }
         },
         "entry_savefile_query": {
@@ -770,21 +798,30 @@
               "Phantasy Star IV (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Phantasy Star IV (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [
             {
-              "code": "core-multi-option",
+              "code": "unverified-version",
               "data": {
                 "core": "genesis_plus_gx",
-                "verdict": "multi-option",
-                "options": "genesis_plus_gx_system_bram, genesis_plus_gx_cart_bram, genesis_plus_gx_cart_size"
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
               }
             }
           ],
           "granularity": {
             "value": "per-game-file",
-            "mode": null,
+            "mode": "cartridge",
             "readings": [],
             "alternatives": []
           }
@@ -3437,8 +3474,8 @@
       }
     },
     {
-      "name": "a-cd-system-where-the-interface-claim-was-unreachable",
-      "rationale": "Genesis Plus GX really fills save_ram — for cartridges. On the CD systems that code is unreachable: SYSTEM_MCD initializes the CD hardware instead of the cartridge hardware, sram.on never sets, and the memory interface answers 0, so RetroArch writes nothing. The record's megacd rows used to claim save_ram anyway, citing the reachable memory switch without tracing which systems reach it — the audit's first wrong shipped row. This vector pins the corrected answer: a declared set of no files, with core-own-writes-unestablished carrying what that outcome cannot settle. What the core does write there — its BRAM tree under three interacting options — is the multi-option card work the audit queue carries.",
+      "name": "a-cd-system-answers-with-the-cores-own-bram-tree",
+      "rationale": "On the CD systems Genesis Plus GX never reaches the SRAM interface — SYSTEM_MCD initializes the CD hardware instead of the cartridge hardware — and the save is the core's own BRAM: at the registered defaults one region-keyed internal file (the scd_E/U/J.brm candidates) and one shared 4Mbit backup cart. The rule reads the three options and the granularity block carries a reading per switch, with the one-edit neighbours as alternatives.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3453,7 +3490,35 @@
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
             "library_name": "Genesis Plus GX",
-            "library_version": "v1.7.4 46a5521"
+            "library_version": "v1.7.4 46a5521",
+            "options": {
+              "genesis_plus_gx_system_bram": {
+                "default": "per bios",
+                "values": [
+                  "per bios",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_bram": {
+                "default": "per cart",
+                "values": [
+                  "per cart",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_size": {
+                "default": "4meg",
+                "values": [
+                  "disabled",
+                  "128k",
+                  "256k",
+                  "512k",
+                  "1meg",
+                  "2meg",
+                  "4meg"
+                ]
+              }
+            }
           }
         },
         "entry_savefile_query": {
@@ -3480,27 +3545,123 @@
           "physical_dir": null,
           "file_set": {
             "state": "declared",
-            "files": [],
+            "files": [
+              "scd_E.brm",
+              "scd_U.brm",
+              "scd_J.brm",
+              "4Mbit_cart.brm"
+            ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "4Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [
             {
-              "code": "core-multi-option",
+              "code": "unverified-version",
               "data": {
                 "core": "genesis_plus_gx",
-                "verdict": "multi-option",
-                "options": "genesis_plus_gx_system_bram, genesis_plus_gx_cart_bram, genesis_plus_gx_cart_size"
-              }
-            },
-            {
-              "code": "core-own-writes-unestablished",
-              "data": {
-                "core": "genesis_plus_gx"
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
               }
             }
           ],
-          "granularity": null
+          "granularity": {
+            "value": "shared-file",
+            "mode": "cd-bios-bram+cart-4meg",
+            "readings": [
+              {
+                "key": "genesis_plus_gx_system_bram",
+                "value": "per bios",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "genesis_plus_gx_cart_bram",
+                "value": "per cart",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "genesis_plus_gx_cart_size",
+                "value": "4meg",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-game-bram+cart-4meg",
+                "options": {
+                  "genesis_plus_gx_system_bram": "per game"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "cd-bios-bram+cart-4meg-per-game",
+                "options": {
+                  "genesis_plus_gx_cart_bram": "per game"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "cd-bios-bram",
+                "options": {
+                  "genesis_plus_gx_cart_size": "disabled"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "cd-bios-bram+cart-128k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "128k"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "cd-bios-bram+cart-256k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "256k"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "cd-bios-bram+cart-512k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "512k"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "cd-bios-bram+cart-1meg",
+                "options": {
+                  "genesis_plus_gx_cart_size": "1meg"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "cd-bios-bram+cart-2meg",
+                "options": {
+                  "genesis_plus_gx_cart_size": "2meg"
+                },
+                "value": "shared-file"
+              }
+            ]
+          }
         }
       }
     },
@@ -4369,6 +4530,341 @@
               }
             ],
             "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-slot-pair-that-keys-one-card-on-the-discs-serial",
+      "rationale": "SwanStation's mode is the pair of its two slot types. With slot 1 on a game-code card and slot 2 shared, the answer names the serial-keyed card with the save_id hole for the caller to fill, the shared card verbatim, and the id-less fallback spelling in the caveat's data — a disc that yields no code lands on the shared card instead. One reading per slot, one-edit neighbours as alternatives.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Vagrant Story (USA).chd": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "swanstation_MemoryCards_Card1Type = \"PerGame\"\nswanstation_MemoryCards_Card2Type = \"Shared\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/swanstation_libretro.so": {
+            "library_name": "SwanStation",
+            "library_version": "1.0 4d309c0",
+            "options": {
+              "swanstation_MemoryCards_Card1Type": {
+                "default": "Libretro",
+                "values": [
+                  "Libretro",
+                  "Shared",
+                  "PerGame",
+                  "PerGameTitle",
+                  "None"
+                ]
+              },
+              "swanstation_MemoryCards_Card2Type": {
+                "default": "None",
+                "values": [
+                  "None",
+                  "Shared",
+                  "PerGame",
+                  "PerGameTitle"
+                ]
+              },
+              "swanstation_MemoryCards_UsePlaylistTitle": {
+                "default": "true",
+                "values": [
+                  "true",
+                  "false"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Vagrant Story (USA).chd",
+          "core_so": "swanstation_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd",
+              "duckstation_shared_card_2.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "swanstation",
+                "mode": "card1-per-code+card2-shared",
+                "files": "<save_id>_1.mcd, duckstation_shared_card_2.mcd",
+                "files_without_save_id": "duckstation_shared_card_1.mcd"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "card1-per-code+card2-shared",
+            "readings": [
+              {
+                "key": "swanstation_MemoryCards_Card1Type",
+                "value": "PerGame",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "swanstation_MemoryCards_Card2Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "card1-libretro+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "Libretro"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "card1-shared+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "Shared"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "card1-per-title+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "PerGameTitle"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "card1-none+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "None"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "card1-per-code+card2-none",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "None"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "card1-per-code+card2-per-code",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "PerGame"
+                },
+                "value": "per-game-files"
+              },
+              {
+                "mode": "card1-per-code+card2-per-title",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "PerGameTitle"
+                },
+                "value": "per-game-file"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "two-empty-slots-keep-no-save-under-the-save-root",
+      "rationale": "Both SwanStation slots set to 'No Memory Card' leave the emulated console nowhere to save: the discarded emptiness under the frontend's save root — the first writes-discarded mode that is not content-anchored — with granularity 'none' and the switches that would make saves exist again. A leftover .srm from an earlier mode is deliberately not observed as this configuration's save.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Vagrant Story (USA).chd": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "swanstation_MemoryCards_Card1Type = \"None\"\n",
+          "/mnt/sd/retrodeck/saves/Vagrant Story (USA).srm": "old"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/swanstation_libretro.so": {
+            "library_name": "SwanStation",
+            "library_version": "1.0 4d309c0",
+            "options": {
+              "swanstation_MemoryCards_Card1Type": {
+                "default": "Libretro",
+                "values": [
+                  "Libretro",
+                  "Shared",
+                  "PerGame",
+                  "PerGameTitle",
+                  "None"
+                ]
+              },
+              "swanstation_MemoryCards_Card2Type": {
+                "default": "None",
+                "values": [
+                  "None",
+                  "Shared",
+                  "PerGame",
+                  "PerGameTitle"
+                ]
+              },
+              "swanstation_MemoryCards_UsePlaylistTitle": {
+                "default": "true",
+                "values": [
+                  "true",
+                  "false"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Vagrant Story (USA).chd",
+          "core_so": "swanstation_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "swanstation",
+                "mode": "card1-none+card2-none"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "card1-none+card2-none",
+            "readings": [
+              {
+                "key": "swanstation_MemoryCards_Card1Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "swanstation_MemoryCards_Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "card1-libretro+card2-none",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "Libretro"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "card1-shared+card2-none",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "Shared"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "card1-per-code+card2-none",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "PerGame"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "card1-per-title+card2-none",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "PerGameTitle"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "card1-none+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "Shared"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "card1-none+card2-per-code",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "PerGame"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "card1-none+card2-per-title",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "PerGameTitle"
+                },
+                "value": "per-game-file"
+              }
+            ]
           }
         }
       }
