@@ -938,14 +938,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -1031,14 +1035,18 @@
                 "options": {
                   "reicast_per_content_vmus": "disabled"
                 },
-                "value": "shared-card"
+                "values": [
+                  "shared-card"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -1140,14 +1148,18 @@
                 "options": {
                   "reicast_per_content_vmus": "disabled"
                 },
-                "value": "shared-card"
+                "values": [
+                  "shared-card"
+                ]
               },
               {
                 "mode": "VMU A1",
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -1223,14 +1235,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -1328,14 +1344,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -1410,14 +1430,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -1492,14 +1516,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -1603,14 +1631,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -1690,14 +1722,18 @@
                 "options": {
                   "reicast_per_content_vmus": "disabled"
                 },
-                "value": "shared-card"
+                "values": [
+                  "shared-card"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -1969,7 +2005,9 @@
                 "options": {
                   "pcsx2_shared_memory_cards": "disabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -2437,7 +2475,9 @@
                 "options": {
                   "pcsx2_shared_memory_cards": "disabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -2534,7 +2574,9 @@
                 "options": {
                   "pcsx2_shared_memory_cards": "disabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -2729,7 +2771,9 @@
                 "options": {
                   "opera_nvram_storage": "shared"
                 },
-                "value": "shared-card"
+                "values": [
+                  "shared-card"
+                ]
               }
             ]
           }
@@ -2816,7 +2860,9 @@
                 "options": {
                   "opera_nvram_storage": "per game"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -2910,14 +2956,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -3002,23 +3052,23 @@
     },
     {
       "name": "multi-option-core-names-the-options-that-decide-granularity",
-      "rationale": "PCSX-ReARMed's audit verdict is multi-option: the directory follows the standard rule and RetroArch writes the .srm, but pcsx_rearmed_memcard2 can add a second, shared card the record cannot model. atlas does not interpret that option yet, so the granularity is deliberately unstated and the caveat names it — the honest thin answer every core keeps until its rule card ships.",
+      "rationale": "NeoCD's audit verdict is multi-option: the core really fills save RAM, so the record's .srm declaration stands, but neocd_per_content_saves can move the whole set to a shared <system_dir>/neocd/neocd.srm — an option registered only at load, where no probe reads it. atlas does not interpret it yet, so the caveat names it beside the record's answer, which holds across both Neo Geo CD systems and says so — the honest thin answer every core keeps until its rule card ships.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
-          "/mnt/sd/retrodeck/roms/psx/Vagrant Story (USA).chd": "",
-          "/mnt/sd/retrodeck/saves/psx/.keep": ""
+          "/mnt/sd/retrodeck/saves/psx/.keep": "",
+          "/mnt/sd/retrodeck/roms/neogeocd/Metal Slug (Japan).chd": ""
         },
         "cores": {
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/pcsx_rearmed_libretro.so": {
-            "library_name": "PCSX-ReARMed"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/neocd_libretro.so": {
+            "library_name": "NeoCD"
           }
         },
         "savefile_query": {
-          "content_path": "/mnt/sd/retrodeck/roms/psx/Vagrant Story (USA).chd",
-          "core_so": "pcsx_rearmed_libretro.so"
+          "content_path": "/mnt/sd/retrodeck/roms/neogeocd/Metal Slug (Japan).chd",
+          "core_so": "neocd_libretro.so"
         }
       },
       "expected": {
@@ -3033,14 +3083,16 @@
           }
         ],
         "savefile_location": {
-          "dir": "/mnt/sd/retrodeck/saves/psx",
+          "dir": "/mnt/sd/retrodeck/saves/neogeocd",
           "root_kind": "savefile_directory",
           "needs": [],
-          "fallback_dir": null,
+          "fallback_dir": "/mnt/sd/retrodeck/saves",
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "Metal Slug (Japan).srm"
+            ],
             "complete": false,
             "groups": []
           },
@@ -3048,13 +3100,32 @@
             {
               "code": "core-multi-option",
               "data": {
-                "core": "pcsx_rearmed",
+                "core": "neocd",
                 "verdict": "multi-option",
-                "options": "pcsx_rearmed_memcard2"
+                "options": "neocd_per_content_saves"
+              }
+            },
+            {
+              "code": "file-set-across-systems",
+              "data": {
+                "core": "neocd",
+                "systems": "neogeocd, neogeocdjp"
+              }
+            },
+            {
+              "code": "sorted-dir-missing",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves/neogeocd",
+                "fallback_dir": "/mnt/sd/retrodeck/saves"
               }
             }
           ],
-          "granularity": null
+          "granularity": {
+            "value": "per-game-file",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
         }
       }
     },
@@ -3196,7 +3267,10 @@
                   "beetle_saturn_shared_int": "enabled",
                   "beetle_saturn_shared_ext": "disabled"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file",
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "cartridge-shared",
@@ -3204,7 +3278,10 @@
                   "beetle_saturn_shared_int": "disabled",
                   "beetle_saturn_shared_ext": "enabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ]
               },
               {
                 "mode": "both-shared",
@@ -3212,7 +3289,9 @@
                   "beetle_saturn_shared_int": "enabled",
                   "beetle_saturn_shared_ext": "enabled"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               }
             ]
           }
@@ -3355,7 +3434,9 @@
                 "options": {
                   "opera_nvram_storage": "per game"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -3890,14 +3971,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -7044,14 +7129,18 @@
                 "options": {
                   "reicast_per_content_vmus": "VMU A1"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "All VMUs",
                 "options": {
                   "reicast_per_content_vmus": "All VMUs"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }

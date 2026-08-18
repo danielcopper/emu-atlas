@@ -502,7 +502,7 @@ for r in g.readings:
 for a in g.alternatives:
     a.mode          # 'internal-shared'                       — another reachable mode
     a.options       # (('beetle_saturn_shared_int', 'enabled'), ('beetle_saturn_shared_ext', 'disabled'))
-    a.value         # 'shared-file'                           — that mode's grouping
+    a.values        # ('shared-file', 'per-game-file')        — every grouping in that mode, its own first
 ```
 
 An alternative names the **full option combination** that reaches its mode, so "switch to per-game saves" is a concrete
@@ -510,11 +510,13 @@ edit of concrete keys in a concrete file, not a guess. One special value: `g.val
 beside `save-writes-discarded`) means this configuration keeps no save at all — the readings and alternatives are then
 exactly the way out.
 
-**One limit worth knowing.** `granularity.value` and each alternative's `value` state _one_ grouping per mode, which is
-the first group's — so a mode that mixes them (FinalBurn Neo's shared mode writes a per-game `.fs` beside a shared
-memory card) reports the first, and the parts are only in `groups`. That is exact for the mode in force and understated
-for the alternatives: switching to such a mode can add a shared file the value does not mention. Read `groups` for the
-active mode; treat an alternative's grouping as the grouping of its main save, not of everything it writes.
+**A mixed mode states every grouping.** `granularity.value` is _one_ word — the first group's — and for the mode in
+force that is exact, because `file_set.groups` carries every part with its own grouping and role. An alternative has no
+groups to show, so its `values` lists every distinct grouping of the mode it names, the mode's own first: switching to
+FinalBurn Neo's shared mode adds a card every game shares beside the per-game save, and
+`('per-game-file',
+'shared-card')` says so where a single word used to hide it. A client that wants one word reads
+`values[0]`.
 
 **Reading nothing of this keeps today's answer.** `groups` is empty unless a rule card decomposed the answer — every
 observation, every unknown and every standard-rule declaration has none, and empty means _not decomposed_, never _no

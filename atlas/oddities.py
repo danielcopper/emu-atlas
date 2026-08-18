@@ -410,6 +410,20 @@ class SaveMode:
         return self.primary.granularity
 
     @property
+    def granularities(self) -> tuple[str, ...]:
+        """Every distinct grouping among the mode's groups, the mode's own first.
+
+        One entry for most modes; the honest plural for a mixed one, whose
+        secondary groups group differently than its answer's headline. The
+        unnamed groups count — a directory whose names are not derivable
+        still has a grouping — and the groups-less forms answer with their
+        single derived value.
+        """
+        if self.stated is not None:
+            return (self.granularity,)
+        return tuple(dict.fromkeys([self.granularity, *(g.granularity for g in self.groups)]))
+
+    @property
     def observe(self) -> tuple[str, ...] | None:
         if self.stated is not None:
             return None

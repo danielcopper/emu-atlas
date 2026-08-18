@@ -109,7 +109,7 @@ def savefile_placement_contract(placement: SavefilePlacement) -> dict[str, Any]:
                 for r in granularity.readings
             ],
             "alternatives": [
-                {"mode": a.mode, "options": dict(a.options), "value": a.value}
+                {"mode": a.mode, "options": dict(a.options), "values": list(a.values)}
                 for a in granularity.alternatives
             ],
         },

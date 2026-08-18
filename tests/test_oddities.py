@@ -481,7 +481,7 @@ class TestAnOptionThatMovesTheRootItself:
         assert "disk image itself" in caveat.message
         assert p.granularity is not None
         assert p.granularity.mode == "enabled"
-        assert ("disabled", "per-game-files") in [(a.mode, a.value) for a in p.granularity.alternatives]
+        assert ("disabled", ("per-game-files",)) in [(a.mode, a.values) for a in p.granularity.alternatives]
 
     def test_the_open_diff_set_is_scoped_by_a_caveat(self):
         p = self._query(self.FILES)
@@ -505,7 +505,7 @@ class TestFlycastResolution:
         assert p.file_set.files == ("vmu_save_A1.bin",)
         assert p.granularity is not None
         assert p.granularity.value == GRANULARITY_SHARED_CARD
-        assert ("VMU A1", GRANULARITY_PER_GAME_FILE) in [(a.mode, a.value) for a in p.granularity.alternatives]
+        assert ("VMU A1", (GRANULARITY_PER_GAME_FILE,)) in [(a.mode, a.values) for a in p.granularity.alternatives]
         assert p.granularity.readings[0].options_file == OPTIONS_CFG
 
     def test_option_absent_uses_core_default(self):
@@ -867,7 +867,7 @@ class TestLRPS2Card:
         assert g.value == GRANULARITY_SHARED_CARD
         assert g.readings[0].key == "pcsx2_shared_memory_cards"
         assert g.mode == "enabled"
-        assert ("disabled", GRANULARITY_PER_GAME_FILE) in [(a.mode, a.value) for a in g.alternatives]
+        assert ("disabled", (GRANULARITY_PER_GAME_FILE,)) in [(a.mode, a.values) for a in g.alternatives]
 
     def test_per_content_mode_names_card_after_rom_stem(self):
         # main.cpp:2154-2166 + Pcsx2Config.cpp:995-997 — slot 1 = <rom_stem>.ps2
@@ -1359,7 +1359,7 @@ class TestOperaCard:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.granularity is not None
         assert p.granularity.value == GRANULARITY_PER_GAME_FILE
-        assert ("shared", GRANULARITY_SHARED_CARD) in [(a.mode, a.value) for a in p.granularity.alternatives]
+        assert ("shared", (GRANULARITY_SHARED_CARD,)) in [(a.mode, a.values) for a in p.granularity.alternatives]
 
     def test_shared_mode_switches_subdir(self):
         p = self._query({OPTIONS_CFG: 'opera_nvram_storage = "shared"\n'})
@@ -1413,16 +1413,21 @@ class TestAuditVerdictCaveats:
 
     def test_multi_option_verdict_names_the_options_that_decide_granularity(self):
         p = self._query(
-            core_so="pcsx_rearmed_libretro.so",
-            library_name="PCSX-ReARMed",
-            system="psx",
-            rom="Vagrant Story (USA).chd",
+            core_so="neocd_libretro.so",
+            library_name="NeoCD",
+            system="neogeocd",
+            rom="Metal Slug (Japan).chd",
         )
-        assert p.granularity is None
+        # The record still answers — NeoCD really fills save RAM — so the
+        # standard-rule granularity stands; what the verdict adds is the
+        # caveat naming the option that can move the whole set, which no
+        # record models. No card spoke, so no mode is named.
+        assert p.granularity is not None
+        assert p.granularity.mode is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MULTI_OPTION]
         assert stated
-        assert stated[0].data["core"] == "pcsx_rearmed"
-        assert stated[0].data["options"] == "pcsx_rearmed_memcard2"
+        assert stated[0].data["core"] == "neocd"
+        assert stated[0].data["options"] == "neocd_per_content_saves"
 
     # What these two cases are about: an audit verdict that adds nothing of its
     # own. `core-unaudited`, `core-suspect` and `core-multi-option` are the
@@ -1526,21 +1531,21 @@ class TestARuleSelectedCard:
     def test_every_alternative_names_the_combination_that_reaches_it(self):
         g = _saturn_query(self.FILES).granularity
         assert g is not None
-        assert [(a.mode, dict(a.options), a.value) for a in g.alternatives] == [
+        assert [(a.mode, dict(a.options), a.values) for a in g.alternatives] == [
             (
                 "internal-shared",
                 {"beetle_saturn_shared_int": "enabled", "beetle_saturn_shared_ext": "disabled"},
-                "shared-file",
+                ("shared-file", "per-game-file"),
             ),
             (
                 "cartridge-shared",
                 {"beetle_saturn_shared_int": "disabled", "beetle_saturn_shared_ext": "enabled"},
-                "per-game-file",
+                ("per-game-file", "shared-file"),
             ),
             (
                 "both-shared",
                 {"beetle_saturn_shared_int": "enabled", "beetle_saturn_shared_ext": "enabled"},
-                "shared-file",
+                ("shared-file",),
             ),
         ]
 
@@ -1648,8 +1653,8 @@ class TestHatariContentClasses:
         g = _hatari_query(self.FILES, content_path=self.FLOPPY).granularity
         assert g is not None
         assert [r.key for r in g.readings] == ["hatari_writeprotect_floppy"]
-        assert [(a.mode, dict(a.options), a.value) for a in g.alternatives] == [
-            ("floppy-discarded", {"hatari_writeprotect_floppy": "on"}, "none")
+        assert [(a.mode, dict(a.options), a.values) for a in g.alternatives] == [
+            ("floppy-discarded", {"hatari_writeprotect_floppy": "on"}, ("none",))
         ]
 
     def test_protection_on_states_that_nothing_keeps_the_progress(self):
@@ -1664,8 +1669,8 @@ class TestHatariContentClasses:
         assert stated[0].data["mode"] == "floppy-discarded"
         assert p.granularity is not None
         assert p.granularity.value == "none"
-        assert [(a.mode, a.value) for a in p.granularity.alternatives] == [
-            ("floppy-writeback", "per-game-file")
+        assert [(a.mode, a.values) for a in p.granularity.alternatives] == [
+            ("floppy-writeback", ("per-game-file",))
         ]
 
     def test_hard_disk_content_is_governed_by_its_own_switch(self):
@@ -2031,6 +2036,41 @@ class TestGpgxContentClasses:
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
         assert stated
         assert "Sega CD disc header" in stated[0].data["files_established_for"]
+
+
+class TestAMixedModeAlternativeStatesEveryGrouping:
+    """Issue #128's case: FinalBurn Neo's shared mode writes a per-game save
+    beside a card every game shares, and a single-value alternative hid the
+    shared file — the one direction the understatement could hurt. The plural
+    carries both, the mode's own first."""
+
+    FBNEO_ROM = "/mnt/sd/retrodeck/roms/arcade/mslug.zip"
+    FBNEO_CORE = {
+        "library_name": "FinalBurn Neo",
+        "options": {
+            "fbneo-memcard-mode": {
+                "default": "disabled",
+                "values": ["disabled", "shared", "per-game"],
+            }
+        },
+    }
+
+    def test_the_shared_alternative_carries_the_hidden_card(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                self.FBNEO_ROM: "",
+                "/mnt/sd/retrodeck/saves/arcade/.keep": "",
+            },
+            cores={f"{DEPLOY}/fbneo_libretro.so": self.FBNEO_CORE},
+        )
+        p = placed(rd.savefile_location(content_path=self.FBNEO_ROM, core_so="fbneo_libretro.so"))
+        assert p.granularity is not None
+        assert p.granularity.mode == "disabled"
+        by_mode = {a.mode: a.values for a in p.granularity.alternatives}
+        assert by_mode["shared"] == ("per-game-file", "shared-card")
+        assert by_mode["per-game"] == ("per-game-file",)
 
 
 class TestStrictLoaders:
@@ -3436,6 +3476,9 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("nxengine", "profile4.dat", "unprotected"),
             ("nxengine", "profile5.dat", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
+            # PCSX-ReARMed's slot 1 fills the SRAM interface — the .srm is
+            # RetroArch's naming, like the psx neighbours above.
+            ("pcsx_rearmed", "<rom_stem>.srm", "unprotected"),
             # prboom's subdirectory is the placement's own template, and its
             # eight savegame names are composed from a base and a format the
             # binary carries whole ('prbmsav', '%s%c%s%d.dsg').

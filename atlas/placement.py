@@ -605,15 +605,18 @@ class ModeAlternative:
     """One other mode a caller could switch to, and the settings that select it.
 
     ``options`` is the combination that reaches the mode — for a single-option
-    core one pair, for a rule card one pair per switch. ``value`` is that
-    mode's own granularity, read off its first group the same way the active
-    mode's is; a mode with several groups can group the rest differently, and
-    this one value does not carry that (the understatement issue #128 tracks).
+    core one pair, for a rule card one pair per switch. ``values`` is every
+    distinct grouping among that mode's groups, in card order with the mode's
+    own first: one entry for most modes, and the honest plural for a mixed one
+    (FinalBurn Neo's shared mode writes a per-game save beside a card every
+    game shares, and a single value would hide the shared file — the
+    understatement issue #128 was about). A client that wants one word reads
+    ``values[0]``, which is exactly what the old single value said.
     """
 
     mode: str
     options: tuple[tuple[str, str], ...]
-    value: str
+    values: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)

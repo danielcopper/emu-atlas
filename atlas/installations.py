@@ -1833,7 +1833,7 @@ def _apply_card(
                 ModeAlternative(
                     mode=value,
                     options=((card.option_key, value),),
-                    value=other.granularity,
+                    values=other.granularities,
                 )
                 for value, other in card.modes.items()
                 if value != opt_value
@@ -2064,7 +2064,7 @@ def _apply_rule_card(
         mode=choice.mode,
         readings=consulted,
         alternatives=tuple(
-            ModeAlternative(mode=name, options=combo, value=card.modes[name].granularity)
+            ModeAlternative(mode=name, options=combo, values=card.modes[name].granularities)
             for name, combo in choice.alternatives
         ),
         provenance=(

@@ -1166,7 +1166,9 @@
                 "options": {
                   "mame_mame_paths_enable": "enabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -1258,14 +1260,19 @@
                 "options": {
                   "fbneo-memcard-mode": "shared"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file",
+                  "shared-card"
+                ]
               },
               {
                 "mode": "per-game",
                 "options": {
                   "fbneo-memcard-mode": "per-game"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -2251,7 +2258,11 @@
                 "options": {
                   "mame2003_core_save_subfolder": "disabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file",
+                  "shared-card",
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -2405,7 +2416,11 @@
                 "options": {
                   "mame2003-plus_core_save_subfolder": "enabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file",
+                  "shared-card",
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -2531,7 +2546,9 @@
                 "options": {
                   "fba2012cps2_hiscores": "disabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -3609,56 +3626,74 @@
                 "options": {
                   "genesis_plus_gx_system_bram": "per game"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ]
               },
               {
                 "mode": "cd-bios-bram+cart-4meg-per-game",
                 "options": {
                   "genesis_plus_gx_cart_bram": "per game"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file",
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "cd-bios-bram",
                 "options": {
                   "genesis_plus_gx_cart_size": "disabled"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "cd-bios-bram+cart-128k",
                 "options": {
                   "genesis_plus_gx_cart_size": "128k"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "cd-bios-bram+cart-256k",
                 "options": {
                   "genesis_plus_gx_cart_size": "256k"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "cd-bios-bram+cart-512k",
                 "options": {
                   "genesis_plus_gx_cart_size": "512k"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "cd-bios-bram+cart-1meg",
                 "options": {
                   "genesis_plus_gx_cart_size": "1meg"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "cd-bios-bram+cart-2meg",
                 "options": {
                   "genesis_plus_gx_cart_size": "2meg"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               }
             ]
           }
@@ -3966,7 +4001,9 @@
                 "options": {
                   "q88_save_to_disk_image": "enabled"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -4064,7 +4101,9 @@
                 "options": {
                   "q88_save_to_disk_image": "disabled"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               }
             ]
           }
@@ -4171,7 +4210,9 @@
                 "options": {
                   "hatari_writeprotect_floppy": "off"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -4363,7 +4404,9 @@
                 "options": {
                   "hatari_writeprotect_floppy": "on"
                 },
-                "value": "none"
+                "values": [
+                  "none"
+                ]
               }
             ]
           }
@@ -4664,49 +4707,65 @@
                 "options": {
                   "swanstation_MemoryCards_Card1Type": "Libretro"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ]
               },
               {
                 "mode": "card1-shared+card2-shared",
                 "options": {
                   "swanstation_MemoryCards_Card1Type": "Shared"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "card1-per-title+card2-shared",
                 "options": {
                   "swanstation_MemoryCards_Card1Type": "PerGameTitle"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ]
               },
               {
                 "mode": "card1-none+card2-shared",
                 "options": {
                   "swanstation_MemoryCards_Card1Type": "None"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "card1-per-code+card2-none",
                 "options": {
                   "swanstation_MemoryCards_Card2Type": "None"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "card1-per-code+card2-per-code",
                 "options": {
                   "swanstation_MemoryCards_Card2Type": "PerGame"
                 },
-                "value": "per-game-files"
+                "values": [
+                  "per-game-files"
+                ]
               },
               {
                 "mode": "card1-per-code+card2-per-title",
                 "options": {
                   "swanstation_MemoryCards_Card2Type": "PerGameTitle"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }
@@ -4820,49 +4879,63 @@
                 "options": {
                   "swanstation_MemoryCards_Card1Type": "Libretro"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "card1-shared+card2-none",
                 "options": {
                   "swanstation_MemoryCards_Card1Type": "Shared"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "card1-per-code+card2-none",
                 "options": {
                   "swanstation_MemoryCards_Card1Type": "PerGame"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "card1-per-title+card2-none",
                 "options": {
                   "swanstation_MemoryCards_Card1Type": "PerGameTitle"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "card1-none+card2-shared",
                 "options": {
                   "swanstation_MemoryCards_Card2Type": "Shared"
                 },
-                "value": "shared-file"
+                "values": [
+                  "shared-file"
+                ]
               },
               {
                 "mode": "card1-none+card2-per-code",
                 "options": {
                   "swanstation_MemoryCards_Card2Type": "PerGame"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               },
               {
                 "mode": "card1-none+card2-per-title",
                 "options": {
                   "swanstation_MemoryCards_Card2Type": "PerGameTitle"
                 },
-                "value": "per-game-file"
+                "values": [
+                  "per-game-file"
+                ]
               }
             ]
           }

@@ -97,7 +97,7 @@ def _granularity(**overrides) -> Vector:
         "value": "shared-card",
         "mode": "on",
         "readings": [{"key": "opt", "value": "on", "options_file": "/opts.cfg"}],
-        "alternatives": [{"mode": "off", "options": {"opt": "off"}, "value": "per-game-file"}],
+        "alternatives": [{"mode": "off", "options": {"opt": "off"}, "values": ["per-game-file"]}],
         **overrides,
     }
 
@@ -610,7 +610,7 @@ PLACEMENT_CASES = [
          "granularity alternative must be exactly the fields", id="granularity-alternatives-shape"),
     case(_base_placement(
              granularity=_granularity(
-                 alternatives=[{"mode": "off", "options": {"opt": "off"}, "value": "nope"}]
+                 alternatives=[{"mode": "off", "options": {"opt": "off"}, "values": ["nope"]}]
              )
          ),
          "every alternative's granularity must be one of", id="granularity-alternative-value"),
@@ -620,7 +620,7 @@ PLACEMENT_CASES = [
          "reading's key must be a non-empty string", id="granularity-reading-empty-key"),
     case(_base_placement(
              granularity=_granularity(
-                 alternatives=[{"mode": "off", "options": [["opt", "off"]], "value": "per-game-file"}]
+                 alternatives=[{"mode": "off", "options": [["opt", "off"]], "values": ["per-game-file"]}]
              )
          ),
          "options must map option keys to values", id="granularity-alternative-options-shape"),
