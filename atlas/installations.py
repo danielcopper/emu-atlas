@@ -4964,33 +4964,33 @@ def _reading_with_file(reading: OptionReading, options_file: str | None) -> Opti
     return OptionReading(reading.key, reading.value, reading.provenance, options_file)
 
 
+# The one edit a player actually makes: flip slot A between the folder
+# (per-game files) and the raw card (one shared file per region). Keyed by
+# the mode it flips FROM; slot B's combinations multiply the space without
+# changing the shape of any answer, so they stay as they are.
+_DOLPHIN_SLOT_A_FLIPS = {
+    "folder": ("card", _DOLPHIN_DEVICE_RAW, "shared-file"),
+    "card": ("folder", _DOLPHIN_DEVICE_FOLDER, "per-game-files"),
+}
+
+
 def _dolphin_alternatives(
     slots: tuple[_DolphinSlot, _DolphinSlot]
 ) -> tuple[ModeAlternative, ...]:
-    """The other card scheme for slot A — the one edit a player actually makes.
-
-    Slot B's combinations multiply the space without changing the shape of any
-    answer, so the stated alternative keeps B as it is and flips A between the
-    folder (per-game files) and the raw card (one shared file per region).
-    """
+    """The other card scheme for slot A — every other mode is a caveat, not a mode."""
     a, b = slots
-    if a.mode == "folder":
-        return (
+    alternatives: list[ModeAlternative] = []
+    flip = _DOLPHIN_SLOT_A_FLIPS.get(a.mode)
+    if flip is not None:
+        other, device, value = flip
+        alternatives.append(
             ModeAlternative(
-                mode=f"card+{b.mode}",
-                options=(("SlotA", str(_DOLPHIN_DEVICE_RAW)),),
-                values=("shared-file",),
-            ),
+                mode=f"{other}+{b.mode}",
+                options=(("SlotA", str(device)),),
+                values=(value,),
+            )
         )
-    if a.mode == "card":
-        return (
-            ModeAlternative(
-                mode=f"folder+{b.mode}",
-                options=(("SlotA", str(_DOLPHIN_DEVICE_FOLDER)),),
-                values=("per-game-files",),
-            ),
-        )
-    return ()
+    return tuple(alternatives)
 
 
 def _dolphin_wii_answer(
