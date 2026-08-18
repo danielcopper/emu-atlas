@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. A subdir segment may be exactly one of the placement's subdir templates — <rom_stem>, or <content_dir_name>, the basename of the content's directory — whole-segment only (the resolver's segment arithmetic depends on one template filling to one segment) and only under the savefile_directory root; the resolver fills it from the content path, and a content-less question keeps the token in the path with its hole in needs. A mode may state 'inside_content' instead of 'groups': no separate save file exists — the loaded content file itself takes the writes (quasi88 with its option on). The value is the reason, required prose; the root must be content_directory, and the answer becomes a declared emptiness with the save-inside-content caveat carrying the fact — never the content file presented as a save under a second name. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory | working_directory (and a mode does not span its own root; working_directory is the launch's own directory — the answer stays a <cwd> template with its hole in needs), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
+  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. A subdir segment may be exactly one of the placement's subdir templates — <rom_stem>, or <content_dir_name>, the basename of the content's directory — whole-segment only (the resolver's segment arithmetic depends on one template filling to one segment) and only under the savefile_directory root; the resolver fills it from the content path, and a content-less question keeps the token in the path with its hole in needs. A mode may state 'inside_content' instead of 'groups': no separate save file exists — the loaded content file itself takes the writes (quasi88 with its option on). The value is the reason, required prose; the root must be content_directory, and the answer becomes a declared emptiness with the save-inside-content caveat carrying the fact — never the content file presented as a save under a second name. Its harder sibling is 'writes_discarded': nothing keeps a save at all (hatari with write protection on discards the changed image at eject) — same construction, its own save-writes-discarded caveat, granularity 'none', and the two statements refuse to ride one mode together. A card whose modes no single option's value can name states 'governing_rule' instead of 'governing_option': the options its selection rule reads (possibly none), with the rule itself registered in atlas.mode_rules under the card key — freely named modes, the card states what can exist and the rule decides what holds here. A mode whose every group is unnamed states the directory and refuses the names (ScummVM's launcher-target slot files); its declared set is the empty set of statable names and never claims completeness. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory | working_directory (and a mode does not span its own root; working_directory is the launch's own directory — the answer stays a <cwd> template with its hole in needs), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
     "boom3": {
       "identifiers": {
@@ -2637,6 +2637,242 @@
         "source": "vitaquake3 source at 8ab09d1, the revision the shipped binary's 'v0.8' (libretro.c:1091) belongs to, bound to it by whole strings ('q3config.cfg', 'fs_homepath', '%s/q3key'). retro_load_game strips the content path twice and hands the parent to the engine as its install path (code/libretro/libretro.c:1449, :1487, :1508); Sys_DefaultHomePath returns a static nothing ever fills (:1624, :1641-1643), so FS_Startup falls back to fs_basepath — that same parent — for fs_homepath (code/qcommon/files.c:3409-3415). Every write lands under <that parent>/<fs_game>/ — the content's own directory for baseq3 content, and the game directory the content itself selects for Team Arena, Urban Terror or Q3 Rally (libretro.c:1549-1558). What is written is one file: Com_WriteConfiguration writes q3config.cfg back whenever an archived cvar changed (code/qcommon/common.c:2942-2954). The role is settings and the file holds more than settings: Quake 3 keeps its arena progress — g_spScores1 through 5, g_spAwards, g_spSkill — as archived cvars (code/ui/ui_main.c:177-184), so the campaign's unlocks travel inside the config, and a client that wants them takes the settings file. That is the trade MAME's <machine>.cfg already made: a configuration file whose contents matter to the game stays role settings, with the fact stated. The CD-key file q3key lands beside it (common.c:2962-2965) and is neither settings nor save data.\n\nThe directory the loader builds under the frontend's save root (libretro.c:1453-1483) is assigned, created and never read — like the homePath static, a dead end — so an empty directory named after the content's directory can appear under the save root and never fill. The placement is the content tree.",
         "status": {
           "always": "[D] Read from source at 8ab09d1, bound to the shipped binary by its whole strings. Not live-observed."
+        }
+      }
+    },
+    "mednafen_saturn": {
+      "identifiers": {
+        "library_name": [
+          "Beetle Saturn"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": [
+            "beetle_saturn_shared_int",
+            "beetle_saturn_shared_ext"
+          ]
+        },
+        "modes": {
+          "per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.bkr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>.bcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>.smpc"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "internal-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "mednafen_saturn_libretro_shared.bkr"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>.bcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "mednafen_saturn_libretro_shared.smpc"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "cartridge-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.bkr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "mednafen_saturn_libretro_shared.bcr"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>.smpc"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "both-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "mednafen_saturn_libretro_shared.bkr"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "mednafen_saturn_libretro_shared.bcr"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "mednafen_saturn_libretro_shared.smpc"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "beetle_saturn_shared_int": {
+            "literal": "beetle_saturn_shared_int"
+          },
+          "beetle_saturn_shared_ext": {
+            "literal": "beetle_saturn_shared_ext"
+          },
+          "<rom_stem>.bkr": {
+            "literal": "bkr"
+          },
+          "<rom_stem>.bcr": {
+            "literal": "bcr"
+          },
+          "<rom_stem>.smpc": {
+            "literal": "smpc"
+          },
+          "mednafen_saturn_libretro_shared.bkr": {
+            "literal": "mednafen_saturn_libretro_shared"
+          },
+          "mednafen_saturn_libretro_shared.bcr": {
+            "literal": "mednafen_saturn_libretro_shared"
+          },
+          "mednafen_saturn_libretro_shared.smpc": {
+            "literal": "mednafen_saturn_libretro_shared"
+          }
+        }
+      },
+      "provenance": {
+        "source": "beetle-saturn-libretro at ccba526, the revision the shipped binary names in its library_version. The core answers RETRO_MEMORY_SYSTEM_RAM alone (libretro.cpp:1026-1036), so the frontend writes nothing and every save file is the core's own, flat in the save directory RetroArch hands it. MDFN_MakeFName builds each path from that directory and one of two stems (libretro.cpp:1045-1073): MDFNMKF_SAV names the internal pair — the console's backup RAM as <stem>.bkr (mednafen/ss/ss.cpp:1037-1044) and the SMPC's RTC and language settings as <stem>.smpc (ss.cpp:1140-1147) — after retro_cd_base_name until 'beetle_saturn_shared_int' swaps the stem to 'mednafen_saturn_libretro_shared'; MDFNMKF_CART names the backup cartridge's <stem>.bcr (written at ss.cpp:1085-1130, the extension from mednafen/ss/cart/backup.cpp:60-66) under 'beetle_saturn_shared_ext' the same way. Both options register enabled/disabled with 'disabled' as the default (libretro_core_options.h:607-635, read at libretro.cpp:257-276). The four combinations are the card's four modes — no single option's value can name them, so the mode is selected by the card's rule reading both options. The .bcr appears only when the emulated machine has a backup cartridge attached (ss.cpp:1092 writes it only when the cart supplies one), which is one reason no mode claims a complete set.",
+        "status": {
+          "per-game": "[V] Read from source at ccba526, the revision the shipped binary names, and live-observed content-keyed on a RetroDECK arrangement (2026-07-23): the three per-game files beside a played game.",
+          "internal-shared": "[D] Read from source at ccba526 (libretro.cpp:1045-1073). Not live-observed.",
+          "cartridge-shared": "[D] Read from source at ccba526 (libretro.cpp:1045-1073). Not live-observed.",
+          "both-shared": "[D] Read from source at ccba526 (libretro.cpp:1045-1073). Not live-observed."
+        }
+      }
+    },
+    "hatari": {
+      "identifiers": {
+        "library_name": [
+          "hatari"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": [
+            "hatari_writeprotect_floppy",
+            "hatari_writeprotect_hd"
+          ]
+        },
+        "modes": {
+          "floppy-writeback": {
+            "root": "content_directory",
+            "inside_content": "with 'hatari_writeprotect_floppy' off — the registered default — a modified floppy is written back into its own image at eject and shutdown (Floppy_EjectDiskFromDrive, src/floppy.c:599-634 at 7008194): .st/.msa/.dim/.ipf/.stx in place, a zipped image back into its .zip (:626-627). An .m3u playlist's member images take the writes each into their own file, never the playlist itself. With 'auto' the image file's own write protection decides — a write-protected file's changes are discarded instead of written back"
+          },
+          "floppy-discarded": {
+            "root": "content_directory",
+            "writes_discarded": "with 'hatari_writeprotect_floppy' on the emulated drive is write-protected and the changed contents are discarded at eject instead of written back (Floppy_EjectDiskFromDrive, src/floppy.c:599-634 at 7008194) — no separate save file exists either, so nothing anywhere keeps the progress"
+          },
+          "hard-disk-writeback": {
+            "root": "content_directory",
+            "inside_content": "with 'hatari_writeprotect_hd' off — the registered default — hard-disk content takes its writes in place: an IDE (.ide) or ACSI (.vhd) image is modified directly, and a GEMDOS mapping (.gem) writes into the host directory it names (libretro/libretro.c:1633-1652 at 7008194; the protection reaches the emulator as --protect-hd, cmdline.c:84). With 'auto' the image file's own write protection decides"
+          },
+          "hard-disk-discarded": {
+            "root": "content_directory",
+            "writes_discarded": "with 'hatari_writeprotect_hd' on the emulated hard disk is write-protected and every write is refused (--protect-hd, libretro/cmdline.c:84 at 7008194) — no separate save file exists either, so nothing anywhere keeps the progress"
+          }
+        },
+        "anchors": {
+          "hatari_writeprotect_floppy": {
+            "literal": "hatari_writeprotect_floppy"
+          },
+          "hatari_writeprotect_hd": {
+            "literal": "hatari_writeprotect_hd"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/hatari at 7008194, the revision the shipped binary names in its library_version ('1.8 7008194'). retro_get_memory_size discards every id (libretro/libretro.c:1782-1786), so the frontend writes nothing — the save story is write-back into the loaded content itself, and which write-protect option governs is the content's class, which is why the mode is selected by the card's rule rather than one option. Floppy content (.st/.msa/.stx/.dim/.ipf, an .m3u playlist of them, a zipped image; the dispatch at libretro.c:1597-1611) is modified in memory and written back into its own file at eject and shutdown (Floppy_EjectDiskFromDrive, src/floppy.c:599-634) under 'hatari_writeprotect_floppy'; hard-disk content (.ide into the IDE slot, .vhd into ACSI, .gem mapping a GEMDOS directory — libretro.c:1633-1652) takes its writes in place under 'hatari_writeprotect_hd'. Both options register on/off/auto with 'off' as the default (libretro_core_options.h:420-449) and reach the emulator as --protect-floppy/--protect-hd (libretro/cmdline.c:82-84). 'auto' follows the image file's own write protection — a protected file's changes are discarded exactly as under 'on'; the card states the writeback modes for it and says so in their prose. Falcon and TT machines additionally keep hatari.nvram under $HOME/.hatari (src/falcon/nvram.c:186-196), a home-rooted path outside every root kind a card states — recorded here as prose because naming it as a placement would state a root the format cannot anchor. The queue's 'auto.sav'/'hatari.sav' strings are memory-snapshot defaults reachable only through the core's own GUI, not this family.",
+        "status": {
+          "floppy-writeback": "[D] Read from source at 7008194, the revision the shipped binary names. Not live-observed.",
+          "floppy-discarded": "[D] Read from source at 7008194, the revision the shipped binary names. Not live-observed.",
+          "hard-disk-writeback": "[D] Read from source at 7008194, the revision the shipped binary names. Not live-observed.",
+          "hard-disk-discarded": "[D] Read from source at 7008194, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
+    "scummvm": {
+      "identifiers": {
+        "library_name": [
+          "ScummVM"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": []
+        },
+        "modes": {
+          "frontend-save-dir": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "granularity": "per-game-files",
+                "role": "battery",
+                "unnamed": "ScummVM's slot files are named per engine from the ScummVM target — launcher configuration, not the content path — so the names follow from nothing atlas reads (DefaultSaveFileManager writing into 'savepath'; libretro-os-base.cpp:47 and libretro-os-utils.cpp:212-216 at 686cdd1 wire the default, the engines name their own slots)"
+              }
+            ]
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/scummvm at 686cdd1, the revision the shipped binary names in its library_version. retro_get_memory_size returns 0 for every id (backends/platform/libretro/src/libretro-core.cpp:1109-1111), so every save is ScummVM's own: slot files written by its DefaultSaveFileManager into the 'savepath' setting, whose registered default is the directory RetroArch hands the core as the save directory, flat (libretro-os-base.cpp:47, libretro-os-utils.cpp:212-216). The setting is the user's, changeable in the core's own GUI and persisted in <system dir>/scummvm.ini (libretro-os-utils.cpp:64-69); set and pointing at an existing directory it governs, set to anything else the backend removes it and falls back to the save directory (checkPathSetting, :169-181, applied at :218-221). The card's rule reads the ini the way the emulator does — no savepath, or one that is not a directory, or one that spells the save directory itself, selects the card's one mode; a savepath pointing elsewhere makes the card step aside with the configured path stated machine-readably (save-root-redirected), because it is a directory outside every root kind the format anchors. Two bounds worth stating: a per-target section of the ini can carry its own savepath override, and which target the loaded content maps to is launcher configuration atlas does not read; and if the frontend's save directory is itself missing at startup, the backend flushes its home directory into 'savepath' instead (libretro-os-utils.cpp:218-221), a state no healthy arrangement reaches.",
+        "status": {
+          "frontend-save-dir": "[D] Read from source at 686cdd1, the revision the shipped binary names. Not live-observed."
         }
       }
     }

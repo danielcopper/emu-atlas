@@ -921,23 +921,34 @@
             "complete": false,
             "groups": []
           },
+          "caveats": [],
           "granularity": {
             "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
             ]
-          },
-          "caveats": []
+          }
         }
       }
     },
@@ -987,22 +998,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "VMU A1",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "disabled",
-                "shared-card"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "file-set-spans-roots",
@@ -1019,7 +1014,34 @@
                 "fallback_dir": "/mnt/sd/retrodeck/saves"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "VMU A1",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "VMU A1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "disabled",
+                "options": {
+                  "reicast_per_content_vmus": "disabled"
+                },
+                "value": "shared-card"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
+            ]
+          }
         }
       }
     },
@@ -1089,22 +1111,6 @@
               }
             ]
           },
-          "granularity": {
-            "value": "per-game-files",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "All VMUs",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "disabled",
-                "shared-card"
-              ],
-              [
-                "VMU A1",
-                "per-game-file"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "filenames-content-conditional",
@@ -1117,7 +1123,34 @@
                 "citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "All VMUs",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "All VMUs",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "disabled",
+                "options": {
+                  "reicast_per_content_vmus": "disabled"
+                },
+                "value": "shared-card"
+              },
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              }
+            ]
+          }
         }
       }
     },
@@ -1173,23 +1206,34 @@
             "complete": false,
             "groups": []
           },
+          "caveats": [],
           "granularity": {
             "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
             ]
-          },
-          "caveats": []
+          }
         }
       }
     },
@@ -1267,23 +1311,34 @@
               }
             ]
           },
+          "caveats": [],
           "granularity": {
             "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
             ]
-          },
-          "caveats": []
+          }
         }
       }
     },
@@ -1338,23 +1393,34 @@
             "complete": false,
             "groups": []
           },
+          "caveats": [],
           "granularity": {
             "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
             ]
-          },
-          "caveats": []
+          }
         }
       }
     },
@@ -1409,23 +1475,34 @@
             "complete": false,
             "groups": []
           },
+          "caveats": [],
           "granularity": {
             "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
             ]
-          },
-          "caveats": []
+          }
         }
       }
     },
@@ -1501,22 +1578,6 @@
               }
             ]
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "sandbox-path-untranslated",
@@ -1525,7 +1586,34 @@
                 "path": "/var/db/bios"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
+            ]
+          }
         }
       }
     },
@@ -1576,22 +1664,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "VMU A1",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "disabled",
-                "shared-card"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "file-set-spans-roots",
@@ -1601,7 +1673,34 @@
                 "also_under": "content_directory"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "VMU A1",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "VMU A1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "disabled",
+                "options": {
+                  "reicast_per_content_vmus": "disabled"
+                },
+                "value": "shared-card"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
+            ]
+          }
         }
       }
     },
@@ -1853,19 +1952,27 @@
             "complete": false,
             "groups": []
           },
+          "caveats": [],
           "granularity": {
             "value": "shared-card",
-            "option_key": "pcsx2_shared_memory_cards",
-            "option_value": "enabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "enabled",
+            "readings": [
+              {
+                "key": "pcsx2_shared_memory_cards",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "disabled",
-                "per-game-file"
-              ]
+              {
+                "mode": "disabled",
+                "options": {
+                  "pcsx2_shared_memory_cards": "disabled"
+                },
+                "value": "per-game-file"
+              }
             ]
-          },
-          "caveats": []
+          }
         }
       }
     },
@@ -1978,9 +2085,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -2305,18 +2411,6 @@
               }
             ]
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "pcsx2_shared_memory_cards",
-            "option_value": "enabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "disabled",
-                "per-game-file"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "dead-symlink",
@@ -2326,7 +2420,27 @@
                 "resolved": "/run/media/gone/retrodeck/saves/ps2/memcards"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "enabled",
+            "readings": [
+              {
+                "key": "pcsx2_shared_memory_cards",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "disabled",
+                "options": {
+                  "pcsx2_shared_memory_cards": "disabled"
+                },
+                "value": "per-game-file"
+              }
+            ]
+          }
         }
       }
     },
@@ -2394,18 +2508,6 @@
               }
             ]
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "pcsx2_shared_memory_cards",
-            "option_value": "enabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "disabled",
-                "per-game-file"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "symlink-loop",
@@ -2415,7 +2517,27 @@
                 "target": "/run/media/loop/retrodeck/memcards"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "enabled",
+            "readings": [
+              {
+                "key": "pcsx2_shared_memory_cards",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "disabled",
+                "options": {
+                  "pcsx2_shared_memory_cards": "disabled"
+                },
+                "value": "per-game-file"
+              }
+            ]
+          }
         }
       }
     },
@@ -2574,18 +2696,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": "opera_nvram_storage",
-            "option_value": "per game",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "shared",
-                "shared-card"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "unverified-version",
@@ -2602,7 +2712,27 @@
                 "mode": "per game"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "per game",
+            "readings": [
+              {
+                "key": "opera_nvram_storage",
+                "value": "per game",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "shared",
+                "options": {
+                  "opera_nvram_storage": "shared"
+                },
+                "value": "shared-card"
+              }
+            ]
+          }
         }
       }
     },
@@ -2653,18 +2783,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "opera_nvram_storage",
-            "option_value": "shared",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "per game",
-                "per-game-file"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "unverified-version",
@@ -2681,7 +2799,27 @@
                 "mode": "shared"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "shared",
+            "readings": [
+              {
+                "key": "opera_nvram_storage",
+                "value": "shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "per game",
+                "options": {
+                  "opera_nvram_storage": "per game"
+                },
+                "value": "per-game-file"
+              }
+            ]
+          }
         }
       }
     },
@@ -2746,22 +2884,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "arrangement-version-drifted",
@@ -2771,7 +2893,34 @@
                 "observed": "0.11.0"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
+            ]
+          }
         }
       }
     },
@@ -2959,8 +3108,8 @@
       }
     },
     {
-      "name": "multi-option-core-observes-its-core-written-file-set",
-      "rationale": "Beetle Saturn's verdict was standard-dir on the claim that the shipped core registers no option — refuted by the binary, which registers both sharing switches with their UI labels. The verdict is multi-option now and the caveat names the two options that swap the three files' stems to a shared spelling. Unchanged beneath it: the file set is core-owned (.bcr/.bkr/.smpc, not RetroArch's .srm), the record's declared emptiness is a statement about the frontend, and the three core-written files lying in the directory stay unreported — seen, deferred, pinned.",
+      "name": "a-rule-card-observes-its-three-role-files",
+      "rationale": "Beetle Saturn's card is rule-selected: no single option's value names a mode, so the card's rule reads both sharing switches — here at their registered defaults — and picks 'per-game'. The answer observes the three role files the core wrote beside the game and the granularity block carries one reading per switch plus every other mode with the option combination that reaches it; the multi-option caveat is gone because its question is answered.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2973,7 +3122,23 @@
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_saturn_libretro.so": {
-            "library_name": "Beetle Saturn"
+            "library_name": "Beetle Saturn",
+            "options": {
+              "beetle_saturn_shared_int": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "beetle_saturn_shared_ext": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
           }
         },
         "savefile_query": {
@@ -2999,35 +3164,58 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "declared",
-            "files": [],
+            "state": "observed",
+            "files": [
+              "Sega Rally Championship (USA).bcr",
+              "Sega Rally Championship (USA).bkr",
+              "Sega Rally Championship (USA).smpc"
+            ],
             "complete": false,
             "groups": []
           },
-          "caveats": [
-            {
-              "code": "core-multi-option",
-              "data": {
-                "core": "mednafen_saturn",
-                "verdict": "multi-option",
-                "options": "beetle_saturn_shared_int, beetle_saturn_shared_ext"
+          "caveats": [],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "per-game",
+            "readings": [
+              {
+                "key": "beetle_saturn_shared_int",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "beetle_saturn_shared_ext",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
-            },
-            {
-              "code": "file-set-across-systems",
-              "data": {
-                "core": "mednafen_saturn",
-                "systems": "saturn, saturnjp"
+            ],
+            "alternatives": [
+              {
+                "mode": "internal-shared",
+                "options": {
+                  "beetle_saturn_shared_int": "enabled",
+                  "beetle_saturn_shared_ext": "disabled"
+                },
+                "value": "shared-file"
+              },
+              {
+                "mode": "cartridge-shared",
+                "options": {
+                  "beetle_saturn_shared_int": "disabled",
+                  "beetle_saturn_shared_ext": "enabled"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "both-shared",
+                "options": {
+                  "beetle_saturn_shared_int": "enabled",
+                  "beetle_saturn_shared_ext": "enabled"
+                },
+                "value": "shared-file"
               }
-            },
-            {
-              "code": "core-own-writes-unestablished",
-              "data": {
-                "core": "mednafen_saturn"
-              }
-            }
-          ],
-          "granularity": null
+            ]
+          }
         }
       }
     },
@@ -3134,18 +3322,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "opera_nvram_storage",
-            "option_value": "shared",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg",
-            "alternatives": [
-              [
-                "per game",
-                "per-game-file"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "unverified-version",
@@ -3162,7 +3338,27 @@
                 "mode": "shared"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "shared",
+            "readings": [
+              {
+                "key": "opera_nvram_storage",
+                "value": "shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "per game",
+                "options": {
+                  "opera_nvram_storage": "per game"
+                },
+                "value": "per-game-file"
+              }
+            ]
+          }
         }
       }
     },
@@ -3667,22 +3863,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "unverified-version",
@@ -3693,7 +3873,34 @@
                 "missing": "arrangement_version, core_library_version"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
+            ]
+          }
         }
       }
     },
@@ -4411,9 +4618,8 @@
           "caveats": [],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -4508,9 +4714,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -4606,9 +4811,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -5471,13 +5675,6 @@
                 "complete": false,
                 "groups": []
               },
-              "granularity": {
-                "value": "per-game-file",
-                "option_key": null,
-                "option_value": null,
-                "options_file": null,
-                "alternatives": []
-              },
               "caveats": [
                 {
                   "code": "arrangement-version-drifted",
@@ -5494,7 +5691,13 @@
                     "systems": "n64, n64dd"
                   }
                 }
-              ]
+              ],
+              "granularity": {
+                "value": "per-game-file",
+                "mode": null,
+                "readings": [],
+                "alternatives": []
+              }
             }
           }
         ],
@@ -5512,13 +5715,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
-            "alternatives": []
-          },
           "caveats": [
             {
               "code": "arrangement-version-drifted",
@@ -5535,7 +5731,13 @@
                 "systems": "n64, n64dd"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
         },
         "firmware": {
           "root": "/mnt/sd/retrodeck/bios",
@@ -5610,9 +5812,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -5678,13 +5879,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
-            "alternatives": []
-          },
           "caveats": [
             {
               "code": "file-set-across-systems",
@@ -5693,7 +5887,13 @@
                 "systems": "n64, n64dd"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
         },
         "firmware": {
           "root": "/mnt/sd/retrodeck/bios",
@@ -5769,13 +5969,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
-            "alternatives": []
-          },
           "caveats": [
             {
               "code": "file-set-across-systems",
@@ -5784,7 +5977,13 @@
                 "systems": "n64, n64dd"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
         }
       }
     },
@@ -5843,13 +6042,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
-            "alternatives": []
-          },
           "caveats": [
             {
               "code": "file-set-across-systems",
@@ -5858,7 +6050,13 @@
                 "systems": "n64, n64dd"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
         }
       }
     },
@@ -5917,13 +6115,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
-            "alternatives": []
-          },
           "caveats": [
             {
               "code": "marker-invalid",
@@ -5939,7 +6130,13 @@
                 "systems": "n64, n64dd"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
         }
       }
     },
@@ -6821,22 +7018,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "shared-card",
-            "option_key": "reicast_per_content_vmus",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
-            "alternatives": [
-              [
-                "VMU A1",
-                "per-game-file"
-              ],
-              [
-                "All VMUs",
-                "per-game-files"
-              ]
-            ]
-          },
           "caveats": [
             {
               "code": "unknown-option-value",
@@ -6846,7 +7027,34 @@
                 "value": "Every VMU"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "value": "per-game-files"
+              }
+            ]
+          }
         }
       }
     },
@@ -7891,9 +8099,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         },
@@ -8016,9 +8223,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -8091,9 +8297,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -8171,9 +8376,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -8244,9 +8448,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -9088,9 +9291,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -9640,9 +9842,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -10265,13 +10466,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
-            "alternatives": []
-          },
           "caveats": [
             {
               "code": "file-set-across-systems",
@@ -10280,7 +10474,13 @@
                 "systems": "n64, n64dd"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
         }
       }
     },
@@ -10333,13 +10533,6 @@
             "complete": false,
             "groups": []
           },
-          "granularity": {
-            "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
-            "alternatives": []
-          },
           "caveats": [
             {
               "code": "sandbox-path-untranslated",
@@ -10355,7 +10548,13 @@
                 "systems": "n64, n64dd"
               }
             }
-          ]
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
         }
       }
     }

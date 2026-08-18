@@ -615,23 +615,6 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
-    "hatari": {
-      "identifiers": {
-        "library_name": [
-          "hatari"
-        ]
-      },
-      "systems": {
-        "atarist": {
-          "memory_types": [],
-          "verified_core": "1.8 7008194",
-          "citation": "[V] libretro/libretro.c:1782-1786 at libretro/hatari 7008194 — retro_get_memory_size discards the id and returns 0."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "holani": {
       "identifiers": {
         "library_name": [
@@ -803,28 +786,6 @@
           ],
           "verified_core": "v0.9.36.5 dd04cef",
           "citation": "[V] libretro.cpp:1735-1748 at beetle-pcfx-libretro dd04cef — RETRO_MEMORY_SAVE_RAM answers sizeof(SaveRAM) unconditionally; no RETRO_MEMORY_RTC case exists."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
-    "mednafen_saturn": {
-      "identifiers": {
-        "library_name": [
-          "Beetle Saturn"
-        ]
-      },
-      "systems": {
-        "saturn": {
-          "memory_types": [],
-          "verified_core": "v1.29.0 ccba526",
-          "citation": "[V] libretro.cpp:1026-1036 at beetle-saturn-libretro ccba526 — the switch answers RETRO_MEMORY_SYSTEM_RAM alone and falls through to 'not supported' with 0 for everything else, save RAM included. The core writes Saturn saves itself, in files this record does not describe."
-        },
-        "saturnjp": {
-          "memory_types": [],
-          "verified_core": "v1.29.0 ccba526",
-          "citation": "[V] libretro.cpp:1026-1036 at beetle-saturn-libretro ccba526 — the switch answers RETRO_MEMORY_SYSTEM_RAM alone and falls through to 'not supported' with 0 for everything else, save RAM included. The core writes Saturn saves itself, in files this record does not describe."
         }
       },
       "provenance": {
@@ -1533,23 +1494,6 @@
           "memory_types": [],
           "verified_core": "0.13.6 f0286ee",
           "citation": "[V] libretro/libretro.c:1211-1248 at libretro/sameduck f0286ee — RETRO_MEMORY_SAVE_RAM and RETRO_MEMORY_RTC are both written out as cases and both set the size to 0; only system and video RAM answer."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
-    "scummvm": {
-      "identifiers": {
-        "library_name": [
-          "ScummVM"
-        ]
-      },
-      "systems": {
-        "scummvm": {
-          "memory_types": [],
-          "verified_core": "686cdd1-2.10.0git",
-          "citation": "[V] backends/platform/libretro/src/libretro-core.cpp:1109-1111 at libretro/scummvm 686cdd1 — retro_get_memory_size returns 0 for every id. ScummVM keeps its saves in its own directory, which RetroDECK configures separately and this record does not describe."
         }
       },
       "provenance": {

@@ -1601,7 +1601,7 @@ class TestFlatpakSandboxPaths:
             )
         )
         assert p.granularity is not None
-        assert p.granularity.option_value == "shared"
+        assert p.granularity.mode == "shared"
 
     def test_unreachable_root_is_not_observed_at_all(self):
         # The sorted directory, its fallback and the link view all come from

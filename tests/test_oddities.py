@@ -11,6 +11,7 @@ import pytest
 
 import atlas
 from atlas.machine import CoreOption, FixtureMachine, RealMachine
+from atlas.mode_rules import RULES as MODE_RULES
 from atlas.oddities import (
     ANCHOR_KINDS,
     MODE_ALWAYS,
@@ -22,6 +23,7 @@ from atlas.oddities import (
 )
 from atlas.placement import (
     GRANULARITIES,
+    GRANULARITY_NONE,
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
     GRANULARITY_SHARED_CARD,
@@ -460,7 +462,7 @@ class TestAnOptionThatMovesTheRootItself:
         assert p.file_set.files == ("Game (Japan).srm",)
         assert [g.role for g in p.file_set.groups] == [atlas.ROLE_DISK_DIFF]
         assert p.granularity is not None
-        assert p.granularity.option_value == "disabled"
+        assert p.granularity.mode == "disabled"
 
     def test_the_enabled_option_moves_the_writes_into_the_image_itself(self):
         files = {**self.FILES, OPTIONS_CFG: 'q88_save_to_disk_image = "enabled"\n'}
@@ -478,8 +480,8 @@ class TestAnOptionThatMovesTheRootItself:
         assert caveat.data["mode"] == "enabled"
         assert "disk image itself" in caveat.message
         assert p.granularity is not None
-        assert p.granularity.option_value == "enabled"
-        assert ("disabled", "per-game-files") in p.granularity.alternatives
+        assert p.granularity.mode == "enabled"
+        assert ("disabled", "per-game-files") in [(a.mode, a.value) for a in p.granularity.alternatives]
 
     def test_the_open_diff_set_is_scoped_by_a_caveat(self):
         p = self._query(self.FILES)
@@ -503,15 +505,15 @@ class TestFlycastResolution:
         assert p.file_set.files == ("vmu_save_A1.bin",)
         assert p.granularity is not None
         assert p.granularity.value == GRANULARITY_SHARED_CARD
-        assert ("VMU A1", GRANULARITY_PER_GAME_FILE) in p.granularity.alternatives
-        assert p.granularity.options_file == OPTIONS_CFG
+        assert ("VMU A1", GRANULARITY_PER_GAME_FILE) in [(a.mode, a.value) for a in p.granularity.alternatives]
+        assert p.granularity.readings[0].options_file == OPTIONS_CFG
 
     def test_option_absent_uses_core_default(self):
         p = _flycast_query({RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG})
         assert p.root_kind == atlas.ROOT_SYSTEM_DIRECTORY
         assert p.granularity is not None
-        assert p.granularity.option_value == "disabled"
-        assert "core default" in p.granularity.option_provenance
+        assert p.granularity.mode == "disabled"
+        assert "core default" in p.granularity.readings[0].provenance
 
     def test_no_vmus_present_is_declared_from_card(self):
         p = _flycast_query(
@@ -728,8 +730,8 @@ class TestFlycastResolution:
             }
         )
         assert p.granularity is not None
-        assert p.granularity.option_value == "VMU A1"
-        assert "Dreamcast Game (Europe).opt" in p.granularity.option_provenance
+        assert p.granularity.mode == "VMU A1"
+        assert "Dreamcast Game (Europe).opt" in p.granularity.readings[0].provenance
 
     def test_unknown_option_value_applies_core_default_mode(self):
         # RetroArch's option manager keeps the core default on an invalid
@@ -763,8 +765,8 @@ class TestFlycastResolution:
             }
         )
         assert p.granularity is not None
-        assert p.granularity.option_value == "disabled"
-        assert p.granularity.options_file == OPTIONS_CFG
+        assert p.granularity.mode == "disabled"
+        assert p.granularity.readings[0].options_file == OPTIONS_CFG
 
     def test_a_dropped_game_specific_options_line_leaves_the_game_opt_on(self):
         # The line sets nothing, so the default (true) stands and the game .opt
@@ -780,7 +782,7 @@ class TestFlycastResolution:
             }
         )
         assert p.granularity is not None
-        assert p.granularity.option_value == "VMU A1"
+        assert p.granularity.mode == "VMU A1"
         assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED] == [
             {"key": "game_specific_options", "line": 'game_specific_options="false"'}
         ]
@@ -798,8 +800,8 @@ class TestFlycastResolution:
             }
         )
         assert p.granularity is not None
-        assert p.granularity.option_value == "disabled"
-        assert p.granularity.options_file == OPTIONS_CFG
+        assert p.granularity.mode == "disabled"
+        assert p.granularity.readings[0].options_file == OPTIONS_CFG
         assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED] == [
             {"key": "core_options_path", "line": 'core_options_path="/mnt/sd/retrodeck/elsewhere.cfg"'}
         ]
@@ -817,8 +819,8 @@ class TestFlycastResolution:
             }
         )
         assert p.granularity is not None
-        assert p.granularity.option_value == "VMU A1"
-        assert p.granularity.options_file == FLYCAST_CORE_OPT
+        assert p.granularity.mode == "VMU A1"
+        assert p.granularity.readings[0].options_file == FLYCAST_CORE_OPT
         assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_CFG_LINE_DROPPED] == [
             {"key": "global_core_options", "line": 'global_core_options="true"'}
         ]
@@ -863,9 +865,9 @@ class TestLRPS2Card:
         g = p.granularity
         assert g is not None
         assert g.value == GRANULARITY_SHARED_CARD
-        assert g.option_key == "pcsx2_shared_memory_cards"
-        assert g.option_value == "enabled"
-        assert ("disabled", GRANULARITY_PER_GAME_FILE) in g.alternatives
+        assert g.readings[0].key == "pcsx2_shared_memory_cards"
+        assert g.mode == "enabled"
+        assert ("disabled", GRANULARITY_PER_GAME_FILE) in [(a.mode, a.value) for a in g.alternatives]
 
     def test_per_content_mode_names_card_after_rom_stem(self):
         # main.cpp:2154-2166 + Pcsx2Config.cpp:995-997 — slot 1 = <rom_stem>.ps2
@@ -991,7 +993,7 @@ class TestFeatureDetection:
             files={OPTIONS_CFG: 'reicast_per_content_vmus = "All VMUs"\n'},
         )
         assert p.granularity is not None
-        assert p.granularity.option_value == "All VMUs"
+        assert p.granularity.mode == "All VMUs"
         assert not any(
             c.code == atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED for c in p.caveats
         )
@@ -1009,7 +1011,7 @@ class TestFeatureDetection:
         p = self._flycast({"library_name": "Flycast", "options": options})
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.granularity is not None
-        assert p.granularity.option_value == "VMU A1"
+        assert p.granularity.mode == "VMU A1"
 
     def test_stored_value_validated_against_live_definition(self):
         # Persisted junk value: RetroArch keeps the core default — confirmed
@@ -1205,7 +1207,7 @@ class TestAGoverningValueNothingEstablishes:
         )
         assert p.dir == "/mnt/sd/retrodeck/bios/pcsx2/memcards"
         assert p.granularity is not None
-        assert p.granularity.option_value == "enabled"
+        assert p.granularity.mode == "enabled"
         assert not any(
             c.code == atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED for c in p.caveats
         )
@@ -1357,7 +1359,7 @@ class TestOperaCard:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.granularity is not None
         assert p.granularity.value == GRANULARITY_PER_GAME_FILE
-        assert ("shared", GRANULARITY_SHARED_CARD) in p.granularity.alternatives
+        assert ("shared", GRANULARITY_SHARED_CARD) in [(a.mode, a.value) for a in p.granularity.alternatives]
 
     def test_shared_mode_switches_subdir(self):
         p = self._query({OPTIONS_CFG: 'opera_nvram_storage = "shared"\n'})
@@ -1443,36 +1445,324 @@ class TestAuditVerdictCaveats:
         )
         assert {c.code for c in p.caveats} & self.VERDICT_CAVEATS == set()
 
-    def test_multi_option_saturn_names_its_two_sharing_options(self):
-        # Beetle Saturn rode as standard-dir on the claim that the shipped core
-        # registers no option — refuted by the binary itself, which registers
-        # both sharing switches with their UI labels. The verdict is
-        # multi-option now, and the caveat names the two options that swap the
-        # three files' stems to a shared spelling. The record still speaks over
-        # the disk: the declared emptiness is a statement about the *frontend*,
-        # and the three core-written files lying right there stay unreported —
-        # seen, deferred, pinned as before.
-        stem = "Sega Rally Championship (USA)"
+    def test_a_rule_card_with_uncaptured_options_and_no_file_steps_aside(self):
+        # The _query fixtures register no options at all, which for a rule
+        # card is the probe-limitation state: nothing states either switch's
+        # value, so the rule refuses per missing option and the card steps
+        # aside — the same honesty the single-option route answers with.
         p = self._query(
             core_so="mednafen_saturn_libretro.so",
             library_name="Beetle Saturn",
             system="saturn",
-            rom=f"{stem}.chd",
-            extra_files={
-                f"/mnt/sd/retrodeck/saves/saturn/{stem}.bcr": "backup",
-                f"/mnt/sd/retrodeck/saves/saturn/{stem}.bkr": "backup",
-                f"/mnt/sd/retrodeck/saves/saturn/{stem}.smpc": "smpc",
-            },
+            rom="Sega Rally Championship (USA).chd",
         )
-        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MULTI_OPTION]
-        assert stated
-        assert stated[0].data["options"].split(", ") == [
+        assert p.granularity is None
+        stated = [
+            c for c in p.caveats if c.code == atlas.CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED
+        ]
+        assert [c.data["option_key"] for c in stated] == [
             "beetle_saturn_shared_int",
             "beetle_saturn_shared_ext",
         ]
+
+
+SATURN_REGISTERED = {
+    "beetle_saturn_shared_int": {"default": "disabled", "values": ["enabled", "disabled"]},
+    "beetle_saturn_shared_ext": {"default": "disabled", "values": ["enabled", "disabled"]},
+}
+SATURN_CORE = {"library_name": "Beetle Saturn", "options": SATURN_REGISTERED}
+SATURN_ROM = "/mnt/sd/retrodeck/roms/saturn/Sega Rally Championship (USA).chd"
+SATURN_STEM = "Sega Rally Championship (USA)"
+
+
+def _saturn_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/mednafen_saturn_libretro.so": SATURN_CORE})
+    return placed(
+        rd.savefile_location(content_path=SATURN_ROM, core_so="mednafen_saturn_libretro.so")
+    )
+
+
+class TestARuleSelectedCard:
+    """Beetle Saturn: two independent switches, four modes, one rule deciding.
+
+    The card keeps the modes as data — what can exist — and the rule reads
+    both options live and picks what holds here. The Flycast mechanic a
+    client builds on ("is the wanted option active, and where does it
+    change") survives pluralization: one reading per switch, and every
+    alternative mode names the option combination that reaches it.
+    """
+
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        SATURN_ROM: "",
+        "/mnt/sd/retrodeck/saves/saturn/.keep": "",
+    }
+
+    def test_registered_defaults_select_the_per_game_mode(self):
+        p = _saturn_query(self.FILES)
+        assert p.dir == "/mnt/sd/retrodeck/saves/saturn"
         assert p.file_set.state == "declared"
-        assert p.file_set.files == ()
-        assert any(c.code == "core-own-writes-unestablished" for c in p.caveats)
+        assert p.file_set.files == (
+            f"{SATURN_STEM}.bkr",
+            f"{SATURN_STEM}.bcr",
+            f"{SATURN_STEM}.smpc",
+        )
+        roles = [(g.files, g.granularity, g.role) for g in p.file_set.groups]
+        assert roles == [
+            ((f"{SATURN_STEM}.bkr",), "per-game-file", "battery"),
+            ((f"{SATURN_STEM}.bcr",), "per-game-file", "battery"),
+            ((f"{SATURN_STEM}.smpc",), "per-game-file", "settings"),
+        ]
+        assert p.granularity is not None
+        assert p.granularity.value == "per-game-file"
+        assert p.granularity.mode == "per-game"
+
+    def test_each_switch_is_one_reading_with_its_own_provenance(self):
+        g = _saturn_query(self.FILES).granularity
+        assert g is not None
+        assert [(r.key, r.value) for r in g.readings] == [
+            ("beetle_saturn_shared_int", "disabled"),
+            ("beetle_saturn_shared_ext", "disabled"),
+        ]
+        assert all("core default" in r.provenance for r in g.readings)
+
+    def test_every_alternative_names_the_combination_that_reaches_it(self):
+        g = _saturn_query(self.FILES).granularity
+        assert g is not None
+        assert [(a.mode, dict(a.options), a.value) for a in g.alternatives] == [
+            (
+                "internal-shared",
+                {"beetle_saturn_shared_int": "enabled", "beetle_saturn_shared_ext": "disabled"},
+                "shared-file",
+            ),
+            (
+                "cartridge-shared",
+                {"beetle_saturn_shared_int": "disabled", "beetle_saturn_shared_ext": "enabled"},
+                "per-game-file",
+            ),
+            (
+                "both-shared",
+                {"beetle_saturn_shared_int": "enabled", "beetle_saturn_shared_ext": "enabled"},
+                "shared-file",
+            ),
+        ]
+
+    def test_a_flipped_switch_swaps_the_internal_pair_to_the_shared_stem(self):
+        p = _saturn_query(
+            {**self.FILES, OPTIONS_CFG: 'beetle_saturn_shared_int = "enabled"\n'}
+        )
+        assert p.granularity is not None
+        assert p.granularity.mode == "internal-shared"
+        assert p.granularity.value == "shared-file"
+        assert p.file_set.files == (
+            "mednafen_saturn_libretro_shared.bkr",
+            f"{SATURN_STEM}.bcr",
+            "mednafen_saturn_libretro_shared.smpc",
+        )
+        int_reading = p.granularity.readings[0]
+        assert int_reading.value == "enabled"
+        assert int_reading.options_file == OPTIONS_CFG
+
+    def test_the_observed_trio_outranks_the_declaration(self):
+        p = _saturn_query(
+            {
+                **self.FILES,
+                f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.bkr": "backup",
+                f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.bcr": "backup",
+                f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.smpc": "smpc",
+            }
+        )
+        assert p.file_set.state == "observed"
+        assert p.file_set.files == (
+            f"{SATURN_STEM}.bcr",
+            f"{SATURN_STEM}.bkr",
+            f"{SATURN_STEM}.smpc",
+        )
+
+    def test_a_stored_value_outside_the_registration_falls_to_the_default(self):
+        # RetroArch's option manager keeps the core default when a persisted
+        # value is invalid; the rule sees what the core would run with, and
+        # the passed-over value is stated.
+        p = _saturn_query(
+            {**self.FILES, OPTIONS_CFG: 'beetle_saturn_shared_int = "sometimes"\n'}
+        )
+        assert p.granularity is not None
+        assert p.granularity.mode == "per-game"
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE]
+        assert stated and stated[0].data["value"] == "sometimes"
+
+    def test_a_missing_switch_retires_the_card_as_a_generation_mismatch(self):
+        core = {
+            "library_name": "Beetle Saturn",
+            "options": {
+                "beetle_saturn_shared_int": {
+                    "default": "disabled",
+                    "values": ["enabled", "disabled"],
+                }
+            },
+        }
+        rd = _retrodeck(self.FILES, cores={f"{DEPLOY}/mednafen_saturn_libretro.so": core})
+        p = placed(
+            rd.savefile_location(content_path=SATURN_ROM, core_so="mednafen_saturn_libretro.so")
+        )
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_GENERATION_MISMATCH]
+        assert stated and stated[0].data["options"] == "beetle_saturn_shared_ext"
+
+
+HATARI_REGISTERED = {
+    "hatari_writeprotect_floppy": {"default": "off", "values": ["on", "off", "auto"]},
+    "hatari_writeprotect_hd": {"default": "off", "values": ["on", "off", "auto"]},
+}
+HATARI_CORE = {"library_name": "hatari", "options": HATARI_REGISTERED}
+
+
+def _hatari_query(files, *, content_path):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/hatari_libretro.so": HATARI_CORE})
+    return placed(rd.savefile_location(content_path=content_path, core_so="hatari_libretro.so"))
+
+
+class TestHatariContentClasses:
+    """Which write-protect option governs is the content's class, read by the rule."""
+
+    FLOPPY = "/mnt/sd/retrodeck/roms/atarist/Turrican (Europe).st"
+    HARD_DISK = "/mnt/sd/retrodeck/roms/atarist/GEM Drive.vhd"
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        FLOPPY: "",
+        HARD_DISK: "",
+        "/mnt/sd/retrodeck/saves/atarist/.keep": "",
+    }
+
+    def test_a_floppy_with_protection_off_saves_into_its_own_image(self):
+        p = _hatari_query(self.FILES, content_path=self.FLOPPY)
+        assert p.root_kind == "content_directory"
+        assert p.dir == "/mnt/sd/retrodeck/roms/atarist"
+        assert p.file_set.state == "declared" and p.file_set.files == ()
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_INSIDE_CONTENT]
+        assert stated and stated[0].data["mode"] == "floppy-writeback"
+
+    def test_only_the_governing_class_switch_is_read(self):
+        g = _hatari_query(self.FILES, content_path=self.FLOPPY).granularity
+        assert g is not None
+        assert [r.key for r in g.readings] == ["hatari_writeprotect_floppy"]
+        assert [(a.mode, dict(a.options), a.value) for a in g.alternatives] == [
+            ("floppy-discarded", {"hatari_writeprotect_floppy": "on"}, "none")
+        ]
+
+    def test_protection_on_states_that_nothing_keeps_the_progress(self):
+        p = _hatari_query(
+            {**self.FILES, OPTIONS_CFG: 'hatari_writeprotect_floppy = "on"\n'},
+            content_path=self.FLOPPY,
+        )
+        assert p.file_set.state == "declared" and p.file_set.files == ()
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_WRITES_DISCARDED]
+        assert stated and stated[0].data["mode"] == "floppy-discarded"
+        assert p.granularity is not None
+        assert p.granularity.value == "none"
+        assert [(a.mode, a.value) for a in p.granularity.alternatives] == [
+            ("floppy-writeback", "per-game-file")
+        ]
+
+    def test_hard_disk_content_is_governed_by_its_own_switch(self):
+        p = _hatari_query(self.FILES, content_path=self.HARD_DISK)
+        assert p.granularity is not None
+        assert p.granularity.mode == "hard-disk-writeback"
+        assert [r.key for r in p.granularity.readings] == ["hatari_writeprotect_hd"]
+
+    def test_without_content_the_class_is_unestablished_and_the_card_steps_aside(self):
+        p = _hatari_query(self.FILES, content_path=None)
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated and stated[0].data["core"] == "hatari"
+        assert "no content was named" in stated[0].data["reason"]
+
+
+SCUMMVM_CORE = {"library_name": "ScummVM", "options": {}}
+SCUMMVM_ROM = "/mnt/sd/retrodeck/roms/scummvm/monkey1.scummvm"
+SCUMMVM_INI = "/mnt/sd/retrodeck/bios/scummvm.ini"
+
+
+def _scummvm_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/scummvm_libretro.so": SCUMMVM_CORE})
+    return placed(rd.savefile_location(content_path=SCUMMVM_ROM, core_so="scummvm_libretro.so"))
+
+
+class TestScummvmSavepath:
+    """The save directory is ScummVM's own setting, read the way the emulator does."""
+
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        SCUMMVM_ROM: "",
+        "/mnt/sd/retrodeck/saves/scummvm/.keep": "",
+    }
+
+    def test_without_an_ini_the_frontend_save_dir_holds_the_unnamed_slots(self):
+        p = _scummvm_query(self.FILES)
+        assert p.dir == "/mnt/sd/retrodeck/saves/scummvm"
+        assert p.file_set.state == "declared" and p.file_set.files == ()
+        assert not p.file_set.complete
+        assert [(g.files, g.granularity, g.role) for g in p.file_set.groups] == [
+            (None, "per-game-files", "battery")
+        ]
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED]
+        assert stated and stated[0].data["dir"] == "/mnt/sd/retrodeck/saves/scummvm"
+        assert "launcher configuration" in stated[0].data["citation"]
+
+    def test_the_savepath_reading_says_where_the_setting_would_change(self):
+        g = _scummvm_query(self.FILES).granularity
+        assert g is not None
+        assert g.mode == "frontend-save-dir"
+        assert g.value == "per-game-files"
+        assert [(r.key, r.value, r.options_file) for r in g.readings] == [
+            ("savepath", None, SCUMMVM_INI)
+        ]
+        assert g.alternatives == ()
+
+    def test_a_savepath_spelling_the_save_dir_is_the_default_not_a_redirect(self):
+        p = _scummvm_query(
+            {
+                **self.FILES,
+                SCUMMVM_INI: "[scummvm]\nsavepath=/mnt/sd/retrodeck/saves/scummvm\n",
+            }
+        )
+        assert p.granularity is not None
+        assert p.granularity.mode == "frontend-save-dir"
+        assert p.granularity.readings[0].value == "/mnt/sd/retrodeck/saves/scummvm"
+        assert not any(c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED for c in p.caveats)
+
+    def test_a_savepath_routed_elsewhere_is_stated_machine_readably(self):
+        p = _scummvm_query(
+            {
+                **self.FILES,
+                SCUMMVM_INI: "[scummvm]\nsavepath=/mnt/sd/scumm-saves\n",
+                "/mnt/sd/scumm-saves/.keep": "",
+            }
+        )
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED]
+        assert stated
+        assert stated[0].data["path"] == "/mnt/sd/scumm-saves"
+        assert stated[0].data["options_file"] == SCUMMVM_INI
+
+    def test_a_savepath_that_is_not_a_directory_falls_back_like_the_emulator(self):
+        # checkPathSetting removes the bad key and re-sets the default — the
+        # rule answers the default mode, and the reading's provenance says why.
+        p = _scummvm_query(
+            {**self.FILES, SCUMMVM_INI: "[scummvm]\nsavepath=/mnt/sd/gone\n"}
+        )
+        assert p.granularity is not None
+        assert p.granularity.mode == "frontend-save-dir"
+        assert "not a directory" in p.granularity.readings[0].provenance
+
+    def test_an_unreadable_ini_leaves_the_mode_unestablished(self):
+        p = _scummvm_query({**self.FILES, SCUMMVM_INI: {"status": "unreadable"}})
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated and "could not be read" in stated[0].data["reason"]
 
 
 class TestStrictLoaders:
@@ -1812,7 +2102,7 @@ class TestStrictLoaders:
         text = self._inside_card(
             {"root": "savefile_directory", "inside_content": "why"}
         )
-        with pytest.raises(ValueError, match="content's own tree"):
+        with pytest.raises(ValueError, match="about the loaded content file"):
             load_oddities(text)
 
     def test_a_save_inside_the_content_refuses_also_under(self):
@@ -1821,6 +2111,80 @@ class TestStrictLoaders:
         )
         with pytest.raises(ValueError, match="also_under"):
             load_oddities(text)
+
+    def test_discarded_writes_load_as_the_groups_less_form(self):
+        mode = load_oddities(
+            self._inside_card(
+                {"root": "content_directory", "writes_discarded": "protection is on"}
+            )
+        )[0].modes["always"]
+        assert mode.writes_discarded == "protection is on"
+        assert mode.groups == ()
+        # The harder emptiness answers its group questions the same way,
+        # except the unit: nothing is kept, so there is nothing to group at
+        # all — the granularity is "none", never the content file's per-game.
+        assert mode.files == ()
+        assert mode.complete is True
+        assert mode.granularity == GRANULARITY_NONE
+        assert mode.subdir is None
+        assert mode.observe is None
+
+    def test_discarded_writes_refuse_groups_and_other_roots(self):
+        with pytest.raises(ValueError, match="no separate file to group"):
+            load_oddities(
+                self._inside_card(
+                    {
+                        "root": "content_directory",
+                        "writes_discarded": "why",
+                        "groups": [
+                            {"files": ["a.srm"], "granularity": "per-game-file", "role": "battery"}
+                        ],
+                    }
+                )
+            )
+        with pytest.raises(ValueError, match="about the loaded content file"):
+            load_oddities(
+                self._inside_card({"root": "savefile_directory", "writes_discarded": "why"})
+            )
+
+    def test_the_two_statements_contradict_each_other(self):
+        # One says the content file keeps the save, the other that nothing
+        # keeps it — a mode carrying both is not a mode, it is an argument.
+        with pytest.raises(ValueError, match="contradict"):
+            load_oddities(
+                self._inside_card(
+                    {
+                        "root": "content_directory",
+                        "inside_content": "kept",
+                        "writes_discarded": "discarded",
+                    }
+                )
+            )
+
+    def test_a_mode_of_nothing_but_unnamed_groups_states_the_directory(self):
+        # ScummVM's shape: the directory is known, the slot names are the
+        # launcher target's and follow from nothing atlas reads. The mode's
+        # statable set is empty and never claims to be the whole.
+        mode = load_oddities(
+            self._inside_card(
+                {
+                    "root": "savefile_directory",
+                    "groups": [
+                        {
+                            "granularity": "per-game-files",
+                            "role": "battery",
+                            "unnamed": "slot names come from the launcher target",
+                        }
+                    ],
+                }
+            )
+        )[0].modes["always"]
+        assert mode.named == ()
+        assert mode.files == ()
+        assert mode.complete is False
+        assert mode.granularity == "per-game-files"
+        assert mode.subdir is None
+        assert mode.unnamed[0].unnamed == "slot names come from the launcher target"
 
     # Everything a mode used to carry now belongs to one of its groups, except
     # the two fields that are still the mode's own. Splitting here keeps every
@@ -2107,6 +2471,82 @@ class TestStrictLoaders:
         assert record.core_library_version is None
 
 
+class TestAGoverningRule:
+    """A card whose mode is selected by code: marker in data, decision in the rule."""
+
+    def _rule_card(self, key: str, saves: dict[str, object]) -> str:
+        return json.dumps(
+            {
+                "schema": 1,
+                "cores": {key: {"identifiers": {"library_name": ["X"]}, "saves": saves}},
+            }
+        )
+
+    _MODES = {
+        "one": {
+            "root": "savefile_directory",
+            "groups": [{"files": ["a.srm"], "granularity": "per-game-file", "role": "battery"}],
+        },
+        "two": {
+            "root": "savefile_directory",
+            "groups": [{"files": ["b.srm"], "granularity": "shared-file", "role": "battery"}],
+        },
+    }
+
+    def test_a_rule_card_loads_with_freely_named_modes(self):
+        # The key must name a registered rule, so the fixture borrows a real
+        # one — the modes here are synthetic and never applied.
+        card = load_oddities(
+            self._rule_card(
+                "mednafen_saturn",
+                {"governing_rule": {"options": ["opt_a", "opt_b"]}, "modes": self._MODES},
+            )
+        )[0]
+        assert card.rule_options == ("opt_a", "opt_b")
+        assert card.option_key is None
+        assert sorted(card.modes) == ["one", "two"]
+
+    def test_a_rule_and_a_governing_option_together_are_refused(self):
+        text = self._rule_card(
+            "mednafen_saturn",
+            {
+                "governing_option": {"key": "opt_a"},
+                "governing_rule": {"options": ["opt_a"]},
+                "modes": self._MODES,
+            },
+        )
+        with pytest.raises(ValueError, match="one of them"):
+            load_oddities(text)
+
+    def test_a_rule_marker_without_a_registered_rule_is_refused(self):
+        text = self._rule_card(
+            "nonesuch", {"governing_rule": {"options": ["opt_a"]}, "modes": self._MODES}
+        )
+        with pytest.raises(ValueError, match="no selection rule is registered"):
+            load_oddities(text)
+
+    @pytest.mark.parametrize("block", [{"options": ["a"], "stray": 1}, {}, {"options": "a"}])
+    def test_a_malformed_rule_block_is_refused(self, block):
+        text = self._rule_card("mednafen_saturn", {"governing_rule": block, "modes": self._MODES})
+        with pytest.raises(ValueError, match="governing_rule"):
+            load_oddities(text)
+
+    def test_every_registered_rule_has_a_shipped_card(self):
+        # The loader holds the marker→rule direction; this is the mirror — a
+        # rule with no card would be code describing nothing.
+        carded = {card.key for card in CARDS if card.rule_options is not None}
+        assert set(MODE_RULES) == carded, (
+            f"rules registered for {sorted(MODE_RULES)} and rule cards shipped for {sorted(carded)}"
+            " — the two ship together or not at all"
+        )
+
+    def test_the_rule_options_are_recorded_vocabulary(self):
+        # The anchor tripwire covers them like a governing option's key: a
+        # caller reads them back as this core's own words.
+        words = recorded_vocabulary(option_key=None, modes={}, rule_options=("opt_a",))
+        assert "opt_a" in words
+
+
 class TestCardEvidence:
     """What each mode of a card rests on — stated per mode, never flattened."""
 
@@ -2284,6 +2724,11 @@ class TestVerificationMatrix:
 CARDS = load_oddities()
 
 
+def _deployed_core_info(machine: RealMachine, card: CoreCard):
+    """One card's deployed core, queried — ``None`` when it cannot be read."""
+    return machine.query_core(str(DEPLOYED_CORES / card.so_name))
+
+
 def _registered_governing_option(machine: RealMachine, card: CoreCard) -> CoreOption | None:
     """A card's governing option as the deployed core registers it — ``None`` when unread.
 
@@ -2295,7 +2740,7 @@ def _registered_governing_option(machine: RealMachine, card: CoreCard) -> CoreOp
     """
     if card.option_key is None:
         return None
-    info = machine.query_core(str(DEPLOYED_CORES / card.so_name))
+    info = _deployed_core_info(machine, card)
     if info is None or info.options is None:
         return None
     return info.options.get(card.option_key)
@@ -2438,6 +2883,23 @@ class TestTheModeKeysAreTheDeployedCoresOwn:
     ):
         if not DEPLOYED_CORES.is_dir():
             pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        if card.rule_options is not None:
+            # A rule card's mode keys are atlas's own vocabulary — the rule
+            # selects them, no option's value set spells them, so there is no
+            # binary set to measure them against. What the binary *does*
+            # answer for is the options the rule reads: every declared one
+            # must be registered by the deployed core, or the card describes
+            # switches this generation does not have.
+            info = _deployed_core_info(prober, card)
+            if info is None or info.options is None:
+                pytest.skip(f"the deployed core for card {card.key!r} exposes no options to measure")
+            missing = [key for key in card.rule_options if key not in info.options]
+            assert missing == [], (
+                f"card {card.key!r} declares rule options {list(card.rule_options)} and the "
+                f"deployed core does not register {missing} — the binary is the machine, so the "
+                "card is what changes"
+            )
+            return
         if card.option_key is None:
             # Nothing selects between modes on such a card, so its one mode is
             # not a value anything registers — there is no set to measure

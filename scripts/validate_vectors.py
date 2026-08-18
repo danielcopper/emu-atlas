@@ -170,7 +170,13 @@ IDENTIFICATION_FIELDS = {"identity", "known_as", "requirements", "caveats"}
 IDENTITY_FIELDS = {"md5", "sha1", "size"}
 KNOWN_FIRMWARE_NEEDS = {"required", "optional"}
 KNOWN_FIRMWARE_CHECKED = {"verified", "mismatch", "unchecked", "unknown"}
-GRANULARITY_FIELDS = {"value", "option_key", "option_value", "options_file", "alternatives"}
+GRANULARITY_FIELDS = {"value", "mode", "readings", "alternatives"}
+READING_FIELDS = {"key", "value", "options_file"}
+ALTERNATIVE_FIELDS = {"mode", "options", "value"}
+# The one granularity value no file group may carry: it says no save data is
+# kept at all (write protection discarding the writes), and a group is a place
+# save data lives. Valid for granularity.value and an alternative's value only.
+GRANULARITY_VALUE_NONE = "none"
 CAVEAT_FIELDS = {"code", "data"}
 EMULATOR_FIELDS = {"system", "label", "kind", "core_so", "selection", "caveats"}
 # The three ways a catalogue answer carries no entries, each a different claim:
@@ -286,6 +292,9 @@ KNOWN_CAVEAT_CODES = {
     "core-enumeration-incomplete",
     "save-dir-launch-dependent",
     "save-inside-content",
+    "save-writes-discarded",
+    "core-mode-unestablished",
+    "save-root-redirected",
     "save-dir-unlistable",
     "emulator-read-unestablished",
     "emulator-config-unread",
@@ -785,15 +794,37 @@ def _validate_file_groups(name: str, file_set: Any) -> None:
 
 def _validate_granularity(name: str, granularity: Any) -> None:
     _require_exact(name, granularity, GRANULARITY_FIELDS, "granularity")
-    if granularity["value"] not in KNOWN_GRANULARITIES:
-        fail(f"{name}: granularity.value must be one of {sorted(KNOWN_GRANULARITIES)}")
+    granularity_values = KNOWN_GRANULARITIES | {GRANULARITY_VALUE_NONE}
+    if granularity["value"] not in granularity_values:
+        fail(f"{name}: granularity.value must be one of {sorted(granularity_values)}")
+    mode = granularity["mode"]
+    if mode is not None and (not isinstance(mode, str) or not mode):
+        fail(f"{name}: granularity.mode must be null or a non-empty string")
+    readings = granularity["readings"]
+    if not isinstance(readings, list):
+        fail(f"{name}: granularity.readings must be a list")
+    for reading in readings:
+        _require_exact(name, reading, READING_FIELDS, "granularity reading")
+        if not isinstance(reading["key"], str) or not reading["key"]:
+            fail(f"{name}: a granularity reading's key must be a non-empty string")
+        if reading["value"] is not None and not isinstance(reading["value"], str):
+            fail(f"{name}: a granularity reading's value must be null or a string")
+        if reading["options_file"] is not None and not isinstance(reading["options_file"], str):
+            fail(f"{name}: a granularity reading's options_file must be null or a string")
     alternatives = granularity["alternatives"]
-    if not isinstance(alternatives, list) or not all(
-        isinstance(a, list) and len(a) == 2 and all(isinstance(x, str) for x in a) for a in alternatives
-    ):
-        fail(f"{name}: granularity.alternatives must be a list of [value, granularity] string pairs")
-    if any(pair[1] not in KNOWN_GRANULARITIES for pair in alternatives):
-        fail(f"{name}: every alternative's granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
+    if not isinstance(alternatives, list):
+        fail(f"{name}: granularity.alternatives must be a list")
+    for alternative in alternatives:
+        _require_exact(name, alternative, ALTERNATIVE_FIELDS, "granularity alternative")
+        if not isinstance(alternative["mode"], str) or not alternative["mode"]:
+            fail(f"{name}: an alternative's mode must be a non-empty string")
+        options = alternative["options"]
+        if not isinstance(options, dict) or not all(
+            isinstance(key, str) and isinstance(value, str) for key, value in options.items()
+        ):
+            fail(f"{name}: an alternative's options must map option keys to values, both strings")
+        if alternative["value"] not in granularity_values:
+            fail(f"{name}: every alternative's granularity must be one of {sorted(granularity_values)}")
 
 
 def _validate_placement_core(name: str, placement: Any, *, root_kinds: set[str], what: str) -> None:

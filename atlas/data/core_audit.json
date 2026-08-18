@@ -254,13 +254,9 @@
       "kind": "libretro"
     },
     "hatari": {
-      "verdict": "multi-option",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] Answers no memory id. The save story is write-back into the content itself, option-routed: with 'hatari_writeprotect_floppy' off — the registered default — a modified floppy is written back into its own image at eject and shutdown, .st/.msa/.dim/.ipf/.stx and even inside a .zip (src/floppy.c:599-634 at 7008194, the revision the record pinned); 'on' discards the changes, 'auto' follows the file's own protection. Hard-disk content (a GEMDOS directory, ACSI/IDE images) takes writes in place under 'hatari_writeprotect_hd' the same way. Falcon/TT machines keep hatari.nvram under $HOME/.hatari (src/falcon/nvram.c:186-196) — a root outside every kind the card format states. A card is blocked on the mode form that names no file of the core's own (the save IS the content file, whose spelling varies with the format). The queue's 'auto.sav'/'hatari.sav' strings are memory-snapshot (savestate) defaults, reachable only through the core's own GUI — not this family. Not live-observed.",
-      "save_options": [
-        "hatari_writeprotect_floppy",
-        "hatari_writeprotect_hd"
-      ],
+      "note": "[V-source/binary] Answers no memory id. The save story is write-back into the content itself, option-routed: with 'hatari_writeprotect_floppy' off — the registered default — a modified floppy is written back into its own image at eject and shutdown, .st/.msa/.dim/.ipf/.stx and even inside a .zip (src/floppy.c:599-634 at 7008194, the revision the record pinned); 'on' discards the changes, 'auto' follows the file's own protection. Hard-disk content (a GEMDOS directory, ACSI/IDE images) takes writes in place under 'hatari_writeprotect_hd' the same way. Falcon/TT machines keep hatari.nvram under $HOME/.hatari (src/falcon/nvram.c:186-196) — a root outside every kind the card format states. Card shipped: the writeback modes state the save lives inside the content (save-inside-content), 'on' states the discarded emptiness (save-writes-discarded), and which option governs is the content's class, read by the card's rule. The queue's 'auto.sav'/'hatari.sav' strings are memory-snapshot (savestate) defaults, reachable only through the core's own GUI — not this family. Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,
@@ -390,9 +386,9 @@
       "kind": "libretro"
     },
     "mednafen_saturn": {
-      "verdict": "multi-option",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-live + V-source/binary] Answers system RAM alone; writes its three files itself, flat in the save directory — <stem>.bkr (internal backup RAM, mednafen/ss/ss.cpp:1037-1044 at ccba526), <stem>.bcr (backup cartridge, cart/backup.cpp:62) and <stem>.smpc (RTC and language, ss.cpp:1142) — live-observed content-keyed on a RetroDECK arrangement (2026-07-23). Each stem swaps to 'mednafen_saturn_libretro_shared' under its own option: 'beetle_saturn_shared_int' for the internal pair, 'beetle_saturn_shared_ext' for the cartridge (libretro.cpp:1045-1073, options read at :257-276) — two independent options over one file set, the Beetle PSX shape the single-option card cannot express. The 08-17 queue's 'BSC.MCR' hit is the SH-2 bus controller's register name in the debugger's vocabulary, not a file. Mednafen's rotating sav backups are stubbed out in this port (ss.cpp:1032-1035).",
+      "note": "[V-live + V-source/binary] Answers system RAM alone; writes its three files itself, flat in the save directory — <stem>.bkr (internal backup RAM, mednafen/ss/ss.cpp:1037-1044 at ccba526), <stem>.bcr (backup cartridge, cart/backup.cpp:62) and <stem>.smpc (RTC and language, ss.cpp:1142) — live-observed content-keyed on a RetroDECK arrangement (2026-07-23). Each stem swaps to 'mednafen_saturn_libretro_shared' under its own option: 'beetle_saturn_shared_int' for the internal pair, 'beetle_saturn_shared_ext' for the cartridge (libretro.cpp:1045-1073, options read at :257-276) — two independent options over one file set, the Beetle PSX shape the single-option card cannot express. The 08-17 queue's 'BSC.MCR' hit is the SH-2 bus controller's register name in the debugger's vocabulary, not a file. Mednafen's rotating sav backups are stubbed out in this port (ss.cpp:1032-1035). Card shipped: the mode is selected by a rule reading both options — the granularity block names each switch with its live value and where to change it.",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
@@ -402,11 +398,7 @@
         "emudeck": null,
         "bare": null
       },
-      "kind": "libretro",
-      "save_options": [
-        "beetle_saturn_shared_int",
-        "beetle_saturn_shared_ext"
-      ]
+      "kind": "libretro"
     },
     "melonds": {
       "verdict": "card",
@@ -611,9 +603,9 @@
       "kind": "libretro"
     },
     "scummvm": {
-      "verdict": "standard-dir",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] Answers no memory id. Saves are ScummVM's own slot files, named per engine from the ScummVM *target* — launcher configuration, not the content path — written by its DefaultSaveFileManager into ScummVM's 'savepath' setting, whose registered default is the frontend's save directory, flat (libretro-os-base.cpp:47, libretro-os-utils.cpp:212-221 at 686cdd1, the revision the shipped binary names); an unset or invalid setting falls back the same way. The setting is the user's, changeable in the core's own GUI and persisted in <system dir>/scummvm.ini (libretro-os-utils.cpp:64-69), so the truthful resolver route is reading that ini the way the emulator does — a code rule rather than a card — and the slot names are nothing atlas reads, so a card also needs the mode form that states a directory without naming files. Not live-observed.",
+      "note": "[V-source/binary] Answers no memory id. Saves are ScummVM's own slot files, named per engine from the ScummVM *target* — launcher configuration, not the content path — written by its DefaultSaveFileManager into ScummVM's 'savepath' setting, whose registered default is the frontend's save directory, flat (libretro-os-base.cpp:47, libretro-os-utils.cpp:212-221 at 686cdd1, the revision the shipped binary names); an unset or invalid setting falls back the same way. The setting is the user's, changeable in the core's own GUI and persisted in <system dir>/scummvm.ini (libretro-os-utils.cpp:64-69), so the card's rule reads that ini the way the emulator does, and its one mode states the directory while refusing the names (the all-unnamed group form; a savepath routed elsewhere steps aside with save-root-redirected). Not live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,
