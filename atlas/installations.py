@@ -141,6 +141,7 @@ from atlas.placement import (
     CAVEAT_SOFT_PATCHING_APPLIES,
     CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
     CAVEAT_SAVE_DIR_UNLISTABLE,
+    CAVEAT_SAVE_INSIDE_CONTENT,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
@@ -2112,6 +2113,21 @@ def _card_root_placement(
         f"rule card '{card.key}': {root_sentence} — {card.provenance}",
     ]
     all_caveats = [*caveats, *root.caveats]
+    if mode.inside_content is not None:
+        # The declared emptiness below is true — no separate save file exists —
+        # and this is what keeps it from reading as "this game has no save":
+        # the loaded content file itself takes the writes, and what to make of
+        # that is the caller's decision, not a file listing.
+        mode_value = granularity.option_value if granularity is not None else None
+        all_caveats.append(
+            Caveat(
+                CAVEAT_SAVE_INSIDE_CONTENT,
+                f"core {card.key!r}"
+                + (f" in mode {mode_value!r}" if mode_value else "")
+                + f": no separate save file exists — {mode.inside_content}",
+                {"core": card.key, "mode": mode_value or ""},
+            )
+        )
     if granularity is not None:
         all_caveats.extend(
             _file_set_caveats(

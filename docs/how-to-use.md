@@ -56,10 +56,15 @@ Rules that hold for every answer:
   `<cwd>` template, and only the launcher knows that directory. Every hole is filled from the content or the launch — a
   value the configs state is never one, because you could not supply it either; atlas resolves those itself or states a
   caveat. Holes are not confined to the directory: a declared file set can be a template too. An unknown is something
-  atlas refuses to state — it never guesses to keep a field non-empty. Branch on `atlas.HOLE_CONTENT_DIR` /
-  `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` / `HOLE_ROM_STEM` / `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the strings,
-  the way you would on any other closed set here: every one ships per-value names beside its tuple
-  (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`, `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
+  atlas refuses to state — it never guesses to keep a field non-empty. And a declared **emptiness** is a third thing,
+  distinct from both: a placement with `file_set.state == "declared"` and no files says no separate save file exists.
+  When the `save-inside-content` caveat rides beside it (quasi88 writing straight into the loaded disk image), the
+  loaded content file itself takes the writes — atlas will not hand you the ROM under a second name, so what to make of
+  a content file that doubles as the save (back it up, copy it, leave it) is your decision, made on
+  `atlas.CAVEAT_SAVE_INSIDE_CONTENT`. Branch on `atlas.HOLE_CONTENT_DIR` / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` /
+  `HOLE_ROM_STEM` / `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the strings, the way you would on any other closed
+  set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
+  `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
 - **Arguments follow one rule: the question's subject may be positional, everything else is keyword-only.** The subject

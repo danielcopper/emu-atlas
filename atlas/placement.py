@@ -266,6 +266,12 @@ CAVEAT_SAVE_DIR_UNLISTABLE = "save-dir-unlistable"
 # resolve it — the answer stays a template whose one hole only the launcher
 # can fill.
 CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT = "save-dir-launch-dependent"
+# No separate save file exists: the loaded content file itself takes the
+# writes. The file set is a declared emptiness — true as stated — and this
+# caveat is what keeps it from reading as "this game has no save". A client
+# decides for itself what to make of a content file that doubles as the save
+# (back it up, copy it, leave it); atlas states the fact and stops there.
+CAVEAT_SAVE_INSIDE_CONTENT = "save-inside-content"
 CAVEAT_SANDBOX_PATH_UNTRANSLATED = "sandbox-path-untranslated"
 CAVEAT_APP_RELATIVE_PATH_UNEXPANDED = "app-relative-path-unexpanded"
 CAVEAT_CFG_LINE_DROPPED = "cfg-line-dropped"

@@ -154,6 +154,16 @@ had.
 `complete` is the explicit claim that the mode's candidate universe is closed. A template can in principle carry it —
 the hole is in the name, not in the membership — but only source-verified provenance earns it.
 
+### `inside_content` — the mode with no separate save file
+
+Some cores can write straight into the loaded content file: quasi88 with its option on puts every sector write into the
+`.d88` image itself. Such a mode states `inside_content` (required prose: the reason, with citations) **instead of**
+`groups`, and its `root` must be `content_directory`. The answer is then a **declared emptiness** — true as stated, no
+separate save file exists — plus the `save-inside-content` caveat carrying the fact machine-readably. Deliberately never
+"the content file, declared as a save": a client already manages that file as the content, and handing it over under a
+second name would make a sync client treat the ROM as a save. What to make of a content file that doubles as the save
+(back it up, copy it, leave it) is the caller's decision; atlas states the fact and stops.
+
 ### Anchors — every recorded name, pinned to the string it was read from
 
 A card names files and subdirectories that reach a caller as fact, and `saves.anchors` records where each of those names

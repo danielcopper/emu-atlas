@@ -3784,7 +3784,7 @@
             "alternatives": [
               [
                 "enabled",
-                "per-game-files"
+                "per-game-file"
               ]
             ]
           }
@@ -3793,7 +3793,7 @@
     },
     {
       "name": "an-option-that-moves-the-writes-into-the-image-itself",
-      "rationale": "The first card whose two modes stand on different roots: quasi88's q88_save_to_disk_image enabled abandons the differencing file and writes the sectors into the loaded .d88 itself — the save is the modified content file, and the answer names exactly that file in the content's own tree, because a sync that wants the save must carry the image.",
+      "rationale": "quasi88's q88_save_to_disk_image enabled abandons the differencing file and writes the sectors into the loaded .d88 itself. The answer states that as what it is: no separate save file exists — a declared emptiness in the content's own tree — and the save-inside-content caveat carries the fact, so a sync client is never handed the ROM under a second name and decides for itself what to make of a content file that doubles as the save.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3844,11 +3844,9 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
-            "files": [
-              "Game (Japan).d88"
-            ],
-            "complete": false,
+            "state": "declared",
+            "files": [],
+            "complete": true,
             "groups": []
           },
           "caveats": [
@@ -3861,18 +3859,15 @@
               }
             },
             {
-              "code": "filenames-content-conditional",
+              "code": "save-inside-content",
               "data": {
                 "core": "quasi88",
-                "mode": "enabled",
-                "files": "Game (Japan).d88",
-                "files_established_for": "content loaded as a single .d88 image. With the option on, every sector write lands in the loaded image itself — the save is the modified content file, no file of the core's own appears anywhere. An .m3u playlist's member images take the writes instead of the playlist, and anything the built-in menu opens takes its own",
-                "citation": "src/LIBRETRO/file-op.c:441-445 at libretro/quasi88-libretro 42be798 — with the diff off the write falls through to the plain write on the opened image; the core accepts only d88 and m3u content (libretro.c:742)"
+                "mode": "enabled"
               }
             }
           ],
           "granularity": {
-            "value": "per-game-files",
+            "value": "per-game-file",
             "option_key": "q88_save_to_disk_image",
             "option_value": "enabled",
             "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
