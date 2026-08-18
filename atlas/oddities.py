@@ -215,6 +215,17 @@ class SaveGroup:
     controller port's slot 2 is configured as a VMU). ``complete`` asserts
     that the group's candidate universe is closed — no other file can belong
     to it; a card may claim it only with source-verified provenance.
+
+    ``root`` anchors the group at a *different* root than its mode — Flycast
+    keeps the console flash and the unmoved shared cards under the system
+    directory's ``dc`` while a per-game mode's own answer lives under the
+    save root (issue #97). ``None`` — every group's ordinary state — means
+    the mode's root; the loader refuses a restated one, since it could only
+    ever disagree. A cross-root group reaches the caller through
+    ``file_set.groups`` where the set is declared, and always through the
+    ``file-set-spans-roots`` caveat, whose data names the resolved directory
+    and the files — the caveat is what survives an observed answer, exactly
+    the way ``file-names-unestablished`` carries MAME's unnamed tree.
     """
 
     subdir: str | None
@@ -227,6 +238,7 @@ class SaveGroup:
     files_established_for: str | None = None
     files_citation: str | None = None
     unnamed: str | None = None
+    root: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -265,11 +277,10 @@ class SaveMode:
       four declared names can never exist. The scope travels into the same
       caveat, machine-readably, so the list is never read as established for
       content it was not.
-    - ``also_under`` names a *second* root this mode's save data lives under.
-      A card describes one root per mode, so a mode that spans two cannot
-      state its file set at all: it declares ``files: None`` plus this field,
-      and the resolver says so rather than presenting the half it can see as
-      the whole save.
+    A group may anchor at a different root than its mode (``SaveGroup.root``)
+    — the spanning-save answer that retired the old ``also_under`` field: the
+    mode states every part with its files instead of naming a second root it
+    cannot list (issue #97).
 
     ``writes_discarded`` is the third body a mode can have, beside ``groups``
     and ``inside_content``: the configuration keeps no save at all — the
@@ -282,7 +293,6 @@ class SaveMode:
 
     root: str
     groups: tuple[SaveGroup, ...]
-    also_under: str | None = None
     inside_content: str | None = None
     writes_discarded: str | None = None
 
@@ -303,7 +313,11 @@ class SaveMode:
         # file name follows from anything atlas reads (ScummVM's slot files
         # are named per engine from the launcher target). Its declared set is
         # the empty set of *statable* names, never a claim of completeness.
-        here = [group for group in named if group.subdir == named[0].subdir] if named else []
+        here = (
+            [group for group in named if group.root is None and group.subdir == named[0].subdir]
+            if named
+            else []
+        )
         if here and len({group.files is None for group in here}) != 1:
             # The directory's answer is the groups in it taken together, so one
             # unverified part would silently shorten a list stated as the whole.
@@ -330,11 +344,6 @@ class SaveMode:
             )
         if not statement.strip():
             raise ValueError(f"SaveMode: '{field}' states a reason, not an empty string")
-        if self.also_under is not None:
-            raise ValueError(
-                f"SaveMode: a mode stating '{field}' lies under one root by definition — "
-                "'also_under' cannot apply"
-            )
 
     @property
     def primary(self) -> SaveGroup:
@@ -380,7 +389,11 @@ class SaveMode:
         been about — so splitting one list into two by role does not move a
         single name out of an answer.
         """
-        return tuple(group for group in self.named if group.subdir == self.primary.subdir)
+        return tuple(
+            group
+            for group in self.named
+            if group.root is None and group.subdir == self.primary.subdir
+        )
 
     @property
     def subdir(self) -> str | None:
@@ -523,11 +536,6 @@ def _stated_mode(mode: Any, *, root: str, field: str, reason: str, where: str) -
         raise ValueError(
             f"{where}: '{field}' replaces 'groups' — there is no separate file to group"
         )
-    if mode.get("also_under") is not None:
-        raise ValueError(
-            f"{where}: a mode stating '{field}' lies under one root by definition — "
-            "'also_under' cannot apply"
-        )
     if field == "inside_content":
         return SaveMode(root=root, groups=(), inside_content=reason)
     return SaveMode(root=root, groups=(), writes_discarded=reason)
@@ -535,6 +543,14 @@ def _stated_mode(mode: Any, *, root: str, field: str, reason: str, where: str) -
 
 def _save_mode(mode: Any, where: str) -> SaveMode:
     """One entry of a card's ``modes`` block — validated, never coerced."""
+    if "also_under" in mode:
+        # The field retired with issue #97: a spanning mode states each part
+        # as a group anchored at its own root, files included. A card still
+        # spelling it would silently lose the claim it thinks it makes.
+        raise ValueError(
+            f"{where}: 'also_under' is retired — state the part under the second root as a "
+            "group with its own 'root' and its files"
+        )
     root = _expect_str(mode.get("root"), f"{where}: root")
     if root not in _KNOWN_MODE_ROOTS:
         raise ValueError(f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
@@ -557,25 +573,10 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     groups = tuple(
         _save_group(group, f"{where}: groups[{index}]") for index, group in enumerate(raw_groups)
     )
-    also_under = _expect_opt_str(mode.get("also_under"), f"{where}: also_under")
-    if also_under is not None and also_under not in _KNOWN_MODE_ROOTS:
-        raise ValueError(
-            f"{where}: also_under must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {also_under!r}"
-        )
-    if also_under == root:
-        raise ValueError(
-            f"{where}: also_under names this mode's own root ({root!r}) — it exists to name the "
-            "*second* root the save reaches, and a root does not span itself"
-        )
-    if also_under is not None and any(group.files is not None for group in groups):
-        # The field exists because no list under this root can describe a save
-        # that also lies under another — a card stating both contradicts itself.
-        raise ValueError(
-            f"{where}: a mode with 'also_under' cannot declare 'files' — its save data reaches "
-            "beyond this root, so the set is not statable here"
-        )
-    if root != ROOT_SAVEFILE_DIRECTORY and any(
-        segment in _KNOWN_SUBDIR_TEMPLATES
+    for index, group in enumerate(groups):
+        _check_group_root(group, index=index, mode_root=root, where=where)
+    if any(
+        (group.root or root) != ROOT_SAVEFILE_DIRECTORY and segment in _KNOWN_SUBDIR_TEMPLATES
         for group in groups
         for segment in (group.subdir or "").split("/")
     ):
@@ -585,9 +586,63 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
         # has established — refuse it until a core shows that behaviour.
         raise ValueError(
             f"{where}: a subdir template is established only under {ROOT_SAVEFILE_DIRECTORY!r} — "
-            f"no read core keys a {root!r} subdirectory on the content"
+            "no read core keys another root's subdirectory on the content"
         )
-    return SaveMode(root=root, groups=groups, also_under=also_under)
+    return SaveMode(root=root, groups=groups)
+
+
+# The cross-root shapes one reading has established (issue #97): a mode whose
+# answer lives under the frontend's save root can keep parts behind under the
+# system directory (Flycast's console flash and unmoved shared cards) or the
+# content's tree. Everything else is refused until a core shows the behaviour
+# — the same lets-see-a-customer rule the subdir templates follow.
+_KNOWN_GROUP_ROOTS = frozenset({"system_directory", "content_directory"})
+
+
+def _check_group_root(group: SaveGroup, *, index: int, mode_root: str, where: str) -> None:
+    """What a cross-root group may be — narrow on purpose, like every first shape.
+
+    The refused fields are not second-class: each one's machinery answers for
+    the mode's own directory (observation candidates, the per-directory scope
+    rules, the unnamed tree's caveat arithmetic), and a cross-root group is
+    deliberately outside all of it until a core needs otherwise. Its files
+    are required for the same reason the old ``also_under`` never carried
+    any: a second root with an unstatable list is exactly the claim that
+    field made, and it retired because Flycast's list turned out statable.
+    """
+    if group.root is None:
+        return
+    at = f"{where}: groups[{index}]"
+    if index == 0:
+        raise ValueError(
+            f"{at}: the first group is the mode's own answer — it cannot anchor at another root"
+        )
+    if group.root == mode_root:
+        raise ValueError(
+            f"{at}: 'root' restates the mode's own ({mode_root!r}) — omit it; a restated one "
+            "could only ever disagree"
+        )
+    if mode_root != ROOT_SAVEFILE_DIRECTORY or group.root not in _KNOWN_GROUP_ROOTS:
+        raise ValueError(
+            f"{at}: a cross-root group is established only from a {ROOT_SAVEFILE_DIRECTORY!r} "
+            f"mode into {sorted(_KNOWN_GROUP_ROOTS)} — no read core shows {mode_root!r} -> "
+            f"{group.root!r}"
+        )
+    if group.files is None:
+        raise ValueError(
+            f"{at}: a cross-root group states its files — a second root with an unstatable "
+            "list was the retired 'also_under' claim, and no read core needs it"
+        )
+    if group.unnamed is not None or group.observe is not None:
+        raise ValueError(
+            f"{at}: 'unnamed' and 'observe' answer for the mode's own directory — neither is "
+            "established on a cross-root group"
+        )
+    if group.files_without_save_id is not None or group.files_established_for is not None:
+        raise ValueError(
+            f"{at}: the file-list scopes answer for the mode's own directory — none is "
+            "established on a cross-root group"
+        )
 
 
 def _id_less_alternative(alternative: Any, files: Any, where: str) -> tuple[str, ...] | None:
@@ -666,7 +721,13 @@ def _save_group(mode: Any, where: str) -> SaveGroup:
             f"{where}: a group with 'unnamed' states no 'files' — the field exists because the "
             "names do not follow from anything atlas reads"
         )
+    group_root = _expect_opt_str(mode.get("root"), f"{where}: root")
+    if group_root is not None and group_root not in _KNOWN_MODE_ROOTS:
+        raise ValueError(
+            f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {group_root!r}"
+        )
     return SaveGroup(
+        root=group_root,
         subdir=_expect_subdir(mode.get("subdir"), f"{where}: subdir"),
         files=_expect_file_names(files, f"{where}: files") if files is not None else None,
         granularity=granularity,

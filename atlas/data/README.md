@@ -36,7 +36,6 @@ respelled here, so a card cannot select a value the contract cannot carry — an
 | field         | on    | accepted values                                                                    |
 | ------------- | ----- | ---------------------------------------------------------------------------------- |
 | `root`        | mode  | `savefile_directory`, `system_directory`, `content_directory`, `working_directory` |
-| `also_under`  | mode  | the same set, and not the mode's own `root`                                        |
 | `granularity` | group | `shared-card`, `shared-file`, `per-game-file`, `per-game-files`                    |
 | `role`        | group | `battery`, `memory-card`, `disk-diff`, `high-score`, `settings`                    |
 | `complete`    | group | a JSON boolean, `true` or `false` — never a string, never coerced                  |
@@ -151,12 +150,20 @@ had.
   on a Naomi board, so for arcade content two of the four declared names can never exist. Both travel into the same
   caveat as data, so a client can tell "this list is scoped" from "this list is universal" without reading prose. The
   scope needs a declared `files` to scope, and the citation needs a scope to cite; the loader enforces both.
-- `also_under` — a second root this mode's save data lives under (Flycast's `VMU A1` moves one controller's VMU and
-  leaves the rest on the shared card). Groups divide one root, not several: they carry a `subdir`, and the root stays
-  the mode's, so a mode reaching a second root still declares **no** `files` in any group — the loader refuses both
-  together — and the answer carries `file-set-spans-roots` instead of offering the visible part as the whole save. What
-  is left of task 16 in `docs/tasks/save-detection.md` is exactly this half: a group that resolves against a root of its
-  own, which needs the resolver to resolve both roots on either route rather than a field in this file.
+
+### A group at another root — the spanning save
+
+A group may anchor at a different root than its mode (`root` on the group; the retired `also_under` field's successor,
+issue #97). Flycast's per-game modes move the governed VMU under the save root while the console flash — and in `VMU A1`
+the three unmoved shared cards — stay under the system directory's `dc`, and the mode now states every part with its
+files instead of naming a second root it cannot list. The shape is narrow on purpose, like every first shape: only a
+`savefile_directory` mode may keep parts behind, only under `system_directory` or `content_directory`, never as the
+first group, always with files, and without the home-directory machinery (`observe`, `unnamed`, the list scopes) — each
+of those answers for the mode's own directory, and a cross-root group is outside all of it until a core needs otherwise.
+A cross-root part reaches the caller twice on purpose: as a `FileGroup` where the set is declared, and always as a
+`file-set-spans-roots` caveat whose data names the resolved directory and the files — the carrier that survives an
+observed answer, exactly the way `file-names-unestablished` carries MAME's unnamed tree. A card still spelling
+`also_under` fails the load loudly, because it would otherwise silently lose the claim it thinks it makes.
 
 `complete` is the explicit claim that the mode's candidate universe is closed. A template can in principle carry it —
 the hole is in the name, not in the membership — but only source-verified provenance earns it.

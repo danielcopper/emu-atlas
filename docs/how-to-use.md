@@ -571,13 +571,13 @@ connects four VMUs on a Dreamcast and two on a Naomi board, so for arcade conten
 appear. When the key is present, treat the list as established for that content class only — outside it, the set is a
 shape, not an inventory.
 
-**A save can lie under two roots.** Where a mode moves only part of the save — Flycast's `VMU A1` moves the first
-controller's VMU and leaves the other three plus the console flash on the shared card — atlas states no file set at all
-and says why with `file-set-spans-roots`, whose `data["also_under"]` names the other root — as a `root_kind` value, and
-resolved the same way `root_kind` itself is, so a mode that leaves the rest "in the system directory" reports
-`content_directory` on a machine whose flag moved that directory. `dir` still answers where the moved part goes. A card
-describes one root per mode, so the alternative would be to present a fragment as the whole save; treat this answer as
-"directory yes, file set no".
+**A save can lie under two roots — and every part is stated.** Where a mode moves only part of the save — Flycast's
+`VMU A1` moves the first controller's VMU under the save root and leaves the other three plus the console flash behind —
+the parts that stay carry their own directory and files: as entries in `file_set.groups` where the set is declared, and
+always as one `file-set-spans-roots` caveat per part, whose `data` names the resolved `dir` and the `files`. Resolved
+means resolved: a part that stays "in the system directory" reports the content's own directory on a machine whose flag
+moved that root, the same way the answer's `root_kind` would. The flat `files` stays the answer's own directory, as it
+always was — walk `groups`, or take the caveats' data, and no part is missed on any state of the file set.
 
 **`root_kind` says which anchor won, and a card does not decide it alone.** A core whose card roots its saves in the
 system directory (Flycast's shared VMUs) is not automatically anchored at `system_directory`: RetroArch hands such a
@@ -605,7 +605,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified         |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)     |
 | `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope            |
-| `file-set-spans-roots`                      | part of the save stays under another root (`data["also_under"]`) — no file set is stated          |
+| `file-set-spans-roots`                      | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared     |
 | `file-names-unestablished`                  | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole |
 | `file-set-across-systems`                   | no system was named; the set holds for every system in `data["systems"]` and for no other         |
 | `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain              |
