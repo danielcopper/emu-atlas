@@ -156,7 +156,8 @@ def _flycast_query(files):
 
 MAME_ROM = "/mnt/sd/retrodeck/roms/arcade/dkong.zip"
 MAME_REGISTERED = {
-    "mame_mame_paths_enable": {"default": "disabled", "values": ["disabled", "enabled"]}
+    "mame_mame_paths_enable": {"default": "disabled", "values": ["disabled", "enabled"]},
+    "mame_read_config": {"default": "disabled", "values": ["disabled", "enabled"]},
 }
 MAME_CORE = {"library_name": "MAME", "options": MAME_REGISTERED}
 
@@ -1806,6 +1807,137 @@ class TestScummvmSavepath:
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
         assert "could not be read" in stated[0].data["reason"]
+
+
+MAME_INI_DIR = "/mnt/sd/retrodeck/bios/mame/ini"
+MAME_OWN = 'mame_mame_paths_enable = "enabled"\n'
+MAME_OWN_INI = 'mame_mame_paths_enable = "enabled"\nmame_read_config = "enabled"\n'
+
+
+class TestMameOwnPaths:
+    """Two switches: the frontend's paths hold, or MAME's own world governs."""
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, MAME_ROM: "", SAVES_KEEP: ""}
+
+    def test_the_frontend_mode_reads_one_switch_and_offers_no_alternative(self):
+        # With the paths switch off the glue's command line outranks every ini,
+        # so the second switch cannot matter and is deliberately not consulted.
+        g = _mame_query(self.FILES).granularity
+        assert g is not None
+        assert g.mode == "frontend-paths"
+        assert [r.key for r in g.readings] == ["mame_mame_paths_enable"]
+        assert g.alternatives == ()
+
+    def test_paths_handed_back_without_ini_reading_anchor_at_the_process(self):
+        p = _mame_query({**self.FILES, OPTIONS_CFG: MAME_OWN})
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_ROOT_UNRESOLVABLE]
+        assert stated
+        assert stated[0].data["nvram_directory"] == "states/mame/nvram"
+        assert stated[0].data["cfg_directory"] == "states/mame/cfg"
+        assert stated[0].data["diff_directory"] == "system/mame/diff"
+        assert "working directory" in stated[0].message
+
+    def test_an_absolute_ini_value_is_a_redirect_per_tree(self):
+        p = _mame_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{MAME_INI_DIR}/mame.ini": "nvram_directory   /mnt/sd/mame-nvram\n",
+            }
+        )
+        redirected = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED]
+        assert [(c.data["key"], c.data["path"]) for c in redirected] == [
+            ("nvram_directory", "/mnt/sd/mame-nvram")
+        ]
+        assert redirected[0].data["options_file"] == f"{MAME_INI_DIR}/mame.ini"
+        unresolved = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_ROOT_UNRESOLVABLE]
+        assert unresolved
+        assert "nvram_directory" not in unresolved[0].data
+        assert unresolved[0].data["cfg_directory"] == "states/mame/cfg"
+        assert unresolved[0].data["diff_directory"] == "system/mame/diff"
+
+    def test_the_drivers_ini_outranks_the_main_one(self):
+        p = _mame_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{MAME_INI_DIR}/mame.ini": "cfg_directory   /mnt/sd/mame-cfg-main\n",
+                f"{MAME_INI_DIR}/dkong.ini": 'cfg_directory   "/mnt/sd/mame-cfg-dkong"\n',
+            }
+        )
+        redirected = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED]
+        assert [(c.data["path"], c.data["options_file"]) for c in redirected] == [
+            ("/mnt/sd/mame-cfg-dkong", f"{MAME_INI_DIR}/dkong.ini")
+        ]
+
+    def test_a_home_ini_shadows_the_system_one(self):
+        # $HOME/.mame comes first on the search path and the first find wins —
+        # the system-dir failsafe never gets asked.
+        p = _mame_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{HOME}/.mame/mame.ini": "nvram_directory   /mnt/sd/home-nvram\n",
+                f"{MAME_INI_DIR}/mame.ini": "nvram_directory   /mnt/sd/system-nvram\n",
+            }
+        )
+        redirected = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED]
+        assert [(c.data["path"], c.data["options_file"]) for c in redirected] == [
+            ("/mnt/sd/home-nvram", f"{HOME}/.mame/mame.ini")
+        ]
+
+    def test_a_cascade_member_nobody_can_attribute_refuses_the_mode(self):
+        p = _mame_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{MAME_INI_DIR}/mame.ini": "nvram_directory   /mnt/sd/mame-nvram\n",
+                f"{MAME_INI_DIR}/vertical.ini": "nvram_directory   /mnt/sd/other\n",
+            }
+        )
+        assert not any(c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED for c in p.caveats)
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "vertical.ini" in stated[0].data["reason"]
+
+    def test_an_unreadable_main_ini_leaves_the_mode_unestablished(self):
+        p = _mame_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{MAME_INI_DIR}/mame.ini": {"status": "unreadable"},
+            }
+        )
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "could not be established" in stated[0].data["reason"]
+
+    def test_an_unlistable_search_directory_refuses_the_shadow_check(self):
+        # The values read may be overridden by a file the listing would have
+        # shown — deciding without the listing would be the guess.
+        rd = _retrodeck(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+            },
+            unlistable=[MAME_INI_DIR],
+            cores={f"{DEPLOY}/mame_libretro.so": MAME_CORE},
+        )
+        p = placed(rd.savefile_location(content_path=MAME_ROM, core_so="mame_libretro.so"))
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "could not be listed" in stated[0].data["reason"]
+
+    def test_the_second_switch_alone_changes_nothing(self):
+        # read_config on while the frontend's paths hold: the command line
+        # outranks whatever the ini says, and the answer stays the mode.
+        g = _mame_query(
+            {**self.FILES, OPTIONS_CFG: 'mame_read_config = "enabled"\n'}
+        ).granularity
+        assert g is not None
+        assert g.mode == "frontend-paths"
+        assert [r.key for r in g.readings] == ["mame_mame_paths_enable"]
 
 
 SWAN_REGISTERED = {

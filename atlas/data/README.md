@@ -216,7 +216,13 @@ neighbours — every switch, changed once — rather than the whole product (Swa
 twenty-six CD combinations). A rule that cannot decide selects nothing and says why — `core-mode-unestablished` with the
 reason, or the sharper codes where they exist (`core-option-value-unestablished` per unreadable switch,
 `save-root-redirected` where ScummVM's `savepath` points outside every root kind the format can anchor, with the
-configured path in the caveat's data).
+configured path in the caveat's data). Stepping aside can also be the whole truth of a mode rather than a failure to
+read one: MAME handed its own paths (`mame_mame_paths_enable`) anchors its save trees at the frontend process's working
+directory — process state, written nowhere on the machine — so the rule states the relative trees machine-readably
+(`save-root-unresolvable`) instead of claiming a root; with `mame_read_config` also on it first reads `mame.ini` and the
+driver's `<stem>.ini` along `$HOME/.mame` → `<system>/mame/ini` the way the emulator does, and absolute values become
+per-tree `save-root-redirected` caveats. The card keeps no mode for that world — a mode whose directory nobody can state
+is a caveat, not a mode.
 
 ### Anchors — every recorded name, pinned to the string it was read from
 

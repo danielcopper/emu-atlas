@@ -76,6 +76,7 @@ from atlas.firmware import firmware_for_system as _resolve_for_system
 from atlas.firmware import firmware_inventory as _resolve_inventory
 from atlas.firmware import identify_firmware as _resolve_identification
 from atlas.machine import (
+    GLOB_COMPLETE,
     KIND_DIRECTORY,
     KIND_FILE,
     KIND_MISSING,
@@ -1943,6 +1944,34 @@ def _rule_option_readings(
     return values, readings, caveats
 
 
+def _rule_file_lookup(machine: Machine, base: str | None, name: str) -> FileLookup:
+    """One file a rule asked for under *base* — unreadable when the root is out of reach."""
+    if base is None:
+        return FileLookup(None, FILE_UNREADABLE, None)
+    path = os.path.join(base, name)
+    result = machine.read_text(path)
+    if result.status == READ_OK:
+        return FileLookup(result.text, FILE_READ, path)
+    if result.status == READ_MISSING:
+        return FileLookup(None, FILE_ABSENT, path)
+    return FileLookup(None, FILE_UNREADABLE, path)
+
+
+def _rule_entries(machine: Machine, base: str | None, name: str) -> tuple[str, ...] | None:
+    """The names in one directory a rule asked about — ``None`` when unlistable.
+
+    An absent directory answers ``()``, a truthful negative; a root that is
+    itself out of reach answers ``None`` the way an unlistable directory does,
+    because a rule that cannot look must not conclude nothing is there.
+    """
+    if base is None:
+        return None
+    listing = machine.glob(os.path.join(_glob_escape(os.path.join(base, name)), "*"))
+    if listing.status != GLOB_COMPLETE:
+        return None
+    return tuple(os.path.basename(match) for match in listing.matches)
+
+
 def _rule_reading(
     machine: Machine,
     *,
@@ -1961,7 +1990,7 @@ def _rule_reading(
     *can* decide on stays enumerable in one place.
     """
 
-    def system_file(name: str) -> FileLookup:
+    def _system_base() -> str | None:
         root = _core_system_root(
             sandbox=sandbox,
             cfg_label=cfg_label,
@@ -1970,14 +1999,23 @@ def _rule_reading(
             retroarch_config_dir=retroarch_config_dir,
         )
         if root.needs or not root.reachable:
-            return FileLookup(None, FILE_UNREADABLE, None)
-        path = os.path.join(root.base, name)
-        result = machine.read_text(path)
-        if result.status == READ_OK:
-            return FileLookup(result.text, FILE_READ, path)
-        if result.status == READ_MISSING:
-            return FileLookup(None, FILE_ABSENT, path)
-        return FileLookup(None, FILE_UNREADABLE, path)
+            return None
+        return root.base
+
+    # The home the emulator's own ``$HOME`` expands to is the sandbox
+    # environment's HOME, which is shared with the host — so a rule's
+    # home-relative read follows the emulator's expansion, not atlas's.
+    def system_file(name: str) -> FileLookup:
+        return _rule_file_lookup(machine, _system_base(), name)
+
+    def home_file(name: str) -> FileLookup:
+        return _rule_file_lookup(machine, sandbox.expansion_home, name)
+
+    def system_entries(name: str) -> tuple[str, ...] | None:
+        return _rule_entries(machine, _system_base(), name)
+
+    def home_entries(name: str) -> tuple[str, ...] | None:
+        return _rule_entries(machine, sandbox.expansion_home, name)
 
     def is_directory(path: str) -> bool | None:
         resolved = sandbox.host("savepath", path)
@@ -2000,7 +2038,11 @@ def _rule_reading(
         RuleReading(
             option_values=recorder,
             content_extension=content.extension,
+            content_stem=content.rom_stem,
             system_file=system_file,
+            home_file=home_file,
+            system_entries=system_entries,
+            home_entries=home_entries,
             save_dirs=tuple(save_dirs),
             is_directory=is_directory,
         ),

@@ -1296,11 +1296,14 @@
         ]
       },
       "saves": {
-        "governing_option": {
-          "key": "mame_mame_paths_enable"
+        "governing_rule": {
+          "options": [
+            "mame_mame_paths_enable",
+            "mame_read_config"
+          ]
         },
         "modes": {
-          "disabled": {
+          "frontend-paths": {
             "root": "savefile_directory",
             "groups": [
               {
@@ -1337,17 +1340,6 @@
                 "unnamed": "romload.cpp:1111-1123 at libretro/mame a90e86e1 — the differencing image for a CHD hard disk is named after the disk image's own entry in the machine's ROM table inside the binary (romp->name() + \".dif\"), which is no read of this machine. Upstream says so on the line above it: 'TODO: use system name and/or software list name in the path - the current setup doesn't scale'. The same directory is used by a mounted hard disk image (harddriv.cpp:196-200)."
               }
             ]
-          },
-          "enabled": {
-            "root": "savefile_directory",
-            "groups": [
-              {
-                "subdir": null,
-                "files": null,
-                "granularity": "per-game-file",
-                "role": "battery"
-              }
-            ]
           }
         },
         "anchors": {
@@ -1374,14 +1366,16 @@
           },
           "default.cfg": {
             "literal": "default.cfg"
+          },
+          "mame_read_config": {
+            "literal": "mame_read_config"
           }
         }
       },
       "provenance": {
-        "source": "MAME source at a90e86e1, the revision the shipped binary names in its library_version. The libretro glue points -nvram_directory, -cfg_directory and -diff_directory at <save_dir>/mame/{nvram,cfg,diff} (retro_init.cpp:110-153 and :559-577); MAME then names the NVRAM file after the running machine (machine.cpp:1116-1147, written at :1178-1186) and writes both default.cfg and <machine>.cfg on every save (config.cpp:108-114). The machine's name is the ROM's own basename: the glue derives it in parsePath and passes it as the system to run (retro_init.cpp:158-207, :652). Two things the file names cannot carry. A machine with more than one NVRAM device gets a *directory* <rom_stem>/ with one file per device tag instead of a single file (machine.cpp:1125-1145), and a non-default BIOS selection appends _<n> to the name (:1121-1122). And with mame_mame_paths_enable turned on the glue sets no paths at all (retro_init.cpp:554-555), leaving MAME to take them from its own ini, which atlas does not read — that mode therefore states no file names.",
+        "source": "MAME source at a90e86e1, the revision the shipped binary names in its library_version. The libretro glue points -nvram_directory, -cfg_directory and -diff_directory at <save_dir>/mame/{nvram,cfg,diff} (retro_init.cpp:110-153 and :559-577); MAME then names the NVRAM file after the running machine (machine.cpp:1116-1147, written at :1178-1186) and writes both default.cfg and <machine>.cfg on every save (config.cpp:108-114). The machine's name is the ROM's own basename: the glue derives it in parsePath and passes it as the system to run (retro_init.cpp:158-207, :652). Two things the file names cannot carry. A machine with more than one NVRAM device gets a *directory* <rom_stem>/ with one file per device tag instead of a single file (machine.cpp:1125-1145), and a non-default BIOS selection appends _<n> to the name (:1121-1122). And two switches, not one, decide whether any of this reaches the emulator. The glue's paths are command line, which outranks every ini (OPTION_PRIORITY_CMDLINE = HIGH+1, emuopts.h:18; every ini priority sits below it, mameopts.h:27-39), so frontend-paths holds whatever mame_read_config says. With mame_mame_paths_enable turned on the glue sets nothing at all (retro_init.cpp:554-555) — not even the ini search path — and MAME's own world governs: mame_read_config off (both switches default off) reads no ini whatsoever (parse_one_ini, mameopts.cpp:116-120), leaving the fork's compiled-in relative defaults — states/mame/nvram, states/mame/cfg, system/mame/diff (emuopts.cpp:59-64) — to resolve against the frontend process's working directory, which no read of this machine can establish; on, the inis are searched along $HOME/.mame then <system dir>/mame/ini (INI_PATH, retromain.cpp:85-93, failsafe appended at :181-205, $HOME expanded per element at options.cpp:531-569), and the card's rule reads mame.ini and the driver's <stem>.ini the way the emulator does, stepping aside with the values stated machine-readably. The rest of MAME's ini cascade (vertical.ini, <source>.ini, <parent>.ini, ...) applies by driver metadata inside the binary, which atlas cannot attribute — the rule checks such files' presence and refuses to guess their meaning.",
         "status": {
-          "disabled": "[D] The registered default and the only mode the frontend's own path setup reaches. Read from source; no save was watched being written, and the differencing tree is named without its files by design.",
-          "enabled": "[D] Read from source. The glue sets no paths in this mode, so what MAME uses is its own ini — unread, and therefore unstated rather than guessed."
+          "frontend-paths": "[D] The registered default and the only mode the frontend's own path setup reaches — its command line outranks any ini MAME might read. Read from source; no save was watched being written, and the differencing tree is named without its files by design."
         }
       }
     },

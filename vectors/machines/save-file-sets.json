@@ -1056,6 +1056,13 @@
                   "disabled",
                   "enabled"
                 ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
               }
             }
           }
@@ -1134,7 +1141,7 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "mame",
-                "mode": "disabled",
+                "mode": "frontend-paths",
                 "files": "dkong",
                 "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.cpp:74, m_basename(_config.gamedrv().name)) and every name below is built on it, while the glue finds the driver from the content's basename (retro_init.cpp:285-305). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "citation": "machine.cpp:74 and :1116-1147 at libretro/mame a90e86e1"
@@ -1152,7 +1159,7 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "mode": "disabled",
+            "mode": "frontend-paths",
             "readings": [
               {
                 "key": "mame_mame_paths_enable",
@@ -1160,17 +1167,7 @@
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
-            "alternatives": [
-              {
-                "mode": "enabled",
-                "options": {
-                  "mame_mame_paths_enable": "enabled"
-                },
-                "values": [
-                  "per-game-file"
-                ]
-              }
-            ]
+            "alternatives": []
           }
         }
       }
@@ -4970,6 +4967,290 @@
               }
             ]
           }
+        }
+      }
+    },
+    {
+      "name": "mame-handed-its-own-paths-anchors-them-at-the-process",
+      "rationale": "mame_mame_paths_enable is on and mame_read_config is off (its registered default), so the glue imposes nothing and MAME reads no ini at all — its compiled-in save trees (states/mame/nvram, states/mame/cfg, system/mame/diff) are relative paths, resolved against the frontend process's working directory. That is process state, written nowhere on the machine, so the card steps aside and save-root-unresolvable carries the relative trees a caller would find under the anchor atlas refuses to guess.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame_mame_paths_enable = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
+            "library_name": "MAME",
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip",
+          "core_so": "mame_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-root-unresolvable",
+              "data": {
+                "core": "mame",
+                "nvram_directory": "states/mame/nvram",
+                "cfg_directory": "states/mame/cfg",
+                "diff_directory": "system/mame/diff"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "mames-own-ini-routes-two-trees-and-leaves-one-relative",
+      "rationale": "Both switches are on, so MAME's inis govern and the rule reads them the way the emulator searches: $HOME/.mame first, then <system>/mame/ini, the driver's <stem>.ini outranking mame.ini. mame.ini routes the nvram tree absolutely and names a cfg tree the driver's dkong.ini overrides — both redirects are stated per tree with the file each value came from — while the diff tree stays at the compiled-in relative default and lands in save-root-unresolvable.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame_mame_paths_enable = \"enabled\"\nmame_read_config = \"enabled\"\n",
+          "/mnt/sd/retrodeck/bios/mame/ini/mame.ini": "nvram_directory           /mnt/sd/mame-nvram\ncfg_directory             /mnt/sd/mame-cfg-main\n",
+          "/mnt/sd/retrodeck/bios/mame/ini/dkong.ini": "cfg_directory             \"/mnt/sd/mame-cfg-dkong\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/mame-nvram",
+          "/mnt/sd/mame-cfg-dkong"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
+            "library_name": "MAME",
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip",
+          "core_so": "mame_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "mame",
+                "key": "nvram_directory",
+                "path": "/mnt/sd/mame-nvram",
+                "options_file": "/mnt/sd/retrodeck/bios/mame/ini/mame.ini"
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "mame",
+                "key": "cfg_directory",
+                "path": "/mnt/sd/mame-cfg-dkong",
+                "options_file": "/mnt/sd/retrodeck/bios/mame/ini/dkong.ini"
+              }
+            },
+            {
+              "code": "save-root-unresolvable",
+              "data": {
+                "core": "mame",
+                "diff_directory": "system/mame/diff"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-ini-cascade-member-atlas-cannot-attribute-refuses-the-mode",
+      "rationale": "Both switches are on and a vertical.ini sits on MAME's search path. Whether it applies is the machine's screen orientation — driver metadata inside the binary, which atlas does not read — and it parses at higher priority than mame.ini, so which values govern cannot be established. The rule refuses with the file named rather than answering from values a cascade member may override.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame_mame_paths_enable = \"enabled\"\nmame_read_config = \"enabled\"\n",
+          "/mnt/sd/retrodeck/bios/mame/ini/mame.ini": "nvram_directory           /mnt/sd/mame-nvram\n",
+          "/mnt/sd/retrodeck/bios/mame/ini/vertical.ini": "nvram_directory           /mnt/sd/mame-nvram-vertical\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
+            "library_name": "MAME",
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip",
+          "core_so": "mame_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "mame",
+                "reason": "MAME reads an ini cascade whose members apply by driver metadata inside the binary, which atlas cannot attribute — vertical.ini on its search path outranks mame.ini, so which values govern was never established"
+              }
+            }
+          ],
+          "granularity": null
         }
       }
     }
