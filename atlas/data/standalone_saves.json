@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "spec": "Standalone save cards: which emulators the savefile question can answer for a non-libretro catalogue entry, keyed by the %EMULATOR_…% token the launch command names. This is world knowledge under DESIGN.md's boundary rule — each card names the configuration file that governs the emulator's save tree and the catalogue systems it answers for, with source citations at the revision the arrangement ships; the reading itself is code beside the card (atlas/installations.py), which reads that configuration the way the emulator does and states every degradation as a structured caveat. A card is deliberately thin: what SlotA = 8 means, what an empty path key defaults to, how a configured path templates its region — none of that is on the machine, so it lives as cited code, never as a copied value that could age apart from the binary.",
+  "emulators": {
+    "DOLPHIN": {
+      "saves": {
+        "config": {
+          "base": "config",
+          "path": "dolphin-emu/Dolphin.ini"
+        },
+        "systems": ["gc", "wii"]
+      },
+      "provenance": {
+        "source": "Dolphin 2603a, the release the shipped binary names in its version strings (components/dolphin/bin/dolphin-emu-nogui). GameCube: which device sits in each card slot is [Core] SlotA/SlotB in Dolphin.ini, an EXI device id (EXI_Device.h:25-45 — 1 memory card, 8 GCI folder, 9 AGP, 255 none; registered defaults GCI folder for A, none for B, MainSettings.cpp:133-136). An empty MemcardA/BPath defaults to <user>/GC/MemoryCard<A|B>.<region>.raw and an empty GCIFolderA/BPath to <user>/GC/<region>/Card <A|B> (GetMemcardPath :767-774, GetGCIFolderPath :835-841); a configured value of either is a template whose region segment the running disc replaces (:777-819, :844-873), so the answer keeps a <region> hole rather than reading the value literally. GCI files are named from the save's own directory entry — makercode-gamecode-filename.gci (GCMemcardDirectory.cpp:56-60) — none of it derivable from the content path, so the folder groups are unnamed. A raw card of standard size carries no block suffix (EXI.cpp:123-124 defaults to the 2043-block card; a smaller MemoryCardSize appends one, GetMemcardPath :763-765). Wii: saves live in the NAND tree title/<hi:08x>/<lo:08x>/data below NANDRootPath (NandPaths.cpp:63-71), the title id from the disc — unnamed per title. The user directory is the emulator's XDG data tree, which the arrangement pins and reroutes with symlinks the answer walks. Not modelled and stated as such where met: the AGP device (slot id 9 saves onto a GBA cartridge image), the GBA-integration SavesPath, and the GCIFolder*PathOverride keys a movie or netplay session sets."
+      }
+    }
+  }
+}

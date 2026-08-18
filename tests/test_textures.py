@@ -424,6 +424,15 @@ ESDE_SYSTEMS = """<?xml version="1.0"?>
     <platform>ps2</platform>
     <theme>ps2</theme>
   </system>
+  <system>
+    <name>n3ds</name>
+    <fullname>Nintendo 3DS</fullname>
+    <path>%ROMPATH%/n3ds</path>
+    <extension>.3ds .3DS</extension>
+    <command label="Azahar (Standalone)">%EMULATOR_AZAHAR% %ROM%</command>
+    <platform>n3ds</platform>
+    <theme>n3ds</theme>
+  </system>
 </systemList>
 """
 
@@ -564,13 +573,25 @@ class TestTheEntryRouteAsymmetryIsDeliberate:
     """
 
     def test_the_same_entry_answers_textures_and_refuses_its_save(self):
-        entry = _entry("gc")
+        # Azahar has a texture card and no standalone save card — the split
+        # inside one entry is evidence, not kind.
+        entry = _entry("n3ds")
         assert isinstance(entry.texture_pack_location(), TexturePlacement)
         refusal = entry.savefile_location()
         assert isinstance(refusal, Unresolved)
         assert refusal.code == atlas.UNRESOLVED_STANDALONE
 
-    def test_the_savestate_question_refuses_with_the_save_question(self):
+    def test_an_emulator_with_a_save_card_answers_the_save_question_too(self):
+        # Dolphin carries a standalone save card since #181, so the same entry
+        # that answers textures answers its save — the asymmetry was never
+        # about the standalone kind, only about what atlas has established.
+        entry = _entry("gc")
+        assert isinstance(entry.texture_pack_location(), TexturePlacement)
+        assert isinstance(entry.savefile_location(), atlas.SavefilePlacement)
+
+    def test_the_savestate_question_still_refuses_where_the_save_answers(self):
+        # States are their own wiring (Dolphin's StateSaves tree) and stay
+        # outside the save card deliberately — refusal, not silence.
         refusal = _entry("gc").savestate_location()
         assert isinstance(refusal, Unresolved)
         assert refusal.code == atlas.UNRESOLVED_STANDALONE
