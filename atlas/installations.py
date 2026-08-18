@@ -166,6 +166,7 @@ from atlas.placement import (
     ROOT_WORKING_DIRECTORY,
     STATE_ROOT_CONTENT_DIRECTORY,
     SUBDIR_TEMPLATE_HOLES,
+    TEMPLATE_CONTENT_DIR,
     TEMPLATE_CONTENT_DIR_NAME,
     TEMPLATE_ROM_STEM,
     FILE_SET_DECLARED,
@@ -188,6 +189,7 @@ from atlas.placement import (
     RootKind,
     SCREENSHOT_ROOT_CONTENT_DIRECTORY,
     SCREENSHOT_ROOT_DIRECTORY,
+    ScreenshotRootKind,
     SavefilePlacement,
     SavestatePlacement,
     ScreenshotPlacement,
@@ -2259,7 +2261,7 @@ def _content_system_root(content: _Content, *, provenance: str) -> _SystemRoot:
     if content.system_dir is not None:
         return _SystemRoot(content.system_dir, ROOT_CONTENT_DIRECTORY, sources=(provenance,))
     return _SystemRoot(
-        "<content_dir>", ROOT_CONTENT_DIRECTORY, needs=(HOLE_CONTENT_DIR,), sources=(provenance,)
+        TEMPLATE_CONTENT_DIR, ROOT_CONTENT_DIRECTORY, needs=(HOLE_CONTENT_DIR,), sources=(provenance,)
     )
 
 
@@ -4128,10 +4130,47 @@ def _retroarch_screenshot_location(
     )
     caveats.extend(_ignored_caveats((*in_ignored, *sort_ignored)))
 
+    directory, root_kind, needs, reachable = _screenshot_answer_root(
+        root,
+        reachable=reachable,
+        in_content=in_content,
+        sort_by_content=sort_by_content,
+        content=content,
+        sources=sources,
+    )
+    physical_dir: str | None = None
+    if reachable and not needs:
+        physical_dir, link_caveats = _link_view(machine, directory)
+        caveats.extend(link_caveats)
+    return ScreenshotPlacement(
+        dir=directory,
+        root_kind=root_kind,
+        needs=needs,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
+        physical_dir=physical_dir,
+    )
+
+
+def _screenshot_answer_root(
+    root: str | None,
+    *,
+    reachable: bool,
+    in_content: bool,
+    sort_by_content: bool,
+    content: _Content,
+    sources: list[str],
+) -> tuple[str, ScreenshotRootKind, tuple[str, ...], bool]:
+    """Which root the shot lands under, and the directory below it.
+
+    RetroArch's own decision order (task_screenshot.c:488-550): the
+    in-content flag outranks even a configured directory, an empty root
+    falls to the content, and sorting by the content's directory name
+    applies only under a configured root.
+    """
     needs: tuple[str, ...] = ()
     if in_content or root is None:
-        root_kind = SCREENSHOT_ROOT_CONTENT_DIRECTORY
-        directory = content.dir_path or "<content_dir>"
+        directory = content.dir_path or TEMPLATE_CONTENT_DIR
         if content.dir_path is None:
             needs = (HOLE_CONTENT_DIR,)
         sources.append(
@@ -4145,35 +4184,22 @@ def _retroarch_screenshot_location(
                 "shot entirely (:941-943)"
             )
         )
-        reachable = content.dir_path is not None
-    else:
-        root_kind = SCREENSHOT_ROOT_DIRECTORY
-        directory = root
-        if sort_by_content:
-            # task_screenshot.c:494-507 — the parent directory's name, only
-            # under a configured root.
-            if content.dir_name is not None:
-                directory = os.path.join(directory, content.dir_name)
-            else:
-                directory = os.path.join(directory, "<content_dir_name>")
-                needs = (HOLE_CONTENT_DIR_NAME,)
-            sources.append(
-                "sorted into a subdirectory named after the content's directory "
-                "(sort_screenshots_by_content_enable, task_screenshot.c:494-507); created at "
-                "the moment of the shot (:553-556)"
-            )
-    physical_dir: str | None = None
-    if reachable and not needs:
-        physical_dir, link_caveats = _link_view(machine, directory)
-        caveats.extend(link_caveats)
-    return ScreenshotPlacement(
-        dir=directory,
-        root_kind=root_kind,
-        needs=needs,
-        sources=tuple(sources),
-        caveats=tuple(caveats),
-        physical_dir=physical_dir,
-    )
+        return directory, SCREENSHOT_ROOT_CONTENT_DIRECTORY, needs, content.dir_path is not None
+    directory = root
+    if sort_by_content:
+        # task_screenshot.c:494-507 — the parent directory's name, only
+        # under a configured root.
+        if content.dir_name is not None:
+            directory = os.path.join(directory, content.dir_name)
+        else:
+            directory = os.path.join(directory, TEMPLATE_CONTENT_DIR_NAME)
+            needs = (HOLE_CONTENT_DIR_NAME,)
+        sources.append(
+            "sorted into a subdirectory named after the content's directory "
+            "(sort_screenshots_by_content_enable, task_screenshot.c:494-507); created at "
+            "the moment of the shot (:553-556)"
+        )
+    return directory, SCREENSHOT_ROOT_DIRECTORY, needs, reachable
 
 
 def _optional(caveat: Caveat | None) -> tuple[Caveat, ...]:
@@ -4273,7 +4299,7 @@ def _card_root(
         if chain.content.dir_path is not None:
             return _SystemRoot(chain.content.dir_path, ROOT_CONTENT_DIRECTORY, sources=(provenance,))
         return _SystemRoot(
-            "<content_dir>",
+            TEMPLATE_CONTENT_DIR,
             ROOT_CONTENT_DIRECTORY,
             needs=(HOLE_CONTENT_DIR,),
             sources=(provenance,),
