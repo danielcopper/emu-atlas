@@ -423,6 +423,25 @@ class CoreCard:
         return library_name is not None and library_name in self.library_names
 
 
+def _inside_content_mode(mode: Any, *, root: str, reason: str, where: str) -> SaveMode:
+    """The groups-less form: the loaded content file itself takes the writes."""
+    if root != ROOT_CONTENT_DIRECTORY:
+        raise ValueError(
+            f"{where}: a save inside the content lies in the content's own tree — root must "
+            f"be {ROOT_CONTENT_DIRECTORY!r}, got {root!r}"
+        )
+    if mode.get("groups") is not None:
+        raise ValueError(
+            f"{where}: 'inside_content' replaces 'groups' — there is no separate file to group"
+        )
+    if mode.get("also_under") is not None:
+        raise ValueError(
+            f"{where}: a save inside the content lies under one root by definition — "
+            "'also_under' cannot apply"
+        )
+    return SaveMode(root=root, groups=(), inside_content=reason)
+
+
 def _save_mode(mode: Any, where: str) -> SaveMode:
     """One entry of a card's ``modes`` block — validated, never coerced."""
     root = _expect_str(mode.get("root"), f"{where}: root")
@@ -430,21 +449,7 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
         raise ValueError(f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
     inside_content = _expect_opt_str(mode.get("inside_content"), f"{where}: inside_content")
     if inside_content is not None:
-        if root != ROOT_CONTENT_DIRECTORY:
-            raise ValueError(
-                f"{where}: a save inside the content lies in the content's own tree — root must "
-                f"be {ROOT_CONTENT_DIRECTORY!r}, got {root!r}"
-            )
-        if mode.get("groups") is not None:
-            raise ValueError(
-                f"{where}: 'inside_content' replaces 'groups' — there is no separate file to group"
-            )
-        if mode.get("also_under") is not None:
-            raise ValueError(
-                f"{where}: a save inside the content lies under one root by definition — "
-                "'also_under' cannot apply"
-            )
-        return SaveMode(root=root, groups=(), inside_content=inside_content)
+        return _inside_content_mode(mode, root=root, reason=inside_content, where=where)
     raw_groups = mode.get("groups")
     if not isinstance(raw_groups, list) or not raw_groups:
         raise ValueError(f"{where}: 'groups' must be a non-empty list — a mode has at least one part")
