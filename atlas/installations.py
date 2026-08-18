@@ -2362,6 +2362,18 @@ def _core_system_root(
     return _dc_replace(root, caveats=(*caveats, *root.caveats))
 
 
+def _with_cross_parts(file_set: FileSet, cross_parts: "_CrossParts") -> FileSet:
+    """The declared decomposition gains the parts under the other roots.
+
+    The flat ``files`` stays the answer's own directory, as it always was. An
+    observed or unknown set keeps its shape — no decomposition exists there to
+    extend, and the spans-roots caveats carry the parts instead.
+    """
+    if cross_parts.groups and file_set.state == FILE_SET_DECLARED and file_set.groups:
+        return _dc_replace(file_set, groups=(*file_set.groups, *cross_parts.groups))
+    return file_set
+
+
 @dataclass(frozen=True, slots=True)
 class _CrossParts:
     """A mode's resolved cross-root groups, their caveats, and unfilled holes."""
@@ -3423,10 +3435,7 @@ def _standard_placement(
             )
         )
     all_caveats.extend(cross_parts.caveats)
-    if cross_parts.groups and file_set.state == FILE_SET_DECLARED and file_set.groups:
-        # The decomposition gains the parts under the other roots; the flat
-        # `files` stays the answer's own directory, as it always was.
-        file_set = _dc_replace(file_set, groups=(*file_set.groups, *cross_parts.groups))
+    file_set = _with_cross_parts(file_set, cross_parts)
 
     return SavefilePlacement(
         dir=final_dir,
