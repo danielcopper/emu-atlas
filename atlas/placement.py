@@ -446,6 +446,9 @@ TEMPLATE_SAVE_ID = "<save_id>"
 # A token must be the whole segment — ``_base_of`` undoes a subdir by counting
 # segments, and that stays exact only while one template fills to exactly one.
 TEMPLATE_CONTENT_DIR_NAME = "<content_dir_name>"
+# The whole-directory template the content-rooted answers keep when no content
+# was named — the spelling `needs`'s content_dir hole fills.
+TEMPLATE_CONTENT_DIR = "<content_dir>"
 _FILE_NAME_HOLES: Mapping[str, str] = MappingProxyType({TEMPLATE_SAVE_ID: HOLE_SAVE_ID})
 SUBDIR_TEMPLATE_HOLES: Mapping[str, str] = MappingProxyType(
     {TEMPLATE_ROM_STEM: HOLE_ROM_STEM, TEMPLATE_CONTENT_DIR_NAME: HOLE_CONTENT_DIR_NAME}
@@ -1149,7 +1152,7 @@ def _resolve_placement_dir(
         if content_dir_path is not None:
             parts = [content_dir_path]
         else:
-            parts = ["<content_dir>"]
+            parts = [TEMPLATE_CONTENT_DIR]
             needs.append(HOLE_CONTENT_DIR)
     else:
         rooted_in_content = False
@@ -1159,7 +1162,7 @@ def _resolve_placement_dir(
         if content_dir_name is not None:
             parts.append(content_dir_name)
         else:
-            parts.append("<content_dir>")
+            parts.append(TEMPLATE_CONTENT_DIR)
             needs.append(HOLE_CONTENT_DIR)
     if layout.sort_by_core:
         if library_name is not None:
