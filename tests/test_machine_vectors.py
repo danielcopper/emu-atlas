@@ -25,6 +25,7 @@ from atlas.contract import (
     catalogue_contract,
     savefile_answer_contract,
     savestate_answer_contract,
+    screenshot_answer_contract,
     texture_answer_contract,
     mod_answer_contract,
     soft_patch_answer_contract,
@@ -140,6 +141,13 @@ def _savestate_location(installs, query, name):
     )
 
 
+def _screenshot_location(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return screenshot_answer_contract(
+        install.screenshot_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+    )
+
+
 def _texture_pack_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return texture_answer_contract(
@@ -225,6 +233,7 @@ QUESTIONS = {
     "aggregate": ("aggregate_query", _aggregate),
     "savefile_location": ("savefile_query", _savefile_location),
     "savestate_location": ("savestate_query", _savestate_location),
+    "screenshot_location": ("screenshot_query", _screenshot_location),
     "entry_savestate_location": ("entry_savestate_query", _entry_savestate_location),
     "firmware": ("firmware_query", _firmware),
     "identification": ("identify_query", _identification),

@@ -41,6 +41,7 @@ INPUT_FIELDS_OPTIONAL = {
     "entry_savefile_query",
     "savestate_query",
     "entry_savestate_query",
+    "screenshot_query",
     "texture_query",
     "entry_texture_query",
     "soft_patch_query",
@@ -101,6 +102,11 @@ PLACEMENT_FIELDS = {
 # set rather than spelled out, so the two can never drift in the fields they
 # do share.
 SAVESTATE_PLACEMENT_FIELDS = PLACEMENT_FIELDS - {"granularity"}
+# A screenshot placement is the save shape minus the three fields whose
+# domain is empty there (no file set of dated names, no fallback, no
+# granularity) — see atlas/placement.py.
+SCREENSHOT_PLACEMENT_FIELDS = {"dir", "root_kind", "needs", "physical_dir", "caveats"}
+KNOWN_SCREENSHOT_ROOT_KINDS = {"screenshot_directory", "content_directory"}
 # A texture placement shares only the fields its own question has. Written out
 # rather than derived from the save set, because here the difference is not a
 # subtraction: three save fields are gone (`root_kind` nobody asked for,
@@ -216,7 +222,7 @@ KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
 # config states belongs here either; that is atlas's own to resolve.
 KNOWN_HOLES = {"content_dir", "content_dir_name", "cwd", "library_name", "rom_stem", "save_id"}
 KNOWN_GRANULARITIES = {"shared-card", "shared-file", "per-game-file", "per-game-files"}
-KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings"}
+KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings", "notes"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone"}
 KNOWN_CAVEAT_CODES = {
@@ -237,6 +243,7 @@ KNOWN_CAVEAT_CODES = {
     "per-game-override",
     "unverified-version",
     "invalid-save-directory",
+    "invalid-screenshot-directory",
     "core-suspect",
     "core-unaudited",
     "core-multi-option",
@@ -628,6 +635,7 @@ def _validate_input_cores(name: str, cores: Any) -> None:
 _PLAIN_QUERY_KEYS = (
     "savefile_query",
     "savestate_query",
+    "screenshot_query",
     "texture_query",
     "mod_query",
     "soft_patch_query",
@@ -873,6 +881,27 @@ def _validate_savefile_placement(name: str, placement: Any) -> None:
         _validate_granularity(name, placement["granularity"])
 
 
+def _validate_screenshot_placement(name: str, placement: Any) -> None:
+    _require_exact(name, placement, SCREENSHOT_PLACEMENT_FIELDS, "screenshot_location")
+    if not isinstance(placement["dir"], str) or not placement["dir"]:
+        fail(f"{name}: screenshot_location.dir must be a non-empty string")
+    if placement["root_kind"] not in KNOWN_SCREENSHOT_ROOT_KINDS:
+        fail(
+            f"{name}: screenshot_location.root_kind must be one of "
+            f"{sorted(KNOWN_SCREENSHOT_ROOT_KINDS)}"
+        )
+    needs = placement["needs"]
+    if not isinstance(needs, list) or not all(isinstance(n, str) for n in needs):
+        fail(f"{name}: screenshot_location.needs must be a list of strings")
+    unknown_holes = sorted(set(needs) - KNOWN_HOLES)
+    if unknown_holes:
+        fail(f"{name}: screenshot_location.needs must be holes from {sorted(KNOWN_HOLES)}, got {unknown_holes}")
+    value = placement["physical_dir"]
+    if value is not None and (not isinstance(value, str) or not value):
+        fail(f"{name}: screenshot_location.physical_dir must be null or a non-empty string")
+    _validate_caveats(name, placement["caveats"])
+
+
 def _validate_savestate_placement(name: str, placement: Any) -> None:
     """A savestate placement — the save shape minus the field it cannot have.
 
@@ -911,6 +940,13 @@ def _validate_savefile_outcome(name: str, outcome: Any, what: str = "savefile_lo
     """
     if not _validate_unresolved(name, outcome, what):
         _validate_savefile_placement(name, outcome)
+
+
+def _validate_screenshot_outcome(name: str, outcome: Any) -> None:
+    if isinstance(outcome, dict) and "unresolved" in outcome:
+        _validate_unresolved(name, outcome, what="screenshot_location")
+        return
+    _validate_screenshot_placement(name, outcome)
 
 
 def _validate_savestate_outcome(name: str, outcome: Any, what: str = "savestate_location") -> None:
@@ -1506,6 +1542,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         "entry_savefile_location",
         "savestate_location",
         "entry_savestate_location",
+        "screenshot_location",
         "texture_pack_location",
         "entry_texture_pack_location",
         "soft_patch_candidates",
@@ -1530,6 +1567,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: entry_savefile_query and entry_savefile_location expectation must appear together")
     if ("savestate_location" in keys) != ("savestate_query" in inp):
         fail(f"{name}: savestate_query and savestate_location expectation must appear together")
+    if ("screenshot_location" in keys) != ("screenshot_query" in inp):
+        fail(f"{name}: screenshot_query and screenshot_location expectation must appear together")
     if ("entry_savestate_location" in keys) != ("entry_savestate_query" in inp):
         fail(f"{name}: entry_savestate_query and entry_savestate_location expectation must appear together")
     if ("texture_pack_location" in keys) != ("texture_query" in inp):
@@ -1559,6 +1598,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
             "savestate_location",
             "entry_savefile_location",
             "entry_savestate_location",
+            "screenshot_location",
             "texture_pack_location",
             "entry_texture_pack_location",
             "soft_patch_candidates",
@@ -1583,6 +1623,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_systems(name, expected["systems"])
     if "savestate_location" in keys:
         _validate_savestate_outcome(name, expected["savestate_location"])
+    if "screenshot_location" in keys:
+        _validate_screenshot_outcome(name, expected["screenshot_location"])
     if "entry_savefile_location" in keys:
         _validate_savefile_outcome(name, expected["entry_savefile_location"], "entry_savefile_location")
     if "entry_savestate_location" in keys:

@@ -1967,7 +1967,7 @@
     },
     {
       "name": "an-arcade-build-states-two-directories-it-cannot-list",
-      "rationale": "MAME 2010 is the first answer with two directories whose file names atlas cannot derive, and the reason differs for each: a memory card is named after an index the player picks in the emulator's own interface, a differencing image after a disk's entry in the machine's ROM table. Both are groups like any other — directory, granularity and role stated, only the list refused — so one walk over groups reaches all six places this save lives. The memory cards are shared-card besides: one directory holds every card the machine ever made, so restoring one game's copy would overwrite every other game's.",
+      "rationale": "MAME 2010 keeps its whole tree below <save_dir>/mame2010, and the answer states every part: the named nvram/hi/cfg files, the memcard and diff trees whose names atlas cannot derive, and — since issue #142 — the debugger's per-machine notes (<basename>.cmt, the new notes role), the mame.ini the glue itself generates, and the ctrlr directory of user-provided controller profiles, stated without names because MAME only reads them. input and image stay out of scope by that issue's decision.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2062,6 +2062,28 @@
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "disk-diff"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2010/comment",
+                "files": [
+                  "dkong.cmt"
+                ],
+                "granularity": "per-game-file",
+                "role": "notes"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2010/ini",
+                "files": [
+                  "mame.ini"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2010/ctrlr",
+                "files": null,
+                "granularity": "shared-file",
+                "role": "settings"
               }
             ]
           },
@@ -2100,6 +2122,15 @@
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/diff",
                 "role": "disk-diff",
                 "citation": "the differencing image for a CHD hard disk is named after the disk image's own entry in the machine's ROM table inside the binary, the same scheme the current MAME still uses and still calls unscalable. The directory is set at retromain.c:253 at libretro/mame2010-libretro c5b413b."
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "mame2010",
+                "dir": "/mnt/sd/retrodeck/saves/mame2010/ctrlr",
+                "role": "settings",
+                "citation": "controller profiles the user provides and MAME reads back (config.c:121 opens them by the profile name the user chose); the glue creates the directory (retromain.c:239-240) and MAME itself never writes into it"
               }
             }
           ],

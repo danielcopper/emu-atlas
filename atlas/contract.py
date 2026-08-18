@@ -46,6 +46,7 @@ from atlas.placement import (
     ModPlacement,
     SavefilePlacement,
     SavestatePlacement,
+    ScreenshotPlacement,
     SoftPatchAnswer,
     TexturePlacement,
     Unresolved,
@@ -132,6 +133,32 @@ def savestate_placement_contract(placement: SavestatePlacement) -> dict[str, Any
     directory.
     """
     return _placement_core(placement)
+
+
+def screenshot_placement_contract(placement: ScreenshotPlacement) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.placement.ScreenshotPlacement`.
+
+    The savefile shape minus ``file_set``, ``fallback_dir`` and
+    ``granularity`` — each omission the contract, for the reasons the
+    placement's own docstring gives: no closed set of dated names exists to
+    state, the directory is created at the moment of the shot rather than
+    fallen back from, and nothing groups screenshots but the directory
+    itself. ``root_kind`` speaks the question's own two-word vocabulary.
+    """
+    return {
+        "dir": placement.dir,
+        "root_kind": placement.root_kind,
+        "needs": list(placement.needs),
+        "physical_dir": placement.physical_dir,
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+    }
+
+
+def screenshot_answer_contract(outcome: ScreenshotPlacement | Unresolved) -> dict[str, Any]:
+    """A screenshot question's answer, placement or refusal — the family pattern."""
+    if isinstance(outcome, Unresolved):
+        return unresolved_contract(outcome)
+    return screenshot_placement_contract(outcome)
 
 
 def texture_placement_contract(placement: TexturePlacement) -> dict[str, Any]:

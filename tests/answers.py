@@ -19,6 +19,7 @@ from atlas.placement import (
     ModPlacement,
     SavefilePlacement,
     SavestatePlacement,
+    ScreenshotPlacement,
     TexturePlacement,
     Unresolved,
 )
@@ -33,6 +34,12 @@ def placed(outcome: SavefilePlacement | Unresolved) -> SavefilePlacement:
 def state_placed(outcome: SavestatePlacement | Unresolved) -> SavestatePlacement:
     """The savestate placement this fixture guarantees — never the refusal."""
     assert isinstance(outcome, SavestatePlacement), f"expected a savestate placement, got {outcome}"
+    return outcome
+
+
+def screenshot_placed(outcome: ScreenshotPlacement | Unresolved) -> ScreenshotPlacement:
+    """The screenshot placement this fixture guarantees — never the refusal."""
+    assert isinstance(outcome, ScreenshotPlacement), f"expected a screenshot placement, got {outcome}"
     return outcome
 
 

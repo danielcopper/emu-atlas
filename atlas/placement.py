@@ -95,6 +95,16 @@ ROOT_SYSTEM_DIRECTORY: RootKind = "system_directory"
 # often IS the launcher.
 ROOT_WORKING_DIRECTORY: RootKind = "working_directory"
 
+# The screenshot question's own two-word vocabulary, closed around its own
+# question like the savestate one is: a screenshot is never anchored at a
+# save root or a core's system directory — RetroArch writes it itself, into
+# its screenshot directory or the content's own (task_screenshot.c:488-550
+# at a79435a).
+ScreenshotRootKind = Literal["screenshot_directory", "content_directory"]
+SCREENSHOT_ROOT_DIRECTORY: ScreenshotRootKind = "screenshot_directory"
+SCREENSHOT_ROOT_CONTENT_DIRECTORY: ScreenshotRootKind = "content_directory"
+SCREENSHOT_ROOT_KINDS = ("screenshot_directory", "content_directory")
+
 ROOT_SAVESTATE_DIRECTORY: StateRootKind = "savestate_directory"
 # The content root is the one value both questions share, and it is the same
 # fact on both: the ROM's own directory, reached either by the family's
@@ -183,17 +193,25 @@ GRANULARITY_NONE = "none"
 # it, so it is not one player's progress the way a battery save is. Folding it
 # into :data:`ROLE_BATTERY` would state something true (it is save data, back it
 # up) while losing the only part a client could act on.
+# :data:`ROLE_NOTES` is the user's own words about a game — MAME 2010 keeps
+# the debugger's per-machine comment files under its save tree — and it is a
+# separate value for the same reason the score table is: what a client does
+# with it. Notes are neither progress a newer copy overwrites nor settings a
+# save sync skips; a client lifts them deliberately (into RomM's per-game
+# notes, say) or leaves them, and either needs the word to decide by.
 ROLE_BATTERY = "battery"
 ROLE_MEMORY_CARD = "memory-card"
 ROLE_DISK_DIFF = "disk-diff"
 ROLE_HIGH_SCORE = "high-score"
 ROLE_SETTINGS = "settings"
+ROLE_NOTES = "notes"
 ROLES = (
     ROLE_BATTERY,
     ROLE_MEMORY_CARD,
     ROLE_DISK_DIFF,
     ROLE_HIGH_SCORE,
     ROLE_SETTINGS,
+    ROLE_NOTES,
 )
 
 
@@ -247,6 +265,13 @@ CAVEAT_UNVERIFIED_VERSION = "unverified-version"
 # what it is — a fact about the FRONTEND — and this says the other half is open.
 CAVEAT_CORE_OWN_WRITES_UNESTABLISHED = "core-own-writes-unestablished"
 CAVEAT_INVALID_SAVE_DIRECTORY = "invalid-save-directory"
+# The screenshot family's own spelling of the refused-directory fact, because
+# the consequence differs: a refused save root falls back to the value that
+# stood before it or the platform default, while a refused screenshot
+# directory is simply cleared at config load (configuration.c:6733-6741) and
+# the shots land in the content's own directory. One code per consequence, so
+# a client never has to guess which family's fallback follows.
+CAVEAT_INVALID_SCREENSHOT_DIRECTORY = "invalid-screenshot-directory"
 CAVEAT_CORE_SUSPECT = "core-suspect"
 CAVEAT_CORE_UNAUDITED = "core-unaudited"
 CAVEAT_CORE_MULTI_OPTION = "core-multi-option"
@@ -700,6 +725,47 @@ class SavefilePlacement:
             raise ValueError("SavefilePlacement: dir must be non-empty (an unanswerable placement is Unresolved)")
         if self.root_kind not in ROOT_KINDS:
             raise ValueError(f"SavefilePlacement: root_kind must be one of {ROOT_KINDS}, got {self.root_kind!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class ScreenshotPlacement:
+    """Where RetroArch writes this configuration's screenshots (issue #142).
+
+    The savefile placement's shape minus the fields whose domain is empty
+    here, each omission the contract rather than an oversight. No
+    ``file_set``: the default naming is the content's stem plus a timestamp
+    (``fill_str_dated_filename``, task_screenshot.c:517-535 at a79435a), so
+    no closed set of names exists to declare or observe. No ``fallback_dir``:
+    RetroArch creates the directory at the moment of the shot and simply
+    fails the shot when it cannot (task_screenshot.c:553-556) — there is no
+    revert-to-unsorted the way the save families have. No ``granularity``:
+    nothing groups screenshots but the directory itself.
+
+    ``root_kind`` speaks the question's own two-word vocabulary. The
+    ``content_directory`` root is reached three ways, all stated in
+    ``sources``: the ``screenshots_in_content_dir`` flag (which outranks even
+    a configured directory, task_screenshot.c:547-550), a key that is unset
+    or reset to ``"default"``, and a configured directory that does not exist
+    — RetroArch clears that at config load rather than creating it
+    (configuration.c:6733-6741), which the ``invalid-screenshot-directory``
+    caveat carries machine-readably.
+    """
+
+    dir: str
+    root_kind: ScreenshotRootKind
+    needs: tuple[str, ...]
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...]
+    physical_dir: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.dir:
+            raise ValueError("ScreenshotPlacement: dir must be non-empty")
+        if self.root_kind not in SCREENSHOT_ROOT_KINDS:
+            raise ValueError(
+                f"ScreenshotPlacement: root_kind must be one of {SCREENSHOT_ROOT_KINDS}, "
+                f"got {self.root_kind!r}"
+            )
 
 
 # Unresolved outcome codes — stable identifiers like caveat codes.

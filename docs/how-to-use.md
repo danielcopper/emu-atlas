@@ -455,7 +455,9 @@ be read off the other, and a client needs both.
 mine = [g for g in placement.file_set.groups if g.role != atlas.ROLE_SETTINGS]
 ```
 
-Take every role but `settings` — dip switches and input maps are configuration, not progress. And never copy a
+Take every role but `settings` and `notes` — dip switches and input maps are configuration, not progress, and notes
+(`notes`: MAME 2010 keeps the debugger's per-machine comment files as `<driver>.cmt`) are the user's own words, worth
+lifting deliberately — into a library's per-game notes, say — rather than copying blind as save data. And never copy a
 `shared-card` or `shared-file` group between machines without thinking: those files belong to every game at once, so
 restoring one game's copy overwrites every other game's state in them. A tool making a _complete_ backup takes them all;
 that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
@@ -645,6 +647,26 @@ cover art, the archive the ROM came in. atlas states the whole set rather than f
 extensions; `complete` is `false`, and deciding which of those files are yours to upload is the client's call.
 
 ## Where do this ROM's savestates live?
+
+### Where screenshots go
+
+`screenshot_location` answers where RetroArch writes its screenshots (issue #142) — its own question beside the save
+ones, because a screenshot is not save data and must never land in a sync's file set:
+
+```python
+placement = inst.screenshot_location(content_path=rom, core_so="mupen64plus_next_libretro.so")
+placement.dir        # '/…/screenshots/n64' — or the content's own directory
+placement.root_kind  # 'screenshot_directory' | 'content_directory' — the question's own two words
+placement.needs      # ('content_dir',) when content-rooted and no content was named
+```
+
+Both arguments are optional: the core matters only because a per-core or per-game override can move the screenshot keys.
+Three things this answer deliberately does not carry: no `file_set` (the default names are dated,
+`<stem>-YYMMDD-HHMMSS.png`, so no closed set exists to state), no `fallback_dir` (RetroArch creates the directory at the
+moment of the shot and simply fails the shot when it cannot), and no `granularity`. The family's own quirk is the
+`invalid-screenshot-directory` caveat: a configured directory that does not exist is cleared at config load rather than
+created, and the shots land beside the content — the caveat names the configured spelling so a client can say which line
+to fix. The question answers on the direct route and the aggregate; the catalogue-entry route does not carry it yet.
 
 `savestate_location` is `savefile_location`'s twin, and it takes the same two optional arguments:
 
