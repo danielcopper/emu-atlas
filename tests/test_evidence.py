@@ -29,7 +29,7 @@ from atlas.evidence import (
     load_arrangement_evidence,
     lookup_arrangement,
 )
-from tests.answers import mod_placed, placed, state_placed, texture_placed
+from tests.answers import screenshot_placed, mod_placed, placed, state_placed, texture_placed
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -288,6 +288,9 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
     return {
         "savefile_location": tuple(c.code for c in placed(handle.savefile_location(core_so=CORE_SO)).caveats),
         "savestate_location": tuple(c.code for c in state_placed(handle.savestate_location(core_so=CORE_SO)).caveats),
+        "screenshot_location": tuple(
+            c.code for c in screenshot_placed(handle.screenshot_location(core_so=CORE_SO)).caveats
+        ),
         "texture_pack_location": tuple(
             c.code
             for c in texture_placed(handle.texture_pack_location(core_so=TEXTURE_CORE_SO)).caveats

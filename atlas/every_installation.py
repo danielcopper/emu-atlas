@@ -52,6 +52,7 @@ from atlas.placement import (
     ModPlacement,
     SavefilePlacement,
     SavestatePlacement,
+    ScreenshotPlacement,
     SoftPatchAnswer,
     TexturePlacement,
     Unresolved,
@@ -143,6 +144,20 @@ class EveryInstallation:
         """
         return self._ask(
             lambda installation: installation.savestate_location(
+                content_path=content_path, core_so=core_so
+            )
+        )
+
+    def screenshot_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> tuple[InstallationAnswer[ScreenshotPlacement | Unresolved], ...]:
+        """Where each installation keeps this content's screenshots, or refuses to.
+
+        Refuses on the same condition the savefile route does: a core this
+        installation does not have.
+        """
+        return self._ask(
+            lambda installation: installation.screenshot_location(
                 content_path=content_path, core_so=core_so
             )
         )

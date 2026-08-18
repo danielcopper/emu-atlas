@@ -1792,6 +1792,28 @@
                 "granularity": "per-game-files",
                 "role": "disk-diff",
                 "unnamed": "the differencing image for a CHD hard disk is named after the disk image's own entry in the machine's ROM table inside the binary, the same scheme the current MAME still uses and still calls unscalable. The directory is set at retromain.c:253 at libretro/mame2010-libretro c5b413b."
+              },
+              {
+                "subdir": "mame2010/comment",
+                "files": [
+                  "<rom_stem>.cmt"
+                ],
+                "granularity": "per-game-file",
+                "role": "notes"
+              },
+              {
+                "subdir": "mame2010/ini",
+                "files": [
+                  "mame.ini"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              },
+              {
+                "subdir": "mame2010/ctrlr",
+                "granularity": "shared-file",
+                "role": "settings",
+                "unnamed": "controller profiles the user provides and MAME reads back (config.c:121 opens them by the profile name the user chose); the glue creates the directory (retromain.c:239-240) and MAME itself never writes into it"
               }
             ]
           }
@@ -1826,11 +1848,26 @@
           },
           "<rom_stem>.cfg": {
             "unprotected": "composed at run time: config.c:141 appends '.cfg' to the same basename, and neither half is a whole string. Its sibling 'default.cfg' is, and is anchored"
+          },
+          "comment": {
+            "literal": "comment"
+          },
+          "<rom_stem>.cmt": {
+            "literal": ".cmt"
+          },
+          "ini": {
+            "literal": "ini"
+          },
+          "mame.ini": {
+            "literal": "mame.ini"
+          },
+          "ctrlr": {
+            "literal": "ctrlr"
           }
         }
       },
       "provenance": {
-        "source": "MAME 2010 source at c5b413b, the revision the shipped binary names in its library_version ('0.139 c5b413b'). The libretro glue builds <save_dir>/<core_name> from GET_SAVE_DIRECTORY, with core_name the compiled-in \"mame2010\" (retromain.c:36, :218), and points MAME's own path options at subdirectories of it (:239-257). MAME then names each file after the running machine, whose basename is the driver's own name (machine.c:183): NVRAM as <basename>.nv (src/emu/machine/generic.c:325-331), the score table as <basename>.hi (src/emu/hiscore.c:213 loading, :246 saving), and the configuration as both default.cfg and <basename>.cfg on every save (src/emu/config.c:133, :141-142). Two trees are stated without their files. Memory cards are 'memcard.%03d' by an index the player chooses (generic.c:476-478), shared across every game rather than keyed by one. Differencing images for CHD hard disks are named from the machine's own ROM table. Five more directories the glue creates hold nothing this question is about — ctrlr, ini, input, image and comment — and whether atlas should answer for them at all is #142. The mame-external_hiscore option chooses where the hiscore *database* is read from and does not move the save (hiscore.c:353), so it is not a governing option.",
+        "source": "MAME 2010 source at c5b413b, the revision the shipped binary names in its library_version ('0.139 c5b413b'). The libretro glue builds <save_dir>/<core_name> from GET_SAVE_DIRECTORY, with core_name the compiled-in \"mame2010\" (retromain.c:36, :218), and points MAME's own path options at subdirectories of it (:239-257). MAME then names each file after the running machine, whose basename is the driver's own name (machine.c:183): NVRAM as <basename>.nv (src/emu/machine/generic.c:325-331), the score table as <basename>.hi (src/emu/hiscore.c:213 loading, :246 saving), and the configuration as both default.cfg and <basename>.cfg on every save (src/emu/config.c:133, :141-142). Two trees are stated without their files. Memory cards are 'memcard.%03d' by an index the player chooses (generic.c:476-478), shared across every game rather than keyed by one. Differencing images for CHD hard disks are named from the machine's own ROM table. Five more directories the glue creates hold nothing this question is about — ctrlr, ini, input, image and comment — and whether atlas should answer for them at all is #142. The mame-external_hiscore option chooses where the hiscore *database* is read from and does not move the save (hiscore.c:353), so it is not a governing option. Issue #142 added the three save-adjacent trees the same glue builds: comment holds the debugger's per-machine notes, written as <basename>.cmt when any exist (debugcmt.c:413-414, from the comsave command at debugcmd.c:1155 and the exit hook at :522-524 — reachable once MAME's own debug option is on, in the mame.ini the core generates); ini holds that mame.ini, which the glue writes when missing (retromain.c:262-273) and MAME reads back (mame.c:605); ctrlr holds controller profiles the user provides and MAME only reads (config.c:121), so its names are the user's own and the group says so instead of listing them. input and image exist in the same tree and stay out of scope by that issue's decision: a recording is a replay of a session, and mounted images are content.",
         "status": {
           "always": "[D] Read from source and confirmed against the shipped binary's strings, 'memcard.%03d' among them. One mode: the paths are fixed in the glue and no registered option moves them. No save was watched being written, and two trees are named without their files by design."
         }

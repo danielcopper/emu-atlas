@@ -137,6 +137,7 @@ from atlas.placement import (
     CAVEAT_CORE_UNAUDITED,
     CAVEAT_CORE_UNQUERYABLE,
     CAVEAT_INVALID_SAVE_DIRECTORY,
+    CAVEAT_INVALID_SCREENSHOT_DIRECTORY,
     CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
@@ -156,6 +157,7 @@ from atlas.placement import (
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
     CAVEAT_UNKNOWN_OPTION_VALUE,
     HOLE_CONTENT_DIR,
+    HOLE_CONTENT_DIR_NAME,
     HOLE_CWD,
     PATCH_FORMATS,
     ROOT_CONTENT_DIRECTORY,
@@ -184,8 +186,11 @@ from atlas.placement import (
     ModTree,
     OptionReading,
     RootKind,
+    SCREENSHOT_ROOT_CONTENT_DIRECTORY,
+    SCREENSHOT_ROOT_DIRECTORY,
     SavefilePlacement,
     SavestatePlacement,
+    ScreenshotPlacement,
     SoftPatchAnswer,
     TexturePlacement,
     Unresolved,
@@ -197,6 +202,7 @@ from atlas.placement import (
 )
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
+    chain_value,
     SAVEFILE_KEYS,
     SAVESTATE_KEYS,
     UPSTREAM_DEFAULTS,
@@ -980,6 +986,10 @@ NO_CORE_FOR_SAVES = (
     "no core given — per-core overrides and recorded per-core save behaviour not checked: this "
     "answer assumes a standard core, and a core recorded as deviating (e.g. one rooted in "
     "system_directory, like Flycast) keeps its saves elsewhere entirely"
+)
+NO_CORE_FOR_SCREENSHOTS = (
+    "no core given — per-core and per-game overrides not checked: an override can move the "
+    "screenshot keys, so this answer reflects the global configuration alone"
 )
 NO_CORE_FOR_STATES = (
     "no core given — per-core overrides not checked, sorting by core cannot be resolved, and "
@@ -2205,8 +2215,9 @@ def _unnamed_tree_caveats(
         caveats.append(
             Caveat(
                 CAVEAT_FILE_NAMES_UNESTABLISHED,
-                f"core {card.key!r} writes save data into {where}, and its file names do not follow "
-                "from anything atlas reads — the directory is stated, the names are not",
+                f"core {card.key!r} keeps files under {where} whose names do not follow "
+                "from anything atlas reads — the directory is stated, the names are not, and "
+                "the citation says what stands behind them",
                 {"core": card.key, "dir": where, "role": group.role, "citation": group.unnamed or ""},
             )
         )
@@ -3983,6 +3994,184 @@ def _retroarch_savestate_location(machine: Machine, query: _SaveQuery) -> Savest
         sources=placement.sources,
         caveats=tuple(caveats),
         fallback_dir=fallback_dir,
+        physical_dir=physical_dir,
+    )
+
+
+_SCREENSHOT_DIRECTORY_KEY = "screenshot_directory"
+
+
+def _screenshot_layers(
+    machine: Machine, query: _SaveQuery
+) -> tuple[_Content, _CoreIdentity, list[_CfgLayer], list[str], list[Caveat]]:
+    """The shared preamble, without a family layout: content, core, cfg layers.
+
+    The screenshot family reads three keys of its own through the same
+    override chain the save families read theirs through, but none of the
+    save layout applies — no platform default seeds a directory for it, and
+    an empty key falls to the content's directory instead — so this takes
+    the chain-building half of :func:`_read_chain` and leaves the layout
+    resolution to the caller.
+    """
+    content = _content_coordinates(query.content_path)
+    core = _identify_core(
+        machine,
+        core_so=query.core_so,
+        core_path_resolver=query.core_path_resolver,
+        no_core_message=NO_CORE_FOR_SCREENSHOTS,
+    )
+    caveats = [*query.extra_caveats, *core.caveats]
+    if query.content_path is not None and content.rom_stem is None:
+        caveats.append(_unnamed_content_caveat(query.content_path))
+    sources = [*query.extra_sources, *core.sources]
+    retroarch_config_dir = os.path.dirname(query.global_cfg_path)
+    gates = _override_gates(
+        query.global_text,
+        sandbox=query.sandbox,
+        cfg_label=query.cfg_label,
+        override_config_dir=query.override_config_dir,
+        config_file_dir=retroarch_config_dir,
+    )
+    sources.extend(gates.sources)
+    caveats.extend(gates.caveats)
+    overrides, override_sources = _override_layers(
+        machine, gates=gates, library_name=core.library_name, content=content
+    )
+    sources.extend(override_sources)
+    layers: list[_CfgLayer] = [
+        (label, text)
+        for label, text in ((query.cfg_label, query.global_text), *overrides)
+        if text is not None
+    ]
+    return content, core, layers, sources, caveats
+
+
+def _screenshot_root(
+    machine: Machine,
+    query: _SaveQuery,
+    layers: list[_CfgLayer],
+    sources: list[str],
+    caveats: list[Caveat],
+) -> tuple[str | None, bool]:
+    """The configured screenshot root as this machine holds it, or ``None``.
+
+    ``None`` is every way the key ends up empty: unset, reset to the literal
+    ``"default"``, or pointing at something that is not an existing directory
+    — RetroArch clears that at config load rather than creating it
+    (configuration.c:6733-6741), and the caveat states it machine-readably.
+    The second element is false where the spelling exists only inside the
+    emulator's sandbox: the value stands, and nothing below it can be looked
+    at from here.
+    """
+    raw, dropped = chain_value(layers, _SCREENSHOT_DIRECTORY_KEY)
+    caveats.extend(_ignored_caveats(dropped))
+    if raw is None:
+        return None, True
+    configured = raw.strip()
+    if not configured or configured == "default":
+        # configuration.c:6735-6736 — the literal "default" is the reset
+        # spelling, same as the save families' key.
+        sources.append(
+            f'{_SCREENSHOT_DIRECTORY_KEY} = "{raw}" — the reset spelling; the key counts as '
+            "unset (configuration.c:6735-6736)"
+        )
+        return None, True
+    if configured.startswith("~") and query.sandbox.expansion_home is not None:
+        # An unset home leaves the tilde verbatim, exactly as the save
+        # families' resolution does.
+        configured = query.sandbox.expansion_home + configured[1:]
+    resolved = query.sandbox.host(_SCREENSHOT_DIRECTORY_KEY, configured)
+    sources.append(f'{query.cfg_label}: {_SCREENSHOT_DIRECTORY_KEY} = "{raw}"{resolved.note}')
+    if resolved.path is None:
+        caveats.extend(resolved.caveats)
+        return configured, False
+    if machine.path_kind(resolved.path) != KIND_DIRECTORY:
+        looked_at = (
+            f" (atlas looked at its host spelling {resolved.path!r})"
+            if resolved.path != configured
+            else ""
+        )
+        caveats.append(
+            Caveat(
+                CAVEAT_INVALID_SCREENSHOT_DIRECTORY,
+                f"{_SCREENSHOT_DIRECTORY_KEY} {raw!r} is not an existing directory{looked_at} — "
+                "RetroArch clears it at config load rather than creating it, and the shots land "
+                "in the content's own directory (configuration.c:6733-6741)",
+                {"configured": raw},
+            )
+        )
+        return None, True
+    return resolved.path, True
+
+
+def _retroarch_screenshot_location(
+    machine: Machine, query: _SaveQuery
+) -> ScreenshotPlacement | Unresolved:
+    """Where RetroArch writes this configuration's screenshots (issue #142).
+
+    Three keys through the override chain, and the same refusal as every
+    other question for a named core that is not installed. The directory
+    math is RetroArch's own (task_screenshot.c:488-556 at a79435a): the
+    in-content flag outranks even a configured directory, an empty or
+    cleared key falls to the content's directory, and sorting by the
+    content's directory name applies only under a configured root. The
+    directory is created at the moment of the shot, so no existence claim
+    or fallback rides the sorted answer.
+    """
+    content, core, layers, sources, caveats = _screenshot_layers(machine, query)
+    if core.not_installed is not None:
+        return core.not_installed
+    root, reachable = _screenshot_root(machine, query, layers, sources, caveats)
+    in_content, in_ignored = chain_bool(layers, "screenshots_in_content_dir", default=False)
+    sort_by_content, sort_ignored = chain_bool(
+        layers, "sort_screenshots_by_content_enable", default=False
+    )
+    caveats.extend(_ignored_caveats((*in_ignored, *sort_ignored)))
+
+    needs: tuple[str, ...] = ()
+    if in_content or root is None:
+        root_kind = SCREENSHOT_ROOT_CONTENT_DIRECTORY
+        directory = content.dir_path or "<content_dir>"
+        if content.dir_path is None:
+            needs = (HOLE_CONTENT_DIR,)
+        sources.append(
+            "screenshots land in the content's own directory — "
+            + (
+                "screenshots_in_content_dir is on, which outranks even a configured directory "
+                "(task_screenshot.c:547-550)"
+                if in_content
+                else "no usable screenshot_directory stands, and an empty root falls to the "
+                "content (task_screenshot.c:547-550); without content RetroArch refuses the "
+                "shot entirely (:941-943)"
+            )
+        )
+        reachable = content.dir_path is not None
+    else:
+        root_kind = SCREENSHOT_ROOT_DIRECTORY
+        directory = root
+        if sort_by_content:
+            # task_screenshot.c:494-507 — the parent directory's name, only
+            # under a configured root.
+            if content.dir_name is not None:
+                directory = os.path.join(directory, content.dir_name)
+            else:
+                directory = os.path.join(directory, "<content_dir_name>")
+                needs = (HOLE_CONTENT_DIR_NAME,)
+            sources.append(
+                "sorted into a subdirectory named after the content's directory "
+                "(sort_screenshots_by_content_enable, task_screenshot.c:494-507); created at "
+                "the moment of the shot (:553-556)"
+            )
+    physical_dir: str | None = None
+    if reachable and not needs:
+        physical_dir, link_caveats = _link_view(machine, directory)
+        caveats.extend(link_caveats)
+    return ScreenshotPlacement(
+        dir=directory,
+        root_kind=root_kind,
+        needs=needs,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
         physical_dir=physical_dir,
     )
 
@@ -6946,6 +7135,40 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=core_so,
         )
 
+    def _screenshot_location_from(
+        self,
+        config: dict[str, Any],
+        marker_issues: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+        core_so: str | None,
+        extra_caveats: tuple[Caveat, ...] = (),
+    ) -> ScreenshotPlacement | Unresolved:
+        return _retroarch_screenshot_location(
+            self._machine,
+            self._query_from(
+                config,
+                marker_issues,
+                content_path=content_path,
+                core_so=core_so,
+                extra_caveats=extra_caveats,
+            ),
+        )
+
+    def screenshot_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> ScreenshotPlacement | Unresolved:
+        """Where this RetroDECK's RetroArch writes screenshots for *content_path*.
+
+        Both arguments are optional: the core matters only because a per-core
+        or per-game override can move the screenshot keys, and without content
+        the content-rooted answers keep their hole.
+        """
+        config, marker_issues = self._read_marker()
+        return self._screenshot_location_from(
+            config, marker_issues, content_path=content_path, core_so=core_so
+        )
+
     def _texture_pack_location_from(
         self,
         config: dict[str, Any],
@@ -8311,6 +8534,14 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    def screenshot_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> ScreenshotPlacement | Unresolved:
+        """Where EmuDeck's RetroArch writes screenshots — the same cfg, its own keys."""
+        return _retroarch_screenshot_location(
+            self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
     def texture_pack_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> TexturePlacement | Unresolved:
@@ -8589,6 +8820,20 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    def screenshot_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> ScreenshotPlacement | Unresolved:
+        """Where this RetroArch install writes screenshots for *content_path*.
+
+        A bare install carries the upstream compile-time defaults: no
+        screenshot directory is configured, so the shots land in the content's
+        own directory (task_screenshot.c:547-550), and without content
+        RetroArch refuses the shot entirely (:941-943).
+        """
+        return _retroarch_screenshot_location(
+            self._machine, self._query(content_path=content_path, core_so=core_so)
+        )
+
     def texture_pack_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> TexturePlacement | Unresolved:
@@ -8704,6 +8949,10 @@ class Installation(Protocol):
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement | Unresolved: ...
+
+    def screenshot_location(
+        self, *, content_path: str | None = None, core_so: str | None = None
+    ) -> ScreenshotPlacement | Unresolved: ...
 
     def texture_pack_location(
         self, *, content_path: str | None = None, core_so: str | None = None

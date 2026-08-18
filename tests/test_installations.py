@@ -1015,6 +1015,62 @@ class TestSystemDirectoryRoot:
             assert "system_directory" not in p.needs, cfg
 
 
+class TestScreenshotLocation:
+    """The screenshot family's own two rules the vectors do not carry."""
+
+    CFG = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n'
+    )
+    ROM = "/mnt/sd/retrodeck/roms/n64/Game (Europe).z64"
+
+    def _handle(self, cfg_extra, dirs=()):
+        machine = FixtureMachine(
+            {
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": (
+                    '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+                    '"saves_path": "/mnt/sd/retrodeck/saves"}}'
+                ),
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": (
+                    self.CFG + cfg_extra
+                ),
+                self.ROM: "",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", *dirs],
+        )
+        return atlas.RetroDeck(HOME, machine)
+
+    def test_the_in_content_flag_outranks_a_configured_directory(self):
+        p = self._handle(
+            'screenshot_directory = "/mnt/sd/retrodeck/screenshots"\n'
+            'screenshots_in_content_dir = "true"\n',
+            dirs=("/mnt/sd/retrodeck/screenshots",),
+        ).screenshot_location(content_path=self.ROM)
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "content_directory"
+        assert p.dir == "/mnt/sd/retrodeck/roms/n64"
+
+    def test_the_default_literal_counts_as_unset(self):
+        p = self._handle('screenshot_directory = "default"\n').screenshot_location(
+            content_path=self.ROM
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "content_directory"
+        assert not any(
+            c.code == atlas.CAVEAT_INVALID_SCREENSHOT_DIRECTORY for c in p.caveats
+        )
+
+    def test_sorting_without_content_keeps_the_hole(self):
+        p = self._handle(
+            'screenshot_directory = "/mnt/sd/retrodeck/screenshots"\n'
+            'sort_screenshots_by_content_enable = "true"\n',
+            dirs=("/mnt/sd/retrodeck/screenshots",),
+        ).screenshot_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/retrodeck/screenshots/<content_dir_name>"
+        assert p.needs == ("content_dir_name",)
+
+
 class TestEmuDeck:
     def test_settings_parse_and_roots(self):
         machine = FixtureMachine(

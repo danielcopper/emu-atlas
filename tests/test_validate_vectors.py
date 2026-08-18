@@ -1283,7 +1283,14 @@ class TestTheVocabularyIsOneVocabulary:
         seen — so the list is written out here and a change to it has to be
         made twice, on purpose.
         """
-        assert atlas.ROLES == ("battery", "memory-card", "disk-diff", "high-score", "settings")
+        assert atlas.ROLES == (
+            "battery",
+            "memory-card",
+            "disk-diff",
+            "high-score",
+            "settings",
+            "notes",
+        )
 
     def test_the_role_constants_are_the_role_tuple(self):
         assert self._exported("ROLE_") == set(atlas.ROLES)
