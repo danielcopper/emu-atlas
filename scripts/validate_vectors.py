@@ -172,7 +172,7 @@ KNOWN_FIRMWARE_NEEDS = {"required", "optional"}
 KNOWN_FIRMWARE_CHECKED = {"verified", "mismatch", "unchecked", "unknown"}
 GRANULARITY_FIELDS = {"value", "mode", "readings", "alternatives"}
 READING_FIELDS = {"key", "value", "options_file"}
-ALTERNATIVE_FIELDS = {"mode", "options", "value"}
+ALTERNATIVE_FIELDS = {"mode", "options", "values"}
 # The one granularity value no file group may carry: it says no save data is
 # kept at all (write protection discarding the writes), and a group is a place
 # save data lives. Valid for granularity.value and an alternative's value only.
@@ -813,7 +813,10 @@ def _validate_alternative(name: str, alternative: Any, granularity_values: set[s
         isinstance(key, str) and isinstance(value, str) for key, value in options.items()
     ):
         fail(f"{name}: an alternative's options must map option keys to values, both strings")
-    if alternative["value"] not in granularity_values:
+    values = alternative["values"]
+    if not isinstance(values, list) or not values:
+        fail(f"{name}: an alternative's values must be a non-empty list — its mode groups somehow")
+    if any(value not in granularity_values for value in values):
         fail(f"{name}: every alternative's granularity must be one of {sorted(granularity_values)}")
 
 

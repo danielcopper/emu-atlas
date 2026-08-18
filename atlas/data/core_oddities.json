@@ -4246,6 +4246,69 @@
           "cd-game-bram+cart-4meg-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed."
         }
       }
+    },
+    "pcsx_rearmed": {
+      "identifiers": {
+        "library_name": [
+          "PCSX-ReARMed"
+        ]
+      },
+      "saves": {
+        "governing_option": {
+          "key": "pcsx_rearmed_memcard2"
+        },
+        "modes": {
+          "disabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "enabled": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "pcsx-card2.mcd"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "pcsx_rearmed_memcard2": {
+            "literal": "pcsx_rearmed_memcard2"
+          },
+          "<rom_stem>.srm": {
+            "unprotected": "the name is RetroArch's own standard naming — the content's stem with .srm (save.c:710-724) — reached because slot 1 fills the SRAM interface; no literal of this binary can spell a name the frontend builds"
+          },
+          "pcsx-card2.mcd": {
+            "literal": "pcsx-card2.mcd"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/pcsx_rearmed at 228c14e, the revision the shipped binary names in its library_version ('r25 228c14e'). Slot 1 is always the frontend's: the card reaches RetroArch through the SRAM interface and the standard <content stem>.srm is written by RetroArch itself (frontend/libretro.c:2050-2068, :3483-3496). 'pcsx_rearmed_memcard2' — the core's only save option, registered disabled/enabled with 'disabled' as the default (frontend/libretro_core_options.h:152-165) — adds the core-written pcsx-card2.mcd beside it, one second-slot card shared by every game (frontend/libretro.c:3500-3525). No per-game spelling exists for the second slot, so the two modes are the whole space and one option's values select them.",
+        "status": {
+          "disabled": "[D] Read from source at 228c14e, the revision the shipped binary names. Not live-observed.",
+          "enabled": "[D] Read from source at 228c14e, the revision the shipped binary names. Not live-observed."
+        }
+      }
     }
   }
 }

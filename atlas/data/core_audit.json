@@ -511,12 +511,9 @@
       "kind": "libretro"
     },
     "pcsx_rearmed": {
-      "verdict": "multi-option",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] pcsx_rearmed@228c14e hands slot 1 to the libretro SRAM interface (frontend/libretro.c:2050-2068, :3483-3496), so RetroArch writes the standard .srm; pcsx_rearmed_memcard2 (frontend/libretro_core_options.h:152-165) is the core's only save option and switching it on adds pcsx-card2.mcd in the save directory, one card shared by every game (frontend/libretro.c:3500-3525).",
-      "save_options": [
-        "pcsx_rearmed_memcard2"
-      ],
+      "note": "[V-source/binary] pcsx_rearmed@228c14e hands slot 1 to the libretro SRAM interface (frontend/libretro.c:2050-2068, :3483-3496), so RetroArch writes the standard .srm; pcsx_rearmed_memcard2 (frontend/libretro_core_options.h:152-165) is the core's only save option and switching it on adds pcsx-card2.mcd in the save directory, one card shared by every game (frontend/libretro.c:3500-3525). Card shipped: a plain single-option card, both modes from the one switch.",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",

@@ -202,12 +202,14 @@ installed core, or the card steps aside as a generation mismatch exactly as a si
 The answer's granularity block records the decision so a client can act on it: one reading per switch the rule actually
 consulted (its live value, its provenance, the file where it would change — hatari reads one of its two write-protect
 options, never both, because which one governs is the content's class), and alternatives with the full option
-combination that selects each. Which other modes an answer lists is the rule's judgment: a small space lists every other
-mode (Beetle Saturn's three), a large one the one-edit neighbours — every switch, changed once — rather than the whole
-product (SwanStation's twenty, Genesis Plus GX's twenty-six CD combinations). A rule that cannot decide selects nothing
-and says why — `core-mode-unestablished` with the reason, or the sharper codes where they exist
-(`core-option-value-unestablished` per unreadable switch, `save-root-redirected` where ScummVM's `savepath` points
-outside every root kind the format can anchor, with the configured path in the caveat's data).
+combination that selects each — every alternative lists each distinct grouping of its mode (`values`, the mode's own
+first), so a mixed mode cannot hide the card every game shares behind its per-game headline. Which other modes an answer
+lists is the rule's judgment: a small space lists every other mode (Beetle Saturn's three), a large one the one-edit
+neighbours — every switch, changed once — rather than the whole product (SwanStation's twenty, Genesis Plus GX's
+twenty-six CD combinations). A rule that cannot decide selects nothing and says why — `core-mode-unestablished` with the
+reason, or the sharper codes where they exist (`core-option-value-unestablished` per unreadable switch,
+`save-root-redirected` where ScummVM's `savepath` points outside every root kind the format can anchor, with the
+configured path in the caveat's data).
 
 ### Anchors — every recorded name, pinned to the string it was read from
 
