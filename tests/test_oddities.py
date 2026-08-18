@@ -1413,20 +1413,16 @@ class TestAuditVerdictCaveats:
 
     def test_multi_option_verdict_names_the_options_that_decide_granularity(self):
         p = self._query(
-            core_so="swanstation_libretro.so",
-            library_name="SwanStation",
+            core_so="pcsx_rearmed_libretro.so",
+            library_name="PCSX-ReARMed",
             system="psx",
             rom="Vagrant Story (USA).chd",
         )
         assert p.granularity is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MULTI_OPTION]
         assert stated
-        assert stated[0].data["core"] == "swanstation"
-        assert stated[0].data["options"].split(", ") == [
-            "swanstation_MemoryCards_Card1Type",
-            "swanstation_MemoryCards_Card2Type",
-            "swanstation_MemoryCards_UsePlaylistTitle",
-        ]
+        assert stated[0].data["core"] == "pcsx_rearmed"
+        assert stated[0].data["options"] == "pcsx_rearmed_memcard2"
 
     # What these two cases are about: an audit verdict that adds nothing of its
     # own. `core-unaudited`, `core-suspect` and `core-multi-option` are the
@@ -1775,6 +1771,268 @@ class TestScummvmSavepath:
         assert "could not be read" in stated[0].data["reason"]
 
 
+SWAN_REGISTERED = {
+    "swanstation_MemoryCards_Card1Type": {
+        "default": "Libretro",
+        "values": ["Libretro", "Shared", "PerGame", "PerGameTitle", "None"],
+    },
+    "swanstation_MemoryCards_Card2Type": {
+        "default": "None",
+        "values": ["None", "Shared", "PerGame", "PerGameTitle"],
+    },
+    "swanstation_MemoryCards_UsePlaylistTitle": {"default": "true", "values": ["true", "false"]},
+}
+SWAN_CORE = {"library_name": "SwanStation", "options": SWAN_REGISTERED}
+SWAN_ROM = "/mnt/sd/retrodeck/roms/psx/Vagrant Story (USA).chd"
+
+
+def _swan_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/swanstation_libretro.so": SWAN_CORE})
+    return placed(rd.savefile_location(content_path=SWAN_ROM, core_so="swanstation_libretro.so"))
+
+
+class TestSwanStationSlotPair:
+    """Two slots, each with its own type — the mode is the pair."""
+
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        SWAN_ROM: "",
+        "/mnt/sd/retrodeck/saves/psx/.keep": "",
+    }
+
+    def test_the_default_pair_is_the_frontends_srm_alone(self):
+        p = _swan_query(self.FILES)
+        assert p.file_set.files == ("Vagrant Story (USA).srm",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "card1-libretro+card2-none"
+        assert p.granularity.value == "per-game-file"
+        assert [r.key for r in p.granularity.readings] == [
+            "swanstation_MemoryCards_Card1Type",
+            "swanstation_MemoryCards_Card2Type",
+        ]
+
+    def test_the_alternatives_are_the_one_edit_neighbours(self):
+        g = _swan_query(self.FILES).granularity
+        assert g is not None
+        # Four other slot-1 types and three other slot-2 types — never the
+        # whole twenty-mode product.
+        assert len(g.alternatives) == 7
+        assert [(a.mode, dict(a.options)) for a in g.alternatives[:2]] == [
+            (
+                "card1-shared+card2-none",
+                {"swanstation_MemoryCards_Card1Type": "Shared"},
+            ),
+            (
+                "card1-per-code+card2-none",
+                {"swanstation_MemoryCards_Card1Type": "PerGame"},
+            ),
+        ]
+
+    def test_a_code_keyed_card_keeps_the_save_id_hole(self):
+        p = _swan_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: 'swanstation_MemoryCards_Card1Type = "PerGame"\n'
+                'swanstation_MemoryCards_Card2Type = "Shared"\n',
+            }
+        )
+        assert p.granularity is not None
+        assert p.granularity.mode == "card1-per-code+card2-shared"
+        assert p.file_set.files == ("<save_id>_1.mcd", "duckstation_shared_card_2.mcd")
+        assert "save_id" in p.needs
+        # A disc that yields no game code falls back to the shared card —
+        # the id-less spelling travels in the caveat's data.
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
+        assert stated
+        assert stated[0].data["files_without_save_id"] == "duckstation_shared_card_1.mcd"
+
+    def test_no_cards_at_all_is_the_discarded_emptiness_under_the_save_root(self):
+        p = _swan_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: 'swanstation_MemoryCards_Card1Type = "None"\n',
+            }
+        )
+        assert p.root_kind == "savefile_directory"
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ()
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_WRITES_DISCARDED]
+        assert stated
+        assert stated[0].data["mode"] == "card1-none+card2-none"
+        assert p.granularity is not None
+        assert p.granularity.value == "none"
+
+    def test_a_leftover_srm_is_not_presented_as_the_discarded_modes_save(self):
+        p = _swan_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: 'swanstation_MemoryCards_Card1Type = "None"\n',
+                "/mnt/sd/retrodeck/saves/psx/Vagrant Story (USA).srm": "old",
+            }
+        )
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ()
+
+    def test_a_title_keyed_slot_reads_the_playlist_switch_too(self):
+        p = _swan_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: 'swanstation_MemoryCards_Card1Type = "PerGameTitle"\n',
+            }
+        )
+        assert p.granularity is not None
+        assert p.granularity.mode == "card1-per-title+card2-none"
+        assert p.file_set.files == ("Vagrant Story (USA)_1.mcd",)
+        assert [r.key for r in p.granularity.readings] == [
+            "swanstation_MemoryCards_Card1Type",
+            "swanstation_MemoryCards_Card2Type",
+            "swanstation_MemoryCards_UsePlaylistTitle",
+        ]
+
+
+BEETLE_REGISTERED = {
+    "beetle_psx_use_mednafen_memcard0_method": {
+        "default": "libretro",
+        "values": ["libretro", "mednafen"],
+    },
+    "beetle_psx_enable_memcard1": {"default": "enabled", "values": ["enabled", "disabled"]},
+    "beetle_psx_shared_memory_cards": {"default": "disabled", "values": ["enabled", "disabled"]},
+    "beetle_psx_memcard_left_index": {"default": "0", "values": [str(i) for i in range(64)]},
+    "beetle_psx_memcard_right_index": {"default": "1", "values": [str(i) for i in range(64)]},
+}
+BEETLE_CORE = {"library_name": "Beetle PSX", "options": BEETLE_REGISTERED}
+
+
+def _beetle_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/mednafen_psx_libretro.so": BEETLE_CORE})
+    return placed(rd.savefile_location(content_path=SWAN_ROM, core_so="mednafen_psx_libretro.so"))
+
+
+class TestBeetlePsxSecondCard:
+    """Issue #80's answer: the default-enabled slot 1 is a core-written .mcr."""
+
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        SWAN_ROM: "",
+        "/mnt/sd/retrodeck/saves/psx/.keep": "",
+    }
+
+    def test_the_default_answer_is_the_srm_beside_the_second_card(self):
+        p = _beetle_query(self.FILES)
+        assert p.granularity is not None
+        assert p.granularity.mode == "srm+second-card"
+        assert p.file_set.files == ("Vagrant Story (USA).srm", "Vagrant Story (USA).1.mcr")
+        assert [(g.files, g.role) for g in p.file_set.groups] == [
+            (("Vagrant Story (USA).srm",), "memory-card"),
+            (("Vagrant Story (USA).1.mcr",), "memory-card"),
+        ]
+        # The index options are read only where a slot they name is in play —
+        # slot 0 is on the libretro method here, so only the right index shows.
+        assert [r.key for r in p.granularity.readings] == [
+            "beetle_psx_use_mednafen_memcard0_method",
+            "beetle_psx_enable_memcard1",
+            "beetle_psx_shared_memory_cards",
+            "beetle_psx_memcard_right_index",
+        ]
+
+    def test_sharing_swaps_the_core_written_stem_and_never_the_srm(self):
+        p = _beetle_query(
+            {**self.FILES, OPTIONS_CFG: 'beetle_psx_shared_memory_cards = "enabled"\n'}
+        )
+        assert p.granularity is not None
+        assert p.granularity.mode == "srm+second-card-shared"
+        assert p.file_set.files == (
+            "Vagrant Story (USA).srm",
+            "mednafen_psx_libretro_shared.1.mcr",
+        )
+
+    def test_an_offset_card_index_steps_aside_rather_than_misname(self):
+        p = _beetle_query(
+            {**self.FILES, OPTIONS_CFG: 'beetle_psx_memcard_right_index = "7"\n'}
+        )
+        assert p.granularity is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "memcard_right_index" in stated[0].data["reason"]
+
+
+GPGX_REGISTERED = {
+    "genesis_plus_gx_system_bram": {"default": "per bios", "values": ["per bios", "per game"]},
+    "genesis_plus_gx_cart_bram": {"default": "per cart", "values": ["per cart", "per game"]},
+    "genesis_plus_gx_cart_size": {
+        "default": "4meg",
+        "values": ["disabled", "128k", "256k", "512k", "1meg", "2meg", "4meg"],
+    },
+}
+GPGX_CORE = {"library_name": "Genesis Plus GX", "options": GPGX_REGISTERED}
+
+
+def _gpgx_query(files, *, rom):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/genesis_plus_gx_libretro.so": GPGX_CORE})
+    return placed(rd.savefile_location(content_path=rom, core_so="genesis_plus_gx_libretro.so"))
+
+
+class TestGpgxContentClasses:
+    """Cartridges fill the frontend's SRAM; CDs write the core's own BRAM tree."""
+
+    CARTRIDGE = "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md"
+    CD = "/mnt/sd/retrodeck/roms/megacd/Sonic CD (Europe).chd"
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        CARTRIDGE: "",
+        CD: "",
+        "/mnt/sd/retrodeck/saves/megadrive/.keep": "",
+        "/mnt/sd/retrodeck/saves/megacd/.keep": "",
+    }
+
+    def test_a_cartridge_is_the_frontends_srm_with_no_option_read(self):
+        p = _gpgx_query(self.FILES, rom=self.CARTRIDGE)
+        assert p.granularity is not None
+        assert p.granularity.mode == "cartridge"
+        assert p.file_set.files == ("Phantasy Star IV (USA).srm",)
+        assert p.granularity.readings == ()
+
+    def test_a_cd_at_the_defaults_keeps_the_region_trio_and_the_shared_cart(self):
+        p = _gpgx_query(self.FILES, rom=self.CD)
+        assert p.granularity is not None
+        assert p.granularity.mode == "cd-bios-bram+cart-4meg"
+        assert p.granularity.value == "shared-file"
+        assert p.file_set.files == ("scd_E.brm", "scd_U.brm", "scd_J.brm", "4Mbit_cart.brm")
+        assert [(g.granularity, g.role) for g in p.file_set.groups] == [
+            ("shared-file", "battery"),
+            ("shared-file", "battery"),
+        ]
+
+    def test_per_game_bram_keys_both_files_on_the_content(self):
+        p = _gpgx_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: 'genesis_plus_gx_system_bram = "per game"\n'
+                'genesis_plus_gx_cart_bram = "per game"\n'
+                'genesis_plus_gx_cart_size = "128k"\n',
+            },
+            rom=self.CD,
+        )
+        assert p.granularity is not None
+        assert p.granularity.mode == "cd-game-bram+cart-128k-per-game"
+        assert p.file_set.files == (
+            "Sonic CD (Europe).brm",
+            "Sonic CD (Europe)_128Kbit_cart.brm",
+        )
+
+    def test_a_raw_bin_is_the_scoped_cartridge_answer(self):
+        rom = "/mnt/sd/retrodeck/roms/megadrive/Sonic 3 (USA).bin"
+        p = _gpgx_query({**self.FILES, rom: ""}, rom=rom)
+        assert p.granularity is not None
+        assert p.granularity.mode == "cartridge-raw-image"
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
+        assert stated
+        assert "Sega CD disc header" in stated[0].data["files_established_for"]
+
+
 class TestStrictLoaders:
     """Packaged data is validated, never coerced — a broken build fails loudly."""
 
@@ -2112,7 +2370,7 @@ class TestStrictLoaders:
         text = self._inside_card(
             {"root": "savefile_directory", "inside_content": "why"}
         )
-        with pytest.raises(ValueError, match="about the loaded content file"):
+        with pytest.raises(ValueError, match="anchors where the writes would have landed"):
             load_oddities(text)
 
     def test_a_save_inside_the_content_refuses_also_under(self):
@@ -2151,8 +2409,15 @@ class TestStrictLoaders:
         )
         with pytest.raises(ValueError, match="no separate file to group"):
             load_oddities(with_groups)
-        other_root = self._inside_card({"root": "savefile_directory", "writes_discarded": "why"})
-        with pytest.raises(ValueError, match="about the loaded content file"):
+        # The discarded statement may also anchor at the save root — where
+        # the writes would have gone (SwanStation with no cards at all) — but
+        # never at a root no save was ever headed for.
+        savefile_rooted = self._inside_card(
+            {"root": "savefile_directory", "writes_discarded": "why"}
+        )
+        assert load_oddities(savefile_rooted)[0].modes["always"].writes_discarded == "why"
+        other_root = self._inside_card({"root": "system_directory", "writes_discarded": "why"})
+        with pytest.raises(ValueError, match="anchors where the writes would have landed"):
             load_oddities(other_root)
 
     def test_the_two_statements_contradict_each_other(self):
@@ -3091,6 +3356,13 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("flycast", "<save_id>.C1.bin", "unprotected"),
             ("flycast", "<save_id>.D1.bin", "unprotected"),
             ("flycast", "dc_nvmem.bin", "unprotected"),
+            # gpgx's per-game system BRAM appends a four-byte suffix the
+            # compiler tail-merges into the cart literals; its .srm — like
+            # swanstation's and the beetle pair's — is RetroArch's own naming,
+            # reached through the SRAM interface, which no core literal can
+            # spell.
+            ("genesis_plus_gx", "<rom_stem>.brm", "unprotected"),
+            ("genesis_plus_gx", "<rom_stem>.srm", "unprotected"),
             # geolith joins a stem to one of four extensions from a table. Three
             # of the four are whole strings and the fourth, "brm", is three
             # characters a compiler stores as an immediate — its siblings are
@@ -3149,6 +3421,10 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("mame2010", "<rom_stem>.cfg", "unprotected"),
             ("mame2010", "<rom_stem>.hi", "unprotected"),
             ("mame2010", "<rom_stem>.nv", "unprotected"),
+            # The beetle pair's slot-0 default fills the SRAM interface, so
+            # the .srm is RetroArch's naming — same reasoning as gpgx's above.
+            ("mednafen_psx", "<rom_stem>.srm", "unprotected"),
+            ("mednafen_psx_hw", "<rom_stem>.srm", "unprotected"),
             ("melonds", "<rom_stem>.sav", "unprotected"),
             ("noods", "<rom_stem>.sav", "unprotected"),
             # NXEngine's five profile names come from one format the binary
@@ -3182,6 +3458,9 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             # stores as an immediate rather than as a string. Its anchor names the
             # build file that proves the unit is linked instead.
             ("race", "<rom_stem>.ngf", "unprotected"),
+            # SwanStation's default slot-1 type fills the SRAM interface —
+            # the .srm is RetroArch's naming, like the beetle pair's above.
+            ("swanstation", "<rom_stem>.srm", "unprotected"),
             # TyrQuake's subdirectory is the basename-of-the-content's-directory
             # template, and its twelve slot names are composed from the menu's
             # 'save s%i' command and the save command's defaulted '.sav'

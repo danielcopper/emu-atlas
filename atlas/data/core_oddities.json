@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. A subdir segment may be exactly one of the placement's subdir templates — <rom_stem>, or <content_dir_name>, the basename of the content's directory — whole-segment only (the resolver's segment arithmetic depends on one template filling to one segment) and only under the savefile_directory root; the resolver fills it from the content path, and a content-less question keeps the token in the path with its hole in needs. A mode may state 'inside_content' instead of 'groups': no separate save file exists — the loaded content file itself takes the writes (quasi88 with its option on). The value is the reason, required prose; the root must be content_directory, and the answer becomes a declared emptiness with the save-inside-content caveat carrying the fact — never the content file presented as a save under a second name. Its harder sibling is 'writes_discarded': nothing keeps a save at all (hatari with write protection on discards the changed image at eject) — same construction, its own save-writes-discarded caveat, granularity 'none', and the two statements refuse to ride one mode together. A card whose modes no single option's value can name states 'governing_rule' instead of 'governing_option': the options its selection rule reads (possibly none), with the rule itself registered in atlas.mode_rules under the card key — freely named modes, the card states what can exist and the rule decides what holds here. A mode whose every group is unnamed states the directory and refuses the names (ScummVM's launcher-target slot files); its declared set is the empty set of statable names and never claims completeness. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory | working_directory (and a mode does not span its own root; working_directory is the launch's own directory — the answer stays a <cwd> template with its hole in needs), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
+  "spec": "Rule cards for libretro cores whose save behaviour deviates from RetroArch's standard savefile_directory rule. This is world knowledge under DESIGN.md's boundary rule: each card states WHICH live config governs the core and what its values mean — the current value is always read from the machine, never from here. A card states only what no read of the machine recovers: the .so name is derived from the card key and never restated, an option default is recorded only for a core that registers none (a probe of the binary reads the others), and what a card does state about the core's own vocabulary is machine-checked wherever a machine can check it. Cards are keyed by the core's canonical short name (the .so basename without _libretro.so, matching libretro-core-info filenames); 'identifiers' carries the display library_name the core binary reports, the one name that key does not give. 'saves.anchors' is that vocabulary's tripwire: every file name and subdir fragment a card records is pinned either to 'literal' — the whole NUL-delimited byte string the auditor read in the shipped .so, which a test re-reads there — or to an explicit reason no literal can carry it ('unprotected', the core composes the name at run time; 'arrangement', the path is one the arrangement builds and not the core's word at all). A recorded name with neither fails the tests; there is no silent opt-out. Facts live here; interpretation lives in code — a rule that does not fit this schema gets code plus a card referencing it, the schema does not grow a DSL. A declared file name may carry the placement's own hole tokens and nothing else (<rom_stem>, which the resolver fills from the content path, and <save_id>, which it never fills and hands to the caller as a hole); the loader refuses any other token, so a typo cannot travel into a filename atlas states as fact. A subdir segment may be exactly one of the placement's subdir templates — <rom_stem>, or <content_dir_name>, the basename of the content's directory — whole-segment only (the resolver's segment arithmetic depends on one template filling to one segment) and only under the savefile_directory root; the resolver fills it from the content path, and a content-less question keeps the token in the path with its hole in needs. A mode may state 'inside_content' instead of 'groups': no separate save file exists — the loaded content file itself takes the writes (quasi88 with its option on). The value is the reason, required prose; the root must be content_directory, and the answer becomes a declared emptiness with the save-inside-content caveat carrying the fact — never the content file presented as a save under a second name. Its harder sibling is 'writes_discarded': nothing keeps a save at all (hatari with write protection on discards the changed image at eject; SwanStation with both card slots on none) — same construction, its own save-writes-discarded caveat, granularity 'none', and the two statements refuse to ride one mode together; it may also anchor at savefile_directory, where the writes would have landed. A card whose modes no single option's value can name states 'governing_rule' instead of 'governing_option': the options its selection rule reads (possibly none), with the rule itself registered in atlas.mode_rules under the card key — freely named modes, the card states what can exist and the rule decides what holds here. A mode whose every group is unnamed states the directory and refuses the names (ScummVM's launcher-target slot files); its declared set is the empty set of statable names and never claims completeness. The other closed vocabularies are the placement's too: 'root' and 'also_under' are savefile_directory | system_directory | content_directory | working_directory (and a mode does not span its own root; working_directory is the launch's own directory — the answer stays a <cwd> template with its hole in needs), 'granularity' is shared-card | shared-file | per-game-file | per-game-files, and 'complete' must be a JSON boolean — never a quoted one, which Python would read as true. Format and per-field rules: atlas/data/README.md (shipped beside this file).",
   "cores": {
     "boom3": {
       "identifiers": {
@@ -2873,6 +2873,1377 @@
         "source": "libretro/scummvm at 686cdd1, the revision the shipped binary names in its library_version. retro_get_memory_size returns 0 for every id (backends/platform/libretro/src/libretro-core.cpp:1109-1111), so every save is ScummVM's own: slot files written by its DefaultSaveFileManager into the 'savepath' setting, whose registered default is the directory RetroArch hands the core as the save directory, flat (libretro-os-base.cpp:47, libretro-os-utils.cpp:212-216). The setting is the user's, changeable in the core's own GUI and persisted in <system dir>/scummvm.ini (libretro-os-utils.cpp:64-69); set and pointing at an existing directory it governs, set to anything else the backend removes it and falls back to the save directory (checkPathSetting, :169-181, applied at :218-221). The card's rule reads the ini the way the emulator does — no savepath, or one that is not a directory, or one that spells the save directory itself, selects the card's one mode; a savepath pointing elsewhere makes the card step aside with the configured path stated machine-readably (save-root-redirected), because it is a directory outside every root kind the format anchors. Two bounds worth stating: a per-target section of the ini can carry its own savepath override, and which target the loaded content maps to is launcher configuration atlas does not read; and if the frontend's save directory is itself missing at startup, the backend flushes its home directory into 'savepath' instead (libretro-os-utils.cpp:218-221), a state no healthy arrangement reaches.",
         "status": {
           "frontend-save-dir": "[D] Read from source at 686cdd1, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
+    "swanstation": {
+      "identifiers": {
+        "library_name": [
+          "SwanStation"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": [
+            "swanstation_MemoryCards_Card1Type",
+            "swanstation_MemoryCards_Card2Type",
+            "swanstation_MemoryCards_UsePlaylistTitle"
+          ]
+        },
+        "modes": {
+          "card1-libretro+card2-none": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-libretro+card2-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-libretro+card2-per-code": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "<save_id>_2.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-libretro+card2-per-title": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "<rom_stem>_2.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-shared+card2-none": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "duckstation_shared_card_1.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-shared+card2-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "duckstation_shared_card_1.mcd",
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-shared+card2-per-code": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "duckstation_shared_card_1.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "<save_id>_2.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-shared+card2-per-title": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "duckstation_shared_card_1.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "<rom_stem>_2.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-per-code+card2-none": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-per-code+card2-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-per-code+card2-per-code": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<save_id>_1.mcd",
+                  "<save_id>_2.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_1.mcd",
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-per-code+card2-per-title": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "<rom_stem>_2.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-per-title+card2-none": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-per-title+card2-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-per-title+card2-per-code": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "<save_id>_2.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-per-title+card2-per-title": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>_1.mcd",
+                  "<rom_stem>_2.mcd"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-none+card2-none": {
+            "root": "savefile_directory",
+            "writes_discarded": "both memory-card slots are set to 'No Memory Card', so the emulated console has nowhere to save and the core opens no card file (GetMemoryCardForSlot returns none for the type, src/core/system.cpp:1508-1512 at 4d309c0) — no save exists anywhere, and the libretro SRAM interface stays empty too"
+          },
+          "card1-none+card2-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-none+card2-per-code": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<save_id>_2.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "card1-none+card2-per-title": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>_2.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "swanstation_MemoryCards_Card1Type": {
+            "literal": "swanstation_MemoryCards_Card1Type"
+          },
+          "swanstation_MemoryCards_Card2Type": {
+            "literal": "swanstation_MemoryCards_Card2Type"
+          },
+          "swanstation_MemoryCards_UsePlaylistTitle": {
+            "literal": "swanstation_MemoryCards_UsePlaylistTitle"
+          },
+          "<rom_stem>.srm": {
+            "unprotected": "the name is RetroArch's own standard naming — the content's stem with .srm (save.c:710-724) — reached because the Libretro card type fills the SRAM interface instead of opening a file; no literal of this binary can spell a name the frontend builds"
+          },
+          "duckstation_shared_card_1.mcd": {
+            "literal": "%s/duckstation_shared_card_%d.mcd"
+          },
+          "duckstation_shared_card_2.mcd": {
+            "literal": "%s/duckstation_shared_card_%d.mcd"
+          },
+          "<save_id>_1.mcd": {
+            "literal": "%s/%s_%d.mcd"
+          },
+          "<save_id>_2.mcd": {
+            "literal": "%s/%s_%d.mcd"
+          },
+          "<rom_stem>_1.mcd": {
+            "literal": "%s/%s_%d.mcd"
+          },
+          "<rom_stem>_2.mcd": {
+            "literal": "%s/%s_%d.mcd"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/swanstation at 4d309c0, the revision the shipped binary names in its library_version. Each memory-card slot has its own type option (libretro_core_options.h:785-830): slot 1 defaults to 'Libretro' — the card is exposed through the SRAM interface and RetroArch writes the standard <content stem>.srm (libretro_host_interface.cpp:751-786) — and slot 2 to no card. The other types open a file of the core's own in the save directory (GetSharedMemoryCardPath/GetGameMemoryCardPath, libretro_host_interface.cpp:404-415, selected per slot in src/core/system.cpp:1450-1508): 'Shared' is duckstation_shared_card_<slot>.mcd for every game, 'PerGame' names the card after the disc's game code (the serial — the <save_id> hole), 'PerGameTitle' after the running game's title, which this port takes from the content file's own name (GetGameInfo, libretro_host_interface.cpp:396-410). For an .m3u playlist with 'UsePlaylistTitle' on — the default — the title is the playlist's, so the name still spells the loaded content's stem; switched off, each disc names its own title-keyed card, a spelling the playlist path alone does not give (system.cpp:1650-1656). A game-code card for content that yields no code falls back to the shared card (system.cpp:1457-1466). The mode is the pair of slot types, selected by the card's rule; alternatives list the one-edit neighbours rather than all twenty combinations.",
+        "status": {
+          "card1-libretro+card2-none": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-libretro+card2-shared": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-libretro+card2-per-code": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-libretro+card2-per-title": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-shared+card2-none": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-shared+card2-shared": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-shared+card2-per-code": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-shared+card2-per-title": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-per-code+card2-none": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-per-code+card2-shared": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-per-code+card2-per-code": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-per-code+card2-per-title": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-per-title+card2-none": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-per-title+card2-shared": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-per-title+card2-per-code": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-per-title+card2-per-title": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-none+card2-none": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-none+card2-shared": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-none+card2-per-code": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed.",
+          "card1-none+card2-per-title": "[D] Read from source at 4d309c0, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
+    "mednafen_psx": {
+      "identifiers": {
+        "library_name": [
+          "Beetle PSX"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": [
+            "beetle_psx_use_mednafen_memcard0_method",
+            "beetle_psx_enable_memcard1",
+            "beetle_psx_shared_memory_cards",
+            "beetle_psx_memcard_left_index",
+            "beetle_psx_memcard_right_index"
+          ]
+        },
+        "modes": {
+          "srm+second-card": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "<rom_stem>.1.mcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "srm+second-card-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "mednafen_psx_libretro_shared.1.mcr"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "srm-only": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "mcr+second-card": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.0.mcr",
+                  "<rom_stem>.1.mcr"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "mcr+second-card-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "mednafen_psx_libretro_shared.0.mcr",
+                  "mednafen_psx_libretro_shared.1.mcr"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "mcr-only": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.0.mcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "mcr-only-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "mednafen_psx_libretro_shared.0.mcr"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "beetle_psx_use_mednafen_memcard0_method": {
+            "literal": "beetle_psx_use_mednafen_memcard0_method"
+          },
+          "beetle_psx_enable_memcard1": {
+            "literal": "beetle_psx_enable_memcard1"
+          },
+          "beetle_psx_shared_memory_cards": {
+            "literal": "beetle_psx_shared_memory_cards"
+          },
+          "beetle_psx_memcard_left_index": {
+            "literal": "beetle_psx_memcard_left_index"
+          },
+          "beetle_psx_memcard_right_index": {
+            "literal": "beetle_psx_memcard_right_index"
+          },
+          "<rom_stem>.srm": {
+            "unprotected": "the name is RetroArch's own standard naming — the content's stem with .srm (save.c:710-724) — reached because the libretro memcard-0 method fills the SRAM interface instead of opening a file; no literal of this binary can spell a name the frontend builds"
+          },
+          "<rom_stem>.0.mcr": {
+            "literal": "%d.mcr"
+          },
+          "<rom_stem>.1.mcr": {
+            "literal": "%d.mcr"
+          },
+          "mednafen_psx_libretro_shared.0.mcr": {
+            "literal": "mednafen_psx_libretro_shared"
+          },
+          "mednafen_psx_libretro_shared.1.mcr": {
+            "literal": "mednafen_psx_libretro_shared"
+          }
+        }
+      },
+      "provenance": {
+        "source": "beetle-psx-libretro at d6383bf, the revision the shipped binary names in its library_version — one implementation behind two option prefixes, and this card is the beetle_psx spelling of it. Every memory card lands flat in the save directory (MDFN_MakeFName, libretro.cpp:5240-5249). Slot 0 defaults to the libretro method: the card reaches RetroArch through the SRAM interface and the frontend writes the standard <content stem>.srm (libretro.cpp:5129-5145); under 'beetle_psx_use_mednafen_memcard0_method' = mednafen the core writes it itself as <stem>.<idx>.mcr. Slot 1 is enabled by default and always core-written the same way, appearing once a game dirties it (libretro.cpp:2145-2163, :2459-2485). 'beetle_psx_shared_memory_cards' swaps the content stem for 'mednafen_psx_libretro_shared' on every core-written card, never on the frontend's .srm (libretro.cpp:5240-5247). The digit in the name is the card-image index option's value (issue #80, settled at libretro.cpp:2159-2164: slot 0 takes 'beetle_psx_memcard_left_index', slot 1 'beetle_psx_memcard_right_index'), so the recorded names hold for the registered defaults (left 0, right 1) and the rule steps aside for any other selection. Slots 2-7 exist for multitap play and are written as <stem>.<n>.mcr the same way — outside the recorded set, which is one reason no mode claims completeness.",
+        "status": {
+          "srm+second-card": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "srm+second-card-shared": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "srm-only": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "mcr+second-card": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "mcr+second-card-shared": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "mcr-only": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "mcr-only-shared": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
+    "mednafen_psx_hw": {
+      "identifiers": {
+        "library_name": [
+          "Beetle PSX HW"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": [
+            "beetle_psx_hw_use_mednafen_memcard0_method",
+            "beetle_psx_hw_enable_memcard1",
+            "beetle_psx_hw_shared_memory_cards",
+            "beetle_psx_hw_memcard_left_index",
+            "beetle_psx_hw_memcard_right_index"
+          ]
+        },
+        "modes": {
+          "srm+second-card": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "<rom_stem>.1.mcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "srm+second-card-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "files": [
+                  "mednafen_psx_libretro_shared.1.mcr"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "srm-only": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "mcr+second-card": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.0.mcr",
+                  "<rom_stem>.1.mcr"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "mcr+second-card-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "mednafen_psx_libretro_shared.0.mcr",
+                  "mednafen_psx_libretro_shared.1.mcr"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "mcr-only": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.0.mcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "mcr-only-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "mednafen_psx_libretro_shared.0.mcr"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "beetle_psx_hw_use_mednafen_memcard0_method": {
+            "literal": "beetle_psx_hw_use_mednafen_memcard0_method"
+          },
+          "beetle_psx_hw_enable_memcard1": {
+            "literal": "beetle_psx_hw_enable_memcard1"
+          },
+          "beetle_psx_hw_shared_memory_cards": {
+            "literal": "beetle_psx_hw_shared_memory_cards"
+          },
+          "beetle_psx_hw_memcard_left_index": {
+            "literal": "beetle_psx_hw_memcard_left_index"
+          },
+          "beetle_psx_hw_memcard_right_index": {
+            "literal": "beetle_psx_hw_memcard_right_index"
+          },
+          "<rom_stem>.srm": {
+            "unprotected": "the name is RetroArch's own standard naming — the content's stem with .srm (save.c:710-724) — reached because the libretro memcard-0 method fills the SRAM interface instead of opening a file; no literal of this binary can spell a name the frontend builds"
+          },
+          "<rom_stem>.0.mcr": {
+            "literal": "%d.mcr"
+          },
+          "<rom_stem>.1.mcr": {
+            "literal": "%d.mcr"
+          },
+          "mednafen_psx_libretro_shared.0.mcr": {
+            "literal": "mednafen_psx_libretro_shared"
+          },
+          "mednafen_psx_libretro_shared.1.mcr": {
+            "literal": "mednafen_psx_libretro_shared"
+          }
+        }
+      },
+      "provenance": {
+        "source": "beetle-psx-libretro at d6383bf, the revision the shipped binary names in its library_version — one implementation behind two option prefixes, and this card is the beetle_psx_hw spelling of it. Every memory card lands flat in the save directory (MDFN_MakeFName, libretro.cpp:5240-5249). Slot 0 defaults to the libretro method: the card reaches RetroArch through the SRAM interface and the frontend writes the standard <content stem>.srm (libretro.cpp:5129-5145); under 'beetle_psx_hw_use_mednafen_memcard0_method' = mednafen the core writes it itself as <stem>.<idx>.mcr. Slot 1 is enabled by default and always core-written the same way, appearing once a game dirties it (libretro.cpp:2145-2163, :2459-2485). 'beetle_psx_hw_shared_memory_cards' swaps the content stem for 'mednafen_psx_libretro_shared' on every core-written card, never on the frontend's .srm (libretro.cpp:5240-5247). The digit in the name is the card-image index option's value (issue #80, settled at libretro.cpp:2159-2164: slot 0 takes 'beetle_psx_hw_memcard_left_index', slot 1 'beetle_psx_hw_memcard_right_index'), so the recorded names hold for the registered defaults (left 0, right 1) and the rule steps aside for any other selection. Slots 2-7 exist for multitap play and are written as <stem>.<n>.mcr the same way — outside the recorded set, which is one reason no mode claims completeness.",
+        "status": {
+          "srm+second-card": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "srm+second-card-shared": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "srm-only": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "mcr+second-card": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "mcr+second-card-shared": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "mcr-only": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed.",
+          "mcr-only-shared": "[D] Read from source at d6383bf, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
+    "genesis_plus_gx": {
+      "identifiers": {
+        "library_name": [
+          "Genesis Plus GX"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": [
+            "genesis_plus_gx_system_bram",
+            "genesis_plus_gx_cart_bram",
+            "genesis_plus_gx_cart_size"
+          ]
+        },
+        "modes": {
+          "cartridge": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cartridge-raw-image": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.srm"
+                ],
+                "files_established_for": "a raw .bin loaded as the cartridge dump it is in every ordinary library — one that carries the Sega CD disc header boots as a disc instead and takes the CD modes, a class the extension alone cannot settle",
+                "files_citation": "core/loadrom.c load-time system detection at 46a5521",
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-128k": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "128Kbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-128k-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_128Kbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-256k": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "256Kbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-256k-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_256Kbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-512k": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "512Kbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-512k-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_512Kbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-1meg": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "1Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-1meg-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_1Mbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-2meg": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "2Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-2meg-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_2Mbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-4meg": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "4Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-bios-bram+cart-4meg-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "scd_E.brm",
+                  "scd_U.brm",
+                  "scd_J.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_4Mbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-128k": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "128Kbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-128k-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_128Kbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-256k": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "256Kbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-256k-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_256Kbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-512k": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "512Kbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-512k-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_512Kbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-1meg": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "1Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-1meg-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_1Mbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-2meg": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "2Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-2meg-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_2Mbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-4meg": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "4Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "cd-game-bram+cart-4meg-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "files": [
+                  "<rom_stem>.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "files": [
+                  "<rom_stem>_4Mbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "genesis_plus_gx_system_bram": {
+            "literal": "genesis_plus_gx_system_bram"
+          },
+          "genesis_plus_gx_cart_bram": {
+            "literal": "genesis_plus_gx_cart_bram"
+          },
+          "genesis_plus_gx_cart_size": {
+            "literal": "genesis_plus_gx_cart_size"
+          },
+          "scd_E.brm": {
+            "literal": "scd_E.brm"
+          },
+          "scd_U.brm": {
+            "literal": "scd_U.brm"
+          },
+          "scd_J.brm": {
+            "literal": "scd_J.brm"
+          },
+          "<rom_stem>.srm": {
+            "unprotected": "the name is RetroArch's own standard naming — the content's stem with .srm (save.c:710-724) — reached because cartridge content fills the SRAM interface; no literal of this binary can spell a name the frontend builds"
+          },
+          "<rom_stem>.brm": {
+            "unprotected": "composed at run time from the content's name and the '.brm' suffix (libretro.c:1396-1400 at 46a5521); the four-byte suffix is tail-merged by the compiler into the cart literals ('_128Kbit_cart.brm' …), so no NUL-delimited string spells it alone"
+          },
+          "128Kbit_cart.brm": {
+            "literal": "_128Kbit_cart.brm"
+          },
+          "<rom_stem>_128Kbit_cart.brm": {
+            "literal": "_128Kbit_cart.brm"
+          },
+          "256Kbit_cart.brm": {
+            "literal": "_256Kbit_cart.brm"
+          },
+          "<rom_stem>_256Kbit_cart.brm": {
+            "literal": "_256Kbit_cart.brm"
+          },
+          "512Kbit_cart.brm": {
+            "literal": "_512Kbit_cart.brm"
+          },
+          "<rom_stem>_512Kbit_cart.brm": {
+            "literal": "_512Kbit_cart.brm"
+          },
+          "1Mbit_cart.brm": {
+            "literal": "_1Mbit_cart.brm"
+          },
+          "<rom_stem>_1Mbit_cart.brm": {
+            "literal": "_1Mbit_cart.brm"
+          },
+          "2Mbit_cart.brm": {
+            "literal": "_2Mbit_cart.brm"
+          },
+          "<rom_stem>_2Mbit_cart.brm": {
+            "literal": "_2Mbit_cart.brm"
+          },
+          "4Mbit_cart.brm": {
+            "literal": "_4Mbit_cart.brm"
+          },
+          "<rom_stem>_4Mbit_cart.brm": {
+            "literal": "_4Mbit_cart.brm"
+          }
+        }
+      },
+      "provenance": {
+        "source": "ekeeke/Genesis-Plus-GX at 46a5521, the revision the shipped binary names in its library_version. The save story splits on the content's class, which is why the mode is selected by the card's rule from the extension the loader dispatches on (valid extensions at libretro.c:3129). Cartridge content (md/smd/gen/sms/gg/sg/68k/sgd/mdx/bms, and raw .bin) fills the frontend's SRAM interface and RetroArch writes the standard <content stem>.srm — every cartridge system the retired memory record covered agreed on that. CD content (cue/iso/chd/m3u) never reaches it: SYSTEM_MCD runs scd_init() instead of md_cart_init() (core/genesis.c:162-175), so the saves are the core's own BRAM files, flat in the save directory, under three interacting options read at first run (libretro.c:1385-1500) and written by bram_load/bram_save (libretro.c:3675, :3730). 'genesis_plus_gx_system_bram' per bios — the default — keeps one region-keyed internal file (scd_E.brm, scd_U.brm, scd_J.brm; which one a game touches is the console region, so all three are the declared candidates); per game keeps <stem>.brm instead. The backup RAM cart is 'genesis_plus_gx_cart_bram' with 'genesis_plus_gx_cart_size' (default per cart at 4meg): one <size>_cart.brm shared across games, a per-game <stem>_<size>_cart.brm, or no cart at all with the size disabled. Alternatives list the one-edit neighbours rather than all twenty-six CD combinations.",
+        "status": {
+          "cartridge": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cartridge-raw-image": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-128k": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-128k-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-256k": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-256k-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-512k": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-512k-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-1meg": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-1meg-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-2meg": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-2meg-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-4meg": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-bios-bram+cart-4meg-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-128k": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-128k-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-256k": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-256k-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-512k": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-512k-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-1meg": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-1meg-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-2meg": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-2meg-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-4meg": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed.",
+          "cd-game-bram+cart-4meg-per-game": "[D] Read from source at 46a5521, the revision the shipped binary names. Not live-observed."
         }
       }
     }

@@ -487,15 +487,23 @@ class CoreCard:
 def _stated_mode(mode: Any, *, root: str, field: str, reason: str, where: str) -> SaveMode:
     """The groups-less forms: the content file takes the writes, or nothing does.
 
-    Both anchor at the content's own tree — the statement is about what
-    happens to the loaded content file — and both replace the groups with
-    required prose, so one loader carries them and the field name says which
-    form it is building.
+    Both replace the groups with required prose, so one loader carries them
+    and the field name says which form it is building. The inside-content
+    statement is about the loaded content file and anchors at its tree;
+    the discarded statement may also anchor at the frontend's save root —
+    where the save *would* have gone — because a core can keep nothing
+    without the content being involved at all (SwanStation with both
+    memory-card slots set to none).
     """
-    if root != ROOT_CONTENT_DIRECTORY:
+    allowed = (
+        (ROOT_CONTENT_DIRECTORY,)
+        if field == "inside_content"
+        else (ROOT_CONTENT_DIRECTORY, ROOT_SAVEFILE_DIRECTORY)
+    )
+    if root not in allowed:
         raise ValueError(
-            f"{where}: a mode stating '{field}' is about the loaded content file — root must "
-            f"be {ROOT_CONTENT_DIRECTORY!r}, got {root!r}"
+            f"{where}: a mode stating '{field}' anchors where the writes would have landed — "
+            f"root must be one of {sorted(allowed)}, got {root!r}"
         )
     if mode.get("groups") is not None:
         raise ValueError(

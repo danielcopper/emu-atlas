@@ -392,6 +392,263 @@ def _same_path(left: str, right: str) -> bool:
     return posixpath.normpath(left.rstrip("/")) == posixpath.normpath(right.rstrip("/"))
 
 
+# ---------------------------------------------------------------------------
+# swanstation — each memory-card slot has its own type option, and the mode is
+# the pair: slot 1 defaults to the libretro SRAM interface (the frontend's
+# .srm), slot 2 to no card. The per-game types name the card after the disc's
+# game code or its title (libretro_host_interface.cpp:404-415 at 4d309c0,
+# selected in system.cpp:1450-1508). Which other modes an answer lists is the
+# rule's judgment: twenty are reachable, so the alternatives are the one-edit
+# neighbours — every slot, changed once — rather than the whole product.
+# ---------------------------------------------------------------------------
+
+_SWAN_CARD1 = "swanstation_MemoryCards_Card1Type"
+_SWAN_CARD2 = "swanstation_MemoryCards_Card2Type"
+_SWAN_PLAYLIST = "swanstation_MemoryCards_UsePlaylistTitle"
+_SWAN_TYPES = {
+    "Libretro": "libretro",
+    "Shared": "shared",
+    "PerGame": "per-code",
+    "PerGameTitle": "per-title",
+    "None": "none",
+}
+_SWAN_CARD1_VALUES = ("Libretro", "Shared", "PerGame", "PerGameTitle", "None")
+_SWAN_CARD2_VALUES = ("None", "Shared", "PerGame", "PerGameTitle")
+
+
+def _swanstation_mode(card1: str, card2: str) -> str:
+    return f"card1-{_SWAN_TYPES[card1]}+card2-{_SWAN_TYPES[card2]}"
+
+
+def _swanstation(reading: RuleReading) -> ModeChoice:
+    card1 = reading.option_values[_SWAN_CARD1]
+    card2 = reading.option_values[_SWAN_CARD2]
+    missing = [
+        key for key, value in ((_SWAN_CARD1, card1), (_SWAN_CARD2, card2)) if value is None
+    ]
+    if missing:
+        return ModeChoice(
+            None, caveats=tuple(_value_unestablished("swanstation", key) for key in missing)
+        )
+    alien = [
+        (key, value)
+        for key, value, known in (
+            (_SWAN_CARD1, card1, _SWAN_CARD1_VALUES),
+            (_SWAN_CARD2, card2, _SWAN_CARD2_VALUES),
+        )
+        if value not in known
+    ]
+    if alien:
+        return ModeChoice(
+            None,
+            caveats=tuple(_unknown_value("swanstation", key, value or "") for key, value in alien),
+        )
+    if "PerGameTitle" in (card1, card2):
+        # The playlist option only moves a title-named card's stem, so it is
+        # read — and stated as a reading — exactly where a slot is title-named.
+        _ = reading.option_values[_SWAN_PLAYLIST]
+    alternatives = []
+    for value in _SWAN_CARD1_VALUES:
+        if value != card1:
+            alternatives.append((_swanstation_mode(value, card2 or ""), ((_SWAN_CARD1, value),)))
+    for value in _SWAN_CARD2_VALUES:
+        if value != card2:
+            alternatives.append((_swanstation_mode(card1 or "", value), ((_SWAN_CARD2, value),)))
+    return ModeChoice(_swanstation_mode(card1 or "", card2 or ""), alternatives=tuple(alternatives))
+
+
+# ---------------------------------------------------------------------------
+# beetle psx / beetle psx hw — one implementation, two option prefixes. Slot 0
+# is the frontend's .srm through the libretro SRAM interface, or the core's
+# own <stem>.<idx>.mcr under the mednafen method; slot 1 adds a second .mcr;
+# sharing swaps the stem (libretro.cpp:2145-2163, :2459-2485, :5240-5249 at
+# d6383bf). The card-image index options supply the digit in the name
+# (:2159-2164), so the recorded names hold for the registered defaults (left
+# 0, right 1) and the rule steps aside for any other selection.
+# ---------------------------------------------------------------------------
+
+
+def _beetle_psx_rule(prefix: str, core: str) -> Callable[[RuleReading], ModeChoice]:
+    method_key = f"{prefix}use_mednafen_memcard0_method"
+    memcard1_key = f"{prefix}enable_memcard1"
+    shared_key = f"{prefix}shared_memory_cards"
+    left_key = f"{prefix}memcard_left_index"
+    right_key = f"{prefix}memcard_right_index"
+
+    def rule(reading: RuleReading) -> ModeChoice:
+        method = reading.option_values[method_key]
+        memcard1 = reading.option_values[memcard1_key]
+        shared = reading.option_values[shared_key]
+        missing = [
+            key
+            for key, value in ((method_key, method), (memcard1_key, memcard1), (shared_key, shared))
+            if value is None
+        ]
+        if missing:
+            return ModeChoice(None, caveats=tuple(_value_unestablished(core, key) for key in missing))
+        alien = [
+            (key, value)
+            for key, value, known in (
+                (method_key, method, ("libretro", "mednafen")),
+                (memcard1_key, memcard1, ("enabled", "disabled")),
+                (shared_key, shared, ("enabled", "disabled")),
+            )
+            if value not in known
+        ]
+        if alien:
+            return ModeChoice(
+                None, caveats=tuple(_unknown_value(core, key, value or "") for key, value in alien)
+            )
+        indexes = []
+        if method == "mednafen":
+            indexes.append((left_key, reading.option_values[left_key], "0"))
+        if memcard1 == "enabled":
+            indexes.append((right_key, reading.option_values[right_key], "1"))
+        offset = [(key, value) for key, value, default in indexes if value != default]
+        if offset:
+            names = ", ".join(f'{key} = "{value}"' for key, value in offset)
+            return ModeChoice(
+                None,
+                caveats=(
+                    _mode_unestablished(
+                        core,
+                        f"the card-image index options select other card files than the recorded "
+                        f"names cover ({names} — the digit in <stem>.<idx>.mcr is the option's "
+                        "value, libretro.cpp:2159-2164 at d6383bf)",
+                    ),
+                ),
+            )
+        slot0 = "srm" if method == "libretro" else "mcr"
+        second = memcard1 == "enabled"
+        is_shared = shared == "enabled" and (slot0 == "mcr" or second)
+        mode = f"{slot0}{'+second-card' if second else '-only'}{'-shared' if is_shared else ''}"
+
+        def other(method_v: str, memcard1_v: str, shared_v: str) -> tuple[str, tuple[tuple[str, str], ...]]:
+            s0 = "srm" if method_v == "libretro" else "mcr"
+            snd = memcard1_v == "enabled"
+            shr = shared_v == "enabled" and (s0 == "mcr" or snd)
+            name = f"{s0}{'+second-card' if snd else '-only'}{'-shared' if shr else ''}"
+            return name, ((method_key, method_v), (memcard1_key, memcard1_v), (shared_key, shared_v))
+
+        flips = [
+            other("mednafen" if method == "libretro" else "libretro", memcard1 or "", shared or ""),
+            other(method or "", "disabled" if second else "enabled", shared or ""),
+            other(method or "", memcard1 or "", "disabled" if shared == "enabled" else "enabled"),
+        ]
+        alternatives = tuple(
+            (name, combo) for name, combo in flips if name != mode
+        )
+        return ModeChoice(mode, alternatives=alternatives)
+
+    return rule
+
+
+# ---------------------------------------------------------------------------
+# genesis_plus_gx — frontend SRAM is real for the cartridge systems and
+# unreachable for the CD ones, whose BRAM tree hangs on three interacting
+# options (libretro.c:1385-1500 at 46a5521): the system BRAM is region-keyed
+# scd_E/U/J.brm or per-game <stem>.brm, and the backup cart is one shared
+# size-keyed file, a per-game one, or absent. Which world applies is the
+# content's class, read off the extension the way the loader dispatches.
+# ---------------------------------------------------------------------------
+
+_GPGX_SYSTEM = "genesis_plus_gx_system_bram"
+_GPGX_CART = "genesis_plus_gx_cart_bram"
+_GPGX_SIZE = "genesis_plus_gx_cart_size"
+_GPGX_CD = frozenset({"cue", "iso", "chd", "m3u"})
+_GPGX_CARTRIDGE = frozenset({"md", "smd", "gen", "sms", "gg", "sg", "68k", "sgd", "mdx", "bms"})
+_GPGX_SIZES = ("128k", "256k", "512k", "1meg", "2meg", "4meg")
+
+
+def _gpgx_cd_mode(system: str, cart: str, size: str) -> str:
+    base = "cd-bios-bram" if system == "per bios" else "cd-game-bram"
+    if size == "disabled":
+        return base
+    suffix = f"+cart-{size}" if cart == "per cart" else f"+cart-{size}-per-game"
+    return base + suffix
+
+
+def _genesis_plus_gx(reading: RuleReading) -> ModeChoice:
+    extension = reading.content_extension
+    if extension is None:
+        return ModeChoice(
+            None,
+            caveats=(
+                _mode_unestablished(
+                    "genesis_plus_gx",
+                    "the save story splits on the content's class (a cartridge fills the "
+                    "frontend's SRAM interface, a CD writes the core's own BRAM files), and no "
+                    "content was named",
+                ),
+            ),
+        )
+    if extension in _GPGX_CARTRIDGE:
+        return ModeChoice("cartridge")
+    if extension == "bin":
+        # A raw .bin is a cartridge dump in every ordinary library, and the
+        # loader would still boot one carrying a CD header as a disc — the
+        # mode's scoped file list says so instead of a second class guess.
+        return ModeChoice("cartridge-raw-image")
+    if extension not in _GPGX_CD:
+        return ModeChoice(
+            None,
+            caveats=(
+                _mode_unestablished(
+                    "genesis_plus_gx",
+                    f"the content's extension {extension!r} is outside both recorded classes "
+                    "(cartridge: md/smd/gen/sms/gg/sg/68k/sgd/mdx/bms and raw .bin; CD: "
+                    "cue/iso/chd/m3u), so which save story applies was never established",
+                ),
+            ),
+        )
+    system = reading.option_values[_GPGX_SYSTEM]
+    cart = reading.option_values[_GPGX_CART]
+    size = reading.option_values[_GPGX_SIZE]
+    missing = [
+        key
+        for key, value in ((_GPGX_SYSTEM, system), (_GPGX_CART, cart), (_GPGX_SIZE, size))
+        if value is None
+    ]
+    if missing:
+        return ModeChoice(
+            None, caveats=tuple(_value_unestablished("genesis_plus_gx", key) for key in missing)
+        )
+    alien = [
+        (key, value)
+        for key, value, known in (
+            (_GPGX_SYSTEM, system, ("per bios", "per game")),
+            (_GPGX_CART, cart, ("per cart", "per game")),
+            (_GPGX_SIZE, size, ("disabled", *_GPGX_SIZES)),
+        )
+        if value not in known
+    ]
+    if alien:
+        return ModeChoice(
+            None,
+            caveats=tuple(_unknown_value("genesis_plus_gx", key, value or "") for key, value in alien),
+        )
+    mode = _gpgx_cd_mode(system or "", cart or "", size or "")
+    alternatives = [
+        (
+            _gpgx_cd_mode("per game" if system == "per bios" else "per bios", cart or "", size or ""),
+            ((_GPGX_SYSTEM, "per game" if system == "per bios" else "per bios"),),
+        )
+    ]
+    if size != "disabled":
+        alternatives.append(
+            (
+                _gpgx_cd_mode(system or "", "per game" if cart == "per cart" else "per cart", size or ""),
+                ((_GPGX_CART, "per game" if cart == "per cart" else "per cart"),),
+            )
+        )
+    for other_size in ("disabled", *_GPGX_SIZES):
+        if other_size != size:
+            alternatives.append(
+                (_gpgx_cd_mode(system or "", cart or "", other_size), ((_GPGX_SIZE, other_size),))
+            )
+    return ModeChoice(mode, alternatives=tuple(dict.fromkeys(alternatives)))
+
+
 # The registry the card loader validates against: a card stating a
 # ``governing_rule`` must have its function here, and the test suite holds
 # the mirror claim — a rule with no card would be code describing nothing.
@@ -399,4 +656,8 @@ RULES: Mapping[str, Callable[[RuleReading], ModeChoice]] = {
     "mednafen_saturn": _mednafen_saturn,
     "hatari": _hatari,
     "scummvm": _scummvm,
+    "swanstation": _swanstation,
+    "mednafen_psx": _beetle_psx_rule("beetle_psx_", "mednafen_psx"),
+    "mednafen_psx_hw": _beetle_psx_rule("beetle_psx_hw_", "mednafen_psx_hw"),
+    "genesis_plus_gx": _genesis_plus_gx,
 }

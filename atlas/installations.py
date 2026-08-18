@@ -2410,6 +2410,40 @@ def _also_under_root(
     ).root_kind
 
 
+def _stated_mode_caveats(
+    card: CoreCard, mode: SaveMode, granularity: Granularity | None
+) -> tuple[Caveat, ...]:
+    """The groups-less forms' caveats, wherever the mode's root routed the answer.
+
+    Both statements produce a declared-empty file set that is true as stated,
+    and the caveat is what keeps each from reading as "this game has no
+    save": inside-content says the loaded content file takes the writes (the
+    caller decides what to make of that), writes-discarded says nothing keeps
+    any save at all — the granularity block beside it names the switch that
+    would change that.
+    """
+    mode_value = granularity.mode if granularity is not None else None
+    suffix = f" in mode {mode_value!r}" if mode_value else ""
+    caveats: list[Caveat] = []
+    if mode.inside_content is not None:
+        caveats.append(
+            Caveat(
+                CAVEAT_SAVE_INSIDE_CONTENT,
+                f"core {card.key!r}{suffix}: no separate save file exists — {mode.inside_content}",
+                {"core": card.key, "mode": mode_value or ""},
+            )
+        )
+    if mode.writes_discarded is not None:
+        caveats.append(
+            Caveat(
+                CAVEAT_SAVE_WRITES_DISCARDED,
+                f"core {card.key!r}{suffix}: no save exists anywhere — {mode.writes_discarded}",
+                {"core": card.key, "mode": mode_value or ""},
+            )
+        )
+    return tuple(caveats)
+
+
 def _card_root_placement(
     machine: Machine,
     *,
@@ -2437,35 +2471,7 @@ def _card_root_placement(
         f"rule card '{card.key}': {root_sentence} — {card.provenance}",
     ]
     all_caveats = [*caveats, *root.caveats]
-    mode_value = granularity.mode if granularity is not None else None
-    if mode.inside_content is not None:
-        # The declared emptiness below is true — no separate save file exists —
-        # and this is what keeps it from reading as "this game has no save":
-        # the loaded content file itself takes the writes, and what to make of
-        # that is the caller's decision, not a file listing.
-        all_caveats.append(
-            Caveat(
-                CAVEAT_SAVE_INSIDE_CONTENT,
-                f"core {card.key!r}"
-                + (f" in mode {mode_value!r}" if mode_value else "")
-                + f": no separate save file exists — {mode.inside_content}",
-                {"core": card.key, "mode": mode_value or ""},
-            )
-        )
-    if mode.writes_discarded is not None:
-        # The harder emptiness: nothing keeps any save at all. The same
-        # declared-empty file set below is the whole truth here, and the
-        # caveat is what tells the two apart — the granularity block beside
-        # it says which switch would make saves exist again.
-        all_caveats.append(
-            Caveat(
-                CAVEAT_SAVE_WRITES_DISCARDED,
-                f"core {card.key!r}"
-                + (f" in mode {mode_value!r}" if mode_value else "")
-                + f": no save exists anywhere — {mode.writes_discarded}",
-                {"core": card.key, "mode": mode_value or ""},
-            )
-        )
+    all_caveats.extend(_stated_mode_caveats(card, mode, granularity))
     if granularity is not None:
         all_caveats.extend(
             _file_set_caveats(
@@ -2681,6 +2687,21 @@ def _observed_file_set(
     sentence a genuinely empty directory earns and would send a caller off to
     restore a save it already has.
     """
+    if mode is not None and mode.stated is not None:
+        # A groups-less statement leaves nothing to observe: the mode says no
+        # separate save file exists, and a leftover from an earlier mode lying
+        # in the directory must not be presented as this configuration's save.
+        return (
+            _file_set_of(
+                [],
+                directory=directory,
+                rom_stem=rom_stem,
+                content_dir_name=content_dir_name,
+                card=card,
+                mode=mode,
+            ),
+            (),
+        )
     content_file = content_file_name(content_path) if content_path else None
     pattern = os.path.join(_glob_escape(directory), _glob_escape(rom_stem) + ".*")
     companions = {f"{rom_stem}.ldci"}
@@ -3285,6 +3306,8 @@ def _standard_placement(
     ``fallback_dir`` stays empty rather than claiming a fallback nobody takes.
     """
     all_caveats = list(caveats)
+    if card is not None and mode is not None:
+        all_caveats.extend(_stated_mode_caveats(card, mode, granularity))
     if card is not None and mode is not None and granularity is not None:
         all_caveats.extend(
             _file_set_caveats(

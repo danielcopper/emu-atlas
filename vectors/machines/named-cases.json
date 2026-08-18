@@ -3002,7 +3002,7 @@
     },
     {
       "name": "multi-option-core-names-the-options-that-decide-granularity",
-      "rationale": "SwanStation's audit verdict is multi-option: the directory follows the standard rule, but MemoryCards_Card1Type/Card2Type/UsePlaylistTitle decide whether the save is a per-game .srm, a serial- or title-keyed .mcd, or one card shared by every game. atlas does not interpret those options, so granularity stays null — and the caveat is what keeps that deliberate silence apart from a standard core's nothing-to-report, naming the options so a consumer can ask about them instead of assuming per-game.",
+      "rationale": "PCSX-ReARMed's audit verdict is multi-option: the directory follows the standard rule and RetroArch writes the .srm, but pcsx_rearmed_memcard2 can add a second, shared card the record cannot model. atlas does not interpret that option yet, so the granularity is deliberately unstated and the caveat names it — the honest thin answer every core keeps until its rule card ships.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3012,13 +3012,13 @@
           "/mnt/sd/retrodeck/saves/psx/.keep": ""
         },
         "cores": {
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/swanstation_libretro.so": {
-            "library_name": "SwanStation"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/pcsx_rearmed_libretro.so": {
+            "library_name": "PCSX-ReARMed"
           }
         },
         "savefile_query": {
           "content_path": "/mnt/sd/retrodeck/roms/psx/Vagrant Story (USA).chd",
-          "core_so": "swanstation_libretro.so"
+          "core_so": "pcsx_rearmed_libretro.so"
         }
       },
       "expected": {
@@ -3044,17 +3044,17 @@
             "complete": false,
             "groups": []
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "core-multi-option",
               "data": {
-                "core": "swanstation",
+                "core": "pcsx_rearmed",
                 "verdict": "multi-option",
-                "options": "swanstation_MemoryCards_Card1Type, swanstation_MemoryCards_Card2Type, swanstation_MemoryCards_UsePlaylistTitle"
+                "options": "pcsx_rearmed_memcard2"
               }
             }
-          ]
+          ],
+          "granularity": null
         }
       }
     },
