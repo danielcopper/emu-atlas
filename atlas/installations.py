@@ -2370,7 +2370,13 @@ def _with_cross_parts(file_set: FileSet, cross_parts: "_CrossParts") -> FileSet:
     extend, and the spans-roots caveats carry the parts instead.
     """
     if cross_parts.groups and file_set.state == FILE_SET_DECLARED and file_set.groups:
-        return _dc_replace(file_set, groups=(*file_set.groups, *cross_parts.groups))
+        return FileSet(
+            state=file_set.state,
+            files=file_set.files,
+            provenance=file_set.provenance,
+            complete=file_set.complete,
+            groups=(*file_set.groups, *cross_parts.groups),
+        )
     return file_set
 
 
