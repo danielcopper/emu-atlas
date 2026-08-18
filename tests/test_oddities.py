@@ -467,10 +467,16 @@ class TestAnOptionThatMovesTheRootItself:
         p = self._query(files)
         assert p.root_kind == atlas.ROOT_CONTENT_DIRECTORY
         assert p.dir == "/mnt/sd/retrodeck/roms/pc88"
-        # No file of the core's own exists in this mode — the save is the
-        # modified content file, and the answer names exactly that file.
+        # No separate save file exists in this mode, and the answer says so as
+        # a declared emptiness — never by presenting the content file as a
+        # save, which would hand a sync client the ROM under a second name.
+        # The caveat carries the fact; what to make of it is the caller's call.
         assert p.file_set.state == "declared"
-        assert p.file_set.files == ("Game (Japan).d88",)
+        assert p.file_set.files == ()
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_INSIDE_CONTENT)
+        assert caveat.data["core"] == "quasi88"
+        assert caveat.data["mode"] == "enabled"
+        assert "disk image itself" in caveat.message
         assert p.granularity is not None
         assert p.granularity.option_value == "enabled"
         assert ("disabled", "per-game-files") in p.granularity.alternatives
@@ -1760,6 +1766,62 @@ class TestStrictLoaders:
         )
         assert load_oddities(text)[0].modes["always"].subdir == "<content_dir_name>/save"
 
+    def _inside_card(self, mode):
+        return json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"library_name": ["X"]},
+                        "saves": {"modes": {"always": mode}},
+                    }
+                },
+            }
+        )
+
+    def test_a_save_inside_the_content_loads_as_the_groups_less_form(self):
+        mode = load_oddities(
+            self._inside_card(
+                {"root": "content_directory", "inside_content": "the image is the medium"}
+            )
+        )[0].modes["always"]
+        assert mode.inside_content == "the image is the medium"
+        assert mode.groups == ()
+        # The group-derived answers the form gives itself: an empty, closed
+        # set of separate files, per game by the medium's own nature.
+        assert mode.files == ()
+        assert mode.complete is True
+        assert mode.granularity == "per-game-file"
+        assert mode.subdir is None
+        assert mode.observe is None
+
+    def test_a_save_inside_the_content_refuses_groups(self):
+        text = self._inside_card(
+            {
+                "root": "content_directory",
+                "inside_content": "why",
+                "groups": [{"files": ["a.srm"], "granularity": "per-game-file", "role": "battery"}],
+            }
+        )
+        with pytest.raises(ValueError, match="no separate file to group"):
+            load_oddities(text)
+
+    def test_a_save_inside_the_content_refuses_another_root(self):
+        # The statement is about the content's own tree; under the save root it
+        # would claim RetroArch's directory holds a file that is the content.
+        text = self._inside_card(
+            {"root": "savefile_directory", "inside_content": "why"}
+        )
+        with pytest.raises(ValueError, match="content's own tree"):
+            load_oddities(text)
+
+    def test_a_save_inside_the_content_refuses_also_under(self):
+        text = self._inside_card(
+            {"root": "content_directory", "inside_content": "why", "also_under": "system_directory"}
+        )
+        with pytest.raises(ValueError, match="also_under"):
+            load_oddities(text)
+
     # Everything a mode used to carry now belongs to one of its groups, except
     # the two fields that are still the mode's own. Splitting here keeps every
     # case below written the way it was — what it asserts did not change.
@@ -2641,11 +2703,10 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("prboom", "prbmsav5.dsg", "unprotected"),
             ("prboom", "prbmsav6.dsg", "unprotected"),
             ("prboom", "prbmsav7.dsg", "unprotected"),
-            # quasi88's two names are the opened disk image's own: the diff is
-            # composed from the whole format '%s%c%s.srm', and the in-place
-            # target is the content file itself — the binary carries the
-            # extension registration 'd88|m3u' that admits it.
-            ("quasi88", "<rom_stem>.d88", "unprotected"),
+            # quasi88's diff is named after the opened disk image's stem at run
+            # time, composed from the whole format '%s%c%s.srm'. The in-place
+            # mode no longer records a name: the save is the content file
+            # itself, which the card states as a fact rather than a file.
             ("quasi88", "<rom_stem>.srm", "unprotected"),
             # RACE's is the one name in this list the binary carries no trace of,
             # not even the extension: 'ngf' is three characters, which a compiler

@@ -285,6 +285,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-scan-incomplete",
     "core-enumeration-incomplete",
     "save-dir-launch-dependent",
+    "save-inside-content",
     "save-dir-unlistable",
     "emulator-read-unestablished",
     "emulator-config-unread",

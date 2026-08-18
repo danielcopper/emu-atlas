@@ -31,6 +31,7 @@ from typing import Any, Mapping
 from atlas.placement import (
     GRANULARITIES,
     ROLES,
+    ROOT_CONTENT_DIRECTORY,
     ROOT_KINDS,
     ROOT_SAVEFILE_DIRECTORY,
     SUBDIR_TEMPLATE_HOLES,
@@ -271,8 +272,27 @@ class SaveMode:
     root: str
     groups: tuple[SaveGroup, ...]
     also_under: str | None = None
+    inside_content: str | None = None
 
     def __post_init__(self) -> None:
+        if self.inside_content is not None:
+            # The groups-less form: no separate save file exists, the loaded
+            # content file itself takes the writes. There is nothing to group
+            # — the statement replaces the groups, and the reason is required
+            # prose because an empty one would reach the caller as silence.
+            if self.groups:
+                raise ValueError(
+                    "SaveMode: a mode stating the save lives inside the content declares no "
+                    "groups — there is no separate file to group"
+                )
+            if not self.inside_content.strip():
+                raise ValueError("SaveMode: 'inside_content' states a reason, not an empty string")
+            if self.also_under is not None:
+                raise ValueError(
+                    "SaveMode: a save inside the content lies under one root by definition — "
+                    "'also_under' cannot apply"
+                )
+            return
         if not self.groups:
             raise ValueError("SaveMode: a mode states at least one group")
         named = [group for group in self.groups if group.unnamed is None]
@@ -295,6 +315,11 @@ class SaveMode:
     def primary(self) -> SaveGroup:
         """The group the mode's own answer is about — the card states it first."""
         return self.named[0]
+
+    # The groups-less form answers the group-derived questions itself: the
+    # save medium is the content file, so the declared set of *separate* files
+    # is empty and closed, the unit is per game by the medium's own nature,
+    # and there is neither a subdir to join nor a name to watch for.
 
     @property
     def named(self) -> tuple[SaveGroup, ...]:
@@ -321,20 +346,28 @@ class SaveMode:
 
     @property
     def subdir(self) -> str | None:
+        if self.inside_content is not None:
+            return None
         return self.primary.subdir
 
     @property
     def files(self) -> tuple[str, ...] | None:
+        if self.inside_content is not None:
+            return ()
         if self.primary.files is None:
             return None
         return tuple(name for group in self.here for name in group.files or ())
 
     @property
     def granularity(self) -> str:
+        if self.inside_content is not None:
+            return "per-game-file"
         return self.primary.granularity
 
     @property
     def observe(self) -> tuple[str, ...] | None:
+        if self.inside_content is not None:
+            return None
         if all(group.observe is None for group in self.here):
             return None
         return tuple(
@@ -345,6 +378,11 @@ class SaveMode:
 
     @property
     def complete(self) -> bool:
+        if self.inside_content is not None:
+            # No separate save file can belong to this mode — that is the
+            # statement itself, and the source read behind the card is what
+            # licenses the claim.
+            return True
         return all(group.complete for group in self.here)
 
     @property
@@ -390,6 +428,23 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     root = _expect_str(mode.get("root"), f"{where}: root")
     if root not in _KNOWN_MODE_ROOTS:
         raise ValueError(f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
+    inside_content = _expect_opt_str(mode.get("inside_content"), f"{where}: inside_content")
+    if inside_content is not None:
+        if root != ROOT_CONTENT_DIRECTORY:
+            raise ValueError(
+                f"{where}: a save inside the content lies in the content's own tree — root must "
+                f"be {ROOT_CONTENT_DIRECTORY!r}, got {root!r}"
+            )
+        if mode.get("groups") is not None:
+            raise ValueError(
+                f"{where}: 'inside_content' replaces 'groups' — there is no separate file to group"
+            )
+        if mode.get("also_under") is not None:
+            raise ValueError(
+                f"{where}: a save inside the content lies under one root by definition — "
+                "'also_under' cannot apply"
+            )
+        return SaveMode(root=root, groups=(), inside_content=inside_content)
     raw_groups = mode.get("groups")
     if not isinstance(raw_groups, list) or not raw_groups:
         raise ValueError(f"{where}: 'groups' must be a non-empty list — a mode has at least one part")
