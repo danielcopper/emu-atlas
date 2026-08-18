@@ -792,6 +792,31 @@ def _validate_file_groups(name: str, file_set: Any) -> None:
             )
 
 
+def _validate_reading(name: str, reading: Any) -> None:
+    """One granularity reading: a switch, its live value, where it changes."""
+    _require_exact(name, reading, READING_FIELDS, "granularity reading")
+    if not isinstance(reading["key"], str) or not reading["key"]:
+        fail(f"{name}: a granularity reading's key must be a non-empty string")
+    if reading["value"] is not None and not isinstance(reading["value"], str):
+        fail(f"{name}: a granularity reading's value must be null or a string")
+    if reading["options_file"] is not None and not isinstance(reading["options_file"], str):
+        fail(f"{name}: a granularity reading's options_file must be null or a string")
+
+
+def _validate_alternative(name: str, alternative: Any, granularity_values: set[str]) -> None:
+    """One reachable mode: its name, the option combination, its grouping."""
+    _require_exact(name, alternative, ALTERNATIVE_FIELDS, "granularity alternative")
+    if not isinstance(alternative["mode"], str) or not alternative["mode"]:
+        fail(f"{name}: an alternative's mode must be a non-empty string")
+    options = alternative["options"]
+    if not isinstance(options, dict) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in options.items()
+    ):
+        fail(f"{name}: an alternative's options must map option keys to values, both strings")
+    if alternative["value"] not in granularity_values:
+        fail(f"{name}: every alternative's granularity must be one of {sorted(granularity_values)}")
+
+
 def _validate_granularity(name: str, granularity: Any) -> None:
     _require_exact(name, granularity, GRANULARITY_FIELDS, "granularity")
     granularity_values = KNOWN_GRANULARITIES | {GRANULARITY_VALUE_NONE}
@@ -804,27 +829,12 @@ def _validate_granularity(name: str, granularity: Any) -> None:
     if not isinstance(readings, list):
         fail(f"{name}: granularity.readings must be a list")
     for reading in readings:
-        _require_exact(name, reading, READING_FIELDS, "granularity reading")
-        if not isinstance(reading["key"], str) or not reading["key"]:
-            fail(f"{name}: a granularity reading's key must be a non-empty string")
-        if reading["value"] is not None and not isinstance(reading["value"], str):
-            fail(f"{name}: a granularity reading's value must be null or a string")
-        if reading["options_file"] is not None and not isinstance(reading["options_file"], str):
-            fail(f"{name}: a granularity reading's options_file must be null or a string")
+        _validate_reading(name, reading)
     alternatives = granularity["alternatives"]
     if not isinstance(alternatives, list):
         fail(f"{name}: granularity.alternatives must be a list")
     for alternative in alternatives:
-        _require_exact(name, alternative, ALTERNATIVE_FIELDS, "granularity alternative")
-        if not isinstance(alternative["mode"], str) or not alternative["mode"]:
-            fail(f"{name}: an alternative's mode must be a non-empty string")
-        options = alternative["options"]
-        if not isinstance(options, dict) or not all(
-            isinstance(key, str) and isinstance(value, str) for key, value in options.items()
-        ):
-            fail(f"{name}: an alternative's options must map option keys to values, both strings")
-        if alternative["value"] not in granularity_values:
-            fail(f"{name}: every alternative's granularity must be one of {sorted(granularity_values)}")
+        _validate_alternative(name, alternative, granularity_values)
 
 
 def _validate_placement_core(name: str, placement: Any, *, root_kinds: set[str], what: str) -> None:

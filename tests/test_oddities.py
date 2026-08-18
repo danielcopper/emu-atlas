@@ -1590,7 +1590,8 @@ class TestARuleSelectedCard:
         assert p.granularity is not None
         assert p.granularity.mode == "per-game"
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE]
-        assert stated and stated[0].data["value"] == "sometimes"
+        assert stated
+        assert stated[0].data["value"] == "sometimes"
 
     def test_a_missing_switch_retires_the_card_as_a_generation_mismatch(self):
         core = {
@@ -1608,7 +1609,8 @@ class TestARuleSelectedCard:
         )
         assert p.granularity is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_GENERATION_MISMATCH]
-        assert stated and stated[0].data["options"] == "beetle_saturn_shared_ext"
+        assert stated
+        assert stated[0].data["options"] == "beetle_saturn_shared_ext"
 
 
 HATARI_REGISTERED = {
@@ -1640,9 +1642,11 @@ class TestHatariContentClasses:
         p = _hatari_query(self.FILES, content_path=self.FLOPPY)
         assert p.root_kind == "content_directory"
         assert p.dir == "/mnt/sd/retrodeck/roms/atarist"
-        assert p.file_set.state == "declared" and p.file_set.files == ()
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ()
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_INSIDE_CONTENT]
-        assert stated and stated[0].data["mode"] == "floppy-writeback"
+        assert stated
+        assert stated[0].data["mode"] == "floppy-writeback"
 
     def test_only_the_governing_class_switch_is_read(self):
         g = _hatari_query(self.FILES, content_path=self.FLOPPY).granularity
@@ -1657,9 +1661,11 @@ class TestHatariContentClasses:
             {**self.FILES, OPTIONS_CFG: 'hatari_writeprotect_floppy = "on"\n'},
             content_path=self.FLOPPY,
         )
-        assert p.file_set.state == "declared" and p.file_set.files == ()
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ()
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_WRITES_DISCARDED]
-        assert stated and stated[0].data["mode"] == "floppy-discarded"
+        assert stated
+        assert stated[0].data["mode"] == "floppy-discarded"
         assert p.granularity is not None
         assert p.granularity.value == "none"
         assert [(a.mode, a.value) for a in p.granularity.alternatives] == [
@@ -1676,7 +1682,8 @@ class TestHatariContentClasses:
         p = _hatari_query(self.FILES, content_path=None)
         assert p.granularity is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
-        assert stated and stated[0].data["core"] == "hatari"
+        assert stated
+        assert stated[0].data["core"] == "hatari"
         assert "no content was named" in stated[0].data["reason"]
 
 
@@ -1703,13 +1710,15 @@ class TestScummvmSavepath:
     def test_without_an_ini_the_frontend_save_dir_holds_the_unnamed_slots(self):
         p = _scummvm_query(self.FILES)
         assert p.dir == "/mnt/sd/retrodeck/saves/scummvm"
-        assert p.file_set.state == "declared" and p.file_set.files == ()
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ()
         assert not p.file_set.complete
         assert [(g.files, g.granularity, g.role) for g in p.file_set.groups] == [
             (None, "per-game-files", "battery")
         ]
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED]
-        assert stated and stated[0].data["dir"] == "/mnt/sd/retrodeck/saves/scummvm"
+        assert stated
+        assert stated[0].data["dir"] == "/mnt/sd/retrodeck/saves/scummvm"
         assert "launcher configuration" in stated[0].data["citation"]
 
     def test_the_savepath_reading_says_where_the_setting_would_change(self):
@@ -1762,7 +1771,8 @@ class TestScummvmSavepath:
         p = _scummvm_query({**self.FILES, SCUMMVM_INI: {"status": "unreadable"}})
         assert p.granularity is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
-        assert stated and "could not be read" in stated[0].data["reason"]
+        assert stated
+        assert "could not be read" in stated[0].data["reason"]
 
 
 class TestStrictLoaders:
@@ -2130,36 +2140,33 @@ class TestStrictLoaders:
         assert mode.observe is None
 
     def test_discarded_writes_refuse_groups_and_other_roots(self):
+        with_groups = self._inside_card(
+            {
+                "root": "content_directory",
+                "writes_discarded": "why",
+                "groups": [
+                    {"files": ["a.srm"], "granularity": "per-game-file", "role": "battery"}
+                ],
+            }
+        )
         with pytest.raises(ValueError, match="no separate file to group"):
-            load_oddities(
-                self._inside_card(
-                    {
-                        "root": "content_directory",
-                        "writes_discarded": "why",
-                        "groups": [
-                            {"files": ["a.srm"], "granularity": "per-game-file", "role": "battery"}
-                        ],
-                    }
-                )
-            )
+            load_oddities(with_groups)
+        other_root = self._inside_card({"root": "savefile_directory", "writes_discarded": "why"})
         with pytest.raises(ValueError, match="about the loaded content file"):
-            load_oddities(
-                self._inside_card({"root": "savefile_directory", "writes_discarded": "why"})
-            )
+            load_oddities(other_root)
 
     def test_the_two_statements_contradict_each_other(self):
         # One says the content file keeps the save, the other that nothing
         # keeps it — a mode carrying both is not a mode, it is an argument.
+        text = self._inside_card(
+            {
+                "root": "content_directory",
+                "inside_content": "kept",
+                "writes_discarded": "discarded",
+            }
+        )
         with pytest.raises(ValueError, match="contradict"):
-            load_oddities(
-                self._inside_card(
-                    {
-                        "root": "content_directory",
-                        "inside_content": "kept",
-                        "writes_discarded": "discarded",
-                    }
-                )
-            )
+            load_oddities(text)
 
     def test_a_mode_of_nothing_but_unnamed_groups_states_the_directory(self):
         # ScummVM's shape: the directory is known, the slot names are the

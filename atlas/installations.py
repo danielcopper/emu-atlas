@@ -1463,77 +1463,89 @@ def _select_card(*, so_basename: str | None, core_info: CoreInfo | None) -> _Car
     """
     library_name = core_info.library_name if core_info is not None else None
     card = lookup_card(so_basename=so_basename, library_name=library_name)
-    live_option = None
-    live_options: Mapping[str, CoreOption] | None = None
-    sources: tuple[str, ...] = ()
-    caveats: list[Caveat] = []
+    choice = _CardChoice(card=card)
     if card is not None:
         if core_info is None:
-            caveats.append(
-                Caveat(
-                    CAVEAT_CORE_GENERATION_UNESTABLISHED,
-                    f"core {card.key!r} is recorded as placing its saves outside the standard "
-                    "layout, but the installed core could not be read — which generation is here "
-                    "was never established, so the recorded behaviour is not applied; the standard "
-                    "answer below may miss the real save stack",
-                    {"core": card.key},
+            choice = _CardChoice(
+                caveats=(
+                    Caveat(
+                        CAVEAT_CORE_GENERATION_UNESTABLISHED,
+                        f"core {card.key!r} is recorded as placing its saves outside the standard "
+                        "layout, but the installed core could not be read — which generation is "
+                        "here was never established, so the recorded behaviour is not applied; "
+                        "the standard answer below may miss the real save stack",
+                        {"core": card.key},
+                    ),
                 )
             )
-            card = None
         elif card.option_key is not None and core_info.options is not None:
-            live_option = core_info.options.get(card.option_key)
-            if live_option is None:
-                caveats.append(
-                    Caveat(
-                        CAVEAT_CORE_GENERATION_MISMATCH,
-                        f"core {card.key!r} is recorded as placing its saves outside the standard "
-                        f"layout under option {card.option_key!r}, which this core does not "
-                        "register — the recorded behaviour belongs to a different core generation "
-                        "and is not applied; this core's actual save behaviour is unknown until "
-                        "re-audited, so the standard answer below may miss the real save stack",
-                        {"core": card.key, "option_key": card.option_key},
-                    )
-                )
-                card = None
-            else:
-                sources = (
-                    f"feature-detected: core registers {card.option_key!r} (default "
-                    f"{live_option.default!r}, values {list(live_option.values)}) — card generation "
-                    "confirmed by observation, not by version comparison",
-                )
+            choice = _option_confirmed_choice(card, core_info.options)
         elif card.rule_options and core_info.options is not None:
-            # The rule-card plural of the branch above: the generation is
-            # confirmed by every declared option being registered, and a
-            # single missing one retires the card the same way — the rule
-            # would be reading a switch this core does not have.
-            missing = [key for key in card.rule_options if key not in core_info.options]
-            if missing:
-                caveats.append(
-                    Caveat(
-                        CAVEAT_CORE_GENERATION_MISMATCH,
-                        f"core {card.key!r} is recorded as selecting between save behaviours by "
-                        f"options this core does not register ({', '.join(missing)}) — the "
-                        "recorded behaviour belongs to a different core generation and is not "
-                        "applied; this core's actual save behaviour is unknown until re-audited, "
-                        "so the standard answer below may miss the real save stack",
-                        {"core": card.key, "options": ", ".join(missing)},
-                    )
-                )
-                card = None
-            else:
-                live_options = {key: core_info.options[key] for key in card.rule_options}
-                sources = (
-                    f"feature-detected: core registers {', '.join(card.rule_options)} — card "
-                    "generation confirmed by observation, not by version comparison",
-                )
-    if card is None and so_basename is not None:
-        caveats.extend(_unaudited_caveats(so_basename))
+            choice = _rule_confirmed_choice(card, core_info.options)
+    if choice.card is None and so_basename is not None:
+        choice = _dc_replace(
+            choice, caveats=(*choice.caveats, *_unaudited_caveats(so_basename))
+        )
+    return choice
+
+
+def _option_confirmed_choice(card: CoreCard, registered: Mapping[str, CoreOption]) -> _CardChoice:
+    """Feature detection for a single-option card: the key registered, or not."""
+    live_option = registered.get(card.option_key or "")
+    if live_option is None:
+        return _CardChoice(
+            caveats=(
+                Caveat(
+                    CAVEAT_CORE_GENERATION_MISMATCH,
+                    f"core {card.key!r} is recorded as placing its saves outside the standard "
+                    f"layout under option {card.option_key!r}, which this core does not "
+                    "register — the recorded behaviour belongs to a different core generation "
+                    "and is not applied; this core's actual save behaviour is unknown until "
+                    "re-audited, so the standard answer below may miss the real save stack",
+                    {"core": card.key, "option_key": card.option_key or ""},
+                ),
+            )
+        )
     return _CardChoice(
         card=card,
         live_option=live_option,
-        live_options=live_options,
-        sources=sources,
-        caveats=tuple(caveats),
+        sources=(
+            f"feature-detected: core registers {card.option_key!r} (default "
+            f"{live_option.default!r}, values {list(live_option.values)}) — card generation "
+            "confirmed by observation, not by version comparison",
+        ),
+    )
+
+
+def _rule_confirmed_choice(card: CoreCard, registered: Mapping[str, CoreOption]) -> _CardChoice:
+    """The rule-card plural: every declared option registered, or the card retires.
+
+    A single missing switch is the same generation mismatch a single-option
+    card answers with — the rule would be reading a switch this core does not
+    have.
+    """
+    missing = [key for key in card.rule_options or () if key not in registered]
+    if missing:
+        return _CardChoice(
+            caveats=(
+                Caveat(
+                    CAVEAT_CORE_GENERATION_MISMATCH,
+                    f"core {card.key!r} is recorded as selecting between save behaviours by "
+                    f"options this core does not register ({', '.join(missing)}) — the "
+                    "recorded behaviour belongs to a different core generation and is not "
+                    "applied; this core's actual save behaviour is unknown until re-audited, "
+                    "so the standard answer below may miss the real save stack",
+                    {"core": card.key, "options": ", ".join(missing)},
+                ),
+            )
+        )
+    return _CardChoice(
+        card=card,
+        live_options={key: registered[key] for key in card.rule_options or ()},
+        sources=(
+            f"feature-detected: core registers {', '.join(card.rule_options or ())} — card "
+            "generation confirmed by observation, not by version comparison",
+        ),
     )
 
 

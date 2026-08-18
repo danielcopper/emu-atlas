@@ -292,26 +292,8 @@ class SaveMode:
                 "SaveMode: 'inside_content' and 'writes_discarded' contradict each other — one "
                 "says the content file keeps the save, the other that nothing keeps it"
             )
-        statement = self.inside_content if self.inside_content is not None else self.writes_discarded
-        if statement is not None:
-            # The groups-less forms: no separate save file exists — the loaded
-            # content file takes the writes, or nothing does. There is nothing
-            # to group — the statement replaces the groups, and the reason is
-            # required prose because an empty one would reach the caller as
-            # silence.
-            field = "inside_content" if self.inside_content is not None else "writes_discarded"
-            if self.groups:
-                raise ValueError(
-                    f"SaveMode: a mode stating '{field}' declares no groups — there is no "
-                    "separate file to group"
-                )
-            if not statement.strip():
-                raise ValueError(f"SaveMode: '{field}' states a reason, not an empty string")
-            if self.also_under is not None:
-                raise ValueError(
-                    f"SaveMode: a mode stating '{field}' lies under one root by definition — "
-                    "'also_under' cannot apply"
-                )
+        if self.stated is not None:
+            self._check_stated_form()
             return
         if not self.groups:
             raise ValueError("SaveMode: a mode states at least one group")
@@ -332,6 +314,26 @@ class SaveMode:
             raise ValueError(
                 "SaveMode: two groups in one directory both scope their file list — the mode "
                 "cannot say which scope its answer carries"
+            )
+
+    def _check_stated_form(self) -> None:
+        """The groups-less forms: no separate save file exists — the loaded
+        content file takes the writes, or nothing does. There is nothing to
+        group — the statement replaces the groups, and the reason is required
+        prose because an empty one would reach the caller as silence."""
+        statement = self.stated or ""
+        field = "inside_content" if self.inside_content is not None else "writes_discarded"
+        if self.groups:
+            raise ValueError(
+                f"SaveMode: a mode stating '{field}' declares no groups — there is no "
+                "separate file to group"
+            )
+        if not statement.strip():
+            raise ValueError(f"SaveMode: '{field}' states a reason, not an empty string")
+        if self.also_under is not None:
+            raise ValueError(
+                f"SaveMode: a mode stating '{field}' lies under one root by definition — "
+                "'also_under' cannot apply"
             )
 
     @property
