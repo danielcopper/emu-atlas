@@ -328,6 +328,16 @@ CAVEAT_CORE_MODE_UNESTABLISHED = "core-mode-unestablished"
 # skips it loses the saves; the placement itself falls back to the standard
 # answer rather than stating a root kind that would be a lie.
 CAVEAT_SAVE_ROOT_REDIRECTED = "save-root-redirected"
+# The redirected caveat's harder sibling: the emulator anchors its save trees
+# in the frontend *process's* state — its working directory, its environment —
+# and that is a value no read of this machine can establish (MAME with its own
+# paths in force resolves ``states/mame/nvram`` against whatever directory
+# RetroArch happens to run from). Where redirected states the directory it
+# read, this one states the relative trees that would hang off the
+# unknowable anchor, in ``data``, so a caller sees what to look for once it
+# knows the anchor atlas refuses to guess. The placement itself falls back to
+# the standard answer, marked as where the frontend would look.
+CAVEAT_SAVE_ROOT_UNRESOLVABLE = "save-root-unresolvable"
 CAVEAT_SANDBOX_PATH_UNTRANSLATED = "sandbox-path-untranslated"
 CAVEAT_APP_RELATIVE_PATH_UNEXPANDED = "app-relative-path-unexpanded"
 CAVEAT_CFG_LINE_DROPPED = "cfg-line-dropped"

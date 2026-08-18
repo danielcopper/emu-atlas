@@ -273,7 +273,7 @@
     "mame": {
       "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source] The shipped a90e86e1 generation answers no libretro memory id and keeps its saves in three trees of its own below the save directory: nvram (the machine's battery memory), cfg (its dip switches, beside an emulator-wide default.cfg) and diff (write differences against CHD hard disks). The diff names come from the machine's ROM table in the binary and are stated as unnameable rather than guessed. mame_mame_paths_enable hands path control back to MAME's own ini, and that mode states no names. Nothing is live-observed.",
+      "note": "[V-source] The shipped a90e86e1 generation answers no libretro memory id and keeps its saves in three trees of its own below the save directory: nvram (the machine's battery memory), cfg (its dip switches, beside an emulator-wide default.cfg) and diff (write differences against CHD hard disks). The diff names come from the machine's ROM table in the binary and are stated as unnameable rather than guessed. Two switches govern the card's rule: mame_mame_paths_enable hands path control back to MAME, whose save trees then anchor at the frontend process's working directory (no ini is read while mame_read_config is off — the default), and with both switches on the rule reads mame.ini and the driver's <stem>.ini along $HOME/.mame;<system>/mame/ini the way the emulator does. Nothing is live-observed.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,

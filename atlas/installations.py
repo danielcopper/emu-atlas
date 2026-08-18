@@ -76,6 +76,7 @@ from atlas.firmware import firmware_for_system as _resolve_for_system
 from atlas.firmware import firmware_inventory as _resolve_inventory
 from atlas.firmware import identify_firmware as _resolve_identification
 from atlas.machine import (
+    GLOB_COMPLETE,
     KIND_DIRECTORY,
     KIND_FILE,
     KIND_MISSING,
@@ -1961,7 +1962,7 @@ def _rule_reading(
     *can* decide on stays enumerable in one place.
     """
 
-    def system_file(name: str) -> FileLookup:
+    def _system_base() -> str | None:
         root = _core_system_root(
             sandbox=sandbox,
             cfg_label=cfg_label,
@@ -1970,14 +1971,45 @@ def _rule_reading(
             retroarch_config_dir=retroarch_config_dir,
         )
         if root.needs or not root.reachable:
+            return None
+        return root.base
+
+    def _home_base() -> str | None:
+        # The home the emulator's own ``$HOME`` expands to — the sandbox
+        # environment's HOME, which is shared with the host — so a rule's
+        # home-relative read follows the emulator's expansion, not atlas's.
+        return sandbox.expansion_home
+
+    def _file_under(base: str | None, name: str) -> FileLookup:
+        if base is None:
             return FileLookup(None, FILE_UNREADABLE, None)
-        path = os.path.join(root.base, name)
+        path = os.path.join(base, name)
         result = machine.read_text(path)
         if result.status == READ_OK:
             return FileLookup(result.text, FILE_READ, path)
         if result.status == READ_MISSING:
             return FileLookup(None, FILE_ABSENT, path)
         return FileLookup(None, FILE_UNREADABLE, path)
+
+    def _entries_under(base: str | None, name: str) -> tuple[str, ...] | None:
+        if base is None:
+            return None
+        listing = machine.glob(os.path.join(_glob_escape(os.path.join(base, name)), "*"))
+        if listing.status != GLOB_COMPLETE:
+            return None
+        return tuple(os.path.basename(match) for match in listing.matches)
+
+    def system_file(name: str) -> FileLookup:
+        return _file_under(_system_base(), name)
+
+    def home_file(name: str) -> FileLookup:
+        return _file_under(_home_base(), name)
+
+    def system_entries(name: str) -> tuple[str, ...] | None:
+        return _entries_under(_system_base(), name)
+
+    def home_entries(name: str) -> tuple[str, ...] | None:
+        return _entries_under(_home_base(), name)
 
     def is_directory(path: str) -> bool | None:
         resolved = sandbox.host("savepath", path)
@@ -2000,7 +2032,11 @@ def _rule_reading(
         RuleReading(
             option_values=recorder,
             content_extension=content.extension,
+            content_stem=content.rom_stem,
             system_file=system_file,
+            home_file=home_file,
+            system_entries=system_entries,
+            home_entries=home_entries,
             save_dirs=tuple(save_dirs),
             is_directory=is_directory,
         ),

@@ -302,6 +302,7 @@ KNOWN_CAVEAT_CODES = {
     "save-writes-discarded",
     "core-mode-unestablished",
     "save-root-redirected",
+    "save-root-unresolvable",
     "save-dir-unlistable",
     "emulator-read-unestablished",
     "emulator-config-unread",

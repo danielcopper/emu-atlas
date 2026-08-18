@@ -32,6 +32,7 @@ from atlas.placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_SAVE_ROOT_REDIRECTED,
+    CAVEAT_SAVE_ROOT_UNRESOLVABLE,
     Caveat,
     OptionReading,
 )
@@ -68,20 +69,32 @@ class RuleReading:
     which one governs is the content's class.
 
     ``content_extension`` is the loaded content's extension, lowered, without
-    the dot — ``None`` when the question named no content. ``system_file``
-    reads a file from the directory RetroArch hands cores as the system
-    directory. ``save_dirs`` is every spelling the frontend's save root can
-    have reached the core under (the configured root, and the sorted
-    directory RetroArch redirects to), for a rule that must compare a
-    configured path against it, and ``is_directory`` answers whether an
-    emulator-spelled path is a directory on this machine — ``None`` where
-    that could not be established (the path did not translate to a host
-    view).
+    the dot — ``None`` when the question named no content — and
+    ``content_stem`` its file stem, for a rule whose emulator derives names
+    from it (MAME's per-driver ini). ``system_file`` reads a file from the
+    directory RetroArch hands cores as the system directory, ``home_file``
+    one relative to the home the emulator's own ``$HOME`` expands to (the
+    sandbox environment's HOME — ``None``-homed machines answer unreadable,
+    because the emulator's expansion is then not a path atlas can follow).
+    ``system_entries`` and ``home_entries`` list the names in a directory
+    under the same two roots — ``()`` when the directory is not there, which
+    is a truthful negative, and ``None`` when it exists and could not be
+    listed, or the root itself is out of reach. ``save_dirs`` is every
+    spelling the frontend's save root can have reached the core under (the
+    configured root, and the sorted directory RetroArch redirects to), for a
+    rule that must compare a configured path against it, and ``is_directory``
+    answers whether an emulator-spelled path is a directory on this machine —
+    ``None`` where that could not be established (the path did not translate
+    to a host view).
     """
 
     option_values: Mapping[str, str | None]
     content_extension: str | None
+    content_stem: str | None
     system_file: Callable[[str], FileLookup]
+    home_file: Callable[[str], FileLookup]
+    system_entries: Callable[[str], "tuple[str, ...] | None"]
+    home_entries: Callable[[str], "tuple[str, ...] | None"]
     save_dirs: tuple[str, ...]
     is_directory: Callable[[str], bool | None]
 
@@ -679,6 +692,255 @@ def _genesis_plus_gx(reading: RuleReading) -> ModeChoice:
     )
 
 
+# ---------------------------------------------------------------------------
+# mame — whether the frontend's paths reach the emulator at all is one switch,
+# and whether MAME's own ini is read is another. mame_mame_paths_enable off
+# (the registered default) has the glue impose -nvram_directory,
+# -cfg_directory and -diff_directory on the command line (retro_init.cpp:
+# 549-577 at a90e86e1), which outranks every ini (OPTION_PRIORITY_CMDLINE =
+# HIGH+1, emuopts.h:18; every ini priority sits below it, mameopts.h:27-39) —
+# that is the card's one stated mode, whatever the second switch says. On,
+# the glue sets nothing (:554-555) and MAME's own world governs. With
+# mame_read_config off no ini is read at all (parse_one_ini, mameopts.cpp:
+# 116-120) and the fork's compiled-in defaults apply — states/mame/nvram,
+# states/mame/cfg, system/mame/diff (emuopts.cpp:59-64) — relative paths,
+# resolved against the frontend process's working directory, which is process
+# state no read of this machine can establish. With it on, inis are searched
+# along $HOME/.mame then <system dir>/mame/ini (INI_PATH, retromain.cpp:
+# 85-93, with the system-dir failsafe appended at :181-205; the OSD's
+# duplicate 'inipath' row is ignored — add_entries override_existing=false,
+# options.h:184/options.cpp:702-719 — and $HOME expands per element,
+# options.cpp:531-569), first find per file name wins. Both elements are
+# machine-readable, so the rule reads mame.ini and the driver's <stem>.ini
+# the way the emulator does. The rest of the cascade (vertical.ini,
+# <source>.ini, <parent>.ini, ...) applies by driver metadata inside the
+# binary, which atlas cannot attribute — their presence is checked, never
+# their meaning guessed.
+# ---------------------------------------------------------------------------
+
+_MAME_PATHS = "mame_mame_paths_enable"
+_MAME_READ_CONFIG = "mame_read_config"
+_MAME_FRONTEND_MODE = "frontend-paths"
+_MAME_HOME_INIS = ".mame"
+_MAME_SYSTEM_INIS = "mame/ini"
+_MAME_MAIN_INI = "mame.ini"
+# The fork's compiled-in save trees (emuopts.cpp:59-64 at a90e86e1) — what
+# governs when MAME's own paths are in force and no ini names a directory.
+_MAME_DEFAULT_TREES = (
+    ("nvram_directory", "states/mame/nvram"),
+    ("cfg_directory", "states/mame/cfg"),
+    ("diff_directory", "system/mame/diff"),
+)
+_MAME_TOGGLES = ("enabled", "disabled")
+
+
+def _mame_ini_values(text: str) -> dict[str, str]:
+    """The three directory keys from one MAME ini, read the way MAME writes them.
+
+    A MAME ini is ``name value`` lines — whitespace-separated, the value
+    optionally quoted — with ``#`` comments; not the ``key=value`` shape
+    other emulators use.
+    """
+    wanted = {key for key, _ in _MAME_DEFAULT_TREES}
+    values: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(None, 1)
+        if len(parts) == 2 and parts[0] in wanted:
+            values[parts[0]] = parts[1].strip().strip('"')
+    return values
+
+
+def _mame_ini_lookup(reading: RuleReading, name: str) -> FileLookup:
+    """*name* along MAME's effective ini search path — the first find wins.
+
+    An unreadable stop comes back as-is: the emulator may have found a file
+    there, and deciding without knowing would be the guess this project
+    refuses.
+    """
+    last = FileLookup(None, FILE_ABSENT, None)
+    for fetch, base in (
+        (reading.home_file, _MAME_HOME_INIS),
+        (reading.system_file, _MAME_SYSTEM_INIS),
+    ):
+        found = fetch(posixpath.join(base, name))
+        if found.status != FILE_ABSENT:
+            return found
+        last = found
+    return last
+
+
+def _mame_stray_inis(reading: RuleReading, stem: str | None) -> tuple[str, ...] | None:
+    """Cascade members atlas cannot attribute — ``None`` when it cannot even look."""
+    attributable = {_MAME_MAIN_INI}
+    if stem:
+        attributable.add(f"{stem}.ini")
+    strays: set[str] = set()
+    for entries, base in (
+        (reading.home_entries, _MAME_HOME_INIS),
+        (reading.system_entries, _MAME_SYSTEM_INIS),
+    ):
+        listing = entries(base)
+        if listing is None:
+            return None
+        strays.update(n for n in listing if n.endswith(".ini") and n not in attributable)
+    return tuple(sorted(strays))
+
+
+def _mame_unresolvable(
+    trees: tuple[tuple[str, str], ...], because: str, options_file: str | None
+) -> Caveat:
+    listed = ", ".join(f"{key} = {tree!r}" for key, tree in trees)
+    data: dict[str, str] = {"core": "mame", **dict(trees)}
+    if options_file:
+        data["options_file"] = options_file
+    return Caveat(
+        CAVEAT_SAVE_ROOT_UNRESOLVABLE,
+        f"MAME's own paths are in force (mame_mame_paths_enable is on) and {because}: "
+        f"{listed} — resolved against the frontend process's working directory, which is "
+        "process state no read of this machine can establish; the standard answer below is "
+        "where the frontend would look, not where this emulator writes",
+        data,
+    )
+
+
+def _mame_redirected(key: str, path: str, options_file: str | None) -> Caveat:
+    return Caveat(
+        CAVEAT_SAVE_ROOT_REDIRECTED,
+        f"MAME's own configuration routes its {key} to {path!r}, read along its ini search "
+        "path the way the emulator reads it — the standard answer below is where the frontend "
+        "would look, not where this emulator writes",
+        {"core": "mame", "key": key, "path": path, "options_file": options_file or ""},
+    )
+
+
+def _mame_own_ini(reading: RuleReading) -> ModeChoice:
+    """Both switches on: the inis govern, read the way the emulator searches them."""
+    main = _mame_ini_lookup(reading, _MAME_MAIN_INI)
+    if main.status == FILE_UNREADABLE:
+        return ModeChoice(
+            None,
+            caveats=(
+                _mode_unestablished(
+                    "mame",
+                    "MAME's own paths and ini reading are both on, and whether a mame.ini "
+                    "exists along the emulator's search path could not be established — "
+                    "whether the save trees were routed elsewhere is unknowable here",
+                ),
+            ),
+        )
+    stem = reading.content_stem
+    driver = (
+        _mame_ini_lookup(reading, f"{stem}.ini")
+        if stem
+        else FileLookup(None, FILE_ABSENT, None)
+    )
+    if driver.status == FILE_UNREADABLE:
+        return ModeChoice(
+            None,
+            caveats=(
+                _mode_unestablished(
+                    "mame",
+                    f"MAME's own paths and ini reading are both on, and whether a {stem}.ini "
+                    "exists along the emulator's search path could not be established — the "
+                    "driver's ini outranks mame.ini, so which values govern is unknowable here",
+                ),
+            ),
+        )
+    strays = _mame_stray_inis(reading, stem)
+    if strays is None:
+        return ModeChoice(
+            None,
+            caveats=(
+                _mode_unestablished(
+                    "mame",
+                    "MAME reads an ini cascade, and one of its search directories could not "
+                    "be listed — whether a higher-priority ini overrides the values read is "
+                    "unknowable here",
+                ),
+            ),
+        )
+    if strays:
+        outranks = (
+            f"{strays[0]} on its search path outranks mame.ini"
+            if len(strays) == 1
+            else f"{', '.join(strays)} on its search path outrank mame.ini"
+        )
+        return ModeChoice(
+            None,
+            caveats=(
+                _mode_unestablished(
+                    "mame",
+                    "MAME reads an ini cascade whose members apply by driver metadata inside "
+                    f"the binary, which atlas cannot attribute — {outranks}, so which values "
+                    "govern was never established",
+                ),
+            ),
+        )
+    values: dict[str, str] = {}
+    sources: dict[str, str | None] = {}
+    for lookup in (main, driver):  # the driver's ini parses at higher priority
+        if lookup.status == FILE_READ and lookup.text:
+            for key, value in _mame_ini_values(lookup.text).items():
+                values[key] = value
+                sources[key] = lookup.path
+    caveats: list[Caveat] = []
+    unresolved: list[tuple[str, str]] = []
+    unresolved_file: str | None = None
+    for key, default in _MAME_DEFAULT_TREES:
+        # A directory option is a MAME multipath; a write opens its first
+        # element. A value carrying `$VAR` is expanded from the process's
+        # environment (options.cpp:531-569) — process state, like the cwd.
+        target = values.get(key, default).split(";")[0].strip()
+        if target.startswith("/"):
+            caveats.append(_mame_redirected(key, target, sources.get(key)))
+        else:
+            unresolved.append((key, target))
+            if unresolved_file is None:
+                unresolved_file = sources.get(key)
+    if unresolved:
+        because = (
+            "the values it reads leave these trees relative"
+            if any(key in values for key, _ in unresolved)
+            else "no ini along its search path names these trees, so the compiled-in "
+            "defaults apply"
+        )
+        caveats.append(_mame_unresolvable(tuple(unresolved), because, unresolved_file))
+    return ModeChoice(None, caveats=tuple(caveats))
+
+
+def _mame(reading: RuleReading) -> ModeChoice:
+    paths = reading.option_values[_MAME_PATHS]
+    if paths is None:
+        return ModeChoice(None, caveats=(_value_unestablished("mame", _MAME_PATHS),))
+    if paths not in _MAME_TOGGLES:
+        return ModeChoice(None, caveats=(_unknown_value("mame", _MAME_PATHS, paths),))
+    if paths == "disabled":
+        # The glue's command line outranks every ini, so the second switch
+        # cannot matter here and is deliberately not consulted.
+        return ModeChoice(_MAME_FRONTEND_MODE)
+    read_config = reading.option_values[_MAME_READ_CONFIG]
+    if read_config is None:
+        return ModeChoice(None, caveats=(_value_unestablished("mame", _MAME_READ_CONFIG),))
+    if read_config not in _MAME_TOGGLES:
+        return ModeChoice(None, caveats=(_unknown_value("mame", _MAME_READ_CONFIG, read_config),))
+    if read_config == "disabled":
+        return ModeChoice(
+            None,
+            caveats=(
+                _mame_unresolvable(
+                    _MAME_DEFAULT_TREES,
+                    "mame_read_config is off, so no ini is read and the compiled-in "
+                    "defaults apply",
+                    None,
+                ),
+            ),
+        )
+    return _mame_own_ini(reading)
+
+
 # The registry the card loader validates against: a card stating a
 # ``governing_rule`` must have its function here, and the test suite holds
 # the mirror claim — a rule with no card would be code describing nothing.
@@ -690,4 +952,5 @@ RULES: Mapping[str, Callable[[RuleReading], ModeChoice]] = {
     "mednafen_psx": _beetle_psx_rule("beetle_psx_", "mednafen_psx"),
     "mednafen_psx_hw": _beetle_psx_rule("beetle_psx_hw_", "mednafen_psx_hw"),
     "genesis_plus_gx": _genesis_plus_gx,
+    "mame": _mame,
 }
