@@ -71,7 +71,13 @@ from atlas.retroarch_cfg import RetroArchCfg
 # anchored at a core's system directory (no card can move it — see the module
 # docstring), so a shared union would hand every client values its own branch
 # can never see.
-RootKind = Literal["savefile_directory", "content_directory", "system_directory", "working_directory"]
+RootKind = Literal[
+    "savefile_directory",
+    "content_directory",
+    "system_directory",
+    "working_directory",
+    "emulator_directory",
+]
 StateRootKind = Literal["savestate_directory", "content_directory"]
 FileSetState = Literal["observed", "declared", "unknown"]
 
@@ -94,6 +100,12 @@ ROOT_SYSTEM_DIRECTORY: RootKind = "system_directory"
 # rather than a refusal: a hole is something the caller fills, and the caller
 # often IS the launcher.
 ROOT_WORKING_DIRECTORY: RootKind = "working_directory"
+# The root a standalone emulator owns: its user tree below the XDG base the
+# arrangement pins. No frontend hands these emulators a save directory — the
+# tree is the emulator's own, its shape read from the emulator's configuration
+# the way the emulator reads it, and where an arrangement routes pieces of it
+# elsewhere it does so with symlinks the answer walks, not with settings.
+ROOT_EMULATOR_DIRECTORY: RootKind = "emulator_directory"
 
 # The screenshot question's own two-word vocabulary, closed around its own
 # question like the savestate one is: a screenshot is never anchored at a
@@ -111,7 +123,13 @@ ROOT_SAVESTATE_DIRECTORY: StateRootKind = "savestate_directory"
 # in-content-dir flag or by a root that resolved to nothing.
 STATE_ROOT_CONTENT_DIRECTORY: StateRootKind = "content_directory"
 
-ROOT_KINDS = ("savefile_directory", "content_directory", "system_directory", "working_directory")
+ROOT_KINDS = (
+    "savefile_directory",
+    "content_directory",
+    "system_directory",
+    "working_directory",
+    "emulator_directory",
+)
 STATE_ROOT_KINDS = ("savestate_directory", "content_directory")
 _FILE_SET_STATES = ("observed", "declared", "unknown")
 
@@ -439,6 +457,13 @@ HOLE_CONTENT_DIR_NAME = "content_dir_name"
 # will load the core. It exists for the ``working_directory`` root and is
 # genuinely the caller's to fill — a frontend knows what cwd it launches with.
 HOLE_CWD = "cwd"
+# The hole a region-keyed answer keeps: which of an emulator's per-region
+# trees this game's save lands in is decided by the disc's own region field,
+# which atlas does not read out of content — but a caller with metadata (a
+# library server knows its games' regions) fills it and narrows the answer to
+# one tree. The groups list every tree either way, so a caller without the
+# region still sees the whole candidate set.
+HOLE_REGION = "region"
 
 # The template tokens a rule card's declared file names may carry, and the hole
 # each leaves behind. ``<rom_stem>`` the resolver fills itself from the content
@@ -459,6 +484,11 @@ TEMPLATE_CONTENT_DIR_NAME = "<content_dir_name>"
 # The whole-directory template the content-rooted answers keep when no content
 # was named — the spelling `needs`'s content_dir hole fills.
 TEMPLATE_CONTENT_DIR = "<content_dir>"
+# The segment template a region-keyed emulator tree keeps until a caller fills
+# the ``region`` hole — one path segment, exactly like the subdir templates,
+# because that is the granularity Dolphin swaps it at (GetGCIFolderPath
+# replaces the last segment, MainSettings.cpp:844-873 at 2603a).
+TEMPLATE_REGION = "<region>"
 _FILE_NAME_HOLES: Mapping[str, str] = MappingProxyType({TEMPLATE_SAVE_ID: HOLE_SAVE_ID})
 SUBDIR_TEMPLATE_HOLES: Mapping[str, str] = MappingProxyType(
     {TEMPLATE_ROM_STEM: HOLE_ROM_STEM, TEMPLATE_CONTENT_DIR_NAME: HOLE_CONTENT_DIR_NAME}
@@ -700,9 +730,10 @@ class SavefilePlacement:
     holes a declared file-set template keeps, so ``needs`` is the answer's
     holes, not the directory's alone. ``root_kind``
     names the anchor (:data:`ROOT_SAVEFILE_DIRECTORY`,
-    :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`, or
+    :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`,
     :data:`ROOT_WORKING_DIRECTORY` — the launch's own directory, always a
-    ``<cwd>`` template with its hole in ``needs``).
+    ``<cwd>`` template with its hole in ``needs`` — or
+    :data:`ROOT_EMULATOR_DIRECTORY`, a standalone emulator's own tree).
     ``file_set`` is observed or unknown, never guessed. ``sources`` is the
     provenance trail; ``caveats`` states every degradation explicitly.
 
@@ -806,6 +837,14 @@ UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED = "texture-wiring-unestablished"
 # values an installer writes into ``mame.ini``, so naming them would state an
 # arrangement's directory as an emulator's read location.
 UNRESOLVED_MOD_WIRING_UNESTABLISHED = "mod-wiring-unestablished"
+# A standalone emulator's save answer hangs entirely on a configuration of the
+# emulator's own, and that file exists and could not be read. There is no
+# standard frame to fall back to the way a libretro card steps aside — the
+# frontend hands these emulators nothing — so the whole question refuses,
+# with the file named in ``data``. Distinct from ``standalone-unsupported``:
+# there atlas has no wiring for the emulator, here it does and the machine
+# would not let it look.
+UNRESOLVED_EMULATOR_CONFIG_UNREADABLE = "emulator-config-unreadable"
 
 
 @dataclass(frozen=True, slots=True)

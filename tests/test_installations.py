@@ -1071,6 +1071,102 @@ class TestScreenshotLocation:
         assert p.needs == ("content_dir_name",)
 
 
+DOLPHIN_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+DOLPHIN_ESDE = (
+    "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/"
+    "components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+)
+DOLPHIN_SYSTEMS = (
+    '<?xml version="1.0"?><systemList>'
+    "<system><name>gc</name><path>%ROMPATH%/gc</path><extension>.rvz</extension>"
+    '<command label="Dolphin (Standalone)">%EMULATOR_DOLPHIN% -b -e %ROM%</command></system>'
+    "<system><name>wii</name><path>%ROMPATH%/wii</path><extension>.rvz</extension>"
+    '<command label="Dolphin (Standalone)">%EMULATOR_DOLPHIN% -b -e %ROM%</command></system>'
+    "</systemList>"
+)
+DOLPHIN_GC_USER = f"{HOME}/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC"
+
+
+class TestDolphinStandaloneSaves:
+    """The corners of the Dolphin card the vector family does not carry."""
+
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: DOLPHIN_SYSTEMS,
+    }
+
+    def _answer(self, ini, system="gc"):
+        files = dict(self.BASE)
+        if ini is not None:
+            files[DOLPHIN_INI_PATH] = ini
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
+        entry = rd.emulators_for(system).entries[0]
+        return entry.savefile_location()
+
+    def test_a_missing_ini_answers_from_the_registered_defaults(self):
+        # SlotA defaults to the GCI folder and SlotB to nothing
+        # (MainSettings.cpp:133-136) — a fresh Dolphin answers, it does not refuse.
+        p = self._answer(None)
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == atlas.ROOT_EMULATOR_DIRECTORY
+        assert p.needs == (atlas.HOLE_REGION,)
+        assert p.granularity is not None
+        assert p.granularity.mode == "folder+none"
+
+    def test_no_card_in_either_slot_keeps_no_save(self):
+        p = self._answer("[Core]\nSlotA = 255\nSlotB = 255\n")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ()
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_WRITES_DISCARDED]
+        assert stated
+        assert stated[0].data["mode"] == "none+none"
+
+    def test_an_uninterpreted_slot_device_is_refused_not_guessed(self):
+        p = self._answer("[Core]\nSlotA = 7\nSlotB = 255\n")
+        assert not isinstance(p, atlas.Unresolved)
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "uninterpreted" in stated[0].data["reason"]
+
+    def test_a_configured_card_path_is_a_region_template(self):
+        # The emulator replaces the region code in a configured filename
+        # (GetMemcardPath, MainSettings.cpp:777-819) — so does the answer.
+        p = self._answer(
+            "[Core]\nSlotA = 1\nSlotB = 255\nMemcardAPath = /mnt/sd/cards/mine.USA.raw\n"
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("mine.USA.raw", "mine.EUR.raw", "mine.JAP.raw")
+        assert p.file_set.groups[0].dir == "/mnt/sd/cards"
+
+    def test_a_second_slot_adds_its_own_groups(self):
+        p = self._answer("[Core]\nSlotA = 8\nSlotB = 1\n")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.granularity is not None
+        assert p.granularity.mode == "folder+card"
+        dirs = {g.dir for g in p.file_set.groups if g.files is not None}
+        assert dirs == {DOLPHIN_GC_USER}
+        assert len([g for g in p.file_set.groups if g.files is None]) == 3
+
+    def test_a_session_override_says_the_cards_live_elsewhere_while_it_runs(self):
+        p = self._answer(
+            "[Core]\nSlotA = 8\nSlotB = 255\nGCIFolderAPathOverride = /tmp/movie\n"
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "GCIFolderAPathOverride" in stated[0].data["reason"]
+
+    def test_the_savestate_question_still_refuses(self):
+        files = dict(self.BASE)
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
+        entry = rd.emulators_for("gc").entries[0]
+        refusal = entry.savestate_location()
+        assert isinstance(refusal, atlas.Unresolved)
+        assert refusal.code == atlas.UNRESOLVED_STANDALONE
+
+
 class TestEmuDeck:
     def test_settings_parse_and_roots(self):
         machine = FixtureMachine(

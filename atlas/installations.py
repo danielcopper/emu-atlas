@@ -123,6 +123,7 @@ from atlas.placement import (
     CAVEAT_CONTENT_PATH_UNNAMED,
     CAVEAT_CORE_GENERATION_MISMATCH,
     CAVEAT_CORE_GENERATION_UNESTABLISHED,
+    CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_CORE_OWN_WRITES_UNESTABLISHED,
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
@@ -160,8 +161,11 @@ from atlas.placement import (
     HOLE_CONTENT_DIR,
     HOLE_CONTENT_DIR_NAME,
     HOLE_CWD,
+    HOLE_REGION,
     PATCH_FORMATS,
+    ROLE_BATTERY,
     ROOT_CONTENT_DIRECTORY,
+    ROOT_EMULATOR_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     ROOT_WORKING_DIRECTORY,
@@ -169,11 +173,14 @@ from atlas.placement import (
     SUBDIR_TEMPLATE_HOLES,
     TEMPLATE_CONTENT_DIR,
     TEMPLATE_CONTENT_DIR_NAME,
+    TEMPLATE_REGION,
     TEMPLATE_ROM_STEM,
     FILE_SET_DECLARED,
     FILE_SET_OBSERVED,
     FILE_SET_UNKNOWN,
+    GRANULARITY_NONE,
     UNKNOWN_FILE_SET,
+    UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_MOD_WIRING_UNESTABLISHED,
     UNRESOLVED_STANDALONE,
     UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED,
@@ -203,6 +210,7 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
+from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
     chain_value,
@@ -4654,6 +4662,517 @@ def _standalone_texture_unresolved(spec: EmulatorSpec) -> Unresolved:
     )
 
 
+# ---------------------------------------------------------------------------
+# Standalone save resolution — the savefile question for a catalogue entry
+# whose command names an emulator a standalone save card covers. The card is
+# the thin, cited half (atlas/standalone_saves.py); the reading here follows
+# the emulator's own code at the pinned revision, and every value it takes
+# off the machine is a config read or a symlink walk, never a guess.
+# ---------------------------------------------------------------------------
+
+# Dolphin 2603a. Region directory names and card file stems are compile-time
+# literals (CommonPaths.h:40-44, :141-142); the slot devices are EXI ids
+# (EXI_Device.h:25-45), registered with GCI-folder as slot A's default and
+# nothing in slot B (MainSettings.cpp:133-136).
+_DOLPHIN_REGIONS = ("USA", "EUR", "JAP")
+_DOLPHIN_REGION_SPELLINGS = ("USA", "EUR", "JAP", "JPN", "DEV")
+_DOLPHIN_DEVICE_RAW = 1
+_DOLPHIN_DEVICE_FOLDER = 8
+_DOLPHIN_DEVICE_AGP = 9
+_DOLPHIN_DEVICE_NONE = 255
+_DOLPHIN_SLOT_DEFAULTS = {"A": _DOLPHIN_DEVICE_FOLDER, "B": _DOLPHIN_DEVICE_NONE}
+
+
+def _parse_sectioned_ini(text: str) -> dict[str, dict[str, str]]:
+    """``key = value`` lines under ``[section]`` headers — Dolphin.ini's own shape."""
+    sections: dict[str, dict[str, str]] = {"": {}}
+    current = sections[""]
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            current = sections.setdefault(line[1:-1], {})
+            continue
+        key, sep, value = line.partition("=")
+        if sep:
+            current[key.strip()] = value.strip()
+    return sections
+
+
+@dataclass(frozen=True, slots=True)
+class _DolphinSlot:
+    """One card slot's contribution to the answer: groups, readings, caveats."""
+
+    mode: str
+    groups: tuple[FileGroup, ...] = ()
+    readings: tuple[OptionReading, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+    template_dir: str | None = None
+
+
+def _dolphin_region_split(value: str, *, separator: str) -> tuple[str, str]:
+    """*value* with a trailing region code stripped — ``(base, suffix-after-region)``.
+
+    The emulator's own move, made explicit: a configured card path is a
+    template whose region segment the running disc replaces (GetMemcardPath
+    MainSettings.cpp:777-819, GetGCIFolderPath :844-873). A value that spells
+    no region keeps its tail and the region is inserted before it.
+    """
+    for region in _DOLPHIN_REGION_SPELLINGS:
+        marker = separator + region
+        if value.endswith(marker):
+            return value[: -len(marker)], ""
+    return value, ""
+
+
+def _dolphin_raw_slot(letter: str, configured: str | None, sandbox: _Sandbox, gc_root: str) -> _DolphinSlot:
+    """A raw memory card in one slot: one file per region, named.
+
+    An empty path defaults to ``<GC user>/MemoryCard<slot>.<region>.raw``
+    (MainSettings.cpp:767-774); a standard-size card carries no block suffix
+    (EXI.cpp:123-124 sizes the card at 2043 blocks unless MemoryCardSize
+    overrides it, and the suffix only exists below that, :763-765).
+    """
+    if configured:
+        resolved = sandbox.host(f"Memcard{letter}Path", configured)
+        if resolved.path is None:
+            return _DolphinSlot(
+                mode="card",
+                caveats=(
+                    Caveat(
+                        CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                        f"Dolphin.ini sets Memcard{letter}Path to {configured!r}, a path only the "
+                        "emulator's sandbox can read — the card file could not be located from here",
+                        {"key": f"Memcard{letter}Path", "path": configured},
+                    ),
+                ),
+                readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None),),
+            )
+        directory, filename = os.path.split(resolved.path)
+        stem, ext = os.path.splitext(filename)
+        base, _ = _dolphin_region_split(stem, separator=".")
+        names = tuple(f"{base}.{region}{ext}" for region in _DOLPHIN_REGIONS)
+    else:
+        directory = gc_root
+        names = tuple(f"MemoryCard{letter}.{region}.raw" for region in _DOLPHIN_REGIONS)
+    return _DolphinSlot(
+        mode="card",
+        groups=tuple(
+            FileGroup(dir=directory, files=(name,), granularity="shared-file", role="memory-card")
+            for name in names
+        ),
+        readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None),),
+    )
+
+
+def _dolphin_folder_slot(letter: str, configured: str | None, sandbox: _Sandbox, gc_root: str) -> _DolphinSlot:
+    """A GCI folder in one slot: one directory per region, files unnamed.
+
+    An empty path defaults to ``<GC user>/<region>/Card <slot>``
+    (MainSettings.cpp:835-841). The ``.gci`` names inside come from the save's
+    own directory entry — makercode, gamecode and the save's internal filename
+    (GCMemcardDirectory.cpp:56-60) — none of which any read of the content
+    path recovers, so the groups stay unnamed.
+    """
+    if configured:
+        resolved = sandbox.host(f"GCIFolder{letter}Path", configured)
+        if resolved.path is None:
+            return _DolphinSlot(
+                mode="folder",
+                caveats=(
+                    Caveat(
+                        CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                        f"Dolphin.ini sets GCIFolder{letter}Path to {configured!r}, a path only the "
+                        "emulator's sandbox can read — the folder could not be located from here",
+                        {"key": f"GCIFolder{letter}Path", "path": configured},
+                    ),
+                ),
+                readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None),),
+            )
+        base, _ = _dolphin_region_split(resolved.path.rstrip("/"), separator="/")
+        dirs = tuple(os.path.join(base, region) for region in _DOLPHIN_REGIONS)
+        template = os.path.join(base, TEMPLATE_REGION)
+    else:
+        dirs = tuple(os.path.join(gc_root, region, f"Card {letter}") for region in _DOLPHIN_REGIONS)
+        template = os.path.join(gc_root, TEMPLATE_REGION, f"Card {letter}")
+    return _DolphinSlot(
+        mode="folder",
+        groups=tuple(
+            FileGroup(dir=d, files=None, granularity="per-game-files", role="memory-card")
+            for d in dirs
+        ),
+        readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None),),
+        template_dir=template,
+    )
+
+
+def _dolphin_reading(key: str, value: str | None, provenance: str | None) -> OptionReading:
+    return OptionReading(
+        key,
+        value,
+        provenance
+        or (
+            f'Dolphin.ini: [Core] {key} = "{value}"'
+            if value is not None
+            else f"[Core] {key} is unset — the compiled-in default governs (MainSettings.cpp at 2603a)"
+        ),
+        None,
+    )
+
+
+def _dolphin_slot(letter: str, core: Mapping[str, str], sandbox: _Sandbox, gc_root: str) -> _DolphinSlot:
+    """One slot read the way the emulator reads it: device id first, then the path."""
+    raw_value = core.get(f"Slot{letter}")
+    try:
+        device = int(raw_value) if raw_value is not None else _DOLPHIN_SLOT_DEFAULTS[letter]
+    except ValueError:
+        device = None
+    slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None)
+    if device == _DOLPHIN_DEVICE_NONE:
+        return _DolphinSlot(mode="none", readings=(slot_reading,))
+    if device == _DOLPHIN_DEVICE_FOLDER:
+        slot = _dolphin_folder_slot(letter, core.get(f"GCIFolder{letter}Path"), sandbox, gc_root)
+    elif device == _DOLPHIN_DEVICE_RAW:
+        slot = _dolphin_raw_slot(letter, core.get(f"Memcard{letter}Path"), sandbox, gc_root)
+    elif device == _DOLPHIN_DEVICE_AGP:
+        return _DolphinSlot(
+            mode="agp",
+            readings=(slot_reading,),
+            caveats=(
+                Caveat(
+                    CAVEAT_CORE_MODE_UNESTABLISHED,
+                    f"Dolphin's slot {letter} holds a GBA cartridge adapter (AGP, EXI device 9) — "
+                    "its saves go onto the cartridge image the emulator is configured with, which "
+                    "this answer does not model; the other slot's statement stands on its own",
+                    {"core": "DOLPHIN", "reason": f"slot {letter} is an AGP device"},
+                ),
+            ),
+        )
+    else:
+        return _DolphinSlot(
+            mode="unknown",
+            readings=(slot_reading,),
+            caveats=(
+                Caveat(
+                    CAVEAT_CORE_MODE_UNESTABLISHED,
+                    f'Dolphin.ini sets Slot{letter} to "{raw_value}", a device this card cannot '
+                    "interpret — what sits in that slot and where it saves is unestablished",
+                    {"core": "DOLPHIN", "reason": f'Slot{letter} = "{raw_value}" is uninterpreted'},
+                ),
+            ),
+        )
+    return _DolphinSlot(
+        mode=slot.mode,
+        groups=slot.groups,
+        readings=(slot_reading, *slot.readings),
+        caveats=slot.caveats,
+        template_dir=slot.template_dir,
+    )
+
+
+def _dolphin_gc_answer(
+    slots: tuple[_DolphinSlot, _DolphinSlot],
+    *,
+    machine: Machine,
+    ini_path: str | None,
+    card: StandaloneSaveCard,
+    extra_caveats: tuple[Caveat, ...],
+) -> SavefilePlacement:
+    """The GameCube answer assembled from both slots' contributions."""
+    groups = tuple(g for slot in slots for g in slot.groups)
+    readings = tuple(
+        _reading_with_file(r, ini_path) for slot in slots for r in slot.readings
+    )
+    caveats = [*extra_caveats, *(c for slot in slots for c in slot.caveats)]
+    mode = "+".join(slot.mode for slot in slots)
+    template = next((slot.template_dir for slot in slots if slot.template_dir), None)
+    if groups:
+        directory = template or groups[0].dir
+        needs = (HOLE_REGION,) if template else ()
+        named_first = groups[0].files is not None
+        files = tuple(
+            name for g in groups if g.dir == groups[0].dir and g.files for name in g.files
+        ) if named_first else ()
+        state = FILE_SET_DECLARED
+        if any(g.files is None for g in groups):
+            caveats.extend(
+                Caveat(
+                    CAVEAT_FILE_NAMES_UNESTABLISHED,
+                    "the .gci files here are named from the save's own directory entry — "
+                    "makercode, gamecode and the save's internal filename — which follow from "
+                    "nothing atlas reads; back the directory up whole",
+                    {
+                        "core": card.token,
+                        "dir": g.dir,
+                        "role": g.role,
+                        "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a",
+                    },
+                )
+                for g in groups
+                if g.files is None
+            )
+    else:
+        # No device keeps a card: nothing on this machine takes a GameCube
+        # game's save writes until a slot is configured again.
+        directory = template or (ini_path and os.path.dirname(ini_path)) or "/"
+        needs = ()
+        files = ()
+        state = FILE_SET_DECLARED
+        caveats.append(
+            Caveat(
+                CAVEAT_SAVE_WRITES_DISCARDED,
+                "no memory card sits in either slot (Dolphin.ini [Core] SlotA/SlotB) — a "
+                "GameCube game finds nowhere to save and nothing is kept; the granularity "
+                "block names the switches that would change that",
+                {"core": card.token, "mode": mode},
+            )
+        )
+    physical, link_caveats = (
+        _link_view(machine, directory) if TEMPLATE_REGION not in directory else (None, ())
+    )
+    caveats.extend(link_caveats)
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=needs,
+        fallback_dir=None,
+        file_set=FileSet(
+            state,
+            files,
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=groups,
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=groups[0].granularity if groups else GRANULARITY_NONE,
+            mode=mode,
+            readings=readings,
+            alternatives=_dolphin_alternatives(slots),
+            provenance=(
+                f"standalone save card '{card.token}': mode {mode!r} from Dolphin.ini's slot "
+                "devices (EXI_Device.h:25-45 at 2603a)"
+            ),
+        ),
+    )
+
+
+def _reading_with_file(reading: OptionReading, options_file: str | None) -> OptionReading:
+    return OptionReading(reading.key, reading.value, reading.provenance, options_file)
+
+
+# The one edit a player actually makes: flip slot A between the folder
+# (per-game files) and the raw card (one shared file per region). Keyed by
+# the mode it flips FROM; slot B's combinations multiply the space without
+# changing the shape of any answer, so they stay as they are.
+_DOLPHIN_SLOT_A_FLIPS = {
+    "folder": ("card", _DOLPHIN_DEVICE_RAW, "shared-file"),
+    "card": ("folder", _DOLPHIN_DEVICE_FOLDER, "per-game-files"),
+}
+
+
+def _dolphin_alternatives(
+    slots: tuple[_DolphinSlot, _DolphinSlot]
+) -> tuple[ModeAlternative, ...]:
+    """The other card scheme for slot A — every other mode is a caveat, not a mode."""
+    a, b = slots
+    alternatives: list[ModeAlternative] = []
+    flip = _DOLPHIN_SLOT_A_FLIPS.get(a.mode)
+    if flip is not None:
+        other, device, value = flip
+        alternatives.append(
+            ModeAlternative(
+                mode=f"{other}+{b.mode}",
+                options=(("SlotA", str(device)),),
+                values=(value,),
+            )
+        )
+    return tuple(alternatives)
+
+
+def _dolphin_wii_answer(
+    general: Mapping[str, str],
+    *,
+    machine: Machine,
+    sandbox: _Sandbox,
+    homes: _XdgHomes,
+    ini_path: str | None,
+    card: StandaloneSaveCard,
+    extra_caveats: tuple[Caveat, ...],
+) -> SavefilePlacement:
+    """The Wii answer: the NAND's title tree, one unnamed directory per title.
+
+    ``NANDRootPath`` governs where the NAND lives (the default is the ``Wii``
+    tree below the user directory, CommonPaths.h:49); the saves inside it are
+    ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at 2603a), the title
+    id a fact of the disc that no read of the content path recovers.
+    """
+    configured = general.get("NANDRootPath")
+    caveats = [*extra_caveats]
+    if configured:
+        resolved = sandbox.host("NANDRootPath", configured)
+        nand_root = resolved.path
+        reading = _dolphin_reading("NANDRootPath", configured, f'Dolphin.ini: [General] NANDRootPath = "{configured}"')
+        if nand_root is None:
+            caveats.append(
+                Caveat(
+                    CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                    f"Dolphin.ini sets NANDRootPath to {configured!r}, a path only the emulator's "
+                    "sandbox can read — falling back to the default NAND root it spells",
+                    {"key": "NANDRootPath", "path": configured},
+                )
+            )
+            nand_root = os.path.join(homes.base("data"), "dolphin-emu", "Wii")
+    else:
+        nand_root = os.path.join(homes.base("data"), "dolphin-emu", "Wii")
+        reading = _dolphin_reading(
+            "NANDRootPath",
+            None,
+            "[General] NANDRootPath is unset — the NAND defaults to the Wii tree below the "
+            "user directory (CommonPaths.h:49 at 2603a)",
+        )
+    directory = os.path.join(nand_root, "title")
+    # The link walk stops at the NAND root: the ``title`` tree below it is
+    # created at the first Wii save, so its absence is no dead link — the
+    # root's own resolution is the boundary the arrangement reroutes.
+    resolved_root, link_caveats = _link_view(machine, nand_root)
+    physical = os.path.join(resolved_root, "title") if resolved_root else None
+    caveats.extend(link_caveats)
+    caveats.append(
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "a Wii save lives in title/<title id>/data below the NAND root, and the title id "
+            "is the disc's own — it follows from nothing atlas reads; back the tree up whole",
+            {
+                "core": card.token,
+                "dir": directory,
+                "role": ROLE_BATTERY,
+                "citation": "NandPaths.cpp:63-71 at dolphin 2603a",
+            },
+        )
+    )
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=(
+                FileGroup(dir=directory, files=None, granularity="per-game-files", role=ROLE_BATTERY),
+            ),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value="per-game-files",
+            mode="nand",
+            readings=(_reading_with_file(reading, ini_path),),
+            alternatives=(),
+            provenance=f"standalone save card '{card.token}': the Wii NAND tree (NandPaths.cpp:63-71 at 2603a)",
+        ),
+    )
+
+
+def _dolphin_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    extra_caveats: tuple[Caveat, ...],
+) -> SavefilePlacement | Unresolved:
+    """Dolphin's save answer, read from Dolphin.ini the way the emulator reads it."""
+    ini_path = os.path.join(homes.base(card.config_base), card.config_path)
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Dolphin's configuration ({ini_path}) exists and could not be read — which devices "
+            "sit in the card slots and where the trees point is unknowable here",
+            {"emulator": card.token, "config": ini_path},
+        )
+    sections = _parse_sectioned_ini(result.text) if result.status == READ_OK and result.text else {}
+    stated_ini = ini_path if result.status == READ_OK else None
+    core = sections.get("Core", {})
+    if system == "wii":
+        return _dolphin_wii_answer(
+            sections.get("General", {}),
+            machine=machine,
+            sandbox=sandbox,
+            homes=homes,
+            ini_path=stated_ini,
+            card=card,
+            extra_caveats=extra_caveats,
+        )
+    gc_root = os.path.join(homes.base("data"), "dolphin-emu", "GC")
+    override_caveats = tuple(
+        Caveat(
+            CAVEAT_CORE_MODE_UNESTABLISHED,
+            f"Dolphin.ini carries {key}, a per-session override a movie or netplay session "
+            "sets (MainSettings.cpp:117-119) — while one runs, the cards live at its path, "
+            "not at the answer's",
+            {"core": card.token, "reason": f"{key} is set"},
+        )
+        for key in ("GCIFolderAPathOverride", "GCIFolderBPathOverride")
+        if core.get(key)
+    )
+    slots = (
+        _dolphin_slot("A", core, sandbox, gc_root),
+        _dolphin_slot("B", core, sandbox, gc_root),
+    )
+    return _dolphin_gc_answer(
+        slots,
+        machine=machine,
+        ini_path=stated_ini,
+        card=card,
+        extra_caveats=(*extra_caveats, *override_caveats),
+    )
+
+
+_STANDALONE_SAVE_RESOLVERS = {"DOLPHIN": _dolphin_savefile_placement}
+
+
+def _standalone_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    extra_caveats: tuple[Caveat, ...],
+) -> SavefilePlacement | Unresolved:
+    """Dispatch to the emulator's own resolver — a card without one fails loudly."""
+    resolver = _STANDALONE_SAVE_RESOLVERS.get(card.token)
+    if resolver is None:
+        raise ValueError(
+            f"standalone save card {card.token!r} has no resolver registered — the card and "
+            "the code shipped out of step"
+        )
+    return resolver(
+        machine, card=card, homes=homes, sandbox=sandbox, system=system, extra_caveats=extra_caveats
+    )
+
+
+def _standalone_savefile_unresolved(spec: EmulatorSpec) -> Unresolved:
+    """The refusal for a standalone entry no packaged save card covers."""
+    return Unresolved(
+        UNRESOLVED_STANDALONE,
+        f"standalone emulator {spec.label!r} ({spec.system}) is not resolvable yet — its save "
+        "tree is shaped by a configuration of its own, and only emulators with a packaged "
+        "standalone save card are read (issue #3 tracks the rest)",
+        {"label": spec.label, "system": spec.system},
+    )
+
+
 def _mod_enabled(
     machine: Machine,
     *,
@@ -6177,13 +6696,14 @@ class EmulatorEntry:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
         Catalogue-level degradations stay attached to the derived answer
-        (REVIEW M9). Standalone entries are outside the resolver's coverage
-        until the standalone block lands — that is a domain outcome
-        (:class:`~atlas.placement.Unresolved`), never a guess and never an
-        exception (REVIEW M8).
+        (REVIEW M9). A standalone entry answers where a packaged standalone
+        save card covers the emulator the command names, and refuses with a
+        domain outcome (:class:`~atlas.placement.Unresolved`) where none does —
+        never a guess and never an exception (REVIEW M8). Which of the two it
+        is stays the installation's decision, exactly as the texture question
+        decides it: the catalogue names an emulator, and whether atlas has its
+        wiring is a question about packaged knowledge.
         """
-        if self._spec.kind != KIND_LIBRETRO:
-            return self._standalone()
         return self._installation.entry_savefile_location(
             self._spec, self._caveats, content_path=content_path
         )
@@ -7468,6 +7988,24 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             if content_path is not None
             else ()
         )
+        if spec.kind != KIND_LIBRETRO:
+            card = lookup_standalone_save_card(emulator_token(spec.command))
+            if card is None or spec.system not in card.systems:
+                return _standalone_savefile_unresolved(spec)
+            health = self._health_from(config, marker_issues)
+            return _standalone_savefile_placement(
+                self._machine,
+                card=card,
+                homes=self._xdg_homes(),
+                sandbox=self._sandbox(),
+                system=spec.system,
+                extra_caveats=(
+                    *entry_caveats,
+                    *extra,
+                    *health.issues,
+                    *arrangement_caveats(self.kind, observed_version=_marker_version(config)),
+                ),
+            )
         placement = self._savefile_location_from(
             config,
             marker_issues,
@@ -8425,7 +8963,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         The placement itself is the companion RetroArch's, exactly as the
         direct question answers it; what the entry adds is its own catalogue
         caveats and, when content is named, the per-game override check.
+        A standalone entry still refuses here: EmuDeck installs each emulator
+        as its own flatpak with its own config tree, and none of that wiring
+        is read yet — the standalone save cards cover RetroDECK's one-flatpak
+        layout first, where the trees were verified live.
         """
+        if spec.kind != KIND_LIBRETRO:
+            return _standalone_savefile_unresolved(spec)
         placement = _retroarch_savefile_location(
             self._machine,
             self._query(

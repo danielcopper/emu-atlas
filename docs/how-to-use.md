@@ -53,20 +53,23 @@ Rules that hold for every answer:
   save directory after the content's stem) and `content_dir_name` (the vitaquake2 family names it after the content's
   directory); name the content and the resolver fills both itself. One hole no content can fill is `cwd`: a
   `working_directory`-rooted answer (DeSmuME 2015 writes relative to wherever RetroArch was started) is always the
-  `<cwd>` template, and only the launcher knows that directory. Every hole is filled from the content or the launch — a
-  value the configs state is never one, because you could not supply it either; atlas resolves those itself or states a
-  caveat. Holes are not confined to the directory: a declared file set can be a template too. An unknown is something
-  atlas refuses to state — it never guesses to keep a field non-empty. And a declared **emptiness** is a third thing,
-  distinct from both: a placement with `file_set.state == "declared"` and no files says no separate save file exists.
-  When the `save-inside-content` caveat rides beside it (quasi88 writing straight into the loaded disk image, hatari
-  writing a floppy back into its own file at eject), the loaded content file itself takes the writes — atlas will not
-  hand you the ROM under a second name, so what to make of a content file that doubles as the save (back it up, copy it,
-  leave it) is your decision, made on `atlas.CAVEAT_SAVE_INSIDE_CONTENT`. Its harder sibling is
-  `atlas.CAVEAT_SAVE_WRITES_DISCARDED` (hatari with write protection on): the same declared emptiness, and this time it
-  is the whole truth — nothing anywhere keeps the progress, and the granularity block beside it says which switch would
-  change that. Branch on `atlas.HOLE_CONTENT_DIR` / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` / `HOLE_ROM_STEM` /
-  `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the strings, the way you would on any other closed set here: every
-  one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
+  `<cwd>` template, and only the launcher knows that directory. And `region` is the hole a region-keyed standalone
+  answer keeps: which of Dolphin's per-region GameCube trees a game saves into is the disc's own region field, which
+  atlas does not read out of content — a caller with metadata (a library server knows its games' regions) fills it and
+  narrows the `<region>` template to one tree, while the groups list every tree either way. Every hole is filled from
+  the content or the launch — a value the configs state is never one, because you could not supply it either; atlas
+  resolves those itself or states a caveat. Holes are not confined to the directory: a declared file set can be a
+  template too. An unknown is something atlas refuses to state — it never guesses to keep a field non-empty. And a
+  declared **emptiness** is a third thing, distinct from both: a placement with `file_set.state == "declared"` and no
+  files says no separate save file exists. When the `save-inside-content` caveat rides beside it (quasi88 writing
+  straight into the loaded disk image, hatari writing a floppy back into its own file at eject), the loaded content file
+  itself takes the writes — atlas will not hand you the ROM under a second name, so what to make of a content file that
+  doubles as the save (back it up, copy it, leave it) is your decision, made on `atlas.CAVEAT_SAVE_INSIDE_CONTENT`. Its
+  harder sibling is `atlas.CAVEAT_SAVE_WRITES_DISCARDED` (hatari with write protection on): the same declared emptiness,
+  and this time it is the whole truth — nothing anywhere keeps the progress, and the granularity block beside it says
+  which switch would change that. Branch on `atlas.HOLE_CONTENT_DIR` / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` /
+  `HOLE_ROM_STEM` / `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the strings, the way you would on any other closed
+  set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
   `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
@@ -286,6 +289,7 @@ placement = inst.savefile_location(
 )
 placement.dir          # '/run/media/deck/Emulation/retrodeck/saves/n64'  — concrete, holes filled
 placement.root_kind    # 'savefile_directory' | 'content_directory' | 'system_directory' | 'working_directory'
+                       # | 'emulator_directory' (a standalone emulator's own tree — see the entry route)
 placement.needs        # ()  — nothing left for you to fill
 placement.file_set     # what the save consists of — see below
 placement.granularity  # a Granularity — how the save is grouped, plus every switch that selects it (see below);
@@ -647,6 +651,33 @@ to the ROM, and the observation matches everything there under the ROM's name �
 cover art, the archive the ROM came in. atlas states the whole set rather than filtering by an invented list of content
 extensions; `complete` is `false`, and deciding which of those files are yours to upload is the client's call.
 
+### Where a standalone emulator's saves live
+
+A standalone catalogue entry answers `savefile_location` where a **standalone save card** covers the emulator its launch
+command names — Dolphin today, keyed by the `%EMULATOR_…%` token the way the texture cards are. No frontend hands these
+emulators a save directory, so the answer's `root_kind` is `emulator_directory`: the emulator's own tree below the XDG
+base the arrangement pins, its shape read from the emulator's own configuration the way the emulator reads it (Dolphin's
+`Dolphin.ini`, at the shipped release), and rerouted with symlinks the answer walks.
+
+```python
+entry = inst.emulators_for("gc").entries[0]   # 'Dolphin (Standalone)'
+p = entry.savefile_location()
+p.root_kind          # 'emulator_directory'
+p.dir                # '…/data/dolphin-emu/GC/<region>/Card A' — the GCI folder, one .gci per save
+p.needs              # ('region',) — the disc's region picks the tree; fill it from your metadata
+p.file_set.groups    # all three region trees, so you see the candidate set without filling anything
+p.granularity.mode   # 'folder+none' — what sits in card slots A and B, read from Dolphin.ini
+```
+
+The granularity block is the same machinery the rule cards use: the readings name the switches that decided the mode
+(`SlotA = 8` is the GCI-folder device) and the alternative names the one edit to the other scheme — `SlotA = 1`, the raw
+card, where every game of a region shares one `MemoryCardA.<region>.raw` and the granularity says so. The Wii answer
+(`system="wii"`) is the NAND's `title/` tree: one unnamed directory per title, `file-names-unestablished` carrying the
+citation, and `physical_dir` pointing at the real tree behind the arrangement's symlink. A Dolphin.ini that exists and
+cannot be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside
+to. Savestates stay refused (`standalone-unsupported`): the states tree is its own wiring, deliberately outside the save
+card.
+
 ## Where do this ROM's savestates live?
 
 ### Where screenshots go
@@ -746,16 +777,18 @@ directory whose feature is off is still the right directory: that is why these a
 binary documents `system/dc/textures/<game-id>/`, so that row states `game-id`; a row whose evidence stops short states
 `None`, which is not the claim that the tree is undivided.
 
-**Standalone emulators answer here, and their saves do not — that asymmetry is deliberate.** A save routes through a
-config atlas would have to model; a texture pack usually does not, because a standalone emulator opens its own default
-directory below an XDG base the distribution's flatpak pins. So the same catalogue entry can refuse `savefile_location`
-and answer `texture_pack_location`:
+**Standalone emulators answer here without a config read — the save question needs one, and answers only where a card
+carries it.** A texture pack usually lives at a default the emulator opens below an XDG base the distribution's flatpak
+pins, so every carded emulator answers this question; a save routes through the emulator's own configuration, so
+`savefile_location` answers only for emulators with a standalone _save_ card (Dolphin today — see
+[the standalone save answer](#where-a-standalone-emulators-saves-live)) and refuses for the rest. The same catalogue
+entry can therefore answer this question and refuse that one:
 
 ```python
-entry = inst.emulators_for("gc").entries[0]         # 'Dolphin (Standalone)'
+entry = inst.emulators_for("n3ds").entries[0]       # 'Azahar (Standalone)'
 entry.savefile_location()                            # Unresolved: standalone-unsupported
 outcome = entry.texture_pack_location()
-outcome.dir           # '/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Load/Textures'
+outcome.dir           # '/home/deck/.var/app/net.retrodeck.retrodeck/data/azahar-emu/load/textures'
 outcome.physical_dir  # the shared tree the distribution linked it into
 outcome.enabled       # None — always, on a standalone row
 ```

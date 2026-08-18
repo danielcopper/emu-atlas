@@ -407,6 +407,25 @@ driven by `core_audit.json`, not by this file or by a resolver**: it fires on th
 carry for their saves, so closing the verdict there retires it here, the way `arrangement_evidence.json` retires
 `arrangement-unverified`.
 
+## `standalone_saves.json` — which standalone emulators the save question answers for
+
+Read by `atlas.standalone_saves`, and keyed by the `%EMULATOR_…%` token an ES-DE launch command names — the same key the
+texture table's standalone half uses, because for a standalone entry that token is the only identifier there is. The
+savefile question answers a standalone catalogue entry exactly where a card here covers its emulator, and refuses with
+`standalone-unsupported` everywhere else; which of the two it is runs on evidence, never on the kind of entry.
+
+A card is deliberately **thin**: the configuration file that governs the emulator's save tree (below the XDG base the
+arrangement pins), the catalogue systems the card answers for, and the provenance behind both. Everything else — what
+`SlotA = 8` means, what an empty path key defaults to, how a configured card path templates its region — is knowledge
+written nowhere on the machine, so it lives as cited code beside the card (`atlas/installations.py`), the same split the
+rule cards make with `atlas/mode_rules.py`. The loader refuses a card whose token has no resolver registered.
+
+The one card today is Dolphin (release 2603a, the binary RetroDECK ships): GameCube card slots read from `Dolphin.ini`'s
+EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
+unnamed `title/` tree. The answers root at `emulator_directory` — no frontend hands a standalone emulator a save
+directory. EmuDeck's standalone entries still refuse: it installs each emulator as its own flatpak, and none of that
+per-app wiring is read yet.
+
 ## `save_memory.json` — which files RetroArch writes for a core, per system
 
 Read by `atlas.save_memory`, and it is the only table here keyed by **core _and_ system**. The name of a save is not in

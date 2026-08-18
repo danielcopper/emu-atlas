@@ -719,13 +719,13 @@
     },
     {
       "name": "a-standalone-entry-answers-the-texture-question-and-refuses-the-save-one",
-      "rationale": "The deliberate asymmetry, on ONE entry so nothing can drift between the two: a save routes through a config atlas would have to model, while this emulator's packs sit at its own default below an XDG base the flatpak pins — a path join and a symlink walk. So the same entry answers here and refuses there, and the answer states what it did not read rather than calling the switch off.",
+      "rationale": "One catalogue, two standalone entries, two different save outcomes — and the texture question answering beside them. Azahar has a texture card and no standalone save card, so its entry refuses the save question with standalone-unsupported; Dolphin answers both since its save card landed. The asymmetry between the questions was never about the standalone kind, only about what atlas has established per emulator — this vector keeps the refusal half honest.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>psp</name>\n    <fullname>Sony PlayStation Portable</fullname>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n    <platform>psp</platform>\n    <theme>psp</theme>\n  </system>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n    <theme>ps2</theme>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>psp</name>\n    <fullname>Sony PlayStation Portable</fullname>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n    <platform>psp</platform>\n    <theme>psp</theme>\n  </system>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n    <theme>ps2</theme>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <fullname>Nintendo 3DS</fullname>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds .3DS</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n    <platform>n3ds</platform>\n    <theme>n3ds</theme>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/texture_packs/Dolphin/Textures/readme.txt": "put packs here"
         },
         "dirs": [
@@ -739,7 +739,7 @@
           "system": "gc"
         },
         "entry_savefile_query": {
-          "system": "gc"
+          "system": "n3ds"
         }
       },
       "expected": {
@@ -773,8 +773,8 @@
           "unresolved": {
             "code": "standalone-unsupported",
             "data": {
-              "label": "Dolphin (Standalone)",
-              "system": "gc"
+              "label": "Azahar (Standalone)",
+              "system": "n3ds"
             }
           }
         }
