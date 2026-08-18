@@ -939,7 +939,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -948,7 +949,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -958,7 +960,7 @@
     },
     {
       "name": "flycast-per-game-vmu-mode",
-      "rationale": "The same core with reicast_per_content_vmus = 'VMU A1' switches to per-game VMUs rooted in the standard savefile_directory — granularity and root flip on one live-read option. Per-content applies to port A1 alone (oslib.cpp:40-41), so B1..D1 and the console flash keep using the shared card under system_directory: the save lies under two roots, which a card describing one cannot state. The file set therefore stays unknown and 'file-set-spans-roots' says why, instead of offering the single visible file as the whole save.",
+      "rationale": "'All VMUs' moves the four per-content cards under the save root and the console flash stays behind under the system directory's dc — stated since #97 as a cross-root group and a spans-roots caveat naming the resolved directory, instead of prose. The mode's own files keep the save_id hole for the caller to fill.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -993,22 +995,56 @@
         "savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves/dreamcast",
           "root_kind": "savefile_directory",
-          "needs": [],
+          "needs": [
+            "save_id"
+          ],
           "fallback_dir": "/mnt/sd/retrodeck/saves",
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "<save_id>.A1.bin"
+            ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/dreamcast",
+                "files": [
+                  "<save_id>.A1.bin"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_B1.bin",
+                  "vmu_save_C1.bin",
+                  "vmu_save_D1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [
             {
-              "code": "file-set-spans-roots",
+              "code": "filenames-content-conditional",
               "data": {
                 "core": "flycast",
                 "mode": "VMU A1",
-                "also_under": "system_directory"
+                "files": "<save_id>.A1.bin",
+                "files_without_save_id": "Dreamcast Game (Europe).A1.bin",
+                "files_established_for": "console",
+                "citation": "flycast@1dac369 oslib.cpp:38-67 (names; per-content applies per port, :40-41), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only, so port A1 never exists for arcade content)"
               }
             },
             {
@@ -1016,6 +1052,24 @@
               "data": {
                 "dir": "/mnt/sd/retrodeck/saves/dreamcast",
                 "fallback_dir": "/mnt/sd/retrodeck/saves"
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "core": "flycast",
+                "mode": "VMU A1",
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": "vmu_save_B1.bin, vmu_save_C1.bin, vmu_save_D1.bin"
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "core": "flycast",
+                "mode": "VMU A1",
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": "dc_nvmem.bin"
               }
             }
           ],
@@ -1045,7 +1099,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -1116,6 +1171,14 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
               }
             ]
           },
@@ -1129,6 +1192,15 @@
                 "files_without_save_id": "Multi Disc Game (Europe).A1.bin, Multi Disc Game (Europe).B1.bin, Multi Disc Game (Europe).C1.bin, Multi Disc Game (Europe).D1.bin",
                 "files_established_for": "console",
                 "citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)"
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "core": "flycast",
+                "mode": "All VMUs",
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": "dc_nvmem.bin"
               }
             }
           ],
@@ -1158,7 +1230,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               }
             ]
@@ -1236,7 +1309,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -1245,7 +1319,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -1345,7 +1420,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -1354,7 +1430,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -1431,7 +1508,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -1440,7 +1518,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -1517,7 +1596,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -1526,7 +1606,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -1632,7 +1713,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -1641,7 +1723,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -1650,8 +1733,8 @@
       }
     },
     {
-      "name": "flycast-a-spanning-modes-second-root-is-resolved-not-the-cards-spelling",
-      "rationale": "In 'VMU A1' only port A1 moves to the save directory; the rest keeps using the shared card, which the card calls the system directory. With systemfiles_in_content_dir set, that shared card is under the CONTENT directory (runloop.c:1963-1985), so file-set-spans-roots reports also_under: content_directory — the same reading root_kind performs, because a consumer following the card's own spelling back to the cfg key would look where this core never writes.",
+      "name": "flycast-a-spanning-modes-parts-follow-the-resolved-system-root",
+      "rationale": "'VMU A1' moves port A1 to the save directory while B1..D1 and the console flash stay behind — and the machine's cfg has just redirected the system root to the content's own directory. The cross-root parts follow the root as this machine resolves it: the spans-roots caveats name the resolved directory with the files, and the declared decomposition carries the same parts as groups. A consumer following the cfg key back would look where this core no longer writes.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1687,22 +1770,74 @@
         "savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves",
           "root_kind": "savefile_directory",
-          "needs": [],
+          "needs": [
+            "save_id"
+          ],
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "<save_id>.A1.bin"
+            ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "<save_id>.A1.bin"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": [
+                  "vmu_save_B1.bin",
+                  "vmu_save_C1.bin",
+                  "vmu_save_D1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "flycast",
+                "mode": "VMU A1",
+                "files": "<save_id>.A1.bin",
+                "files_without_save_id": "Dreamcast Game (Europe).A1.bin",
+                "files_established_for": "console",
+                "citation": "flycast@1dac369 oslib.cpp:38-67 (names; per-content applies per port, :40-41), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only, so port A1 never exists for arcade content)"
+              }
+            },
             {
               "code": "file-set-spans-roots",
               "data": {
                 "core": "flycast",
                 "mode": "VMU A1",
-                "also_under": "content_directory"
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": "vmu_save_B1.bin, vmu_save_C1.bin, vmu_save_D1.bin"
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "core": "flycast",
+                "mode": "VMU A1",
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": "dc_nvmem.bin"
               }
             }
           ],
@@ -1732,7 +1867,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -2957,7 +3093,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -2966,7 +3103,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -3972,7 +4110,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -3981,7 +4120,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]
@@ -7130,7 +7270,8 @@
                   "reicast_per_content_vmus": "VMU A1"
                 },
                 "values": [
-                  "per-game-file"
+                  "per-game-file",
+                  "shared-card"
                 ]
               },
               {
@@ -7139,7 +7280,8 @@
                   "reicast_per_content_vmus": "All VMUs"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-files",
+                  "shared-card"
                 ]
               }
             ]

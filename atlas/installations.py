@@ -2126,33 +2126,17 @@ def _card_file_set(
 
 
 def _file_set_caveats(
-    card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None, also_under: str | None
+    card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None
 ) -> tuple[Caveat, ...]:
     """What one declared file list cannot say about this mode's save.
 
-    Three states the card keeps apart, each stated rather than left to an
-    empty-looking answer: a mode whose save reaches beyond its own root (a
-    list would offer a part as the whole), a mode whose names depend on a fact
-    atlas does not read (both spellings are handed over, the caller picks),
-    and a mode whose names are not established yet.
-
-    *also_under* is the mode's second root **as this machine resolves it**, not
-    the card's own spelling of it: the card names the root its core asks for,
-    and where that is is the resolver's question — the same one
-    :func:`_core_system_root` answers for the root the placement itself uses
-    (:func:`_also_under_root`).
+    Two states the card keeps apart, each stated rather than left to an
+    empty-looking answer: a mode whose names depend on a fact atlas does not
+    read (both spellings are handed over, the caller picks), and a mode whose
+    names are not established yet. The spanning mode stopped being a third:
+    its cross-root parts state their files as groups now, and
+    :func:`_cross_root_parts` carries them.
     """
-    if also_under is not None:
-        return (
-            Caveat(
-                CAVEAT_FILE_SET_SPANS_ROOTS,
-                f"core {card.key!r} in mode {mode_value!r}: only part of the save moves here — the "
-                f"rest keeps using the {also_under} root. What is recorded about this core states "
-                "one root per mode, so the file set is left unstated instead of presenting the "
-                "visible part as the whole save",
-                {"core": card.key, "mode": mode_value, "also_under": also_under},
-            ),
-        )
     if mode.files is None:
         return (
             Caveat(
@@ -2378,36 +2362,86 @@ def _core_system_root(
     return _dc_replace(root, caveats=(*caveats, *root.caveats))
 
 
-def _also_under_root(
-    mode: SaveMode | None,
+@dataclass(frozen=True, slots=True)
+class _CrossParts:
+    """A mode's resolved cross-root groups, their caveats, and unfilled holes."""
+
+    groups: tuple[FileGroup, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+    holes: tuple[str, ...] = ()
+
+
+def _cross_root_parts(
+    mode: SaveMode,
     *,
+    card: CoreCard,
+    mode_value: str | None,
     sandbox: _Sandbox,
     cfg_label: str,
     layers: Sequence[_CfgLayer],
     content: _Content,
     retroarch_config_dir: str,
-) -> str | None:
-    """A spanning mode's second root, resolved the way its own root is resolved.
+) -> _CrossParts:
+    """A mode's cross-root groups, resolved: the parts that stay behind elsewhere.
 
-    ``also_under`` is a root *kind*, and ``system_directory`` is the one kind
-    that does not say where it is: the core is handed the content's directory
-    instead wherever ``systemfiles_in_content_dir`` — or an emptied key — sends
-    it (:func:`_core_system_root`). A consumer following ``also_under`` back to
-    the cfg key would look in a directory the core never touches, and the
-    answer's own ``root_kind`` stopped reading it that way, so this reads it the
-    same. Only that kind needs resolving; the others name themselves.
+    Flycast's per-game modes move the governed VMU under the save root while
+    the console flash — and in 'VMU A1' the three unmoved shared cards — stay
+    under the system directory's ``dc``. Each such part resolves against its
+    own root the way that root has always been resolved (the system kind can
+    legitimately land in the content's directory), and reaches the caller
+    twice on purpose: as a :class:`FileGroup` where the set is declared, and
+    always as a ``file-set-spans-roots`` caveat naming the directory and the
+    files — the carrier that survives an observed answer, exactly the way
+    ``file-names-unestablished`` carries MAME's unnamed tree. The third
+    element is the holes the bases could not fill, which join the answer's
+    ``needs``.
     """
-    if mode is None or mode.also_under is None:
-        return None
-    if mode.also_under != ROOT_SYSTEM_DIRECTORY:
-        return mode.also_under
-    return _core_system_root(
-        sandbox=sandbox,
-        cfg_label=cfg_label,
-        layers=layers,
-        content=content,
-        retroarch_config_dir=retroarch_config_dir,
-    ).root_kind
+    cross = [group for group in mode.groups if group.root is not None]
+    if not cross:
+        return _CrossParts()
+    bases: dict[str, _SystemRoot] = {}
+    for kind in {group.root or "" for group in cross}:
+        if kind == ROOT_SYSTEM_DIRECTORY:
+            bases[kind] = _core_system_root(
+                sandbox=sandbox,
+                cfg_label=cfg_label,
+                layers=layers,
+                content=content,
+                retroarch_config_dir=retroarch_config_dir,
+            )
+        else:
+            bases[kind] = _content_system_root(
+                content,
+                provenance=f"rule card '{card.key}': a cross-root part lies in the content's own tree",
+            )
+    groups_out: list[FileGroup] = []
+    caveats: list[Caveat] = []
+    holes: list[str] = []
+    suffix = f" in mode {mode_value!r}" if mode_value else ""
+    for group in cross:
+        base = bases[group.root or ""]
+        directory = os.path.join(base.base, *[seg for seg in (group.subdir or "").split("/") if seg])
+        filled = _card_files(group.files or (), content.rom_stem)
+        names = filled if filled is not None else group.files or ()
+        groups_out.append(
+            FileGroup(dir=directory, files=names, granularity=group.granularity, role=group.role)
+        )
+        holes.extend(base.needs)
+        caveats.append(
+            Caveat(
+                CAVEAT_FILE_SET_SPANS_ROOTS,
+                f"core {card.key!r}{suffix}: part of the save stays under {directory} — "
+                f"{', '.join(names)} — beyond this answer's own root; where the file set is "
+                "declared, the same part is in file_set.groups",
+                {
+                    "core": card.key,
+                    "mode": mode_value or "",
+                    "dir": directory,
+                    "files": ", ".join(names),
+                },
+            )
+        )
+    return _CrossParts(tuple(groups_out), tuple(caveats), tuple(dict.fromkeys(holes)))
 
 
 def _stated_mode_caveats(
@@ -2449,7 +2483,6 @@ def _card_root_placement(
     *,
     root: _SystemRoot,
     root_sentence: str,
-    also_under: str | None,
     card: CoreCard,
     mode: SaveMode,
     granularity: Granularity | None,
@@ -2479,7 +2512,6 @@ def _card_root_placement(
                 mode,
                 mode_value=granularity.mode or "",
                 rom_stem=content.rom_stem,
-                also_under=also_under,
             )
         )
         all_caveats.extend(
@@ -2551,10 +2583,6 @@ def _system_directory_placement(
         root_sentence=(
             "core keeps saves under the directory RetroArch hands it as the system directory"
         ),
-        # A mode routed here is rooted in the system directory itself, and a
-        # second root naming that same one is refused when the card is loaded —
-        # so nothing here needs the resolution _also_under_root performs.
-        also_under=mode.also_under,
         card=card,
         mode=mode,
         granularity=granularity,
@@ -2597,16 +2625,6 @@ def _content_directory_placement(
         machine,
         root=root,
         root_sentence="core writes into the content's own tree",
-        # The one root kind an ``also_under`` cannot name itself is the system
-        # directory — resolve it the way the spanning caveat expects.
-        also_under=_also_under_root(
-            mode,
-            sandbox=sandbox,
-            cfg_label=cfg_label,
-            layers=layers,
-            content=content,
-            retroarch_config_dir=retroarch_config_dir,
-        ),
         card=card,
         mode=mode,
         granularity=granularity,
@@ -2800,6 +2818,11 @@ def _declared_groups(
     base = _base_of(directory, mode.subdir)
     groups: list[FileGroup] = []
     for group in mode.groups:
+        if group.root is not None:
+            # A cross-root part resolves against its own root, not against
+            # this directory's base — _cross_root_parts builds it, and the
+            # standard route appends it after this decomposition.
+            continue
         names = _card_files(group.files, rom_stem) if group.files is not None else None
         if group.unnamed is None and not names:
             return ()
@@ -3286,7 +3309,7 @@ def _standard_placement(
     card: CoreCard | None,
     mode: SaveMode | None,
     granularity: Granularity | None,
-    also_under: str | None,
+    cross_parts: _CrossParts,
     reachable: bool,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
@@ -3315,7 +3338,6 @@ def _standard_placement(
                 mode,
                 mode_value=granularity.mode or "",
                 rom_stem=content.rom_stem,
-                also_under=also_under,
             )
         )
 
@@ -3400,11 +3422,18 @@ def _standard_placement(
                 content_dir_name=content.dir_name,
             )
         )
+    all_caveats.extend(cross_parts.caveats)
+    if cross_parts.groups and file_set.state == FILE_SET_DECLARED and file_set.groups:
+        # The decomposition gains the parts under the other roots; the flat
+        # `files` stays the answer's own directory, as it always was.
+        file_set = _dc_replace(file_set, groups=(*file_set.groups, *cross_parts.groups))
 
     return SavefilePlacement(
         dir=final_dir,
         root_kind=placement.root_kind,
-        needs=needs_with_file_set([*placement.needs, *subdir_holes], file_set.files),
+        needs=needs_with_file_set(
+            [*placement.needs, *subdir_holes, *cross_parts.holes], file_set.files
+        ),
         file_set=file_set,
         sources=tuple(final_sources),
         caveats=tuple(all_caveats),
@@ -3596,7 +3625,6 @@ def _working_directory_placement(
         machine,
         root=root,
         root_sentence="core writes relative to the launching process's working directory",
-        also_under=mode.also_under,
         card=card,
         mode=mode,
         granularity=granularity,
@@ -3684,6 +3712,18 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
             caveats=tuple(caveats),
         )
 
+    cross_parts = _CrossParts()
+    if card is not None and card_mode is not None:
+        cross_parts = _cross_root_parts(
+            card_mode,
+            card=card,
+            mode_value=granularity.mode if granularity is not None else None,
+            sandbox=query.sandbox,
+            cfg_label=query.cfg_label,
+            layers=layers,
+            content=content,
+            retroarch_config_dir=retroarch_config_dir,
+        )
     return _standard_placement(
         machine,
         query,
@@ -3694,14 +3734,7 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
         card=card,
         mode=card_mode,
         granularity=granularity,
-        also_under=_also_under_root(
-            card_mode,
-            sandbox=query.sandbox,
-            cfg_label=query.cfg_label,
-            layers=layers,
-            content=content,
-            retroarch_config_dir=retroarch_config_dir,
-        ),
+        cross_parts=cross_parts,
         reachable=chain.reachable,
         sources=tuple(sources_extra),
         caveats=tuple(caveats),

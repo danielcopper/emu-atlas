@@ -107,6 +107,14 @@ class TestCardLookup:
         assert lrps2.option_default == "enabled"
         assert set(card.modes) == {"disabled", "VMU A1", "All VMUs"}
         assert card.modes["disabled"].files is not None
+        # 'VMU A1' states everything since #97: its own per-content card, and
+        # the parts that stay behind as cross-root groups.
+        assert card.modes["VMU A1"].files == ("<save_id>.A1.bin",)
+        assert [g.root for g in card.modes["VMU A1"].groups] == [
+            None,
+            "system_directory",
+            "system_directory",
+        ]
         # 'All VMUs' names its files through the content's own id — a template,
         # kept as one: atlas states the shape, never the id. 'VMU A1' moves one
         # port and leaves the rest on the shared card, which one root cannot say.
@@ -122,8 +130,6 @@ class TestCardLookup:
             "<rom_stem>.C1.bin",
             "<rom_stem>.D1.bin",
         )
-        assert card.modes["VMU A1"].files is None
-        assert card.modes["VMU A1"].also_under == "system_directory"
 
 
 def _retrodeck(files, **kwargs):
@@ -505,7 +511,9 @@ class TestFlycastResolution:
         assert p.file_set.files == ("vmu_save_A1.bin",)
         assert p.granularity is not None
         assert p.granularity.value == GRANULARITY_SHARED_CARD
-        assert ("VMU A1", (GRANULARITY_PER_GAME_FILE,)) in [(a.mode, a.values) for a in p.granularity.alternatives]
+        assert ("VMU A1", (GRANULARITY_PER_GAME_FILE, GRANULARITY_SHARED_CARD)) in [
+            (a.mode, a.values) for a in p.granularity.alternatives
+        ]
         assert p.granularity.readings[0].options_file == OPTIONS_CFG
 
     def test_option_absent_uses_core_default(self):
@@ -592,14 +600,38 @@ class TestFlycastResolution:
         assert p.granularity is not None
         assert p.granularity.value == GRANULARITY_PER_GAME_FILE
         # Only port A1 goes per-content here (oslib.cpp:40-41) — B1..D1 and the
-        # console flash keep using the shared card, so the save lies under two
-        # roots and the card, which states one, states no file set at all.
-        assert p.file_set.state == "unknown"
-        assert p.needs == ()
+        # console flash keep using the shared card. Since #97 the mode states
+        # every part: its own file with the save_id hole, and the parts left
+        # behind as groups under the system directory, carried twice — in the
+        # decomposition and in one spans-roots caveat per part.
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ("<save_id>.A1.bin",)
+        assert p.needs == ("save_id",)
+        assert [(g.dir, g.files, g.granularity, g.role) for g in p.file_set.groups] == [
+            ("/mnt/sd/retrodeck/saves/dreamcast", ("<save_id>.A1.bin",), "per-game-file", "memory-card"),
+            (
+                "/mnt/sd/retrodeck/bios/dc",
+                ("vmu_save_B1.bin", "vmu_save_C1.bin", "vmu_save_D1.bin"),
+                "shared-card",
+                "memory-card",
+            ),
+            ("/mnt/sd/retrodeck/bios/dc", ("dc_nvmem.bin",), "shared-card", "battery"),
+        ]
         assert not any(c.code == atlas.CAVEAT_FILENAMES_UNVERIFIED for c in p.caveats)
         spans = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS]
         assert [dict(c.data) for c in spans] == [
-            {"core": "flycast", "mode": "VMU A1", "also_under": "system_directory"}
+            {
+                "core": "flycast",
+                "mode": "VMU A1",
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": "vmu_save_B1.bin, vmu_save_C1.bin, vmu_save_D1.bin",
+            },
+            {
+                "core": "flycast",
+                "mode": "VMU A1",
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": "dc_nvmem.bin",
+            },
         ]
 
     def test_all_vmus_declares_one_file_per_connected_port(self):
@@ -2273,9 +2305,11 @@ class TestStrictLoaders:
         with pytest.raises(ValueError, match="not a file name"):
             load_oddities(text)
 
-    def test_a_second_root_equal_to_the_first_is_rejected(self):
+    def test_the_retired_also_under_field_is_refused_loudly(self):
+        # Retired with issue #97: a card still spelling it would silently
+        # lose the claim it thinks it makes.
         text = self._mode_card({"granularity": "per-game-file", "also_under": "savefile_directory"})
-        with pytest.raises(ValueError, match="own root"):
+        with pytest.raises(ValueError, match="retired"):
             load_oddities(text)
 
     def test_a_scope_without_a_declared_set_is_rejected(self):
@@ -2413,11 +2447,11 @@ class TestStrictLoaders:
         with pytest.raises(ValueError, match="anchors where the writes would have landed"):
             load_oddities(text)
 
-    def test_a_save_inside_the_content_refuses_also_under(self):
+    def test_a_save_inside_the_content_refuses_the_retired_also_under(self):
         text = self._inside_card(
             {"root": "content_directory", "inside_content": "why", "also_under": "system_directory"}
         )
-        with pytest.raises(ValueError, match="also_under"):
+        with pytest.raises(ValueError, match="retired"):
             load_oddities(text)
 
     def test_discarded_writes_load_as_the_groups_less_form(self):
@@ -2614,21 +2648,111 @@ class TestStrictLoaders:
             "<rom_stem>.srm",
         }
 
-    def test_a_mode_that_spans_roots_cannot_declare_files(self):
-        # The field exists because one list cannot describe a two-root save.
-        text = self._mode_card(
+    def _cross_card(self, groups, *, root="savefile_directory"):
+        return json.dumps(
             {
-                "granularity": "per-game-file",
-                "files": ["<save_id>.A1.bin"],
-                "also_under": "system_directory",
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"library_name": ["X"]},
+                        "saves": {"modes": {"always": {"root": root, "groups": groups}}},
+                    }
+                },
             }
         )
-        with pytest.raises(ValueError, match="also_under"):
+
+    _HOME_GROUP = {"files": ["a.srm"], "granularity": "per-game-file", "role": "battery"}
+
+    def test_a_cross_root_group_loads_and_stays_out_of_the_flat_set(self):
+        text = self._cross_card(
+            [
+                self._HOME_GROUP,
+                {
+                    "root": "system_directory",
+                    "subdir": "dc",
+                    "files": ["flash.bin"],
+                    "granularity": "shared-card",
+                    "role": "battery",
+                },
+            ]
+        )
+        mode = load_oddities(text)[0].modes["always"]
+        assert mode.groups[1].root == "system_directory"
+        # The flat set and the mode's own directory stay the primary root's.
+        assert mode.files == ("a.srm",)
+        assert mode.here == (mode.groups[0],)
+        # Every grouping still counts for the alternatives' plural.
+        assert mode.granularities == ("per-game-file", "shared-card")
+
+    def test_a_cross_root_group_on_the_first_position_is_refused(self):
+        text = self._cross_card(
+            [
+                {
+                    "root": "system_directory",
+                    "files": ["flash.bin"],
+                    "granularity": "shared-card",
+                    "role": "battery",
+                },
+                self._HOME_GROUP,
+            ]
+        )
+        with pytest.raises(ValueError, match="first group is the mode's own answer"):
             load_oddities(text)
 
-    def test_an_unknown_second_root_is_rejected(self):
-        text = self._mode_card({"granularity": "per-game-file", "also_under": "somewhere_else"})
-        with pytest.raises(ValueError, match="also_under"):
+    def test_a_restated_group_root_is_refused(self):
+        text = self._cross_card(
+            [
+                self._HOME_GROUP,
+                {
+                    "root": "savefile_directory",
+                    "files": ["b.srm"],
+                    "granularity": "per-game-file",
+                    "role": "battery",
+                },
+            ]
+        )
+        with pytest.raises(ValueError, match="restates the mode's own"):
+            load_oddities(text)
+
+    def test_an_unestablished_cross_root_shape_is_refused(self):
+        # Only savefile-rooted modes keep parts behind under system/content —
+        # every other direction waits for a core that shows it.
+        text = self._cross_card(
+            [
+                {"subdir": "dc", "files": ["a.bin"], "granularity": "shared-card", "role": "battery"},
+                {
+                    "root": "savefile_directory",
+                    "files": ["b.srm"],
+                    "granularity": "per-game-file",
+                    "role": "battery",
+                },
+            ],
+            root="system_directory",
+        )
+        with pytest.raises(ValueError, match="established only from"):
+            load_oddities(text)
+
+    @pytest.mark.parametrize(
+        "extra",
+        [
+            {"files": None, "unnamed": "why"},
+            {"observe": ["c.bin"]},
+            {"files_without_save_id": ["d.bin"]},
+        ],
+        ids=["unnamed", "observe", "id-less-scope"],
+    )
+    def test_the_home_directory_machinery_is_refused_on_a_cross_group(self, extra):
+        group = {
+            "root": "system_directory",
+            "files": ["<save_id>.bin"] if "files_without_save_id" in extra else ["flash.bin"],
+            "granularity": "shared-card",
+            "role": "battery",
+        }
+        group.update(extra)
+        if group["files"] is None:
+            del group["files"]
+        text = self._cross_card([self._HOME_GROUP, group])
+        with pytest.raises(ValueError, match="cross-root group"):
             load_oddities(text)
 
     def test_the_id_less_alternative_needs_an_id_keyed_set_to_be_the_alternative_to(self):
