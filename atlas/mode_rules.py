@@ -142,6 +142,22 @@ def _mode_unestablished(core: str, reason: str) -> Caveat:
     )
 
 
+def _require_values(core: str, pairs: tuple[tuple[str, str | None], ...]) -> tuple[Caveat, ...]:
+    """One caveat per switch nothing on the machine states — empty means all read."""
+    return tuple(_value_unestablished(core, key) for key, value in pairs if value is None)
+
+
+def _refuse_alien(
+    core: str, triples: tuple[tuple[str, str | None, tuple[str, ...]], ...]
+) -> tuple[Caveat, ...]:
+    """One caveat per read value the recorded behaviour cannot interpret."""
+    return tuple(
+        _unknown_value(core, key, value or "")
+        for key, value, known in triples
+        if value not in known
+    )
+
+
 # ---------------------------------------------------------------------------
 # mednafen_saturn — two independent sharing switches over one three-file set.
 # shared_int swaps the stem of the internal pair (.bkr backup RAM and .smpc
@@ -161,25 +177,20 @@ _SATURN_MODES: dict[tuple[str, str], str] = {
 
 
 def _mednafen_saturn(reading: RuleReading) -> ModeChoice:
-    values = (reading.option_values[_SATURN_INT], reading.option_values[_SATURN_EXT])
-    missing = [key for key, value in zip((_SATURN_INT, _SATURN_EXT), values) if value is None]
+    int_value = reading.option_values[_SATURN_INT]
+    ext_value = reading.option_values[_SATURN_EXT]
+    missing = _require_values(
+        "mednafen_saturn", ((_SATURN_INT, int_value), (_SATURN_EXT, ext_value))
+    )
     if missing:
-        return ModeChoice(
-            None, caveats=tuple(_value_unestablished("mednafen_saturn", key) for key in missing)
-        )
-    alien = [
-        (key, value)
-        for key, value in zip((_SATURN_INT, _SATURN_EXT), values)
-        if value not in ("enabled", "disabled")
-    ]
+        return ModeChoice(None, caveats=missing)
+    toggles = ("enabled", "disabled")
+    alien = _refuse_alien(
+        "mednafen_saturn",
+        ((_SATURN_INT, int_value, toggles), (_SATURN_EXT, ext_value, toggles)),
+    )
     if alien:
-        return ModeChoice(
-            None,
-            caveats=tuple(
-                _unknown_value("mednafen_saturn", key, value or "") for key, value in alien
-            ),
-        )
-    int_value, ext_value = values
+        return ModeChoice(None, caveats=alien)
     mode = _SATURN_MODES[(int_value or "", ext_value or "")]
     return ModeChoice(
         mode,
@@ -423,26 +434,18 @@ def _swanstation_mode(card1: str, card2: str) -> str:
 def _swanstation(reading: RuleReading) -> ModeChoice:
     card1 = reading.option_values[_SWAN_CARD1]
     card2 = reading.option_values[_SWAN_CARD2]
-    missing = [
-        key for key, value in ((_SWAN_CARD1, card1), (_SWAN_CARD2, card2)) if value is None
-    ]
+    missing = _require_values("swanstation", ((_SWAN_CARD1, card1), (_SWAN_CARD2, card2)))
     if missing:
-        return ModeChoice(
-            None, caveats=tuple(_value_unestablished("swanstation", key) for key in missing)
-        )
-    alien = [
-        (key, value)
-        for key, value, known in (
+        return ModeChoice(None, caveats=missing)
+    alien = _refuse_alien(
+        "swanstation",
+        (
             (_SWAN_CARD1, card1, _SWAN_CARD1_VALUES),
             (_SWAN_CARD2, card2, _SWAN_CARD2_VALUES),
-        )
-        if value not in known
-    ]
+        ),
+    )
     if alien:
-        return ModeChoice(
-            None,
-            caveats=tuple(_unknown_value("swanstation", key, value or "") for key, value in alien),
-        )
+        return ModeChoice(None, caveats=alien)
     if "PerGameTitle" in (card1, card2):
         # The playlist option only moves a title-named card's stem, so it is
         # read — and stated as a reading — exactly where a slot is title-named.
@@ -468,43 +471,81 @@ def _swanstation(reading: RuleReading) -> ModeChoice:
 # ---------------------------------------------------------------------------
 
 
+def _beetle_mode_name(method: str, memcard1: str, shared: str) -> str:
+    """The mode a combination selects — sharing that moves no file folds away."""
+    slot0 = "srm" if method == "libretro" else "mcr"
+    second = memcard1 == "enabled"
+    is_shared = shared == "enabled" and (slot0 == "mcr" or second)
+    return f"{slot0}{'+second-card' if second else '-only'}{'-shared' if is_shared else ''}"
+
+
+def _beetle_offset_indexes(
+    reading: RuleReading, *, method: str, memcard1: str, left_key: str, right_key: str
+) -> tuple[tuple[str, str | None], ...]:
+    """The card-image indexes off their defaults, read only where the slot is in play."""
+    indexes: list[tuple[str, str | None, str]] = []
+    if method == "mednafen":
+        indexes.append((left_key, reading.option_values[left_key], "0"))
+    if memcard1 == "enabled":
+        indexes.append((right_key, reading.option_values[right_key], "1"))
+    return tuple((key, value) for key, value, default in indexes if value != default)
+
+
+def _beetle_alternatives(
+    keys: tuple[str, str, str], method: str, memcard1: str, shared: str
+) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+    """The one-edit neighbours — a flip whose mode folds back to the current one drops."""
+    method_key, memcard1_key, shared_key = keys
+    mode = _beetle_mode_name(method, memcard1, shared)
+    flips = (
+        ("mednafen" if method == "libretro" else "libretro", memcard1, shared),
+        (method, "disabled" if memcard1 == "enabled" else "enabled", shared),
+        (method, memcard1, "disabled" if shared == "enabled" else "enabled"),
+    )
+    return tuple(
+        (
+            _beetle_mode_name(*combo),
+            ((method_key, combo[0]), (memcard1_key, combo[1]), (shared_key, combo[2])),
+        )
+        for combo in flips
+        if _beetle_mode_name(*combo) != mode
+    )
+
+
 def _beetle_psx_rule(prefix: str, core: str) -> Callable[[RuleReading], ModeChoice]:
     method_key = f"{prefix}use_mednafen_memcard0_method"
     memcard1_key = f"{prefix}enable_memcard1"
     shared_key = f"{prefix}shared_memory_cards"
     left_key = f"{prefix}memcard_left_index"
     right_key = f"{prefix}memcard_right_index"
+    toggles = ("enabled", "disabled")
 
     def rule(reading: RuleReading) -> ModeChoice:
         method = reading.option_values[method_key]
         memcard1 = reading.option_values[memcard1_key]
         shared = reading.option_values[shared_key]
-        missing = [
-            key
-            for key, value in ((method_key, method), (memcard1_key, memcard1), (shared_key, shared))
-            if value is None
-        ]
+        missing = _require_values(
+            core, ((method_key, method), (memcard1_key, memcard1), (shared_key, shared))
+        )
         if missing:
-            return ModeChoice(None, caveats=tuple(_value_unestablished(core, key) for key in missing))
-        alien = [
-            (key, value)
-            for key, value, known in (
+            return ModeChoice(None, caveats=missing)
+        alien = _refuse_alien(
+            core,
+            (
                 (method_key, method, ("libretro", "mednafen")),
-                (memcard1_key, memcard1, ("enabled", "disabled")),
-                (shared_key, shared, ("enabled", "disabled")),
-            )
-            if value not in known
-        ]
+                (memcard1_key, memcard1, toggles),
+                (shared_key, shared, toggles),
+            ),
+        )
         if alien:
-            return ModeChoice(
-                None, caveats=tuple(_unknown_value(core, key, value or "") for key, value in alien)
-            )
-        indexes = []
-        if method == "mednafen":
-            indexes.append((left_key, reading.option_values[left_key], "0"))
-        if memcard1 == "enabled":
-            indexes.append((right_key, reading.option_values[right_key], "1"))
-        offset = [(key, value) for key, value, default in indexes if value != default]
+            return ModeChoice(None, caveats=alien)
+        offset = _beetle_offset_indexes(
+            reading,
+            method=method or "",
+            memcard1=memcard1 or "",
+            left_key=left_key,
+            right_key=right_key,
+        )
         if offset:
             names = ", ".join(f'{key} = "{value}"' for key, value in offset)
             return ModeChoice(
@@ -518,27 +559,12 @@ def _beetle_psx_rule(prefix: str, core: str) -> Callable[[RuleReading], ModeChoi
                     ),
                 ),
             )
-        slot0 = "srm" if method == "libretro" else "mcr"
-        second = memcard1 == "enabled"
-        is_shared = shared == "enabled" and (slot0 == "mcr" or second)
-        mode = f"{slot0}{'+second-card' if second else '-only'}{'-shared' if is_shared else ''}"
-
-        def other(method_v: str, memcard1_v: str, shared_v: str) -> tuple[str, tuple[tuple[str, str], ...]]:
-            s0 = "srm" if method_v == "libretro" else "mcr"
-            snd = memcard1_v == "enabled"
-            shr = shared_v == "enabled" and (s0 == "mcr" or snd)
-            name = f"{s0}{'+second-card' if snd else '-only'}{'-shared' if shr else ''}"
-            return name, ((method_key, method_v), (memcard1_key, memcard1_v), (shared_key, shared_v))
-
-        flips = [
-            other("mednafen" if method == "libretro" else "libretro", memcard1 or "", shared or ""),
-            other(method or "", "disabled" if second else "enabled", shared or ""),
-            other(method or "", memcard1 or "", "disabled" if shared == "enabled" else "enabled"),
-        ]
-        alternatives = tuple(
-            (name, combo) for name, combo in flips if name != mode
+        return ModeChoice(
+            _beetle_mode_name(method or "", memcard1 or "", shared or ""),
+            alternatives=_beetle_alternatives(
+                (method_key, memcard1_key, shared_key), method or "", memcard1 or "", shared or ""
+            ),
         )
-        return ModeChoice(mode, alternatives=alternatives)
 
     return rule
 
@@ -558,18 +584,21 @@ _GPGX_SIZE = "genesis_plus_gx_cart_size"
 _GPGX_CD = frozenset({"cue", "iso", "chd", "m3u"})
 _GPGX_CARTRIDGE = frozenset({"md", "smd", "gen", "sms", "gg", "sg", "68k", "sgd", "mdx", "bms"})
 _GPGX_SIZES = ("128k", "256k", "512k", "1meg", "2meg", "4meg")
+_PER_BIOS = "per bios"
+_PER_CART = "per cart"
+_PER_GAME = "per game"
 
 
 def _gpgx_cd_mode(system: str, cart: str, size: str) -> str:
-    base = "cd-bios-bram" if system == "per bios" else "cd-game-bram"
+    base = "cd-bios-bram" if system == _PER_BIOS else "cd-game-bram"
     if size == "disabled":
         return base
-    suffix = f"+cart-{size}" if cart == "per cart" else f"+cart-{size}-per-game"
+    suffix = f"+cart-{size}" if cart == _PER_CART else f"+cart-{size}-per-game"
     return base + suffix
 
 
-def _genesis_plus_gx(reading: RuleReading) -> ModeChoice:
-    extension = reading.content_extension
+def _gpgx_content_class(extension: str | None) -> ModeChoice | None:
+    """The cartridge half of the dispatch — ``None`` means CD, read the options."""
     if extension is None:
         return ModeChoice(
             None,
@@ -601,52 +630,53 @@ def _genesis_plus_gx(reading: RuleReading) -> ModeChoice:
                 ),
             ),
         )
-    system = reading.option_values[_GPGX_SYSTEM]
-    cart = reading.option_values[_GPGX_CART]
-    size = reading.option_values[_GPGX_SIZE]
-    missing = [
-        key
-        for key, value in ((_GPGX_SYSTEM, system), (_GPGX_CART, cart), (_GPGX_SIZE, size))
-        if value is None
-    ]
-    if missing:
-        return ModeChoice(
-            None, caveats=tuple(_value_unestablished("genesis_plus_gx", key) for key in missing)
-        )
-    alien = [
-        (key, value)
-        for key, value, known in (
-            (_GPGX_SYSTEM, system, ("per bios", "per game")),
-            (_GPGX_CART, cart, ("per cart", "per game")),
-            (_GPGX_SIZE, size, ("disabled", *_GPGX_SIZES)),
-        )
-        if value not in known
-    ]
-    if alien:
-        return ModeChoice(
-            None,
-            caveats=tuple(_unknown_value("genesis_plus_gx", key, value or "") for key, value in alien),
-        )
-    mode = _gpgx_cd_mode(system or "", cart or "", size or "")
-    alternatives = [
-        (
-            _gpgx_cd_mode("per game" if system == "per bios" else "per bios", cart or "", size or ""),
-            ((_GPGX_SYSTEM, "per game" if system == "per bios" else "per bios"),),
-        )
-    ]
+    return None
+
+
+def _gpgx_cd_alternatives(
+    system: str, cart: str, size: str
+) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+    """The one-edit neighbours of a CD mode — never the whole 26-combination product."""
+    alternatives: list[tuple[str, tuple[tuple[str, str], ...]]] = []
+    other_system = _PER_GAME if system == _PER_BIOS else _PER_BIOS
+    alternatives.append((_gpgx_cd_mode(other_system, cart, size), ((_GPGX_SYSTEM, other_system),)))
     if size != "disabled":
-        alternatives.append(
-            (
-                _gpgx_cd_mode(system or "", "per game" if cart == "per cart" else "per cart", size or ""),
-                ((_GPGX_CART, "per game" if cart == "per cart" else "per cart"),),
-            )
-        )
+        other_cart = _PER_GAME if cart == _PER_CART else _PER_CART
+        alternatives.append((_gpgx_cd_mode(system, other_cart, size), ((_GPGX_CART, other_cart),)))
     for other_size in ("disabled", *_GPGX_SIZES):
         if other_size != size:
             alternatives.append(
-                (_gpgx_cd_mode(system or "", cart or "", other_size), ((_GPGX_SIZE, other_size),))
+                (_gpgx_cd_mode(system, cart, other_size), ((_GPGX_SIZE, other_size),))
             )
-    return ModeChoice(mode, alternatives=tuple(dict.fromkeys(alternatives)))
+    return tuple(alternatives)
+
+
+def _genesis_plus_gx(reading: RuleReading) -> ModeChoice:
+    cartridge_choice = _gpgx_content_class(reading.content_extension)
+    if cartridge_choice is not None:
+        return cartridge_choice
+    system = reading.option_values[_GPGX_SYSTEM]
+    cart = reading.option_values[_GPGX_CART]
+    size = reading.option_values[_GPGX_SIZE]
+    missing = _require_values(
+        "genesis_plus_gx", ((_GPGX_SYSTEM, system), (_GPGX_CART, cart), (_GPGX_SIZE, size))
+    )
+    if missing:
+        return ModeChoice(None, caveats=missing)
+    alien = _refuse_alien(
+        "genesis_plus_gx",
+        (
+            (_GPGX_SYSTEM, system, (_PER_BIOS, _PER_GAME)),
+            (_GPGX_CART, cart, (_PER_CART, _PER_GAME)),
+            (_GPGX_SIZE, size, ("disabled", *_GPGX_SIZES)),
+        ),
+    )
+    if alien:
+        return ModeChoice(None, caveats=alien)
+    return ModeChoice(
+        _gpgx_cd_mode(system or "", cart or "", size or ""),
+        alternatives=_gpgx_cd_alternatives(system or "", cart or "", size or ""),
+    )
 
 
 # The registry the card loader validates against: a card stating a
