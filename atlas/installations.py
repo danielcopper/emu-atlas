@@ -1944,6 +1944,34 @@ def _rule_option_readings(
     return values, readings, caveats
 
 
+def _rule_file_lookup(machine: Machine, base: str | None, name: str) -> FileLookup:
+    """One file a rule asked for under *base* — unreadable when the root is out of reach."""
+    if base is None:
+        return FileLookup(None, FILE_UNREADABLE, None)
+    path = os.path.join(base, name)
+    result = machine.read_text(path)
+    if result.status == READ_OK:
+        return FileLookup(result.text, FILE_READ, path)
+    if result.status == READ_MISSING:
+        return FileLookup(None, FILE_ABSENT, path)
+    return FileLookup(None, FILE_UNREADABLE, path)
+
+
+def _rule_entries(machine: Machine, base: str | None, name: str) -> tuple[str, ...] | None:
+    """The names in one directory a rule asked about — ``None`` when unlistable.
+
+    An absent directory answers ``()``, a truthful negative; a root that is
+    itself out of reach answers ``None`` the way an unlistable directory does,
+    because a rule that cannot look must not conclude nothing is there.
+    """
+    if base is None:
+        return None
+    listing = machine.glob(os.path.join(_glob_escape(os.path.join(base, name)), "*"))
+    if listing.status != GLOB_COMPLETE:
+        return None
+    return tuple(os.path.basename(match) for match in listing.matches)
+
+
 def _rule_reading(
     machine: Machine,
     *,
@@ -1974,42 +2002,20 @@ def _rule_reading(
             return None
         return root.base
 
-    def _home_base() -> str | None:
-        # The home the emulator's own ``$HOME`` expands to — the sandbox
-        # environment's HOME, which is shared with the host — so a rule's
-        # home-relative read follows the emulator's expansion, not atlas's.
-        return sandbox.expansion_home
-
-    def _file_under(base: str | None, name: str) -> FileLookup:
-        if base is None:
-            return FileLookup(None, FILE_UNREADABLE, None)
-        path = os.path.join(base, name)
-        result = machine.read_text(path)
-        if result.status == READ_OK:
-            return FileLookup(result.text, FILE_READ, path)
-        if result.status == READ_MISSING:
-            return FileLookup(None, FILE_ABSENT, path)
-        return FileLookup(None, FILE_UNREADABLE, path)
-
-    def _entries_under(base: str | None, name: str) -> tuple[str, ...] | None:
-        if base is None:
-            return None
-        listing = machine.glob(os.path.join(_glob_escape(os.path.join(base, name)), "*"))
-        if listing.status != GLOB_COMPLETE:
-            return None
-        return tuple(os.path.basename(match) for match in listing.matches)
-
+    # The home the emulator's own ``$HOME`` expands to is the sandbox
+    # environment's HOME, which is shared with the host — so a rule's
+    # home-relative read follows the emulator's expansion, not atlas's.
     def system_file(name: str) -> FileLookup:
-        return _file_under(_system_base(), name)
+        return _rule_file_lookup(machine, _system_base(), name)
 
     def home_file(name: str) -> FileLookup:
-        return _file_under(_home_base(), name)
+        return _rule_file_lookup(machine, sandbox.expansion_home, name)
 
     def system_entries(name: str) -> tuple[str, ...] | None:
-        return _entries_under(_system_base(), name)
+        return _rule_entries(machine, _system_base(), name)
 
     def home_entries(name: str) -> tuple[str, ...] | None:
-        return _entries_under(_home_base(), name)
+        return _rule_entries(machine, sandbox.expansion_home, name)
 
     def is_directory(path: str) -> bool | None:
         resolved = sandbox.host("savepath", path)

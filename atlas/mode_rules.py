@@ -816,51 +816,27 @@ def _mame_redirected(key: str, path: str, options_file: str | None) -> Caveat:
     )
 
 
-def _mame_own_ini(reading: RuleReading) -> ModeChoice:
-    """Both switches on: the inis govern, read the way the emulator searches them."""
-    main = _mame_ini_lookup(reading, _MAME_MAIN_INI)
+def _mame_cascade_refusal(
+    main: FileLookup, driver: FileLookup, stem: str | None, strays: tuple[str, ...] | None
+) -> str | None:
+    """Why the ini branch cannot decide — ``None`` when it can."""
     if main.status == FILE_UNREADABLE:
-        return ModeChoice(
-            None,
-            caveats=(
-                _mode_unestablished(
-                    "mame",
-                    "MAME's own paths and ini reading are both on, and whether a mame.ini "
-                    "exists along the emulator's search path could not be established — "
-                    "whether the save trees were routed elsewhere is unknowable here",
-                ),
-            ),
+        return (
+            "MAME's own paths and ini reading are both on, and whether a mame.ini exists "
+            "along the emulator's search path could not be established — whether the save "
+            "trees were routed elsewhere is unknowable here"
         )
-    stem = reading.content_stem
-    driver = (
-        _mame_ini_lookup(reading, f"{stem}.ini")
-        if stem
-        else FileLookup(None, FILE_ABSENT, None)
-    )
     if driver.status == FILE_UNREADABLE:
-        return ModeChoice(
-            None,
-            caveats=(
-                _mode_unestablished(
-                    "mame",
-                    f"MAME's own paths and ini reading are both on, and whether a {stem}.ini "
-                    "exists along the emulator's search path could not be established — the "
-                    "driver's ini outranks mame.ini, so which values govern is unknowable here",
-                ),
-            ),
+        return (
+            f"MAME's own paths and ini reading are both on, and whether a {stem}.ini exists "
+            "along the emulator's search path could not be established — the driver's ini "
+            "outranks mame.ini, so which values govern is unknowable here"
         )
-    strays = _mame_stray_inis(reading, stem)
     if strays is None:
-        return ModeChoice(
-            None,
-            caveats=(
-                _mode_unestablished(
-                    "mame",
-                    "MAME reads an ini cascade, and one of its search directories could not "
-                    "be listed — whether a higher-priority ini overrides the values read is "
-                    "unknowable here",
-                ),
-            ),
+        return (
+            "MAME reads an ini cascade, and one of its search directories could not be "
+            "listed — whether a higher-priority ini overrides the values read is unknowable "
+            "here"
         )
     if strays:
         outranks = (
@@ -868,17 +844,18 @@ def _mame_own_ini(reading: RuleReading) -> ModeChoice:
             if len(strays) == 1
             else f"{', '.join(strays)} on its search path outrank mame.ini"
         )
-        return ModeChoice(
-            None,
-            caveats=(
-                _mode_unestablished(
-                    "mame",
-                    "MAME reads an ini cascade whose members apply by driver metadata inside "
-                    f"the binary, which atlas cannot attribute — {outranks}, so which values "
-                    "govern was never established",
-                ),
-            ),
+        return (
+            "MAME reads an ini cascade whose members apply by driver metadata inside the "
+            f"binary, which atlas cannot attribute — {outranks}, so which values govern was "
+            "never established"
         )
+    return None
+
+
+def _mame_ini_readings(
+    main: FileLookup, driver: FileLookup
+) -> tuple[dict[str, str], dict[str, "str | None"]]:
+    """The directory keys both inis state, each with the file its value came from."""
     values: dict[str, str] = {}
     sources: dict[str, str | None] = {}
     for lookup in (main, driver):  # the driver's ini parses at higher priority
@@ -886,6 +863,13 @@ def _mame_own_ini(reading: RuleReading) -> ModeChoice:
             for key, value in _mame_ini_values(lookup.text).items():
                 values[key] = value
                 sources[key] = lookup.path
+    return values, sources
+
+
+def _mame_tree_caveats(
+    values: dict[str, str], sources: dict[str, "str | None"]
+) -> tuple[Caveat, ...]:
+    """What the effective values say per tree: a redirect each, or the unresolvable rest."""
     caveats: list[Caveat] = []
     unresolved: list[tuple[str, str]] = []
     unresolved_file: str | None = None
@@ -908,7 +892,23 @@ def _mame_own_ini(reading: RuleReading) -> ModeChoice:
             "defaults apply"
         )
         caveats.append(_mame_unresolvable(tuple(unresolved), because, unresolved_file))
-    return ModeChoice(None, caveats=tuple(caveats))
+    return tuple(caveats)
+
+
+def _mame_own_ini(reading: RuleReading) -> ModeChoice:
+    """Both switches on: the inis govern, read the way the emulator searches them."""
+    main = _mame_ini_lookup(reading, _MAME_MAIN_INI)
+    stem = reading.content_stem
+    driver = (
+        _mame_ini_lookup(reading, f"{stem}.ini")
+        if stem
+        else FileLookup(None, FILE_ABSENT, None)
+    )
+    refusal = _mame_cascade_refusal(main, driver, stem, _mame_stray_inis(reading, stem))
+    if refusal is not None:
+        return ModeChoice(None, caveats=(_mode_unestablished("mame", refusal),))
+    values, sources = _mame_ini_readings(main, driver)
+    return ModeChoice(None, caveats=_mame_tree_caveats(values, sources))
 
 
 def _mame(reading: RuleReading) -> ModeChoice:
