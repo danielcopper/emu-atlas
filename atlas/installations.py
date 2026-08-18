@@ -4997,6 +4997,49 @@ def _dolphin_alternatives(
     return tuple(alternatives)
 
 
+def _unnamed_tree_placement(
+    card: StandaloneSaveCard,
+    *,
+    directory: str,
+    mode: str,
+    readings: tuple[OptionReading, ...],
+    caveats: tuple[Caveat, ...],
+    physical: str | None,
+    provenance: str,
+) -> SavefilePlacement:
+    """One unnamed per-game tree as a whole answer — the shape three cards share.
+
+    A Wii NAND, a PSP memstick's savedata and a Wii U MLC make the same claim:
+    the tree is stated, its entries are named by the game and refused, and the
+    granularity is per-game-files with the readings that located the tree.
+    """
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=(
+                FileGroup(dir=directory, files=None, granularity="per-game-files", role=ROLE_BATTERY),
+            ),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=caveats,
+        physical_dir=physical,
+        granularity=Granularity(
+            value="per-game-files",
+            mode=mode,
+            readings=readings,
+            alternatives=(),
+            provenance=provenance,
+        ),
+    )
+
+
 def _dolphin_wii_answer(
     general: Mapping[str, str],
     *,
@@ -5058,30 +5101,14 @@ def _dolphin_wii_answer(
             },
         )
     )
-    return SavefilePlacement(
-        dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(),
-        fallback_dir=None,
-        file_set=FileSet(
-            FILE_SET_DECLARED,
-            (),
-            f"declared by standalone save card '{card.token}'",
-            complete=False,
-            groups=(
-                FileGroup(dir=directory, files=None, granularity="per-game-files", role=ROLE_BATTERY),
-            ),
-        ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+    return _unnamed_tree_placement(
+        card,
+        directory=directory,
+        mode="nand",
+        readings=(_reading_with_file(reading, ini_path),),
         caveats=tuple(caveats),
-        physical_dir=physical,
-        granularity=Granularity(
-            value="per-game-files",
-            mode="nand",
-            readings=(_reading_with_file(reading, ini_path),),
-            alternatives=(),
-            provenance=f"standalone save card '{card.token}': the Wii NAND tree (NandPaths.cpp:63-71 at 2603a)",
-        ),
+        physical=physical,
+        provenance=f"standalone save card '{card.token}': the Wii NAND tree (NandPaths.cpp:63-71 at 2603a)",
     )
 
 
@@ -5183,32 +5210,16 @@ def _ppsspp_savefile_placement(
             },
         ),
     ]
-    return SavefilePlacement(
-        dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(),
-        fallback_dir=None,
-        file_set=FileSet(
-            FILE_SET_DECLARED,
-            (),
-            f"declared by standalone save card '{card.token}'",
-            complete=False,
-            groups=(
-                FileGroup(dir=directory, files=None, granularity="per-game-files", role=ROLE_BATTERY),
-            ),
-        ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+    return _unnamed_tree_placement(
+        card,
+        directory=directory,
+        mode="memstick",
+        readings=(),
         caveats=tuple(caveats),
-        physical_dir=physical,
-        granularity=Granularity(
-            value="per-game-files",
-            mode="memstick",
-            readings=(),
-            alternatives=(),
-            provenance=(
-                f"standalone save card '{card.token}': the memstick is fixed by the build "
-                "(NativeApp.cpp:473-482 at v1.20.4) — no switch selects anything"
-            ),
+        physical=physical,
+        provenance=(
+            f"standalone save card '{card.token}': the memstick is fixed by the build "
+            "(NativeApp.cpp:473-482 at v1.20.4) — no switch selects anything"
         ),
     )
 
@@ -5246,6 +5257,92 @@ def _xemu_group(
     return FileGroup(dir=directory, files=(name,), granularity="shared-file", role=role), ()
 
 
+def _xemu_document(
+    machine: Machine, card: StandaloneSaveCard, toml_path: str
+) -> "tuple[Mapping[str, Any], str | None] | Unresolved":
+    """xemu.toml parsed, or the refusal — no frame exists to step aside to."""
+    result = machine.read_text(toml_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"xemu's configuration ({toml_path}) exists and could not be read — where the "
+            "hard-disk image and the EEPROM live is unknowable here",
+            {"emulator": card.token, "config": toml_path},
+        )
+    try:
+        doc: Mapping[str, Any] = (
+            tomllib.loads(result.text) if result.status == READ_OK and result.text else {}
+        )
+    except tomllib.TOMLDecodeError:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"xemu's configuration ({toml_path}) is not parseable TOML — where the hard-disk "
+            "image and the EEPROM live is unknowable here",
+            {"emulator": card.token, "config": toml_path},
+        )
+    return doc, (toml_path if result.status == READ_OK else None)
+
+
+def _xemu_disk_pieces(
+    sandbox: _Sandbox, card: StandaloneSaveCard, hdd: str | None
+) -> tuple[tuple[FileGroup, ...], tuple[Caveat, ...]]:
+    """The hard-disk image's group and what travels with it — or why there is none."""
+    if not hdd:
+        return (), (
+            Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED,
+                "xemu.toml names no hard-disk image ([sys.files] hdd_path) — the machine has "
+                "no disk to save onto, and where one would be attached is unknowable here",
+                {"core": card.token, "reason": "hdd_path is unset"},
+            ),
+        )
+    group, group_caveats = _xemu_group(sandbox, "hdd_path", hdd, role=ROLE_BATTERY)
+    if group is None or not group.files:
+        return (), group_caveats
+    return (group,), (
+        *group_caveats,
+        Caveat(
+            CAVEAT_SAVE_INSIDE_IMAGE,
+            f"every game's save lives inside {group.files[0]} — the emulated Xbox hard disk, "
+            "a FATX filesystem with one directory per title id under UDATA/ — and nothing "
+            "outside the image is addressable per game: back the image up whole, or parse "
+            "its filesystem with the layout stated here",
+            {
+                "emulator": card.token,
+                "image": os.path.join(group.dir, group.files[0]),
+                "layout": "UDATA/<title id>",
+            },
+        ),
+    )
+
+
+def _xemu_readings(
+    hdd: str | None, eeprom: str | None, stated_toml: str | None
+) -> tuple[OptionReading, ...]:
+    return (
+        _reading_with_file(
+            _dolphin_reading(
+                "hdd_path",
+                hdd,
+                f'xemu.toml: [sys.files] hdd_path = "{hdd}"'
+                if hdd
+                else "[sys.files] hdd_path is unset — no hard-disk image is configured",
+            ),
+            stated_toml,
+        ),
+        _reading_with_file(
+            _dolphin_reading(
+                "eeprom_path",
+                eeprom,
+                f'xemu.toml: [sys.files] eeprom_path = "{eeprom}"'
+                if eeprom
+                else "[sys.files] eeprom_path is unset",
+            ),
+            stated_toml,
+        ),
+    )
+
+
 def _xemu_savefile_placement(
     machine: Machine,
     *,
@@ -5259,71 +5356,19 @@ def _xemu_savefile_placement(
     """xemu's save answer, read from xemu.toml the way the emulator reads it."""
     assert card.config_base is not None and card.config_path is not None
     toml_path = os.path.join(homes.base(card.config_base), card.config_path)
-    result = machine.read_text(toml_path)
-    if result.status not in (READ_OK, READ_MISSING):
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"xemu's configuration ({toml_path}) exists and could not be read — where the "
-            "hard-disk image and the EEPROM live is unknowable here",
-            {"emulator": card.token, "config": toml_path},
-        )
-    try:
-        doc: Mapping[str, Any] = tomllib.loads(result.text) if result.status == READ_OK and result.text else {}
-    except tomllib.TOMLDecodeError:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"xemu's configuration ({toml_path}) is not parseable TOML — where the hard-disk "
-            "image and the EEPROM live is unknowable here",
-            {"emulator": card.token, "config": toml_path},
-        )
-    stated_toml = toml_path if result.status == READ_OK else None
+    parsed = _xemu_document(machine, card, toml_path)
+    if isinstance(parsed, Unresolved):
+        return parsed
+    doc, stated_toml = parsed
     hdd = _xemu_file_value(doc, "hdd_path")
     eeprom = _xemu_file_value(doc, "eeprom_path")
-    caveats: list[Caveat] = [*extra_caveats]
-    groups: list[FileGroup] = []
-    readings = [
-        _reading_with_file(
-            _dolphin_reading("hdd_path", hdd, f'xemu.toml: [sys.files] hdd_path = "{hdd}"' if hdd else "[sys.files] hdd_path is unset — no hard-disk image is configured"),
-            stated_toml,
-        ),
-        _reading_with_file(
-            _dolphin_reading("eeprom_path", eeprom, f'xemu.toml: [sys.files] eeprom_path = "{eeprom}"' if eeprom else "[sys.files] eeprom_path is unset"),
-            stated_toml,
-        ),
-    ]
-    if hdd:
-        group, group_caveats = _xemu_group(sandbox, "hdd_path", hdd, role=ROLE_BATTERY)
-        caveats.extend(group_caveats)
-        if group is not None:
-            groups.append(group)
-            caveats.append(
-                Caveat(
-                    CAVEAT_SAVE_INSIDE_IMAGE,
-                    f"every game's save lives inside {group.files[0] if group.files else hdd!r} — "
-                    "the emulated Xbox hard disk, a FATX filesystem with one directory per title "
-                    "id under UDATA/ — and nothing outside the image is addressable per game: "
-                    "back the image up whole, or parse its filesystem with the layout stated here",
-                    {
-                        "emulator": card.token,
-                        "image": os.path.join(group.dir, group.files[0]) if group.files else hdd,
-                        "layout": "UDATA/<title id>",
-                    },
-                )
-            )
-    else:
-        caveats.append(
-            Caveat(
-                CAVEAT_CORE_MODE_UNESTABLISHED,
-                "xemu.toml names no hard-disk image ([sys.files] hdd_path) — the machine has "
-                "no disk to save onto, and where one would be attached is unknowable here",
-                {"core": card.token, "reason": "hdd_path is unset"},
-            )
-        )
-    if eeprom:
-        group, group_caveats = _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS)
-        caveats.extend(group_caveats)
-        if group is not None:
-            groups.append(group)
+    readings = _xemu_readings(hdd, eeprom, stated_toml)
+    disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd)
+    eeprom_group, eeprom_caveats = (
+        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS) if eeprom else (None, ())
+    )
+    groups = [*disk_groups, *([eeprom_group] if eeprom_group is not None else [])]
+    caveats = [*extra_caveats, *disk_caveats, *eeprom_caveats]
     if not groups:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -5483,32 +5528,16 @@ def _cemu_savefile_placement(
         )
     )
     stated_xml = xml_path if result.status == READ_OK else None
-    return SavefilePlacement(
-        dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(),
-        fallback_dir=None,
-        file_set=FileSet(
-            FILE_SET_DECLARED,
-            (),
-            f"declared by standalone save card '{card.token}'",
-            complete=False,
-            groups=(
-                FileGroup(dir=directory, files=None, granularity="per-game-files", role=ROLE_BATTERY),
-            ),
-        ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+    return _unnamed_tree_placement(
+        card,
+        directory=directory,
+        mode="mlc",
+        readings=(_reading_with_file(reading, stated_xml),),
         caveats=tuple(caveats),
-        physical_dir=physical,
-        granularity=Granularity(
-            value="per-game-files",
-            mode="mlc",
-            readings=(_reading_with_file(reading, stated_xml),),
-            alternatives=(),
-            provenance=(
-                f"standalone save card '{card.token}': the MLC from settings.xml "
-                "(ActiveSettings.cpp:242-268 at 2.6)"
-            ),
+        physical=physical,
+        provenance=(
+            f"standalone save card '{card.token}': the MLC from settings.xml "
+            "(ActiveSettings.cpp:242-268 at 2.6)"
         ),
     )
 
