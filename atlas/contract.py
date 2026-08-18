@@ -87,7 +87,15 @@ def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[s
 
 
 def savefile_placement_contract(placement: SavefilePlacement) -> dict[str, Any]:
-    """The stable, JSON-shaped form of a :class:`~atlas.placement.SavefilePlacement`."""
+    """The stable, JSON-shaped form of a :class:`~atlas.placement.SavefilePlacement`.
+
+    The granularity block is plural on purpose: ``readings`` is one entry per
+    switch that went into selecting the mode (its provenance prose stays out,
+    like all provenance), and each ``alternatives`` entry names another mode
+    with the full option combination that selects it — a client renders
+    "is the wanted option active, and in which file does it change" from the
+    readings, for one switch or several alike.
+    """
     granularity = placement.granularity
     return {
         **_placement_core(placement),
@@ -95,10 +103,15 @@ def savefile_placement_contract(placement: SavefilePlacement) -> dict[str, Any]:
         if granularity is None
         else {
             "value": granularity.value,
-            "option_key": granularity.option_key,
-            "option_value": granularity.option_value,
-            "options_file": granularity.options_file,
-            "alternatives": [list(pair) for pair in granularity.alternatives],
+            "mode": granularity.mode,
+            "readings": [
+                {"key": r.key, "value": r.value, "options_file": r.options_file}
+                for r in granularity.readings
+            ],
+            "alternatives": [
+                {"mode": a.mode, "options": dict(a.options), "value": a.value}
+                for a in granularity.alternatives
+            ],
         },
     }
 

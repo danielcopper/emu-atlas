@@ -58,12 +58,15 @@ Rules that hold for every answer:
   caveat. Holes are not confined to the directory: a declared file set can be a template too. An unknown is something
   atlas refuses to state — it never guesses to keep a field non-empty. And a declared **emptiness** is a third thing,
   distinct from both: a placement with `file_set.state == "declared"` and no files says no separate save file exists.
-  When the `save-inside-content` caveat rides beside it (quasi88 writing straight into the loaded disk image), the
-  loaded content file itself takes the writes — atlas will not hand you the ROM under a second name, so what to make of
-  a content file that doubles as the save (back it up, copy it, leave it) is your decision, made on
-  `atlas.CAVEAT_SAVE_INSIDE_CONTENT`. Branch on `atlas.HOLE_CONTENT_DIR` / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` /
-  `HOLE_ROM_STEM` / `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the strings, the way you would on any other closed
-  set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
+  When the `save-inside-content` caveat rides beside it (quasi88 writing straight into the loaded disk image, hatari
+  writing a floppy back into its own file at eject), the loaded content file itself takes the writes — atlas will not
+  hand you the ROM under a second name, so what to make of a content file that doubles as the save (back it up, copy it,
+  leave it) is your decision, made on `atlas.CAVEAT_SAVE_INSIDE_CONTENT`. Its harder sibling is
+  `atlas.CAVEAT_SAVE_WRITES_DISCARDED` (hatari with write protection on): the same declared emptiness, and this time it
+  is the whole truth — nothing anywhere keeps the progress, and the granularity block beside it says which switch would
+  change that. Branch on `atlas.HOLE_CONTENT_DIR` / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` / `HOLE_ROM_STEM` /
+  `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the strings, the way you would on any other closed set here: every
+  one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
   `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
@@ -285,7 +288,7 @@ placement.dir          # '/run/media/deck/Emulation/retrodeck/saves/n64'  — co
 placement.root_kind    # 'savefile_directory' | 'content_directory' | 'system_directory' | 'working_directory'
 placement.needs        # ()  — nothing left for you to fill
 placement.file_set     # what the save consists of — see below
-placement.granularity  # a Granularity — how the save is grouped, plus the option that selects it where one does;
+placement.granularity  # a Granularity — how the save is grouped, plus every switch that selects it (see below);
                        # stated wherever the file set is, and None where atlas states no file set either
 placement.fallback_dir # set when dir does not exist yet: RetroArch reverts here if it cannot create dir
 placement.physical_dir # set when dir reaches its files through symlinks: the real backing path
@@ -483,12 +486,35 @@ for. The reason travels beside the answer as a `file-names-unestablished` caveat
 `citation` behind the reading — that is where the sentence a person reads lives, but it is no longer the only place the
 directory appears, so one loop over `groups` is enough and there is no second structure to correlate.
 
-**One limit worth knowing.** `granularity.value` and the `alternatives` pairs beside it state _one_ grouping per mode,
-which is the first group's — so a mode that mixes them (FinalBurn Neo's shared mode writes a per-game `.fs` beside a
-shared memory card) reports the first, and the parts are only in `groups`. That is exact for the mode in force and
-understated for the alternatives: switching to such a mode can add a shared file the pair does not mention. Read
-`groups` for the active mode; treat an alternative's grouping as the grouping of its main save, not of everything it
-writes.
+**The granularity block is how you show "is the wanted option active, and where does it change".** `value` is the
+grouping in force and `mode` names the rule-card mode behind it (an option value like `"enabled"` where one option
+governs, the card's own mode name like `"per-game"` where a rule selects, `None` where no card speaks). `readings` is
+one entry per switch that went into the selection — for Flycast one, for Beetle Saturn its two sharing switches, and for
+hatari exactly the one write-protect option the loaded content's class made relevant:
+
+```python
+g = placement.granularity
+for r in g.readings:
+    r.key           # 'beetle_saturn_shared_int'
+    r.value         # 'disabled'   — live-read; None where nothing states it and the provenance says what applies
+    r.provenance    # 'core default: …' | 'retroarch-core-options.cfg: …'  — where the value came from (prose)
+    r.options_file  # the file to edit to change this switch — change it, ask again, the new answer confirms
+for a in g.alternatives:
+    a.mode          # 'internal-shared'                       — another reachable mode
+    a.options       # (('beetle_saturn_shared_int', 'enabled'), ('beetle_saturn_shared_ext', 'disabled'))
+    a.value         # 'shared-file'                           — that mode's grouping
+```
+
+An alternative names the **full option combination** that reaches its mode, so "switch to per-game saves" is a concrete
+edit of concrete keys in a concrete file, not a guess. One special value: `g.value == atlas.GRANULARITY_NONE` (only ever
+beside `save-writes-discarded`) means this configuration keeps no save at all — the readings and alternatives are then
+exactly the way out.
+
+**One limit worth knowing.** `granularity.value` and each alternative's `value` state _one_ grouping per mode, which is
+the first group's — so a mode that mixes them (FinalBurn Neo's shared mode writes a per-game `.fs` beside a shared
+memory card) reports the first, and the parts are only in `groups`. That is exact for the mode in force and understated
+for the alternatives: switching to such a mode can add a shared file the value does not mention. Read `groups` for the
+active mode; treat an alternative's grouping as the grouping of its main save, not of everything it writes.
 
 **Reading nothing of this keeps today's answer.** `groups` is empty unless a rule card decomposed the answer — every
 observation, every unknown and every standard-rule declaration has none, and empty means _not decomposed_, never _no
@@ -584,6 +610,10 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `core-generation-mismatch`                  | the recorded deviation names an option this core does not register — not applied, standard frame  |
 | `core-generation-unestablished`             | the core could not be read, so its generation is unknown — the recorded deviation is not applied  |
 | `core-option-value-unestablished`           | the core fits the card, but nothing states the value governing it — not applied, standard frame   |
+| `core-mode-unestablished`                   | the card's selection rule could not decide (`data["reason"]` says why) — not applied              |
+| `save-inside-content`                       | no separate save file exists: the loaded content file itself takes the writes — your call         |
+| `save-writes-discarded`                     | nothing keeps a save at all: the writes are discarded — the granularity block names the way out   |
+| `save-root-redirected`                      | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip   |
 | `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below      |
 | `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                            |
 | `marker-missing`                            | health: the config marker this installation is detected by is gone                                |

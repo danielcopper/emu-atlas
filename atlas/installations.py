@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import os
 from glob import escape as _glob_escape
-from typing import Any, Callable, Mapping, Protocol, Sequence, cast, runtime_checkable
+from typing import Any, Callable, Iterator, Mapping, Protocol, Sequence, cast, runtime_checkable
 
 from dataclasses import dataclass, replace as _dc_replace
 
@@ -96,6 +96,14 @@ from atlas.mods import (
     lookup_soft_patch_build,
     lookup_standalone_mod_card,
 )
+from atlas.mode_rules import (
+    FILE_ABSENT,
+    FILE_READ,
+    FILE_UNREADABLE,
+    RULES as MODE_RULES,
+    FileLookup,
+    RuleReading,
+)
 from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
 from atlas.save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
 from atlas.textures import (
@@ -142,6 +150,7 @@ from atlas.placement import (
     CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
     CAVEAT_SAVE_DIR_UNLISTABLE,
     CAVEAT_SAVE_INSIDE_CONTENT,
+    CAVEAT_SAVE_WRITES_DISCARDED,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
@@ -170,8 +179,10 @@ from atlas.placement import (
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
     Granularity,
+    ModeAlternative,
     ModPlacement,
     ModTree,
+    OptionReading,
     RootKind,
     SavefilePlacement,
     SavestatePlacement,
@@ -894,6 +905,10 @@ class _Content:
     dir_name: str | None = None
     rom_stem: str | None = None
     system_dir: str | None = None
+    # The content's extension, lowered and without the dot — the coordinate a
+    # selection rule classifies content by (hatari: floppy image or hard-disk
+    # image). ``None`` where no content was named or the name carries no dot.
+    extension: str | None = None
 
 
 def _content_coordinates(content_path: str | None) -> _Content:
@@ -908,7 +923,10 @@ def _content_coordinates(content_path: str | None) -> _Content:
     if not content_path:
         return _Content()
     dir_path, dir_name, rom_stem = split_content_path(content_path)
-    return _Content(dir_path, dir_name, rom_stem or None, content_system_dir(content_path))
+    extension = os.path.splitext(content_path)[1].removeprefix(".").lower() or None
+    return _Content(
+        dir_path, dir_name, rom_stem or None, content_system_dir(content_path), extension
+    )
 
 
 def _unnamed_content_caveat(content_path: str) -> Caveat:
@@ -1405,11 +1423,15 @@ class _CardChoice:
     """The rule card that applies here, once feature detection has had its say.
 
     ``live_option`` is the governing option as the core *registers* it — the
-    observation that confirms the card's generation.
+    observation that confirms the card's generation. ``live_options`` is the
+    rule-card plural: every declared rule option the core registers, or
+    ``None`` where the options could not be captured at all (a probe
+    limitation, not a mismatch).
     """
 
     card: CoreCard | None = None
     live_option: CoreOption | None = None
+    live_options: Mapping[str, CoreOption] | None = None
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
 
@@ -1441,46 +1463,90 @@ def _select_card(*, so_basename: str | None, core_info: CoreInfo | None) -> _Car
     """
     library_name = core_info.library_name if core_info is not None else None
     card = lookup_card(so_basename=so_basename, library_name=library_name)
-    live_option = None
-    sources: tuple[str, ...] = ()
-    caveats: list[Caveat] = []
+    choice = _CardChoice(card=card)
     if card is not None:
         if core_info is None:
-            caveats.append(
-                Caveat(
-                    CAVEAT_CORE_GENERATION_UNESTABLISHED,
-                    f"core {card.key!r} is recorded as placing its saves outside the standard "
-                    "layout, but the installed core could not be read — which generation is here "
-                    "was never established, so the recorded behaviour is not applied; the standard "
-                    "answer below may miss the real save stack",
-                    {"core": card.key},
+            choice = _CardChoice(
+                caveats=(
+                    Caveat(
+                        CAVEAT_CORE_GENERATION_UNESTABLISHED,
+                        f"core {card.key!r} is recorded as placing its saves outside the standard "
+                        "layout, but the installed core could not be read — which generation is "
+                        "here was never established, so the recorded behaviour is not applied; "
+                        "the standard answer below may miss the real save stack",
+                        {"core": card.key},
+                    ),
                 )
             )
-            card = None
         elif card.option_key is not None and core_info.options is not None:
-            live_option = core_info.options.get(card.option_key)
-            if live_option is None:
-                caveats.append(
-                    Caveat(
-                        CAVEAT_CORE_GENERATION_MISMATCH,
-                        f"core {card.key!r} is recorded as placing its saves outside the standard "
-                        f"layout under option {card.option_key!r}, which this core does not "
-                        "register — the recorded behaviour belongs to a different core generation "
-                        "and is not applied; this core's actual save behaviour is unknown until "
-                        "re-audited, so the standard answer below may miss the real save stack",
-                        {"core": card.key, "option_key": card.option_key},
-                    )
-                )
-                card = None
-            else:
-                sources = (
-                    f"feature-detected: core registers {card.option_key!r} (default "
-                    f"{live_option.default!r}, values {list(live_option.values)}) — card generation "
-                    "confirmed by observation, not by version comparison",
-                )
-    if card is None and so_basename is not None:
-        caveats.extend(_unaudited_caveats(so_basename))
-    return _CardChoice(card=card, live_option=live_option, sources=sources, caveats=tuple(caveats))
+            choice = _option_confirmed_choice(card, core_info.options)
+        elif card.rule_options and core_info.options is not None:
+            choice = _rule_confirmed_choice(card, core_info.options)
+    if choice.card is None and so_basename is not None:
+        choice = _dc_replace(
+            choice, caveats=(*choice.caveats, *_unaudited_caveats(so_basename))
+        )
+    return choice
+
+
+def _option_confirmed_choice(card: CoreCard, registered: Mapping[str, CoreOption]) -> _CardChoice:
+    """Feature detection for a single-option card: the key registered, or not."""
+    live_option = registered.get(card.option_key or "")
+    if live_option is None:
+        return _CardChoice(
+            caveats=(
+                Caveat(
+                    CAVEAT_CORE_GENERATION_MISMATCH,
+                    f"core {card.key!r} is recorded as placing its saves outside the standard "
+                    f"layout under option {card.option_key!r}, which this core does not "
+                    "register — the recorded behaviour belongs to a different core generation "
+                    "and is not applied; this core's actual save behaviour is unknown until "
+                    "re-audited, so the standard answer below may miss the real save stack",
+                    {"core": card.key, "option_key": card.option_key or ""},
+                ),
+            )
+        )
+    return _CardChoice(
+        card=card,
+        live_option=live_option,
+        sources=(
+            f"feature-detected: core registers {card.option_key!r} (default "
+            f"{live_option.default!r}, values {list(live_option.values)}) — card generation "
+            "confirmed by observation, not by version comparison",
+        ),
+    )
+
+
+def _rule_confirmed_choice(card: CoreCard, registered: Mapping[str, CoreOption]) -> _CardChoice:
+    """The rule-card plural: every declared option registered, or the card retires.
+
+    A single missing switch is the same generation mismatch a single-option
+    card answers with — the rule would be reading a switch this core does not
+    have.
+    """
+    missing = [key for key in card.rule_options or () if key not in registered]
+    if missing:
+        return _CardChoice(
+            caveats=(
+                Caveat(
+                    CAVEAT_CORE_GENERATION_MISMATCH,
+                    f"core {card.key!r} is recorded as selecting between save behaviours by "
+                    f"options this core does not register ({', '.join(missing)}) — the "
+                    "recorded behaviour belongs to a different core generation and is not "
+                    "applied; this core's actual save behaviour is unknown until re-audited, "
+                    "so the standard answer below may miss the real save stack",
+                    {"core": card.key, "options": ", ".join(missing)},
+                ),
+            )
+        )
+    return _CardChoice(
+        card=card,
+        live_options={key: registered[key] for key in card.rule_options or ()},
+        sources=(
+            f"feature-detected: core registers {', '.join(card.rule_options or ())} — card "
+            "generation confirmed by observation, not by version comparison",
+        ),
+    )
 
 
 def _version_drift(
@@ -1664,8 +1730,11 @@ def _apply_card(
     *,
     sandbox: _Sandbox,
     retroarch_config_dir: str,
+    cfg_label: str,
+    layout: RetroArchCfg,
     card: CoreCard,
     live_option: CoreOption | None,
+    live_options: Mapping[str, CoreOption] | None,
     library_name: str | None,
     layers: Sequence[_CfgLayer],
     content: _Content,
@@ -1681,8 +1750,24 @@ def _apply_card(
     The options files are resolved here rather than per query because this is
     where they are read: a card that governs nothing consults none of them, and
     an unreachable ``core_options_path`` is only a degradation for an answer
-    that would have looked there.
+    that would have looked there. A card governed by a rule takes its own
+    route (:func:`_apply_rule_card`): the rule reads several switches, or none
+    at all, and what it needs beyond the options files is threaded there.
     """
+    if card.rule_options is not None:
+        return _apply_rule_card(
+            machine,
+            sandbox=sandbox,
+            retroarch_config_dir=retroarch_config_dir,
+            cfg_label=cfg_label,
+            layout=layout,
+            card=card,
+            live_options=live_options,
+            library_name=library_name,
+            layers=layers,
+            content=content,
+            gates=gates,
+        )
     if card.option_key is None:
         # The load refuses any other shape (_expect_selectable_modes), so the
         # mode is there — a card that governs nothing states exactly this one.
@@ -1692,11 +1777,10 @@ def _apply_card(
             mode=mode,
             granularity=Granularity(
                 value=mode.granularity,
-                option_key=None,
-                option_value=None,
-                option_provenance=f"rule card '{card.key}': fixed behaviour (no governing option)",
-                options_file=None,
+                mode=MODE_ALWAYS,
+                readings=(),
                 alternatives=(),
+                provenance=f"rule card '{card.key}': fixed behaviour (no governing option)",
             ),
         )
 
@@ -1743,15 +1827,255 @@ def _apply_card(
     if applied is not None and mode is not None:
         granularity = Granularity(
             value=mode.granularity,
-            option_key=card.option_key,
-            option_value=opt_value,
-            option_provenance=opt_source,
-            options_file=options_file,
+            mode=opt_value,
+            readings=(OptionReading(card.option_key, opt_value, opt_source, options_file),),
             alternatives=tuple(
-                (value, other.granularity) for value, other in card.modes.items() if value != opt_value
+                ModeAlternative(
+                    mode=value,
+                    options=((card.option_key, value),),
+                    value=other.granularity,
+                )
+                for value, other in card.modes.items()
+                if value != opt_value
             ),
+            provenance=opt_source,
         )
     return _CardApplication(card=applied, mode=mode, granularity=granularity, caveats=tuple(caveats))
+
+
+class _ConsultedOptions(Mapping[str, "str | None"]):
+    """The rule's view of its options — recording which ones it actually read.
+
+    The answer's readings are the switches that decided the mode *here*, not
+    every switch the card declares: hatari reads one of its two write-protect
+    options, because which one governs is the content's class, and listing the
+    other would tell a caller a switch mattered that did not. Reading a key
+    the card never declared is a build mistake and raises as one.
+    """
+
+    def __init__(self, values: dict[str, str | None]) -> None:
+        self._values = values
+        self.consulted: list[str] = []
+
+    def __getitem__(self, key: str) -> str | None:
+        if key not in self._values:
+            raise ValueError(
+                f"a mode-selection rule read option {key!r}, which its card does not declare — "
+                "the rule and the card shipped out of step"
+            )
+        if key not in self.consulted:
+            self.consulted.append(key)
+        return self._values[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._values)
+
+    def __len__(self) -> int:
+        return len(self._values)
+
+
+def _rule_option_readings(
+    machine: Machine,
+    *,
+    card: CoreCard,
+    live_options: Mapping[str, CoreOption] | None,
+    option_gates: _OptionGates,
+    library_name: str | None,
+    content: _Content,
+    gates: _OverrideGates,
+) -> tuple[dict[str, str | None], dict[str, OptionReading], list[Caveat]]:
+    """Every declared rule option, read live and normalized against the core.
+
+    The normalization is RetroArch's own move made explicit: a persisted value
+    outside the registered set is kept as the core's default by the option
+    manager, so the rule sees what the core would run with — plus the caveat
+    that says a stored value was passed over (the single-option route states
+    the same thing through :func:`_mode_for_unknown_value`).
+    """
+    values: dict[str, str | None] = {}
+    readings: dict[str, OptionReading] = {}
+    caveats: list[Caveat] = []
+    for key in card.rule_options or ():
+        live = (live_options or {}).get(key)
+        default = live.default if live is not None else None
+        value, source, options_file = _core_options_value(
+            machine,
+            override_config_dir=gates.override_config_dir,
+            global_file=option_gates.global_file,
+            library_name=library_name,
+            content_dir_name=content.dir_name,
+            rom_stem=content.rom_stem,
+            option_key=key,
+            option_default=default,
+            game_specific_options=option_gates.game_specific_options,
+            per_core_options=option_gates.per_core_options,
+        )
+        if (
+            value is not None
+            and live is not None
+            and value not in live.values
+            and default is not None
+        ):
+            caveats.append(
+                Caveat(
+                    CAVEAT_UNKNOWN_OPTION_VALUE,
+                    f'core option {key} = "{value}" is not a value the installed core registers '
+                    f"— applying the core default {default!r} as RetroArch would",
+                    {"core": card.key, "option_key": key, "value": value},
+                )
+            )
+            value = default
+            source = f'core default: {key} = "{default}" (the stored value is not one the core registers)'
+        values[key] = value
+        readings[key] = OptionReading(key, value, source, options_file)
+    return values, readings, caveats
+
+
+def _rule_reading(
+    machine: Machine,
+    *,
+    values: dict[str, str | None],
+    sandbox: _Sandbox,
+    cfg_label: str,
+    layout: RetroArchCfg,
+    layers: Sequence[_CfgLayer],
+    content: _Content,
+    retroarch_config_dir: str,
+) -> tuple[RuleReading, _ConsultedOptions]:
+    """The machine, packaged for one rule: options, content class, files, paths.
+
+    Everything here is a read of the running machine or a closure over one —
+    the rule itself never touches the machine seam directly, so what a rule
+    *can* decide on stays enumerable in one place.
+    """
+
+    def system_file(name: str) -> FileLookup:
+        root = _core_system_root(
+            sandbox=sandbox,
+            cfg_label=cfg_label,
+            layers=layers,
+            content=content,
+            retroarch_config_dir=retroarch_config_dir,
+        )
+        if root.needs or not root.reachable:
+            return FileLookup(None, FILE_UNREADABLE, None)
+        path = os.path.join(root.base, name)
+        result = machine.read_text(path)
+        if result.status == READ_OK:
+            return FileLookup(result.text, FILE_READ, path)
+        if result.status == READ_MISSING:
+            return FileLookup(None, FILE_ABSENT, path)
+        return FileLookup(None, FILE_UNREADABLE, path)
+
+    def is_directory(path: str) -> bool | None:
+        resolved = sandbox.host("savepath", path)
+        if resolved.path is None:
+            return None
+        return machine.path_kind(resolved.path) == KIND_DIRECTORY
+
+    save_dirs: list[str] = []
+    if layout.directory is not None:
+        # The spellings retro_get_save_dir can have handed the core: the
+        # configured root, and the sorted directory RetroArch redirects to —
+        # a rule comparing a persisted path against "the save directory"
+        # must recognize either.
+        save_dirs.append(layout.directory)
+        for segment in (content.dir_name, content.rom_stem):
+            if segment:
+                save_dirs.append(os.path.join(layout.directory, segment))
+    recorder = _ConsultedOptions(values)
+    return (
+        RuleReading(
+            option_values=recorder,
+            content_extension=content.extension,
+            system_file=system_file,
+            save_dirs=tuple(save_dirs),
+            is_directory=is_directory,
+        ),
+        recorder,
+    )
+
+
+def _apply_rule_card(
+    machine: Machine,
+    *,
+    sandbox: _Sandbox,
+    retroarch_config_dir: str,
+    cfg_label: str,
+    layout: RetroArchCfg,
+    card: CoreCard,
+    live_options: Mapping[str, CoreOption] | None,
+    library_name: str | None,
+    layers: Sequence[_CfgLayer],
+    content: _Content,
+    gates: _OverrideGates,
+) -> _CardApplication:
+    """Hand the machine to the card's selection rule and take the mode it names.
+
+    The rule decides, the resolver reads: every option the card declares is
+    read live first, and the rule sees the values through a recorder so the
+    answer's readings are exactly the switches that went into the decision.
+    A rule that cannot decide returns no mode with the reason as caveats, and
+    the card steps aside the way it does for an unconfirmed generation. A
+    rule naming a mode its card does not state is a build mistake — the card
+    and the rule ship together — and fails loudly rather than resolving
+    wrongly.
+    """
+    option_gates = _option_gates(layers, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir)
+    values, readings, caveats = _rule_option_readings(
+        machine,
+        card=card,
+        live_options=live_options,
+        option_gates=option_gates,
+        library_name=library_name,
+        content=content,
+        gates=gates,
+    )
+    caveats = [*option_gates.caveats, *caveats]
+    reading, recorder = _rule_reading(
+        machine,
+        values=values,
+        sandbox=sandbox,
+        cfg_label=cfg_label,
+        layout=layout,
+        layers=layers,
+        content=content,
+        retroarch_config_dir=retroarch_config_dir,
+    )
+    choice = MODE_RULES[card.key](reading)
+    caveats.extend(choice.caveats)
+    if choice.mode is None:
+        return _CardApplication(caveats=tuple(caveats))
+    mode = card.modes.get(choice.mode)
+    if mode is None:
+        raise ValueError(
+            f"the rule for card {card.key!r} selected mode {choice.mode!r}, which the card does "
+            "not state — the rule and the card shipped out of step"
+        )
+    unknown = [name for name, _ in choice.alternatives if name not in card.modes]
+    if unknown:
+        raise ValueError(
+            f"the rule for card {card.key!r} offered alternatives {unknown}, which the card does "
+            "not state — the rule and the card shipped out of step"
+        )
+    consulted = tuple(readings[key] for key in recorder.consulted) + choice.readings
+    granularity = Granularity(
+        value=mode.granularity,
+        mode=choice.mode,
+        readings=consulted,
+        alternatives=tuple(
+            ModeAlternative(mode=name, options=combo, value=card.modes[name].granularity)
+            for name, combo in choice.alternatives
+        ),
+        provenance=(
+            f"rule card '{card.key}': mode {choice.mode!r} selected by the card's rule from "
+            + (
+                ", ".join(f'{r.key} = "{r.value}"' for r in consulted if r.value is not None)
+                or "the card's fixed knowledge"
+            )
+        ),
+    )
+    return _CardApplication(card=card, mode=mode, granularity=granularity, caveats=tuple(caveats))
 
 
 def _card_file_set(
@@ -2113,12 +2437,12 @@ def _card_root_placement(
         f"rule card '{card.key}': {root_sentence} — {card.provenance}",
     ]
     all_caveats = [*caveats, *root.caveats]
+    mode_value = granularity.mode if granularity is not None else None
     if mode.inside_content is not None:
         # The declared emptiness below is true — no separate save file exists —
         # and this is what keeps it from reading as "this game has no save":
         # the loaded content file itself takes the writes, and what to make of
         # that is the caller's decision, not a file listing.
-        mode_value = granularity.option_value if granularity is not None else None
         all_caveats.append(
             Caveat(
                 CAVEAT_SAVE_INSIDE_CONTENT,
@@ -2128,12 +2452,26 @@ def _card_root_placement(
                 {"core": card.key, "mode": mode_value or ""},
             )
         )
+    if mode.writes_discarded is not None:
+        # The harder emptiness: nothing keeps any save at all. The same
+        # declared-empty file set below is the whole truth here, and the
+        # caveat is what tells the two apart — the granularity block beside
+        # it says which switch would make saves exist again.
+        all_caveats.append(
+            Caveat(
+                CAVEAT_SAVE_WRITES_DISCARDED,
+                f"core {card.key!r}"
+                + (f" in mode {mode_value!r}" if mode_value else "")
+                + f": no save exists anywhere — {mode.writes_discarded}",
+                {"core": card.key, "mode": mode_value or ""},
+            )
+        )
     if granularity is not None:
         all_caveats.extend(
             _file_set_caveats(
                 card,
                 mode,
-                mode_value=granularity.option_value or "",
+                mode_value=granularity.mode or "",
                 rom_stem=content.rom_stem,
                 also_under=also_under,
             )
@@ -2799,14 +3137,13 @@ def _standard_declaration(
             value=(
                 GRANULARITY_PER_GAME_FILE if len(files) == 1 else GRANULARITY_PER_GAME_FILES
             ),
-            option_key=None,
-            option_value=None,
-            option_provenance=(
+            mode=None,
+            readings=(),
+            alternatives=(),
+            provenance=(
                 f"RetroArch's standard rule keys every save file by the content, and '{record.key}' "
                 f"on {scope} fills {len(files)} of them — no core option governs this"
             ),
-            options_file=None,
-            alternatives=(),
         ),
         caveats=across
         + _as_tuple(_drift_caveat(record, entry, system=scope, core_version=core_version)),
@@ -2953,7 +3290,7 @@ def _standard_placement(
             _file_set_caveats(
                 card,
                 mode,
-                mode_value=granularity.option_value or "",
+                mode_value=granularity.mode or "",
                 rom_stem=content.rom_stem,
                 also_under=also_under,
             )
@@ -3283,7 +3620,7 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
             arrangement=query.arrangement,
             arrangement_version=query.arrangement_version,
             core_version=core.info.library_version if core.info is not None else None,
-            feature_confirmed=choice.live_option is not None,
+            feature_confirmed=choice.live_option is not None or bool(choice.live_options),
         )
         sources_extra.extend(notes)
         caveats.extend(verification_caveats)
@@ -3291,8 +3628,11 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
             machine,
             sandbox=query.sandbox,
             retroarch_config_dir=retroarch_config_dir,
+            cfg_label=query.cfg_label,
+            layout=layout,
             card=card,
             live_option=choice.live_option,
+            live_options=choice.live_options,
             library_name=core.library_name,
             layers=layers,
             content=content,

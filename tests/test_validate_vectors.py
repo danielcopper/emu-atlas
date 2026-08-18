@@ -95,10 +95,9 @@ def _placement(**overrides) -> Vector:
 def _granularity(**overrides) -> Vector:
     return {
         "value": "shared-card",
-        "option_key": "opt",
-        "option_value": "on",
-        "options_file": "/opts.cfg",
-        "alternatives": [["off", "per-game-file"]],
+        "mode": "on",
+        "readings": [{"key": "opt", "value": "on", "options_file": "/opts.cfg"}],
+        "alternatives": [{"mode": "off", "options": {"opt": "off"}, "value": "per-game-file"}],
         **overrides,
     }
 
@@ -607,10 +606,24 @@ PLACEMENT_CASES = [
          "granularity must be exactly the fields", id="granularity-stray-field"),
     case(_base_placement(granularity=_granularity(value="nope")),
          "granularity.value must be one of", id="granularity-value"),
-    case(_base_placement(granularity=_granularity(alternatives=[["off"]])),
-         "granularity.alternatives must be a list", id="granularity-alternatives-shape"),
-    case(_base_placement(granularity=_granularity(alternatives=[["off", "nope"]])),
+    case(_base_placement(granularity=_granularity(alternatives=[{"mode": "off"}])),
+         "granularity alternative must be exactly the fields", id="granularity-alternatives-shape"),
+    case(_base_placement(
+             granularity=_granularity(
+                 alternatives=[{"mode": "off", "options": {"opt": "off"}, "value": "nope"}]
+             )
+         ),
          "every alternative's granularity must be one of", id="granularity-alternative-value"),
+    case(_base_placement(
+             granularity=_granularity(readings=[{"key": "", "value": None, "options_file": None}])
+         ),
+         "reading's key must be a non-empty string", id="granularity-reading-empty-key"),
+    case(_base_placement(
+             granularity=_granularity(
+                 alternatives=[{"mode": "off", "options": [["opt", "off"]], "value": "per-game-file"}]
+             )
+         ),
+         "options must map option keys to values", id="granularity-alternative-options-shape"),
 ]
 
 TEXTURE_CASES = [
@@ -1277,8 +1290,13 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_granularity_constants_are_the_granularity_tuple(self):
         # Every other closed set here ships per-value names beside the tuple;
-        # this is what keeps the two from drifting once both exist.
-        assert self._exported("GRANULARITY_") == set(atlas.GRANULARITIES)
+        # this is what keeps the two from drifting once both exist. One name
+        # stands outside the tuple on purpose: GRANULARITY_NONE says no save
+        # data is kept at all, which no file group may ever claim — it is a
+        # granularity.value, never a group vocabulary member.
+        assert self._exported("GRANULARITY_") == set(atlas.GRANULARITIES) | {atlas.GRANULARITY_NONE}
+        assert atlas.GRANULARITY_NONE not in atlas.GRANULARITIES
+        assert validate_vectors.GRANULARITY_VALUE_NONE == atlas.GRANULARITY_NONE
 
     def test_the_root_kind_vocabularies_match(self):
         assert validate_vectors.KNOWN_ROOT_KINDS == set(atlas.ROOT_KINDS)

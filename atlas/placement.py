@@ -155,6 +155,13 @@ GRANULARITIES = (
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
 )
+# The one value outside the tuple above, deliberately: it is what
+# :attr:`Granularity.value` says for a mode that keeps no save data at all
+# (write protection on — the writes are discarded), so no *group* may ever
+# carry it — a group is a place save data lives, and this value says none
+# does. The card loader validates groups against GRANULARITIES and never
+# sees this word; the contract's granularity.value vocabulary includes it.
+GRANULARITY_NONE = "none"
 
 # What a group of files *is*, as against whom it belongs to. The two questions
 # are deliberately separate fields: a granularity says whether a file is this
@@ -272,6 +279,30 @@ CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT = "save-dir-launch-dependent"
 # decides for itself what to make of a content file that doubles as the save
 # (back it up, copy it, leave it); atlas states the fact and stops there.
 CAVEAT_SAVE_INSIDE_CONTENT = "save-inside-content"
+# The inside-content statement's harder sibling: this configuration keeps no
+# save at all — the writes are discarded (hatari with write protection on
+# throws the modified image away at eject). The declared emptiness is the
+# whole truth here, and the caveat is what separates "nothing is kept" from
+# both "no separate file" above and "nobody looked". The granularity block
+# still travels, with value "none": the option readings and alternatives in
+# it are how a caller sees which switch to flip to make saves exist again.
+CAVEAT_SAVE_WRITES_DISCARDED = "save-writes-discarded"
+# A rule card fits this core, but which of its recorded modes is in force
+# could not be established — the selection rule needed something this
+# question did not carry (hatari's write-protect story splits on whether the
+# content is a floppy or a hard-disk image, so without a content path there
+# is no class to select with) or something the machine does not state. The
+# recorded behaviour is not applied; ``data`` carries the core and the
+# reason. Sibling of core-option-value-unestablished, one level up: there
+# the option's value is missing, here the rule as a whole cannot decide.
+CAVEAT_CORE_MODE_UNESTABLISHED = "core-mode-unestablished"
+# The emulator's own configuration routes its saves to a directory outside
+# every root kind this answer format states — ScummVM's scummvm.ini can set
+# 'savepath' to any directory at all. The path is read off the machine and
+# carried in ``data`` (with the file it came from), because a client that
+# skips it loses the saves; the placement itself falls back to the standard
+# answer rather than stating a root kind that would be a lie.
+CAVEAT_SAVE_ROOT_REDIRECTED = "save-root-redirected"
 CAVEAT_SANDBOX_PATH_UNTRANSLATED = "sandbox-path-untranslated"
 CAVEAT_APP_RELATIVE_PATH_UNEXPANDED = "app-relative-path-unexpanded"
 CAVEAT_CFG_LINE_DROPPED = "cfg-line-dropped"
@@ -553,25 +584,63 @@ class FileSet:
 
 
 @dataclass(frozen=True, slots=True)
+class OptionReading:
+    """One switch that decides the granularity, read live: key, value, and where.
+
+    ``value`` is the live value the resolver read — or ``None`` where the
+    setting has no entry anywhere and its effect falls to a default the
+    ``provenance`` explains. ``provenance`` is prose (which file stated it, or
+    the core's registered default); ``options_file`` is where a caller would
+    change it — change it, ask again, and the new answer confirms the switch.
+    """
+
+    key: str
+    value: str | None
+    provenance: str
+    options_file: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ModeAlternative:
+    """One other mode a caller could switch to, and the settings that select it.
+
+    ``options`` is the combination that reaches the mode — for a single-option
+    core one pair, for a rule card one pair per switch. ``value`` is that
+    mode's own granularity, read off its first group the same way the active
+    mode's is; a mode with several groups can group the rest differently, and
+    this one value does not carry that (the understatement issue #128 tracks).
+    """
+
+    mode: str
+    options: tuple[tuple[str, str], ...]
+    value: str
+
+
+@dataclass(frozen=True, slots=True)
 class Granularity:
     """How this emulator, configured as it is, groups save data — and how to change it.
 
     ``value`` is the current granularity (``"shared-card"``,
-    ``"per-game-file"``, …), selected by the live-read ``option_value`` of
-    ``option_key``; ``option_provenance`` is where that value came from (which file, or the
-    core default). ``options_file`` is where a caller would change the option —
-    change it, ask again, and the new answer confirms the switch.
-    ``alternatives`` lists the other selectable ``(option_value, granularity)``
-    pairs from the rule card. A core with fixed behaviour (no governing option,
-    e.g. LRPS2) carries ``option_key=None`` and no alternatives.
+    ``"per-game-file"``, …, or ``"none"`` for a mode that keeps no save at
+    all); ``mode`` names the rule-card mode in force — an option value where
+    one option governs, the card's own mode name where a rule selects, and
+    ``None`` where no card speaks (the standard rule's per-game grouping).
+    ``readings`` is one :class:`OptionReading` per switch that went into the
+    selection — one for a single-option card, several for a rule card, none
+    where nothing selects. ``alternatives`` lists the other reachable modes
+    as :class:`ModeAlternative`, each with the option combination that
+    selects it. A core with fixed behaviour (e.g. LRPS2) carries no readings
+    and no alternatives. ``provenance`` is prose: how the mode came to be
+    selected — for a granularity with readings each reading carries its own,
+    and this sentence is the summary; for one without, it is the whole story
+    (the standard rule's per-content keying, a card's fixed behaviour).
     """
 
     value: str
-    option_key: str | None
-    option_value: str | None
-    option_provenance: str
-    options_file: str | None
-    alternatives: tuple[tuple[str, str], ...]
+    mode: str | None
+    readings: tuple[OptionReading, ...]
+    alternatives: tuple[ModeAlternative, ...]
+    provenance: str
 
 
 UNKNOWN_FILE_SET = FileSet(

@@ -61,9 +61,8 @@
           "caveats": [],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -134,9 +133,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -198,9 +196,8 @@
           "caveats": [],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -265,9 +262,8 @@
           "caveats": [],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -397,9 +393,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -588,9 +583,8 @@
           "caveats": [],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -721,9 +715,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -791,9 +784,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -860,9 +852,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -996,9 +987,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -1125,14 +1115,22 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": "mame_mame_paths_enable",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "mame_mame_paths_enable",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "enabled",
-                "per-game-file"
-              ]
+              {
+                "mode": "enabled",
+                "options": {
+                  "mame_mame_paths_enable": "enabled"
+                },
+                "value": "per-game-file"
+              }
             ]
           }
         }
@@ -1209,18 +1207,29 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": "fbneo-memcard-mode",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "fbneo-memcard-mode",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "shared",
-                "per-game-file"
-              ],
-              [
-                "per-game",
-                "per-game-file"
-              ]
+              {
+                "mode": "shared",
+                "options": {
+                  "fbneo-memcard-mode": "shared"
+                },
+                "value": "per-game-file"
+              },
+              {
+                "mode": "per-game",
+                "options": {
+                  "fbneo-memcard-mode": "per-game"
+                },
+                "value": "per-game-file"
+              }
             ]
           }
         }
@@ -1288,9 +1297,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -1357,9 +1365,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -1447,9 +1454,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -1536,9 +1542,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -1624,9 +1629,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -1710,9 +1714,8 @@
           "caveats": [],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": null,
+            "readings": [],
             "alternatives": []
           }
         }
@@ -1902,7 +1905,7 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "mame2000",
-                "mode": "",
+                "mode": "always",
                 "files": "dkong.nv",
                 "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. The file is named after the driver, not after the ROM file: MAME 2000 matches the content's basename against its driver table case-insensitively (libretro.c:862-871, and a miss refuses the load), and then writes the table's own spelling. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "citation": "libretro/fileio.c:763 at libretro/mame2000-libretro 2ec60f6"
@@ -1911,9 +1914,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -2032,7 +2034,7 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "mame2010",
-                "mode": "",
+                "mode": "always",
                 "files": "dkong.nv",
                 "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.c:183, m_basename(driver.name)) and every name below is built on it, while the glue finds the driver from the content's basename (retromain.c). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "citation": "src/emu/machine/generic.c:325-331 at libretro/mame2010-libretro c5b413b"
@@ -2059,9 +2061,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -2199,14 +2200,22 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": "mame2003_core_save_subfolder",
-            "option_value": "enabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "enabled",
+            "readings": [
+              {
+                "key": "mame2003_core_save_subfolder",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "disabled",
-                "per-game-file"
-              ]
+              {
+                "mode": "disabled",
+                "options": {
+                  "mame2003_core_save_subfolder": "disabled"
+                },
+                "value": "per-game-file"
+              }
             ]
           }
         }
@@ -2345,14 +2354,22 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": "mame2003-plus_core_save_subfolder",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "mame2003-plus_core_save_subfolder",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "enabled",
-                "per-game-file"
-              ]
+              {
+                "mode": "enabled",
+                "options": {
+                  "mame2003-plus_core_save_subfolder": "enabled"
+                },
+                "value": "per-game-file"
+              }
             ]
           }
         }
@@ -2463,14 +2480,22 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": "fba2012cps2_hiscores",
-            "option_value": "enabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "enabled",
+            "readings": [
+              {
+                "key": "fba2012cps2_hiscores",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "disabled",
-                "per-game-file"
-              ]
+              {
+                "mode": "disabled",
+                "options": {
+                  "fba2012cps2_hiscores": "disabled"
+                },
+                "value": "per-game-file"
+              }
             ]
           }
         }
@@ -2562,7 +2587,7 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "fbalpha2012_neogeo",
-                "mode": "",
+                "mode": "always",
                 "files": "mslug.fs",
                 "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "citation": "src/burner/libretro/libretro.cpp:1429 (write) and :2899 (read) at libretro/fbalpha2012_neogeo fa3bf50"
@@ -2571,9 +2596,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -2655,9 +2679,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -2739,9 +2762,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -2845,9 +2867,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -2941,9 +2962,8 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -3024,9 +3044,8 @@
           ],
           "granularity": {
             "value": "shared-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -3127,7 +3146,7 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "prboom",
-                "mode": "",
+                "mode": "always",
                 "files": "prbmsav0.dsg, prbmsav1.dsg, prbmsav2.dsg, prbmsav3.dsg, prbmsav4.dsg, prbmsav5.dsg, prbmsav6.dsg, prbmsav7.dsg, prboom.cfg",
                 "files_established_for": "content whose DeHackEd patch does not rename the savegame base",
                 "citation": "d_deh.c:492 sets the base to 'prbmsav'; :840 lists SAVEGAMENAME among the strings a .deh may replace, and the loader passes a matching .deh found beside the content (libretro.c:2399, :2611)"
@@ -3136,9 +3155,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -3230,9 +3248,8 @@
           ],
           "granularity": {
             "value": "shared-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -3324,9 +3341,8 @@
           ],
           "granularity": {
             "value": "shared-file",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -3413,9 +3429,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -3592,7 +3607,7 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "tyrquake",
-                "mode": "",
+                "mode": "always",
                 "files": "s0.sav, s1.sav, s2.sav, s3.sav, s4.sav, s5.sav, s6.sav, s7.sav, s8.sav, s9.sav, s10.sav, s11.sav, config.cfg",
                 "files_established_for": "saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them",
                 "citation": "common/menu.c:643 at libretro/tyrquake dfdae65 stuffs 'save s%i' for the twelve slots (MAX_SAVEGAMES, menu.c:487); host_cmd.c:512-513 joins the save directory with the given name and defaults the extension"
@@ -3601,9 +3616,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -3671,7 +3685,7 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "tyrquake",
-                "mode": "",
+                "mode": "always",
                 "files": "s0.sav, s1.sav, s2.sav, s3.sav, s4.sav, s5.sav, s6.sav, s7.sav, s8.sav, s9.sav, s10.sav, s11.sav, config.cfg",
                 "files_established_for": "saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them",
                 "citation": "common/menu.c:643 at libretro/tyrquake dfdae65 stuffs 'save s%i' for the twelve slots (MAX_SAVEGAMES, menu.c:487); host_cmd.c:512-513 joins the save directory with the given name and defaults the extension"
@@ -3680,9 +3694,8 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": null,
-            "option_value": null,
-            "options_file": null,
+            "mode": "always",
+            "readings": [],
             "alternatives": []
           }
         }
@@ -3778,14 +3791,22 @@
           ],
           "granularity": {
             "value": "per-game-files",
-            "option_key": "q88_save_to_disk_image",
-            "option_value": "disabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "q88_save_to_disk_image",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "enabled",
-                "per-game-file"
-              ]
+              {
+                "mode": "enabled",
+                "options": {
+                  "q88_save_to_disk_image": "enabled"
+                },
+                "value": "per-game-file"
+              }
             ]
           }
         }
@@ -3868,15 +3889,486 @@
           ],
           "granularity": {
             "value": "per-game-file",
-            "option_key": "q88_save_to_disk_image",
-            "option_value": "enabled",
-            "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg",
+            "mode": "enabled",
+            "readings": [
+              {
+                "key": "q88_save_to_disk_image",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
             "alternatives": [
-              [
-                "disabled",
-                "per-game-files"
-              ]
+              {
+                "mode": "disabled",
+                "options": {
+                  "q88_save_to_disk_image": "disabled"
+                },
+                "value": "per-game-files"
+              }
             ]
+          }
+        }
+      }
+    },
+    {
+      "name": "write-protection-discards-every-write",
+      "rationale": "hatari with 'hatari_writeprotect_floppy' on keeps nothing: the changed floppy contents are discarded at eject instead of written back, so no save exists anywhere — a declared emptiness that is the whole truth, told apart from the inside-content case by the save-writes-discarded caveat. The granularity block still travels with value 'none': its reading and its alternative are how a caller sees which switch to flip to make saves exist again.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/atarist/Turrican (Europe).st": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "hatari_writeprotect_floppy = \"on\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/hatari_libretro.so": {
+            "library_name": "hatari",
+            "library_version": "1.8 7008194",
+            "options": {
+              "hatari_writeprotect_floppy": {
+                "default": "off",
+                "values": [
+                  "on",
+                  "off",
+                  "auto"
+                ]
+              },
+              "hatari_writeprotect_hd": {
+                "default": "off",
+                "values": [
+                  "on",
+                  "off",
+                  "auto"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/atarist/Turrican (Europe).st",
+          "core_so": "hatari_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/atarist",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "hatari",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "hatari",
+                "mode": "floppy-discarded"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "floppy-discarded",
+            "readings": [
+              {
+                "key": "hatari_writeprotect_floppy",
+                "value": "on",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-writeback",
+                "options": {
+                  "hatari_writeprotect_floppy": "off"
+                },
+                "value": "per-game-file"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-mode-selection-that-needs-the-contents-class",
+      "rationale": "hatari's write-protect story splits on whether the content is a floppy or a hard-disk image, so asked without a content path the card's rule has no class to select with. The card steps aside with core-mode-unestablished carrying the reason, and the standard answer below stays honest: hatari fills no memory id and its record retired with the card, so no file set is stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/atarist/Turrican (Europe).st": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/hatari_libretro.so": {
+            "library_name": "hatari",
+            "library_version": "1.8 7008194",
+            "options": {
+              "hatari_writeprotect_floppy": {
+                "default": "off",
+                "values": [
+                  "on",
+                  "off",
+                  "auto"
+                ]
+              },
+              "hatari_writeprotect_hd": {
+                "default": "off",
+                "values": [
+                  "on",
+                  "off",
+                  "auto"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "hatari_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "hatari",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "hatari",
+                "reason": "which write-protect option governs depends on the content's class (a floppy image is written back into itself, a hard-disk image takes writes in place), and no content was named"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-floppy-saves-into-its-own-image",
+      "rationale": "hatari at its registered defaults writes a modified floppy back into its own image at eject — the inside-content answer, selected by the rule from the content's class. Only the floppy switch is read (the hard-disk one governs other content, and listing it would say a switch mattered that did not), and the one alternative names the option value that would discard the writes instead.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/atarist/Turrican (Europe).st": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/hatari_libretro.so": {
+            "library_name": "hatari",
+            "library_version": "1.8 7008194",
+            "options": {
+              "hatari_writeprotect_floppy": {
+                "default": "off",
+                "values": [
+                  "on",
+                  "off",
+                  "auto"
+                ]
+              },
+              "hatari_writeprotect_hd": {
+                "default": "off",
+                "values": [
+                  "on",
+                  "off",
+                  "auto"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/atarist/Turrican (Europe).st",
+          "core_so": "hatari_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/atarist",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "hatari",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-inside-content",
+              "data": {
+                "core": "hatari",
+                "mode": "floppy-writeback"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "floppy-writeback",
+            "readings": [
+              {
+                "key": "hatari_writeprotect_floppy",
+                "value": "off",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-discarded",
+                "options": {
+                  "hatari_writeprotect_floppy": "on"
+                },
+                "value": "none"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-emulators-own-setting-routes-the-saves-elsewhere",
+      "rationale": "ScummVM's scummvm.ini sets 'savepath' to a directory that exists and is neither the frontend's save root nor a sorting of it. The emulator honors that path, and no root kind this format states can anchor it — so the card steps aside and the save-root-redirected caveat carries the configured path and the file it came from, machine-readably. A client that skips it loses the saves.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/scummvm/monkey1.scummvm": "rom",
+          "/mnt/sd/retrodeck/bios/scummvm.ini": "[scummvm]\nsavepath=/mnt/sd/scumm-saves\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/scumm-saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/scummvm_libretro.so": {
+            "library_name": "ScummVM",
+            "library_version": "2.10.0git",
+            "options": {}
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/scummvm/monkey1.scummvm",
+          "core_so": "scummvm_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "scummvm",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "scummvm",
+                "key": "savepath",
+                "path": "/mnt/sd/scumm-saves",
+                "options_file": "/mnt/sd/retrodeck/bios/scummvm.ini"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-directory-stated-with-its-names-refused",
+      "rationale": "ScummVM writes its slot files flat into the frontend's save directory, but their names come from the ScummVM target — launcher configuration atlas does not read. The card's one mode states the directory and refuses the names: a declared set of no statable names, one group with files unstated, and the caveat carrying the reason. The granularity reading is the 'savepath' setting itself, with the ini where it would change — set to nothing here, so the registered default governs.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/scummvm/monkey1.scummvm": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/scummvm_libretro.so": {
+            "library_name": "ScummVM",
+            "library_version": "2.10.0git",
+            "options": {}
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/scummvm/monkey1.scummvm",
+          "core_so": "scummvm_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "scummvm",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "scummvm",
+                "dir": "/mnt/sd/retrodeck/saves",
+                "role": "battery",
+                "citation": "ScummVM's slot files are named per engine from the ScummVM target — launcher configuration, not the content path — so the names follow from nothing atlas reads (DefaultSaveFileManager writing into 'savepath'; libretro-os-base.cpp:47 and libretro-os-utils.cpp:212-216 at 686cdd1 wire the default, the engines name their own slots)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "frontend-save-dir",
+            "readings": [
+              {
+                "key": "savepath",
+                "value": null,
+                "options_file": "/mnt/sd/retrodeck/bios/scummvm.ini"
+              }
+            ],
+            "alternatives": []
           }
         }
       }

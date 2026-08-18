@@ -28,8 +28,11 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
 
+from atlas.mode_rules import RULES as MODE_RULES
 from atlas.placement import (
     GRANULARITIES,
+    GRANULARITY_NONE,
+    GRANULARITY_PER_GAME_FILE,
     ROLES,
     ROOT_CONTENT_DIRECTORY,
     ROOT_KINDS,
@@ -267,39 +270,41 @@ class SaveMode:
       state its file set at all: it declares ``files: None`` plus this field,
       and the resolver says so rather than presenting the half it can see as
       the whole save.
+
+    ``writes_discarded`` is the third body a mode can have, beside ``groups``
+    and ``inside_content``: the configuration keeps no save at all — the
+    writes are discarded (hatari with write protection on throws the modified
+    image away at eject). Like ``inside_content`` it is required prose that
+    replaces the groups; unlike it, the declared emptiness it produces is the
+    whole truth, so its granularity is ``"none"`` rather than the content
+    file's own per-game grouping.
     """
 
     root: str
     groups: tuple[SaveGroup, ...]
     also_under: str | None = None
     inside_content: str | None = None
+    writes_discarded: str | None = None
 
     def __post_init__(self) -> None:
-        if self.inside_content is not None:
-            # The groups-less form: no separate save file exists, the loaded
-            # content file itself takes the writes. There is nothing to group
-            # — the statement replaces the groups, and the reason is required
-            # prose because an empty one would reach the caller as silence.
-            if self.groups:
-                raise ValueError(
-                    "SaveMode: a mode stating the save lives inside the content declares no "
-                    "groups — there is no separate file to group"
-                )
-            if not self.inside_content.strip():
-                raise ValueError("SaveMode: 'inside_content' states a reason, not an empty string")
-            if self.also_under is not None:
-                raise ValueError(
-                    "SaveMode: a save inside the content lies under one root by definition — "
-                    "'also_under' cannot apply"
-                )
+        if self.inside_content is not None and self.writes_discarded is not None:
+            raise ValueError(
+                "SaveMode: 'inside_content' and 'writes_discarded' contradict each other — one "
+                "says the content file keeps the save, the other that nothing keeps it"
+            )
+        if self.stated is not None:
+            self._check_stated_form()
             return
         if not self.groups:
             raise ValueError("SaveMode: a mode states at least one group")
         named = [group for group in self.groups if group.unnamed is None]
-        if not named:
-            raise ValueError('SaveMode: a mode whose every group is unnamed states nothing')
-        here = [group for group in named if group.subdir == named[0].subdir]
-        if len({group.files is None for group in here}) != 1:
+        # A mode whose every group is unnamed is a real statement, not an
+        # empty one: it names the directory the save lives in and says why no
+        # file name follows from anything atlas reads (ScummVM's slot files
+        # are named per engine from the launcher target). Its declared set is
+        # the empty set of *statable* names, never a claim of completeness.
+        here = [group for group in named if group.subdir == named[0].subdir] if named else []
+        if here and len({group.files is None for group in here}) != 1:
             # The directory's answer is the groups in it taken together, so one
             # unverified part would silently shorten a list stated as the whole.
             raise ValueError(
@@ -311,15 +316,48 @@ class SaveMode:
                 "cannot say which scope its answer carries"
             )
 
+    def _check_stated_form(self) -> None:
+        """The groups-less forms: no separate save file exists — the loaded
+        content file takes the writes, or nothing does. There is nothing to
+        group — the statement replaces the groups, and the reason is required
+        prose because an empty one would reach the caller as silence."""
+        statement = self.stated or ""
+        field = "inside_content" if self.inside_content is not None else "writes_discarded"
+        if self.groups:
+            raise ValueError(
+                f"SaveMode: a mode stating '{field}' declares no groups — there is no "
+                "separate file to group"
+            )
+        if not statement.strip():
+            raise ValueError(f"SaveMode: '{field}' states a reason, not an empty string")
+        if self.also_under is not None:
+            raise ValueError(
+                f"SaveMode: a mode stating '{field}' lies under one root by definition — "
+                "'also_under' cannot apply"
+            )
+
     @property
     def primary(self) -> SaveGroup:
-        """The group the mode's own answer is about — the card states it first."""
-        return self.named[0]
+        """The group the mode's own answer is about — the card states it first.
 
-    # The groups-less form answers the group-derived questions itself: the
-    # save medium is the content file, so the declared set of *separate* files
-    # is empty and closed, the unit is per game by the medium's own nature,
-    # and there is neither a subdir to join nor a name to watch for.
+        Where every group is unnamed there is no named first group, and the
+        first unnamed one carries the mode's directory and granularity just
+        the same — it is a group like any other, only its file names are not
+        derivable.
+        """
+        return self.named[0] if self.named else self.groups[0]
+
+    # The groups-less forms answer the group-derived questions themselves:
+    # with the save inside the content the medium is the content file, so the
+    # declared set of *separate* files is empty and closed and the unit is per
+    # game by the medium's own nature; with the writes discarded nothing keeps
+    # any save at all, which is an empty closed set with no unit to state.
+    # Either way there is neither a subdir to join nor a name to watch for.
+
+    @property
+    def stated(self) -> str | None:
+        """The groups-less statement this mode carries, whichever form it is."""
+        return self.inside_content if self.inside_content is not None else self.writes_discarded
 
     @property
     def named(self) -> tuple[SaveGroup, ...]:
@@ -346,13 +384,18 @@ class SaveMode:
 
     @property
     def subdir(self) -> str | None:
-        if self.inside_content is not None:
+        if self.stated is not None:
             return None
         return self.primary.subdir
 
     @property
     def files(self) -> tuple[str, ...] | None:
-        if self.inside_content is not None:
+        if self.stated is not None:
+            return ()
+        if not self.named:
+            # Every group is unnamed: the set of statable names is empty, and
+            # the groups (files=None) plus their caveat carry what that means
+            # — files exist here, their names do not follow from any read.
             return ()
         if self.primary.files is None:
             return None
@@ -361,12 +404,14 @@ class SaveMode:
     @property
     def granularity(self) -> str:
         if self.inside_content is not None:
-            return "per-game-file"
+            return GRANULARITY_PER_GAME_FILE
+        if self.writes_discarded is not None:
+            return GRANULARITY_NONE
         return self.primary.granularity
 
     @property
     def observe(self) -> tuple[str, ...] | None:
-        if self.inside_content is not None:
+        if self.stated is not None:
             return None
         if all(group.observe is None for group in self.here):
             return None
@@ -378,11 +423,15 @@ class SaveMode:
 
     @property
     def complete(self) -> bool:
-        if self.inside_content is not None:
+        if self.stated is not None:
             # No separate save file can belong to this mode — that is the
             # statement itself, and the source read behind the card is what
             # licenses the claim.
             return True
+        if not self.named:
+            # The names exist and are not derivable — the one thing this mode
+            # can never claim is that its (empty) statable set is the whole.
+            return False
         return all(group.complete for group in self.here)
 
     @property
@@ -400,7 +449,18 @@ class SaveMode:
 
 @dataclass(frozen=True, slots=True)
 class CoreCard:
-    """A core's save rule card: identifiers, governing option, modes, provenance."""
+    """A core's save rule card: identifiers, what selects a mode, modes, provenance.
+
+    Three ways a mode gets selected, one per card: a governing *option*
+    (``option_key``, its live value is the mode key), a governing *rule*
+    (``rule_options`` is not ``None`` — a per-core function in
+    :mod:`atlas.mode_rules`, keyed by the card key, reads the named options
+    and whatever else it declared and returns a freely named mode), or
+    nothing (the one ``always`` mode). The card stays what it always was —
+    what *can* exist — and the rule is what decides what holds here: several
+    interacting options are a product no single option's value can name, so
+    the format grows code plus a card referencing it, not a DSL (issue #163).
+    """
 
     key: str
     library_names: tuple[str, ...]
@@ -408,6 +468,7 @@ class CoreCard:
     option_default: str | None
     modes: Mapping[str, SaveMode]
     provenance: str
+    rule_options: tuple[str, ...] | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "modes", MappingProxyType(dict(self.modes)))
@@ -423,23 +484,31 @@ class CoreCard:
         return library_name is not None and library_name in self.library_names
 
 
-def _inside_content_mode(mode: Any, *, root: str, reason: str, where: str) -> SaveMode:
-    """The groups-less form: the loaded content file itself takes the writes."""
+def _stated_mode(mode: Any, *, root: str, field: str, reason: str, where: str) -> SaveMode:
+    """The groups-less forms: the content file takes the writes, or nothing does.
+
+    Both anchor at the content's own tree — the statement is about what
+    happens to the loaded content file — and both replace the groups with
+    required prose, so one loader carries them and the field name says which
+    form it is building.
+    """
     if root != ROOT_CONTENT_DIRECTORY:
         raise ValueError(
-            f"{where}: a save inside the content lies in the content's own tree — root must "
+            f"{where}: a mode stating '{field}' is about the loaded content file — root must "
             f"be {ROOT_CONTENT_DIRECTORY!r}, got {root!r}"
         )
     if mode.get("groups") is not None:
         raise ValueError(
-            f"{where}: 'inside_content' replaces 'groups' — there is no separate file to group"
+            f"{where}: '{field}' replaces 'groups' — there is no separate file to group"
         )
     if mode.get("also_under") is not None:
         raise ValueError(
-            f"{where}: a save inside the content lies under one root by definition — "
+            f"{where}: a mode stating '{field}' lies under one root by definition — "
             "'also_under' cannot apply"
         )
-    return SaveMode(root=root, groups=(), inside_content=reason)
+    if field == "inside_content":
+        return SaveMode(root=root, groups=(), inside_content=reason)
+    return SaveMode(root=root, groups=(), writes_discarded=reason)
 
 
 def _save_mode(mode: Any, where: str) -> SaveMode:
@@ -448,8 +517,18 @@ def _save_mode(mode: Any, where: str) -> SaveMode:
     if root not in _KNOWN_MODE_ROOTS:
         raise ValueError(f"{where}: root must be one of {sorted(_KNOWN_MODE_ROOTS)}, got {root!r}")
     inside_content = _expect_opt_str(mode.get("inside_content"), f"{where}: inside_content")
+    writes_discarded = _expect_opt_str(mode.get("writes_discarded"), f"{where}: writes_discarded")
+    if inside_content is not None and writes_discarded is not None:
+        raise ValueError(
+            f"{where}: 'inside_content' and 'writes_discarded' contradict each other — one says "
+            "the content file keeps the save, the other that nothing keeps it"
+        )
     if inside_content is not None:
-        return _inside_content_mode(mode, root=root, reason=inside_content, where=where)
+        return _stated_mode(mode, root=root, field="inside_content", reason=inside_content, where=where)
+    if writes_discarded is not None:
+        return _stated_mode(
+            mode, root=root, field="writes_discarded", reason=writes_discarded, where=where
+        )
     raw_groups = mode.get("groups")
     if not isinstance(raw_groups, list) or not raw_groups:
         raise ValueError(f"{where}: 'groups' must be a non-empty list — a mode has at least one part")
@@ -579,21 +658,30 @@ def _save_group(mode: Any, where: str) -> SaveGroup:
     )
 
 
-def recorded_vocabulary(*, option_key: str | None, modes: Mapping[str, SaveMode]) -> frozenset[str]:
-    """Every word a card states as this core's own: option key, subdirs, file names.
+def recorded_vocabulary(
+    *,
+    option_key: str | None,
+    modes: Mapping[str, SaveMode],
+    rule_options: tuple[str, ...] = (),
+) -> frozenset[str]:
+    """Every word a card states as this core's own: option keys, subdirs, file names.
 
     These are the names a caller reads back as fact, so they are the names the
     anchor tripwire covers. A subdir contributes one item per path segment,
     because that is the granularity the binary spells them at (``opera`` and
-    ``per_game`` are two literals, not one).
+    ``per_game`` are two literals, not one). A rule card's option keys are
+    recorded words exactly like a governing option's key is.
 
-    Mode *keys* are deliberately absent: they are the governing option's own
-    values, and the deployed core registers them — a measurement beats an
-    anchor, and ``tests/test_oddities.py`` makes it.
+    Mode *keys* are deliberately absent. For an option-governed card they are
+    the option's own values and the deployed core registers them — a
+    measurement beats an anchor, and ``tests/test_oddities.py`` makes it. For
+    a rule card they are atlas's own vocabulary, chosen here the way caveat
+    codes are — nothing in a binary spells them, so there is nothing to pin.
     """
     words: set[str] = set()
     if option_key is not None:
         words.add(option_key)
+    words.update(rule_options)
     for mode in modes.values():
         for group in mode.groups:
             if group.subdir is not None:
@@ -640,23 +728,64 @@ def _expect_anchors(value: object, *, where: str, vocabulary: frozenset[str]) ->
         _expect_str(detail, f"{at}.{kind}")
 
 
-def _expect_selectable_modes(where: str, *, option_key: str | None, modes: Mapping[str, SaveMode]) -> None:
-    """A card without a governing option states exactly the ``always`` mode.
+def _expect_selectable_modes(
+    where: str,
+    *,
+    option_key: str | None,
+    rule_options: tuple[str, ...] | None,
+    modes: Mapping[str, SaveMode],
+) -> None:
+    """A card without a governing option or rule states exactly the ``always`` mode.
 
-    Nothing selects between modes when no option governs the card, so the
-    resolver takes ``always`` and only ``always``. A card that names its one
-    mode anything else, or names several, therefore describes behaviour that
-    can never be applied: the answer comes back with no rule card behind it and
-    no caveat either, because from the resolver's side nothing went wrong. The
-    card is shipped with the code, so that is a build mistake, not a state of
-    the machine — it fails the load.
+    Nothing selects between modes when neither an option nor a rule governs
+    the card, so the resolver takes ``always`` and only ``always``. A card
+    that names its one mode anything else, or names several, therefore
+    describes behaviour that can never be applied: the answer comes back with
+    no rule card behind it and no caveat either, because from the resolver's
+    side nothing went wrong. The card is shipped with the code, so that is a
+    build mistake, not a state of the machine — it fails the load. A rule
+    card's mode names are the rule's to select, so they are free — the rule
+    is code shipped beside the card, and returning a name the card does not
+    state fails at apply time as the build mistake it is.
     """
-    if option_key is not None or set(modes) == {MODE_ALWAYS}:
+    if option_key is not None or rule_options is not None or set(modes) == {MODE_ALWAYS}:
         return
     raise ValueError(
-        f"{where}: a card with no governing_option.key selects nothing, so it must declare exactly "
-        f"the {MODE_ALWAYS!r} mode — got {sorted(modes) or 'no modes at all'}"
+        f"{where}: a card with no governing_option.key and no governing_rule selects nothing, so "
+        f"it must declare exactly the {MODE_ALWAYS!r} mode — got {sorted(modes) or 'no modes at all'}"
     )
+
+
+def _governing_rule(
+    value: Any, where: str, *, card_key: str, option_key: str | None
+) -> tuple[str, ...] | None:
+    """A card's ``governing_rule`` block: the options its selection rule reads.
+
+    The list may be empty — ScummVM's rule reads a file of the emulator's own
+    and no core option at all — but the block itself must name a rule that
+    exists: the card is data shipped beside the code, so a marker with no
+    function behind it is a build mistake and fails the load. The mirror
+    claim (a rule with no card) is a test, because the loader validating one
+    card cannot see which rules the others claimed.
+    """
+    if value is None:
+        return None
+    if option_key is not None:
+        raise ValueError(
+            f"{where}: 'governing_option' and 'governing_rule' are two answers to who selects "
+            "the mode — a card states one of them"
+        )
+    if not isinstance(value, dict) or set(value) != {"options"}:
+        raise ValueError(
+            f"{where}: governing_rule must be an object naming exactly 'options', got {value!r}"
+        )
+    options = _expect_str_list(value["options"], f"{where}: governing_rule.options")
+    if card_key not in MODE_RULES:
+        raise ValueError(
+            f"{where}: states a governing_rule and no selection rule is registered under "
+            f"{card_key!r} in atlas.mode_rules — the marker would select nothing"
+        )
+    return options
 
 
 def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
@@ -687,7 +816,10 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
         }
         provenance = entry.get("provenance", {})
         option_key = _expect_opt_str(governing.get("key"), f"{where}: governing_option.key")
-        _expect_selectable_modes(where, option_key=option_key, modes=modes)
+        rule_options = _governing_rule(
+            saves.get("governing_rule"), where, card_key=key, option_key=option_key
+        )
+        _expect_selectable_modes(where, option_key=option_key, rule_options=rule_options, modes=modes)
         if "so" in identifiers:
             raise ValueError(
                 f"{where}: identifiers.so is derived from the card key ({key + SO_SUFFIX!r}) and no "
@@ -698,7 +830,9 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
             _expect_anchors(
                 anchors,
                 where=f"{where}: saves.anchors",
-                vocabulary=recorded_vocabulary(option_key=option_key, modes=modes),
+                vocabulary=recorded_vocabulary(
+                    option_key=option_key, modes=modes, rule_options=rule_options or ()
+                ),
             )
         cards.append(
             CoreCard(
@@ -710,6 +844,7 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
                 option_default=_expect_opt_str(governing.get("default"), f"{where}: governing_option.default"),
                 modes=modes,
                 provenance=provenance.get("source", "unstated"),
+                rule_options=rule_options,
             )
         )
     return tuple(cards)

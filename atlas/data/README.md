@@ -23,11 +23,12 @@ check it.** Three consequences run through the format:
   `core-option-value-unestablished`.
 - Every file name and subdir fragment a card records is pinned to the binary it was read from — see _Anchors_ below.
 
-A mode — one value of the governing option — states the root it anchors at and its **groups**: one entry per directory
-_and meaning_, because a save is not always one list of files that mean one thing. MAME keeps a machine's battery memory
-under `nvram/`, its dip switches under `cfg/` beside an emulator-wide `default.cfg`, and disk write-differences under
-`diff/`; Flycast's shared mode keeps four memory cards and the console's own flash side by side under `dc/`. A group
-carries its own `subdir`, its own `granularity`, a `role`, and its own file and evidence fields.
+A mode — one value of the governing option, or one name a governing _rule_ selects (see below) — states the root it
+anchors at and its **groups**: one entry per directory _and meaning_, because a save is not always one list of files
+that mean one thing. MAME keeps a machine's battery memory under `nvram/`, its dip switches under `cfg/` beside an
+emulator-wide `default.cfg`, and disk write-differences under `diff/`; Flycast's shared mode keeps four memory cards and
+the console's own flash side by side under `dc/`. A group carries its own `subdir`, its own `granularity`, a `role`, and
+its own file and evidence fields.
 
 Four of those fields are closed vocabularies — all four the placement's own, imported by the loader rather than
 respelled here, so a card cannot select a value the contract cannot carry — and one is a type rule:
@@ -101,8 +102,14 @@ group's `role` beside it; that caveat is the sentence a person reads and the cit
 
 The alternative would have been silence, and silence there is the expensive kind: a client that never learns the
 directory exists loses the player's progress on every machine with a hard disk. The loader refuses `unnamed` together
-with `files` — the field's whole reason is that no list can be given — and a mode whose every group is unnamed, since
-that mode would state nothing at all.
+with `files` — the field's whole reason is that no list can be given.
+
+A mode whose **every** group is unnamed is a real statement, not an empty one: it names the directory the save lives in
+and says why no file name follows from anything atlas reads. ScummVM is its one customer — the slot files land flat in
+the frontend's save directory, named per engine from the ScummVM _target_, which is launcher configuration. Such a
+mode's answer is a declared set of no statable names (`files: []`, `complete: false`) with the one `files=None` group
+and the `file-names-unestablished` caveat carrying the reason; it can never claim completeness, because the names exist
+and are simply not derivable.
 
 ### File names are templates in the placement's own hole vocabulary
 
@@ -164,12 +171,45 @@ separate save file exists — plus the `save-inside-content` caveat carrying the
 second name would make a sync client treat the ROM as a save. What to make of a content file that doubles as the save
 (back it up, copy it, leave it) is the caller's decision; atlas states the fact and stops.
 
+### `writes_discarded` — the mode where nothing keeps a save at all
+
+The inside-content statement's harder sibling: hatari with write protection on throws the modified image away at eject,
+so no save exists _anywhere_ — not beside the content, not inside it. Same construction (required prose instead of
+`groups`, `root` must be `content_directory`, the two statements refuse to ride one mode together), its own caveat
+`save-writes-discarded`, and one difference a client reads: the granularity value is `none`, the one value no file group
+may ever carry, because a group is a place save data lives and this mode says none does. The granularity block still
+travels — its readings and alternatives are how a caller sees which switch would make saves exist again.
+
+### `governing_rule` — modes a rule selects instead of one option's value
+
+Some cores' behaviour is the **product** of several interacting settings, and no single option's value can name a mode:
+Beetle Saturn's two sharing switches make four modes, hatari's governing option depends on the loaded content's class,
+ScummVM's save directory is a setting in the emulator's own ini. Such a card states `governing_rule` (mutually exclusive
+with `governing_option`) with the core options its rule reads — `options` may be empty where the rule reads none — and
+its modes carry **freely chosen names** (`per-game`, `internal-shared`, `floppy-writeback`): atlas's own vocabulary,
+like caveat codes, since no binary registers them as values.
+
+The rule itself is code, in `atlas/mode_rules.py`, keyed by the card key — the format grows _code plus a card
+referencing it_, never a DSL. The card stays what a card always was (**what can exist**), the rule decides **what holds
+here**, and everything it decides on is a live read the resolver hands it: the declared options' values, the content's
+class, a file of the emulator's own. The loader refuses a `governing_rule` with no registered rule behind it, and the
+tests hold the mirror claim. Feature detection covers the plural: every declared option must be registered by the
+installed core, or the card steps aside as a generation mismatch exactly as a single-option card does.
+
+The answer's granularity block records the decision so a client can act on it: one reading per switch the rule actually
+consulted (its live value, its provenance, the file where it would change — hatari reads one of its two write-protect
+options, never both, because which one governs is the content's class), and one alternative per other reachable mode
+with the full option combination that selects it. A rule that cannot decide selects nothing and says why —
+`core-mode-unestablished` with the reason, or the sharper codes where they exist (`core-option-value-unestablished` per
+unreadable switch, `save-root-redirected` where ScummVM's `savepath` points outside every root kind the format can
+anchor, with the configured path in the caveat's data).
+
 ### Anchors — every recorded name, pinned to the string it was read from
 
 A card names files and subdirectories that reach a caller as fact, and `saves.anchors` records where each of those names
-came from. One entry per recorded name — the governing option key, and from **every group of every mode** each segment
-of its `subdir` and every name in its `files`, `observe` and `files_without_save_id` — carrying exactly one of three
-kinds:
+came from. One entry per recorded name — the governing option key (or every option a `governing_rule` declares), and
+from **every group of every mode** each segment of its `subdir` and every name in its `files`, `observe` and
+`files_without_save_id` — carrying exactly one of three kinds:
 
 | kind          | means                                                                                |
 | ------------- | ------------------------------------------------------------------------------------ |
@@ -196,8 +236,10 @@ literal (that `%s.ps2` still names the save and not something else) and the name
 source the byte check simply cannot reach (Flycast's `dc_nvmem.bin` is assembled in `.text` from instruction
 immediates).
 
-Mode keys are deliberately not anchored. They are the governing option's own values and the deployed core registers
-them, so the tests measure that set against the binary directly — a measurement beats an anchor.
+Mode keys are deliberately not anchored. On an option-governed card they are the option's own values and the deployed
+core registers them, so the tests measure that set against the binary directly — a measurement beats an anchor. On a
+rule card they are atlas's own vocabulary, chosen the way caveat codes are; nothing in a binary spells them, so there is
+nothing to pin.
 
 The loader validates the block and then drops it: anchors are audit machinery, and nothing that reaches a caller holds
 them.
