@@ -89,6 +89,111 @@ class TestABrokenCatalogueEmptiesTheFrontend:
         )
 
 
+class TestAnUnwiredContentTreeIsAFinding:
+    """Issue #104: a hub tree without its emulator-side link loses what is filed there.
+
+    The exemplar pair is the Citra texture row (hub
+    ``texture_packs/retroarch-core/Citra/textures``, emulator side
+    ``<xdg-config>/retroarch/saves/Citra/load/textures``); the wired contrast
+    is the PPSSPP mods row. Every gate is exercised as its own case, because
+    each one failing open would alarm a machine the table knows nothing about.
+    """
+
+    VERSIONED_JSON = (
+        '{"version": "0.10.9b", '
+        '"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}'
+    )
+    HUB_TREE = "/mnt/sd/retrodeck/texture_packs/retroarch-core/Citra/textures"
+    EMULATOR_SIDE = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/Citra/load/textures"
+
+    def _rd(self, *, marker=VERSIONED_JSON, dirs=(), symlinks=None, inaccessible=()):
+        machine = FixtureMachine(
+            {RETRODECK_JSON: marker, RETRODECK_CFG: 'libretro_directory = "/app/cores"\n'},
+            dirs=["/mnt/sd/retrodeck/saves", *dirs],
+            symlinks=symlinks or {},
+            inaccessible=list(inaccessible),
+        )
+        return atlas.RetroDeck(HOME, machine)
+
+    def _findings(self, rd):
+        return [c for c in rd.health().issues if c.code == atlas.HEALTH_ISSUE_CONTENT_TREE_UNWIRED]
+
+    def test_a_plain_directory_in_place_of_the_link_fires(self):
+        rd = self._rd(dirs=[self.HUB_TREE, self.EMULATOR_SIDE])
+        findings = self._findings(rd)
+        assert [f.data for f in findings] == [
+            {
+                "family": "texture_packs",
+                "hub": self.HUB_TREE,
+                "path": self.EMULATOR_SIDE,
+                "problem": "not-a-link",
+            }
+        ]
+
+    def test_a_missing_emulator_side_fires_its_own_problem(self):
+        rd = self._rd(dirs=[self.HUB_TREE])
+        findings = self._findings(rd)
+        assert [f.data["problem"] for f in findings] == ["missing"]
+
+    def test_a_link_settling_outside_the_hub_names_where_it_went(self):
+        rd = self._rd(
+            dirs=[self.HUB_TREE, "/mnt/other/textures"],
+            symlinks={self.EMULATOR_SIDE: "/mnt/other/textures"},
+        )
+        findings = self._findings(rd)
+        assert [f.data for f in findings] == [
+            {
+                "family": "texture_packs",
+                "hub": self.HUB_TREE,
+                "path": self.EMULATOR_SIDE,
+                "problem": "diverted",
+                "target": "/mnt/other/textures",
+            }
+        ]
+
+    def test_a_wired_pair_is_silent(self):
+        rd = self._rd(dirs=[self.HUB_TREE], symlinks={self.EMULATOR_SIDE: self.HUB_TREE})
+        assert self._findings(rd) == []
+
+    def test_a_dead_link_into_the_hub_is_still_wired(self):
+        # Creating the hub side brings the link to life — the routing stands,
+        # so the pair supports no finding (the per-answer dead-symlink caveat
+        # is the place that state is told).
+        rd = self._rd(
+            dirs=[self.HUB_TREE],
+            symlinks={self.EMULATOR_SIDE: "/mnt/sd/retrodeck/texture_packs/somewhere/else"},
+        )
+        assert self._findings(rd) == []
+
+    def test_a_link_into_an_older_hub_layout_is_still_wired(self):
+        # RetroDECK 0.7-era upgrades linked Dolphin's whole hub directory, not
+        # today's Textures tree below it. That link is hub wiring; the weak
+        # criterion is what keeps a legitimately upgraded machine quiet.
+        dolphin_side = f"{HOME}/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Load/Textures"
+        rd = self._rd(
+            dirs=["/mnt/sd/retrodeck/texture_packs/Dolphin/Textures"],
+            symlinks={dolphin_side: "/mnt/sd/retrodeck/texture_packs/Dolphin"},
+        )
+        assert self._findings(rd) == []
+
+    def test_an_absent_hub_tree_checks_nothing(self):
+        rd = self._rd(dirs=[self.EMULATOR_SIDE])
+        assert self._findings(rd) == []
+
+    def test_a_version_the_table_never_read_checks_nothing(self):
+        other = self.VERSIONED_JSON.replace("0.10.9b", "0.11.0b")
+        rd = self._rd(marker=other, dirs=[self.HUB_TREE, self.EMULATOR_SIDE])
+        assert self._findings(rd) == []
+
+    def test_a_marker_without_a_version_checks_nothing(self):
+        rd = self._rd(marker=RD_JSON, dirs=[self.HUB_TREE, self.EMULATOR_SIDE])
+        assert self._findings(rd) == []
+
+    def test_an_unstatable_emulator_side_supports_no_claim(self):
+        rd = self._rd(dirs=[self.HUB_TREE], inaccessible=[self.EMULATOR_SIDE])
+        assert self._findings(rd) == []
+
+
 class TestRetroDeckPaths:
     def test_roots_from_json(self):
         rd = _retrodeck({RETRODECK_JSON: RD_JSON})

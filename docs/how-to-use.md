@@ -106,16 +106,17 @@ if not health.ok:
 A finding is a `Caveat` like any other — stable `code`, machine-readable `data`, human `message` — so the same branching
 works on it. What each finding carries:
 
-| code                       | `data`            | what it says                                                        |
-| -------------------------- | ----------------- | ------------------------------------------------------------------- |
-| `marker-missing`           | `path`            | the config marker this arrangement is detected by is not there      |
-| `marker-unreadable`        | `path`, `status`  | it exists and its bytes could not be read (`status` is the read)    |
-| `marker-invalid`           | `path`[, `key`]   | it parsed to something unusable; `key` names the offending entry    |
-| `root-missing`             | `path`            | the installation's own root is not an existing directory            |
-| `saves-root-missing`       | `path`            | its saves root is not an existing directory                         |
-| `config-unreadable`        | `path`, `status`  | a bare RetroArch's `retroarch.cfg` could not be read                |
-| `companion-config-missing` | `path`, `status`  | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
-| `catalogue-invalid`        | `path`, `problem` | an `es_systems.xml` ES-DE refuses its **whole** catalogue load on   |
+| code                       | `data`                                         | what it says                                                        |
+| -------------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| `marker-missing`           | `path`                                         | the config marker this arrangement is detected by is not there      |
+| `marker-unreadable`        | `path`, `status`                               | it exists and its bytes could not be read (`status` is the read)    |
+| `marker-invalid`           | `path`[, `key`]                                | it parsed to something unusable; `key` names the offending entry    |
+| `root-missing`             | `path`                                         | the installation's own root is not an existing directory            |
+| `saves-root-missing`       | `path`                                         | its saves root is not an existing directory                         |
+| `config-unreadable`        | `path`, `status`                               | a bare RetroArch's `retroarch.cfg` could not be read                |
+| `companion-config-missing` | `path`, `status`                               | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
+| `catalogue-invalid`        | `path`, `problem`                              | an `es_systems.xml` ES-DE refuses its **whole** catalogue load on   |
+| `content-tree-unwired`     | `family`, `hub`, `path`, `problem`[, `target`] | a texture/mods hub tree exists that no emulator-side link reaches   |
 
 `catalogue-invalid` is the hardest of them (issue #100): a systems file that does not parse (`problem: "parse-error"`)
 or carries no document-level `<systemList>` (`"missing-systemlist"`) aborts ES-DE's whole load — the frontend runs with
@@ -124,6 +125,19 @@ instead of enumerating layers the running frontend does not have. It fires only 
 atlas cannot read may parse fine for the frontend, and stays the unknown it always was. It rides the `health()` question
 and every answer whose question reads the catalogue — an answer that never opens the catalogue cannot state its parse
 state, by the one-read consistency model.
+
+`content-tree-unwired` is the upgraded-without-reset state (issue #104). RetroDECK files texture packs and mods in two
+hub directories and reaches them from each emulator by replacing the emulator-side directory with a symlink — a pair its
+preparation creates together, and an in-place upgrade re-creates only in version-gated patches. An installation upgraded
+without a reset can therefore carry a hub tree whose emulator-side path is a plain directory of the emulator's own:
+content filed in the hub then never reaches it, silently. The finding names the pair (`family` is `texture_packs` or
+`mods`, `hub` the tree, `path` the emulator side) and how it is broken (`problem`: `"missing"`, `"not-a-link"`, or
+`"diverted"` with `target` naming where the link actually settles). Three gates keep it honest: it fires only when the
+marker names exactly the RetroDECK version the packaged wiring table was read at (any other version made promises atlas
+never read), only for a hub tree that exists (nothing can be filed in one that is not there), and the wired test is
+deliberately weak — a link settling _anywhere_ in the family's hub counts as wired, because older RetroDECK versions
+linked coarser hub layouts and those links still route. Unlike `catalogue-invalid` it rides the `health()` question
+alone: no other answer's question reads the wiring state.
 
 The findings also travel **in the answers themselves**: every answer computed on a broken installation — a placement, a
 catalogue answer, a systems listing, any of the four firmware answers — carries them in its own `caveats`, ahead of what
@@ -643,6 +657,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `config-unreadable`                         | health: a bare RetroArch's `retroarch.cfg` could not be read                                        |
 | `companion-config-missing`                  | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                         |
 | `catalogue-invalid`                         | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run              |
+| `content-tree-unwired`                      | health: a texture/mods hub tree exists that no emulator-side link reaches — filed content is lost   |
 | `unverified-version`                        | the rule card was never verified against this emulator version                                      |
 | `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)                   |
 | `arrangement-version-drifted`               | it was observed, on another version than this machine runs — re-verification pending                |
@@ -651,11 +666,12 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
-The eight `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
-`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Every
-answer carries them, not just placements, ahead of what the query itself could not resolve. Do not key on the position:
-on the entry route (`EmulatorEntry.savefile_location()`) the entry's own catalogue caveats precede them. Match on the
-codes.
+The nine `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
+`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). The
+marker, root and config findings travel in every answer, not just placements, ahead of what the query itself could not
+resolve; the two findings with their own reads follow the one-read model instead — `catalogue-invalid` rides the answers
+whose question reads the catalogue, `content-tree-unwired` rides `health()` alone. Do not key on the position: on the
+entry route (`EmulatorEntry.savefile_location()`) the entry's own catalogue caveats precede them. Match on the codes.
 
 `content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
 to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the
