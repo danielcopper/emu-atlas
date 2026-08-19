@@ -235,6 +235,10 @@ def main(argv: list[str]) -> int:
         "library_name": name,
         "library_version": _decode(info.library_version),
         "valid_extensions": _decode(info.valid_extensions),
+        # bool(...) because ctypes hands back a c_bool whose truthiness is the
+        # fact; RetroArch reads the same struct field to decide whether an
+        # archive is passed through raw (task_content.c:742).
+        "block_extract": bool(info.block_extract),
     }
     # Phase 1: the base line survives even if phase 2 crashes the process.
     print(json.dumps(base), flush=True)

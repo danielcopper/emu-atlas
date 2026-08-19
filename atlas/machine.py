@@ -198,12 +198,19 @@ class CoreInfo:
     core *generation* better than any version string. ``None`` means *not
     captured* (the probe saw no registration — some cores register later, in
     ``retro_init``): unknown, never "registers nothing".
+
+    ``block_extract`` is the same struct's archive statement
+    (``retro_system_info.block_extract``): true means RetroArch hands the
+    core an archive raw instead of picking a matching file out of it
+    (task_content.c:742, :1735 @ a79435a). ``None`` is a fixture or record
+    that never captured it — unknown, never "false".
     """
 
     library_name: str
     library_version: str | None
     valid_extensions: str | None
     options: Mapping[str, CoreOption] | None = None
+    block_extract: bool | None = None
 
     def __post_init__(self) -> None:
         if self.options is not None:
@@ -556,11 +563,13 @@ def _parse_probe_output(stdout: bytes | None) -> CoreInfo | None:
         return None
     version = data.get("library_version")
     extensions = data.get("valid_extensions")
+    block_extract = data.get("block_extract")
     return CoreInfo(
         library_name=name,
         library_version=version if isinstance(version, str) else None,
         valid_extensions=extensions if isinstance(extensions, str) else None,
         options=_parse_core_options(data.get("options")),
+        block_extract=block_extract if isinstance(block_extract, bool) else None,
     )
 
 
@@ -994,11 +1003,13 @@ class FixtureMachine:
             return None
         version = spec.get("library_version")
         extensions = spec.get("valid_extensions")
+        block_extract = spec.get("block_extract")
         return CoreInfo(
             library_name=name,
             library_version=version if isinstance(version, str) else None,
             valid_extensions=extensions if isinstance(extensions, str) else None,
             options=_parse_core_options(spec.get("options")),
+            block_extract=block_extract if isinstance(block_extract, bool) else None,
         )
 
     def glob(self, pattern: str) -> GlobResult:

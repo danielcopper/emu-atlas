@@ -77,7 +77,7 @@ from atlas.firmware import (
     load_hashes,
     read_core_declarations,
 )
-from atlas.launch_formats import lookup_install_first
+from atlas.launch_formats import lookup_install_first, lookup_standalone_launch
 from atlas.firmware import firmware_for_core as _resolve_for_core
 from atlas.firmware import firmware_for_system as _resolve_for_system
 from atlas.firmware import firmware_inventory as _resolve_inventory
@@ -6831,15 +6831,44 @@ class SystemsAnswer:
 # nobody checked. Each constant spells its code.
 VERDICT_LAUNCHABLE = "launchable"
 VERDICT_NOT_ACCEPTED = "not-accepted"
+# The accept-list is declared per system — the union over every entry — and
+# the command per emulator, so the list can say yes while the entry that
+# actually runs loads nothing (issue #66). This verdict is that split, stated
+# only where the running entry's refusal is ESTABLISHED: a standalone whose
+# recorded loader does not read the format, or a block-extract core handed an
+# archive it does not claim. The remedies differ from not-accepted's, which
+# is why the two never collapse: unpack the container, or select an entry
+# that takes it — ``alternatives`` names the ones established to.
+VERDICT_ENTRY_NOT_ACCEPTED = "entry-not-accepted"
 VERDICT_NEEDS_INSTALLATION = "needs-installation"
 VERDICT_UNKNOWN = "unknown"
 
 LAUNCH_VERDICTS = (
     VERDICT_LAUNCHABLE,
     VERDICT_NOT_ACCEPTED,
+    VERDICT_ENTRY_NOT_ACCEPTED,
     VERDICT_NEEDS_INSTALLATION,
     VERDICT_UNKNOWN,
 )
+
+# The per-entry half of a launchability answer, three statements apart. For a
+# libretro entry the extension list is a CLAIM, not a gate: RetroArch checks
+# nothing on a direct load and hands the file to the core, so a file outside
+# the claims is attempted, never refused — stated, because a client deciding
+# what to bake should know the claim is absent. Archives are the exception
+# that runs through RetroArch's own hands: a container the core does not
+# claim is opened and searched for a file matching the claims
+# (task_content.c:1325-1358 @ a79435a) — what is inside is something atlas
+# does not read. And an entry whose reading nobody established — a standalone
+# without a card, a core that could not be probed — is exactly that, never
+# "refuses".
+CAVEAT_ENTRY_FORMAT_UNCLAIMED = "entry-format-unclaimed"
+CAVEAT_ARCHIVE_CONTENTS_UNREAD = "archive-contents-unread"
+CAVEAT_ENTRY_FORMAT_UNESTABLISHED = "entry-format-unestablished"
+
+_ENTRY_ACCEPTS = "accepts"
+_ENTRY_REFUSES = "refuses"
+_ENTRY_UNESTABLISHED = "unestablished"
 
 
 @dataclass(frozen=True, slots=True)
@@ -6851,15 +6880,18 @@ class LaunchabilityAnswer:
     stated on every verdict so a 'no' shows the exact string that missed.
     ``accepted`` is the system's declared list verbatim, empty where nothing
     was read. ``entry`` is the launch entry that would run — the frontend's
-    own selection hierarchy applied, per-game override first — and it is only
-    ever stated on a ``launchable`` verdict: naming an emulator for a file
-    nothing launches would be an answer to a different question.
+    own selection hierarchy applied, per-game override first — stated on the
+    two verdicts where one exists: ``launchable``, and ``entry-not-accepted``,
+    where the entry *is* the finding. ``alternatives`` travels with the
+    latter alone: the labels of the declared entries established to take the
+    file, which is one of the two remedies that verdict leaves open.
     """
 
     verdict: str
     extension: str
     accepted: tuple[str, ...] = ()
     entry: EmulatorEntry | None = None
+    alternatives: tuple[str, ...] = ()
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
 
@@ -7598,6 +7630,209 @@ def _launchable_with_caveats(
     return cast(LaunchabilityAnswer, _dc_replace(answer, caveats=caveats))
 
 
+class _EntryCoreReader:
+    """The installed core behind a libretro entry — read lazily, each source once.
+
+    The launchability question pays the RetroArch cfg read (and the override
+    files composing its sandbox) only when an entry judgment actually needs a
+    core: a standalone-only judgment never opens them. One cfg snapshot and
+    one probe per ``.so`` serve every entry judged inside one answer, so the
+    running entry and the alternatives can never read two revisions of the
+    same file.
+    """
+
+    def __init__(
+        self,
+        machine: Machine,
+        cfg_path: str,
+        cfg_sandbox: "Callable[[], tuple[_Sandbox, tuple[str, ...]]]",
+    ) -> None:
+        self._machine = machine
+        self._cfg_path = cfg_path
+        self._cfg_sandbox = cfg_sandbox
+        self._context: tuple[_Sandbox, str | None] | None = None
+        self._infos: dict[str, CoreInfo | None] = {}
+        self.sources: tuple[str, ...] = ()
+
+    def __call__(self, entry: EmulatorEntry) -> CoreInfo | None:
+        if entry.core_so is None:
+            return None
+        if entry.core_so in self._infos:
+            return self._infos[entry.core_so]
+        if self._context is None:
+            sandbox, self.sources = self._cfg_sandbox()
+            self._context = (sandbox, self._machine.read_text(self._cfg_path).text)
+        sandbox, global_text = self._context
+        lookup = _core_path_from(sandbox, global_text, entry.core_so)
+        info = self._machine.query_core(lookup.so_path) if lookup.so_path is not None else None
+        self._infos[entry.core_so] = info
+        return info
+
+
+def _loader_archive_token(extension: str) -> bool:
+    """Whether RetroArch's loader treats this extension as a compressed container.
+
+    ``path_is_compressed_file`` replicated exactly (file_path.c:294-320 @
+    a79435a): ``zip``, ``zst`` and ``apk`` case-folded per character — and
+    ``7z`` folding only its first position, so a ``.7Z`` is *not* compressed
+    to this loader. The quirk is upstream's, and smoothing it over would
+    state a behaviour the shipped binary does not have.
+    """
+    rest = extension[1:] if extension.startswith(".") else extension
+    if len(rest) == 2 and rest[0] == "7":
+        return rest[1] == "z"
+    return rest.lower() in ("zip", "zst", "apk")
+
+
+def _core_claims(info: CoreInfo | None) -> frozenset[str] | None:
+    """The core's ``valid_extensions``, split and folded the way RetroArch matches them.
+
+    Lowercase because every comparison RetroArch makes against this list is
+    case-insensitive (``string_list_find_elem``'s ``|32`` folding and the
+    archive filter's ``tolower``, string_list.c:342-390 @ a79435a). ``None``
+    is a core nobody read, never an empty claim.
+    """
+    if info is None or info.valid_extensions is None:
+        return None
+    return frozenset(token.lower() for token in info.valid_extensions.split("|") if token)
+
+
+def _entry_reading(
+    entry: EmulatorEntry,
+    *,
+    extension: str,
+    core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """One entry's stance on one extension: accepts, refuses, or unestablished.
+
+    The two kinds of entry split along the boundary rule (issue #66). A
+    libretro entry's claims are read live off the installed core, and they
+    are claims: RetroArch checks nothing on a direct load, so a file outside
+    them is attempted with a statement, never refused — except an archive,
+    which runs through RetroArch's own hands (extracted and searched by the
+    claims, or handed raw to a ``block_extract`` core that never claimed
+    it, which is the one libretro refusal this can establish). A standalone
+    entry opens the file itself: its recorded loader decides, and an
+    emulator without a card is an entry nobody read.
+    """
+    if entry.kind == KIND_LIBRETRO:
+        return _libretro_entry_reading(entry, extension=extension, info=core_info_for(entry))
+    return _standalone_entry_reading(entry, extension=extension)
+
+
+def _libretro_entry_reading(
+    entry: EmulatorEntry, *, extension: str, info: CoreInfo | None
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """The libretro half of :func:`_entry_reading` — claims, and RetroArch's archive hands."""
+    bare = extension[1:].lower() if extension.startswith(".") and len(extension) > 1 else None
+    claims = _core_claims(info)
+    if claims is None:
+        return (
+            _ENTRY_UNESTABLISHED,
+            (),
+            (
+                Caveat(
+                    CAVEAT_ENTRY_FORMAT_UNESTABLISHED,
+                    f"whether {entry.label!r} reads {extension!r} is not established — the "
+                    "installed core could not be read, and a claim nobody read is not a "
+                    "refusal",
+                    {"entry": entry.label, "extension": extension},
+                ),
+            ),
+        )
+    if bare is not None and bare in claims:
+        return (
+            _ENTRY_ACCEPTS,
+            (
+                f"entry {entry.label!r}: the installed core claims {extension!r} "
+                "(valid_extensions, read live off the binary; RetroArch's comparisons "
+                "against that list fold case, string_list.c:342-390 @ a79435a)",
+            ),
+            (),
+        )
+    if _loader_archive_token(extension):
+        if info is not None and info.block_extract:
+            return (
+                _ENTRY_REFUSES,
+                (
+                    f"entry {entry.label!r}: the core does not claim {extension!r} and sets "
+                    "block_extract, so RetroArch hands it the archive raw instead of picking "
+                    "a matching file out of it (task_content.c:742, :1735 @ a79435a) — a "
+                    "container the core never claimed to read",
+                ),
+                (),
+            )
+        return (
+            _ENTRY_ACCEPTS,
+            (),
+            (
+                Caveat(
+                    CAVEAT_ARCHIVE_CONTENTS_UNREAD,
+                    f"{extension!r} is a container RetroArch opens for {entry.label!r}: the "
+                    "first file inside matching the core's claims is what loads "
+                    "(task_content.c:1325-1358 @ a79435a) — whether one is in there is "
+                    "inside the archive, which atlas does not read",
+                    {"entry": entry.label, "extension": extension},
+                ),
+            ),
+        )
+    return (
+        _ENTRY_ACCEPTS,
+        (),
+        (
+            Caveat(
+                CAVEAT_ENTRY_FORMAT_UNCLAIMED,
+                f"the installed core behind {entry.label!r} does not claim {extension!r} — "
+                "RetroArch checks nothing on a direct load and hands the file over, so the "
+                "core will attempt it and may fail; the claim's absence is stated, not a "
+                "refusal",
+                {"entry": entry.label, "extension": extension},
+            ),
+        ),
+    )
+
+
+def _standalone_entry_reading(
+    entry: EmulatorEntry, *, extension: str
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """The standalone half of :func:`_entry_reading` — the recorded loader decides."""
+    card = lookup_standalone_launch(emulator_token(entry.command))
+    if card is None:
+        return (
+            _ENTRY_UNESTABLISHED,
+            (),
+            (
+                Caveat(
+                    CAVEAT_ENTRY_FORMAT_UNESTABLISHED,
+                    f"what {entry.label!r} reads is not established — no card covers this "
+                    "standalone emulator's loader, which says nothing about whether it takes "
+                    f"{extension!r}",
+                    {"entry": entry.label, "extension": extension},
+                ),
+            ),
+        )
+    if card.takes(extension):
+        return (
+            _ENTRY_ACCEPTS,
+            (f"entry {entry.label!r}: its own loader reads {extension!r} — {card.source}",),
+            (),
+        )
+    archive_note = (
+        " (an archive container, and this loader opens none — no RetroArch stands in front of "
+        "a standalone to pick a file out of it)"
+        if _loader_archive_token(extension) and not card.archives
+        else ""
+    )
+    return (
+        _ENTRY_REFUSES,
+        (
+            f"entry {entry.label!r}: its own loader does not read {extension!r}{archive_note} — "
+            f"{card.source}",
+        ),
+        (),
+    )
+
+
 def _launchability_verdict(
     *,
     system: str,
@@ -7605,13 +7840,21 @@ def _launchability_verdict(
     declaration: SystemDeclaration | None,
     entries: tuple[EmulatorEntry, ...],
     complete: bool,
-) -> tuple[str, EmulatorEntry | None, tuple[str, ...], tuple[Caveat, ...]]:
+    core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
+) -> tuple[str, EmulatorEntry | None, tuple[str, ...], tuple[str, ...], tuple[Caveat, ...]]:
     """One (declaration, extension) pair's verdict — shared by every ES-DE-driven handle.
 
-    Returns ``(verdict, entry, sources, own caveats)``. Module-level for the
-    reason :func:`_entries_from` is: the match is ES-DE's, not an
-    arrangement's, and two copies of it are how "launchable here" and
-    "launchable there" would silently mean different comparisons.
+    Returns ``(verdict, entry, alternatives, sources, own caveats)``.
+    Module-level for the reason :func:`_entries_from` is: the match is
+    ES-DE's, not an arrangement's, and two copies of it are how "launchable
+    here" and "launchable there" would silently mean different comparisons.
+
+    An accepted extension is judged one level further (issue #66): the entry
+    that would run gets :func:`_entry_reading`'s stance, and an established
+    refusal flips the verdict to ``entry-not-accepted`` — the accept-list is
+    the union over every entry, and the machine then does nothing at all. The
+    other declared entries are judged only then, because ``alternatives`` is
+    that verdict's remedy and nobody else's read.
 
     The unknowns split three ways and only one earns ``system-unknown``: a
     catalogue read **completely** that declares no such system. An incomplete
@@ -7624,10 +7867,11 @@ def _launchability_verdict(
     """
     if declaration is None:
         if not complete:
-            return VERDICT_UNKNOWN, None, (), ()
+            return VERDICT_UNKNOWN, None, (), (), ()
         return (
             VERDICT_UNKNOWN,
             None,
+            (),
             (),
             (
                 Caveat(
@@ -7644,6 +7888,7 @@ def _launchability_verdict(
             VERDICT_UNKNOWN,
             None,
             (),
+            (),
             (
                 Caveat(
                     CAVEAT_SYSTEM_UNKNOWN,
@@ -7655,30 +7900,46 @@ def _launchability_verdict(
             ),
         )
     if extension in declaration.extensions:
-        return (
-            VERDICT_LAUNCHABLE,
-            entries[0] if entries else None,
-            (
-                f"accept-list match: the file yields {extension!r} (its name from the last dot, "
-                "case preserved — FileSystemUtil.cpp:630-645 @ v3.4.1) and the system's "
-                "<extension> list declares that exact token (the scan compares exactly, "
-                "SystemData.cpp:669)",
-                "the accept-list is declared per system — whether the entry that runs reads this "
-                "format is per-emulator knowledge atlas does not yet state (issue #66)",
-            ),
-            (),
+        match_source = (
+            f"accept-list match: the file yields {extension!r} (its name from the last dot, "
+            "case preserved — FileSystemUtil.cpp:630-645 @ v3.4.1) and the system's "
+            "<extension> list declares that exact token (the scan compares exactly, "
+            "SystemData.cpp:669)"
         )
+        entry = entries[0] if entries else None
+        if entry is None:
+            return VERDICT_LAUNCHABLE, None, (), (match_source,), ()
+        stance, entry_sources, entry_caveats = _entry_reading(
+            entry, extension=extension, core_info_for=core_info_for
+        )
+        if stance == _ENTRY_REFUSES:
+            alternatives = tuple(
+                other.label
+                for other in entries[1:]
+                if _entry_reading(other, extension=extension, core_info_for=core_info_for)[0]
+                == _ENTRY_ACCEPTS
+            )
+            return (
+                VERDICT_ENTRY_NOT_ACCEPTED,
+                entry,
+                alternatives,
+                (match_source, *entry_sources),
+                entry_caveats,
+            )
+        return VERDICT_LAUNCHABLE, entry, (), (match_source, *entry_sources), entry_caveats
     record = lookup_install_first(system, extension)
     if record is not None:
         return (
             VERDICT_NEEDS_INSTALLATION,
             None,
+            (),
             (f"install-first format {extension!r} for {system}: {record.statement} — {record.source}",),
             (),
         )
     return (
         VERDICT_NOT_ACCEPTED,
         None,
+        (),
         (
             f"the file yields {extension!r} and the system's <extension> list "
             f"({' '.join(declaration.extensions)}) carries no such token — the comparison is "
@@ -8521,12 +8782,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
         )
         declaration = by_system.get(system)
-        verdict, entry, sources, own = _launchability_verdict(
+        core_reader = _EntryCoreReader(
+            self._machine,
+            os.path.join(self._home, RETRODECK_CFG_SUFFIX),
+            self._cfg_sandbox,
+        )
+        verdict, entry, alternatives, sources, own = _launchability_verdict(
             system=system,
             extension=extension,
             declaration=declaration,
             entries=entries,
             complete=True,
+            core_info_for=core_reader,
         )
         return (
             LaunchabilityAnswer(
@@ -8534,8 +8801,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 extension=extension,
                 accepted=declaration.extensions if declaration is not None else (),
                 entry=entry,
+                alternatives=alternatives,
                 sources=(
                     _CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,
+                    *core_reader.sources,
                     *sources,
                 ),
                 caveats=(*findings, *invalid, *status, *own, *anchor.caveats),
@@ -9942,12 +10211,16 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
         )
         declaration = snapshot.by_system.get(system)
-        verdict, entry, sources, own = _launchability_verdict(
+        core_reader = _EntryCoreReader(
+            self._machine, self._companion_cfg_path(), self._cfg_sandbox
+        )
+        verdict, entry, alternatives, sources, own = _launchability_verdict(
             system=system,
             extension=extension,
             declaration=declaration,
             entries=entries,
             complete=snapshot.complete,
+            core_info_for=core_reader,
         )
         return (
             LaunchabilityAnswer(
@@ -9955,8 +10228,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 extension=extension,
                 accepted=declaration.extensions if declaration is not None else (),
                 entry=entry,
+                alternatives=alternatives,
                 sources=(
                     _CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,
+                    *core_reader.sources,
                     *sources,
                 ),
                 caveats=(*snapshot.findings, *snapshot.tail, *own, *anchor.caveats),

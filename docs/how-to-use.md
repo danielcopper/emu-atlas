@@ -664,6 +664,9 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `arrangement-version-drifted`               | it was observed, on another version than this machine runs — re-verification pending                |
 | `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read         |
 | `config-home-relocated`                     | EmuDeck entry route: a `portable.txt` may have moved ES-DE's tree — reads may not be in force       |
+| `entry-format-unclaimed`                    | launchable: the running core does not claim this format — attempted, never refused                  |
+| `archive-contents-unread`                   | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread     |
+| `entry-format-unestablished`                | launchable: what the running entry reads was never established — not the same as "refuses"          |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
@@ -1214,25 +1217,30 @@ answer is no, **which kind of no** (issue #36). The accept-list above is the rea
 
 ```python
 answer = inst.launchable("dreamcast", "/run/media/deck/roms/dreamcast/Game (Track 1).bin")
-answer.verdict     # 'launchable' | 'not-accepted' | 'needs-installation' | 'unknown'
-answer.extension   # '.bin' — the token ES-DE derives (name from the last dot, case preserved)
-answer.accepted    # ('.chd', '.cue', '.gdi') — the system's declared list, verbatim
-answer.entry       # the launch entry that would run — only ever on 'launchable'
+answer.verdict       # 'launchable' | 'not-accepted' | 'entry-not-accepted' | 'needs-installation' | 'unknown'
+answer.extension     # '.bin' — the token ES-DE derives (name from the last dot, case preserved)
+answer.accepted      # ('.chd', '.cue', '.gdi') — the system's declared list, verbatim
+answer.entry         # the entry that would run — on 'launchable' and 'entry-not-accepted'
+answer.alternatives  # entry labels established to take the file — on 'entry-not-accepted' alone
 ```
 
 The match is exactly ES-DE's: the file name's token from its **last** dot, case preserved, compared **exactly** against
 the declared tokens — which is why catalogues list `.z64` and `.Z64` separately, and why a `.CHD` file on a `.chd`-only
 list is genuinely `not-accepted` (the frontend never scans it). A name without a dot yields `"."`, ES-DE's own sentinel.
 
-The four verdicts never collapse:
+The five verdicts never collapse:
 
 - **`launchable`** — the list accepts the token; `entry` is the emulator that would run, resolved through the same
-  selection hierarchy `emulators_for` applies (per-game override first). One boundary is stated in the sources rather
-  than silently crossed: the accept-list is declared per _system_ and the command per _emulator_, so a file the list
-  accepts may still be one the entry that runs cannot read — issue #66 tracks resolving that per entry.
+  selection hierarchy `emulators_for` applies (per-game override first), and judged one level further (issue #66, see
+  below).
 - **`not-accepted`** — no declared token equals the derived one. The remedy is the consumer's: pick the `.gdi` instead
   of its track file, unpack the container, or select an entry that accepts it. `extension` and `accepted` carry
   everything that decision needs.
+- **`entry-not-accepted`** — the list accepts the token and the entry that would run is **established** not to read it:
+  the accept-list is declared per _system_ (the union over every entry) while the command is per _emulator_, so the
+  union can say yes and the machine then does nothing at all. `entry` names the refusing entry — it _is_ the finding —
+  and `alternatives` the declared entries established to take the file; the remedies are that verdict's own (unpack, or
+  select one of them), which is why it never collapses into `not-accepted`.
 - **`needs-installation`** — the format is real content for the platform and an installation step has to run before
   anything launches: recorded world knowledge with its citation in the sources (`atlas/data/launch_formats.json` — a PSN
   `.pkg` is the case that founded it). Never collapsed into `not-accepted`, because "find another file" is the wrong
@@ -1240,6 +1248,16 @@ The four verdicts never collapse:
 - **`unknown`** — the system is not one this catalogue declares, the catalogue could not be read, or (EmuDeck) the layer
   that might declare it is sealed inside the AppImage. A statement about the look, never about the file — the riding
   caveats say which, and a client that treated it as either 'no' would be told something nobody checked.
+
+**The per-entry judgment** splits along the boundary rule. A **libretro** entry's formats are read live off the
+installed core, and they are _claims_, not gates: RetroArch checks nothing on a direct load and hands the file over, so
+a file outside the claims stays `launchable` with `entry-format-unclaimed` stating the absent promise. Archives run
+through RetroArch's own hands — a container the core does not claim is opened and searched for the first file matching
+the claims, so the verdict stands with `archive-contents-unread` (what is inside is something atlas does not read); a
+`block_extract` core handed a container it never claimed is the one libretro refusal this can establish. A
+**standalone** entry opens the file itself: its recorded loader decides (`launch_formats.json`'s `emulators` block,
+matched case-insensitively — the gate is the loader, not ES-DE's case-exact scan), and an emulator without a card earns
+`entry-format-unestablished` — never "refuses", because an entry nobody read is not an entry known to refuse the file.
 
 ## Firmware
 
