@@ -445,6 +445,121 @@ class TestLaunchable:
         assert atlas.CAVEAT_SYSTEM_UNKNOWN not in codes
 
 
+class TestADerivedEmulatorList:
+    """Issue #133: a catalogue-less arrangement's emulator list, from the cores' own .info."""
+
+    CFG_PATH = f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg"
+    CORES_DIR = f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/cores"
+    CFG = (
+        'savefile_directory = "~/saves"\n'
+        f'libretro_directory = "{CORES_DIR}"\nlibretro_info_path = "{CORES_DIR}"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+    )
+    MGBA_INFO = (
+        'corename = "mGBA"\nsystemname = "Game Boy Advance"\nfirmware_count = "0"\n'
+    )
+
+    def _bare(self):
+        machine = FixtureMachine(
+            {
+                self.CFG_PATH: self.CFG,
+                f"{self.CORES_DIR}/mgba_libretro.info": self.MGBA_INFO,
+            },
+            cores={f"{self.CORES_DIR}/mgba_libretro.so": {"library_name": "mGBA"}},
+            dirs=[f"{HOME}/saves"],
+        )
+        return atlas.BareRetroArchFlatpak(HOME, machine)
+
+    def test_the_entries_are_the_cores_with_their_own_names(self):
+        answer = self._bare().emulators_for("gba")
+        assert [(e.label, e.core_so, e.kind) for e in answer.entries] == [
+            ("mGBA", "mgba_libretro.so", atlas.KIND_LIBRETRO)
+        ]
+        # No catalogue declares a command — empty is the honest statement.
+        assert answer.entries[0].command == ""
+        codes = [c.code for c in answer.caveats]
+        assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in codes
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE in codes
+
+    def test_a_derived_entry_answers_the_save_question(self):
+        # The client gain: the entry route works, because a derived entry is a
+        # core and the core question has always been answerable here.
+        entry = self._bare().emulators_for("gba").entries[0]
+        placement = placed(entry.savefile_location(content_path="/roms/gba/Game.gba"))
+        assert placement.dir == f"{HOME}/saves"
+
+    def test_the_systems_list_is_what_the_cores_file_under(self):
+        answer = self._bare().systems()
+        assert answer.systems == ("gba",)
+        assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in [c.code for c in answer.caveats]
+
+    def test_a_system_no_core_files_under_is_empty_and_derived(self):
+        answer = self._bare().emulators_for("n64")
+        assert answer.entries == ()
+        assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in [c.code for c in answer.caveats]
+
+    def test_emudeck_derives_where_the_readable_layers_are_silent(self):
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\n',
+                STANDALONE_CFG: self.CFG,
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": (
+                    '<?xml version="1.0"?><systemList></systemList>'
+                ),
+                f"{self.CORES_DIR}/mgba_libretro.info": self.MGBA_INFO,
+            },
+            cores={f"{self.CORES_DIR}/mgba_libretro.so": {"library_name": "mGBA"}},
+        )
+        answer = atlas.EmuDeck(HOME, machine).emulators_for("gba")
+        assert [e.label for e in answer.entries] == ["mGBA"]
+        codes = [c.code for c in answer.caveats]
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
+        assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in codes
+
+    def test_emudecks_systems_list_joins_the_derived_ones_while_sealed(self):
+        overlay = (
+            '<?xml version="1.0"?><systemList><system><name>atarijaguar</name>'
+            "<path>%ROMPATH%/atarijaguar</path><extension>.j64</extension>"
+            '<command label="Virtual Jaguar">%EMULATOR_RETROARCH% -L '
+            "%CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>"
+            "</system></systemList>"
+        )
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\n',
+                STANDALONE_CFG: self.CFG,
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": overlay,
+                f"{self.CORES_DIR}/mgba_libretro.info": self.MGBA_INFO,
+            },
+            cores={f"{self.CORES_DIR}/mgba_libretro.so": {"library_name": "mGBA"}},
+        )
+        answer = atlas.EmuDeck(HOME, machine).systems()
+        assert answer.systems == ("atarijaguar", "gba")
+        assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in [c.code for c in answer.caveats]
+
+    def test_emudeck_keeps_the_catalogue_where_the_overlay_declares(self):
+        # A declared system stays the frontend's own answer — the derivation
+        # never overrides a read.
+        overlay = (
+            '<?xml version="1.0"?><systemList><system><name>gba</name>'
+            "<path>%ROMPATH%/gba</path><extension>.gba</extension>"
+            '<command label="mGBA (Standalone)">%EMULATOR_MGBA% %ROM%</command>'
+            "</system></systemList>"
+        )
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\n',
+                STANDALONE_CFG: self.CFG,
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": overlay,
+                f"{self.CORES_DIR}/mgba_libretro.info": self.MGBA_INFO,
+            },
+            cores={f"{self.CORES_DIR}/mgba_libretro.so": {"library_name": "mGBA"}},
+        )
+        answer = atlas.EmuDeck(HOME, machine).emulators_for("gba")
+        assert [e.label for e in answer.entries] == ["mGBA (Standalone)"]
+        assert atlas.CAVEAT_EMULATOR_LIST_DERIVED not in [c.code for c in answer.caveats]
+
+
 class TestRetroDeckPaths:
     def test_roots_from_json(self):
         rd = _retrodeck({RETRODECK_JSON: RD_JSON})
