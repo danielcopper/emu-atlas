@@ -154,6 +154,63 @@ def _flycast_query(files):
     return placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
 
 
+FLYCAST_SLOT2_REGISTERED = {
+    **FLYCAST_REGISTERED,
+    **{
+        f"reicast_device_port{i}_slot2": {
+            "default": "Purupuru",
+            "values": ["VMU", "Purupuru", "None"],
+        }
+        for i in (1, 2, 3, 4)
+    },
+}
+
+
+class TestFlycastSlot2ObservationGate:
+    """Issue #89: a slot-2 card that cannot exist here is not probed blind."""
+
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        ROM: "",
+        "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": {"status": "invalid-text"},
+        "/mnt/sd/retrodeck/bios/dc/vmu_save_A2.bin": {"status": "invalid-text"},
+        OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+    }
+
+    def _query(self, files, registered=FLYCAST_SLOT2_REGISTERED):
+        core = {"library_name": "Flycast", "options": registered}
+        rd = _retrodeck(files, cores={f"{DEPLOY}/flycast_libretro.so": core})
+        return placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
+
+    def test_the_registered_default_rules_the_stale_card_out(self):
+        p = self._query(self.FILES)
+        assert p.file_set.state == "observed"
+        assert "vmu_save_A2.bin" not in p.file_set.files
+        assert p.granularity is not None
+        slot2 = [r for r in p.granularity.readings if r.key.endswith("_slot2")]
+        assert [(r.key, r.value) for r in slot2] == [
+            (f"reicast_device_port{i}_slot2", "Purupuru") for i in (1, 2, 3, 4)
+        ]
+
+    def test_a_slot_set_to_vmu_keeps_its_candidate(self):
+        p = self._query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n'
+                'reicast_device_port1_slot2 = "VMU"\n',
+            }
+        )
+        assert "vmu_save_A2.bin" in p.file_set.files
+
+    def test_a_switch_nobody_could_read_excludes_nothing(self):
+        # "Cannot exist" is a claim, not a default: without the registration
+        # and without a stored value, the candidates stay and the probe is
+        # as blind as it always was.
+        p = self._query(self.FILES, registered=FLYCAST_REGISTERED)
+        assert "vmu_save_A2.bin" in p.file_set.files
+
+
 MAME_ROM = "/mnt/sd/retrodeck/roms/arcade/dkong.zip"
 MAME_REGISTERED = {
     "mame_mame_paths_enable": {"default": "disabled", "values": ["disabled", "enabled"]},

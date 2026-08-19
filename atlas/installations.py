@@ -1534,6 +1534,10 @@ def _option_confirmed_choice(card: CoreCard, registered: Mapping[str, CoreOption
     return _CardChoice(
         card=card,
         live_option=live_option,
+        # The full registration travels too: an observation gate reads
+        # switches beyond the governing one, and their registered defaults
+        # are live facts exactly like the governing option's (issue #89).
+        live_options=registered,
         sources=(
             f"feature-detected: core registers {card.option_key!r} (default "
             f"{live_option.default!r}, values {list(live_option.values)}) — card generation "
@@ -1742,12 +1746,56 @@ class _CardApplication:
 
     ``card`` comes back ``None`` when the card stepped aside — the answer then
     falls through to the standard rule, with the mismatch stated.
+    ``excluded_observations`` are observe candidates a live switch rules out
+    (an observation gate, issue #89): names the mode would have probed blind
+    and this machine's configuration says cannot exist.
     """
 
     card: CoreCard | None = None
     mode: SaveMode | None = None
     granularity: Granularity | None = None
     caveats: tuple[Caveat, ...] = ()
+    excluded_observations: frozenset[str] = frozenset()
+
+
+# ---------------------------------------------------------------------------
+# Observation gates — a mode's observe candidates refined by switches the card
+# does not select its modes with (issue #89). A gate is code keyed by (card,
+# mode), the same split the selection rules make: the card states what *can*
+# exist, the gate reads what this machine's switches rule out, and the reason
+# rides the answer as readings. A gate only ever *removes* candidates, and
+# only on an established value — a switch nobody could read excludes nothing,
+# because "cannot exist" is a claim, not a default.
+# ---------------------------------------------------------------------------
+
+# flycast@1dac369: a slot-2 VMU file exists only while the port's expansion
+# slot holds the VMU device — reicast_device_port{1..4}_slot2 registers
+# VMU|Purupuru|None with default Purupuru (libretro_core_options.h:995-1008),
+# and only the literal "VMU" maps to MDT_SegaVMU (libretro.cpp:996-1010), so
+# on a default machine no vmu_save_<port>2.bin can appear. The main-device
+# options can only *further* forbid a slot (a non-controller device forces
+# both expansions to None, libretro.cpp:990-993, :1013-1017), so excluding on
+# the slot option alone never rules out a file that could exist.
+_FLYCAST_SLOT2_PORTS = tuple(zip("1234", "ABCD"))
+
+
+def _flycast_slot2_gate(
+    read_option: "Callable[[str], OptionReading]",
+) -> tuple[frozenset[str], tuple[OptionReading, ...]]:
+    excluded: set[str] = set()
+    readings: list[OptionReading] = []
+    for port, letter in _FLYCAST_SLOT2_PORTS:
+        reading = read_option(f"reicast_device_port{port}_slot2")
+        readings.append(reading)
+        if reading.value is not None and reading.value != "VMU":
+            excluded.add(f"vmu_save_{letter}2.bin")
+    return frozenset(excluded), tuple(readings)
+
+
+_OBSERVATION_GATES: Mapping[
+    tuple[str, str],
+    "Callable[[Callable[[str], OptionReading]], tuple[frozenset[str], tuple[OptionReading, ...]]]",
+] = {("flycast", "disabled"): _flycast_slot2_gate}
 
 
 def _apply_card(
@@ -1848,12 +1896,37 @@ def _apply_card(
             card, opt_value=opt_value, effective_default=effective_default, live_option=live_option
         )
         caveats.append(caveat)
+    excluded: frozenset[str] = frozenset()
+    gate_readings: tuple[OptionReading, ...] = ()
+    gate = _OBSERVATION_GATES.get((card.key, opt_value)) if applied is not None else None
+    if gate is not None:
+
+        def _read_gate_option(key: str) -> OptionReading:
+            live = (live_options or {}).get(key)
+            value, source, gate_file = _core_options_value(
+                machine,
+                override_config_dir=gates.override_config_dir,
+                global_file=option_gates.global_file,
+                library_name=library_name,
+                content_dir_name=content.dir_name,
+                rom_stem=content.rom_stem,
+                option_key=key,
+                option_default=live.default if live is not None else None,
+                game_specific_options=option_gates.game_specific_options,
+                per_core_options=option_gates.per_core_options,
+            )
+            return OptionReading(key, value, source, gate_file)
+
+        excluded, gate_readings = gate(_read_gate_option)
     granularity = None
     if applied is not None and mode is not None:
         granularity = Granularity(
             value=mode.granularity,
             mode=opt_value,
-            readings=(OptionReading(card.option_key, opt_value, opt_source, options_file),),
+            readings=(
+                OptionReading(card.option_key, opt_value, opt_source, options_file),
+                *gate_readings,
+            ),
             alternatives=tuple(
                 ModeAlternative(
                     mode=value,
@@ -1865,7 +1938,13 @@ def _apply_card(
             ),
             provenance=opt_source,
         )
-    return _CardApplication(card=applied, mode=mode, granularity=granularity, caveats=tuple(caveats))
+    return _CardApplication(
+        card=applied,
+        mode=mode,
+        granularity=granularity,
+        caveats=tuple(caveats),
+        excluded_observations=excluded,
+    )
 
 
 class _ConsultedOptions(Mapping[str, "str | None"]):
@@ -2153,6 +2232,7 @@ def _card_file_set(
     rom_stem: str | None,
     content_dir_name: str | None,
     observable: bool,
+    excluded: frozenset[str] = frozenset(),
 ) -> FileSet:
     """What the card says lies in its own directory — declared, or observed there.
 
@@ -2177,8 +2257,11 @@ def _card_file_set(
         )
     # Observation candidates may be wider than the declared defaults —
     # e.g. Flycast's slot-2 VMUs exist only when configured (REVIEW M2).
+    # An observation gate narrows them back where a live switch says a
+    # candidate cannot exist here (issue #89): a stale file under an excluded
+    # name is not part of what this configuration reads or writes.
     observe = _card_files(mode.observe, rom_stem) if mode.observe is not None else None
-    candidates = observe if observe is not None else declared
+    candidates = tuple(f for f in (observe if observe is not None else declared) if f not in excluded)
     present = tuple(f for f in candidates if machine.path_kind(os.path.join(directory, f)) == KIND_FILE)
     if present:
         return FileSet("observed", present, f"observed on the machine: {directory}", complete=mode.complete)
@@ -2574,6 +2657,7 @@ def _card_root_placement(
     content: _Content,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
+    excluded: frozenset[str] = frozenset(),
 ) -> SavefilePlacement:
     """The placement for a card mode rooted somewhere the standard rule is not.
 
@@ -2617,6 +2701,7 @@ def _card_root_placement(
         rom_stem=content.rom_stem,
         content_dir_name=content.dir_name,
         observable=observable,
+        excluded=excluded,
     )
     physical_dir = None
     if observable:
@@ -2647,6 +2732,7 @@ def _system_directory_placement(
     retroarch_config_dir: str,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
+    excluded: frozenset[str] = frozenset(),
 ) -> SavefilePlacement:
     """The placement for a card whose core roots its saves in the system directory.
 
@@ -2674,6 +2760,7 @@ def _system_directory_placement(
         content=content,
         sources=sources,
         caveats=caveats,
+        excluded=excluded,
     )
 
 
@@ -2690,6 +2777,7 @@ def _content_directory_placement(
     retroarch_config_dir: str,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
+    excluded: frozenset[str] = frozenset(),
 ) -> SavefilePlacement:
     """The placement for a card whose core writes into the content's own tree.
 
@@ -2716,6 +2804,7 @@ def _content_directory_placement(
         content=content,
         sources=sources,
         caveats=caveats,
+        excluded=excluded,
     )
 
 
@@ -3669,6 +3758,7 @@ def _working_directory_placement(
     retroarch_config_dir: str,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
+    excluded: frozenset[str] = frozenset(),
 ) -> SavefilePlacement:
     """The placement for a card whose core writes relative to the launch's cwd.
 
@@ -3684,7 +3774,7 @@ def _working_directory_placement(
     The unused parameters keep the three diverted routes one signature, which
     is what lets the router pick a route instead of a call shape.
     """
-    del sandbox, cfg_label, layers, retroarch_config_dir
+    del sandbox, cfg_label, layers, retroarch_config_dir, excluded
     root = _SystemRoot(
         "<cwd>",
         ROOT_WORKING_DIRECTORY,
@@ -3792,6 +3882,7 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
             retroarch_config_dir=retroarch_config_dir,
             sources=tuple(sources_extra),
             caveats=tuple(caveats),
+            excluded=applied.excluded_observations,
         )
 
     cross_parts = _CrossParts()
