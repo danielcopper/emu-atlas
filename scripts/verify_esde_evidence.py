@@ -48,7 +48,10 @@ PACKAGE = "LinuxSteamDeckAppImage"
 
 def _appimage_md5() -> str | None:
     try:
-        digest = hashlib.md5()
+        # md5 because that is the digest the manifest publishes (and the one
+        # EmuDeck's own installer compares); an identity check, not a security
+        # function — which is what usedforsecurity=False states.
+        digest = hashlib.md5(usedforsecurity=False)
         with open(APPIMAGE, "rb") as handle:
             for chunk in iter(lambda: handle.read(1 << 20), b""):
                 digest.update(chunk)
