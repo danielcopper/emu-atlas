@@ -50,33 +50,39 @@ class TestThePackagedTable:
 
 class TestTheLoaderRefusesWhatItCannotState:
     def test_a_family_outside_the_vocabulary_fails(self):
+        table = _table([{**ROW, "family": "cheats"}])
         with pytest.raises(ValueError, match="family"):
-            load_content_tree_wiring(_table([{**ROW, "family": "cheats"}]))
+            load_content_tree_wiring(table)
 
     def test_a_base_outside_the_vocabulary_fails(self):
+        table = _table([{**ROW, "base": "home"}])
         with pytest.raises(ValueError, match="base"):
-            load_content_tree_wiring(_table([{**ROW, "base": "home"}]))
+            load_content_tree_wiring(table)
 
     def test_an_absolute_hub_path_fails(self):
+        table = _table([{**ROW, "hub": "/mnt/sd/hub"}])
         with pytest.raises(ValueError, match="relative"):
-            load_content_tree_wiring(_table([{**ROW, "hub": "/mnt/sd/hub"}]))
+            load_content_tree_wiring(table)
 
     def test_a_parent_escape_fails(self):
+        table = _table([{**ROW, "path": "../outside"}])
         with pytest.raises(ValueError, match="relative"):
-            load_content_tree_wiring(_table([{**ROW, "path": "../outside"}]))
+            load_content_tree_wiring(table)
 
     def test_a_repeated_pair_fails(self):
+        table = _table([ROW, dict(ROW)])
         with pytest.raises(ValueError, match="repeat"):
-            load_content_tree_wiring(_table([ROW, dict(ROW)]))
+            load_content_tree_wiring(table)
 
     def test_a_row_with_extra_keys_fails(self):
+        table = _table([{**ROW, "note": "?"}])
         with pytest.raises(ValueError, match="exactly"):
-            load_content_tree_wiring(_table([{**ROW, "note": "?"}]))
+            load_content_tree_wiring(table)
 
     def test_a_row_without_a_source_fails(self):
-        row = {k: v for k, v in ROW.items() if k != "source"}
+        table = _table([{k: v for k, v in ROW.items() if k != "source"}])
         with pytest.raises(ValueError, match="exactly"):
-            load_content_tree_wiring(_table([row]))
+            load_content_tree_wiring(table)
 
     def test_an_unknown_schema_fails(self):
         with pytest.raises(ValueError, match="schema"):
