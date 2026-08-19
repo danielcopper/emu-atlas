@@ -686,6 +686,17 @@
         "bare": null
       },
       "kind": "libretro"
+    },
+    "citra": {
+      "verdict": "suspect",
+      "per_game_capable": null,
+      "note": "[O] The unfiltered options scan of the shipped citra_libretro.so shows two save-relevant switches nobody has verified — citra_use_libretro_save_path and citra_use_virtual_sd — beside LibRetro::GetSaveDir and the emulated SD's FileSys archives. Which directories those switches actually route, and what the core writes where, has not been read from source; no core-written save has been observed.",
+      "verified": {
+        "retrodeck": null,
+        "emudeck": null,
+        "bare": null
+      },
+      "kind": "libretro"
     }
   }
 }

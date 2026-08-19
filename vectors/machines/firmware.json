@@ -6584,6 +6584,78 @@
           ]
         }
       }
+    },
+    {
+      "name": "emudeck-firmware-a-broken-resource-shadow-claims-nothing",
+      "rationale": "The firmware route over the same broken resource shadow the catalogue vector guarantees: the shadow is the file ES-DE loads instead of the embedded copy, so a shadow that exists and cannot be read means what the catalogue says is unknown — the firmware answer carries the unreadable-catalogue claim instead of enumerating emulators from the overlay alone. Locks in what a live probe established.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/home/deck/ES-DE/resources/systems/linux/es_systems.xml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/system",
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-root-missing",
+              "data": {
+                "path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/system"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {
+                "system": "atarijaguar"
+              }
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "atarijaguar"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
