@@ -292,6 +292,15 @@ which of its values mean _on_. Whether it is on is then read from the options fi
 the default the installed core registers. What is left is what no machine states: the fragment below the root, the
 option's identity, and how the tree is keyed per game.
 
+Every row here and in the mods table carries an `anchors` block, the byte tripwire the rule cards already have — with
+two differences the round that added it forced (issue #105). Containment is **raw bytes**, never a NUL-delimited run:
+several of these literals exist only tail-merged into longer strings, which a delimited needle would miss and call a
+rename. And the **encoding travels with the anchor** (`utf-8` unless stated): one shipped name — mupen64plus_next's
+`hires_texture` — exists only as UTF-32LE. A standalone row's block also names the component `binary` its literals were
+read from, because nothing derives it; a core row's binary is its key. Every recorded name — path segments, option
+settings, config file names — is either anchored or opted out with a reason, and the opt-out list is curated in
+`tests/test_anchor_tripwire.py` (empty today: even LRPS2's source-level settings key pins its own last segment).
+
 ```json
 "flycast": {
   "identifiers": { "library_name": ["Flycast"] },

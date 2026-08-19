@@ -258,6 +258,86 @@ def _absent_switch(value: object, where: str) -> AbsentSwitch | None:
     )
 
 
+# The byte tripwire's data half, shared with the mods table (issue #105).
+# Every name a row records — path segments, option settings, config file
+# names — is either pinned to the raw bytes it was read from, or opted out
+# with the reason that says what does stand behind it. Raw-byte containment
+# rather than NUL-delimited runs, because a tail-merged literal ("load/"
+# living only inside "…-emu/load/") is invisible to every token pass; the
+# encoding travels with the anchor because one shipped name exists only as
+# UTF-32LE. The block is validated here and dropped — audit machinery, not
+# an answer — and the byte check itself is a test.
+ANCHOR_ENCODINGS = ("utf-8", "utf-16le", "utf-32le")
+
+
+def path_segments(*paths: str | None) -> list[str]:
+    """The recorded words of one or more slash-joined paths, in order."""
+    return [segment for path in paths if path for segment in path.split("/") if segment]
+
+
+def expect_table_anchors(
+    value: object, *, where: str, vocabulary: frozenset[str], binary_required: bool
+) -> None:
+    """Validate one row's ``anchors`` block — shape here, bytes in the tests.
+
+    A standalone row names the component binary its literals were read from
+    (``binary``, relative to the components tree), because nothing derives
+    it; a core row's binary is derived from its key, so a restated one could
+    only ever disagree and is refused.
+    """
+    at = f"{where}: anchors"
+    if not isinstance(value, dict) or set(value) - {"binary", "names"} or "names" not in value:
+        raise ValueError(f"{at}: expected {{'binary'?: …, 'names': …}}, got {value!r}")
+    binary = value.get("binary")
+    if binary_required and (not isinstance(binary, str) or not binary):
+        raise ValueError(f"{at}: a standalone row names the component binary its literals were read from")
+    if not binary_required and binary is not None:
+        raise ValueError(f"{at}: a core row's binary is derived from its key — a restated one could only disagree")
+    names = value["names"]
+    if not isinstance(names, dict):
+        raise ValueError(f"{at}: 'names' must be an object of recorded name -> anchor, got {names!r}")
+    for name, anchor in names.items():
+        here = f"{at}[{name!r}]"
+        if name not in vocabulary:
+            raise ValueError(
+                f"{here}: anchors a name this row does not record — an anchor for nothing outlives "
+                "the name it was written for and silently protects the next typo instead"
+            )
+        if not isinstance(anchor, dict) or set(anchor) - {"encoding"} not in ({"literal"}, {"unprotected"}):
+            raise ValueError(
+                f"{here}: expected {{'literal': …, 'encoding'?: …}} or {{'unprotected': …}}, got {anchor!r}"
+            )
+        if "unprotected" in anchor:
+            if "encoding" in anchor:
+                raise ValueError(f"{here}: an encoding belongs to a literal — an opt-out reads no bytes")
+            _expect_str(anchor["unprotected"], f"{here}.unprotected")
+            continue
+        _expect_str(anchor["literal"], f"{here}.literal")
+        encoding = anchor.get("encoding", "utf-8")
+        if encoding not in ANCHOR_ENCODINGS:
+            raise ValueError(f"{here}.encoding: must be one of {ANCHOR_ENCODINGS}, got {encoding!r}")
+
+
+def recorded_texture_core_words(entry: Mapping[str, Any]) -> frozenset[str]:
+    """Every word a core texture row states as this core's own."""
+    textures = entry.get("textures", {})
+    words = path_segments(textures.get("subdir"))
+    for switch in (textures.get("replacement_option"), textures.get("absent_switch")):
+        if isinstance(switch, dict) and isinstance(switch.get("setting"), str):
+            words.append(switch["setting"])
+    return frozenset(words)
+
+
+def recorded_texture_emulator_words(entry: Mapping[str, Any]) -> frozenset[str]:
+    """Every word a standalone texture row states as this emulator's own."""
+    textures = entry.get("textures", {})
+    words = path_segments(textures.get("subdir"))
+    config = textures.get("config")
+    if isinstance(config, dict) and isinstance(config.get("path"), str):
+        words.append(config["path"].rsplit("/", 1)[-1])
+    return frozenset(words)
+
+
 def _texture_card(key: str, entry: Any) -> TextureCard:
     """One core's card — validated, never coerced."""
     where = f"texture card {key!r}"
@@ -286,6 +366,13 @@ def _texture_card(key: str, entry: Any) -> TextureCard:
         raise ValueError(
             f"{where}: a card states either the option that governs replacement or that this build "
             "offers no way to switch it — never both"
+        )
+    if entry.get("anchors") is not None:
+        expect_table_anchors(
+            entry["anchors"],
+            where=where,
+            vocabulary=recorded_texture_core_words(entry),
+            binary_required=False,
         )
     return TextureCard(
         key=key,
@@ -373,6 +460,13 @@ def _standalone_card(token: str, entry: Any) -> StandaloneTextureCard:
     if base not in XDG_BASES:
         raise ValueError(f"{where}: textures.base must be one of {sorted(XDG_BASES)}, got {base!r}")
     keying, citation = _keying(textures.get("keying"), f"{where}: textures.keying")
+    if entry.get("anchors") is not None:
+        expect_table_anchors(
+            entry["anchors"],
+            where=where,
+            vocabulary=recorded_texture_emulator_words(entry),
+            binary_required=True,
+        )
     return StandaloneTextureCard(
         token=token,
         base=base,
