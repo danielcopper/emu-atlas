@@ -1042,6 +1042,91 @@
           ]
         }
       }
+    },
+    {
+      "name": "citras-texture-and-mod-trees-ride-the-open-root-question",
+      "rationale": "Citra's rows land after its audit entry did (#106): the core's own binary spells the user-directory name, the load/ table and both loader templates, keyed by title id — but which root the user directory hangs off is the open question the suspect verdict carries for its saves, so both answers ride emulator-read-unestablished until #98 closes it. The replacement switch is read (citra_custom_textures, registered default disabled); the mod loader has no switch at all, which stays a statement about the core, not about a value nobody read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/mnt/sd/retrodeck/cores\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/cores"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/citra_libretro.so": {
+            "library_name": "Citra",
+            "library_version": "5263fae",
+            "options": {
+              "citra_custom_textures": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "texture_query": {
+          "core_so": "citra_libretro.so"
+        },
+        "mod_query": {
+          "core_so": "citra_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "texture_pack_location": {
+          "dir": "/mnt/sd/retrodeck/saves/citra-emu/load/textures",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": false,
+          "keying": "title-id",
+          "caveats": [
+            {
+              "code": "emulator-read-unestablished",
+              "data": {
+                "core": "citra",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        },
+        "mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/mnt/sd/retrodeck/saves/citra-emu/load/mods",
+              "physical_dir": null,
+              "keying": "title-id"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-read-unestablished",
+              "data": {
+                "core": "citra",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
