@@ -275,6 +275,31 @@ def path_segments(*paths: str | None) -> list[str]:
     return [segment for path in paths if path for segment in path.split("/") if segment]
 
 
+def _expect_anchor_binary(value: object, *, at: str, binary_required: bool) -> None:
+    """The ``binary`` field's one rule per row kind: stated exactly where nothing derives it."""
+    if binary_required and (not isinstance(value, str) or not value):
+        raise ValueError(f"{at}: a standalone row names the component binary its literals were read from")
+    if not binary_required and value is not None:
+        raise ValueError(f"{at}: a core row's binary is derived from its key — a restated one could only disagree")
+
+
+def _expect_one_anchor(anchor: object, *, here: str) -> None:
+    """One anchor: a literal with an optional encoding, or an opt-out with a reason."""
+    if not isinstance(anchor, dict) or set(anchor) - {"encoding"} not in ({"literal"}, {"unprotected"}):
+        raise ValueError(
+            f"{here}: expected {{'literal': …, 'encoding'?: …}} or {{'unprotected': …}}, got {anchor!r}"
+        )
+    if "unprotected" in anchor:
+        if "encoding" in anchor:
+            raise ValueError(f"{here}: an encoding belongs to a literal — an opt-out reads no bytes")
+        _expect_str(anchor["unprotected"], f"{here}.unprotected")
+        return
+    _expect_str(anchor["literal"], f"{here}.literal")
+    encoding = anchor.get("encoding", "utf-8")
+    if encoding not in ANCHOR_ENCODINGS:
+        raise ValueError(f"{here}.encoding: must be one of {ANCHOR_ENCODINGS}, got {encoding!r}")
+
+
 def expect_table_anchors(
     value: object, *, where: str, vocabulary: frozenset[str], binary_required: bool
 ) -> None:
@@ -288,11 +313,7 @@ def expect_table_anchors(
     at = f"{where}: anchors"
     if not isinstance(value, dict) or set(value) - {"binary", "names"} or "names" not in value:
         raise ValueError(f"{at}: expected {{'binary'?: …, 'names': …}}, got {value!r}")
-    binary = value.get("binary")
-    if binary_required and (not isinstance(binary, str) or not binary):
-        raise ValueError(f"{at}: a standalone row names the component binary its literals were read from")
-    if not binary_required and binary is not None:
-        raise ValueError(f"{at}: a core row's binary is derived from its key — a restated one could only disagree")
+    _expect_anchor_binary(value.get("binary"), at=at, binary_required=binary_required)
     names = value["names"]
     if not isinstance(names, dict):
         raise ValueError(f"{at}: 'names' must be an object of recorded name -> anchor, got {names!r}")
@@ -303,19 +324,7 @@ def expect_table_anchors(
                 f"{here}: anchors a name this row does not record — an anchor for nothing outlives "
                 "the name it was written for and silently protects the next typo instead"
             )
-        if not isinstance(anchor, dict) or set(anchor) - {"encoding"} not in ({"literal"}, {"unprotected"}):
-            raise ValueError(
-                f"{here}: expected {{'literal': …, 'encoding'?: …}} or {{'unprotected': …}}, got {anchor!r}"
-            )
-        if "unprotected" in anchor:
-            if "encoding" in anchor:
-                raise ValueError(f"{here}: an encoding belongs to a literal — an opt-out reads no bytes")
-            _expect_str(anchor["unprotected"], f"{here}.unprotected")
-            continue
-        _expect_str(anchor["literal"], f"{here}.literal")
-        encoding = anchor.get("encoding", "utf-8")
-        if encoding not in ANCHOR_ENCODINGS:
-            raise ValueError(f"{here}.encoding: must be one of {ANCHOR_ENCODINGS}, got {encoding!r}")
+        _expect_one_anchor(anchor, here=here)
 
 
 def recorded_texture_core_words(entry: Mapping[str, Any]) -> frozenset[str]:
