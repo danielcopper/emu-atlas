@@ -106,15 +106,24 @@ if not health.ok:
 A finding is a `Caveat` like any other — stable `code`, machine-readable `data`, human `message` — so the same branching
 works on it. What each finding carries:
 
-| code                       | `data`           | what it says                                                        |
-| -------------------------- | ---------------- | ------------------------------------------------------------------- |
-| `marker-missing`           | `path`           | the config marker this arrangement is detected by is not there      |
-| `marker-unreadable`        | `path`, `status` | it exists and its bytes could not be read (`status` is the read)    |
-| `marker-invalid`           | `path`[, `key`]  | it parsed to something unusable; `key` names the offending entry    |
-| `root-missing`             | `path`           | the installation's own root is not an existing directory            |
-| `saves-root-missing`       | `path`           | its saves root is not an existing directory                         |
-| `config-unreadable`        | `path`, `status` | a bare RetroArch's `retroarch.cfg` could not be read                |
-| `companion-config-missing` | `path`, `status` | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
+| code                       | `data`            | what it says                                                        |
+| -------------------------- | ----------------- | ------------------------------------------------------------------- |
+| `marker-missing`           | `path`            | the config marker this arrangement is detected by is not there      |
+| `marker-unreadable`        | `path`, `status`  | it exists and its bytes could not be read (`status` is the read)    |
+| `marker-invalid`           | `path`[, `key`]   | it parsed to something unusable; `key` names the offending entry    |
+| `root-missing`             | `path`            | the installation's own root is not an existing directory            |
+| `saves-root-missing`       | `path`            | its saves root is not an existing directory                         |
+| `config-unreadable`        | `path`, `status`  | a bare RetroArch's `retroarch.cfg` could not be read                |
+| `companion-config-missing` | `path`, `status`  | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
+| `catalogue-invalid`        | `path`, `problem` | an `es_systems.xml` ES-DE refuses its **whole** catalogue load on   |
+
+`catalogue-invalid` is the hardest of them (issue #100): a systems file that does not parse (`problem: "parse-error"`)
+or carries no document-level `<systemList>` (`"missing-systemlist"`) aborts ES-DE's whole load — the frontend runs with
+**no systems at all**, so the catalogue answers state exactly that (an empty enumeration with this finding beside it)
+instead of enumerating layers the running frontend does not have. It fires only where atlas _read_ the file: a file
+atlas cannot read may parse fine for the frontend, and stays the unknown it always was. It rides the `health()` question
+and every answer whose question reads the catalogue — an answer that never opens the catalogue cannot state its parse
+state, by the one-read consistency model.
 
 The findings also travel **in the answers themselves**: every answer computed on a broken installation — a placement, a
 catalogue answer, a systems listing, any of the four firmware answers — carries them in its own `caveats`, ahead of what
@@ -633,6 +642,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `saves-root-missing`                        | health: its saves root is not an existing directory                                                 |
 | `config-unreadable`                         | health: a bare RetroArch's `retroarch.cfg` could not be read                                        |
 | `companion-config-missing`                  | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                         |
+| `catalogue-invalid`                         | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run              |
 | `unverified-version`                        | the rule card was never verified against this emulator version                                      |
 | `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)                   |
 | `arrangement-version-drifted`               | it was observed, on another version than this machine runs — re-verification pending                |
@@ -641,7 +651,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
-The seven `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
+The eight `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
 `health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). Every
 answer carries them, not just placements, ahead of what the query itself could not resolve. Do not key on the position:
 on the entry route (`EmulatorEntry.savefile_location()`) the entry's own catalogue caveats precede them. Match on the
