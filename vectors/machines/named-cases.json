@@ -11385,6 +11385,101 @@
           ]
         }
       }
+    },
+    {
+      "name": "retrodeck-an-upgraded-install-carries-a-hub-nobody-wired",
+      "rationale": "The Citra texture hub tree exists while the emulator-side path RetroDECK 0.10.9b pairs it with (components/retroarch/component_prepare.sh:157) is a plain directory — dir_prep creates hub tree and symlink together on prepare/reset/move only, and an in-place upgrade re-creates only version-gated pairs, so this is the upgraded-without-reset state of issue #104: whatever is filed under the hub tree never reaches the core. The marker names exactly the version the packaged wiring table was read at, so the pair is measurable and health states the break; the systems answer beside it stays clean, because no answer's own question reads the wiring state (the finding rides health() alone).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gb</name>\n    <path>%ROMPATH%/gb</path>\n    <extension>.gb</extension>\n    <command label=\"Gambatte\">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs/retroarch-core/Citra/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/Citra/load/textures"
+        ],
+        "systems_query": {
+          "installation": "retrodeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "content-tree-unwired",
+                "data": {
+                  "family": "texture_packs",
+                  "hub": "/mnt/sd/retrodeck/texture_packs/retroarch-core/Citra/textures",
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/Citra/load/textures",
+                  "problem": "not-a-link"
+                }
+              }
+            ]
+          }
+        ],
+        "systems": {
+          "systems": [
+            "gb"
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-version-the-wiring-table-never-read-stays-silent",
+      "rationale": "The same broken pair, but the marker names a RetroDECK version the packaged wiring table was not read at. That version's prepare may pair different trees or none — its promise was never read — so the check fails closed and health carries no content-tree-unwired finding: atlas refuses to measure a machine against a promise it does not know rather than alarming on one it invented.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.11.0b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gb</name>\n    <path>%ROMPATH%/gb</path>\n    <extension>.gb</extension>\n    <command label=\"Gambatte\">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs/retroarch-core/Citra/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/Citra/load/textures"
+        ],
+        "systems_query": {
+          "installation": "retrodeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "gb"
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.11.0b"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

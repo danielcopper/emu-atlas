@@ -181,10 +181,17 @@ from atlas.firmware import (
     FirmwareNeed,
     SystemSource,
 )
+from atlas.content_tree_wiring import (
+    ArrangementWiring,
+    WiringRow,
+    load_content_tree_wiring,
+    lookup_content_tree_wiring,
+)
 from atlas.installations import (
     HEALTH_ISSUE_CATALOGUE_INVALID,
     HEALTH_ISSUE_COMPANION_CONFIG_MISSING,
     HEALTH_ISSUE_CONFIG_UNREADABLE,
+    HEALTH_ISSUE_CONTENT_TREE_UNWIRED,
     HEALTH_ISSUE_MARKER_INVALID,
     HEALTH_ISSUE_MARKER_MISSING,
     HEALTH_ISSUE_MARKER_UNREADABLE,
@@ -473,6 +480,12 @@ __all__ = [
     "HEALTH_ISSUE_CONFIG_UNREADABLE",
     "HEALTH_ISSUE_CATALOGUE_INVALID",
     "HEALTH_ISSUE_COMPANION_CONFIG_MISSING",
+    "HEALTH_ISSUE_CONTENT_TREE_UNWIRED",
+    # Content-tree wiring (the dir_prep pairs behind that finding)
+    "ArrangementWiring",
+    "WiringRow",
+    "load_content_tree_wiring",
+    "lookup_content_tree_wiring",
     # Typed outcome codes
     "UNRESOLVED_CORE_NOT_INSTALLED",
     "UNRESOLVED_STANDALONE",

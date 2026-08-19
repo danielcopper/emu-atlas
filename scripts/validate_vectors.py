@@ -211,6 +211,7 @@ KNOWN_HEALTH_ISSUES = {
     "companion-config-missing",
     "config-unreadable",
     "catalogue-invalid",
+    "content-tree-unwired",
 }
 KNOWN_ROOT_KINDS = {
     "savefile_directory",

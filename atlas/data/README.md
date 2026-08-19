@@ -606,6 +606,28 @@ one, and an empty list is a legal record (patching compiled out) rather than a m
 record is one nobody examined: every candidate comes back with `attempted` null beside `patch-formats-unestablished`,
 never with the upstream build defaults, which are a fact about the source tree and not about anyone's binary.
 
+## `content_tree_wiring.json` — the symlink pairs an arrangement's preparation promises
+
+Read by `atlas.content_tree_wiring`, behind the `content-tree-unwired` health finding (issue #104). RetroDECK reaches
+its two content hubs (`texture_packs/`, `mods/`) from each emulator by replacing the emulator-side directory with a
+symlink — `dir_prep` creates hub tree and link **together**, and only on prepare, reset and folder moves; an in-place
+upgrade runs version-gated patches that re-create only some pairs. The table records every pair one RetroDECK version
+promises, each row citing the `component_prepare.sh` line in the shipped Flatpak that makes it.
+
+This is **arrangement** knowledge, deliberately not on the texture or mods cards: a card states where the emulator
+reads, and the installer's link target is provably not always that path — Citra's card derives `citra-emu/load/textures`
+from the core's own literals while the installer links `saves/Citra/load/textures`, the very gap issue #98 tracks. A
+health check built on card paths would probe paths the installer never linked.
+
+A row is `family` (which hub), `hub` (the tree below that family's root), `base` + `path` (the emulator-side location:
+`bios` and `storage` resolve from the marker, `xdg-data`/`xdg-config` are the flatpak's pinned homes), and `source`. The
+check fails closed on every axis: a marker naming any version but the pinned one is measured against nothing, a hub tree
+that does not exist files nothing, an emulator-side path whose `stat` fails supports no claim — and a link settling
+_anywhere_ in the family's hub counts as wired, because older versions linked coarser layouts and those links still
+route. Three absences are deliberate, spelled out in the file's own spec: PCSX2 standalone and MAME wire by
+configuration value rather than by link, and the legacy rows in `component_update.sh` files are migrations for layouts
+the pinned version no longer prepares.
+
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 
 One record per installation kind, saying whether a live installation of that arrangement has ever confirmed atlas's

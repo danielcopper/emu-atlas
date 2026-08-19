@@ -36,6 +36,7 @@ from atlas.content_path import (
     content_system_dir,
     split_content_path,
 )
+from atlas.content_tree_wiring import WiringRow, lookup_content_tree_wiring
 from atlas.core_info import parse_core_info
 from atlas.esde import (
     INVALID_PARSE,
@@ -82,6 +83,7 @@ from atlas.machine import (
     GLOB_COMPLETE,
     KIND_DIRECTORY,
     KIND_FILE,
+    KIND_INACCESSIBLE,
     KIND_MISSING,
     READ_MISSING,
     READ_OK,
@@ -259,6 +261,40 @@ HEALTH_ISSUE_CONFIG_UNREADABLE = "config-unreadable"
 # atlas cannot READ: ES-DE may read such a file fine, so what it says stays
 # unknown there rather than refused (issue #100).
 HEALTH_ISSUE_CATALOGUE_INVALID = "catalogue-invalid"
+# A content hub tree (texture_packs or mods) that exists while the emulator-side
+# path its arrangement pairs it with is no symlink into the hub — the
+# upgraded-without-reset state (issue #104): dir_prep creates hub tree and link
+# together on prepare/reset/move, a flatpak upgrade re-runs only version-gated
+# patches, so an upgraded installation can carry the hub while the emulator
+# reads a plain directory of its own, and content filed in the hub never
+# reaches it. One finding per broken pair; ``data.problem`` keeps the three
+# ways apart (missing / not-a-link / diverted). Checked only when the marker
+# names exactly the version the wiring table was read at — any other version
+# made promises atlas never read, so no row is checked there (fail closed).
+HEALTH_ISSUE_CONTENT_TREE_UNWIRED = "content-tree-unwired"
+
+
+def _content_tree_unwired_finding(
+    row: WiringRow, *, version: str, hub_dir: str, path: str, problem: str, target: str | None
+) -> Caveat:
+    """The health finding for one dir_prep pair whose emulator-side link is gone."""
+    if problem == "missing":
+        state = f"nothing exists at {path}"
+    elif problem == "diverted":
+        state = f"the link at {path} settles at {target}, outside the {row.family} hub"
+    else:
+        state = f"{path} stands there as a plain path of its own, not a link"
+    data = {"family": row.family, "hub": hub_dir, "path": path, "problem": problem}
+    if target is not None:
+        data["target"] = target
+    return Caveat(
+        HEALTH_ISSUE_CONTENT_TREE_UNWIRED,
+        f"content filed under {hub_dir} never reaches an emulator: RetroDECK {version} pairs "
+        f"that hub tree with {path} by symlink, and {state} — the pair is created on prepare, "
+        "reset and folder moves only, never by an in-place upgrade, so the gap stays until one "
+        f"of those runs ({row.source})",
+        data,
+    )
 
 
 def _catalogue_invalid_finding(path: str, problem: str) -> Caveat:
@@ -7670,9 +7706,91 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         health = self._health_from(config, marker_issues)
         root = self._config_path(config, "rd_home_path", "")[0]
         catalogue_invalid = self._read_catalogue(root)[3]
+        issues = health.issues
         if catalogue_invalid is not None:
-            return Health((*health.issues, catalogue_invalid))
-        return health
+            issues = (*issues, catalogue_invalid)
+        return Health((*issues, *self._content_tree_findings(config)))
+
+    def _content_tree_findings(self, config: dict[str, Any]) -> tuple[Caveat, ...]:
+        """The dir_prep pairs whose hub tree exists without its emulator-side link.
+
+        Like the catalogue check above, this lives on the health question and
+        nowhere else: no answer's own question reads the wiring state, so no
+        answer pays for it. Every gate fails closed. A wiring table pinned to
+        a version the marker does not name checks nothing — that version's
+        promise was never read. A hub tree that is not a directory files
+        nothing, so its pair supports no finding. And an emulator-side path
+        whose ``stat`` fails is a path atlas could not read, which is never
+        evidence of a broken link.
+
+        The wired test is deliberately weak: the emulator-side path must
+        resolve *into the family's hub*, not onto the exact tree this version
+        pairs it with — older RetroDECK versions wired coarser trees
+        (``texture_packs/Dolphin`` where today's layout is
+        ``texture_packs/Dolphin/Textures``), and a link they created is hub
+        wiring, not a break. What the finding states is the pair with **no**
+        hub backing at all.
+        """
+        wiring = lookup_content_tree_wiring(self.kind)
+        if wiring is None or config.get("version") != wiring.version:
+            return ()
+        homes = self._xdg_homes()
+        bases = {
+            "bios": self._config_path(config, "bios_path", "bios")[0],
+            "storage": self._config_path(config, "storage_path", "storage")[0],
+            "xdg-data": homes.data,
+            "xdg-config": homes.config,
+        }
+        hub_roots = {
+            "texture_packs": self._config_path(config, "texture_packs_path", "texture_packs")[0],
+            "mods": self._config_path(config, "mods_path", "mods")[0],
+        }
+        resolved_roots = {
+            family: _resolve_symlink_chain(self._machine, root)[0]
+            for family, root in hub_roots.items()
+        }
+        findings: list[Caveat] = []
+        for row in wiring.rows:
+            hub_dir = os.path.join(hub_roots[row.family], row.hub)
+            if self._machine.path_kind(hub_dir) != KIND_DIRECTORY:
+                continue
+            finding = self._content_tree_finding(
+                row,
+                version=wiring.version,
+                hub_dir=hub_dir,
+                path=os.path.join(bases[row.base], row.path),
+                hub_root=resolved_roots[row.family],
+            )
+            if finding is not None:
+                findings.append(finding)
+        return tuple(findings)
+
+    def _content_tree_finding(
+        self, row: WiringRow, *, version: str, hub_dir: str, path: str, hub_root: str | None
+    ) -> Caveat | None:
+        """One pair's verdict — ``None`` exactly when the path resolves into the hub."""
+        resolved, links = _resolve_symlink_chain(self._machine, path)
+        if (
+            resolved is not None
+            and hub_root is not None
+            and (resolved == hub_root or resolved.startswith(hub_root + "/"))
+        ):
+            # Wired — even when the target does not exist yet: creating the
+            # hub side brings a dead link to life, so the pair still routes
+            # everything filed in the hub to the emulator.
+            return None
+        if links:
+            target = resolved if resolved is not None else links[0][1]
+            return _content_tree_unwired_finding(
+                row, version=version, hub_dir=hub_dir, path=path, problem="diverted", target=target
+            )
+        kind = self._machine.path_kind(path)
+        if kind == KIND_INACCESSIBLE:
+            return None
+        problem = "missing" if kind == KIND_MISSING else "not-a-link"
+        return _content_tree_unwired_finding(
+            row, version=version, hub_dir=hub_dir, path=path, problem=problem, target=None
+        )
 
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._APP_ID, "config", "retroarch")
