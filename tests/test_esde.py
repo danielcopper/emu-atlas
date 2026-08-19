@@ -7,6 +7,7 @@ from atlas.installations import parse_gamelist
 from atlas.machine import FixtureMachine
 from atlas.esde import (
     EmulatorSpec,
+    esde_extension,
     expand_home_path,
     merge_layers,
     parse_es_settings,
@@ -83,6 +84,34 @@ class TestParse:
         # it now would regress a file the frontend reads fine.
         parsed = parse_es_systems(f"\ufeff{BUNDLED_XML}", provenance="test").systems
         assert set(parsed) == {"dreamcast", "n64", "ps3"}
+
+
+class TestTheExtensionTokenIsEsdes:
+    """The scan's own derivation and list split, replicated exactly (issue #36)."""
+
+    def test_the_token_is_the_name_from_its_last_dot_case_preserved(self):
+        # getExtension (FileSystemUtil.cpp:630-645 @ v3.4.1): no lowercasing —
+        # the case-sensitive comparison downstream is why catalogues list
+        # .z64 and .Z64 separately.
+        assert esde_extension("/roms/n64/Game.Z64") == ".Z64"
+        assert esde_extension("/roms/gc/archive.tar.gz") == ".gz"
+
+    def test_a_name_without_a_dot_answers_the_sentinel(self):
+        # The same "." ES-DE answers — it matches only a declared "." token.
+        assert esde_extension("/roms/dos/GAMEFILE") == "."
+
+    def test_the_extension_list_splits_on_commas_too(self):
+        # readList's delimiter set is " \t\r\n," (SystemData.cpp:795) — a
+        # comma-separated list is legal and a bare whitespace split would fuse
+        # its tokens into ones no file can ever yield.
+        xml = (
+            '<systemList><system><name>gb</name><path>%ROMPATH%/gb</path>'
+            "<extension>.gb,.gbc\t.zip</extension>"
+            '<command label="Gambatte">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>'
+            "</system></systemList>"
+        )
+        parsed = parse_es_systems(xml, provenance="test").systems
+        assert parsed["gb"].extensions == (".gb", ".gbc", ".zip")
 
 
 class TestLoadExclusive:

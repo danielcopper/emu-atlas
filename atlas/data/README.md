@@ -638,6 +638,17 @@ route. Three absences are deliberate, spelled out in the file's own spec: PCSX2 
 configuration value rather than by link, and the legacy rows in `component_update.sh` files are migrations for layouts
 the pinned version no longer prepares.
 
+## `launch_formats.json` — formats that need an installation step before anything launches
+
+Read by `atlas.launch_formats`, behind the `needs-installation` verdict of the launchability question (issue #36). The
+accept-list read off the machine states only that the frontend will not scan a file — never why. For some files the why
+matters more than the no: a PSN `.pkg` is the distribution form of the content itself, RPCS3 has to install it into
+`dev_hdd0` before anything can launch, and for digital-only titles no other form exists — so "not accepted, pick another
+file" is the wrong advice. That is world knowledge about a platform, written nowhere on the machine, so it lives here:
+keyed by the atlas system id and the exact extension token ES-DE would derive (case-sensitive, leading dot), each entry
+with its statement and its citation. The table is consulted only where the extension is already outside the machine's
+own accept-list — what the catalogue declares launchable, is launchable, and this file never overrides a read.
+
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 
 One record per installation kind, saying whether a live installation of that arrangement has ever confirmed atlas's

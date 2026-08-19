@@ -1207,6 +1207,40 @@ matching needs — but do it on your side, on a copy. atlas will not clean the l
 about what the frontend launches, and the frontend launches what its own typo says: a dot-less token matches nothing
 there either, and inventing the dot would make atlas's answer disagree with the machine.
 
+## Is this file launchable here?
+
+A client that has a file and a system needs to know whether anything on this machine will launch it — and when the
+answer is no, **which kind of no** (issue #36). The accept-list above is the read; this question is the judgment:
+
+```python
+answer = inst.launchable("dreamcast", "/run/media/deck/roms/dreamcast/Game (Track 1).bin")
+answer.verdict     # 'launchable' | 'not-accepted' | 'needs-installation' | 'unknown'
+answer.extension   # '.bin' — the token ES-DE derives (name from the last dot, case preserved)
+answer.accepted    # ('.chd', '.cue', '.gdi') — the system's declared list, verbatim
+answer.entry       # the launch entry that would run — only ever on 'launchable'
+```
+
+The match is exactly ES-DE's: the file name's token from its **last** dot, case preserved, compared **exactly** against
+the declared tokens — which is why catalogues list `.z64` and `.Z64` separately, and why a `.CHD` file on a `.chd`-only
+list is genuinely `not-accepted` (the frontend never scans it). A name without a dot yields `"."`, ES-DE's own sentinel.
+
+The four verdicts never collapse:
+
+- **`launchable`** — the list accepts the token; `entry` is the emulator that would run, resolved through the same
+  selection hierarchy `emulators_for` applies (per-game override first). One boundary is stated in the sources rather
+  than silently crossed: the accept-list is declared per _system_ and the command per _emulator_, so a file the list
+  accepts may still be one the entry that runs cannot read — issue #66 tracks resolving that per entry.
+- **`not-accepted`** — no declared token equals the derived one. The remedy is the consumer's: pick the `.gdi` instead
+  of its track file, unpack the container, or select an entry that accepts it. `extension` and `accepted` carry
+  everything that decision needs.
+- **`needs-installation`** — the format is real content for the platform and an installation step has to run before
+  anything launches: recorded world knowledge with its citation in the sources (`atlas/data/launch_formats.json` — a PSN
+  `.pkg` is the case that founded it). Never collapsed into `not-accepted`, because "find another file" is the wrong
+  advice for a digital-only title whose only form is the package.
+- **`unknown`** — the system is not one this catalogue declares, the catalogue could not be read, or (EmuDeck) the layer
+  that might declare it is sealed inside the AppImage. A statement about the look, never about the file — the riding
+  caveats say which, and a client that treated it as either 'no' would be told something nobody checked.
+
 ## Firmware
 
 Four questions, verification strictly opt-in. The first three share one answer shape (`FirmwareAnswer`);
