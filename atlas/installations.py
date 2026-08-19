@@ -7883,15 +7883,17 @@ class _CatalogueQueries:
         self, system: str, content_path: str
     ) -> tuple[LaunchabilityAnswer, str | None]:
         # The accept-list lives in the catalogue this arrangement does not
-        # have, so the verdict is unknown for the same reason the entries are:
-        # nothing was read, and the file was never judged.
+        # have, so the verdict is unknown for the same reason the entry list
+        # is empty — the refusal is the catalogue question's own, worn by
+        # this answer's shape.
+        answer, version = self._catalogue_answer(system, content_path=content_path)
         return (
             LaunchabilityAnswer(
                 verdict=VERDICT_UNKNOWN,
                 extension=esde_extension(content_path),
-                caveats=(*self.health().issues, self._catalogue_absence()),
+                caveats=answer.caveats,
             ),
-            None,
+            version,
         )
 
     def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:

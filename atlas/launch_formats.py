@@ -61,24 +61,25 @@ def load_launch_formats(text: str | None = None) -> tuple[InstallFirstFormat, ..
         if not isinstance(entries, dict) or not entries:
             raise ValueError(f"{where}: expected a non-empty object, got {entries!r}")
         for extension, entry in entries.items():
-            at = f"{where}: {extension!r}"
-            if not extension.startswith(".") or extension == ".":
-                # The key must be a token esde_extension() can ever answer:
-                # every derived extension starts with the dot it was cut at,
-                # and the bare-dot sentinel names "no extension", which is not
-                # a format.
-                raise ValueError(f"{at}: an extension token starts with '.' and names one")
-            if not isinstance(entry, dict) or set(entry) != {"statement", "source"}:
-                raise ValueError(f"{at}: an entry names exactly 'statement' and 'source', got {entry!r}")
-            formats.append(
-                InstallFirstFormat(
-                    system=system,
-                    extension=extension,
-                    statement=_expect_str(entry["statement"], f"{at}: statement"),
-                    source=_expect_str(entry["source"], f"{at}: source"),
-                )
-            )
+            formats.append(_format(system, extension, entry, f"{where}: {extension!r}"))
     return tuple(formats)
+
+
+def _format(system: str, extension: str, entry: Any, at: str) -> InstallFirstFormat:
+    """One record — validated, never coerced."""
+    if not extension.startswith(".") or extension == ".":
+        # The key must be a token esde_extension() can ever answer: every
+        # derived extension starts with the dot it was cut at, and the
+        # bare-dot sentinel names "no extension", which is not a format.
+        raise ValueError(f"{at}: an extension token starts with '.' and names one")
+    if not isinstance(entry, dict) or set(entry) != {"statement", "source"}:
+        raise ValueError(f"{at}: an entry names exactly 'statement' and 'source', got {entry!r}")
+    return InstallFirstFormat(
+        system=system,
+        extension=extension,
+        statement=_expect_str(entry["statement"], f"{at}: statement"),
+        source=_expect_str(entry["source"], f"{at}: source"),
+    )
 
 
 _PACKAGED: tuple[InstallFirstFormat, ...] | None = None
