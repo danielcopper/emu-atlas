@@ -11651,6 +11651,93 @@
           "granularity": null
         }
       }
+    },
+    {
+      "name": "lrps2-a-retired-entry-no-probe-could-sweep",
+      "rationale": "LRPS2 registers its options after any probe listens, so no live registration set exists to sweep the file against — a generic 'is this key registered?' check could never fire here. The retirement of pcsx2_memcard_slot_1 is a recorded binary fact instead (absent from the shipped pcsx2_libretro.so even as a substring, while pcsx2_shared_memory_cards is a whole literal), so the answer states the dead entry beside the governing key it reads from the same file (issue #79).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": "m",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "pcsx2_shared_memory_cards = \"enabled\"\npcsx2_memcard_slot_1 = \"shared8\"\n"
+        },
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso",
+          "core_so": "pcsx2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd001.ps2"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "option-entry-retired",
+              "data": {
+                "core": "pcsx2",
+                "option_key": "pcsx2_memcard_slot_1",
+                "value": "shared8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "enabled",
+            "readings": [
+              {
+                "key": "pcsx2_shared_memory_cards",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "disabled",
+                "options": {
+                  "pcsx2_shared_memory_cards": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }

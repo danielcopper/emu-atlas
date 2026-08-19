@@ -2142,7 +2142,17 @@
           "<rom_stem>.ps2": {
             "literal": "%s.ps2"
           }
-        }
+        },
+        "retired_options": [
+          {
+            "key": "pcsx2_memcard_slot_1",
+            "citation": "[V-binary] the older generation's key this card's provenance already notes — absent from the shipped pcsx2_libretro.so (RetroDECK 0.10.9b) even as a substring, while pcsx2_shared_memory_cards is a whole NUL-delimited literal; observed lingering in a live retroarch-core-options.cfg (issue #79). The binary fact matters doubly here: this core registers its options too late for any live probe, so absence is only establishable by the unfiltered scan."
+          },
+          {
+            "key": "pcsx2_memcard_slot_2",
+            "citation": "[V-binary] the older generation's key this card's provenance already notes — absent from the shipped pcsx2_libretro.so (RetroDECK 0.10.9b) even as a substring, while pcsx2_shared_memory_cards is a whole NUL-delimited literal; observed lingering in a live retroarch-core-options.cfg (issue #79). The binary fact matters doubly here: this core registers its options too late for any live probe, so absence is only establishable by the unfiltered scan."
+          }
+        ]
       },
       "provenance": {
         "source": "libretro/ps2 source: option def libretro_core_options.h:158-170; per-content branch main.cpp:2154-2166 sets Folders/MemoryCards to RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY and Pcsx2Config.cpp:995-997 names slot 1 '<rom_stem>.ps2'. Shared mode roots at PCSX2's default memcards folder — under RetroDECK that is <system_directory>/pcsx2/memcards, and that path is the arrangement's own work, not the core's: retroarch/component_prepare.sh:97 (in the Flatpak's components tree) runs dir_prep for it against <saves>/ps2/retroarch-core/LRPS2/memcards. What stands there is therefore whatever the arrangement last prepared — observed on 2026-08-12 as exactly that symlink, empty; a plain directory at the same path is the same answer for placement, since the core is handed the path either way. NOTE: an older LRPS2 generation used pcsx2_memcard_slot_1/2 keys (observed in a live retroarch-core-options.cfg) — this card matches the core shipped in RetroDECK 0.10.9b. LRPS2 registers its options later than retro_set_environment, so a probe of the shipped binary captures none of them and cannot confirm the default the way it can for other cards; governing_option.default is the recorded fallback for an options file that has no entry.",
@@ -3311,7 +3321,21 @@
           "<rom_stem>_2.mcd": {
             "literal": "%s/%s_%d.mcd"
           }
-        }
+        },
+        "retired_options": [
+          {
+            "key": "duckstation_MemoryCards.Card1Type",
+            "citation": "[V-binary] the DuckStation-named generation's spelling — absent from the shipped swanstation_libretro.so (RetroDECK 0.10.9b) even as a substring, while the swanstation_MemoryCards_* twins are whole NUL-delimited literals; observed lingering in a live retroarch-core-options.cfg beside all three current keys (issue #79)."
+          },
+          {
+            "key": "duckstation_MemoryCards.Card2Type",
+            "citation": "[V-binary] the DuckStation-named generation's spelling — absent from the shipped swanstation_libretro.so (RetroDECK 0.10.9b) even as a substring, while the swanstation_MemoryCards_* twins are whole NUL-delimited literals; observed lingering in a live retroarch-core-options.cfg beside all three current keys (issue #79)."
+          },
+          {
+            "key": "duckstation_MemoryCards.UsePlaylistTitle",
+            "citation": "[V-binary] the DuckStation-named generation's spelling — absent from the shipped swanstation_libretro.so (RetroDECK 0.10.9b) even as a substring, while the swanstation_MemoryCards_* twins are whole NUL-delimited literals; observed lingering in a live retroarch-core-options.cfg beside all three current keys (issue #79)."
+          }
+        ]
       },
       "provenance": {
         "source": "libretro/swanstation at 4d309c0, the revision the shipped binary names in its library_version. Each memory-card slot has its own type option (libretro_core_options.h:785-830): slot 1 defaults to 'Libretro' — the card is exposed through the SRAM interface and RetroArch writes the standard <content stem>.srm (libretro_host_interface.cpp:751-786) — and slot 2 to no card. The other types open a file of the core's own in the save directory (GetSharedMemoryCardPath/GetGameMemoryCardPath, libretro_host_interface.cpp:404-415, selected per slot in src/core/system.cpp:1450-1508): 'Shared' is duckstation_shared_card_<slot>.mcd for every game, 'PerGame' names the card after the disc's game code (the serial — the <save_id> hole), 'PerGameTitle' after the running game's title, which this port takes from the content file's own name (GetGameInfo, libretro_host_interface.cpp:396-410). For an .m3u playlist with 'UsePlaylistTitle' on — the default — the title is the playlist's, so the name still spells the loaded content's stem; switched off, each disc names its own title-keyed card, a spelling the playlist path alone does not give (system.cpp:1650-1656). A game-code card for content that yields no code falls back to the shared card (system.cpp:1457-1466). The mode is the pair of slot types, selected by the card's rule; alternatives list the one-edit neighbours rather than all twenty combinations.",
@@ -4276,7 +4300,13 @@
           "<rom_stem>_4Mbit_cart.brm": {
             "literal": "_4Mbit_cart.brm"
           }
-        }
+        },
+        "retired_options": [
+          {
+            "key": "genesis_plus_gx_bram",
+            "citation": "[V-binary] absent from the shipped genesis_plus_gx_libretro.so (RetroDECK 0.10.9b) even as a substring, while genesis_plus_gx_system_bram and genesis_plus_gx_cart_bram are whole NUL-delimited literals — the split that retired the single key; observed lingering in a live retroarch-core-options.cfg beside both current keys (issue #79)."
+          }
+        ]
       },
       "provenance": {
         "source": "ekeeke/Genesis-Plus-GX at 46a5521, the revision the shipped binary names in its library_version. The save story splits on the content's class, which is why the mode is selected by the card's rule from the extension the loader dispatches on (valid extensions at libretro.c:3129). Cartridge content (md/smd/gen/sms/gg/sg/68k/sgd/mdx/bms, and raw .bin) fills the frontend's SRAM interface and RetroArch writes the standard <content stem>.srm — every cartridge system the retired memory record covered agreed on that. CD content (cue/iso/chd/m3u) never reaches it: SYSTEM_MCD runs scd_init() instead of md_cart_init() (core/genesis.c:162-175), so the saves are the core's own BRAM files, flat in the save directory, under three interacting options read at first run (libretro.c:1385-1500) and written by bram_load/bram_save (libretro.c:3675, :3730). 'genesis_plus_gx_system_bram' per bios — the default — keeps one region-keyed internal file (scd_E.brm, scd_U.brm, scd_J.brm; which one a game touches is the console region, so all three are the declared candidates); per game keeps <stem>.brm instead. The backup RAM cart is 'genesis_plus_gx_cart_bram' with 'genesis_plus_gx_cart_size' (default per cart at 4meg): one <size>_cart.brm shared across games, a per-game <stem>_<size>_cart.brm, or no cart at all with the size disabled. Alternatives list the one-edit neighbours rather than all twenty-six CD combinations.",

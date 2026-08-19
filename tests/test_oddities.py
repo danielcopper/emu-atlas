@@ -2259,6 +2259,87 @@ class TestGpgxContentClasses:
         assert "Sega CD disc header" in stated[0].data["files_established_for"]
 
 
+class TestARetiredEntryIsStated:
+    """Issue #79: an options entry the shipped generation no longer reads is named.
+
+    The inverse direction of the generation guard: the file names a key the
+    core retired, the answer stands on the current keys, and the caveat
+    carries the dead entry, its value and the file someone would prune.
+    """
+
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        SWAN_ROM: "",
+        "/mnt/sd/retrodeck/saves/psx/.keep": "",
+    }
+    STALE = (
+        'duckstation_MemoryCards.Card1Type = "Libretro"\n'
+        'duckstation_MemoryCards.Card2Type = "None"\n'
+    )
+
+    def _retired(self, placement):
+        return [c for c in placement.caveats if c.code == atlas.CAVEAT_OPTION_ENTRY_RETIRED]
+
+    def test_a_rule_card_states_each_dead_entry_once(self):
+        p = _swan_query({**self.FILES, OPTIONS_CFG: self.STALE})
+        assert [c.data for c in self._retired(p)] == [
+            {
+                "core": "swanstation",
+                "option_key": "duckstation_MemoryCards.Card1Type",
+                "value": "Libretro",
+                "options_file": OPTIONS_CFG,
+            },
+            {
+                "core": "swanstation",
+                "option_key": "duckstation_MemoryCards.Card2Type",
+                "value": "None",
+                "options_file": OPTIONS_CFG,
+            },
+        ]
+        # The answer itself stands on the current keys, untouched.
+        assert p.granularity is not None
+        assert p.granularity.mode == "card1-libretro+card2-none"
+
+    def test_a_file_without_dead_entries_earns_no_statement(self):
+        p = _swan_query(
+            {**self.FILES, OPTIONS_CFG: 'swanstation_MemoryCards_Card1Type = "Shared"\n'}
+        )
+        assert self._retired(p) == []
+
+    def test_the_probe_blind_core_states_it_from_the_record(self):
+        # LRPS2 registers its options after any probe listens: no live
+        # registration set exists to sweep against, and the statement rides
+        # the recorded binary fact instead.
+        rom = "/mnt/sd/retrodeck/roms/ps2/Game (USA).iso"
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: CFG,
+            rom: "",
+            OPTIONS_CFG: 'pcsx2_memcard_slot_1 = "shared8"\n',
+        }
+        rd = _retrodeck(files, cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2"}})
+        p = placed(rd.savefile_location(content_path=rom, core_so="pcsx2_libretro.so"))
+        assert [c.data["option_key"] for c in self._retired(p)] == ["pcsx2_memcard_slot_1"]
+
+    def test_a_dead_entry_outside_the_governing_file_is_not_named(self):
+        # With global_core_options off (the compile-time default) and a
+        # per-core .opt present, the .opt is THE source — a stale entry in the
+        # global file is one RetroArch would not read for this core either,
+        # and naming it would send the pruning hand to a file that decides
+        # nothing here.
+        swan_opt = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/config/SwanStation/SwanStation.opt"
+        p = _swan_query(
+            {
+                **self.FILES,
+                RETRODECK_CFG: CFG_WITHOUT_GLOBAL_OPTS,
+                swan_opt: 'swanstation_MemoryCards_Card1Type = "Libretro"\n',
+                OPTIONS_CFG: self.STALE,
+            }
+        )
+        assert self._retired(p) == []
+
+
 class TestAMixedModeAlternativeStatesEveryGrouping:
     """Issue #128's case: FinalBurn Neo's shared mode writes a per-game save
     beside a card every game shares, and a single-value alternative hid the
@@ -2292,6 +2373,64 @@ class TestAMixedModeAlternativeStatesEveryGrouping:
         by_mode = {a.mode: a.values for a in p.granularity.alternatives}
         assert by_mode["shared"] == ("per-game-file", "shared-card")
         assert by_mode["per-game"] == ("per-game-file",)
+
+
+class TestRetiredOptionsLoad:
+    """Issue #79's card field: retired spellings load with their evidence or not at all."""
+
+    @staticmethod
+    def _card(retired, *, saves_extra=None):
+        saves = {
+            "governing_option": {"key": "x_storage"},
+            "modes": {"on": _mode("per-game-file", files=["a.srm"])},
+            "retired_options": retired,
+            **(saves_extra or {}),
+        }
+        return json.dumps(
+            {"schema": 1, "cores": {"x": {"identifiers": {"library_name": ["X"]}, "saves": saves}}}
+        )
+
+    def test_a_retired_key_loads_with_its_citation(self):
+        card = load_oddities(self._card([{"key": "x_old", "citation": "[V-binary] absent"}]))[0]
+        assert [(r.key, r.citation) for r in card.retired_options] == [
+            ("x_old", "[V-binary] absent")
+        ]
+
+    def test_an_entry_without_a_citation_fails(self):
+        with pytest.raises(ValueError, match="citation"):
+            load_oddities(self._card([{"key": "x_old"}]))
+
+    def test_a_key_the_generation_still_reads_is_a_contradiction(self):
+        with pytest.raises(ValueError, match="contradiction"):
+            load_oddities(self._card([{"key": "x_storage", "citation": "?"}]))
+
+    def test_a_key_recorded_twice_fails(self):
+        entries = [
+            {"key": "x_old", "citation": "a"},
+            {"key": "x_old", "citation": "b"},
+        ]
+        with pytest.raises(ValueError, match="twice"):
+            load_oddities(self._card(entries))
+
+    def test_a_card_reading_no_options_cannot_carry_them(self):
+        # No governing read would ever check these — a dead promise fails the
+        # load instead of shipping.
+        text = json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"library_name": ["X"]},
+                        "saves": {
+                            "modes": {"always": _mode("per-game-file", files=["a.srm"])},
+                            "retired_options": [{"key": "x_old", "citation": "?"}],
+                        },
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="reads no options"):
+            load_oddities(text)
 
 
 class TestStrictLoaders:

@@ -307,6 +307,19 @@ CAVEAT_CORE_GENERATION_UNESTABLISHED = "core-generation-unestablished"
 # the *setting* is unknown — and exclusive with both of the two above it, since
 # each of them has already retired the card before an option can be read.
 CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED = "core-option-value-unestablished"
+# The governing options file carries an entry for a key this card's core
+# generation retired — an older generation wrote it, the rename or split left
+# it behind, and RetroArch never prunes the file, so the value someone set
+# there silently stopped applying (issue #79). The inverse direction of
+# core-generation-mismatch: there the RECORD names a key the core does not
+# register and the card steps aside; here the FILE names one and the answer
+# stands on the current key, with this caveat naming the dead entry, its
+# value, and the file a user would prune. Stated only for keys the card
+# records as retired, each with the binary evidence — attributing an
+# arbitrary unregistered entry to a core would be guessing, and the cores
+# that register their options too late for any probe (LRPS2) could never be
+# swept generically at all.
+CAVEAT_OPTION_ENTRY_RETIRED = "option-entry-retired"
 CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
 CAVEAT_DEAD_SYMLINK = "dead-symlink"
 CAVEAT_SYMLINK_LOOP = "symlink-loop"

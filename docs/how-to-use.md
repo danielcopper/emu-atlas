@@ -642,6 +642,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `core-generation-unestablished`             | the core could not be read, so its generation is unknown — the recorded deviation is not applied    |
 | `core-option-value-unestablished`           | the core fits the card, but nothing states the value governing it — not applied, standard frame     |
 | `core-mode-unestablished`                   | the card's selection rule could not decide (`data["reason"]` says why) — not applied                |
+| `option-entry-retired`                      | the options file carries a key this core generation retired — the value there stopped applying      |
 | `save-inside-content`                       | no separate save file exists: the loaded content file itself takes the writes — your call           |
 | `save-inside-image`                         | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file    |
 | `save-writes-discarded`                     | nothing keeps a save at all: the writes are discarded — the granularity block names the way out     |
