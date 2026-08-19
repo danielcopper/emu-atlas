@@ -31,6 +31,26 @@ class InstallFirstFormat:
     source: str
 
 
+@dataclass(frozen=True, slots=True)
+class StandaloneLaunchCard:
+    """What one standalone emulator's own loader reads (issue #66).
+
+    ``accepts`` are extension tokens in their dotted lowercase form, matched
+    case-insensitively — the gate here is the emulator's loader, not ES-DE's
+    case-exact scan. ``archives`` says whether the loader opens archive
+    containers at all: a standalone gets the file itself, with no RetroArch
+    in front of it to pick a matching entry out of a zip.
+    """
+
+    token: str
+    accepts: tuple[str, ...]
+    archives: bool
+    source: str
+
+    def takes(self, extension: str) -> bool:
+        return extension.lower() in self.accepts
+
+
 def _expect_str(value: Any, where: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{where}: expected a non-empty string, got {value!r}")
@@ -40,11 +60,7 @@ def _expect_str(value: Any, where: str) -> str:
 def load_launch_formats(text: str | None = None) -> tuple[InstallFirstFormat, ...]:
     """Load the packaged install-first formats (or *text* when supplied, for tests)."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "launch_formats.json")
-            .read_text(encoding="utf-8")
-        )
+        text = _packaged_text()
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != FORMATS_SCHEMA:
         raise ValueError(
@@ -82,7 +98,57 @@ def _format(system: str, extension: str, entry: Any, at: str) -> InstallFirstFor
     )
 
 
+def load_standalone_launch(text: str | None = None) -> tuple[StandaloneLaunchCard, ...]:
+    """Load the packaged standalone launch cards (or *text* when supplied, for tests)."""
+    if text is None:
+        text = _packaged_text()
+    raw = json.loads(text)
+    if not isinstance(raw, dict) or raw.get("schema") != FORMATS_SCHEMA:
+        raise ValueError(
+            f"launch_formats: unsupported schema "
+            f"{raw.get('schema') if isinstance(raw, dict) else None!r} "
+            f"(this atlas reads schema {FORMATS_SCHEMA})"
+        )
+    emulators = raw.get("emulators", {})
+    if not isinstance(emulators, dict):
+        raise ValueError(f"launch_formats: emulators must be an object, got {emulators!r}")
+    return tuple(_launch_card(token, entry) for token, entry in emulators.items())
+
+
+def _launch_card(token: str, entry: Any) -> StandaloneLaunchCard:
+    where = f"standalone launch card {token!r}"
+    if not isinstance(entry, dict) or set(entry) != {"accepts", "archives", "source"}:
+        raise ValueError(f"{where}: a card names exactly 'accepts', 'archives' and 'source'")
+    accepts = entry["accepts"]
+    if not isinstance(accepts, list) or not accepts:
+        raise ValueError(f"{where}: accepts must be a non-empty list")
+    for token_ext in accepts:
+        if not isinstance(token_ext, str) or not token_ext.startswith(".") or token_ext == ".":
+            raise ValueError(f"{where}: accepts[{token_ext!r}] — an extension token starts with '.' and names one")
+        if token_ext != token_ext.lower():
+            # The match is case-insensitive by lowercasing the file's token, so
+            # a card token carrying upper case could never be hit.
+            raise ValueError(f"{where}: accepts[{token_ext!r}] must be recorded lowercase")
+    if not isinstance(entry["archives"], bool):
+        raise ValueError(f"{where}: archives must be a JSON boolean")
+    return StandaloneLaunchCard(
+        token=token,
+        accepts=tuple(accepts),
+        archives=entry["archives"],
+        source=_expect_str(entry["source"], f"{where}: source"),
+    )
+
+
 _PACKAGED: tuple[InstallFirstFormat, ...] | None = None
+_PACKAGED_CARDS: tuple[StandaloneLaunchCard, ...] | None = None
+
+
+def _packaged_text() -> str:
+    return (
+        importlib.resources.files("atlas")
+        .joinpath("data", "launch_formats.json")
+        .read_text(encoding="utf-8")
+    )
 
 
 def lookup_install_first(system: str, extension: str) -> InstallFirstFormat | None:
@@ -93,3 +159,13 @@ def lookup_install_first(system: str, extension: str) -> InstallFirstFormat | No
     return next(
         (f for f in _PACKAGED if f.system == system and f.extension == extension), None
     )
+
+
+def lookup_standalone_launch(token: str | None) -> StandaloneLaunchCard | None:
+    """The packaged card for one emulator token, or ``None`` — no fuzzy matching."""
+    global _PACKAGED_CARDS
+    if _PACKAGED_CARDS is None:
+        _PACKAGED_CARDS = load_standalone_launch()
+    if token is None:
+        return None
+    return next((card for card in _PACKAGED_CARDS if card.token == token), None)

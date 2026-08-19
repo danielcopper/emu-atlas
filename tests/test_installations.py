@@ -266,6 +266,155 @@ class TestLaunchable:
         assert answer.verdict == atlas.VERDICT_UNKNOWN
         assert atlas.CAVEAT_SYSTEM_UNKNOWN in [c.code for c in answer.caveats]
 
+    N3DS = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>n3ds</name>\n'
+        "    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds .zip .7z</extension>\n"
+        '    <command label="Azahar">%EMULATOR_AZAHAR% %ROM%</command>\n'
+        '    <command label="Citra">retroarch -L /app/cores/citra_libretro.so %ROM%</command>\n'
+        "  </system>\n</systemList>\n"
+    )
+    DEPLOY_CORES = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
+    CFG_WITH_CORES = (
+        'savefile_directory = "/mnt/sd/retrodeck/saves"\nlibretro_directory = "/app/cores"\n'
+    )
+
+    def _n3ds(self, cores=None):
+        return _retrodeck(
+            {
+                **self.FILES,
+                RETRODECK_CFG: self.CFG_WITH_CORES,
+                RD_BUNDLED_ESDE: self.N3DS,
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+            cores=cores or {},
+        )
+
+    def test_a_recorded_standalone_refusal_flips_the_verdict(self):
+        # Issue #66's founding case: the union says yes, the default entry is
+        # a standalone recorded as opening no archive, and the alternative
+        # that would take the container is named.
+        citra = {
+            f"{self.DEPLOY_CORES}/citra_libretro.so": {
+                "library_name": "Citra",
+                "valid_extensions": "3ds|3dsx|cia|elf",
+                "block_extract": False,
+            }
+        }
+        answer = self._n3ds(citra).launchable("n3ds", "/roms/n3ds/Game.zip")
+        assert answer.verdict == atlas.VERDICT_ENTRY_NOT_ACCEPTED
+        assert answer.entry is not None
+        assert answer.entry.label == "Azahar"
+        assert answer.alternatives == ("Citra",)
+
+    def test_a_block_extract_core_handed_an_unclaimed_archive_refuses(self):
+        # The one libretro refusal this can establish: block_extract means the
+        # archive goes to the core raw (task_content.c:742, :1735), and the
+        # core never claimed to read one.
+        core = {
+            f"{self.DEPLOY_CORES}/citra_libretro.so": {
+                "library_name": "Citra",
+                "valid_extensions": "3ds|3dsx",
+                "block_extract": True,
+            }
+        }
+        catalogue = self.N3DS.replace(
+            '    <command label="Azahar">%EMULATOR_AZAHAR% %ROM%</command>\n', ""
+        )
+        rd = _retrodeck(
+            {**self.FILES, RETRODECK_CFG: self.CFG_WITH_CORES, RD_BUNDLED_ESDE: catalogue},
+            dirs=["/mnt/sd/retrodeck/saves"],
+            cores=core,
+        )
+        answer = rd.launchable("n3ds", "/roms/n3ds/Game.zip")
+        assert answer.verdict == atlas.VERDICT_ENTRY_NOT_ACCEPTED
+        assert answer.alternatives == ()
+
+    def test_an_archive_for_an_extracting_core_is_launchable_with_the_boundary(self):
+        core = {
+            f"{self.DEPLOY_CORES}/citra_libretro.so": {
+                "library_name": "Citra",
+                "valid_extensions": "3ds|3dsx",
+                "block_extract": False,
+            }
+        }
+        catalogue = self.N3DS.replace(
+            '    <command label="Azahar">%EMULATOR_AZAHAR% %ROM%</command>\n', ""
+        )
+        rd = _retrodeck(
+            {**self.FILES, RETRODECK_CFG: self.CFG_WITH_CORES, RD_BUNDLED_ESDE: catalogue},
+            dirs=["/mnt/sd/retrodeck/saves"],
+            cores=core,
+        )
+        answer = rd.launchable("n3ds", "/roms/n3ds/Game.zip")
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert atlas.CAVEAT_ARCHIVE_CONTENTS_UNREAD in [c.code for c in answer.caveats]
+
+    def test_a_direct_file_outside_the_claims_is_attempted_with_a_statement(self):
+        core = {
+            f"{self.DEPLOY_CORES}/citra_libretro.so": {
+                "library_name": "Citra",
+                "valid_extensions": "3dsx|cia",
+                "block_extract": False,
+            }
+        }
+        catalogue = self.N3DS.replace(
+            '    <command label="Azahar">%EMULATOR_AZAHAR% %ROM%</command>\n', ""
+        )
+        rd = _retrodeck(
+            {**self.FILES, RETRODECK_CFG: self.CFG_WITH_CORES, RD_BUNDLED_ESDE: catalogue},
+            dirs=["/mnt/sd/retrodeck/saves"],
+            cores=core,
+        )
+        answer = rd.launchable("n3ds", "/roms/n3ds/Game.3ds")
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert atlas.CAVEAT_ENTRY_FORMAT_UNCLAIMED in [c.code for c in answer.caveats]
+
+    def test_a_standalone_without_a_card_is_unestablished_never_refuses(self):
+        # Azahar HAS a card and takes .3ds — the uncarded standalone is the
+        # discriminating entry here.
+        rpcs3 = self.N3DS.replace("AZAHAR", "RPCS3").replace(
+            '<command label="Azahar">%EMULATOR_RPCS3% %ROM%</command>',
+            '<command label="RPCS3">%EMULATOR_RPCS3% %ROM%</command>',
+        )
+        rd = _retrodeck(
+            {**self.FILES, RETRODECK_CFG: self.CFG_WITH_CORES, RD_BUNDLED_ESDE: rpcs3},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.launchable("n3ds", "/roms/n3ds/Game.3ds")
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert atlas.CAVEAT_ENTRY_FORMAT_UNESTABLISHED in [c.code for c in answer.caveats]
+
+    def test_the_recorded_azahar_card_confirms_its_own_formats(self):
+        answer = self._n3ds().launchable("n3ds", "/roms/n3ds/Game.3ds")
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert answer.entry is not None
+        assert answer.entry.label == "Azahar"
+        assert [c.code for c in answer.caveats] == []
+
+    def test_the_loader_archive_quirk_is_upstreams(self):
+        # path_is_compressed_file folds zip/zst/apk per character and the 7z
+        # only at its digit — a '.7Z' is not compressed to that loader, so it
+        # is a plain unclaimed format here where '.7z' is an opened container.
+        core = {
+            f"{self.DEPLOY_CORES}/citra_libretro.so": {
+                "library_name": "Citra",
+                "valid_extensions": "3ds|3dsx",
+                "block_extract": False,
+            }
+        }
+        catalogue = self.N3DS.replace(
+            '    <command label="Azahar">%EMULATOR_AZAHAR% %ROM%</command>\n', ""
+        ).replace("<extension>.3ds .zip .7z</extension>", "<extension>.3ds .7z .7Z</extension>")
+        rd = _retrodeck(
+            {**self.FILES, RETRODECK_CFG: self.CFG_WITH_CORES, RD_BUNDLED_ESDE: catalogue},
+            dirs=["/mnt/sd/retrodeck/saves"],
+            cores=core,
+        )
+        lower = rd.launchable("n3ds", "/roms/n3ds/Game.7z")
+        upper = rd.launchable("n3ds", "/roms/n3ds/Game.7Z")
+        assert atlas.CAVEAT_ARCHIVE_CONTENTS_UNREAD in [c.code for c in lower.caveats]
+        assert atlas.CAVEAT_ENTRY_FORMAT_UNCLAIMED in [c.code for c in upper.caveats]
+
     def test_a_catalogue_less_arrangement_answers_unknown(self):
         machine = FixtureMachine(
             {f"{HOME}/.config/retroarch/retroarch.cfg": 'savefile_directory = "~/saves"\n'}

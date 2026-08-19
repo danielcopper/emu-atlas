@@ -64,7 +64,13 @@ SYSTEMS_QUERY_FIELDS = {"installation"}
 LAUNCHABLE_QUERY_FIELDS = {"installation", "system", "content_path"}
 # The launchability verdicts — the vocabulary expected.launchable.verdict draws
 # from, mirrored from atlas.installations.LAUNCH_VERDICTS.
-KNOWN_LAUNCH_VERDICTS = {"launchable", "not-accepted", "needs-installation", "unknown"}
+KNOWN_LAUNCH_VERDICTS = {
+    "launchable",
+    "not-accepted",
+    "entry-not-accepted",
+    "needs-installation",
+    "unknown",
+}
 # ROM placement is asked of one system; content plays no part in where a
 # system's ROMs live, so unlike the catalogue query this one takes no path.
 ROM_LOCATION_QUERY_FIELDS = {"installation", "system"}
@@ -324,6 +330,9 @@ KNOWN_CAVEAT_CODES = {
     "feature-switch-absent",
     "patch-formats-unestablished",
     "soft-patching-applies",
+    "entry-format-unclaimed",
+    "archive-contents-unread",
+    "entry-format-unestablished",
     # An installation's health findings are caveats with their own stable
     # codes, and an answer computed on a broken installation carries them
     # directly — so the caveat vocabulary contains the health vocabulary by
@@ -1507,25 +1516,31 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
 
 
 def _validate_launchable(name: str, answer: Any) -> None:
-    """A launchability answer: the verdict, and the coupling only it may state.
+    """A launchability answer: the verdict, and the couplings only it may state.
 
-    ``entry`` and ``launchable`` travel together — an emulator named for a
-    file nothing launches would answer a different question, and a launchable
-    verdict without the entry that would run has thrown half its answer away.
+    ``entry`` travels with the two verdicts that have one — an emulator named
+    for a file nothing launches would answer a different question, and a
+    launchable verdict without the entry that would run has thrown half its
+    answer away. ``alternatives`` is ``entry-not-accepted``'s remedy alone
+    (and may be empty even there — none established is a legal answer).
     """
-    fields = {"verdict", "extension", "accepted", "entry", "caveats"}
+    fields = {"verdict", "extension", "accepted", "entry", "alternatives", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.launchable must carry exactly {sorted(fields)}")
     if answer["verdict"] not in KNOWN_LAUNCH_VERDICTS:
         fail(f"{name}: expected.launchable.verdict must be one of {sorted(KNOWN_LAUNCH_VERDICTS)}")
     if not isinstance(answer["extension"], str) or not answer["extension"]:
         fail(f"{name}: expected.launchable.extension must be a non-empty string")
-    if not isinstance(answer["accepted"], list) or not all(
-        isinstance(token, str) and token for token in answer["accepted"]
-    ):
-        fail(f"{name}: expected.launchable.accepted must be a list of non-empty strings")
-    if (answer["entry"] is not None) != (answer["verdict"] == "launchable"):
-        fail(f"{name}: expected.launchable.entry travels with the 'launchable' verdict alone")
+    for list_key in ("accepted", "alternatives"):
+        if not isinstance(answer[list_key], list) or not all(
+            isinstance(token, str) and token for token in answer[list_key]
+        ):
+            fail(f"{name}: expected.launchable.{list_key} must be a list of non-empty strings")
+    entry_verdicts = {"launchable", "entry-not-accepted"}
+    if (answer["entry"] is not None) != (answer["verdict"] in entry_verdicts):
+        fail(f"{name}: expected.launchable.entry travels with {sorted(entry_verdicts)} alone")
+    if answer["alternatives"] and answer["verdict"] != "entry-not-accepted":
+        fail(f"{name}: expected.launchable.alternatives travels with 'entry-not-accepted' alone")
     if answer["entry"] is not None:
         _validate_emulator(name, answer["entry"])
     _validate_caveats(name, answer["caveats"])

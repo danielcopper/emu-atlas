@@ -429,16 +429,20 @@ def catalogue_contract(answer: CatalogueAnswer) -> dict[str, Any]:
 def launchable_contract(answer: LaunchabilityAnswer) -> dict[str, Any]:
     """The stable form of a launchability answer — the verdict, and everything a 'no' needs.
 
-    ``entry`` is ``null`` on every verdict but ``launchable``: an emulator for
-    a file nothing launches would answer a different question. ``accepted``
-    stays the declared tokens verbatim, the same non-vocabulary the ROM
-    placement's ``extensions`` field carries.
+    ``entry`` travels with the two verdicts that have one — ``launchable``,
+    and ``entry-not-accepted``, where the entry *is* the finding — and is
+    ``null`` on the rest: an emulator for a file nothing launches would
+    answer a different question. ``alternatives`` is ``entry-not-accepted``'s
+    remedy alone: the declared entries established to take the file.
+    ``accepted`` stays the declared tokens verbatim, the same non-vocabulary
+    the ROM placement's ``extensions`` field carries.
     """
     return {
         "verdict": answer.verdict,
         "extension": answer.extension,
         "accepted": list(answer.accepted),
         "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
+        "alternatives": list(answer.alternatives),
         "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
     }
 

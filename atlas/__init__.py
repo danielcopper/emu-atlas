@@ -98,7 +98,11 @@ from atlas.installations import (
     CAVEAT_FRONTEND_SETTINGS_UNREADABLE,
     CAVEAT_ROM_PATH_UNDECLARED,
     CAVEAT_ROM_PATH_UNRESOLVED,
+    CAVEAT_ARCHIVE_CONTENTS_UNREAD,
+    CAVEAT_ENTRY_FORMAT_UNCLAIMED,
+    CAVEAT_ENTRY_FORMAT_UNESTABLISHED,
     LAUNCH_VERDICTS,
+    VERDICT_ENTRY_NOT_ACCEPTED,
     VERDICT_LAUNCHABLE,
     VERDICT_NEEDS_INSTALLATION,
     VERDICT_NOT_ACCEPTED,
@@ -110,7 +114,14 @@ from atlas.installations import (
     RomPlacement,
     SystemsAnswer,
 )
-from atlas.launch_formats import InstallFirstFormat, load_launch_formats, lookup_install_first
+from atlas.launch_formats import (
+    InstallFirstFormat,
+    StandaloneLaunchCard,
+    load_launch_formats,
+    load_standalone_launch,
+    lookup_install_first,
+    lookup_standalone_launch,
+)
 from atlas.esde import esde_extension
 from atlas.placement import (
     Caveat,
@@ -363,11 +374,18 @@ __all__ = [
     "LAUNCH_VERDICTS",
     "VERDICT_LAUNCHABLE",
     "VERDICT_NOT_ACCEPTED",
+    "VERDICT_ENTRY_NOT_ACCEPTED",
     "VERDICT_NEEDS_INSTALLATION",
     "VERDICT_UNKNOWN",
+    "CAVEAT_ENTRY_FORMAT_UNCLAIMED",
+    "CAVEAT_ARCHIVE_CONTENTS_UNREAD",
+    "CAVEAT_ENTRY_FORMAT_UNESTABLISHED",
     "InstallFirstFormat",
+    "StandaloneLaunchCard",
     "load_launch_formats",
+    "load_standalone_launch",
     "lookup_install_first",
+    "lookup_standalone_launch",
     "esde_extension",
     "RomPlacement",
     "EmulatorEntry",

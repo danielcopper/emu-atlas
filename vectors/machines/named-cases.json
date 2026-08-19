@@ -11741,12 +11741,12 @@
     },
     {
       "name": "an-accepted-extension-is-launchable-with-its-entry",
-      "rationale": "The file yields .chd — its name from the last dot, case preserved (FileSystemUtil.cpp:630-645 @ v3.4.1) — and the dreamcast accept-list declares that exact token, so ES-DE scans the file and the entry the frontend's own selection hierarchy puts first is the one that would run. The per-system/per-entry boundary (issue #66) is stated in the sources, never silently crossed.",
+      "rationale": "The file yields .chd — its name from the last dot, case preserved (FileSystemUtil.cpp:630-645 @ v3.4.1) — the dreamcast accept-list declares that exact token, and the entry that would run confirms it one level further (issue #66): the installed core's own claims, read live off the binary, carry chd. Two reads, no table.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>dreamcast</name>\n    <path>%ROMPATH%/dreamcast</path>\n    <extension>.chd .cue .gdi</extension>\n    <command label=\"Flycast\">retroarch -L /app/cores/flycast_libretro.so %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.desktop .iso .ps3 .ps3dir</extension>\n    <command label=\"RPCS3\">%EMULATOR_RPCS3% %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Game.chd": ""
         },
@@ -11756,6 +11756,13 @@
         "launchable_query": {
           "system": "dreamcast",
           "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Game.chd"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "valid_extensions": "chd|cdi|elf|cue|gdi|lst|bin|dat|zip|7z|m3u",
+            "block_extract": true
+          }
         }
       },
       "expected": {
@@ -11785,6 +11792,7 @@
             "selection": null,
             "caveats": []
           },
+          "alternatives": [],
           "caveats": []
         }
       }
@@ -11828,6 +11836,7 @@
             ".gdi"
           ],
           "entry": null,
+          "alternatives": [],
           "caveats": []
         }
       }
@@ -11872,6 +11881,7 @@
             ".ps3dir"
           ],
           "entry": null,
+          "alternatives": [],
           "caveats": []
         }
       }
@@ -11915,11 +11925,264 @@
           "extension": ".chd",
           "accepted": [],
           "entry": null,
+          "alternatives": [],
           "caveats": [
             {
               "code": "emulator-catalogue-sealed",
               "data": {
                 "system": "dreamcast"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "the-default-entry-refuses-what-the-system-list-accepts",
+      "rationale": "The n3ds accept-list carries .zip on account of the libretro entries, and the entry that would run — Azahar, the declared default, a standalone — is recorded as reading no archive container at all: its own loader takes .cia/.cci/.3dsx/.cxi/.3ds and z-variants, and no RetroArch stands in front of a standalone to pick a file out of a zip. The union says yes, the machine then does nothing — issue #66's founding case. The verdict is entry-not-accepted, the entry is the finding, and alternatives names Citra: its core does not claim zip either, but RetroArch opens the container for it and picks a matching file out (task_content.c:1325-1358 @ a79435a).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds .cci .zip .7z</extension>\n    <command label=\"Azahar\">%EMULATOR_AZAHAR% %ROM%</command>\n    <command label=\"Citra\">retroarch -L /app/cores/citra_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/citra_libretro.so": {
+            "library_name": "Citra",
+            "valid_extensions": "3ds|3dsx|cia|elf",
+            "block_extract": false
+          }
+        },
+        "launchable_query": {
+          "system": "n3ds",
+          "content_path": "/mnt/sd/retrodeck/roms/n3ds/Game.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "entry-not-accepted",
+          "extension": ".zip",
+          "accepted": [
+            ".3ds",
+            ".cci",
+            ".zip",
+            ".7z"
+          ],
+          "entry": {
+            "system": "n3ds",
+            "label": "Azahar",
+            "kind": "standalone",
+            "core_so": null,
+            "selection": null,
+            "caveats": []
+          },
+          "alternatives": [
+            "Citra"
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "an-archive-runs-through-retroarchs-hands",
+      "rationale": "Gambatte's claims (gb|gbc|dmg, read live) carry no zip, and that refuses nothing: the container runs through RetroArch's own hands — extracted, searched for the first file matching the claims (task_content.c:1325-1358 @ a79435a). Whether such a file is in there is inside the archive, which atlas does not read, so the verdict stands with archive-contents-unread stating exactly that.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gb</name>\n    <path>%ROMPATH%/gb</path>\n    <extension>.gb .gbc .sgb .zip</extension>\n    <command label=\"Gambatte\">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "valid_extensions": "gb|gbc|dmg",
+            "block_extract": false
+          }
+        },
+        "launchable_query": {
+          "system": "gb",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Game.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "launchable",
+          "extension": ".zip",
+          "accepted": [
+            ".gb",
+            ".gbc",
+            ".sgb",
+            ".zip"
+          ],
+          "entry": {
+            "system": "gb",
+            "label": "Gambatte",
+            "kind": "libretro",
+            "core_so": "gambatte_libretro.so",
+            "selection": null,
+            "caveats": []
+          },
+          "alternatives": [],
+          "caveats": [
+            {
+              "code": "archive-contents-unread",
+              "data": {
+                "entry": "Gambatte",
+                "extension": ".zip"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-format-outside-the-cores-claims-is-attempted-not-refused",
+      "rationale": "The gb accept-list carries .sgb, the installed core's claims (gb|gbc|dmg) do not — and for a libretro entry that is a claim, not a gate: RetroArch checks nothing on a direct load and hands the file over (the extension filter exists for its browser and its archive picking, not for launching). The verdict stands with entry-format-unclaimed stating the absent claim, so a client deciding what to bake knows the core never promised this format.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gb</name>\n    <path>%ROMPATH%/gb</path>\n    <extension>.gb .gbc .sgb .zip</extension>\n    <command label=\"Gambatte\">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "valid_extensions": "gb|gbc|dmg",
+            "block_extract": false
+          }
+        },
+        "launchable_query": {
+          "system": "gb",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Game.sgb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "launchable",
+          "extension": ".sgb",
+          "accepted": [
+            ".gb",
+            ".gbc",
+            ".sgb",
+            ".zip"
+          ],
+          "entry": {
+            "system": "gb",
+            "label": "Gambatte",
+            "kind": "libretro",
+            "core_so": "gambatte_libretro.so",
+            "selection": null,
+            "caveats": []
+          },
+          "alternatives": [],
+          "caveats": [
+            {
+              "code": "entry-format-unclaimed",
+              "data": {
+                "entry": "Gambatte",
+                "extension": ".sgb"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an-entry-nobody-read-stays-unestablished",
+      "rationale": "The ps3 accept-list carries .iso and the entry that would run is a standalone no card covers: what RPCS3's loader reads is not established, and an entry nobody read is never 'refuses' — the verdict stands on the system-level read with entry-format-unestablished saying exactly which half is missing (the same discipline the issue demands: a standalone entry with no card is not the same as an entry known to refuse the file).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.desktop .iso .ps3 .ps3dir</extension>\n    <command label=\"RPCS3\">%EMULATOR_RPCS3% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {},
+        "launchable_query": {
+          "system": "ps3",
+          "content_path": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "launchable",
+          "extension": ".iso",
+          "accepted": [
+            ".desktop",
+            ".iso",
+            ".ps3",
+            ".ps3dir"
+          ],
+          "entry": {
+            "system": "ps3",
+            "label": "RPCS3",
+            "kind": "standalone",
+            "core_so": null,
+            "selection": null,
+            "caveats": []
+          },
+          "alternatives": [],
+          "caveats": [
+            {
+              "code": "entry-format-unestablished",
+              "data": {
+                "entry": "RPCS3",
+                "extension": ".iso"
               }
             }
           ]
