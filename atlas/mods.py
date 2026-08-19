@@ -47,7 +47,7 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 from atlas.placement import KEYINGS, PATCH_FORMATS, ROOT_KINDS, Keying
-from atlas.textures import SO_SUFFIX, XDG_BASES
+from atlas.textures import SO_SUFFIX, XDG_BASES, expect_table_anchors, path_segments
 
 # Packaged-data schema version. The loader is strict for the same reason every
 # other packaged-data loader here is: a malformed build fails loudly instead of
@@ -392,6 +392,27 @@ def _standalone_config(value: object, where: str) -> EmulatorConfig | None:
     return EmulatorConfig(base=base, path=_expect_subdir(value.get("path"), f"{where}.path"))
 
 
+def recorded_mod_words(entry: Mapping[str, Any]) -> frozenset[str]:
+    """Every word a mods row states as this emulator's own — both row kinds.
+
+    Tree path segments, the option setting where one governs, and the config
+    file's own name where one is named; the same vocabulary rule the texture
+    rows follow (issue #105).
+    """
+    mods = entry.get("mods", {})
+    words: list[str] = []
+    for tree in mods.get("trees") or ():
+        if isinstance(tree, dict):
+            words.extend(path_segments(tree.get("subdir")))
+    option = mods.get("option")
+    if isinstance(option, dict) and isinstance(option.get("setting"), str):
+        words.append(option["setting"])
+    config = mods.get("config")
+    if isinstance(config, dict) and isinstance(config.get("path"), str):
+        words.append(config["path"].rsplit("/", 1)[-1])
+    return frozenset(words)
+
+
 def _mod_card(key: str, entry: Any) -> ModCard:
     """One core's card — validated, never coerced."""
     where = f"mod card {key!r}"
@@ -409,6 +430,13 @@ def _mod_card(key: str, entry: Any) -> ModCard:
     root = _expect_str(mods.get("root"), f"{where}: mods.root")
     if root not in set(ROOT_KINDS):
         raise ValueError(f"{where}: mods.root must be one of {sorted(ROOT_KINDS)}, got {root!r}")
+    if entry.get("anchors") is not None:
+        expect_table_anchors(
+            entry["anchors"],
+            where=where,
+            vocabulary=recorded_mod_words(entry),
+            binary_required=False,
+        )
     return ModCard(
         key=key,
         library_names=_expect_str_list(
@@ -435,6 +463,13 @@ def _standalone_mod_card(token: str, entry: Any) -> StandaloneModCard:
     base = _expect_str(mods.get("base"), f"{where}: mods.base")
     if base not in XDG_BASES:
         raise ValueError(f"{where}: mods.base must be one of {sorted(XDG_BASES)}, got {base!r}")
+    if entry.get("anchors") is not None:
+        expect_table_anchors(
+            entry["anchors"],
+            where=where,
+            vocabulary=recorded_mod_words(entry),
+            binary_required=True,
+        )
     return StandaloneModCard(
         token=token,
         base=base,
