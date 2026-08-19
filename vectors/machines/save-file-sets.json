@@ -5253,6 +5253,122 @@
           "granularity": null
         }
       }
+    },
+    {
+      "name": "a-retired-option-entry-is-stated-beside-the-keys-that-govern",
+      "rationale": "The options file carries genesis_plus_gx_bram — the single key an older Genesis Plus GX generation read, retired by the system_bram/cart_bram split (the shipped .so carries both current keys as whole NUL-delimited literals and the old one not even as a substring). RetroArch never prunes the file, so the old entry's 'per game' sits beside current keys saying 'per bios' / 'per cart' and silently decides nothing: the answer stands on the current keys, and option-entry-retired names the dead entry, its value and the file someone would prune (issue #79).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megadrive</name><path>%ROMPATH%/megadrive</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "genesis_plus_gx_bram = \"per game\"\ngenesis_plus_gx_system_bram = \"per bios\"\ngenesis_plus_gx_cart_bram = \"per cart\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
+            "library_name": "Genesis Plus GX",
+            "library_version": "v1.7.4 46a5521",
+            "options": {
+              "genesis_plus_gx_system_bram": {
+                "default": "per bios",
+                "values": [
+                  "per bios",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_bram": {
+                "default": "per cart",
+                "values": [
+                  "per cart",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_size": {
+                "default": "4meg",
+                "values": [
+                  "disabled",
+                  "128k",
+                  "256k",
+                  "512k",
+                  "1meg",
+                  "2meg",
+                  "4meg"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megadrive",
+          "content_path": "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Phantasy Star IV (USA).srm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Phantasy Star IV (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "genesis_plus_gx",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "option-entry-retired",
+              "data": {
+                "core": "genesis_plus_gx",
+                "option_key": "genesis_plus_gx_bram",
+                "value": "per game",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cartridge",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

@@ -110,7 +110,15 @@ from atlas.mode_rules import (
     FileLookup,
     RuleReading,
 )
-from atlas.oddities import MODE_ALWAYS, CoreCard, SaveMode, VerifiedOn, lookup_audit, lookup_card
+from atlas.oddities import (
+    MODE_ALWAYS,
+    CoreCard,
+    RetiredOption,
+    SaveMode,
+    VerifiedOn,
+    lookup_audit,
+    lookup_card,
+)
 from atlas.save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
 from atlas.textures import (
     XDG_DATA,
@@ -133,6 +141,7 @@ from atlas.placement import (
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
+    CAVEAT_OPTION_ENTRY_RETIRED,
     CAVEAT_FILE_NAMES_UNESTABLISHED,
     CAVEAT_FILE_SET_ACROSS_SYSTEMS,
     CAVEAT_EMULATOR_CONFIG_UNREAD,
@@ -872,7 +881,8 @@ def _core_options_value(
     option_default: str | None,
     game_specific_options: bool,
     per_core_options: bool,
-) -> tuple[str | None, str, str]:
+    retired: tuple[RetiredOption, ...] = (),
+) -> tuple[str | None, str, str, tuple[tuple[RetiredOption, str], ...]]:
     """Read a core option the way RetroArch does — first existing file is THE source.
 
     Priority (``runloop.c`` ``validate_per_core_options``): game ``.opt``,
@@ -880,12 +890,20 @@ def _core_options_value(
     then *global_file*. A key absent from the governing file falls back to the
     core default — it does not fall through to another file.
 
-    Returns ``(value, provenance, options_file)``, where ``options_file`` is the
-    file a caller would edit to change the option. The value is ``None`` when the
-    governing file states none and *option_default* is ``None`` too: the core
-    itself did not state a default and none is recorded, so what governs here was
-    never established. Substituting the empty string would put a value nobody
-    read into the answer's own provenance.
+    Returns ``(value, provenance, options_file, retired_found)``, where
+    ``options_file`` is the file a caller would edit to change the option. The
+    value is ``None`` when the governing file states none and *option_default*
+    is ``None`` too: the core itself did not state a default and none is
+    recorded, so what governs here was never established. Substituting the
+    empty string would put a value nobody read into the answer's own
+    provenance.
+
+    ``retired_found`` are the entries of *retired* the governing file carries,
+    with the value each states — read off the same parse the value lookup
+    already made, so stating them costs no second read of anything. Only the
+    governing file is checked: a stale entry in a file RetroArch would not
+    read for this core is dead twice over, and naming it would tell a caller
+    to prune a file that decides nothing here.
     """
     candidates = _option_file_candidates(
         override_config_dir=override_config_dir,
@@ -902,11 +920,15 @@ def _core_options_value(
         if text is None:
             continue
         parsed = parse_cfg_text(text)
+        retired_found = tuple(
+            (option, parsed[option.key]) for option in retired if option.key in parsed
+        )
         if option_key in parsed:
             return (
                 parsed[option_key],
                 f'{os.path.basename(path)}: {option_key} = "{parsed[option_key]}"',
                 path,
+                retired_found,
             )
         if option_default is None:
             return (
@@ -914,11 +936,13 @@ def _core_options_value(
                 f"{os.path.basename(path)} has no entry for {option_key} and no default for it was "
                 "established — the installed core states none and none is recorded",
                 path,
+                retired_found,
             )
         return (
             option_default,
             f'core default: {option_key} = "{option_default}" ({os.path.basename(path)} has no entry)',
             path,
+            retired_found,
         )
     if option_default is None:
         return (
@@ -926,11 +950,13 @@ def _core_options_value(
             f"no options file states {option_key} and no default for it was established — the "
             "installed core states none and none is recorded",
             global_file,
+            (),
         )
     return (
         option_default,
         f'core default: {option_key} = "{option_default}" (no options file present)',
         global_file,
+        (),
     )
 
 
@@ -1862,6 +1888,36 @@ _OBSERVATION_GATES: Mapping[
 ] = {("flycast", "disabled"): _flycast_slot2_gate}
 
 
+def _retired_entry_caveats(
+    card: CoreCard, found: tuple[tuple[RetiredOption, str], ...], options_file: str
+) -> tuple[Caveat, ...]:
+    """Each retired entry the governing options file still carries, stated (issue #79).
+
+    The inverse direction of ``core-generation-mismatch``: there the record
+    names a key the core does not register and the card steps aside; here the
+    *file* names one, the answer stands on the current key, and this names
+    the dead entry — the value someone set there silently stopped applying,
+    because RetroArch never prunes the file and the core simply stopped
+    reading the key.
+    """
+    return tuple(
+        Caveat(
+            CAVEAT_OPTION_ENTRY_RETIRED,
+            f'options entry {option.key} = "{value}" no longer applies: the {card.key!r} '
+            f"generation shipped here does not read that key, so the value set in "
+            f"{os.path.basename(options_file)} silently stopped applying and the current "
+            f"option decides instead — {option.citation}",
+            {
+                "core": card.key,
+                "option_key": option.key,
+                "value": value,
+                "options_file": options_file,
+            },
+        )
+        for option, value in found
+    )
+
+
 def _apply_card(
     machine: Machine,
     *,
@@ -1927,7 +1983,7 @@ def _apply_card(
     option_gates = _option_gates(
         layers, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir
     )
-    opt_value, opt_source, options_file = _core_options_value(
+    opt_value, opt_source, options_file, retired_found = _core_options_value(
         machine,
         override_config_dir=gates.override_config_dir,
         global_file=option_gates.global_file,
@@ -1938,8 +1994,12 @@ def _apply_card(
         option_default=effective_default,
         game_specific_options=option_gates.game_specific_options,
         per_core_options=option_gates.per_core_options,
+        retired=card.retired_options,
     )
-    caveats: list[Caveat] = [*option_gates.caveats]
+    caveats: list[Caveat] = [
+        *option_gates.caveats,
+        *_retired_entry_caveats(card, retired_found, options_file),
+    ]
     if opt_value is None:
         # No file states the option and no default was established. There is
         # nothing to select a mode with, and no granularity to report either:
@@ -1967,7 +2027,7 @@ def _apply_card(
 
         def _read_gate_option(key: str) -> OptionReading:
             live = (live_options or {}).get(key)
-            value, source, gate_file = _core_options_value(
+            value, source, gate_file, _ = _core_options_value(
                 machine,
                 override_config_dir=gates.override_config_dir,
                 global_file=option_gates.global_file,
@@ -2066,7 +2126,7 @@ def _rule_option_readings(
     for key in card.rule_options or ():
         live = (live_options or {}).get(key)
         default = live.default if live is not None else None
-        value, source, options_file = _core_options_value(
+        value, source, options_file, retired_found = _core_options_value(
             machine,
             override_config_dir=gates.override_config_dir,
             global_file=option_gates.global_file,
@@ -2077,7 +2137,12 @@ def _rule_option_readings(
             option_default=default,
             game_specific_options=option_gates.game_specific_options,
             per_core_options=option_gates.per_core_options,
+            # The candidate chain is key-independent, so every key reads the
+            # same governing file — the retired sweep rides the first read
+            # and the others skip it rather than stating each entry N times.
+            retired=card.retired_options if not readings else (),
         )
+        caveats.extend(_retired_entry_caveats(card, retired_found, options_file))
         if (
             value is not None
             and live is not None
@@ -4618,7 +4683,7 @@ def _texture_enabled(
     option_gates = _option_gates(
         chain.layers, sandbox=query.sandbox, retroarch_config_dir=chain.retroarch_config_dir
     )
-    value, provenance, _ = _core_options_value(
+    value, provenance, _, _ = _core_options_value(
         machine,
         override_config_dir=chain.gates.override_config_dir,
         global_file=option_gates.global_file,
@@ -5810,7 +5875,7 @@ def _mod_enabled(
     option_gates = _option_gates(
         chain.layers, sandbox=query.sandbox, retroarch_config_dir=chain.retroarch_config_dir
     )
-    value, provenance, _ = _core_options_value(
+    value, provenance, _, _ = _core_options_value(
         machine,
         override_config_dir=chain.gates.override_config_dir,
         global_file=option_gates.global_file,

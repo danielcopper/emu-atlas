@@ -214,6 +214,16 @@ class, a file of the emulator's own. The loader refuses a `governing_rule` with 
 tests hold the mirror claim. Feature detection covers the plural: every declared option must be registered by the
 installed core, or the card steps aside as a generation mismatch exactly as a single-option card does.
 
+A card may also record **`retired_options`** — the spellings an older generation of the same core wrote and this one no
+longer reads (issue #79: RetroArch never prunes the options file, so the entry stays and its value silently stops
+applying). Each entry needs its citation, and retirement is a _negative_ binary fact: the key is absent from the shipped
+`.so` even as a substring while its replacement is a whole literal — which is also why these keys are deliberately
+outside the anchor vocabulary (an anchor demands a literal the binary must carry, and a retired key's whole point is
+that it must not), and why the statement works for a core that registers its options too late for any probe (LRPS2).
+When the governing options file carries such an entry, the answer states it under `option-entry-retired`, riding the
+same parse the value lookup already made — the loader refuses an entry without a citation, one colliding with a key the
+generation still reads, and the field on a card that reads no options at all.
+
 The answer's granularity block records the decision so a client can act on it: one reading per switch the rule actually
 consulted (its live value, its provenance, the file where it would change — hatari reads one of its two write-protect
 options, never both, because which one governs is the content's class), and alternatives with the full option

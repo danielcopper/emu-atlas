@@ -475,6 +475,24 @@ class SaveMode:
 
 
 @dataclass(frozen=True, slots=True)
+class RetiredOption:
+    """One spelling this card's generation retired: the key and the evidence.
+
+    A retired key is an options-file entry the shipped core no longer reads —
+    an older generation wrote it, the rename or split left it behind, and the
+    value someone set there silently stopped applying (issue #79). The
+    citation carries the proof, which is a *negative* binary fact: the key is
+    absent from the shipped ``.so`` while its replacement is a whole literal.
+    That is also why these keys are deliberately outside
+    :func:`recorded_vocabulary`: an anchor demands a literal the binary must
+    carry, and a retired key's whole point is that it must not.
+    """
+
+    key: str
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class CoreCard:
     """A core's save rule card: identifiers, what selects a mode, modes, provenance.
 
@@ -496,6 +514,7 @@ class CoreCard:
     modes: Mapping[str, SaveMode]
     provenance: str
     rule_options: tuple[str, ...] | None = None
+    retired_options: tuple[RetiredOption, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "modes", MappingProxyType(dict(self.modes)))
@@ -839,6 +858,47 @@ def _expect_selectable_modes(
     )
 
 
+def _retired_options(
+    value: object, where: str, *, option_key: str | None, rule_options: tuple[str, ...] | None
+) -> tuple[RetiredOption, ...]:
+    """A card's ``retired_options`` block — the spellings its generation left behind.
+
+    Every entry needs its citation: retirement is a claim about the shipped
+    binary (the key is absent while its replacement is a literal), and a
+    claim without its evidence is the guessing this format exists to refuse.
+    A retired key colliding with a current one is a contradiction — one key
+    cannot be both read and not read by the same generation. And a card that
+    reads no options at all (the ``always`` shape, or a rule declaring none)
+    never opens an options file, so retired knowledge on it would never be
+    checked — stated as a load error rather than shipping a dead promise.
+    """
+    if value is None:
+        return ()
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{where}: retired_options must be a non-empty list, got {value!r}")
+    current = {option_key, *(rule_options or ())} - {None}
+    if not current:
+        raise ValueError(
+            f"{where}: retired_options on a card that reads no options — no read would ever "
+            "check them, so the statement could never fire"
+        )
+    retired: list[RetiredOption] = []
+    for i, entry in enumerate(value):
+        at = f"{where}: retired_options[{i}]"
+        if not isinstance(entry, dict) or set(entry) != {"key", "citation"}:
+            raise ValueError(f"{at}: an entry names exactly 'key' and 'citation', got {entry!r}")
+        key = _expect_str(entry["key"], f"{at}: key")
+        if key in current:
+            raise ValueError(
+                f"{at}: {key!r} is a key this card's generation reads — retired and current "
+                "at once is a contradiction"
+            )
+        if any(r.key == key for r in retired):
+            raise ValueError(f"{at}: {key!r} is recorded twice")
+        retired.append(RetiredOption(key=key, citation=_expect_str(entry["citation"], f"{at}: citation")))
+    return tuple(retired)
+
+
 def _governing_rule(
     value: Any, where: str, *, card_key: str, option_key: str | None
 ) -> tuple[str, ...] | None:
@@ -902,6 +962,9 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
         rule_options = _governing_rule(
             saves.get("governing_rule"), where, card_key=key, option_key=option_key
         )
+        retired_options = _retired_options(
+            saves.get("retired_options"), where, option_key=option_key, rule_options=rule_options
+        )
         _expect_selectable_modes(where, option_key=option_key, rule_options=rule_options, modes=modes)
         if "so" in identifiers:
             raise ValueError(
@@ -928,6 +991,7 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
                 modes=modes,
                 provenance=provenance.get("source", "unstated"),
                 rule_options=rule_options,
+                retired_options=retired_options,
             )
         )
     return tuple(cards)
