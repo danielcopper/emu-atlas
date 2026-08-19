@@ -11480,6 +11480,177 @@
           ]
         }
       }
+    },
+    {
+      "name": "bare-flatpak-a-home-override-moves-the-tilde-base",
+      "rationale": "The bare org.libretro.RetroArch flatpak's own override files are read with the same composition RetroDECK's handle reads its own (issue #101): the user-level per-app file always speaks (flatpak-dir.c:3053-3083 @ 1.16.6), its [Environment] HOME lands on top of the host value with nothing reapplied after (flatpak-run.c:3055, :3352), and the one read it reaches is what RetroArch substitutes for a ~ in a cfg value (file_path.c:1066-1101, :1457-1468). So the configured ~/saves expands against the overridden home, not the machine's.",
+      "input": {
+        "home": "/home/user",
+        "files": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/user/.local/share/flatpak/overrides/org.libretro.RetroArch": "[Environment]\nHOME=/mnt/elsewhere\n",
+          "/home/user/roms/gba/Game.zip": ""
+        },
+        "dirs": [
+          "/mnt/elsewhere/saves",
+          "/home/user/saves"
+        ],
+        "savefile_query": {
+          "content_path": "/home/user/roms/gba/Game.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_flatpak",
+            "kinds": [
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/elsewhere/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_flatpak"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "bare-flatpak-a-user-deploy-silences-the-system-override",
+      "rationale": "Both installations carry the app, so the user deploy is the one flatpak would start (flatpak-dir-utils.c:300-316 — the #93 resolution), and flatpak loads the system installation's override files only for an app the system installation runs (flatpak_dir_load_deployed, flatpak-dir.c:3053-3059, :3071-3077). The system file's HOME therefore says nothing here, and the ~ expands against the machine's own home.",
+      "input": {
+        "home": "/home/user",
+        "files": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/overrides/org.libretro.RetroArch": "[Environment]\nHOME=/mnt/elsewhere\n",
+          "/home/user/roms/gba/Game.zip": ""
+        },
+        "dirs": [
+          "/mnt/elsewhere/saves",
+          "/home/user/saves",
+          "/var/lib/flatpak/app/org.libretro.RetroArch/current/active",
+          "/home/user/.local/share/flatpak/app/org.libretro.RetroArch/current/active"
+        ],
+        "savefile_query": {
+          "content_path": "/home/user/roms/gba/Game.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_flatpak",
+            "kinds": [
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/user/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_flatpak"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "emudeck-the-bare-flatpaks-override-reaches-its-companion-cfg",
+      "rationale": "EmuDeck's RetroArch is the org.libretro.RetroArch flatpak, so the override files that speak for its runs are that app's, not EmuDeck's own (issue #101). The same user-level file that moves the bare handle's ~ base moves this one's: the companion cfg's ~/saves expands against the overridden home on both routes, because both read the same app's runs.",
+      "input": {
+        "home": "/home/user",
+        "files": {
+          "/home/user/.config/EmuDeck/settings.sh": "savesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/user/.local/share/flatpak/overrides/org.libretro.RetroArch": "[Environment]\nHOME=/mnt/elsewhere\n",
+          "/home/user/roms/gba/Game.zip": ""
+        },
+        "dirs": [
+          "/mnt/elsewhere/saves",
+          "/home/user/saves",
+          "/home/user/Emulation/saves"
+        ],
+        "savefile_query": {
+          "installation": "emudeck",
+          "content_path": "/home/user/roms/gba/Game.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/user/Emulation",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/elsewhere/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
+        }
+      }
     }
   ]
 }
