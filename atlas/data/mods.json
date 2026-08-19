@@ -231,6 +231,30 @@
       "provenance": {
         "source": "[V-source/V-binary] The root is the system directory as the core receives it — the log literal \"Setting system dir to %s\" sits immediately before the path cluster, and every path above is composed from g_system_dir. One option governs all three trees, established from the code that reads it: fbneo@01e29d5 refuses the patched romset at libretro.cpp:930, the IPS application at ips_manager.cpp:365 and the romdata application at romdata.cpp:604, each on the same !bPatchedRomsetsEnabled. Per-patch selection below that is per-romset dynamic core options (fbneo-ips-<romset>-<n>, fbneo-romdata-<romset>-<n>) which nothing can enumerate in advance, so the answer states the trees and the one switch above them and stops there. [V-live] RetroDECK 0.10.9b copies its own fbneo tree into $bios_path (components/retroarch/component_prepare.sh:109) and links all three directories into its mods hub (:113-115, re-linked at :203-205)."
       }
+    },
+    "citra": {
+      "identifiers": {
+        "library_name": [
+          "Citra"
+        ]
+      },
+      "mods": {
+        "root": "savefile_directory",
+        "trees": [
+          {
+            "subdir": "citra-emu/load/mods",
+            "keying": {
+              "value": "title-id",
+              "citation": "[V-binary] citra_libretro.so (5263fae) carries the mod loader's path template \"{}mods/{:016X}/\" as a whole NUL-delimited run (0x17a1cf9) — a 16-hex-digit component is a 3DS title id."
+            }
+          }
+        ],
+        "option": null,
+        "config": null
+      },
+      "provenance": {
+        "source": "[V-binary/O-root] The core carries all three components as whole NUL-delimited runs: \"/citra-emu/\" (0x1724a4b), \"load/\" (0x1724a8e) in the user-path table beside \"config/\", \"cache/\", \"sdmc/\" and \"nand/\", and the loader template above. [O] which root that user directory hangs off is the open question the audit carries for this core's saves (core_audit.json: citra, verdict 'suspect'): RetroDECK 0.10.9b prepares its link under the RetroArch config tree's own saves directory rather than the configured one, and names Citra rather than citra-emu (components/retroarch/component_prepare.sh:157 for textures, :163 for mods), and nothing has been observed reading either. So the location recorded here is the one the libretro save-directory contract derives, and every answer built on it states emulator-read-unestablished until issue #98 closes the verdict. [O] no switch: the core registers 26 options and not one of them names mods, so this card records no option and names no configuration — the same open state its successor azahar is in, and not to be confused with a feature whose switch is known and unread."
+      }
     }
   }
 }

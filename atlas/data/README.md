@@ -401,11 +401,11 @@ on that basis. That was wrong, and the reason is now the third trap in `docs/res
 `Textures` are linker-tail-merged into `GL_EXT_protected_textures` and `glBindTextures`, so no `strings` pass surfaces
 them at any encoding — only a raw-byte search does.
 
-Three cards (`azahar`, `dolphin`, `ppsspp`) describe cores that port a standalone emulator and build a user directory
-under a root nobody has watched them choose. Their answers carry `emulator-read-unestablished`, and **that caveat is
-driven by `core_audit.json`, not by this file or by a resolver**: it fires on the `suspect` verdict those cores already
-carry for their saves, so closing the verdict there retires it here, the way `arrangement_evidence.json` retires
-`arrangement-unverified`.
+Four cards (`azahar`, `citra`, `dolphin`, `ppsspp`) describe cores that port a standalone emulator and build a user
+directory under a root nobody has watched them choose. Their answers carry `emulator-read-unestablished`, and **that
+caveat is driven by `core_audit.json`, not by this file or by a resolver**: it fires on the `suspect` verdict those
+cores already carry for their saves, so closing the verdict there retires it here, the way `arrangement_evidence.json`
+retires `arrangement-unverified`.
 
 ## `standalone_saves.json` — which standalone emulators the save question answers for
 
