@@ -7715,74 +7715,87 @@ def _entry_reading(
     entry opens the file itself: its recorded loader decides, and an
     emulator without a card is an entry nobody read.
     """
-    bare = extension[1:].lower() if extension.startswith(".") and len(extension) > 1 else None
     if entry.kind == KIND_LIBRETRO:
-        info = core_info_for(entry)
-        claims = _core_claims(info)
-        if claims is None:
-            return (
-                _ENTRY_UNESTABLISHED,
-                (),
-                (
-                    Caveat(
-                        CAVEAT_ENTRY_FORMAT_UNESTABLISHED,
-                        f"whether {entry.label!r} reads {extension!r} is not established — the "
-                        "installed core could not be read, and a claim nobody read is not a "
-                        "refusal",
-                        {"entry": entry.label, "extension": extension},
-                    ),
+        return _libretro_entry_reading(entry, extension=extension, info=core_info_for(entry))
+    return _standalone_entry_reading(entry, extension=extension)
+
+
+def _libretro_entry_reading(
+    entry: EmulatorEntry, *, extension: str, info: CoreInfo | None
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """The libretro half of :func:`_entry_reading` — claims, and RetroArch's archive hands."""
+    bare = extension[1:].lower() if extension.startswith(".") and len(extension) > 1 else None
+    claims = _core_claims(info)
+    if claims is None:
+        return (
+            _ENTRY_UNESTABLISHED,
+            (),
+            (
+                Caveat(
+                    CAVEAT_ENTRY_FORMAT_UNESTABLISHED,
+                    f"whether {entry.label!r} reads {extension!r} is not established — the "
+                    "installed core could not be read, and a claim nobody read is not a "
+                    "refusal",
+                    {"entry": entry.label, "extension": extension},
                 ),
-            )
-        if bare is not None and bare in claims:
+            ),
+        )
+    if bare is not None and bare in claims:
+        return (
+            _ENTRY_ACCEPTS,
+            (
+                f"entry {entry.label!r}: the installed core claims {extension!r} "
+                "(valid_extensions, read live off the binary; RetroArch's comparisons "
+                "against that list fold case, string_list.c:342-390 @ a79435a)",
+            ),
+            (),
+        )
+    if _loader_archive_token(extension):
+        if info is not None and info.block_extract:
             return (
-                _ENTRY_ACCEPTS,
+                _ENTRY_REFUSES,
                 (
-                    f"entry {entry.label!r}: the installed core claims {extension!r} "
-                    "(valid_extensions, read live off the binary; RetroArch's comparisons "
-                    "against that list fold case, string_list.c:342-390 @ a79435a)",
+                    f"entry {entry.label!r}: the core does not claim {extension!r} and sets "
+                    "block_extract, so RetroArch hands it the archive raw instead of picking "
+                    "a matching file out of it (task_content.c:742, :1735 @ a79435a) — a "
+                    "container the core never claimed to read",
                 ),
                 (),
-            )
-        if _loader_archive_token(extension):
-            if info is not None and info.block_extract:
-                return (
-                    _ENTRY_REFUSES,
-                    (
-                        f"entry {entry.label!r}: the core does not claim {extension!r} and sets "
-                        "block_extract, so RetroArch hands it the archive raw instead of picking "
-                        "a matching file out of it (task_content.c:742, :1735 @ a79435a) — a "
-                        "container the core never claimed to read",
-                    ),
-                    (),
-                )
-            return (
-                _ENTRY_ACCEPTS,
-                (),
-                (
-                    Caveat(
-                        CAVEAT_ARCHIVE_CONTENTS_UNREAD,
-                        f"{extension!r} is a container RetroArch opens for {entry.label!r}: the "
-                        "first file inside matching the core's claims is what loads "
-                        "(task_content.c:1325-1358 @ a79435a) — whether one is in there is "
-                        "inside the archive, which atlas does not read",
-                        {"entry": entry.label, "extension": extension},
-                    ),
-                ),
             )
         return (
             _ENTRY_ACCEPTS,
             (),
             (
                 Caveat(
-                    CAVEAT_ENTRY_FORMAT_UNCLAIMED,
-                    f"the installed core behind {entry.label!r} does not claim {extension!r} — "
-                    "RetroArch checks nothing on a direct load and hands the file over, so the "
-                    "core will attempt it and may fail; the claim's absence is stated, not a "
-                    "refusal",
+                    CAVEAT_ARCHIVE_CONTENTS_UNREAD,
+                    f"{extension!r} is a container RetroArch opens for {entry.label!r}: the "
+                    "first file inside matching the core's claims is what loads "
+                    "(task_content.c:1325-1358 @ a79435a) — whether one is in there is "
+                    "inside the archive, which atlas does not read",
                     {"entry": entry.label, "extension": extension},
                 ),
             ),
         )
+    return (
+        _ENTRY_ACCEPTS,
+        (),
+        (
+            Caveat(
+                CAVEAT_ENTRY_FORMAT_UNCLAIMED,
+                f"the installed core behind {entry.label!r} does not claim {extension!r} — "
+                "RetroArch checks nothing on a direct load and hands the file over, so the "
+                "core will attempt it and may fail; the claim's absence is stated, not a "
+                "refusal",
+                {"entry": entry.label, "extension": extension},
+            ),
+        ),
+    )
+
+
+def _standalone_entry_reading(
+    entry: EmulatorEntry, *, extension: str
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """The standalone half of :func:`_entry_reading` — the recorded loader decides."""
     card = lookup_standalone_launch(emulator_token(entry.command))
     if card is None:
         return (

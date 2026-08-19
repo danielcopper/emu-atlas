@@ -42,7 +42,8 @@ class TestTheStandaloneLaunchCards:
         card = lookup_standalone_launch("AZAHAR")
         assert card is not None
         assert not card.archives
-        assert card.takes(".3ds") and card.takes(".3DS")
+        assert card.takes(".3ds")
+        assert card.takes(".3DS")
         assert not card.takes(".zip")
 
     def test_an_unknown_token_is_none(self):
