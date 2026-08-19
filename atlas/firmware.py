@@ -782,6 +782,11 @@ class CoreDeclarations:
     firmware_count: str = ""
     unread: tuple[str, ...] = ()
     unread_stating_a_path: tuple[str, ...] = ()
+    # The ``corename`` field of the same ``.info`` — RetroArch's own display
+    # name for the core ("Gambatte"), the closest thing a derived catalogue
+    # entry has to a label. Empty where the file states none or could not be
+    # read; a caller labels with the ``.so`` name then, never a guess.
+    corename: str = ""
 
     @property
     def serves_several_systems(self) -> bool:
@@ -830,6 +835,7 @@ class _Info:
     firmware_count: str
     unread: tuple[str, ...]
     unread_stating_a_path: tuple[str, ...]
+    corename: str = ""
 
 
 # What a core whose ``.info`` could not be read declares: nothing, and not
@@ -863,6 +869,7 @@ def _declarations_in(text: str) -> _Info:
         firmware_count=enumeration.count,
         unread=enumeration.unread,
         unread_stating_a_path=enumeration.unread_stating_a_path,
+        corename=fields.get("corename", ""),
     )
 
 
@@ -939,6 +946,7 @@ def read_core_declarations(
                 firmware_count=info.firmware_count,
                 unread=info.unread,
                 unread_stating_a_path=info.unread_stating_a_path,
+                corename=info.corename,
             )
         )
     return CoreEnumeration(tuple(sorted(cores, key=lambda c: c.core_so)), listing.unreadable)
@@ -2139,45 +2147,80 @@ def firmware_for_core(
     )
 
 
+def derived_core_selection(
+    cores: tuple[CoreDeclarations, ...], system: str
+) -> tuple[tuple[CoreDeclarations, ...], Caveat | None]:
+    """The installed cores filed under *system* by their own declarations.
+
+    The selection every catalogue-less answer shares — the firmware route and
+    the catalogue route (issue #133) alike, one function so the two can never
+    derive different lists for one system: a core answers for *system* when
+    the map files the core itself there, or any one of its declared files
+    (the per-file overrides put Flycast under ``naomi``). The second element
+    is the may-hide statement, ``None`` when nothing is at risk: a list keyed
+    on the cores' own ``systemname`` can miss a core whose assignment was
+    derived rather than ruled, and saying which beats an under-inclusive
+    list that reads as complete.
+    """
+    selected = tuple(
+        core
+        for core in cores
+        if core.system == system or any(d.system == system for d in core.firmware)
+    )
+    hidden = _cores_a_derived_assignment_may_hide(cores, selected, system)
+    if not hidden:
+        return selected, None
+    names = ", ".join(sorted(c.core_so for c in hidden))
+    return selected, Caveat(
+        CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
+        f"this list is keyed on the cores' own systemname, and {len(hidden)} installed core(s) "
+        f"name {system!r} in their database while filing firmware by a system that was derived "
+        f"rather than ruled — an emulator missing from this list is one of these: {names}",
+        {
+            "count": str(len(hidden)),
+            "cores": names,
+            "system": system,
+            "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
+        },
+    )
+
+
+# A catalogue-shaped answer whose entries come from the installed cores' own
+# declarations rather than from any catalogue (issue #133). One code on every
+# such answer, whatever the arrangement's catalogue status beside it says
+# (unavailable on a bare RetroArch, sealed on EmuDeck): the list is real, the
+# order claims no default, and no entry carries a launch command.
+CAVEAT_EMULATOR_LIST_DERIVED = "emulator-list-derived"
+
+
+def derived_enumeration_lead(system: str) -> Caveat:
+    """The lead caveat framing a list derived from the cores of a catalogue-less arrangement."""
+    return Caveat(
+        CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
+        "this installation ships no emulator catalogue, so the emulators for this system are derived "
+        "from the installed cores' own systemname — the identifier is atlas's one system vocabulary "
+        "either way; what a catalogue would have said about the emulator list is unknown",
+        {"system": system},
+    )
+
+
 def _derived_enumeration(
     machine: Machine, context: FirmwareContext, system: str, *, verify: bool
 ) -> tuple[list[CoreFirmware], list[Caveat]]:
     """The emulators filed under *system* by the installed cores' own declarations.
 
-    The selection every catalogue-less answer shares: a core answers for
-    *system* when the map files the core itself there, or any one of its
-    declared files (the per-file overrides put Flycast under ``naomi``).
+    :func:`derived_core_selection`, resolved for the firmware answer.
     Observation caveats and the may-hide statement ride along. What does
     *not* ride along is the lead caveat framing the list — *why* the
     enumeration is derived differs between the two callers (an arrangement
     with no catalogue at all, and a word no catalogue can declare), and each
     states its own reason.
     """
-    caveats: list[Caveat] = []
-    selected = tuple(
-        core
-        for core in context.cores
-        if core.system == system or any(d.system == system for d in core.firmware)
-    )
+    selected, hidden = derived_core_selection(context.cores, system)
     cores, observation_caveats = _resolve_cores(machine, context, selected, verify=verify)
-    caveats.extend(observation_caveats)
-    hidden = _cores_a_derived_assignment_may_hide(context.cores, selected, system)
-    if hidden:
-        names = ", ".join(sorted(c.core_so for c in hidden))
-        caveats.append(
-            Caveat(
-                CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
-                f"this list is keyed on the cores' own systemname, and {len(hidden)} installed core(s) "
-                f"name {system!r} in their database while filing firmware by a system that was derived "
-                f"rather than ruled — an emulator missing from this list is one of these: {names}",
-                {
-                    "count": str(len(hidden)),
-                    "cores": names,
-                    "system": system,
-                    "table_version": FIRMWARE_SYSTEM_OVERRIDE_VERSION,
-                },
-            )
-        )
+    caveats = list(observation_caveats)
+    if hidden is not None:
+        caveats.append(hidden)
     return list(cores), caveats
 
 
@@ -2194,14 +2237,7 @@ def _cores_by_systemname(
     a real possibility, an identifier mismatch is not.
     """
     cores, caveats = _derived_enumeration(machine, context, system, verify=verify)
-    lead = Caveat(
-        CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
-        "this installation ships no emulator catalogue, so the emulators for this system are derived "
-        "from the installed cores' own systemname — the identifier is atlas's one system vocabulary "
-        "either way; what a catalogue would have said about the emulator list is unknown",
-        {"system": system},
-    )
-    return cores, [lead, *caveats]
+    return cores, [derived_enumeration_lead(system), *caveats]
 
 
 def _uncatalogued_word_caveat(system: str) -> Caveat:

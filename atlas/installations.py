@@ -64,9 +64,12 @@ from atlas.firmware import (
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
+    CAVEAT_EMULATOR_LIST_DERIVED,
     CAVEAT_FIRMWARE_ROOT_MISSING,
     CAVEAT_INFO_PATH_UNRESOLVED,
     CAVEAT_SYSTEM_UNKNOWN,
+    derived_core_selection,
+    derived_enumeration_lead,
     Catalogue,
     CatalogueEntry,
     CoreDeclarations,
@@ -7950,6 +7953,67 @@ def _launchability_verdict(
     )
 
 
+_DERIVED_ENTRY_PROVENANCE = (
+    "derived from the installed core's own systemname (.info, read live) — no catalogue "
+    "declares this entry, so it carries no launch command"
+)
+
+
+# The context caveats that qualify the *enumeration* a derived catalogue
+# answer is built on — carried onto that answer, unlike the context's
+# firmware-root statements, which qualify a question this one never asked.
+_ENUMERATION_CAVEAT_CODES = frozenset(
+    (
+        CAVEAT_INFO_PATH_UNRESOLVED,
+        CAVEAT_CORE_DIR_UNRESOLVED,
+        CAVEAT_CORE_ENUMERATION_INCOMPLETE,
+        CAVEAT_CORE_INFO_UNREADABLE,
+    )
+)
+
+
+def _derived_catalogue_entries(
+    host: "_CatalogueHost", context: FirmwareContext, system: str
+) -> tuple[tuple[EmulatorEntry, ...], tuple[Caveat, ...]]:
+    """Catalogue-shaped entries for *system*, derived from the installed cores (issue #133).
+
+    The selection is :func:`atlas.firmware.derived_core_selection` — the same
+    one the firmware route uses, so the two questions can never derive
+    different lists for one system. Each entry is a real
+    :class:`EmulatorEntry` with the core's own ``corename`` as its label (the
+    ``.so`` name where the ``.info`` states none) and an **empty command**:
+    no catalogue declares one, and empty is the honest statement where any
+    string would be an invention. The order is the enumeration's own
+    (alphabetical by ``.so``) and claims nothing — with no catalogue and no
+    user selection there is no "entry that would run", and the
+    ``emulator-list-derived`` caveat says all of that in one stable code.
+    """
+    selected, hidden = derived_core_selection(context.cores, system)
+    entries = tuple(
+        EmulatorEntry(
+            host,
+            EmulatorSpec(
+                system=system,
+                label=core.corename or core.core_so,
+                kind=KIND_LIBRETRO,
+                core_so=core.core_so,
+                command="",
+                provenance=_DERIVED_ENTRY_PROVENANCE,
+            ),
+        )
+        for core in selected
+    )
+    derived = Caveat(
+        CAVEAT_EMULATOR_LIST_DERIVED,
+        "these entries are derived from the installed cores' own systemname (.info, read live), "
+        "not from a catalogue — the order claims no default, no entry carries a launch command, "
+        "and a catalogue could declare a different list",
+        {"system": system},
+    )
+    enumeration = tuple(c for c in context.caveats if c.code in _ENUMERATION_CAVEAT_CODES)
+    return entries, (derived, *enumeration, *(() if hidden is None else (hidden,)))
+
+
 def _firmware_with_caveats(answer: FirmwareAnswer, caveats: tuple[Caveat, ...]) -> FirmwareAnswer:
     """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
     return cast(FirmwareAnswer, _dc_replace(answer, caveats=caveats))
@@ -9529,6 +9593,11 @@ class _EsdeSnapshot:
     relocated: bool
     tail: tuple[Caveat, ...]
     exclusive: bool = False
+    # The companion cfg's text, from the same single read whose status decided
+    # the companion health finding — carried so the derived-enumeration branch
+    # (issue #133) can resolve the cores without opening the file a second
+    # time inside one query.
+    companion_text: str | None = None
 
 
 class EmuDeck(_FirmwareQueries, _CatalogueQueries):
@@ -10085,13 +10154,19 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         list.
         """
         settings, marker_issues = self._read_marker()
-        companion_status = self._machine.read_text(self._companion_cfg_path()).status
-        findings = self._health_from(settings, marker_issues, companion_status).issues
+        companion = self._machine.read_text(self._companion_cfg_path())
+        findings = self._health_from(settings, marker_issues, companion.status).issues
         present = self._esde_present()
         riders = self._riders(settings, present)
         if not present:
             return _EsdeSnapshot(
-                findings, (*findings, self._catalogue_absence(), *riders), {}, False, False, ()
+                findings,
+                (*findings, self._catalogue_absence(), *riders),
+                {},
+                False,
+                False,
+                (),
+                companion_text=companion.text,
             )
         relocated = any(caveat.code == CAVEAT_CONFIG_HOME_RELOCATED for caveat in riders)
         by_system, complete, shadow_broken, exclusive, catalogue_invalid = (
@@ -10105,6 +10180,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 False,
                 relocated,
                 (),
+                companion_text=companion.text,
             )
         if exclusive:
             status: tuple[Caveat, ...] = self._catalogue_exclusive(system)
@@ -10113,27 +10189,67 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if catalogue_invalid is not None:
             status = (catalogue_invalid, *status)
         return _EsdeSnapshot(
-            findings, None, by_system, complete, relocated, (*status, *riders), exclusive
+            findings,
+            None,
+            by_system,
+            complete,
+            relocated,
+            (*status, *riders),
+            exclusive,
+            companion_text=companion.text,
         )
 
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
-        """Every system the readable layers declare — stated as incomplete while sealed.
+        """Every system the readable layers declare — joined by the derived ones while sealed.
 
-        The version travelling back is the backend checkout's HEAD
-        (:meth:`_observed_backend_head`) — ``settings.sh`` names none, so the
-        checkout is what this arrangement's evidence is weighed against. It
-        rides the refusal too: which ES-DE is on disk and which backend this
-        machine runs are separate facts.
+        With the bundled layer sealed, the overlay's few systems are not the
+        machine's whole answer: the installed cores' own declarations file
+        under systems the readable layers never mention, and those join the
+        list marked ``emulator-list-derived`` (issue #133). A complete
+        catalogue (a readable shadow, or an exclusive overlay) answers alone —
+        the derivation never overrides a read. The version travelling back is
+        the backend checkout's HEAD (:meth:`_observed_backend_head`) —
+        ``settings.sh`` names none, so the checkout is what this
+        arrangement's evidence is weighed against. It rides the refusal too:
+        which ES-DE is on disk and which backend this machine runs are
+        separate facts.
         """
         version = self._observed_backend_head()
         snapshot = self._esde_snapshot()
         if snapshot.refusal is not None:
             return SystemsAnswer(caveats=snapshot.refusal), version
+        systems = set(snapshot.by_system)
+        derived_mark: tuple[Caveat, ...] = ()
+        sources: tuple[str, ...] = (
+            _CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,
+        )
+        if not snapshot.complete:
+            context = self._derived_context(snapshot)
+            derived = {
+                core.system for core in context.cores if core.system != "_unknown"
+            } | {
+                declaration.system
+                for core in context.cores
+                for declaration in core.firmware
+                if declaration.system != "_unknown"
+            }
+            if derived - systems:
+                systems |= derived
+                sources = (*sources, *context.sources)
+                derived_mark = (
+                    Caveat(
+                        CAVEAT_EMULATOR_LIST_DERIVED,
+                        "the readable layers declare only part of the catalogue, so the systems "
+                        "the installed cores' own declarations file under join this list — the "
+                        "sealed bundled layer may declare a different set",
+                        {},
+                    ),
+                )
         return (
             SystemsAnswer(
-                tuple(sorted(snapshot.by_system)),
-                (_CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,),
-                (*snapshot.findings, *snapshot.tail),
+                tuple(sorted(systems)),
+                sources,
+                (*snapshot.findings, *snapshot.tail, *derived_mark),
             ),
             version,
         )
@@ -10148,13 +10264,28 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         where the answer comes from: the marker, the on-disk ES-DE layers and
         the system's gamelist, each read once here. An empty entry list in the
         sealed state is **not** "the frontend knows none" — the sealed caveat
-        is the code that keeps those apart. The version travelling back is the
-        backend checkout's HEAD, exactly as on :meth:`_systems_answer`.
+        is the code that keeps those apart, and a system the readable layers
+        do not declare answers with the *derived* enumeration instead (issue
+        #133): the installed cores' own declarations, stated as derived,
+        because the sealed layer may declare a different list. The version
+        travelling back is the backend checkout's HEAD, exactly as on
+        :meth:`_systems_answer`.
         """
         version = self._observed_backend_head()
         snapshot = self._esde_snapshot(system)
         if snapshot.refusal is not None:
             return CatalogueAnswer(caveats=snapshot.refusal), version
+        if system not in snapshot.by_system and not snapshot.complete:
+            context = self._derived_context(snapshot)
+            entries, derived = _derived_catalogue_entries(self, context, system)
+            return (
+                CatalogueAnswer(
+                    entries,
+                    context.sources,
+                    (*snapshot.findings, *snapshot.tail, *derived),
+                ),
+                version,
+            )
         anchor = (
             self._esde_system_dir(
                 snapshot.by_system, system, complete=snapshot.complete, relocated=snapshot.relocated
@@ -10176,6 +10307,25 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             ),
             version,
         )
+
+    def _derived_context(self, snapshot: _EsdeSnapshot) -> FirmwareContext:
+        """The core enumeration behind a derived answer — from the snapshot's own cfg read.
+
+        ``findings`` stay empty here on purpose: the snapshot already carries
+        this query's health, and the context is consumed for its cores alone —
+        its caveats never reach the answer, which states its own.
+        """
+        sandbox, environment_sources = self._cfg_sandbox()
+        return _retroarch_firmware_context(
+            sandbox=sandbox,
+            global_text=snapshot.companion_text,
+            cfg_label=RETROARCH_CFG,
+            retroarch_config_dir=self._retroarch_config_dir(),
+            findings=(),
+            arrangement_version=None,
+            extra_sources=environment_sources,
+        )
+
 
     def _launchable_answer(
         self, system: str, content_path: str
@@ -10785,7 +10935,12 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         return self._sandbox(), ()
 
     def _query(
-        self, *, content_path: str | None, core_so: str | None, system: str | None = None
+        self,
+        *,
+        content_path: str | None,
+        core_so: str | None,
+        system: str | None = None,
+        extra_caveats: tuple[Caveat, ...] = (),
     ) -> _SaveQuery:
         """The placement question, over one read of this install's cfg.
 
@@ -10811,7 +10966,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             arrangement="bare",
             arrangement_version=None,
             extra_sources=environment_sources,
-            extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
+            extra_caveats=(*extra_caveats, *health.issues, *arrangement_caveats(self.kind)),
         )
 
     def savefile_location(
@@ -10926,6 +11081,174 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             # this arrangement carries no verified pin to compare one against.
             arrangement_version=None,
             extra_sources=environment_sources,
+        )
+
+    # ── The derived catalogue (issue #133) ─────────────────────────────
+    # A bare RetroArch ships no frontend catalogue, and the machine still
+    # carries an answer: every installed core declares what it is for in the
+    # .info beside it. The enumeration is the firmware route's own selection,
+    # shared so the two questions can never derive different lists — and the
+    # answers say DERIVED on every one, because a catalogue could disagree.
+
+    def _derived_context(self) -> tuple[FirmwareContext, Health]:
+        """The core enumeration behind a derived answer, and this query's health.
+
+        One read of the cfg serves both — its text builds the context, its
+        status the health — and the context's ``findings`` stay empty on
+        purpose: it is consumed for its cores, and the answer states its own
+        health rather than fishing it back out of a mixed caveat list.
+        """
+        cfg = self._machine.read_text(self._cfg_path())
+        sandbox, environment_sources = self._cfg_sandbox()
+        context = _retroarch_firmware_context(
+            sandbox=sandbox,
+            global_text=cfg.text,
+            cfg_label=RETROARCH_CFG,
+            retroarch_config_dir=self.root(),
+            findings=(),
+            arrangement_version=None,
+            extra_sources=environment_sources,
+        )
+        return context, self._health_from(cfg.status)
+
+    def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
+        context, health = self._derived_context()
+        if not context.cores_read:
+            return (
+                SystemsAnswer(caveats=(*health.issues, self._catalogue_absence())),
+                None,
+            )
+        systems = sorted(
+            {core.system for core in context.cores if core.system != "_unknown"}
+            | {
+                declaration.system
+                for core in context.cores
+                for declaration in core.firmware
+                if declaration.system != "_unknown"
+            }
+        )
+        return (
+            SystemsAnswer(
+                tuple(systems),
+                context.sources,
+                (
+                    *health.issues,
+                    Caveat(
+                        CAVEAT_EMULATOR_LIST_DERIVED,
+                        "this installation ships no emulator catalogue, so the systems listed "
+                        "are those the installed cores' own declarations file under — what a "
+                        "catalogue would have declared is unknown",
+                        {},
+                    ),
+                    *(c for c in context.caveats if c.code in _ENUMERATION_CAVEAT_CODES),
+                ),
+            ),
+            None,
+        )
+
+    def _catalogue_answer(
+        self, system: str, *, content_path: str | None = None
+    ) -> tuple[CatalogueAnswer, str | None]:
+        context, health = self._derived_context()
+        if not context.cores_read:
+            return (
+                CatalogueAnswer(caveats=(*health.issues, self._catalogue_absence())),
+                None,
+            )
+        entries, derived = _derived_catalogue_entries(self, context, system)
+        return (
+            CatalogueAnswer(
+                entries,
+                context.sources,
+                (*health.issues, derived_enumeration_lead(system), *derived),
+            ),
+            None,
+        )
+
+    def _launchable_answer(
+        self, system: str, content_path: str
+    ) -> tuple[LaunchabilityAnswer, str | None]:
+        # The derived entries do not change this refusal: the accept-list is
+        # catalogue knowledge, and no core's self-declaration states which
+        # files a frontend would scan — the verdict stays a statement about
+        # the look.
+        cfg_status = self._machine.read_text(self._cfg_path()).status
+        return (
+            LaunchabilityAnswer(
+                verdict=VERDICT_UNKNOWN,
+                extension=esde_extension(content_path),
+                caveats=(*self._health_from(cfg_status).issues, self._catalogue_absence()),
+            ),
+            None,
+        )
+
+    def entry_savefile_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> SavefilePlacement | Unresolved:
+        """The entry route behind a derived entry — the core question, asked by the entry.
+
+        A derived entry is always a libretro core (the enumeration is the
+        cores'), so the placement is exactly what the direct question answers
+        for that ``core_so``; the guard stands for the day a spec arrives
+        from somewhere else.
+        """
+        if spec.kind != KIND_LIBRETRO:
+            return _standalone_savefile_unresolved(spec)
+        return _retroarch_savefile_location(
+            self._machine,
+            self._query(
+                content_path=content_path,
+                core_so=spec.core_so,
+                system=spec.system,
+                extra_caveats=entry_caveats,
+            ),
+        )
+
+    def entry_savestate_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> SavestatePlacement | Unresolved:
+        """The savefile entry route's twin — same sources, the savestate keys."""
+        return _retroarch_savestate_location(
+            self._machine,
+            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+        )
+
+    def entry_texture_pack_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> TexturePlacement | Unresolved:
+        """The texture entry route — the core question, asked by the entry."""
+        if spec.kind != KIND_LIBRETRO:
+            return _standalone_texture_unresolved(spec)
+        return _retroarch_texture_pack_location(
+            self._machine,
+            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+        )
+
+    def entry_mod_location(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...] = (),
+        *,
+        content_path: str | None = None,
+    ) -> ModPlacement | Unresolved:
+        """The mod entry route — the core question, asked by the entry."""
+        if spec.kind != KIND_LIBRETRO:
+            return _standalone_mod_unresolved(spec)
+        return _retroarch_mod_location(
+            self._machine,
+            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
         )
 
 

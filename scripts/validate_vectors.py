@@ -305,6 +305,7 @@ KNOWN_CAVEAT_CODES = {
     "emulator-catalogue-unestablished",
     "emulator-catalogue-sealed",
     "emulator-catalogue-exclusive",
+    "emulator-list-derived",
     "frontend-marker-mismatch",
     "firmware-path-obstructed",
     "firmware-path-inaccessible",
@@ -1511,8 +1512,12 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
         _validate_emulator(name, entry)
     _validate_caveats(name, catalogue["caveats"])
     unread = _no_catalogue_codes_in(catalogue["caveats"])
-    if catalogue["entries"] and unread:
-        fail(f"{name}: expected.catalogue states entries and {unread}")
+    # A derived answer is the one legal pairing (issue #133): the entries come
+    # from the installed cores' own declarations, and the no-catalogue code
+    # beside them says exactly why they had to.
+    derived = any(c["code"] == "emulator-list-derived" for c in catalogue["caveats"])
+    if catalogue["entries"] and unread and not derived:
+        fail(f"{name}: expected.catalogue states entries and {unread} without emulator-list-derived")
 
 
 def _validate_launchable(name: str, answer: Any) -> None:
@@ -1556,8 +1561,9 @@ def _validate_systems(name: str, answer: Any) -> None:
         fail(f"{name}: expected.systems.systems must be a list of non-empty strings")
     _validate_caveats(name, answer["caveats"])
     unread = _no_catalogue_codes_in(answer["caveats"])
-    if answer["systems"] and unread:
-        fail(f"{name}: expected.systems states systems and {unread}")
+    derived = any(c["code"] == "emulator-list-derived" for c in answer["caveats"])
+    if answer["systems"] and unread and not derived:
+        fail(f"{name}: expected.systems states systems and {unread} without emulator-list-derived")
 
 
 def _validate_aggregate_answer(name: str, answered: Any, question: str) -> None:

@@ -9032,7 +9032,7 @@
     },
     {
       "name": "emudeck-esde-sealed-is-not-declares-none",
-      "rationale": "The discriminating direction of the sealed caveat: gb is not in EmuDeck's overlay, and the bundled layer that almost certainly declares it is sealed inside the AppImage. The empty answer carries emulator-catalogue-sealed — 'nothing readable declares this', a statement about atlas — and never reads as 'the frontend knows no emulator for gb'. Same for the ROM placement: no rom-path-undeclared, because that code claims the catalogue WAS read and declares nothing.",
+      "rationale": "The discriminating direction of the sealed caveat: gb is not in EmuDeck's overlay, and the bundled layer that almost certainly declares it is sealed inside the AppImage. The answer never reads as 'the frontend knows no emulator for gb' — since issue #133 it carries the DERIVED enumeration instead: the installed cores' own systemname files them under the asked id, stated as emulator-list-derived beside the sealed statement. This fixture installs no cores, so the derived list is empty too — and still marked derived, never 'declares none'. Same for the ROM placement: no rom-path-undeclared, because the declaration may sit in the sealed layer.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9079,6 +9079,16 @@
               "data": {
                 "system": "gb"
               }
+            },
+            {
+              "code": "emulator-list-derived",
+              "data": {
+                "system": "gb"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
             }
           ]
         },
@@ -12183,6 +12193,124 @@
               "data": {
                 "entry": "RPCS3",
                 "extension": ".iso"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-bare-retroarch-derives-its-emulator-list-from-the-cores",
+      "rationale": "A bare RetroArch ships no frontend catalogue, and the machine still carries an answer: every installed core declares what it is for in the .info beside it (issue #133). The enumeration is the firmware route's own selection — the systemname map files mgba under gba — shaped as real catalogue entries with the core's corename as label and an EMPTY command: no catalogue declares one, and empty is the honest statement where any string would be an invention. The emulator-list-derived caveat says the order claims no default.",
+      "input": {
+        "home": "/home/user",
+        "files": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+        },
+        "cores": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          },
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte"
+          }
+        },
+        "catalogue_query": {
+          "system": "gba"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_flatpak",
+            "kinds": [
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "gba",
+              "label": "mGBA",
+              "kind": "libretro",
+              "core_so": "mgba_libretro.so",
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unavailable",
+              "data": {
+                "system": "gba"
+              }
+            },
+            {
+              "code": "emulator-list-derived",
+              "data": {
+                "system": "gba"
+              }
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_flatpak"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-bare-retroarch-lists-the-systems-its-cores-file-under",
+      "rationale": "The systems question from the same derivation (issue #133): the installed cores' own declarations file under gba and gbc, and the answer lists exactly those — marked emulator-list-derived, because what a catalogue would have declared is unknown, and never as the empty refusal a catalogue-less arrangement gave before.",
+      "input": {
+        "home": "/home/user",
+        "files": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+        },
+        "cores": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          },
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte"
+          }
+        },
+        "systems_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_flatpak",
+            "kinds": [
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "gba",
+            "gbc"
+          ],
+          "caveats": [
+            {
+              "code": "emulator-list-derived",
+              "data": {}
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_flatpak"
               }
             }
           ]

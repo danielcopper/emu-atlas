@@ -667,6 +667,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `entry-format-unclaimed`                    | launchable: the running core does not claim this format — attempted, never refused                  |
 | `archive-contents-unread`                   | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread     |
 | `entry-format-unestablished`                | launchable: what the running entry reads was never established — not the same as "refuses"          |
+| `emulator-list-derived`                     | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
@@ -1046,7 +1047,7 @@ machine and one of the two you may act on as "nothing here":
 | caveat code                        | what it means                                                                                                                                       | what to do                                                                               |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | _(none of the five)_               | read, and the frontend knows no emulator for this system                                                                                            | trust it                                                                                 |
-| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all                                                                                                 | name the core: `savefile_location(core_so=)`                                             |
+| `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all — the entries beside it are **derived** (see below)                                             | use them; `emulator-list-derived` states their nature                                    |
 | `emulator-catalogue-unestablished` | it may have one; atlas has not established where                                                                                                    | same — but do not report "no emulators"                                                  |
 | `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty                                                                               | surface it; the machine may be broken                                                    |
 | `emulator-catalogue-sealed`        | part of the catalogue is sealed away (EmuDeck's AppImage-embedded bundled layer); only the on-disk layers answered                                  | use the entries you got; an empty list is "nothing readable declares this", never "none" |
@@ -1071,6 +1072,19 @@ refusals = {c.code for c in answer.caveats} & {
 if not answer.entries and not refusals:
     nothing_here(system)          # the frontend genuinely knows no emulator for it
 ```
+
+**The derived enumeration (issue #133).** A machine with no readable catalogue still carries an answer: every installed
+core declares what it is for in the `.info` beside it. On a bare RetroArch — and on EmuDeck for a system its readable
+layers do not declare — `emulators_for` now answers with entries **derived** from those declarations, through the same
+versioned systemname map (and the same selection) the firmware route has always used, so the two questions can never
+derive different lists. Such an answer carries `emulator-list-derived`, and the code means three things at once: the
+order claims no default (no catalogue, no user selection — there is no "entry that would run"), no entry carries a
+launch command (`command` is empty — a catalogue declares those, and inventing one would be a guess), and a catalogue
+could declare a different list. The entries are otherwise real: `core_so` names the core, the label is the core's own
+`corename`, and the entry routes work — `entry.savefile_location(...)` answers, because a derived entry is a core and
+the core question was always answerable there. `systems()` on these arrangements lists the systems the cores file under,
+marked the same way. What stays unchanged: `launchable` (the accept-list is catalogue knowledge), and a system the
+readable EmuDeck layers _do_ declare (the catalogue's own answer, never overridden by a derivation).
 
 `unavailable` is a statement about the machine; `unestablished` and `sealed` are statements about atlas, and a client
 that renders either as an absence is telling its user something nobody checked. `exclusive` is a statement about the
