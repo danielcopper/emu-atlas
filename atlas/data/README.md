@@ -122,6 +122,14 @@ here).
   never fills it, because reading an id out of a ROM is identification, not location. It stays in the stated name and
   `save_id` joins `needs`, so a caller sees a template rather than a resolved-looking name.
 
+A group may also carry `observe`: candidates wider than the declared defaults, probed on the machine because they exist
+only when configured (Flycast's slot-2 VMUs beside the four port-1 cards). Since issue #89 an **observation gate** can
+narrow them back — code keyed by `(card, mode)` in `atlas/installations.py`, the same code-beside-data split the
+selection rules make: the card states what _can_ exist, the gate reads the live switches that rule a candidate out here
+(`reicast_device_port{1..4}_slot2` holding anything but the VMU device), and the consulted switches ride the answer's
+granularity readings. A gate only ever removes candidates, and only on an established value — a switch nobody could read
+excludes nothing, because "cannot exist" is a claim, not a default.
+
 The loader rejects any other token in a declared name, and the check is **subtractive**: it removes the known templates
 and refuses whatever still contains `<` or `>`. Scanning for well-formed `<…>` would pass `<rom_stem.A1.bin` (bracket
 never closed) and `<<rom_stem>>.A1.bin` (nested) — both of which atlas would then state verbatim as a filename. That is

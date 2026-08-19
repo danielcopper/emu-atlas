@@ -930,6 +930,26 @@
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
             "alternatives": [
@@ -1300,6 +1320,26 @@
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
             "alternatives": [
@@ -1411,6 +1451,26 @@
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
             "alternatives": [
@@ -1499,6 +1559,26 @@
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
             "alternatives": [
@@ -1586,6 +1666,26 @@
               {
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
@@ -1703,6 +1803,26 @@
               {
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
@@ -3084,6 +3204,26 @@
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
             "alternatives": [
@@ -4100,6 +4240,26 @@
               {
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
@@ -7260,6 +7420,26 @@
               {
                 "key": "reicast_per_content_vmus",
                 "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
@@ -10785,6 +10965,313 @@
             "mode": null,
             "readings": [],
             "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-slot-2-card-that-cannot-exist-is-not-observed",
+      "rationale": "A vmu_save_A2.bin lies in the system tree, but port 1's expansion slot holds the vibration pack — the registered default — and only the VMU device writes a slot-2 card (flycast@1dac369 libretro.cpp:996-1010, registration libretro_core_options.h:995-1008). The observation gate reads the four slot-2 switches and rules the file out instead of probing it blind: a stale card under an excluded name is not part of what this configuration reads or writes, and the readings carry the reason.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/bios/dc/dc_nvmem.bin": "n",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A2.bin": {
+            "status": "invalid-text"
+          }
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369",
+            "options": {
+              "reicast_per_content_vmus": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "VMU A1",
+                  "All VMUs"
+                ]
+              },
+              "reicast_device_port1_slot2": {
+                "default": "Purupuru",
+                "values": [
+                  "VMU",
+                  "Purupuru",
+                  "None"
+                ]
+              },
+              "reicast_device_port2_slot2": {
+                "default": "Purupuru",
+                "values": [
+                  "VMU",
+                  "Purupuru",
+                  "None"
+                ]
+              },
+              "reicast_device_port3_slot2": {
+                "default": "Purupuru",
+                "values": [
+                  "VMU",
+                  "Purupuru",
+                  "None"
+                ]
+              },
+              "reicast_device_port4_slot2": {
+                "default": "Purupuru",
+                "values": [
+                  "VMU",
+                  "Purupuru",
+                  "None"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin",
+              "dc_nvmem.bin"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": "Purupuru",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": "Purupuru",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": "Purupuru",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": "Purupuru",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "values": [
+                  "per-game-files",
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-slot-2-card-the-switch-allows-is-observed-again",
+      "rationale": "The same machine with port 1's expansion slot set to VMU: now the slot-2 card can exist, the gate keeps it as a candidate, and the observation finds it beside the port-1 card. The readings show which switch allowed it — the one edit between this vector and its sibling.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\nreicast_device_port1_slot2 = \"VMU\"\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/mnt/sd/retrodeck/bios/dc/dc_nvmem.bin": "n",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A2.bin": {
+            "status": "invalid-text"
+          }
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "library_version": "1dac369",
+            "options": {
+              "reicast_per_content_vmus": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "VMU A1",
+                  "All VMUs"
+                ]
+              },
+              "reicast_device_port1_slot2": {
+                "default": "Purupuru",
+                "values": [
+                  "VMU",
+                  "Purupuru",
+                  "None"
+                ]
+              },
+              "reicast_device_port2_slot2": {
+                "default": "Purupuru",
+                "values": [
+                  "VMU",
+                  "Purupuru",
+                  "None"
+                ]
+              },
+              "reicast_device_port3_slot2": {
+                "default": "Purupuru",
+                "values": [
+                  "VMU",
+                  "Purupuru",
+                  "None"
+                ]
+              },
+              "reicast_device_port4_slot2": {
+                "default": "Purupuru",
+                "values": [
+                  "VMU",
+                  "Purupuru",
+                  "None"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi",
+          "core_so": "flycast_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/dc",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "vmu_save_A1.bin",
+              "vmu_save_A2.bin",
+              "dc_nvmem.bin"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "reicast_per_content_vmus",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port1_slot2",
+                "value": "VMU",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port2_slot2",
+                "value": "Purupuru",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port3_slot2",
+                "value": "Purupuru",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "reicast_device_port4_slot2",
+                "value": "Purupuru",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "VMU A1",
+                "options": {
+                  "reicast_per_content_vmus": "VMU A1"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "All VMUs",
+                "options": {
+                  "reicast_per_content_vmus": "All VMUs"
+                },
+                "values": [
+                  "per-game-files",
+                  "shared-card"
+                ]
+              }
+            ]
           }
         }
       }
