@@ -6869,6 +6869,113 @@ def _environment_overrides(text: str) -> dict[str, str | None]:
     return environment
 
 
+# Flatpak's overrides directories, one per installation. Both hold a file
+# per app id and a file named "global" that applies to every app. Each of
+# the four spellings was observed live under `strace` (flatpak 1.16.6,
+# reference machine 2026-08-08): one `flatpak override --show` invocation
+# opens exactly one file, and the four flag combinations — plain,
+# `--user`, `<app id>`, `--user <app id>` — open these four in turn.
+_FLATPAK_OVERRIDES_USER = os.path.join(_FLATPAK_USER_BASE, "overrides")
+_FLATPAK_OVERRIDES_SYSTEM = os.path.join("/var", "lib", "flatpak", "overrides")
+_FLATPAK_OVERRIDES_GLOBAL = "global"
+
+
+def _flatpak_override_files(machine: Machine, home: str, app_id: str) -> tuple[str, ...]:
+    """The overrides files that speak for *app_id*'s runs, least specific first.
+
+    Flatpak's own composition, order and scope alike: within each
+    installation the global file before the per-app one, the system
+    installation before the user one, each later file overwriting the
+    earlier per key (``flatpak_deploy_get_overrides``,
+    flatpak-dir.c:1518-1567; the environment merge is a plain per-key
+    hash insert, flatpak-context.c:1077-1079). The system files join only
+    for an app whose *running* deploy the system installation carries
+    (``flatpak_dir_load_deployed``, flatpak-dir.c:3053-3059 and :3071-3077
+    @ 1.16.6, both gated on the installation not being the user one) — and
+    which deploy runs is :func:`_running_deploy`'s single resolution, the
+    same one the app's ``/app`` reads come out of. So a user deploy
+    silences the system files even where a system deploy also exists, and a
+    machine deploying the app nowhere runs nothing for any override to
+    speak about — only the always-loaded user files are read then
+    (flatpak-dir.c:3053-3083).
+    """
+    deploy = _running_deploy(machine, home, app_id)
+    directories = []
+    if deploy is not None and deploy.system:
+        directories.append(_FLATPAK_OVERRIDES_SYSTEM)
+    directories.append(os.path.join(home, _FLATPAK_OVERRIDES_USER))
+    return tuple(
+        os.path.join(directory, name)
+        for directory in directories
+        for name in (_FLATPAK_OVERRIDES_GLOBAL, app_id)
+    )
+
+
+def _flatpak_environment(
+    machine: Machine, home: str, app_id: str
+) -> dict[str, tuple[str | None, str]]:
+    """The environment the override files hand *app_id*'s runs: key -> (value, file).
+
+    Composed the way flatpak composes it: every applicable file in
+    :func:`_flatpak_override_files` order, later files overwriting earlier
+    ones per key — a later set overwrites an earlier unset and vice versa,
+    because the merge is one hash insert per key
+    (flatpak-context.c:1077-1079). ``None`` is an unset. The file that
+    had the last word travels with each value, so a statement can name
+    what a user would edit.
+    """
+    merged: dict[str, tuple[str | None, str]] = {}
+    for path in _flatpak_override_files(machine, home, app_id):
+        text = machine.read_text(path).text
+        if text is None:
+            continue
+        for key, value in _environment_overrides(text).items():
+            merged[key] = (value, path)
+    return merged
+
+
+def _flatpak_cfg_sandbox(machine: Machine, home: str, app_id: str) -> tuple[_Sandbox, tuple[str, ...]]:
+    """The sandbox a Flatpak RetroArch cfg read resolves through, its ``~`` base from the override files.
+
+    The one consequence a Flatpak override has on a cfg-reading query, and
+    that query's one read of the override files. The config home itself
+    cannot be moved: flatpak force-pins the ``XDG_*_HOME`` variables to the
+    per-app directories AFTER applying every override and ``--env``
+    (flatpak 1.16.6, flatpak-context.c:3158-3187 applied via
+    flatpak-run.c:3574, against the context env applied at :3352, both with
+    overwrite; flatpak-run(1) documents the pin; flatpak/flatpak#4529 — the
+    request to lift it — closed as not planned). ``HOME`` is different: the
+    host value passes into the sandbox and an override lands on top with
+    nothing reapplied after (flatpak-run.c:3055, :3352), and the one thing
+    it decides among these reads is what RetroArch substitutes for a ``~``
+    in a cfg value (``getenv("HOME")``, file_path.c:1066-1101, :1457-1468
+    @ a79435a).
+
+    The override value is applied literally — flatpak expands no ``$`` —
+    so an overridden HOME that is not a literal absolute path expands
+    ``~`` into something that is not one either, and the ordinary
+    machinery states what that shape earns (RetroArch's own directory
+    test refuses it, or the sandbox translation cannot follow it). The
+    source line is the statement that an override is in force at all.
+    """
+    environment = _flatpak_environment(machine, home, app_id)
+    if "HOME" not in environment:
+        return _Sandbox(machine, home, app_id, expansion_home=home), ()
+    value, path = environment["HOME"]
+    if not value:
+        state = "HOME unset" if value is None else 'HOME = ""'
+        line = (
+            f"Flatpak overrides read live ({path}: {state}) — RetroArch leaves a ~ in cfg "
+            "values unexpanded (file_path.c:1066-1101, :1457-1468)"
+        )
+    else:
+        line = (
+            f"Flatpak overrides read live ({path}: HOME) — a ~ in cfg values expands "
+            f"against {value!r}"
+        )
+    return _Sandbox(machine, home, app_id, expansion_home=value or None), (line,)
+
+
 # The ways a READ catalogue still yields no ROM directory. The first two are
 # facts about the machine — the catalogue declares nothing, or the frontend's
 # own setting is not a path anything can be resolved against — and a client acts
@@ -8024,119 +8131,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return os.path.join(self._esde_config_home(), "ROMs")
 
-    # Flatpak's overrides directories, one per installation. Both hold a file
-    # per app id and a file named "global" that applies to every app. Each of
-    # the four spellings was observed live under `strace` (flatpak 1.16.6,
-    # reference machine 2026-08-08): one `flatpak override --show` invocation
-    # opens exactly one file, and the four flag combinations — plain,
-    # `--user`, `<app id>`, `--user <app id>` — open these four in turn.
-    _FLATPAK_OVERRIDES_USER = os.path.join(_FLATPAK_USER_BASE, "overrides")
-    _FLATPAK_OVERRIDES_SYSTEM = os.path.join("/var", "lib", "flatpak", "overrides")
-    _FLATPAK_OVERRIDES_GLOBAL = "global"
-
-    def _system_overrides_apply(self) -> bool:
-        """Whether the system installation's overrides files speak for this app's runs.
-
-        Flatpak loads them only for an app whose running deploy the system
-        installation carries (``flatpak_dir_load_deployed``,
-        flatpak-dir.c:3053-3059 and :3071-3077 @ 1.16.6, both gated on the
-        installation not being the user one) — and which deploy runs is
-        :func:`_running_deploy`'s single resolution, the same one this app's
-        ``/app`` reads come out of. So a user deploy silences the system files
-        even where a system deploy also exists, and a machine deploying the
-        app nowhere runs nothing for any override to speak about — only the
-        always-loaded user files are read then.
-        """
-        deploy = _running_deploy(self._machine, self._home, self._APP_ID)
-        return deploy is not None and deploy.system
-
-    def _override_files(self) -> tuple[str, ...]:
-        """The overrides files that speak for this app's runs, least specific first.
-
-        Flatpak's own composition, order and scope alike: within each
-        installation the global file before the per-app one, the system
-        installation before the user one, each later file overwriting the
-        earlier per key (``flatpak_deploy_get_overrides``,
-        flatpak-dir.c:1518-1567; the environment merge is a plain per-key
-        hash insert, flatpak-context.c:1077-1079). The system files join only
-        where they apply (:meth:`_system_overrides_apply`); the user files
-        always do (flatpak-dir.c:3053-3083).
-        """
-        directories = []
-        if self._system_overrides_apply():
-            directories.append(self._FLATPAK_OVERRIDES_SYSTEM)
-        directories.append(os.path.join(self._home, self._FLATPAK_OVERRIDES_USER))
-        return tuple(
-            os.path.join(directory, name)
-            for directory in directories
-            for name in (self._FLATPAK_OVERRIDES_GLOBAL, self._APP_ID)
-        )
-
-    def _effective_environment(self) -> dict[str, tuple[str | None, str]]:
-        """The environment the override files hand this app's runs: key -> (value, file).
-
-        Composed the way flatpak composes it: every applicable file in
-        :meth:`_override_files` order, later files overwriting earlier ones
-        per key — a later set overwrites an earlier unset and vice versa,
-        because the merge is one hash insert per key
-        (flatpak-context.c:1077-1079). ``None`` is an unset. The file that
-        had the last word travels with each value, so a statement can name
-        what a user would edit.
-        """
-        merged: dict[str, tuple[str | None, str]] = {}
-        for path in self._override_files():
-            text = self._machine.read_text(path).text
-            if text is None:
-                continue
-            for key, value in _environment_overrides(text).items():
-                merged[key] = (value, path)
-        return merged
-
     def _cfg_sandbox(self) -> tuple[_Sandbox, tuple[str, ...]]:
-        """The sandbox a cfg read resolves through, its ``~`` base composed from the override files.
+        """The sandbox a cfg read resolves through — :func:`_flatpak_cfg_sandbox` for this app.
 
-        The one consequence a Flatpak override can still have on this handle,
-        and the cfg-reading queries' one read of the override files. The
-        config home itself cannot be moved: flatpak force-pins the
-        ``XDG_*_HOME`` variables to the per-app directories AFTER applying
-        every override and ``--env`` (flatpak 1.16.6,
-        flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against
-        the context env applied at :3352, both with overwrite;
-        flatpak-run(1) documents the pin; flatpak/flatpak#4529 — the request
-        to lift it — closed as not planned), and every file this handle
-        reads is keyed off ``XDG_CONFIG_HOME`` by RetroDECK's own scripts
-        (``all_vars.sh:4``, retroarch ``component_functions.sh:3``, es-de
-        ``component_launcher.sh:10``). ``HOME`` is different: the host
-        value passes into the sandbox and an override lands on top with
-        nothing reapplied after (flatpak-run.c:3055, :3352), and the one
-        thing it decides among this handle's reads is what RetroArch
-        substitutes for a ``~`` in a cfg value (``getenv("HOME")``,
-        file_path.c:1066-1101, :1457-1468 @ a79435a).
-
-        The override value is applied literally — flatpak expands no ``$`` —
-        so an overridden HOME that is not a literal absolute path expands
-        ``~`` into something that is not one either, and the ordinary
-        machinery states what that shape earns (RetroArch's own directory
-        test refuses it, or the sandbox translation cannot follow it). The
-        source line is the statement that an override is in force at all.
+        The ``~`` seam is the override files' one consequence on this handle,
+        because every file it reads is keyed off ``XDG_CONFIG_HOME`` by
+        RetroDECK's own scripts (``all_vars.sh:4``, retroarch
+        ``component_functions.sh:3``, es-de ``component_launcher.sh:10``),
+        and flatpak pins those variables against every override.
         """
-        environment = self._effective_environment()
-        if "HOME" not in environment:
-            return self._sandbox(), ()
-        value, path = environment["HOME"]
-        if not value:
-            state = "HOME unset" if value is None else 'HOME = ""'
-            line = (
-                f"Flatpak overrides read live ({path}: {state}) — RetroArch leaves a ~ in cfg "
-                "values unexpanded (file_path.c:1066-1101, :1457-1468)"
-            )
-        else:
-            line = (
-                f"Flatpak overrides read live ({path}: HOME) — a ~ in cfg values expands "
-                f"against {value!r}"
-            )
-        sandbox = _Sandbox(self._machine, self._home, self._APP_ID, expansion_home=value or None)
-        return sandbox, (line,)
+        return _flatpak_cfg_sandbox(self._machine, self._home, self._APP_ID)
 
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
         """Every system the catalogue declares, sorted — and the version that read stated.
@@ -9782,8 +9786,17 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")
 
-    def _sandbox(self) -> _Sandbox:
-        return _Sandbox(self._machine, self._home, self._RA_APP_ID, expansion_home=self._home)
+    def _cfg_sandbox(self) -> tuple[_Sandbox, tuple[str, ...]]:
+        """The sandbox the companion cfg resolves through — the bare Flatpak's own override files.
+
+        EmuDeck's RetroArch *is* the ``org.libretro.RetroArch`` Flatpak, so
+        the files that speak for its runs are that app's (issue #101), read
+        with :func:`_flatpak_cfg_sandbox`'s composition — the same one
+        RetroDECK's handle reads its own with. EmuDeck's scripts pin nothing
+        here: the flatpak XDG pin alone is what keeps the config home in
+        place, and ``HOME`` remains the one seam that reaches a cfg ``~``.
+        """
+        return _flatpak_cfg_sandbox(self._machine, self._home, self._RA_APP_ID)
 
     def _query(
         self,
@@ -9799,14 +9812,17 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         HEAD (:meth:`_observed_backend_head`), read once here and stated
         through both channels — the per-card comparison and the
         arrangement-level evidence — so the two can never weigh different
-        readings of it.
+        readings of it. The sandbox arrives with its ``~`` base composed from
+        the bare Flatpak's override files (:meth:`_cfg_sandbox`) — this
+        query's one read of those files — and every resolution goes through
+        that one sandbox, the core path included.
         """
         settings, marker_issues = self._read_marker()
         global_cfg_path = self._companion_cfg_path()
         cfg = self._machine.read_text(global_cfg_path)
         health = self._health_from(settings, marker_issues, cfg.status)
         version = self._observed_backend_head()
-        sandbox = self._sandbox()
+        sandbox, environment_sources = self._cfg_sandbox()
         return _SaveQuery(
             sandbox=sandbox,
             global_cfg_path=global_cfg_path,
@@ -9820,6 +9836,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             arrangement="emudeck",
             arrangement_version=version,
             system=system,
+            extra_sources=environment_sources,
             extra_caveats=(
                 *extra_caveats,
                 *health.issues,
@@ -9943,10 +9960,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         its text builds the context, its status decides the companion health
         finding — so the two can never describe different revisions of it. The
         marker snapshot arrives for the same reason: the caller read it once
-        and every part of its answer describes that one revision.
+        and every part of its answer describes that one revision. The sandbox
+        arrives with its ``~`` base composed from the bare Flatpak's override
+        files (:meth:`_cfg_sandbox`) — this context's one read of those files.
         """
+        sandbox, environment_sources = self._cfg_sandbox()
         return _retroarch_firmware_context(
-            sandbox=self._sandbox(),
+            sandbox=sandbox,
             global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self._retroarch_config_dir(),
@@ -9954,6 +9974,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             # ``settings.sh`` names no EmuDeck version — the backend
             # checkout's HEAD is the version this machine states about itself.
             arrangement_version=self._observed_backend_head(),
+            extra_sources=environment_sources,
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
@@ -10104,13 +10125,29 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         """
         return _Sandbox(self._machine, self._home, self._app_id, expansion_home=self._home)
 
+    def _cfg_sandbox(self) -> tuple[_Sandbox, tuple[str, ...]]:
+        """The sandbox a cfg read resolves through, and the statements composing it made.
+
+        The native install's default: the host's own home, and no override
+        files anywhere to read — nothing sandboxes this RetroArch, so nothing
+        can hand it another ``HOME``. :class:`BareRetroArchFlatpak` overrides
+        this with the Flatpak composition (issue #101).
+        """
+        return self._sandbox(), ()
+
     def _query(
         self, *, content_path: str | None, core_so: str | None, system: str | None = None
     ) -> _SaveQuery:
-        """The placement question, over one read of this install's cfg."""
+        """The placement question, over one read of this install's cfg.
+
+        The sandbox arrives with its ``~`` base composed by
+        :meth:`_cfg_sandbox` — on the Flatpak install that is this query's
+        one read of the app's override files — and every resolution goes
+        through that one sandbox, the core path included.
+        """
         cfg = self._machine.read_text(self._cfg_path())
         health = self._health_from(cfg.status)
-        sandbox = self._sandbox()
+        sandbox, environment_sources = self._cfg_sandbox()
         return _SaveQuery(
             sandbox=sandbox,
             global_cfg_path=self._cfg_path(),
@@ -10124,6 +10161,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             core_path_resolver=lambda so: _core_path_from(sandbox, cfg.text, so),
             arrangement="bare",
             arrangement_version=None,
+            extra_sources=environment_sources,
             extra_caveats=(*health.issues, *arrangement_caveats(self.kind)),
         )
 
@@ -10224,10 +10262,13 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
 
     def _read_firmware_context(self) -> FirmwareContext:
         # One read of the cfg answers both: its text is the context, its status
-        # is the health of an installation whose cfg *is* the marker.
+        # is the health of an installation whose cfg *is* the marker. The
+        # sandbox composes through _cfg_sandbox — on the Flatpak install this
+        # context's one read of the app's override files.
         cfg = self._machine.read_text(self._cfg_path())
+        sandbox, environment_sources = self._cfg_sandbox()
         return _retroarch_firmware_context(
-            sandbox=self._sandbox(),
+            sandbox=sandbox,
             global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self.root(),
@@ -10235,6 +10276,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             # A bare install states no version of anything but RetroArch, and
             # this arrangement carries no verified pin to compare one against.
             arrangement_version=None,
+            extra_sources=environment_sources,
         )
 
 
@@ -10247,6 +10289,17 @@ class BareRetroArchFlatpak(_RetroArchInstall):
 
     def __init__(self, home: str, machine: Machine) -> None:
         super().__init__(home, machine, STANDALONE_FLATPAK_CFG_SUFFIX)
+
+    def _cfg_sandbox(self) -> tuple[_Sandbox, tuple[str, ...]]:
+        """The Flatpak composition: this app's own override files decide the ``~`` base.
+
+        The same read RetroDECK's handle makes of its own files (issue #101)
+        — the bare app's runs are governed by ``org.libretro.RetroArch``'s
+        overrides, with the same deploy resolution deciding whether the
+        system installation's files speak (:func:`_running_deploy`, the
+        resolution its ``/app`` reads already ride).
+        """
+        return _flatpak_cfg_sandbox(self._machine, self._home, RETROARCH_FLATPAK_APP_ID)
 
 
 class BareRetroArchNative(_RetroArchInstall):

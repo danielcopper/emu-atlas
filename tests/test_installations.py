@@ -3581,6 +3581,90 @@ class TestAHomeOverrideMovesOnlyTheCfgTildeBase:
         assert placement.dir == "/mnt/elsewhere/saves"
 
 
+class TestTheBareFlatpaksOverridesAreReadTheSameWay:
+    """Issue #101: the ``org.libretro.RetroArch`` overrides speak for the bare app and for EmuDeck's.
+
+    The composition is the one RetroDECK's handle already reads its own files
+    with — user files always, system files only for a system-deployed app —
+    so these tests pin the *wiring*, not the merge machinery: which handle
+    reads which app's files, and that a native install reads none at all.
+    """
+
+    TILDE_CFG = (
+        'savefile_directory = "~/saves"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+    )
+    USER_APP = f"{HOME}/.local/share/flatpak/overrides/org.libretro.RetroArch"
+    SYSTEM_APP = "/var/lib/flatpak/overrides/org.libretro.RetroArch"
+    SYSTEM_DEPLOY = "/var/lib/flatpak/app/org.libretro.RetroArch/current/active"
+    USER_DEPLOY = f"{HOME}/.local/share/flatpak/app/org.libretro.RetroArch/current/active"
+    HOME_DIRS = ["/mnt/elsewhere/saves", f"{HOME}/saves"]
+    MOVED = "[Environment]\nHOME=/mnt/elsewhere\n"
+
+    def _bare(self, files=None, dirs=()):
+        machine = FixtureMachine(
+            {STANDALONE_CFG: self.TILDE_CFG, **(files or {})}, dirs=[*self.HOME_DIRS, *dirs]
+        )
+        return placed(atlas.BareRetroArchFlatpak(HOME, machine).savefile_location())
+
+    def test_a_user_override_moves_the_bare_flatpaks_tilde_base(self):
+        placement = self._bare({self.USER_APP: self.MOVED})
+        assert placement.dir == "/mnt/elsewhere/saves"
+        assert any("Flatpak overrides read live" in source for source in placement.sources)
+
+    def test_without_an_override_the_tilde_expands_against_the_machine_home(self):
+        placement = self._bare()
+        assert placement.dir == f"{HOME}/saves"
+        assert not any("Flatpak overrides read live" in source for source in placement.sources)
+
+    def test_a_system_override_needs_a_system_deploy_to_speak(self):
+        # No deploy anywhere: only the always-loaded user files are read
+        # (flatpak-dir.c:3053-3083), so the system file says nothing.
+        placement = self._bare({self.SYSTEM_APP: self.MOVED})
+        assert placement.dir == f"{HOME}/saves"
+
+    def test_a_system_override_speaks_for_the_system_deployed_app(self):
+        placement = self._bare({self.SYSTEM_APP: self.MOVED}, dirs=[self.SYSTEM_DEPLOY])
+        assert placement.dir == "/mnt/elsewhere/saves"
+
+    def test_a_user_deploy_silences_the_system_file(self):
+        # Both installations carry the app; the user one runs (the #93
+        # resolution), and flatpak loads system overrides only for an app the
+        # system installation runs.
+        placement = self._bare(
+            {self.SYSTEM_APP: self.MOVED}, dirs=[self.SYSTEM_DEPLOY, self.USER_DEPLOY]
+        )
+        assert placement.dir == f"{HOME}/saves"
+
+    def test_emudecks_retroarch_reads_the_same_apps_files(self):
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\n',
+                STANDALONE_CFG: self.TILDE_CFG,
+                self.USER_APP: self.MOVED,
+            },
+            dirs=self.HOME_DIRS,
+        )
+        placement = placed(atlas.EmuDeck(HOME, machine).savefile_location())
+        assert placement.dir == "/mnt/elsewhere/saves"
+        assert any("Flatpak overrides read live" in source for source in placement.sources)
+
+    def test_a_native_install_reads_no_override_files(self):
+        # Nothing sandboxes a native RetroArch, so nothing can hand it another
+        # HOME — the file is another app's business.
+        machine = FixtureMachine(
+            {
+                f"{HOME}/.config/retroarch/retroarch.cfg": self.TILDE_CFG,
+                self.USER_APP: self.MOVED,
+                f"{HOME}/.local/share/flatpak/overrides/global": self.MOVED,
+            },
+            dirs=self.HOME_DIRS,
+        )
+        placement = placed(atlas.BareRetroArchNative(HOME, machine).savefile_location())
+        assert placement.dir == f"{HOME}/saves"
+        assert not any("Flatpak overrides read live" in source for source in placement.sources)
+
+
 class TestTheRunningDeployIsTheOneFlatpakWouldStart:
     """Both installations can carry the same app; the reads come from the one that runs.
 
