@@ -37,6 +37,7 @@ design contract (DESIGN.md, consumption), so ``defusedxml`` is not an option.
 
 from __future__ import annotations
 
+import os
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -116,6 +117,47 @@ def _launch_entries(system_el: ET.Element, *, system: str, provenance: str) -> t
     return tuple(entries)
 
 
+def _read_list(text: str) -> tuple[str, ...]:
+    """Split a catalogue list the way ES-DE's ``readList`` does.
+
+    The delimiter set is exactly ES-DE's — space, tab, CR, LF and comma
+    (``readList``, SystemData.cpp:795 @ v3.4.1) — and nothing else: Python's
+    bare ``split()`` would also break on vertical tabs and form feeds, which
+    ES-DE keeps inside a token.
+    """
+    tokens: list[str] = []
+    current: list[str] = []
+    for char in text:
+        if char in " \t\r\n,":
+            if current:
+                tokens.append("".join(current))
+                current = []
+            continue
+        current.append(char)
+    if current:
+        tokens.append("".join(current))
+    return tuple(tokens)
+
+
+def esde_extension(path: str) -> str:
+    """The extension ES-DE derives from *path* — the token its accept-list is matched against.
+
+    ``Utils::FileSystem::getExtension`` (FileSystemUtil.cpp:630-645 @ v3.4.1):
+    the file name from its **last** dot inclusive, case preserved — the scan's
+    comparison against the declared list is an exact string match
+    (SystemData.cpp:669), which is why real catalogues list ``.z64`` and
+    ``.Z64`` separately. A name without a dot answers ``"."``, the same
+    sentinel ES-DE uses, which matches only a declared ``"."`` token.
+    """
+    name = os.path.basename(path)
+    if name == ".":
+        return name
+    offset = name.rfind(".")
+    if offset != -1:
+        return name[offset:]
+    return "."
+
+
 @dataclass(frozen=True, slots=True)
 class SystemDeclaration:
     """One ``<system>`` as declared: what launches it, where it lives, what counts.
@@ -123,9 +165,11 @@ class SystemDeclaration:
     ``rom_path`` is the ``<path>`` text **verbatim**, still carrying whatever
     tokens the file wrote (``%ROMPATH%/n64``) — resolving them needs a setting
     this parser does not read, so substituting here would mean guessing it.
-    ``extensions`` is the ``<extension>`` list split on whitespace, each token
-    exactly as declared: ES-DE lists both cases separately (``.z64 .Z64``), and
-    normalizing would state a vocabulary the file does not.
+    ``extensions`` is the ``<extension>`` list split the way ES-DE's own
+    ``readList`` splits it (space, tab, CR, LF **and comma** —
+    SystemData.cpp:795 @ v3.4.1), each token exactly as declared: ES-DE lists
+    both cases separately (``.z64 .Z64``), and normalizing would state a
+    vocabulary the file does not.
     """
 
     entries: tuple[EmulatorSpec, ...] = ()
@@ -225,7 +269,7 @@ def parse_es_systems(text: str, *, provenance: str) -> CatalogueLayer:
         result[name] = SystemDeclaration(
             entries=_launch_entries(system_el, system=name, provenance=provenance),
             rom_path=declared_path or None,
-            extensions=tuple((system_el.findtext("extension") or "").split()),
+            extensions=_read_list(system_el.findtext("extension") or ""),
         )
     return CatalogueLayer(systems=result, load_exclusive=load_exclusive)
 

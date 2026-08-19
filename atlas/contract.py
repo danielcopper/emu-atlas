@@ -39,6 +39,7 @@ from atlas.installations import (
     EmulatorEntry,
     Health,
     Installation,
+    LaunchabilityAnswer,
     RomPlacement,
     SystemsAnswer,
 )
@@ -421,6 +422,23 @@ def catalogue_contract(answer: CatalogueAnswer) -> dict[str, Any]:
     """
     return {
         "entries": [emulator_contract(e) for e in answer.entries],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+    }
+
+
+def launchable_contract(answer: LaunchabilityAnswer) -> dict[str, Any]:
+    """The stable form of a launchability answer — the verdict, and everything a 'no' needs.
+
+    ``entry`` is ``null`` on every verdict but ``launchable``: an emulator for
+    a file nothing launches would answer a different question. ``accepted``
+    stays the declared tokens verbatim, the same non-vocabulary the ROM
+    placement's ``extensions`` field carries.
+    """
+    return {
+        "verdict": answer.verdict,
+        "extension": answer.extension,
+        "accepted": list(answer.accepted),
+        "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
         "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
     }
 

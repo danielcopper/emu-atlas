@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "spec": "Formats that are real content for a platform and still launch nothing until an installation step has run — the knowledge that turns a launchability 'no' into the right kind of 'no' (issue #36). A file whose extension is outside a system's accept-list earns 'not-accepted', and the consumer's remedy there is to pick another file or another entry. But some of those files are the *distribution form* of the content itself: a PSN package is the only form many digital-only PS3 titles exist in, and the emulator has to install it before anything can launch. Telling that consumer 'not accepted' sends them looking for a file that does not exist; 'needs installation first' names the actual step. This is world knowledge about a platform, written nowhere on the machine — the accept-list states only that the frontend will not scan the file, never why — so it is marked, versioned and cited here, keyed by the atlas system id and the exact extension token ES-DE would derive (case-sensitive, leading dot). The table is consulted only where the extension is already outside the machine's own accept-list: what the catalogue declares launchable, is launchable — this file never overrides a read.",
+  "systems": {
+    "ps3": {
+      ".pkg": {
+        "statement": "a PSN package — an installer, not loadable content: RPCS3 installs it into its dev_hdd0 tree first, and the title is then launched by its installed form",
+        "source": "[D] RPCS3's own quickstart routes packages through 'File > Install Packages/Raps/Edats' into dev_hdd0 and launches the title from the game list afterwards (rpcs3.net/quickstart, read 2026-08-19); ES-DE's ps3 accept-list carries no .pkg (RetroDECK 0.10.9b declares .desktop .iso .ps3 .ps3dir), so the frontend never scans one. Upstream RPCS3 source not yet read, hence [D]. Surfaced by decky-romm-sync#1582: a largest-file fallback picked the multi-gigabyte package and baked a command RPCS3 could not act on."
+      },
+      ".rap": {
+        "statement": "a PSN license file — installed alongside its package, never launched: without the matching .pkg installed it activates nothing",
+        "source": "[D] The same RPCS3 flow installs licenses beside packages ('File > Install Packages/Raps/Edats', rpcs3.net/quickstart, read 2026-08-19); ES-DE's ps3 accept-list carries no .rap. Upstream RPCS3 source not yet read, hence [D]."
+      }
+    }
+  }
+}

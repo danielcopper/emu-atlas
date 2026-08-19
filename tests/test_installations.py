@@ -194,6 +194,108 @@ class TestAnUnwiredContentTreeIsAFinding:
         assert self._findings(rd) == []
 
 
+class TestLaunchable:
+    """Issue #36: whether a file launches as a system's content — and why not, when not.
+
+    The accept-list is matched the way ES-DE matches it: the file name's token
+    from its last dot, case preserved, compared exactly against the declared
+    tokens (FileSystemUtil.cpp:630-645, SystemData.cpp:669 @ v3.4.1).
+    """
+
+    DREAMCAST = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>dreamcast</name>\n'
+        "    <path>%ROMPATH%/dreamcast</path>\n    <extension>.chd .cue .gdi</extension>\n"
+        '    <command label="Flycast">retroarch -L /app/cores/flycast_libretro.so %ROM%</command>\n'
+        "  </system>\n  <system>\n    <name>ps3</name>\n"
+        "    <path>%ROMPATH%/ps3</path>\n    <extension>.iso .ps3 .ps3dir</extension>\n"
+        '    <command label="RPCS3">%EMULATOR_RPCS3% %ROM%</command>\n'
+        "  </system>\n</systemList>\n"
+    )
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+        RD_BUNDLED_ESDE: DREAMCAST,
+    }
+
+    def _rd(self, files=None):
+        return _retrodeck({**self.FILES, **(files or {})}, dirs=["/mnt/sd/retrodeck/saves"])
+
+    def test_an_accepted_extension_is_launchable_with_its_entry(self):
+        answer = self._rd().launchable("dreamcast", "/roms/dreamcast/Game.chd")
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert answer.extension == ".chd"
+        assert answer.accepted == (".chd", ".cue", ".gdi")
+        assert answer.entry is not None
+        assert answer.entry.label == "Flycast"
+
+    def test_the_match_is_case_sensitive_the_way_esde_scans(self):
+        # ES-DE never lowercases: a .CHD file with only .chd declared never
+        # appears in the menu, and the verdict says so.
+        answer = self._rd().launchable("dreamcast", "/roms/dreamcast/Game.CHD")
+        assert answer.verdict == atlas.VERDICT_NOT_ACCEPTED
+        assert answer.extension == ".CHD"
+        assert answer.entry is None
+
+    def test_a_track_file_is_not_accepted(self):
+        # The GDI-rip case: the accept-list deliberately excludes track files,
+        # and the verdict steers a largest-file fallback away from them.
+        answer = self._rd().launchable("dreamcast", "/roms/dreamcast/Game (Track 1).bin")
+        assert answer.verdict == atlas.VERDICT_NOT_ACCEPTED
+
+    def test_a_psn_package_needs_installation_first(self):
+        answer = self._rd().launchable("ps3", "/roms/ps3/Game.pkg")
+        assert answer.verdict == atlas.VERDICT_NEEDS_INSTALLATION
+        assert answer.extension == ".pkg"
+        assert answer.entry is None
+
+    def test_an_undeclared_system_is_unknown_not_refused_as_content(self):
+        answer = self._rd().launchable("wonderswan", "/roms/wonderswan/Game.ws")
+        assert answer.verdict == atlas.VERDICT_UNKNOWN
+        assert atlas.CAVEAT_SYSTEM_UNKNOWN in [c.code for c in answer.caveats]
+
+    def test_a_system_esde_would_skip_is_unknown(self):
+        # A declared system without a <command> never loads (loadConfig skips
+        # it, SystemData.cpp:1109-1119) — its accept-list judges nothing.
+        broken = self.DREAMCAST.replace(
+            '<command label="Flycast">retroarch -L /app/cores/flycast_libretro.so %ROM%</command>\n',
+            "",
+        )
+        answer = self._rd({RD_BUNDLED_ESDE: broken}).launchable(
+            "dreamcast", "/roms/dreamcast/Game.chd"
+        )
+        assert answer.verdict == atlas.VERDICT_UNKNOWN
+        assert atlas.CAVEAT_SYSTEM_UNKNOWN in [c.code for c in answer.caveats]
+
+    def test_a_catalogue_less_arrangement_answers_unknown(self):
+        machine = FixtureMachine(
+            {f"{HOME}/.config/retroarch/retroarch.cfg": 'savefile_directory = "~/saves"\n'}
+        )
+        answer = atlas.BareRetroArchNative(HOME, machine).launchable(
+            "dreamcast", "/roms/dreamcast/Game.chd"
+        )
+        assert answer.verdict == atlas.VERDICT_UNKNOWN
+        assert answer.accepted == ()
+
+    def test_a_sealed_catalogue_keeps_an_undeclared_system_unclaimed(self):
+        # EmuDeck's bundled layer is sealed: the system may be declared in the
+        # part atlas cannot open, so unknown rides the sealed statement alone —
+        # never system-unknown, which would claim a complete read.
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\n',
+                STANDALONE_CFG: 'savefile_directory = "~/saves"\n',
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": (
+                    '<?xml version="1.0"?><systemList></systemList>'
+                ),
+            }
+        )
+        answer = atlas.EmuDeck(HOME, machine).launchable("dreamcast", "/roms/dreamcast/Game.chd")
+        assert answer.verdict == atlas.VERDICT_UNKNOWN
+        codes = [c.code for c in answer.caveats]
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
+        assert atlas.CAVEAT_SYSTEM_UNKNOWN not in codes
+
+
 class TestRetroDeckPaths:
     def test_roots_from_json(self):
         rd = _retrodeck({RETRODECK_JSON: RD_JSON})

@@ -37,6 +37,7 @@ INPUT_FIELDS_OPTIONAL = {
     "aggregate_query",
     "catalogue_query",
     "systems_query",
+    "launchable_query",
     "rom_location_query",
     "entry_savefile_query",
     "savestate_query",
@@ -60,6 +61,10 @@ QUERY_FIELDS = {"content_path", "core_so", "installation"}
 CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
 # The systems question takes no arguments — only which handle answers it.
 SYSTEMS_QUERY_FIELDS = {"installation"}
+LAUNCHABLE_QUERY_FIELDS = {"installation", "system", "content_path"}
+# The launchability verdicts — the vocabulary expected.launchable.verdict draws
+# from, mirrored from atlas.installations.LAUNCH_VERDICTS.
+KNOWN_LAUNCH_VERDICTS = {"launchable", "not-accepted", "needs-installation", "unknown"}
 # ROM placement is asked of one system; content plays no part in where a
 # system's ROMs live, so unlike the catalogue query this one takes no path.
 ROM_LOCATION_QUERY_FIELDS = {"installation", "system"}
@@ -489,6 +494,24 @@ def _validate_systems_query(name: str, query: Any) -> None:
     _validate_handle_selector(name, "systems_query", query)
 
 
+def _validate_launchable_query(name: str, query: Any) -> None:
+    # Both halves are the question's subject: a verdict without a file has
+    # nothing to derive an extension from, and one without a system has no
+    # accept-list to judge it by.
+    if not isinstance(query, dict):
+        fail(f"{name}: input.launchable_query must be an object")
+    keys = set(query)
+    if not {"system", "content_path"} <= keys or not keys <= LAUNCHABLE_QUERY_FIELDS:
+        fail(
+            f"{name}: input.launchable_query must carry 'system' and 'content_path' plus "
+            "optional 'installation'"
+        )
+    for key in keys:
+        if not isinstance(query[key], str) or not query[key]:
+            fail(f"{name}: input.launchable_query.{key} must be a non-empty string")
+    _validate_handle_selector(name, "launchable_query", query)
+
+
 def _validate_aggregate_question(name: str, query: dict[str, Any]) -> None:
     """Each question carries what that question is asked by, and nothing else.
 
@@ -662,6 +685,7 @@ _OWN_QUERY_VALIDATORS = {
     "aggregate_query": _validate_aggregate_query,
     "catalogue_query": _validate_catalogue_query,
     "systems_query": _validate_systems_query,
+    "launchable_query": _validate_launchable_query,
     "rom_location_query": _validate_rom_location_query,
     "firmware_query": _validate_firmware_query,
     "identify_query": _validate_identify_query,
@@ -1482,6 +1506,31 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
         fail(f"{name}: expected.catalogue states entries and {unread}")
 
 
+def _validate_launchable(name: str, answer: Any) -> None:
+    """A launchability answer: the verdict, and the coupling only it may state.
+
+    ``entry`` and ``launchable`` travel together — an emulator named for a
+    file nothing launches would answer a different question, and a launchable
+    verdict without the entry that would run has thrown half its answer away.
+    """
+    fields = {"verdict", "extension", "accepted", "entry", "caveats"}
+    if not isinstance(answer, dict) or set(answer) != fields:
+        fail(f"{name}: expected.launchable must carry exactly {sorted(fields)}")
+    if answer["verdict"] not in KNOWN_LAUNCH_VERDICTS:
+        fail(f"{name}: expected.launchable.verdict must be one of {sorted(KNOWN_LAUNCH_VERDICTS)}")
+    if not isinstance(answer["extension"], str) or not answer["extension"]:
+        fail(f"{name}: expected.launchable.extension must be a non-empty string")
+    if not isinstance(answer["accepted"], list) or not all(
+        isinstance(token, str) and token for token in answer["accepted"]
+    ):
+        fail(f"{name}: expected.launchable.accepted must be a list of non-empty strings")
+    if (answer["entry"] is not None) != (answer["verdict"] == "launchable"):
+        fail(f"{name}: expected.launchable.entry travels with the 'launchable' verdict alone")
+    if answer["entry"] is not None:
+        _validate_emulator(name, answer["entry"])
+    _validate_caveats(name, answer["caveats"])
+
+
 def _validate_systems(name: str, answer: Any) -> None:
     """A systems answer: what the catalogue declares, and why nothing when nothing."""
     if not isinstance(answer, dict) or set(answer) != {"systems", "caveats"}:
@@ -1550,6 +1599,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         "aggregate",
         "catalogue",
         "systems",
+        "launchable",
         "rom_location",
         "entry_savefile_location",
         "savestate_location",
@@ -1571,6 +1621,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: catalogue_query and catalogue expectation must appear together")
     if ("systems" in keys) != ("systems_query" in inp):
         fail(f"{name}: systems_query and systems expectation must appear together")
+    if ("launchable" in keys) != ("launchable_query" in inp):
+        fail(f"{name}: launchable_query and launchable expectation must appear together")
     if ("rom_location" in keys) != ("rom_location_query" in inp):
         fail(f"{name}: rom_location_query and rom_location expectation must appear together")
     if ("savefile_location" in keys) != ("savefile_query" in inp):
@@ -1618,6 +1670,7 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
             "entry_mod_location",
             "catalogue",
             "systems",
+            "launchable",
             "firmware",
             "identification",
         }
@@ -1633,6 +1686,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_rom_location(name, expected["rom_location"])
     if "systems" in keys:
         _validate_systems(name, expected["systems"])
+    if "launchable" in keys:
+        _validate_launchable(name, expected["launchable"])
     if "savestate_location" in keys:
         _validate_savestate_outcome(name, expected["savestate_location"])
     if "screenshot_location" in keys:

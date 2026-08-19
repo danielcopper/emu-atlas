@@ -46,6 +46,7 @@ from atlas.esde import (
     GamelistSelections,
     SystemDeclaration,
     emulator_token,
+    esde_extension,
     expand_home_path,
     merge_layers,
     parse_es_settings,
@@ -65,6 +66,7 @@ from atlas.firmware import (
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
     CAVEAT_FIRMWARE_ROOT_MISSING,
     CAVEAT_INFO_PATH_UNRESOLVED,
+    CAVEAT_SYSTEM_UNKNOWN,
     Catalogue,
     CatalogueEntry,
     CoreDeclarations,
@@ -75,6 +77,7 @@ from atlas.firmware import (
     load_hashes,
     read_core_declarations,
 )
+from atlas.launch_formats import lookup_install_first
 from atlas.firmware import firmware_for_core as _resolve_for_core
 from atlas.firmware import firmware_for_system as _resolve_for_system
 from atlas.firmware import firmware_inventory as _resolve_inventory
@@ -6816,6 +6819,51 @@ class SystemsAnswer:
     caveats: tuple[Caveat, ...] = ()
 
 
+# The launchability verdicts (issue #36) — four claims that never collapse.
+# "not-accepted" is a read of the machine: the frontend's accept-list for the
+# system does not carry this file's extension, so ES-DE never scans it and
+# nothing here will launch it. "needs-installation" is that same 'no' with its
+# reason from world knowledge: the format is real content for the platform,
+# and an installation step has to run before anything can launch (a PSN .pkg).
+# "unknown" is a statement about the look, never about the file: the system is
+# not one this catalogue declares, or the catalogue could not be read — a
+# client that treated it as either of the other two would be told something
+# nobody checked. Each constant spells its code.
+VERDICT_LAUNCHABLE = "launchable"
+VERDICT_NOT_ACCEPTED = "not-accepted"
+VERDICT_NEEDS_INSTALLATION = "needs-installation"
+VERDICT_UNKNOWN = "unknown"
+
+LAUNCH_VERDICTS = (
+    VERDICT_LAUNCHABLE,
+    VERDICT_NOT_ACCEPTED,
+    VERDICT_NEEDS_INSTALLATION,
+    VERDICT_UNKNOWN,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class LaunchabilityAnswer:
+    """Whether one file launches as one system's content here — and why not, when not.
+
+    ``extension`` is the token ES-DE would derive from the file
+    (:func:`atlas.esde.esde_extension` — from the last dot, case preserved),
+    stated on every verdict so a 'no' shows the exact string that missed.
+    ``accepted`` is the system's declared list verbatim, empty where nothing
+    was read. ``entry`` is the launch entry that would run — the frontend's
+    own selection hierarchy applied, per-game override first — and it is only
+    ever stated on a ``launchable`` verdict: naming an emulator for a file
+    nothing launches would be an answer to a different question.
+    """
+
+    verdict: str
+    extension: str
+    accepted: tuple[str, ...] = ()
+    entry: EmulatorEntry | None = None
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
 # Flatpak's per-app overrides are GKeyFile INI, and only the environment they
 # assign is read here — the [Environment] group's KEY=VALUE lines and the
 # [Context] group's unset-environment list. Value semantics follow
@@ -7543,6 +7591,104 @@ def _catalogue_with_caveats(answer: CatalogueAnswer, caveats: tuple[Caveat, ...]
     return cast(CatalogueAnswer, _dc_replace(answer, caveats=caveats))
 
 
+def _launchable_with_caveats(
+    answer: LaunchabilityAnswer, caveats: tuple[Caveat, ...]
+) -> LaunchabilityAnswer:
+    """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
+    return cast(LaunchabilityAnswer, _dc_replace(answer, caveats=caveats))
+
+
+def _launchability_verdict(
+    *,
+    system: str,
+    extension: str,
+    declaration: SystemDeclaration | None,
+    entries: tuple[EmulatorEntry, ...],
+    complete: bool,
+) -> tuple[str, EmulatorEntry | None, tuple[str, ...], tuple[Caveat, ...]]:
+    """One (declaration, extension) pair's verdict — shared by every ES-DE-driven handle.
+
+    Returns ``(verdict, entry, sources, own caveats)``. Module-level for the
+    reason :func:`_entries_from` is: the match is ES-DE's, not an
+    arrangement's, and two copies of it are how "launchable here" and
+    "launchable there" would silently mean different comparisons.
+
+    The unknowns split three ways and only one earns ``system-unknown``: a
+    catalogue read **completely** that declares no such system. An incomplete
+    read (EmuDeck's sealed bundled layer) may hide the declaration, so the
+    sealed statement riding the answer is the whole claim. And a declaration
+    ES-DE itself would refuse — no ``<extension>`` or no ``<command>`` — is a
+    system the frontend runs without (loadConfig skips it,
+    SystemData.cpp:1109-1119 @ v3.4.1), stated as unknown with the reason
+    rather than matched against a list nothing consults.
+    """
+    if declaration is None:
+        if not complete:
+            return VERDICT_UNKNOWN, None, (), ()
+        return (
+            VERDICT_UNKNOWN,
+            None,
+            (),
+            (
+                Caveat(
+                    CAVEAT_SYSTEM_UNKNOWN,
+                    f"the catalogue was read and declares no system {system!r} — whether anything "
+                    "launches this file is a question no layer here answers",
+                    {"system": system},
+                ),
+            ),
+        )
+    if not declaration.extensions or not declaration.entries:
+        missing = "extension" if not declaration.extensions else "command"
+        return (
+            VERDICT_UNKNOWN,
+            None,
+            (),
+            (
+                Caveat(
+                    CAVEAT_SYSTEM_UNKNOWN,
+                    f"system {system!r} is declared without a <{missing}> tag, and ES-DE skips such "
+                    "a system wholesale (loadConfig, SystemData.cpp:1109-1119 @ v3.4.1) — the "
+                    "frontend runs without it",
+                    {"system": system},
+                ),
+            ),
+        )
+    if extension in declaration.extensions:
+        return (
+            VERDICT_LAUNCHABLE,
+            entries[0] if entries else None,
+            (
+                f"accept-list match: the file yields {extension!r} (its name from the last dot, "
+                "case preserved — FileSystemUtil.cpp:630-645 @ v3.4.1) and the system's "
+                "<extension> list declares that exact token (the scan compares exactly, "
+                "SystemData.cpp:669)",
+                "the accept-list is declared per system — whether the entry that runs reads this "
+                "format is per-emulator knowledge atlas does not yet state (issue #66)",
+            ),
+            (),
+        )
+    record = lookup_install_first(system, extension)
+    if record is not None:
+        return (
+            VERDICT_NEEDS_INSTALLATION,
+            None,
+            (f"install-first format {extension!r} for {system}: {record.statement} — {record.source}",),
+            (),
+        )
+    return (
+        VERDICT_NOT_ACCEPTED,
+        None,
+        (
+            f"the file yields {extension!r} and the system's <extension> list "
+            f"({' '.join(declaration.extensions)}) carries no such token — the comparison is "
+            "exact and case-sensitive (SystemData.cpp:669 @ v3.4.1), so ES-DE never scans the "
+            "file and nothing here launches it",
+        ),
+        (),
+    )
+
+
 def _firmware_with_caveats(answer: FirmwareAnswer, caveats: tuple[Caveat, ...]) -> FirmwareAnswer:
     """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
     return cast(FirmwareAnswer, _dc_replace(answer, caveats=caveats))
@@ -7676,6 +7822,37 @@ class _CatalogueQueries:
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
 
+    def launchable(self, system: str, content_path: str) -> LaunchabilityAnswer:
+        """Whether *content_path* launches as *system* content here — and why not, when not.
+
+        The positive half is a read: the frontend's own accept-list for the
+        system, matched the way ES-DE matches it (the file name's token from
+        its last dot, compared exactly and case-sensitively), with the entry
+        that would run resolved through the same selection hierarchy
+        :meth:`emulators_for` applies. The negative half is the interesting
+        one, and the ``verdict`` keeps its meanings apart:
+
+        - ``not-accepted`` — no token in the accept-list equals this file's
+          extension, so ES-DE never scans it: pick another file, or another
+          form of the content.
+        - ``needs-installation`` — the format is real content for the platform
+          and an installation step has to run before anything launches (a PSN
+          ``.pkg``): recorded world knowledge, cited in the sources.
+        - ``unknown`` — the system is not one this catalogue declares, or the
+          catalogue could not be read: a statement about the look, never about
+          the file, and never collapsed into either 'no'.
+
+        One boundary is stated on every ``launchable`` verdict rather than
+        silently crossed: the accept-list is declared per *system* and the
+        command per *emulator*, so a file the list accepts may still be one
+        the entry that runs cannot read (issue #66 tracks resolving that per
+        entry).
+        """
+        answer, version = self._launchable_answer(system, content_path)
+        return _launchable_with_caveats(
+            answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
+        )
+
     # The two public questions above are the whole catalogue surface, and a
     # handle overrides the two below instead: what it *answers* is its own,
     # how the answer states its arrangement's evidence is not. Splitting them
@@ -7701,6 +7878,21 @@ class _CatalogueQueries:
         self, system: str, *, content_path: str | None = None
     ) -> tuple[CatalogueAnswer, str | None]:
         return CatalogueAnswer(caveats=(*self.health().issues, self._catalogue_absence())), None
+
+    def _launchable_answer(
+        self, system: str, content_path: str
+    ) -> tuple[LaunchabilityAnswer, str | None]:
+        # The accept-list lives in the catalogue this arrangement does not
+        # have, so the verdict is unknown for the same reason the entries are:
+        # nothing was read, and the file was never judged.
+        return (
+            LaunchabilityAnswer(
+                verdict=VERDICT_UNKNOWN,
+                extension=esde_extension(content_path),
+                caveats=(*self.health().issues, self._catalogue_absence()),
+            ),
+            None,
+        )
 
     def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
         # Same refusal as the two above, for the same reason: where a system's
@@ -8286,6 +8478,65 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 ),
                 (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
                 (*findings, *invalid, *status, *anchor.caveats),
+            ),
+            version,
+        )
+
+    def _launchable_answer(
+        self, system: str, content_path: str
+    ) -> tuple[LaunchabilityAnswer, str | None]:
+        """RetroDECK's launchability answer — the same snapshot its catalogue answer takes.
+
+        The marker, both catalogue layers and the system's gamelist are each
+        read once here; ``complete`` is always true for this handle, because
+        its bundled layer is a readable file in the Flatpak deployment — an
+        undeclared system is therefore genuinely unknown to the frontend,
+        never possibly-sealed-away.
+        """
+        extension = esde_extension(content_path)
+        config, marker_issues = self._read_marker()
+        findings = self._health_from(config, marker_issues).issues
+        root = self._config_path(config, "rd_home_path", "")[0]
+        by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
+        invalid = (catalogue_invalid,) if catalogue_invalid is not None else ()
+        version = _marker_version(config)
+        if not read:
+            return (
+                LaunchabilityAnswer(
+                    verdict=VERDICT_UNKNOWN,
+                    extension=extension,
+                    caveats=(*findings, *_catalogue_unread_caveat(system)),
+                ),
+                version,
+            )
+        status = self._catalogue_exclusive(root, system) if exclusive else ()
+        anchor = self._esde_system_dir(by_system, system)
+        entries = _entries_from(
+            self,
+            _declared_entries(by_system, system),
+            self._gamelist_selections_at(root, system),
+            system_roms_dir=anchor.directory,
+            content_path=content_path,
+        )
+        declaration = by_system.get(system)
+        verdict, entry, sources, own = _launchability_verdict(
+            system=system,
+            extension=extension,
+            declaration=declaration,
+            entries=entries,
+            complete=True,
+        )
+        return (
+            LaunchabilityAnswer(
+                verdict=verdict,
+                extension=extension,
+                accepted=declaration.extensions if declaration is not None else (),
+                entry=entry,
+                sources=(
+                    _CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,
+                    *sources,
+                ),
+                caveats=(*findings, *invalid, *status, *own, *anchor.caveats),
             ),
             version,
         )
@@ -9655,6 +9906,62 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             version,
         )
 
+    def _launchable_answer(
+        self, system: str, content_path: str
+    ) -> tuple[LaunchabilityAnswer, str | None]:
+        """EmuDeck's launchability answer — the same snapshot its catalogue answer takes.
+
+        ``complete`` is the snapshot's own flag: with the bundled layer sealed
+        inside the AppImage, a system the readable layers do not declare may
+        still exist, so the verdict stays unknown on the sealed statement
+        alone rather than claiming the frontend knows no such system. An
+        overlay-declared system answers fully — per ES-DE's merge semantics
+        the overlay replaces a same-name bundled system entirely, so its
+        accept-list is exactly what the frontend uses.
+        """
+        extension = esde_extension(content_path)
+        version = self._observed_backend_head()
+        snapshot = self._esde_snapshot(system)
+        if snapshot.refusal is not None:
+            return (
+                LaunchabilityAnswer(
+                    verdict=VERDICT_UNKNOWN, extension=extension, caveats=snapshot.refusal
+                ),
+                version,
+            )
+        anchor = self._esde_system_dir(
+            snapshot.by_system, system, complete=snapshot.complete, relocated=snapshot.relocated
+        )
+        entries = _entries_from(
+            self,
+            _declared_entries(snapshot.by_system, system),
+            self._gamelist_selections(system),
+            system_roms_dir=anchor.directory,
+            content_path=content_path,
+        )
+        declaration = snapshot.by_system.get(system)
+        verdict, entry, sources, own = _launchability_verdict(
+            system=system,
+            extension=extension,
+            declaration=declaration,
+            entries=entries,
+            complete=snapshot.complete,
+        )
+        return (
+            LaunchabilityAnswer(
+                verdict=verdict,
+                extension=extension,
+                accepted=declaration.extensions if declaration is not None else (),
+                entry=entry,
+                sources=(
+                    _CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,
+                    *sources,
+                ),
+                caveats=(*snapshot.findings, *snapshot.tail, *own, *anchor.caveats),
+            ),
+            version,
+        )
+
     def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
         """EmuDeck's ROM placement — the overlay's declaration, resolved ES-DE's way.
 
@@ -10431,6 +10738,8 @@ class Installation(Protocol):
     def systems(self) -> SystemsAnswer: ...
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer: ...
+
+    def launchable(self, system: str, content_path: str) -> LaunchabilityAnswer: ...
 
     def rom_location(self, system: str) -> RomPlacement: ...
 

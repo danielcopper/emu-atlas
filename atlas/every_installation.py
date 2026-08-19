@@ -46,7 +46,14 @@ from typing import Callable, Generic, Sequence, TypeVar
 
 from atlas.detect import detect
 from atlas.firmware import FirmwareAnswer, FirmwareIdentification
-from atlas.installations import CatalogueAnswer, Health, Installation, RomPlacement, SystemsAnswer
+from atlas.installations import (
+    CatalogueAnswer,
+    Health,
+    Installation,
+    LaunchabilityAnswer,
+    RomPlacement,
+    SystemsAnswer,
+)
 from atlas.machine import Machine
 from atlas.placement import (
     ModPlacement,
@@ -225,6 +232,12 @@ class EveryInstallation:
     def rom_location(self, system: str) -> tuple[InstallationAnswer[RomPlacement], ...]:
         """Where each installation keeps *system*'s ROMs, or why it states nowhere."""
         return self._ask(lambda installation: installation.rom_location(system))
+
+    def launchable(
+        self, system: str, content_path: str
+    ) -> tuple[InstallationAnswer[LaunchabilityAnswer], ...]:
+        """Whether each installation launches this file as *system* content, and why not."""
+        return self._ask(lambda installation: installation.launchable(system, content_path))
 
     def firmware_for_core(
         self, core_so: str, *, verify: bool = False

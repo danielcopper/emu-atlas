@@ -11738,6 +11738,193 @@
           }
         }
       }
+    },
+    {
+      "name": "an-accepted-extension-is-launchable-with-its-entry",
+      "rationale": "The file yields .chd — its name from the last dot, case preserved (FileSystemUtil.cpp:630-645 @ v3.4.1) — and the dreamcast accept-list declares that exact token, so ES-DE scans the file and the entry the frontend's own selection hierarchy puts first is the one that would run. The per-system/per-entry boundary (issue #66) is stated in the sources, never silently crossed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>dreamcast</name>\n    <path>%ROMPATH%/dreamcast</path>\n    <extension>.chd .cue .gdi</extension>\n    <command label=\"Flycast\">retroarch -L /app/cores/flycast_libretro.so %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.desktop .iso .ps3 .ps3dir</extension>\n    <command label=\"RPCS3\">%EMULATOR_RPCS3% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Game.chd": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "launchable_query": {
+          "system": "dreamcast",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Game.chd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "launchable",
+          "extension": ".chd",
+          "accepted": [
+            ".chd",
+            ".cue",
+            ".gdi"
+          ],
+          "entry": {
+            "system": "dreamcast",
+            "label": "Flycast",
+            "kind": "libretro",
+            "core_so": "flycast_libretro.so",
+            "selection": null,
+            "caveats": []
+          },
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-track-file-is-not-accepted-and-says-which-token-missed",
+      "rationale": "A multi-file GDI rip's track file yields .bin, and the dreamcast accept-list deliberately carries no such token — ES-DE never scans it (the comparison is exact and case-sensitive, SystemData.cpp:669), so a client's largest-file fallback is steered away from the track and toward the .gdi/.cue the list declares. The answer carries the derived token and the declared list, which is everything the remedy needs.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>dreamcast</name>\n    <path>%ROMPATH%/dreamcast</path>\n    <extension>.chd .cue .gdi</extension>\n    <command label=\"Flycast\">retroarch -L /app/cores/flycast_libretro.so %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.desktop .iso .ps3 .ps3dir</extension>\n    <command label=\"RPCS3\">%EMULATOR_RPCS3% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Game (Track 1).bin": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "launchable_query": {
+          "system": "dreamcast",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Game (Track 1).bin"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "not-accepted",
+          "extension": ".bin",
+          "accepted": [
+            ".chd",
+            ".cue",
+            ".gdi"
+          ],
+          "entry": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-psn-package-needs-installation-first",
+      "rationale": "A PSN .pkg is the distribution form of the content itself — RPCS3 installs it into dev_hdd0 before anything can launch — and the ps3 accept-list carries no .pkg, so a bare not-accepted would send the consumer looking for a file that does not exist for digital-only titles. The recorded install-first format turns the 'no' into the right kind of 'no' (the decky-romm-sync#1582 shape: the largest-file fallback picked the package and baked a command RPCS3 could not act on).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>dreamcast</name>\n    <path>%ROMPATH%/dreamcast</path>\n    <extension>.chd .cue .gdi</extension>\n    <command label=\"Flycast\">retroarch -L /app/cores/flycast_libretro.so %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.desktop .iso .ps3 .ps3dir</extension>\n    <command label=\"RPCS3\">%EMULATOR_RPCS3% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/ps3/Game.pkg": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "launchable_query": {
+          "system": "ps3",
+          "content_path": "/mnt/sd/retrodeck/roms/ps3/Game.pkg"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "needs-installation",
+          "extension": ".pkg",
+          "accepted": [
+            ".desktop",
+            ".iso",
+            ".ps3",
+            ".ps3dir"
+          ],
+          "entry": null,
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-sealed-catalogue-keeps-the-verdict-unknown",
+      "rationale": "EmuDeck's bundled es_systems.xml is sealed inside the AppImage: a system the readable overlay does not declare may still exist in the part atlas cannot open, so the verdict is unknown riding the sealed statement — never system-unknown (which would claim a complete read), and never not-accepted (which would judge the file by a list nobody saw).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "savesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?><systemList></systemList>",
+          "/home/deck/roms/dreamcast/Game.chd": ""
+        },
+        "launchable_query": {
+          "installation": "emudeck",
+          "system": "dreamcast",
+          "content_path": "/home/deck/roms/dreamcast/Game.chd"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/roms",
+          "/home/deck/saves"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "unknown",
+          "extension": ".chd",
+          "accepted": [],
+          "entry": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "dreamcast"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

@@ -30,6 +30,7 @@ from atlas.contract import (
     mod_answer_contract,
     soft_patch_answer_contract,
     systems_contract,
+    launchable_contract,
     firmware_contract,
     identification_contract,
     installation_answers_contract,
@@ -125,6 +126,11 @@ def _rom_location(installs, query, name):
 
 def _systems(installs, query, name):
     return systems_contract(_select(installs, query.get("installation"), name).systems())
+
+
+def _launchable(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return launchable_contract(install.launchable(query["system"], query["content_path"]))
 
 
 def _savefile_location(installs, query, name):
@@ -229,6 +235,7 @@ def _entry_texture_pack_location(installs, query, name):
 QUESTIONS = {
     "catalogue": ("catalogue_query", _catalogue),
     "systems": ("systems_query", _systems),
+    "launchable": ("launchable_query", _launchable),
     "rom_location": ("rom_location_query", _rom_location),
     "aggregate": ("aggregate_query", _aggregate),
     "savefile_location": ("savefile_query", _savefile_location),
