@@ -2397,20 +2397,24 @@ class TestRetiredOptionsLoad:
         ]
 
     def test_an_entry_without_a_citation_fails(self):
+        text = self._card([{"key": "x_old"}])
         with pytest.raises(ValueError, match="citation"):
-            load_oddities(self._card([{"key": "x_old"}]))
+            load_oddities(text)
 
     def test_a_key_the_generation_still_reads_is_a_contradiction(self):
+        text = self._card([{"key": "x_storage", "citation": "?"}])
         with pytest.raises(ValueError, match="contradiction"):
-            load_oddities(self._card([{"key": "x_storage", "citation": "?"}]))
+            load_oddities(text)
 
     def test_a_key_recorded_twice_fails(self):
-        entries = [
-            {"key": "x_old", "citation": "a"},
-            {"key": "x_old", "citation": "b"},
-        ]
+        text = self._card(
+            [
+                {"key": "x_old", "citation": "a"},
+                {"key": "x_old", "citation": "b"},
+            ]
+        )
         with pytest.raises(ValueError, match="twice"):
-            load_oddities(self._card(entries))
+            load_oddities(text)
 
     def test_a_card_reading_no_options_cannot_carry_them(self):
         # No governing read would ever check these — a dead promise fails the
