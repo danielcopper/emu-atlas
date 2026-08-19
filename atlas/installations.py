@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import json
 import os
+import tomllib
+import xml.etree.ElementTree as _ET
 from glob import escape as _glob_escape
 from typing import Any, Callable, Iterator, Mapping, Protocol, Sequence, cast, runtime_checkable
 
@@ -153,6 +155,7 @@ from atlas.placement import (
     CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
     CAVEAT_SAVE_DIR_UNLISTABLE,
     CAVEAT_SAVE_INSIDE_CONTENT,
+    CAVEAT_SAVE_INSIDE_IMAGE,
     CAVEAT_SAVE_WRITES_DISCARDED,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
@@ -164,6 +167,7 @@ from atlas.placement import (
     HOLE_REGION,
     PATCH_FORMATS,
     ROLE_BATTERY,
+    ROLE_SETTINGS,
     ROOT_CONTENT_DIRECTORY,
     ROOT_EMULATOR_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
@@ -4993,6 +4997,49 @@ def _dolphin_alternatives(
     return tuple(alternatives)
 
 
+def _unnamed_tree_placement(
+    card: StandaloneSaveCard,
+    *,
+    directory: str,
+    mode: str,
+    readings: tuple[OptionReading, ...],
+    caveats: tuple[Caveat, ...],
+    physical: str | None,
+    provenance: str,
+) -> SavefilePlacement:
+    """One unnamed per-game tree as a whole answer — the shape three cards share.
+
+    A Wii NAND, a PSP memstick's savedata and a Wii U MLC make the same claim:
+    the tree is stated, its entries are named by the game and refused, and the
+    granularity is per-game-files with the readings that located the tree.
+    """
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=(
+                FileGroup(dir=directory, files=None, granularity="per-game-files", role=ROLE_BATTERY),
+            ),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=caveats,
+        physical_dir=physical,
+        granularity=Granularity(
+            value="per-game-files",
+            mode=mode,
+            readings=readings,
+            alternatives=(),
+            provenance=provenance,
+        ),
+    )
+
+
 def _dolphin_wii_answer(
     general: Mapping[str, str],
     *,
@@ -5054,30 +5101,14 @@ def _dolphin_wii_answer(
             },
         )
     )
-    return SavefilePlacement(
-        dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(),
-        fallback_dir=None,
-        file_set=FileSet(
-            FILE_SET_DECLARED,
-            (),
-            f"declared by standalone save card '{card.token}'",
-            complete=False,
-            groups=(
-                FileGroup(dir=directory, files=None, granularity="per-game-files", role=ROLE_BATTERY),
-            ),
-        ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+    return _unnamed_tree_placement(
+        card,
+        directory=directory,
+        mode="nand",
+        readings=(_reading_with_file(reading, ini_path),),
         caveats=tuple(caveats),
-        physical_dir=physical,
-        granularity=Granularity(
-            value="per-game-files",
-            mode="nand",
-            readings=(_reading_with_file(reading, ini_path),),
-            alternatives=(),
-            provenance=f"standalone save card '{card.token}': the Wii NAND tree (NandPaths.cpp:63-71 at 2603a)",
-        ),
+        physical=physical,
+        provenance=f"standalone save card '{card.token}': the Wii NAND tree (NandPaths.cpp:63-71 at 2603a)",
     )
 
 
@@ -5088,9 +5119,11 @@ def _dolphin_savefile_placement(
     homes: _XdgHomes,
     sandbox: _Sandbox,
     system: str,
+    command: str,
     extra_caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement | Unresolved:
     """Dolphin's save answer, read from Dolphin.ini the way the emulator reads it."""
+    assert card.config_base is not None and card.config_path is not None
     ini_path = os.path.join(homes.base(card.config_base), card.config_path)
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
@@ -5138,7 +5171,383 @@ def _dolphin_savefile_placement(
     )
 
 
-_STANDALONE_SAVE_RESOLVERS = {"DOLPHIN": _dolphin_savefile_placement}
+# ---------------------------------------------------------------------------
+# PPSSPP v1.20.4 — the memstick is fixed by the build on Linux: the config
+# tree itself ($XDG_CONFIG_HOME/ppsspp, NativeApp.cpp:473-482), no setting
+# names it. Savedata is <memstick>/PSP/SAVEDATA (PathUtil.cpp:52, :62-63),
+# one directory per game, named by the game itself out of its own id and
+# save name — read from nothing atlas touches.
+# ---------------------------------------------------------------------------
+
+
+def _ppsspp_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+) -> SavefilePlacement | Unresolved:
+    """PPSSPP's save answer — a compiled-in XDG join, then the links."""
+    directory = os.path.join(homes.base("config"), "ppsspp", "PSP", "SAVEDATA")
+    physical, link_caveats = _link_view(machine, directory)
+    caveats = [
+        *extra_caveats,
+        *link_caveats,
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "a PSP save is one directory per game below SAVEDATA, named by the game itself "
+            "from its own id and save name — it follows from nothing atlas reads; back the "
+            "tree up whole",
+            {
+                "core": card.token,
+                "dir": directory,
+                "role": ROLE_BATTERY,
+                "citation": "the game names its savedata directory; the tree is "
+                "<memstick>/PSP/SAVEDATA (PathUtil.cpp:52,:62-63 at ppsspp v1.20.4)",
+            },
+        ),
+    ]
+    return _unnamed_tree_placement(
+        card,
+        directory=directory,
+        mode="memstick",
+        readings=(),
+        caveats=tuple(caveats),
+        physical=physical,
+        provenance=(
+            f"standalone save card '{card.token}': the memstick is fixed by the build "
+            "(NativeApp.cpp:473-482 at v1.20.4) — no switch selects anything"
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# xemu v0.8.135 — every game's save lives on the emulated Xbox hard disk,
+# a qcow2 image xemu.toml names ([sys.files] hdd_path, config_spec.yml:
+# 359-363), beside the EEPROM file (eeprom_path) that holds the console's
+# settings. Per-title structure exists inside the image's FATX filesystem —
+# one directory per title id under UDATA/ — but nothing outside the image
+# is addressable, which the save-inside-image caveat states machine-readably.
+# ---------------------------------------------------------------------------
+
+
+def _xemu_file_value(doc: Mapping[str, Any], key: str) -> str | None:
+    files = doc.get("sys", {}).get("files", {}) if isinstance(doc.get("sys"), dict) else {}
+    value = files.get(key) if isinstance(files, dict) else None
+    return value if isinstance(value, str) and value else None
+
+
+def _xemu_group(
+    sandbox: _Sandbox, key: str, value: str, *, role: str
+) -> tuple[FileGroup | None, tuple[Caveat, ...]]:
+    resolved = sandbox.host(key, value)
+    if resolved.path is None:
+        return None, (
+            Caveat(
+                CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                f"xemu.toml sets {key} to {value!r}, a path only the emulator's sandbox can "
+                "read — the file could not be located from here",
+                {"key": key, "path": value},
+            ),
+        )
+    directory, name = os.path.split(resolved.path)
+    return FileGroup(dir=directory, files=(name,), granularity="shared-file", role=role), ()
+
+
+def _xemu_document(
+    machine: Machine, card: StandaloneSaveCard, toml_path: str
+) -> "tuple[Mapping[str, Any], str | None] | Unresolved":
+    """xemu.toml parsed, or the refusal — no frame exists to step aside to."""
+    result = machine.read_text(toml_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"xemu's configuration ({toml_path}) exists and could not be read — where the "
+            "hard-disk image and the EEPROM live is unknowable here",
+            {"emulator": card.token, "config": toml_path},
+        )
+    try:
+        doc: Mapping[str, Any] = (
+            tomllib.loads(result.text) if result.status == READ_OK and result.text else {}
+        )
+    except tomllib.TOMLDecodeError:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"xemu's configuration ({toml_path}) is not parseable TOML — where the hard-disk "
+            "image and the EEPROM live is unknowable here",
+            {"emulator": card.token, "config": toml_path},
+        )
+    return doc, (toml_path if result.status == READ_OK else None)
+
+
+def _xemu_disk_pieces(
+    sandbox: _Sandbox, card: StandaloneSaveCard, hdd: str | None
+) -> tuple[tuple[FileGroup, ...], tuple[Caveat, ...]]:
+    """The hard-disk image's group and what travels with it — or why there is none."""
+    if not hdd:
+        return (), (
+            Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED,
+                "xemu.toml names no hard-disk image ([sys.files] hdd_path) — the machine has "
+                "no disk to save onto, and where one would be attached is unknowable here",
+                {"core": card.token, "reason": "hdd_path is unset"},
+            ),
+        )
+    group, group_caveats = _xemu_group(sandbox, "hdd_path", hdd, role=ROLE_BATTERY)
+    if group is None or not group.files:
+        return (), group_caveats
+    return (group,), (
+        *group_caveats,
+        Caveat(
+            CAVEAT_SAVE_INSIDE_IMAGE,
+            f"every game's save lives inside {group.files[0]} — the emulated Xbox hard disk, "
+            "a FATX filesystem with one directory per title id under UDATA/ — and nothing "
+            "outside the image is addressable per game: back the image up whole, or parse "
+            "its filesystem with the layout stated here",
+            {
+                "emulator": card.token,
+                "image": os.path.join(group.dir, group.files[0]),
+                "layout": "UDATA/<title id>",
+            },
+        ),
+    )
+
+
+def _xemu_readings(
+    hdd: str | None, eeprom: str | None, stated_toml: str | None
+) -> tuple[OptionReading, ...]:
+    return (
+        _reading_with_file(
+            _dolphin_reading(
+                "hdd_path",
+                hdd,
+                f'xemu.toml: [sys.files] hdd_path = "{hdd}"'
+                if hdd
+                else "[sys.files] hdd_path is unset — no hard-disk image is configured",
+            ),
+            stated_toml,
+        ),
+        _reading_with_file(
+            _dolphin_reading(
+                "eeprom_path",
+                eeprom,
+                f'xemu.toml: [sys.files] eeprom_path = "{eeprom}"'
+                if eeprom
+                else "[sys.files] eeprom_path is unset",
+            ),
+            stated_toml,
+        ),
+    )
+
+
+def _xemu_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+) -> SavefilePlacement | Unresolved:
+    """xemu's save answer, read from xemu.toml the way the emulator reads it."""
+    assert card.config_base is not None and card.config_path is not None
+    toml_path = os.path.join(homes.base(card.config_base), card.config_path)
+    parsed = _xemu_document(machine, card, toml_path)
+    if isinstance(parsed, Unresolved):
+        return parsed
+    doc, stated_toml = parsed
+    hdd = _xemu_file_value(doc, "hdd_path")
+    eeprom = _xemu_file_value(doc, "eeprom_path")
+    readings = _xemu_readings(hdd, eeprom, stated_toml)
+    disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd)
+    eeprom_group, eeprom_caveats = (
+        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS) if eeprom else (None, ())
+    )
+    groups = [*disk_groups, *([eeprom_group] if eeprom_group is not None else [])]
+    caveats = [*extra_caveats, *disk_caveats, *eeprom_caveats]
+    if not groups:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"none of the files xemu's configuration names could be located from here "
+            f"({toml_path}) — nothing this answer could anchor at",
+            {"emulator": card.token, "config": toml_path},
+        )
+    directory = groups[0].dir
+    physical, link_caveats = _link_view(machine, directory)
+    caveats.extend(link_caveats)
+    files = tuple(
+        name for g in groups if g.dir == directory and g.files for name in g.files
+    )
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            files,
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=tuple(groups),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=groups[0].granularity,
+            mode="hdd",
+            readings=tuple(readings),
+            alternatives=(),
+            provenance=(
+                f"standalone save card '{card.token}': the image and the EEPROM from "
+                "xemu.toml ([sys.files], config_spec.yml:359-363 at v0.8.135)"
+            ),
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cemu 2.6 — the Wii U's internal storage (MLC) holds every save, and where
+# the MLC lives is: a --mlc launch flag, else settings.xml's mlc_path, else
+# <user data>/mlc01 (ActiveSettings.cpp:242-268). The save tree inside it is
+# usr/save/<title id hi>/<title id lo>/user/ — the shipped binary carries
+# that scheme as the whole literal 'usr/save/{:08X}/{:08X}/user/' — one
+# subtree per title, the id the game's own.
+# ---------------------------------------------------------------------------
+
+
+def _cemu_mlc_root(
+    doc: "_ET.Element | None", homes: _XdgHomes, sandbox: _Sandbox
+) -> tuple[str | None, OptionReading, tuple[Caveat, ...]]:
+    """The MLC root the way Cemu resolves it — configured, or the default."""
+    configured = None
+    if doc is not None:
+        element = doc.find("mlc_path")
+        if element is not None and element.text and element.text.strip():
+            configured = element.text.strip()
+    if configured is None:
+        return (
+            os.path.join(homes.base("data"), "Cemu", "mlc01"),
+            _dolphin_reading(
+                "mlc_path",
+                None,
+                "settings.xml names no mlc_path — the MLC defaults to mlc01 below Cemu's "
+                "user data (ActiveSettings.cpp:265-268 at 2.6)",
+            ),
+            (),
+        )
+    reading = _dolphin_reading("mlc_path", configured, f'settings.xml: mlc_path = "{configured}"')
+    resolved = sandbox.host("mlc_path", configured)
+    if resolved.path is None:
+        return (
+            None,
+            reading,
+            (
+                Caveat(
+                    CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                    f"settings.xml sets mlc_path to {configured!r}, a path only the emulator's "
+                    "sandbox can read — the MLC could not be located from here",
+                    {"key": "mlc_path", "path": configured},
+                ),
+            ),
+        )
+    return resolved.path, reading, ()
+
+
+def _cemu_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+) -> SavefilePlacement | Unresolved:
+    """Cemu's save answer, read from settings.xml the way the emulator reads it."""
+    assert card.config_base is not None and card.config_path is not None
+    xml_path = os.path.join(homes.base(card.config_base), card.config_path)
+    result = machine.read_text(xml_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Cemu's configuration ({xml_path}) exists and could not be read — where the MLC "
+            "and every save in it live is unknowable here",
+            {"emulator": card.token, "config": xml_path},
+        )
+    doc: _ET.Element | None = None
+    if result.status == READ_OK and result.text:
+        try:
+            doc = _ET.fromstring(result.text)
+        except _ET.ParseError:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"Cemu's configuration ({xml_path}) is not parseable XML — where the MLC and "
+                "every save in it live is unknowable here",
+                {"emulator": card.token, "config": xml_path},
+            )
+    caveats: list[Caveat] = [*extra_caveats]
+    if "--mlc" in command:
+        caveats.append(
+            Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED,
+                "the launch command carries an --mlc flag, which outranks settings.xml "
+                "(ActiveSettings.cpp:242-251 at 2.6) — the tree below may not be the one "
+                "this launch uses",
+                {"core": card.token, "reason": "an --mlc launch flag outranks the config"},
+            )
+        )
+    mlc_root, reading, root_caveats = _cemu_mlc_root(doc, homes, sandbox)
+    caveats.extend(root_caveats)
+    if mlc_root is None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"the MLC path Cemu's configuration names could not be located from here "
+            f"({xml_path}) — nothing this answer could anchor at",
+            {"emulator": card.token, "config": xml_path},
+        )
+    directory = os.path.join(mlc_root, "usr", "save")
+    physical, link_caveats = _link_view(machine, directory)
+    caveats.extend(link_caveats)
+    caveats.append(
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "a Wii U save is one subtree per title below usr/save, keyed by the title id — "
+            "the game's own, following from nothing atlas reads; back the tree up whole",
+            {
+                "core": card.token,
+                "dir": directory,
+                "role": ROLE_BATTERY,
+                "citation": "the shipped binary composes 'usr/save/{:08X}/{:08X}/user/' "
+                "(whole literal in Cemu 2.6)",
+            },
+        )
+    )
+    stated_xml = xml_path if result.status == READ_OK else None
+    return _unnamed_tree_placement(
+        card,
+        directory=directory,
+        mode="mlc",
+        readings=(_reading_with_file(reading, stated_xml),),
+        caveats=tuple(caveats),
+        physical=physical,
+        provenance=(
+            f"standalone save card '{card.token}': the MLC from settings.xml "
+            "(ActiveSettings.cpp:242-268 at 2.6)"
+        ),
+    )
+
+
+_STANDALONE_SAVE_RESOLVERS = {
+    "DOLPHIN": _dolphin_savefile_placement,
+    "PPSSPP": _ppsspp_savefile_placement,
+    "XEMU": _xemu_savefile_placement,
+    "CEMU": _cemu_savefile_placement,
+}
 
 
 def _standalone_savefile_placement(
@@ -5148,9 +5557,15 @@ def _standalone_savefile_placement(
     homes: _XdgHomes,
     sandbox: _Sandbox,
     system: str,
+    command: str,
     extra_caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement | Unresolved:
-    """Dispatch to the emulator's own resolver — a card without one fails loudly."""
+    """Dispatch to the emulator's own resolver — a card without one fails loudly.
+
+    The launch command rides along because an emulator's own flags can outrank
+    its configuration (Cemu's ``--mlc``), and the catalogue command is the one
+    read that says whether this launch carries any.
+    """
     resolver = _STANDALONE_SAVE_RESOLVERS.get(card.token)
     if resolver is None:
         raise ValueError(
@@ -5158,7 +5573,13 @@ def _standalone_savefile_placement(
             "the code shipped out of step"
         )
     return resolver(
-        machine, card=card, homes=homes, sandbox=sandbox, system=system, extra_caveats=extra_caveats
+        machine,
+        card=card,
+        homes=homes,
+        sandbox=sandbox,
+        system=system,
+        command=command,
+        extra_caveats=extra_caveats,
     )
 
 
@@ -7999,6 +8420,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 homes=self._xdg_homes(),
                 sandbox=self._sandbox(),
                 system=spec.system,
+                command=spec.command,
                 extra_caveats=(
                     *entry_caveats,
                     *extra,

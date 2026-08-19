@@ -420,11 +420,17 @@ arrangement pins), the catalogue systems the card answers for, and the provenanc
 written nowhere on the machine, so it lives as cited code beside the card (`atlas/installations.py`), the same split the
 rule cards make with `atlas/mode_rules.py`. The loader refuses a card whose token has no resolver registered.
 
-The one card today is Dolphin (release 2603a, the binary RetroDECK ships): GameCube card slots read from `Dolphin.ini`'s
+Four cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
 EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
-unnamed `title/` tree. The answers root at `emulator_directory` — no frontend hands a standalone emulator a save
-directory. EmuDeck's standalone entries still refuse: it installs each emulator as its own flatpak, and none of that
-per-app wiring is read yet.
+unnamed `title/` tree. PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's `config` is `null`, the honest
+spelling of "no file governs this" — and savedata is one unnamed directory per game below `PSP/SAVEDATA`. xemu
+(v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml`, stated as one shared file with the
+`save-inside-image` caveat carrying the inside layout (`UDATA/<title id>`), the EEPROM beside it as a named settings
+group. Cemu (2.6): the MLC resolved the way the emulator resolves it (`--mlc` flag outranks `settings.xml` outranks the
+default), one unnamed subtree per title below `usr/save` — the shipped binary carries that scheme as a whole literal.
+The answers root at `emulator_directory` — no frontend hands a standalone emulator a save directory. EmuDeck's
+standalone entries still refuse: it installs each emulator as its own flatpak, and none of that per-app wiring is read
+yet.
 
 ## `save_memory.json` — which files RetroArch writes for a core, per system
 
