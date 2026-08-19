@@ -29,6 +29,66 @@ def _retrodeck(files, **kwargs):
     return atlas.RetroDeck(HOME, machine)
 
 
+RD_OVERLAY = "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml"
+RD_BUNDLED_ESDE = (
+    "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/"
+    "components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+)
+GB_SYSTEM = (
+    '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>gb</name>\n'
+    "    <path>%ROMPATH%/gb</path>\n    <extension>.gb</extension>\n"
+    '    <command label="Gambatte">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>\n'
+    "  </system>\n</systemList>\n"
+)
+
+
+class TestABrokenCatalogueEmptiesTheFrontend:
+    """Issue #100: a systems file ES-DE cannot load aborts its whole catalogue."""
+
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        RD_BUNDLED_ESDE: GB_SYSTEM,
+    }
+
+    def _rd(self, overlay):
+        return _retrodeck(
+            {**self.BASE, RD_OVERLAY: overlay}, dirs=["/mnt/sd/retrodeck/saves"]
+        )
+
+    def test_an_unparseable_overlay_kills_the_bundled_catalogue_too(self):
+        rd = self._rd("<systemList><system><name>gb</name>")
+        answer = rd.systems()
+        assert answer.systems == ()
+        stated = [c for c in answer.caveats if c.code == atlas.HEALTH_ISSUE_CATALOGUE_INVALID]
+        assert stated
+        assert stated[0].data == {"path": RD_OVERLAY, "problem": "parse-error"}
+
+    def test_a_document_without_a_systemlist_is_the_same_refusal(self):
+        # RetroDECK's real stub carries an EMPTY <systemList/>, which is fine;
+        # a document with none at all is INVALID_FILE (SystemData.cpp:900-903).
+        rd = self._rd('<?xml version="1.0"?>\n<!-- nothing else -->\n')
+        answer = rd.systems()
+        assert answer.systems == ()
+        stated = [c for c in answer.caveats if c.code == atlas.HEALTH_ISSUE_CATALOGUE_INVALID]
+        assert stated
+        assert stated[0].data["problem"] == "missing-systemlist"
+
+    def test_the_finding_is_installation_health(self):
+        rd = self._rd("<systemList><system><name>gb</name>")
+        assert atlas.HEALTH_ISSUE_CATALOGUE_INVALID in [c.code for c in rd.health().issues]
+
+    def test_an_empty_systemlist_stays_healthy(self):
+        # The healthy stub shape: parses, declares nothing, ES-DE moves on.
+        rd = self._rd('<?xml version="1.0"?>\n<systemList>\n<!-- stub -->\n</systemList>\n')
+        answer = rd.systems()
+        assert answer.systems == ("gb",)
+        assert not any(
+            c.code == atlas.HEALTH_ISSUE_CATALOGUE_INVALID for c in answer.caveats
+        )
+
+
 class TestRetroDeckPaths:
     def test_roots_from_json(self):
         rd = _retrodeck({RETRODECK_JSON: RD_JSON})

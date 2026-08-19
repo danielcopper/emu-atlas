@@ -11275,6 +11275,116 @@
           }
         }
       }
+    },
+    {
+      "name": "retrodeck-a-broken-custom-catalogue-empties-the-frontend",
+      "rationale": "The custom es_systems.xml exists and does not parse. ES-DE parses the custom file first, and a systems file it cannot load aborts the load of every layer (SystemData.cpp:879-882 @ v3.4.1; INVALID_FILE at main.cpp:483-486) — the bundled catalogue beside it is intact and is never reached. The answer states the frontend's truth: no systems, with the catalogue-invalid health finding naming the one file whose fix brings the catalogue back.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList><system><name>gb</name>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gb</name>\n    <path>%ROMPATH%/gb</path>\n    <extension>.gb</extension>\n    <command label=\"Gambatte\">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "systems_query": {
+          "installation": "retrodeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "catalogue-invalid",
+                "data": {
+                  "path": "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml",
+                  "problem": "parse-error"
+                }
+              }
+            ]
+          }
+        ],
+        "systems": {
+          "systems": [],
+          "caveats": [
+            {
+              "code": "catalogue-invalid",
+              "data": {
+                "path": "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml",
+                "problem": "parse-error"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-an-invalid-resource-shadow-empties-the-frontend",
+      "rationale": "The resource-override shadow is the bundled layer on disk, and this one was read and does not parse — unlike its unreadable sibling, where ES-DE may load the file fine and the catalogue merely stays unknown. A read that establishes the parse failure establishes the frontend's whole load fails (INVALID_FILE), so the answer is the empty catalogue with the finding, never the overlay alone.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/home/deck/ES-DE/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList><system><name>gb</name>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "systems_query": {
+          "installation": "emudeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": [
+              {
+                "code": "catalogue-invalid",
+                "data": {
+                  "path": "/home/deck/ES-DE/resources/systems/linux/es_systems.xml",
+                  "problem": "parse-error"
+                }
+              }
+            ]
+          }
+        ],
+        "systems": {
+          "systems": [],
+          "caveats": [
+            {
+              "code": "catalogue-invalid",
+              "data": {
+                "path": "/home/deck/ES-DE/resources/systems/linux/es_systems.xml",
+                "problem": "parse-error"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

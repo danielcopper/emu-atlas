@@ -210,6 +210,7 @@ KNOWN_HEALTH_ISSUES = {
     "saves-root-missing",
     "companion-config-missing",
     "config-unreadable",
+    "catalogue-invalid",
 }
 KNOWN_ROOT_KINDS = {
     "savefile_directory",

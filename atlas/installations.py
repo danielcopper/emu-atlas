@@ -38,6 +38,7 @@ from atlas.content_path import (
 )
 from atlas.core_info import parse_core_info
 from atlas.esde import (
+    INVALID_PARSE,
     KIND_LIBRETRO,
     CatalogueLayer,
     EmulatorSpec,
@@ -248,6 +249,33 @@ HEALTH_ISSUE_ROOT_MISSING = "root-missing"
 HEALTH_ISSUE_SAVES_ROOT_MISSING = "saves-root-missing"
 HEALTH_ISSUE_COMPANION_CONFIG_MISSING = "companion-config-missing"
 HEALTH_ISSUE_CONFIG_UNREADABLE = "config-unreadable"
+# A systems catalogue file ES-DE refuses its whole load on: one that does not
+# parse, or one carrying no document-level <systemList>. Not a statement about
+# one layer — the frontend aborts loadConfig outright (SystemData.cpp:879-882,
+# :900-903 @ v3.4.1) and the caller turns that into INVALID_FILE
+# (main.cpp:483-486), so it runs with no systems at all. The catalogue answers
+# then state the frontend's truth (nothing), and this finding carries the file
+# and the problem so the one edit that fixes it is named. Distinct from a file
+# atlas cannot READ: ES-DE may read such a file fine, so what it says stays
+# unknown there rather than refused (issue #100).
+HEALTH_ISSUE_CATALOGUE_INVALID = "catalogue-invalid"
+
+
+def _catalogue_invalid_finding(path: str, problem: str) -> Caveat:
+    """The health finding for a catalogue file the frontend refuses to load on."""
+    reason = (
+        "does not parse as XML"
+        if problem == INVALID_PARSE
+        else "carries no document-level <systemList>"
+    )
+    return Caveat(
+        HEALTH_ISSUE_CATALOGUE_INVALID,
+        f"ES-DE refuses its whole systems catalogue: {path} {reason}, and a systems file it "
+        "cannot load aborts the load of every layer (SystemData.cpp:879-882, :900-903; "
+        "INVALID_FILE at main.cpp:483-486 — v3.4.1), so the frontend runs with no systems at "
+        "all until the file is fixed",
+        {"path": path, "problem": problem},
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -7629,9 +7657,22 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return Health(tuple(issues))
 
     def health(self) -> Health:
-        """Installation health — marker readable and parseable, roots present."""
+        """Installation health — marker readable and parseable, roots present, catalogue loadable.
+
+        The catalogue check lives here rather than in :meth:`_health_from`,
+        and the reason is the one-read consistency model: the per-question
+        health computation must not open sources the question itself never
+        reads, so the catalogue-invalid finding rides the health question
+        (its own single read here) and every answer whose question reads the
+        catalogue anyway — never the others.
+        """
         config, marker_issues = self._read_marker()
-        return self._health_from(config, marker_issues)
+        health = self._health_from(config, marker_issues)
+        root = self._config_path(config, "rd_home_path", "")[0]
+        catalogue_invalid = self._read_catalogue(root)[3]
+        if catalogue_invalid is not None:
+            return Health((*health.issues, catalogue_invalid))
+        return health
 
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._APP_ID, "config", "retroarch")
@@ -7649,8 +7690,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     def _catalogue_exclusive(self, root: str, system: str | None = None) -> tuple[Caveat, ...]:
         return _catalogue_exclusive_caveat(self._overlay_path(root), system)
 
-    def _read_catalogue(self, root: str) -> tuple[dict[str, SystemDeclaration], bool, bool]:
-        """The merged ES-DE catalogue → ``(by_system, read, exclusive)``.
+    def _read_catalogue(
+        self, root: str
+    ) -> tuple[dict[str, SystemDeclaration], bool, bool, Caveat | None]:
+        """The merged ES-DE catalogue → ``(by_system, read, exclusive, invalid)``.
 
         ``read`` is not a detail: an empty catalogue because the shipped
         ``es_systems.xml`` was unreadable says nothing about which emulators
@@ -7668,13 +7711,24 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         layer alone, complete — is the statement every consumer rides. A tag
         in the *bundled* layer is ignored the way ES-DE ignores it (the
         LogWarning branch, ``:886-895``).
+
+        ``invalid`` is the hardest state (issue #100): a layer atlas read and
+        ES-DE cannot load aborts the frontend's whole ``loadConfig``, so the
+        catalogue in force is **empty** — read, exclusive of nothing, with
+        the health finding naming the file. It is set only where the file's
+        bytes were read: a file atlas cannot read may parse fine for the
+        frontend, and stays the unread state it always was.
         """
+        empty: dict[str, SystemDeclaration] = {}
         custom = CatalogueLayer(systems={})
-        custom_text = self._machine.read_text(self._overlay_path(root)).text
+        overlay_path = self._overlay_path(root)
+        custom_text = self._machine.read_text(overlay_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, provenance="es_systems.xml (custom_systems overlay)")
+        if custom.invalid is not None:
+            return empty, True, False, _catalogue_invalid_finding(overlay_path, custom.invalid)
         if custom.load_exclusive:
-            return dict(custom.systems), True, True
+            return dict(custom.systems), True, True, None
         bundled = CatalogueLayer(systems={})
         read = False
         bundled_path = self._sandbox().bundled(self._ESDE_BUNDLED_SANDBOX)
@@ -7682,13 +7736,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             text = self._machine.read_text(bundled_path).text
             if text is not None:
                 bundled = parse_es_systems(text, provenance="es_systems.xml (bundled)")
-                # Read AND parsed: parse_es_systems answers the empty layer
-                # for malformed XML, and an enumeration that came back empty
-                # because the file is broken is not an enumeration. RetroDECK
-                # ships the custom overlay fully commented out, so it parses
-                # to zero systems by design and can never stand in for this.
-                read = bool(bundled.systems)
-        return merge_layers(bundled.systems, custom.systems), read, False
+                if bundled.invalid is not None:
+                    return empty, True, False, _catalogue_invalid_finding(bundled_path, bundled.invalid)
+                # Read AND parsed. RetroDECK ships the custom overlay fully
+                # commented out inside an empty <systemList/>, so it parses to
+                # zero systems by design and can never stand in for this.
+                read = True
+        return merge_layers(bundled.systems, custom.systems), read, False, None
 
     _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, bundled + custom_systems overlay)"
     _ROM_DIRECTORY_SOURCE = "ES-DE ROMDirectory read live (es_settings.xml)"
@@ -7976,7 +8030,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
-        by_system, read, exclusive = self._read_catalogue(root)
+        by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
+        invalid = (catalogue_invalid,) if catalogue_invalid is not None else ()
         version = _marker_version(config)
         if not read:
             return SystemsAnswer(caveats=(*findings, *_catalogue_unread_caveat())), version
@@ -7985,7 +8040,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             SystemsAnswer(
                 tuple(sorted(by_system)),
                 (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
-                (*findings, *status),
+                (*findings, *invalid, *status),
             ),
             version,
         )
@@ -8016,7 +8071,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
-        by_system, read, exclusive = self._read_catalogue(root)
+        by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
+        invalid = (catalogue_invalid,) if catalogue_invalid is not None else ()
         version = _marker_version(config)
         if not read:
             return (
@@ -8042,7 +8098,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     content_path=content_path,
                 ),
                 (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
-                (*findings, *status, *anchor.caveats),
+                (*findings, *invalid, *status, *anchor.caveats),
             ),
             version,
         )
@@ -8059,7 +8115,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, marker_issues = self._read_marker()
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
-        by_system, read, exclusive = self._read_catalogue(root)
+        by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
+        invalid = (catalogue_invalid,) if catalogue_invalid is not None else ()
         version = _marker_version(config)
         if not read:
             return (
@@ -8080,7 +8137,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 _CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,
                 *resolved.sources,
             ),
-            caveats=(*findings, *status, *resolved.caveats),
+            caveats=(*findings, *invalid, *status, *resolved.caveats),
         )
         if resolved.directory is None:
             return placement, version
@@ -8414,7 +8471,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         config, marker_issues = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]
-        by_system, read, exclusive = self._read_catalogue(root)
+        by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
         catalogue = Catalogue(
             entries=_firmware_catalogue_entries(
                 self, by_system, system, self._gamelist_selections_at(root, system)
@@ -8428,17 +8485,21 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         answer = _resolve_for_system(
             self._machine, context, system=system, catalogue=catalogue, verify=verify
         )
-        # The exclusive statement rides only answers the catalogue informed:
-        # an own spelling is answered from the cores, so the resolver never
-        # looks at the catalogue for it. It lands where the resolver puts its
-        # own catalogue-status statements — right after the context's caveats
-        # (the answer is (*context.caveats, *its own), per its contract).
-        if not exclusive or system in SYSTEMS_WITHOUT_CATALOGUE_ID:
+        # The catalogue-status statements ride only answers the catalogue
+        # informed: an own spelling is answered from the cores, so the
+        # resolver never looks at the catalogue for it. They land where the
+        # resolver puts its own — right after the context's caveats (the
+        # answer is (*context.caveats, *its own), per its contract).
+        status = (
+            *(() if catalogue_invalid is None else (catalogue_invalid,)),
+            *(self._catalogue_exclusive(root, system) if exclusive else ()),
+        )
+        if not status or system in SYSTEMS_WITHOUT_CATALOGUE_ID:
             return answer
         index = len(context.caveats)
         return _firmware_with_caveats(
             answer,
-            (*answer.caveats[:index], *self._catalogue_exclusive(root, system), *answer.caveats[index:]),
+            (*answer.caveats[:index], *status, *answer.caveats[index:]),
         )
 
     def _entry_caveats_for(
@@ -8461,8 +8522,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         root = self._config_path(config, "rd_home_path", "")[0]
         selections = self._gamelist_selections_at(root, spec.system)
-        by_system, read, exclusive = self._read_catalogue(root)
-        status = self._catalogue_exclusive(root, spec.system) if exclusive else ()
+        by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
+        status = (
+            *(() if catalogue_invalid is None else (catalogue_invalid,)),
+            *(self._catalogue_exclusive(root, spec.system) if exclusive else ()),
+        )
         # A catalogue nobody could read declares nothing, which is not the
         # same fact as a catalogue that was read and declares no <path> for
         # this system — and handing the empty snapshot straight to the
@@ -8947,10 +9011,20 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return Health(tuple(issues))
 
     def health(self) -> Health:
-        """Installation health — marker, roots, and the claimed companion RetroArch config."""
+        """Installation health — marker, roots, companion RetroArch config, catalogue loadable.
+
+        The catalogue check lives here rather than in :meth:`_health_from`
+        for RetroDECK's reason: per-question health must not open sources the
+        question never reads, so the finding rides this question's own single
+        read and every catalogue-reading answer — never the others.
+        """
         settings, marker_issues = self._read_marker()
         companion_status = self._machine.read_text(self._companion_cfg_path()).status
-        return self._health_from(settings, marker_issues, companion_status)
+        health = self._health_from(settings, marker_issues, companion_status)
+        catalogue_invalid = self._read_esde_catalogue()[4]
+        if catalogue_invalid is not None:
+            return Health((*health.issues, catalogue_invalid))
+        return health
 
     # ── EmuDeck's ES-DE ─────────────────────────────────────────────────
     # Every path below is EmuDeck's shipped wiring, read from the installer at
@@ -9090,8 +9164,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             os.path.join(self._esde_appdata_dir(), self._ESDE_OVERLAY_SUFFIX), system
         )
 
-    def _read_esde_catalogue(self) -> tuple[dict[str, SystemDeclaration], bool, bool, bool]:
-        """The readable ES-DE layers → ``(by_system, complete, shadow_broken, exclusive)``.
+    def _read_esde_catalogue(
+        self,
+    ) -> tuple[dict[str, SystemDeclaration], bool, bool, bool, Caveat | None]:
+        """The readable ES-DE layers → ``(by_system, complete, shadow_broken, exclusive, invalid)``.
 
         The overlay is read first because it can end the reading: a
         document-level ``<loadExclusive/>`` in the custom file makes ES-DE
@@ -9126,29 +9202,40 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         sealed layer cannot contradict a same-name overlay system. EmuDeck
         never writes the tag; carrying one is a user's own edit, honored
         because the frontend honors it.
+
+        ``invalid`` is the hardest state (issue #100), and it outranks
+        ``shadow_broken``: a layer atlas **read** and ES-DE cannot load
+        aborts the frontend's whole ``loadConfig``, so the catalogue in
+        force is empty — with the health finding naming the file. A shadow
+        atlas could not read stays ``shadow_broken``: ES-DE may load it
+        fine, so what the catalogue says is unknown, never refused.
         """
         appdata = self._esde_appdata_dir()
         custom = CatalogueLayer(systems={})
-        custom_text = self._machine.read_text(os.path.join(appdata, self._ESDE_OVERLAY_SUFFIX)).text
+        overlay_path = os.path.join(appdata, self._ESDE_OVERLAY_SUFFIX)
+        custom_text = self._machine.read_text(overlay_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, provenance="es_systems.xml (custom_systems overlay)")
+        if custom.invalid is not None:
+            return {}, True, False, False, _catalogue_invalid_finding(overlay_path, custom.invalid)
         if custom.load_exclusive:
-            return dict(custom.systems), True, False, True
+            return dict(custom.systems), True, False, True, None
         bundled = CatalogueLayer(systems={})
         complete = False
-        shadow = self._machine.read_text(os.path.join(appdata, self._ESDE_SHADOW_SUFFIX))
+        shadow_path = os.path.join(appdata, self._ESDE_SHADOW_SUFFIX)
+        shadow = self._machine.read_text(shadow_path)
         if shadow.status != READ_MISSING:
             if shadow.text is not None:
                 bundled = parse_es_systems(
                     shadow.text, provenance="es_systems.xml (resource-override shadow)"
                 )
-                # Read AND parsed, the same rule RetroDECK's bundled layer
-                # holds to: an enumeration that came back empty because the
-                # file is broken is not an enumeration.
-                complete = bool(bundled.systems)
+                if bundled.invalid is not None:
+                    return {}, True, False, False, _catalogue_invalid_finding(shadow_path, bundled.invalid)
+                # Read AND parsed: the shadow is the bundled layer, on disk.
+                complete = True
             if not complete:
-                return {}, False, True, False
-        return merge_layers(bundled.systems, custom.systems), complete, False, False
+                return {}, False, True, False, None
+        return merge_layers(bundled.systems, custom.systems), complete, False, False, None
 
     def _gamelist_selections(self, system: str) -> GamelistSelections:
         """The gamelist's emulator selections — EmuDeck seeds these itself.
@@ -9298,7 +9385,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 findings, (*findings, self._catalogue_absence(), *riders), {}, False, False, ()
             )
         relocated = any(caveat.code == CAVEAT_CONFIG_HOME_RELOCATED for caveat in riders)
-        by_system, complete, shadow_broken, exclusive = self._read_esde_catalogue()
+        by_system, complete, shadow_broken, exclusive, catalogue_invalid = (
+            self._read_esde_catalogue()
+        )
         if shadow_broken:
             return _EsdeSnapshot(
                 findings,
@@ -9312,6 +9401,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             status: tuple[Caveat, ...] = self._catalogue_exclusive(system)
         else:
             status = () if complete else (self._catalogue_sealed_caveat(system),)
+        if catalogue_invalid is not None:
+            status = (catalogue_invalid, *status)
         return _EsdeSnapshot(
             findings, None, by_system, complete, relocated, (*status, *riders), exclusive
         )
@@ -9443,13 +9534,17 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return (self._catalogue_absence(),)
         portable = self._relocation_caveat()
         relocation = () if portable is None else (portable,)
-        by_system, complete, shadow_broken, exclusive = self._read_esde_catalogue()
+        by_system, complete, shadow_broken, exclusive, catalogue_invalid = (
+            self._read_esde_catalogue()
+        )
         if shadow_broken:
             return (*_catalogue_unread_caveat(spec.system), *relocation)
         if exclusive:
             status: tuple[Caveat, ...] = self._catalogue_exclusive(spec.system)
         else:
             status = () if complete else (self._catalogue_sealed_caveat(spec.system),)
+        if catalogue_invalid is not None:
+            status = (catalogue_invalid, *status)
         anchor = self._esde_system_dir(
             by_system, spec.system, complete=complete, relocated=bool(relocation)
         )
@@ -9781,11 +9876,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             # for an answer that would discard them.
             return _resolve_for_system(self._machine, context, system=system, verify=verify)
         riders = self._riders(settings, present)
-        by_system, complete, shadow_broken, exclusive = self._read_esde_catalogue()
+        by_system, complete, shadow_broken, exclusive, catalogue_invalid = (
+            self._read_esde_catalogue()
+        )
         if shadow_broken:
             # The bundled layer is on disk (the resource shadow) and could not
-            # be read or parsed: the resolver states the unreadable catalogue,
-            # the same statement RetroDECK's unread bundled layer gets.
+            # be read: the resolver states the unreadable catalogue, the same
+            # statement RetroDECK's unread bundled layer gets.
             catalogue = Catalogue(entries=(), read=False)
         else:
             catalogue = Catalogue(
@@ -9797,11 +9894,15 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         answer = _resolve_for_system(
             self._machine, context, system=system, catalogue=catalogue, verify=verify
         )
-        # The exclusive statement and the riders ride only answers the
+        # The catalogue-status statements and the riders ride only answers the
         # catalogue informed: an own spelling is answered from the cores on
         # every arrangement, so the resolver never looks at the catalogue for
         # it.
-        inserted = (*(self._catalogue_exclusive(system) if exclusive else ()), *riders)
+        inserted = (
+            *(() if catalogue_invalid is None else (catalogue_invalid,)),
+            *(self._catalogue_exclusive(system) if exclusive else ()),
+            *riders,
+        )
         if not inserted or system in SYSTEMS_WITHOUT_CATALOGUE_ID:
             return answer
         # Adjacent to the catalogue-status statement, which — when one exists

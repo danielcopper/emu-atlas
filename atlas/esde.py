@@ -133,6 +133,13 @@ class SystemDeclaration:
     extensions: tuple[str, ...] = ()
 
 
+# The two reads ES-DE refuses its whole catalogue load on — the values
+# :attr:`CatalogueLayer.invalid` may carry, and therefore the values a health
+# finding's ``data["problem"]`` states.
+INVALID_PARSE = "parse-error"
+INVALID_NO_SYSTEMLIST = "missing-systemlist"
+
+
 @dataclass(frozen=True, slots=True)
 class CatalogueLayer:
     """One ``es_systems.xml`` layer as its document declares it.
@@ -143,10 +150,20 @@ class CatalogueLayer:
     the layer is the custom file, and ignores it in the bundled one with a
     LogWarning (``SystemData.cpp:884-895``, v3.4.1) — so the caller that
     knows which layer it read is the one that honors it.
+
+    ``invalid`` states a read ES-DE refuses the **whole load** on — not just
+    this layer: a file that does not parse aborts ``loadConfig`` outright
+    (``SystemData.cpp:879-882``), and so does one carrying no document-level
+    ``<systemList>`` (``:900-903``); either way the caller in ``main.cpp``
+    turns it into ``INVALID_FILE`` (``:483-486``) and the frontend runs with
+    no systems at all. The layer states the fact; the caller — who knows the
+    file's path and place in the load order — decides what the catalogue as
+    a whole then is. ``systems`` is empty whenever ``invalid`` is set.
     """
 
     systems: Mapping[str, SystemDeclaration]
     load_exclusive: bool = False
+    invalid: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "systems", MappingProxyType(dict(self.systems)))
@@ -180,7 +197,11 @@ def parse_es_systems(text: str, *, provenance: str) -> CatalogueLayer:
     the wrapper the mark would sit mid-document and fail a file the frontend
     reads fine.
 
-    Malformed XML yields the empty layer — skipped, never guessed at.
+    Malformed XML — and a document with no ``<systemList>`` — comes back as
+    an ``invalid`` layer rather than an empty one, because the frontend does
+    not skip such a file: it refuses its whole load on it (see
+    :class:`CatalogueLayer`), and an empty layer would spell that as "this
+    file declares nothing", which is the opposite claim.
     """
     stripped = text.removeprefix("\ufeff").strip()
     if stripped.startswith("<?"):
@@ -190,21 +211,23 @@ def parse_es_systems(text: str, *, provenance: str) -> CatalogueLayer:
     try:
         root = ET.fromstring(f"<atlas-wrapper>{stripped}</atlas-wrapper>")
     except ET.ParseError:
-        return CatalogueLayer(systems={})
-    result: dict[str, SystemDeclaration] = {}
+        return CatalogueLayer(systems={}, invalid=INVALID_PARSE)
     system_list = root.find("systemList")
-    if system_list is not None:
-        for system_el in system_list.findall("system"):
-            name = (system_el.findtext("name") or "").strip()
-            if not name:
-                continue
-            declared_path = (system_el.findtext("path") or "").strip()
-            result[name] = SystemDeclaration(
-                entries=_launch_entries(system_el, system=name, provenance=provenance),
-                rom_path=declared_path or None,
-                extensions=tuple((system_el.findtext("extension") or "").split()),
-            )
-    return CatalogueLayer(systems=result, load_exclusive=root.find("loadExclusive") is not None)
+    load_exclusive = root.find("loadExclusive") is not None
+    if system_list is None:
+        return CatalogueLayer(systems={}, load_exclusive=load_exclusive, invalid=INVALID_NO_SYSTEMLIST)
+    result: dict[str, SystemDeclaration] = {}
+    for system_el in system_list.findall("system"):
+        name = (system_el.findtext("name") or "").strip()
+        if not name:
+            continue
+        declared_path = (system_el.findtext("path") or "").strip()
+        result[name] = SystemDeclaration(
+            entries=_launch_entries(system_el, system=name, provenance=provenance),
+            rom_path=declared_path or None,
+            extensions=tuple((system_el.findtext("extension") or "").split()),
+        )
+    return CatalogueLayer(systems=result, load_exclusive=load_exclusive)
 
 
 def merge_layers(

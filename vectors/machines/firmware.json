@@ -2272,7 +2272,15 @@
               "retrodeck"
             ],
             "root": "/mnt/sd/retrodeck",
-            "health": []
+            "health": [
+              {
+                "code": "catalogue-invalid",
+                "data": {
+                  "path": "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml",
+                  "problem": "parse-error"
+                }
+              }
+            ]
           }
         ],
         "firmware": {
@@ -2282,13 +2290,14 @@
           "unclaimed": [],
           "caveats": [
             {
-              "code": "emulator-catalogue-unreadable",
+              "code": "catalogue-invalid",
               "data": {
-                "system": "dreamcast"
+                "path": "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml",
+                "problem": "parse-error"
               }
             },
             {
-              "code": "firmware-declaration-unknown",
+              "code": "system-unknown",
               "data": {
                 "system": "dreamcast"
               }
