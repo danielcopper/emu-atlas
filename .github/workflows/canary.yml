@@ -21,8 +21,6 @@ on:
   schedule:
     - cron: "17 5 * * 1" # weekly, Monday 05:17 UTC — off the full-hour rush
   workflow_dispatch:
-  push:
-    branches: [ci/108-live-deploy-canary] # temporary: one pre-merge proof run
 
 permissions:
   contents: read
