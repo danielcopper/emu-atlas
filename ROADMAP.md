@@ -35,9 +35,9 @@ know" and collapsed it into "not required" → "nothing missing" → green.
 - _API shape_ (M8, M10): `Installation` protocol instead of a union, standalone entries as typed `Unresolved` domain
   outcomes, Literal vocabularies with validated constructors, deeply immutable value objects, no boolean coercion at
   data boundaries.
-- _Packaging honesty_ (M14, M15): one version source (pyproject, release-please python type), CI on 3.11+3.12,
-  wheel/sdist built and verified from a clean install, vectors in the sdist and attached to releases, generated docs
-  with full source identity.
+- _Packaging honesty_ (M14, M15): one version source (pyproject, release-please python type), CI on 3.11/3.12/3.14 (the
+  matrix covers both sides of the zstd capability), wheel and sdist built and verified from a clean install, generated
+  docs with full source identity.
 
 **One answer grammar** (item 17, in progress): health findings are caveats — `{code, data}` everywhere, no envelope —
 and every answer from a broken installation states them. On the firmware route, a standalone emulator answers
@@ -45,6 +45,14 @@ and every answer from a broken installation states them. On the firmware route, 
 resolves to RetroArch's platform default instead of refusing, leaving `system-directory-cleared` to mean only a key set
 to nothing. Still open in the item: `identify_firmware`'s untyped refusal, the naming sweep, the summary-field
 convention.
+
+**The consumable surface** (#196, #68, #65, #202, #108): the `emu-atlas` CLI — one question per invocation, the contract
+JSON on stdout, the conformance vectors run through its dispatch; the platform crosswalk (`systems_for_platform` /
+`platform_ids`, live `<platform>` tags against a pinned identity table); the AppImage reader (`atlas.squashfs`, pure
+stdlib) opening the catalogue sealed inside ES-DE's AppImage wherever the runtime has the zstd codec (3.14's
+`compression.zstd`, or `backports.zstd` a host vendors); the release artifacts — vectors, wheel, and the self-contained
+bundle (CLI + pinned CPython 3.14) for consumers without a Python; and the weekly canary deploying the newest RetroDECK
+from Flathub against the full suite, so drift announces itself.
 
 ## Next: follow-up branches
 
@@ -71,17 +79,21 @@ observable key (registered → confirmed, version drift demoted to provenance; m
 _variants_ keyed by their option signature — added when an old generation actually gets audited — and distinct
 probe-failure reporting. Design in `docs/research/core-audit.md`.
 
-### 4. Standalone emulators (the second big block)
+### 4. Standalone emulators (the second big block — issue #3)
 
-The `saves/<system>/<emulator>/` family: per-emulator config parsers and placement rules, target list derived from
-`es_systems.xml` (22 runners, 0 audited). DuckStation first (PerGameTitle naming → `<save_id>` hole), then PCSX2,
-Dolphin, melonDS, PPSSPP-SA. Replaces the `Unresolved` standalone outcome route by route.
+Per-emulator config parsers and placement rules, one sub-issue per emulator, target list derived from RetroDECK's own
+`es_systems.xml`. Carded and shipped: Dolphin (GC slots, Wii NAND), PPSSPP, xemu, Cemu — Cemu including the per-title
+unit (`usr/save/<save_id>`, granularity `per-game-directory`) and the EmuDeck launcher route (#207); Cemu's BIOS
+expectations are the next slice (#208). Each sub-issue replaces the `Unresolved` standalone outcome for its emulator,
+save placement + BIOS expectations + config sources, on RetroDECK and EmuDeck both. Candidates next: Citra/Azahar (the
+3DS virtual SD tree, the second half of the rommapp/romm#3866 demand), DuckStation (PerGameTitle naming → `<save_id>`
+hole), PCSX2, melonDS.
 
 ### 5. EmuDeck reality
 
-Everything EmuDeck is vector-tested only, never validated against a real installation (issue #11): detection markers in
-the wild, its own emulator set (coverage-matrix `?` cells), frontend variants (ES-DE elsewhere / Pegasus / SRM),
-companion-health semantics beyond the config-missing case.
+The arrangement was verified against a live installation at a pinned backend revision (issue #11, closed) and its
+answers carry that evidence. What remains: its own emulator set (coverage-matrix `?` cells), frontend variants (ES-DE
+elsewhere / Pegasus / SRM), companion-health semantics beyond the config-missing case.
 
 ### 6. Firmware follow-ups
 

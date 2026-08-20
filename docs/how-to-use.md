@@ -1522,8 +1522,8 @@ package (zero dependencies — a directory copy).
 
 ## Chained flows
 
-The composite questions a sync plugin actually asks, each as a chain of the queries above. The shapes follow
-decky-romm-sync's flows.
+The composite questions a sync plugin actually asks, each as a chain of the queries above. The shapes follow Tender's
+flows.
 
 ### Flow 1 — "Upload this ROM's save"
 

@@ -33,12 +33,12 @@ its own file and evidence fields.
 Four of those fields are closed vocabularies — all four the placement's own, imported by the loader rather than
 respelled here, so a card cannot select a value the contract cannot carry — and one is a type rule:
 
-| field         | on    | accepted values                                                                    |
-| ------------- | ----- | ---------------------------------------------------------------------------------- |
-| `root`        | mode  | `savefile_directory`, `system_directory`, `content_directory`, `working_directory` |
-| `granularity` | group | `shared-card`, `shared-file`, `per-game-file`, `per-game-files`                    |
-| `role`        | group | `battery`, `memory-card`, `disk-diff`, `high-score`, `settings`                    |
-| `complete`    | group | a JSON boolean, `true` or `false` — never a string, never coerced                  |
+| field         | on    | accepted values                                                                       |
+| ------------- | ----- | ------------------------------------------------------------------------------------- |
+| `root`        | mode  | `savefile_directory`, `system_directory`, `content_directory`, `working_directory`    |
+| `granularity` | group | `shared-card`, `shared-file`, `per-game-file`, `per-game-files`, `per-game-directory` |
+| `role`        | group | `battery`, `memory-card`, `disk-diff`, `high-score`, `settings`                       |
+| `complete`    | group | a JSON boolean, `true` or `false` — never a string, never coerced                     |
 
 `granularity` and `role` reach the caller as contract values, so a misspelling would be stated as this machine's actual
 grouping or would send a save sync past real save data; `complete` is a claim about the save, and `bool("false")` is

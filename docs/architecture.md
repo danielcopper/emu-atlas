@@ -1,8 +1,8 @@
 # Architecture — the map
 
-**Stand: 2026-08-07** — the export tiers and the arrangement rename. This document is updated with the surface: it
-describes what is there today, and a change to the API is expected to change it. The spec is `DESIGN.md` — that one says
-why. This one says what is where.
+**Stand: 2026-08-20** — the platform crosswalk, the AppImage seam, the CLI and the launcher route. This document is
+updated with the surface: it describes what is there today, and a change to the API is expected to change it. The spec
+is `DESIGN.md` — that one says why. This one says what is where.
 
 ## The layers
 
@@ -11,7 +11,7 @@ machine is behind the seam.
 
 ```mermaid
 flowchart TB
-    consumers["Consumers<br/><small>decky-romm-sync, tools</small>"]
+    consumers["Consumers<br/><small>Tender, tools, any language via the emu-atlas CLI</small>"]
     vectors["Conformance vectors<br/><small>fixture machine in, expected answers out</small>"]
 
     subgraph api["Tier 1 — import atlas"]
@@ -32,7 +32,7 @@ flowchart TB
         esde["atlas.esde<br/><small>ES-DE es_systems.xml</small>"]
     end
 
-    seam["atlas.machine — the seam<br/><small>every operation reports its outcome:<br/>read_text · glob · path_kind · readlink · query_core · file_size · file_digest</small>"]
+    seam["atlas.machine — the seam<br/><small>every operation reports its outcome:<br/>read_text · glob · path_kind · readlink · query_core · file_size · file_digest · read_appimage_text</small>"]
     real["RealMachine<br/><small>the running machine</small>"]
     fixture["FixtureMachine<br/><small>a machine as plain data</small>"]
 
@@ -67,12 +67,16 @@ classDiagram
         +health() Health
         +savefile_location(content_path, core_so) SavefilePlacement
         +savestate_location(content_path, core_so) SavestatePlacement
+        +screenshot_location(content_path, core_so) ScreenshotPlacement
         +texture_pack_location(content_path, core_so) TexturePlacement
         +mod_location(content_path, core_so) ModPlacement
         +soft_patch_candidates(content_path, core_so) SoftPatchAnswer
         +systems() SystemsAnswer
+        +systems_for_platform(vocabulary, value) PlatformSystemsAnswer
+        +platform_ids(system) SystemPlatformsAnswer
         +emulators_for(system, content_path) CatalogueAnswer
         +rom_location(system) RomPlacement
+        +launchable(system, content_path) LaunchabilityAnswer
         +firmware_for_core(core_so, verify) FirmwareAnswer
         +firmware_for_system(system, verify) FirmwareAnswer
         +firmware_inventory(verify) FirmwareAnswer
@@ -106,10 +110,13 @@ classDiagram
     InstallationAnswer --> Installation : labelled by
 ```
 
-RetroDECK always answers from a frontend catalogue, and EmuDeck does while an ES-DE is on its disk (the bundled layer
-sealed inside the AppImage, and stated so); the handles without one answer the catalogue question with a stated refusal
-rather than an empty list. "Bare" is the arrangement axis (a RetroArch nobody configured for a frontend); "standalone"
-is the emulator axis (an emulator without a libretro core) — the two never mix.
+RetroDECK always answers from a frontend catalogue, and EmuDeck does while an ES-DE is on its disk — including the
+bundled layer inside the ES-DE AppImage, which atlas reads itself (`atlas.squashfs`) wherever the runtime has the
+image's codec, and states as sealed where it does not; the handles without a catalogue answer the question with a stated
+refusal rather than an empty list. "Bare" is the arrangement axis (a RetroArch nobody configured for a frontend);
+"standalone" is the emulator axis (an emulator without a libretro core) — the two never mix. A standalone entry resolves
+through a packaged save card where one covers the emulator the command names (by `%EMULATOR_…%` token, or on EmuDeck by
+the launcher script the command runs); everything else refuses typed.
 
 ## The answers
 
@@ -212,6 +219,35 @@ classDiagram
         +checked: FirmwareChecked
         +satisfied: bool|None «summary»
     }
+    class ScreenshotPlacement {
+        +dir: str
+        +root_kind: ScreenshotRootKind
+        +needs: tuple
+        +physical_dir: str|None
+        +caveats: tuple~Caveat~
+    }
+    class SystemsAnswer {
+        +systems: tuple
+        +caveats: tuple~Caveat~
+    }
+    class PlatformSystemsAnswer {
+        +vocabulary / value
+        +platforms: tuple
+        +matches: tuple~PlatformSystemMatch~
+        +caveats: tuple~Caveat~
+    }
+    class SystemPlatformsAnswer {
+        +system / status / tags_source
+        +platforms: tuple
+        +identities: tuple~PlatformIdentities~
+        +caveats: tuple~Caveat~
+    }
+    class LaunchabilityAnswer {
+        +verdict: str
+        +extension / accepted / alternatives
+        +entry: EmulatorEntry|None
+        +caveats: tuple~Caveat~
+    }
     class Caveat {
         +code: str
         +data: Mapping
@@ -254,6 +290,7 @@ classDiagram
 | porting the resolver            | the Tier-2 modules, as the reference for what each parser reads                                          |
 | reading a cfg / catalogue alone | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems`                           |
 | validating your own system map  | `import atlas` — `from_esde_system`, `known_systems`                                                     |
+| arriving from a platform id     | the two platform questions on any handle; `from atlas.platforms import …` for the raw identity table     |
 | checking packaged knowledge     | `from atlas.oddities import lookup_card`, `from atlas.textures import …`, `from atlas.evidence import …` |
 
 The rule behind the table: if a client acts on it, it is in `atlas`; if it exists so a port or a test can reproduce the

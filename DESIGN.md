@@ -334,11 +334,11 @@ placing a new name: if a client acts on it, Tier 1; if it exists so a port or a 
 
 ## Consumption
 
-| Consumer                           | Path                                                                    |
-| ---------------------------------- | ----------------------------------------------------------------------- |
-| Python clients (decky-romm-sync)   | import directly; vendor by copying (`pip install --target py_modules/`) |
-| Non-Python clients (grout, argosy) | implement the resolver natively; prove conformance against the vectors  |
-| Non-Python tools on a Python host  | planned: a `python -m atlas … --json` process call — no CLI ships today |
+| Consumer                           | Path                                                                                                                                            |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Python clients (Tender)            | import directly; vendor by copying — the release wheel unzips to the tree                                                                       |
+| Non-Python clients (grout, argosy) | implement the resolver natively; prove conformance against the vectors — or run the `emu-atlas` CLI as a subprocess and parse the contract JSON |
+| Consumers without any Python       | the release bundle: the CLI with its own pinned CPython, unpacked anywhere                                                                      |
 
 `dependencies = []` is a contract, not an accident: zero-dependency pure Python is what makes vendoring a directory copy
 — no compiled parts, no architecture question, no version conflicts inside a plugin bundle.
@@ -361,19 +361,28 @@ machine actually declares — the questions answer about names that exist there,
 id set is pinned to the `es_systems.xml` of a stated build, so membership is checkable rather than an opinion. A test
 parses that build's file and asserts set-identity, which is what keeps the snapshot honest as the build moves.
 
-**atlas carries no foreign product vocabulary.** No library manager's platform slugs, no metadata service's ids, nothing
-network-facing — not as a table, not as a translator, not ever. Such a mapping is world knowledge atlas cannot check
-against any machine, which is exactly what the boundary rule refuses: it is versioned by someone else, it changes
-without telling atlas, and much of what it names is not an emulated system at all. Shipping one would also put the
+**atlas carries no foreign product's system vocabulary.** No library manager's system slugs as the ids its questions
+take — not as a table, not as a translator. Such a per-product naming dialect is world knowledge atlas cannot check
+against any machine: it is versioned by someone else, it changes without telling atlas, and shipping it would put the
 mapping two releases away from the client that depends on it, so a wrong entry would be atlas's bug to ship and the
 client's bug to suffer.
 
-So the mapping belongs to whoever holds the other vocabulary, and atlas gives them the target set to check it against:
-`known_systems()` and `from_esde_system(name)`. The worked example is decky-romm-sync, whose ADR-0010 owns its RomM-slug
-normalization; validating its targets against `known_systems()` is what turns "this platform answers nothing" from a
-silent miss into a failing test on the side that can fix it. The failure being prevented is one specific one: an
+So a product's own system mapping belongs to whoever holds that vocabulary, and atlas gives them the target set to check
+it against: `known_systems()` and `from_esde_system(name)`. The worked example is Tender, whose ADR-0010 owns its
+RomM-slug normalization; validating its targets against `known_systems()` is what turns "this platform answers nothing"
+from a silent miss into a failing test on the side that can fix it. The failure being prevented is one specific one: an
 identifier no catalogue declares reaches a question, the question answers "no emulator for that system", and a
 vocabulary mistake has been read as a fact about the machine.
+
+_Settled (issue #68):_ **public platform identities are a different case**, and atlas carries them. Every catalogue
+system declares a `<platform>` tag — a live fact of the machine, ES-DE's own scraping vocabulary — and which public
+identities correspond to a platform (IGDB by numeric id, since slugs drift under a stable id; libretro's names; the
+ScreenScraper and TheGamesDB ids ES-DE's own scrapers map) is world knowledge exactly like a firmware hash: versioned,
+source-cited, regenerated from pinned upstreams (`atlas/data/platform_ids_crosswalk.json`, generator in `scripts/`). The
+split holds the boundary rule on both halves — which tags a system carries is always read, never tabled; what a platform
+id publicly _is_ lives nowhere on any machine and is packaged with provenance. What stays out is unchanged: per-product
+system slugs (RomM publishes its own `igdb_slug` per platform, so a client joins on the IGDB id and needs no RomM column
+here), and anything atlas would have to invent rather than cite.
 
 _Settled (item 20b):_ the firmware route speaks the same ids everywhere. The `systemname` map's values are ES-DE ids
 (map version 2, `atlas/firmware.py` — per-entry citations into the deployed `es_systems.xml` and the shipped `.info`
