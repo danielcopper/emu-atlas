@@ -489,9 +489,14 @@ first. Each entry carries its own resolved `dir`, its own `files`, and two field
 for g in placement.file_set.groups:
     g.dir          # '/…/saves/arcade/mame/cfg'  — resolved, this group's own directory
     g.files        # ('default.cfg',)            — basenames within it, or None (see below)
-    g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'shared-card' | 'shared-file'
+    g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'per-game-directory' | 'shared-card' | 'shared-file'
     g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings'
 ```
+
+`per-game-directory` says the directory itself is the unit: everything below it belongs to one game, so a sync client
+packs and moves the tree whole (Cemu's `usr/save/<save_id>` — the per-title MLC subtree — is the first). Its `dir` may
+carry a `<save_id>` template, with the hole in `needs` and the fill spelled out in the answer's caveat, exactly as the
+file-name templates do it.
 
 One walk over `groups` reaches every directory the answer knows about. `placement.dir` and `placement.file_set.files`
 stay exactly what they always were — the first group's directory and the names in it — so a client that reads only those
@@ -716,10 +721,14 @@ extensions; `complete` is `false`, and deciding which of those files are yours t
 
 A standalone catalogue entry answers `savefile_location` where a **standalone save card** covers the emulator its launch
 command names — Dolphin, PPSSPP, xemu and Cemu today, keyed by the `%EMULATOR_…%` token the way the texture cards are.
-No frontend hands these emulators a save directory, so the answer's `root_kind` is `emulator_directory`: the emulator's
-own tree, its shape read from the emulator's own configuration the way the emulator reads it (Dolphin's `Dolphin.ini`,
-xemu's `xemu.toml`, Cemu's `settings.xml` — each at the shipped release; PPSSPP's Linux memstick is fixed by the build,
-so its card names no config at all), and rerouted with symlinks the answer walks.
+On EmuDeck the catalogue names no token — its commands run per-emulator launcher scripts — so an allowlisted launcher
+(`tools/launchers/cemu.sh` today) reaches the same card, resolved against the host's own XDG tree; the launcher picks
+its binary at run time, and a variant whose config is not the established one (the Windows build under Proton via `-w`,
+or the flatpak fallback when no AppImage is installed) refuses with `standalone-variant-unestablished` and the variant
+named in `data`. No frontend hands these emulators a save directory, so the answer's `root_kind` is
+`emulator_directory`: the emulator's own tree, its shape read from the emulator's own configuration the way the emulator
+reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's `settings.xml` — each at the shipped release; PPSSPP's
+Linux memstick is fixed by the build, so its card names no config at all), and rerouted with symlinks the answer walks.
 
 ```python
 entry = inst.emulators_for("gc").entries[0]   # 'Dolphin (Standalone)'
@@ -741,12 +750,15 @@ Savestates stay refused (`standalone-unsupported`): the states tree is its own w
 card.
 
 The other three cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
-`PSP/SAVEDATA`. Cemu is one unnamed subtree per title id below the MLC's `usr/save`, the MLC resolved the way the
-emulator resolves it (an `--mlc` launch flag outranks `settings.xml`, and the answer says so when it sees one). xemu is
-the boundary case: every game's save lives **inside** the emulated Xbox hard disk, so the answer names the image as one
-shared file and `save-inside-image` carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id>`)
-— a file-level client backs the image up whole or leaves it, a tool that parses FATX has the layout stated instead of
-rediscovered, and per-game sync is honestly not on offer from outside.
+`PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the
+emulator resolves it (an `--mlc` launch flag outranks `settings.xml`, and the answer says so when it sees one) — with
+`needs: ('save_id',)`, granularity `per-game-directory`, and the caveat spelling the fill (the title id, high then low
+word, each 8 lowercase hex digits, as two path segments) with its citation. That unit is what a per-game sync client
+moves whole — the directory-based save shape rommapp/romm#3866 asks for. xemu is the boundary case: every game's save
+lives **inside** the emulated Xbox hard disk, so the answer names the image as one shared file and `save-inside-image`
+carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id>`) — a file-level client backs the
+image up whole or leaves it, a tool that parses FATX has the layout stated instead of rediscovered, and per-game sync is
+honestly not on offer from outside.
 
 ## Where do this ROM's savestates live?
 

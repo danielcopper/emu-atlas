@@ -177,11 +177,18 @@ GRANULARITY_SHARED_CARD = "shared-card"
 GRANULARITY_SHARED_FILE = "shared-file"
 GRANULARITY_PER_GAME_FILE = "per-game-file"
 GRANULARITY_PER_GAME_FILES = "per-game-files"
+# One *directory* per game, and the directory is the unit: everything below it
+# belongs to that one game, so a sync client packs and moves the tree whole
+# rather than tracking files inside it. Distinct from per-game-files, which
+# says several of this game's files sit in a directory *shared* with other
+# games' — there the file is the unit and the directory is not safe to move.
+GRANULARITY_PER_GAME_DIRECTORY = "per-game-directory"
 GRANULARITIES = (
     GRANULARITY_SHARED_CARD,
     GRANULARITY_SHARED_FILE,
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
+    GRANULARITY_PER_GAME_DIRECTORY,
 )
 # The one value outside the tuple above, deliberately: it is what
 # :attr:`Granularity.value` says for a mode that keeps no save data at all
@@ -844,6 +851,16 @@ class ScreenshotPlacement:
 
 # Unresolved outcome codes — stable identifiers like caveat codes.
 UNRESOLVED_STANDALONE = "standalone-unsupported"
+# The emulator is known and carded, but the binary THIS entry would launch is
+# not the one whose configuration is established: an arrangement's launcher
+# script picks at run time (EmuDeck's cemu.sh probes an AppImage, then a
+# flatpak, then a Windows build under Proton), and only an established
+# variant's config answers. A statement about atlas's wiring, never about the
+# emulator; ``data`` names the variant so a client can say why this launch
+# has no read placement. Distinct from ``standalone-unsupported`` (no card at
+# all) and from ``emulator-config-unreadable`` (the established config exists
+# and the machine would not let it be read).
+UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED = "standalone-variant-unestablished"
 # The caller named a core this installation does not have, and the cores
 # directory was read well enough to establish that. One fact, one code on both
 # routes: the firmware route says it with a caveat

@@ -1873,7 +1873,10 @@ class TestMoreStandaloneSaves:
         # answer still stands, with the caveat saying so.
         p = self._answer("wiiu")
         assert not isinstance(p, atlas.Unresolved)
-        assert p.dir.endswith("/data/Cemu/mlc01/usr/save")
+        assert p.dir.endswith("/data/Cemu/mlc01/usr/save/<save_id>")
+        assert p.needs == ("save_id",)
+        assert p.granularity is not None
+        assert p.granularity.value == atlas.GRANULARITY_PER_GAME_DIRECTORY
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
         assert "--mlc" in stated[0].data["reason"]
@@ -1882,6 +1885,83 @@ class TestMoreStandaloneSaves:
         p = self._answer("wiiu", files={CEMU_XML_PATH: "<content><mlc_path>"})
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+
+class TestEmuDeckStandaloneLaunchers:
+    """The launcher route's refusal corners the vector family does not carry."""
+
+    OVERLAY = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n'
+        "    <path>%ROMPATH%/wiiu/roms</path>\n    <extension>.rpx</extension>\n"
+        '    <command label="Cemu (Native)">/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh'
+        " -f -g %ROM%</command>\n"
+        "  </system>\n  <system>\n    <name>atarijaguar</name>\n"
+        "    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64</extension>\n"
+        '    <command label="BigPEmu (Proton)">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh'
+        " %ROM%</command>\n"
+        "  </system>\n  <system>\n    <name>n64</name>\n"
+        "    <path>%ROMPATH%/n64</path>\n    <extension>.z64</extension>\n"
+        '    <command label="Somewhere Else">/usr/bin/some-emulator %ROM%</command>\n'
+        "  </system>\n</systemList>\n"
+    )
+    BASE = {
+        EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+        f"{HOME}/ES-DE/custom_systems/es_systems.xml": OVERLAY,
+        f"{HOME}/.config/Cemu/settings.xml": (
+            "<content><mlc_path>/home/deck/Emulation/roms/wiiu/mlc01</mlc_path></content>"
+        ),
+    }
+
+    def _answer(self, system, files=None, **kwargs):
+        machine = FixtureMachine({**self.BASE, **(files or {})}, **kwargs)
+        ed = atlas.EmuDeck(HOME, machine)
+        return ed.emulators_for(system).entries[0].savefile_location()
+
+    def test_an_unallowlisted_launcher_stays_unsupported(self):
+        # bigpemu.sh is a real EmuDeck launcher, and nobody has established
+        # its wiring — the allowlist is per emulator, never the directory.
+        p = self._answer("atarijaguar")
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_STANDALONE
+
+    def test_a_command_naming_no_launcher_stays_unsupported(self):
+        p = self._answer("n64")
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_STANDALONE
+
+    def test_with_nothing_installed_the_launcher_falls_to_proton(self):
+        # cemu.sh probes the AppImage, then the flatpak, and otherwise runs
+        # the Windows build — an empty machine ends there.
+        p = self._answer("wiiu", dirs=[f"{HOME}/Applications"])
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert p.data["variant"] == "proton"
+
+    def test_a_user_installed_flatpak_is_found_by_the_second_probe(self):
+        p = self._answer(
+            "wiiu",
+            dirs=[
+                f"{HOME}/Applications",
+                f"{HOME}/.local/share/flatpak/app/info.cemu.Cemu",
+            ],
+        )
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert p.data["variant"] == "flatpak"
+
+    def test_an_unlistable_applications_directory_is_not_a_no(self):
+        # The launcher would still look there — an unreadable directory makes
+        # the pick unestablished, never "no AppImage, so Proton".
+        p = self._answer("wiiu", unlistable=[f"{HOME}/Applications"])
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert p.data["variant"] == "unestablished"
+
+    def test_the_appimage_match_is_case_insensitive_like_the_launchers_find(self):
+        # find -iname "Cemu*.AppImage" (cemu.sh:42) — a lowercase file still counts.
+        p = self._answer("wiiu", files={f"{HOME}/Applications/cemu-2.6.appimage": ""})
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir.endswith("/mlc01/usr/save/<save_id>")
 
 
 class TestEmuDeck:
