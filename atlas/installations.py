@@ -10525,6 +10525,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     # holds the evidence.
 
     _ESDE_APPIMAGE_SUFFIX = os.path.join("Applications", "ES-DE.AppImage")
+    # The embedded catalogue's path inside the AppImage's squashfs: the file
+    # the Linux build loads (SystemData.cpp:1349-1351 @ v3.4.1), at the prefix
+    # the AppImage packs it under — verified against the deployed image.
+    _ESDE_APPIMAGE_CATALOGUE_ENTRY = "usr/share/es-de/resources/systems/linux/es_systems.xml"
     _ESDE_PORTABLE_SUFFIX = os.path.join("Applications", "portable.txt")
     _ESDE_APPDATA_DIRNAME = "ES-DE"
     _ESDE_SHADOW_SUFFIX = os.path.join("resources", "systems", "linux", _ES_SYSTEMS_XML)
@@ -10532,7 +10536,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     _ESDE_SETTINGS_SUFFIX = os.path.join("settings", "es_settings.xml")
     _ROM_DIRECTORY_SETTING = "ROMDirectory"
     _FRONTEND_MARKER_KEY = "doInstallESDE"
-    _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, on-disk layers under ~/ES-DE)"
+    _CATALOGUE_SOURCE = (
+        "ES-DE catalogue read live (es_systems.xml — on-disk layers under ~/ES-DE, "
+        "and the AppImage-embedded bundled layer where the runtime can open it)"
+    )
     _ROM_DIRECTORY_SOURCE = "ES-DE ROMDirectory read live (es_settings.xml)"
 
     def _esde_appdata_dir(self) -> str:
@@ -10670,21 +10677,29 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         applies, and a broken shadow cannot matter on such a machine because
         the frontend never opens it either.
 
-        On the merged path: the bundled ``es_systems.xml`` is embedded in the
-        AppImage (ES-DE ``INSTALL.md`` v3.4.1:1470) and atlas does not open
-        AppImages, so the bundled layer is ordinarily not readable — that is
-        the ``sealed`` state, and ``complete`` is ``False``. The one
-        exception is ES-DE's own per-file resource override (``INSTALL.md``
-        v3.4.1:1125): a file at
+        On the merged path the bundled layer has two on-machine sources, in
+        ES-DE's own precedence. First the per-file resource override
+        (``INSTALL.md`` v3.4.1:1125): a file at
         ``~/ES-DE/resources/systems/linux/es_systems.xml`` shadows the
         embedded one for ES-DE itself, so where it exists and parses it *is*
         the bundled layer, on disk — ``complete`` is ``True`` and nothing is
-        sealed away. A shadow that exists and cannot be read or parsed is the
-        third state (``shadow_broken``): ES-DE loads that file, atlas could
-        not, and what the catalogue says is then unknown — the same claim
-        RetroDECK's unreadable bundled layer makes. A ``<loadExclusive/>`` in
-        the shadow is ignored the way ES-DE ignores one in the bundled layer
-        (the LogWarning branch, ``:886-895``).
+        sealed away. A shadow that exists and cannot be read or parsed is
+        ``shadow_broken``: ES-DE loads that file, atlas could not, and what
+        the catalogue says is then unknown — the same claim RetroDECK's
+        unreadable bundled layer makes. Where no shadow exists, the embedded
+        file itself is read **out of the AppImage** (issue #65): the image's
+        squashfs is opened by :mod:`atlas.squashfs` at
+        ``usr/share/es-de/resources/systems/linux/es_systems.xml`` — the
+        path the Linux build loads (``SystemData.cpp:1349-1351``), verified
+        against the deployed AppImage — and where that read answers text,
+        the catalogue is ``complete`` and nothing is sealed. Every other
+        outcome of that read — no AppImage, not an AppImage, no such entry,
+        an interpreter without the image's codec (zstd needs Python >= 3.14),
+        unreadable bytes — leaves the ``sealed`` state exactly as it always
+        was: ``complete`` ``False``, the caveat naming the sealed layer. A
+        ``<loadExclusive/>`` in the shadow or the embedded file is ignored
+        the way ES-DE ignores one in the bundled layer (the LogWarning
+        branch, ``:886-895``).
 
         The overlay is EmuDeck's own write (``emuDeckESDE.sh:18,127``,
         deployed from ``configs/emulationstation/custom_systems/`` and
@@ -10712,22 +10727,65 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return {}, True, False, False, _catalogue_invalid_finding(overlay_path, custom.invalid)
         if custom.load_exclusive:
             return dict(custom.systems), True, False, True, None
-        bundled = CatalogueLayer(systems={})
-        complete = False
+        bundled, complete, shadow_broken, bundled_invalid = self._bundled_layer(appdata)
+        if bundled_invalid is not None:
+            return {}, True, False, False, bundled_invalid
+        if shadow_broken:
+            return {}, False, True, False, None
+        return merge_layers(bundled.systems, custom.systems), complete, False, False, None
+
+    def _bundled_layer(self, appdata: str) -> tuple[CatalogueLayer, bool, bool, Caveat | None]:
+        """The bundled layer's one reading → ``(layer, complete, shadow_broken, invalid)``.
+
+        ES-DE's own precedence: the on-disk resource-override shadow outranks
+        the AppImage-embedded file, so the embedded read runs only where no
+        shadow exists at all. Read and parsed — from either source — the
+        layer is the bundled one and ``complete`` is ``True``; a shadow that
+        exists and yields no text is ``shadow_broken``; a layer that parses
+        invalid is the finding; and every unreadable-image outcome is the
+        sealed state the caller already spells: nothing read, nothing broken.
+        """
+        empty = CatalogueLayer(systems={})
         shadow_path = os.path.join(appdata, self._ESDE_SHADOW_SUFFIX)
         shadow = self._machine.read_text(shadow_path)
         if shadow.status != READ_MISSING:
-            if shadow.text is not None:
-                bundled = parse_es_systems(
-                    shadow.text, provenance="es_systems.xml (resource-override shadow)"
-                )
-                if bundled.invalid is not None:
-                    return {}, True, False, False, _catalogue_invalid_finding(shadow_path, bundled.invalid)
-                # Read AND parsed: the shadow is the bundled layer, on disk.
-                complete = True
-            if not complete:
-                return {}, False, True, False, None
-        return merge_layers(bundled.systems, custom.systems), complete, False, False, None
+            if shadow.text is None:
+                return empty, False, True, None
+            bundled = parse_es_systems(
+                shadow.text, provenance="es_systems.xml (resource-override shadow)"
+            )
+            if bundled.invalid is not None:
+                return empty, True, False, _catalogue_invalid_finding(shadow_path, bundled.invalid)
+            # Read AND parsed: the shadow is the bundled layer, on disk.
+            return bundled, True, False, None
+        embedded, invalid = self._embedded_bundled_layer()
+        if invalid is not None:
+            return empty, True, False, invalid
+        if embedded is not None:
+            # Read AND parsed, straight out of the image: the bundled layer
+            # itself, not a stand-in — nothing is sealed.
+            return embedded, True, False, None
+        return empty, False, False, None
+
+    def _embedded_bundled_layer(self) -> tuple[CatalogueLayer | None, Caveat | None]:
+        """The AppImage-embedded bundled layer → ``(layer, invalid finding)``.
+
+        ``(None, None)`` is every outcome short of text — no AppImage, not an
+        AppImage, no such entry, a runtime without the image's codec,
+        unreadable bytes — and leaves the caller's sealed state untouched. A
+        layer that parses invalid is the finding instead: ES-DE loads the
+        same embedded file and aborts its whole ``loadConfig`` on it.
+        """
+        appimage_path = self._esde_appimage_path()
+        embedded = self._machine.read_appimage_text(
+            appimage_path, self._ESDE_APPIMAGE_CATALOGUE_ENTRY
+        )
+        if embedded.text is None:
+            return None, None
+        bundled = parse_es_systems(embedded.text, provenance="es_systems.xml (AppImage-embedded)")
+        if bundled.invalid is not None:
+            return None, _catalogue_invalid_finding(appimage_path, bundled.invalid)
+        return bundled, None
 
     def _gamelist_selections(self, system: str) -> GamelistSelections:
         """The gamelist's emulator selections — EmuDeck seeds these itself.

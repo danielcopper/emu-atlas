@@ -53,11 +53,13 @@ basedpyright atlas tests scripts   # type-check (CI-enforced; pip install basedp
 - The `machines` vector family (schema 3) models whole machines: `files` (string content, or
   `{"status": "unreadable"|"invalid-text"}` for read failures, optionally with a `size` — the chmod-000 file stats fine
   and only its bytes fail), `dirs` (explicit empty directories), `symlinks` (dead links included), `cores` (`null` =
-  present but unloadable), and two ways to be unreadable: `inaccessible` (the `stat` fails — declaring a directory
-  declares its whole subtree) and `unlistable` (it _is_ a directory and its contents cannot be read, which is the only
-  state a resolver reaches after passing an "is it a directory?" check). Configured save roots must be _directories_ in
-  fixtures (`path_is_directory` validation) — list them in `dirs` or place a file inside. Expected blocks are the
-  canonical contract serializations (`atlas/contract.py`), asserted with exact equality — prose (sources, messages) is
+  present but unloadable), `appimages` (modeled at the seam: entry paths to text, or a whole-archive state
+  `"unreadable"|"not-appimage"|"capability-missing"` — never a binary, so vectors stay codec- and version-independent),
+  and two ways to be unreadable: `inaccessible` (the `stat` fails — declaring a directory declares its whole subtree)
+  and `unlistable` (it _is_ a directory and its contents cannot be read, which is the only state a resolver reaches
+  after passing an "is it a directory?" check). Configured save roots must be _directories_ in fixtures
+  (`path_is_directory` validation) — list them in `dirs` or place a file inside. Expected blocks are the canonical
+  contract serializations (`atlas/contract.py`), asserted with exact equality — prose (sources, messages) is
   non-contractual.
 - Live verification against the real RetroDECK installation on this machine is the final check for resolver changes;
   fixtures prove logic, the machine proves reality.

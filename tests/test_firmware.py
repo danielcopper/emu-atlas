@@ -78,6 +78,7 @@ from atlas.firmware import (
     system_for,
 )
 from atlas.machine import (
+    AppImageReadResult,
     CoreInfo,
     FixtureFileSpec,
     FixtureMachine,
@@ -2007,6 +2008,10 @@ class _CountingMachine:
     def read_text(self, path: str) -> ReadResult:
         self._count("read_text")
         return self._inner.read_text(path)
+
+    def read_appimage_text(self, path: str, inner_path: str) -> AppImageReadResult:
+        self._count("read_appimage_text")
+        return self._inner.read_appimage_text(path, inner_path)
 
     def glob(self, pattern: str) -> GlobResult:
         self._count("glob")
