@@ -55,6 +55,20 @@
       "provenance": {
         "source": "Cemu 2.6, the release the shipped binary carries as a whole version string (components/cemu/bin/Cemu_relwithdebinfo). Every save lives in the Wii U's internal storage (MLC), resolved the way the emulator resolves it: an --mlc launch flag, else settings.xml's mlc_path, else mlc01 below Cemu's user data (ActiveSettings.cpp:242-268). The save tree inside it is usr/save/<title id hi>/<title id lo>/user/ — the shipped binary carries that scheme as the whole literal 'usr/save/{:08X}/{:08X}/user/' — one directory per title, the id the game's own, so the answer templates the unit as usr/save/<save_id> — filled with the title id, high then low word, each 8 lowercase hex digits, the spelling the runtime write sites compose (nn_save.cpp:133-145: 'usr/save/%08x/%08x/user/%08x/' and 'user/common/'). An arrangement may reroute usr/save with a symlink, which the answer walks. On EmuDeck the catalogue reaches this card through the launcher script the command names (tools/launchers/cemu.sh); the AppImage variant reads the host's own XDG tree (emuDeckCemu.sh:13, vars.sh:4-5)."
       }
+    },
+    "AZAHAR": {
+      "saves": {
+        "config": {
+          "base": "config",
+          "path": "azahar-emu/qt-config.ini"
+        },
+        "systems": [
+          "n3ds"
+        ]
+      },
+      "provenance": {
+        "source": "Azahar 2125.1.1, the release RetroDECK ships (components/azahar/bin/azahar reports it). A 3DS save lives on the emulated SD: the archive mounts '<sdmc>/Nintendo 3DS/<ID0>/<ID1>/title/' and the per-title save is '<high:08x>/<low:08x>/data/00000001/' below it (archive_source_sd_savedata.cpp:21-29), with ID0 and ID1 compile-time all-zero strings (archive.h:22-24) — so the unit is a directory keyed by the title id, the same <save_id> spelling Cemu's card fills. The SD root is read the way the emulator reads it: qt-config.ini's [Data Storage] group, where use_custom_storage routes sdmc_directory and nand_directory and false leaves the XDG defaults (config.cpp:480-498; a '<key>\\default=true' companion makes the default win, ReadSetting, config.cpp:1442-1450). The title directory also holds installed content (title/<high>/<low>/content/), which is why the unit anchors at data/ and never at the title directory. Beside the unit, extdata ('Nintendo 3DS/<ID0>/<ID1>/extdata/') keeps save-adjacent data keyed by the title's own extdata id (archive_extsavedata.cpp), and system titles save into the NAND ('nand/data/<ID0>/sysdata') — stated, not templated."
+      }
     }
   }
 }

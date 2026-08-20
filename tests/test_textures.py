@@ -433,6 +433,15 @@ ESDE_SYSTEMS = """<?xml version="1.0"?>
     <platform>n3ds</platform>
     <theme>n3ds</theme>
   </system>
+  <system>
+    <name>psx</name>
+    <fullname>Sony PlayStation</fullname>
+    <path>%ROMPATH%/psx</path>
+    <extension>.chd .CHD</extension>
+    <command label="DuckStation (Standalone)">%EMULATOR_DUCKSTATION% -batch %ROM%</command>
+    <platform>psx</platform>
+    <theme>psx</theme>
+  </system>
 </systemList>
 """
 
@@ -573,9 +582,10 @@ class TestTheEntryRouteAsymmetryIsDeliberate:
     """
 
     def test_the_same_entry_answers_textures_and_refuses_its_save(self):
-        # Azahar has a texture card and no standalone save card — the split
-        # inside one entry is evidence, not kind.
-        entry = _entry("n3ds")
+        # DuckStation has a texture card and no standalone save card — the
+        # split inside one entry is evidence, not kind. (Azahar used to be
+        # this example, until its save card landed.)
+        entry = _entry("psx")
         assert isinstance(entry.texture_pack_location(), TexturePlacement)
         refusal = entry.savefile_location()
         assert isinstance(refusal, Unresolved)

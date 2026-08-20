@@ -720,12 +720,12 @@ extensions; `complete` is `false`, and deciding which of those files are yours t
 ### Where a standalone emulator's saves live
 
 A standalone catalogue entry answers `savefile_location` where a **standalone save card** covers the emulator its launch
-command names — Dolphin, PPSSPP, xemu and Cemu today, keyed by the `%EMULATOR_…%` token the way the texture cards are.
-On EmuDeck the catalogue names no token — its commands run per-emulator launcher scripts — so an allowlisted launcher
-(`tools/launchers/cemu.sh` today) reaches the same card, resolved against the host's own XDG tree; the launcher picks
-its binary at run time, and a variant whose config is not the established one (the Windows build under Proton via `-w`,
-or the flatpak fallback when no AppImage is installed) refuses with `standalone-variant-unestablished` and the variant
-named in `data`. No frontend hands these emulators a save directory, so the answer's `root_kind` is
+command names — Dolphin, PPSSPP, xemu, Cemu and Azahar today, keyed by the `%EMULATOR_…%` token the way the texture
+cards are. On EmuDeck the catalogue names no token — its commands run per-emulator launcher scripts — so an allowlisted
+launcher (`tools/launchers/cemu.sh` today) reaches the same card, resolved against the host's own XDG tree; the launcher
+picks its binary at run time, and a variant whose config is not the established one (the Windows build under Proton via
+`-w`, or the flatpak fallback when no AppImage is installed) refuses with `standalone-variant-unestablished` and the
+variant named in `data`. No frontend hands these emulators a save directory, so the answer's `root_kind` is
 `emulator_directory`: the emulator's own tree, its shape read from the emulator's own configuration the way the emulator
 reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's `settings.xml` — each at the shipped release; PPSSPP's
 Linux memstick is fixed by the build, so its card names no config at all), and rerouted with symlinks the answer walks.

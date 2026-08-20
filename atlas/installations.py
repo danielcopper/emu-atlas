@@ -5859,11 +5859,257 @@ def _cemu_savefile_placement(
     )
 
 
+# The 3DS console-identity levels of the emulated SD tree — compile-time
+# all-zero strings in the emulator (ID0 the system identifier hash, ID1 the
+# scrambled SD CID; archive.h:22-24 at Azahar 2125.1.1), so the container
+# below any SD root is one fixed spelling.
+_AZAHAR_ZERO_ID = "00000000000000000000000000000000"
+_AZAHAR_CONTAINER = os.path.join("Nintendo 3DS", _AZAHAR_ZERO_ID, _AZAHAR_ZERO_ID)
+
+
+def _qt_ini_values(text: str) -> dict[tuple[str, str], str]:
+    """A Qt settings file as ``(section, key) -> raw value`` — read, not interpreted.
+
+    The two spellings that matter here: a section name is ``%``-escaped in the
+    file (``[Data%20Storage]`` is the group ``Data Storage``), and a key may
+    carry a ``\\default`` companion — semantics the caller applies, because
+    they are the emulator's (ReadSetting, config.cpp:1442-1450), not the file
+    format's.
+    """
+    values: dict[tuple[str, str], str] = {}
+    section = ""
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(";") or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            section = _qt_ini_unescape(line[1:-1])
+            continue
+        key, separator, value = line.partition("=")
+        if separator:
+            values[(section, key.strip())] = value.strip()
+    return values
+
+
+def _qt_ini_unescape(name: str) -> str:
+    """QSettings' ``%XX`` section-name escaping, undone byte-wise."""
+    out = bytearray()
+    index = 0
+    encoded = name.encode("utf-8")
+    while index < len(encoded):
+        if encoded[index : index + 1] == b"%" and index + 2 < len(encoded) + 1:
+            hex_pair = encoded[index + 1 : index + 3]
+            try:
+                out.append(int(hex_pair, 16))
+                index += 3
+                continue
+            except ValueError:
+                pass
+        out.append(encoded[index])
+        index += 1
+    return out.decode("utf-8", errors="replace")
+
+
+def _azahar_setting(
+    values: Mapping[tuple[str, str], str], section: str, key: str, default: str
+) -> tuple[str, bool]:
+    """One setting read the way the emulator reads it → (value, configured).
+
+    ``<key>\\default=true`` makes the compiled default win over any stored
+    value (ReadSetting, config.cpp:1442-1450 at 2125.1.1); an absent key is
+    the default too. ``configured`` says whether the stored value governed.
+    """
+    if values.get((section, f"{key}\\default"), "").casefold() == "true":
+        return default, False
+    stored = values.get((section, key))
+    if stored is None or stored == "":
+        return default, False
+    return stored, True
+
+
+def _azahar_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+) -> SavefilePlacement | Unresolved:
+    """Azahar's save answer: the per-title unit on the emulated SD.
+
+    The SD root comes from ``qt-config.ini`` exactly as the emulator resolves
+    it — ``use_custom_storage`` routes ``sdmc_directory``, false leaves the
+    XDG default (``<data>/azahar-emu/sdmc/``) — and the unit below it is
+    ``Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001/``, the title id
+    as two lowercase 8-hex segments (archive_source_sd_savedata.cpp:21-29).
+    The extdata tree beside it is stated as its own group: save-adjacent data
+    keyed by an id of its own, which no title id fills.
+    """
+    assert card.config_base is not None and card.config_path is not None
+    ini_path = os.path.join(homes.base(card.config_base), card.config_path)
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Azahar's configuration ({ini_path}) exists and could not be read — where the "
+            "emulated SD and every save on it live is unknowable here",
+            {"emulator": card.token, "config": ini_path},
+        )
+    values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
+    section = "Data Storage"
+    caveats: list[Caveat] = [*extra_caveats]
+    virtual_sd, _ = _azahar_setting(values, section, "use_virtual_sd", "true")
+    custom, custom_configured = _azahar_setting(values, section, "use_custom_storage", "false")
+    stated_ini = ini_path if result.status == READ_OK else None
+    readings = [
+        _reading_with_file(
+            OptionReading(
+                "use_custom_storage",
+                custom if custom_configured else None,
+                (
+                    f'qt-config.ini: [Data Storage] use_custom_storage = "{custom}"'
+                    if custom_configured
+                    else "use_custom_storage is unset or marked default — the compiled default "
+                    "false governs (settings.h:485 at 2125.1.1)"
+                ),
+                None,
+            ),
+            stated_ini,
+        )
+    ]
+    if virtual_sd.casefold() != "true":
+        caveats.append(
+            Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED,
+                "use_virtual_sd is switched off — no SD card is emulated, so whether and where "
+                "a game's save lands is not established; the tree below is where the "
+                "configuration would put it",
+                {"core": card.token, "reason": "use_virtual_sd = false disables the emulated SD"},
+            )
+        )
+    sdmc_root: str | None = None
+    if custom.casefold() == "true":
+        configured_dir, dir_configured = _azahar_setting(values, section, "sdmc_directory", "")
+        readings.append(
+            _reading_with_file(
+                OptionReading(
+                    "sdmc_directory",
+                    configured_dir if dir_configured else None,
+                    (
+                        f'qt-config.ini: [Data Storage] sdmc_directory = "{configured_dir}"'
+                        if dir_configured
+                        else "sdmc_directory names nothing — an empty custom path leaves the "
+                        "default standing (UpdateUserPath returns on empty)"
+                    ),
+                    None,
+                ),
+                stated_ini,
+            )
+        )
+        if dir_configured:
+            resolved = sandbox.host("sdmc_directory", configured_dir)
+            if resolved.path is None:
+                return Unresolved(
+                    UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                    f"the SD path Azahar's configuration names could not be located from here "
+                    f"({ini_path}) — nothing this answer could anchor at",
+                    {"emulator": card.token, "config": ini_path},
+                )
+            sdmc_root = resolved.path
+    if sdmc_root is None:
+        sdmc_root = os.path.join(homes.base("data"), "azahar-emu", "sdmc")
+    container = os.path.join(sdmc_root, _AZAHAR_CONTAINER)
+    title_tree = os.path.join(container, "title")
+    physical_tree, link_caveats = _link_view(machine, title_tree)
+    caveats.extend(link_caveats)
+    directory = os.path.join(title_tree, TEMPLATE_SAVE_ID, "data", "00000001")
+    physical = (
+        os.path.join(physical_tree, TEMPLATE_SAVE_ID, "data", "00000001")
+        if physical_tree is not None
+        else None
+    )
+    extdata = os.path.join(container, "extdata")
+    caveats.append(
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "the files below a title's save directory are the game's own writes — move the "
+            "directory whole; fill <save_id> with the title id, high word then low word, each "
+            "8 lowercase hex digits, as two path segments",
+            {
+                "core": card.token,
+                "dir": directory,
+                "role": ROLE_BATTERY,
+                "save_id": "the 3DS title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2125.1.1 — "
+                "'{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; "
+                "ID0/ID1 are all-zero (archive.h:22-24)",
+            },
+        )
+    )
+    caveats.append(
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "extdata beside the title tree keeps save-adjacent data per game, keyed by the "
+            "title's own extdata id — an id the title id does not fill — so the tree is stated "
+            "and its entries refused; back it up whole to be safe",
+            {
+                "core": card.token,
+                "dir": extdata,
+                "role": ROLE_BATTERY,
+                "citation": "archive_extsavedata.cpp at Azahar 2125.1.1 — "
+                "'{}Nintendo 3DS/{}/{}/extdata/'",
+            },
+        )
+    )
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(HOLE_SAVE_ID,),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=(
+                FileGroup(
+                    dir=directory,
+                    files=None,
+                    granularity=GRANULARITY_PER_GAME_DIRECTORY,
+                    role=ROLE_BATTERY,
+                ),
+                FileGroup(
+                    dir=extdata,
+                    files=None,
+                    granularity=GRANULARITY_PER_GAME_FILES,
+                    role=ROLE_BATTERY,
+                ),
+            ),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=GRANULARITY_PER_GAME_DIRECTORY,
+            mode="sdmc",
+            readings=tuple(readings),
+            alternatives=(),
+            provenance=(
+                f"standalone save card '{card.token}': the emulated SD from qt-config.ini "
+                "(config.cpp:480-498 at 2125.1.1)"
+            ),
+        ),
+    )
+
+
 _STANDALONE_SAVE_RESOLVERS = {
     "DOLPHIN": _dolphin_savefile_placement,
     "PPSSPP": _ppsspp_savefile_placement,
     "XEMU": _xemu_savefile_placement,
     "CEMU": _cemu_savefile_placement,
+    "AZAHAR": _azahar_savefile_placement,
 }
 
 
@@ -5917,8 +6163,11 @@ def _standalone_savefile_unresolved(spec: EmulatorSpec) -> Unresolved:
 # whose wiring has been established maps to a card (issue #3, one emulator per
 # sub-issue), never the whole directory by pattern: each entry here says a
 # maintainer read that launcher and the config file it leads to. cemu.sh runs
-# Cemu against ${HOME}/.config/Cemu/settings.xml (emuDeckCemu.sh:13).
-_EMUDECK_LAUNCHER_CARDS = {"cemu": "CEMU"}
+# Cemu against ${HOME}/.config/Cemu/settings.xml (emuDeckCemu.sh:13); azahar.sh
+# runs Azahar against ${HOME}/.config/azahar-emu/qt-config.ini
+# (emuDeckAzahar.sh:7). The legacy citra.sh stays out: it launches Citra, an
+# emulator no card describes.
+_EMUDECK_LAUNCHER_CARDS = {"cemu": "CEMU", "azahar": "AZAHAR"}
 
 # The binary variants an EmuDeck launcher picks between, in its probe order
 # (cemu.sh:37-93): an AppImage under ~/Applications (vars.sh:4-5), an
@@ -11462,25 +11711,25 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None,
     ) -> SavefilePlacement | Unresolved:
-        """A standalone entry's save answer, resolved the way the launcher launches.
+        """A standalone entry's save answer, resolved the way the launch resolves.
 
-        The command names a script under ``tools/launchers/``; an allowlisted
-        script maps to a standalone save card. The launcher then picks the
-        binary at run time — ``-w`` forces the Windows build under Proton,
-        otherwise an AppImage under ``~/Applications`` outranks an installed
-        flatpak outranks the Proton fallback (cemu.sh:79-93) — and this route
-        performs the same probe, because which binary runs decides which
-        configuration tree speaks. Only the AppImage variant is established:
-        it reads the host's own XDG tree (emuDeckCemu.sh:13), which is what
-        the card resolves against. The other variants refuse with the variant
-        named rather than answering from a tree their binary never reads.
+        EmuDeck identifies a standalone emulator two ways — the ES-DE
+        ``%EMULATOR_…%`` token, or a ``tools/launchers/<name>.sh`` script —
+        and either way the binary is picked at run time (ES-DE's find rules
+        for the token; the script's own probe, where ``-w`` forces the
+        Windows build under Proton and otherwise an AppImage under
+        ``~/Applications`` outranks an installed flatpak outranks the Proton
+        fallback, cemu.sh:79-93). This route performs the same probe, because
+        which binary runs decides which configuration tree speaks. Only the
+        AppImage variant is established: it reads the host's own XDG tree
+        (emuDeckCemu.sh:13, emuDeckAzahar.sh:7), which is what the card
+        resolves against. The other variants refuse with the variant named
+        rather than answering from a tree their binary never reads.
         """
-        launcher = _emudeck_launcher(spec.command)
-        token = _EMUDECK_LAUNCHER_CARDS.get(launcher[0]) if launcher is not None else None
+        token, name, args = self._standalone_launch_identity(spec.command)
         card = lookup_standalone_save_card(token)
-        if launcher is None or card is None or spec.system not in card.systems:
+        if name is None or card is None or spec.system not in card.systems:
             return _standalone_savefile_unresolved(spec)
-        name, args = launcher
         if "-w" in args:
             return _emudeck_variant_unresolved(
                 spec,
@@ -11495,12 +11744,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 spec,
                 card.token,
                 variant,
-                "the launcher's own probe could not be performed — the directories it "
+                "the launch's own binary probe could not be performed — the directories it "
                 "searches were not readable, so which binary would run is not established",
             )
         if variant != _EMUDECK_VARIANT_APPIMAGE:
             why = (
-                "no AppImage sits under ~/Applications, so the launcher falls through to "
+                "no AppImage sits under ~/Applications, so the launch falls through to "
                 + (
                     "the installed flatpak, whose own config tree is not established "
                     "(a later slice)"
@@ -11574,25 +11823,41 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             config=os.path.join(self._home, _XDG_CONFIG_DIRNAME),
         )
 
-    def standalone_firmware_token(self, command: str) -> str | None:
-        """The launcher route's word, variant-gated — EmuDeck's own reading.
+    def _standalone_launch_identity(
+        self, command: str
+    ) -> tuple[str | None, str | None, tuple[str, ...]]:
+        """(card token, probe name, launcher args) — what this command identifies.
 
-        A token only where the launch would really run the binary whose trees
-        the cards describe: an allowlisted launcher, not forced to Proton by
-        ``-w``, whose probe would pick the AppImage. Every other launch
-        answers ``None`` and stays honestly unsupported — the same gating the
-        save route applies, because it is the same question about the same
-        command.
+        Two spellings identify an emulator on EmuDeck, and its overlays
+        genuinely use both: the ES-DE ``%EMULATOR_…%`` token, and a
+        ``tools/launchers/<name>.sh`` script. Either way the binary is picked
+        at run time (ES-DE's find rules for the token, the script's own probe
+        for the launcher), so both go through the same variant gate. The
+        probe name is the token casefolded, or the script's basename; the
+        args are the launcher's (a token entry has none — ``-w`` is the
+        launcher's spelling).
         """
         token = emulator_token(command)
         if token is not None:
-            return token
+            return token, token.casefold(), ()
         launcher = _emudeck_launcher(command)
         if launcher is None:
-            return None
+            return None, None, ()
         name, args = launcher
-        token = _EMUDECK_LAUNCHER_CARDS.get(name)
-        if token is None or "-w" in args:
+        return _EMUDECK_LAUNCHER_CARDS.get(name), name, args
+
+    def standalone_firmware_token(self, command: str) -> str | None:
+        """The command's word, variant-gated — EmuDeck's own reading.
+
+        A token only where the launch would really run the binary whose trees
+        the cards describe: identified by token or allowlisted launcher, not
+        forced to Proton by ``-w``, and picking the AppImage. Every other
+        launch answers ``None`` and stays honestly unsupported — the same
+        gating the save route applies, because it is the same question about
+        the same command.
+        """
+        token, name, args = self._standalone_launch_identity(command)
+        if token is None or name is None or "-w" in args:
             return None
         if self._launcher_binary_variant(name) != _EMUDECK_VARIANT_APPIMAGE:
             return None

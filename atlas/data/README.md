@@ -447,7 +447,7 @@ arrangement pins), the catalogue systems the card answers for, and the provenanc
 written nowhere on the machine, so it lives as cited code beside the card (`atlas/installations.py`), the same split the
 rule cards make with `atlas/mode_rules.py`. The loader refuses a card whose token has no resolver registered.
 
-Four cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
+Five cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
 EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
 unnamed `title/` tree. PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's `config` is `null`, the honest
 spelling of "no file governs this" — and savedata is one unnamed directory per game below `PSP/SAVEDATA`. xemu
@@ -455,10 +455,15 @@ spelling of "no file governs this" — and savedata is one unnamed directory per
 `save-inside-image` caveat carrying the inside layout (`UDATA/<title id>`), the EEPROM beside it as a named settings
 group. Cemu (2.6): the MLC resolved the way the emulator resolves it (`--mlc` flag outranks `settings.xml` outranks the
 default), and the per-title unit templated below it — `usr/save/<save_id>`, granularity `per-game-directory`, the fill
-spelled in the caveat (nn_save.cpp:133-145). The answers root at `emulator_directory` — no frontend hands a standalone
-emulator a save directory. On EmuDeck the catalogue names no token — its commands run launcher scripts — so an
-allowlisted launcher (`cemu.sh` today) reaches the same card through the launcher route, variant-gated: only the
-AppImage variant's config tree is established, and the other variants refuse with `standalone-variant-unestablished`.
+spelled in the caveat (nn_save.cpp:133-145). Azahar (2125.1.1): the emulated SD read from `qt-config.ini`'s
+`[Data Storage]` group the way the emulator reads it (`use_custom_storage` routes `sdmc_directory`, `\default`
+companions honored — ReadSetting, config.cpp:1442-1450), the per-title unit
+`Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001` below it with compile-time all-zero ids (archive.h:22-24), and
+the extdata tree stated beside it as its own group. The answers root at `emulator_directory` — no frontend hands a
+standalone emulator a save directory. On EmuDeck the catalogue names no token — its commands run launcher scripts — so
+an allowlisted launcher (`cemu.sh` and `azahar.sh` today) reaches the same card through the launcher route,
+variant-gated: only the AppImage variant's config tree is established, and the other variants refuse with
+`standalone-variant-unestablished`.
 
 ## `standalone_firmware.json` — what a standalone emulator expects beside its content
 
