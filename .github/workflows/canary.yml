@@ -1,0 +1,88 @@
+name: Canary
+
+# The weekly live-deploy canary (issue #108). CI's ordinary runs skip every
+# machine-bound test by design — the anchor tripwire reads shipped .so bytes,
+# the card audits probe deployed cores, the catalogue guards parse the deployed
+# es_systems.xml, and none of that exists on a bare runner. This workflow
+# deploys the *latest* RetroDECK from Flathub and runs the whole suite against
+# it, so the machine-bound tier un-skips by the same path-existence checks that
+# silence it elsewhere.
+#
+# Deliberately latest, deliberately not PR-blocking: the pinned evidence
+# describes the release it was read from, so a red canary is the expected
+# signal that upstream moved and re-verification is due — days before the
+# reference machine updates. A pinned commit would stay green and prove almost
+# nothing a local test run does not already prove.
+#
+# The deploy is installed, never run: atlas reads the deployment's files the
+# way it does on a real machine, so no sandbox, session bus or GPU is needed.
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # weekly, Monday 05:17 UTC — off the full-hour rush
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  live-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install flatpak and add the Flathub remote
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Deploy the latest RetroDECK system-wide
+        # A system install lands under /var/lib/flatpak/... — exactly the
+        # paths the machine-bound tests read. The runtime comes along as a
+        # flatpak dependency; disk is printed because the deploy is by far
+        # the biggest thing this repository ever puts on a runner.
+        run: |
+          df -h /
+          sudo flatpak install --system --noninteractive flathub net.retrodeck.retrodeck
+          df -h /
+          flatpak info net.retrodeck.retrodeck
+
+      - name: Refuse a deploy the tests would silently skip over
+        # The machine-bound tests skip on path absence. If RetroDECK ever
+        # restructures its tree, a green run with everything skipped would
+        # read as "no drift" — the opposite of what happened. Probing the two
+        # roots the suite reads makes that restructuring a loud failure.
+        run: |
+          FILES=/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files
+          test -f "$FILES/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+          test -d "$FILES/retrodeck/components/retroarch/rd_extras/cores"
+
+      - name: Run the whole suite against the deployed tree
+        # -rs so the run states what still skipped: a handful of probe-gated
+        # audit tests skip wherever their core registers no options, on the
+        # reference machine and here alike.
+        run: |
+          pip install -e '.[dev]'
+          python -m pytest tests -q -rs
+
+      - name: File the drift issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="canary: the deployed RetroDECK moved past the pinned evidence"
+          version=$(flatpak info net.retrodeck.retrodeck 2>/dev/null | awk -F': *' '/^ *Version/{print $2; exit}')
+          body="The weekly canary deployed RetroDECK ${version:-unknown} from Flathub and the suite no longer passes against it. The pinned evidence — anchor bytes, card audits, catalogue guards — needs re-verification against this release. Run: $RUN_URL"
+          existing=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

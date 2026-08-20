@@ -7,6 +7,7 @@
 <h3>Where an emulator installation actually keeps its saves and BIOS — read live off the machine, not off a list</h3>
 
 [![CI](https://github.com/danielcopper/emu-atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/danielcopper/emu-atlas/actions/workflows/ci.yml)
+[![Canary](https://github.com/danielcopper/emu-atlas/actions/workflows/canary.yml/badge.svg)](https://github.com/danielcopper/emu-atlas/actions/workflows/canary.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=danielcopper_emu-atlas&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danielcopper_emu-atlas)
 [![Coverage](https://img.shields.io/sonar/coverage/danielcopper_emu-atlas?server=https%3A%2F%2Fsonarcloud.io)](https://sonarcloud.io/summary/new_code?id=danielcopper_emu-atlas)
 [![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=danielcopper_emu-atlas&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=danielcopper_emu-atlas)
