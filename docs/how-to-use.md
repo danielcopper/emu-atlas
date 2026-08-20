@@ -1495,6 +1495,18 @@ never parses a half-answer.
 The entry routes (asking one catalogue entry directly) stay library-only for now: naming an entry on a command line is a
 design of its own, and the conformance suite names them as deliberately uncovered.
 
+### No Python at all
+
+Each release ships `emu-atlas-<tag>-x86_64-linux.tar.gz`: the CLI with its own pinned CPython 3.14, for consumers that
+own no interpreter — a Go client, a shell script, a plugin whose host runtime is not yours to choose. Unpack it anywhere
+and run `./emu-atlas <question>`; the tree answers from where it sits, writes nothing outside it, and carries every
+capability the library has (3.14 is the first interpreter with `compression.zstd`, so the AppImage reader is fully
+open). The bundle is a directory of plain files — the unmodified
+[python-build-standalone](https://github.com/astral-sh/python-build-standalone) runtime, the release wheel unpacked into
+its `site-packages`, and a launcher script short enough to read — and the full test suite runs against every built
+bundle before it is attached. A consumer with a Python does not want this artifact: install the wheel, or vendor the
+package (zero dependencies — a directory copy).
+
 ## Chained flows
 
 The composite questions a sync plugin actually asks, each as a chain of the queries above. The shapes follow

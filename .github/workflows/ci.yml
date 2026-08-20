@@ -84,6 +84,27 @@ jobs:
       - name: Verify the sdist carries the vectors
         run: tar -tzf dist/*.tar.gz | grep -q "vectors/machines/named-cases.json"
 
+  # The release attaches a self-contained CLI bundle (pinned CPython 3.14 +
+  # the wheel + a launcher; issue #202). Building and smoking it here means
+  # the release job is never the first execution of that path: the smoke runs
+  # the launcher, proves the zstd capability, checks the import resolves into
+  # the bundle, and passes the full suite under the bundle's interpreter.
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build the wheel
+        run: |
+          pip install build
+          python -m build --wheel
+      - name: Assemble the self-contained CLI bundle
+        run: python scripts/build_release_bundle.py --tag ci --wheel dist/*.whl --out dist-bundle
+      - name: Smoke the built bundle
+        run: python scripts/smoke_release_bundle.py dist-bundle/emu-atlas-ci-x86_64-linux.tar.gz
+
   sonarcloud:
     runs-on: ubuntu-latest
     timeout-minutes: 15

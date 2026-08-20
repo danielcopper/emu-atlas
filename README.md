@@ -97,7 +97,10 @@ installations + placements out.
 
 A consumer does not have to be Python: `emu-atlas` (or `python -m atlas`) answers every question as its contract JSON on
 stdout, one question per invocation, held to the same bytes as the library by the conformance vectors — any language
-runs a subprocess and parses. See [the command line](docs/how-to-use.md#the-command-line).
+runs a subprocess and parses. See [the command line](docs/how-to-use.md#the-command-line). A consumer without any Python
+takes the release bundle instead — `emu-atlas-<tag>-x86_64-linux.tar.gz`, the CLI with its own pinned CPython 3.14,
+smoke-tested against the full suite before every release; unpack anywhere, run `./emu-atlas`, nothing installs itself
+elsewhere.
 
 Places this knowledge could plug in — options, not commitments:
 

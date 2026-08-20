@@ -51,3 +51,30 @@ jobs:
         run: |
           tar -czf "emu-atlas-vectors-$TAG.tar.gz" vectors
           gh release upload "$TAG" "emu-atlas-vectors-$TAG.tar.gz"
+
+      # The self-contained CLI bundle (issue #202) plus the wheel and sdist —
+      # all built from the released commit, smoke-tested before anything is
+      # attached. The bundle smoke runs the full suite under the bundle's own
+      # interpreter, so what ships is what passed.
+      - uses: actions/setup-python@v7
+        if: ${{ steps.release.outputs.release_created }}
+        with:
+          python-version: "3.12"
+      - name: Build wheel and sdist
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          pip install build
+          python -m build
+      - name: Build and smoke the self-contained CLI bundle
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          python scripts/build_release_bundle.py --tag "$TAG" --wheel dist/*.whl --out dist-bundle
+          python scripts/smoke_release_bundle.py "dist-bundle/emu-atlas-$TAG-x86_64-linux.tar.gz"
+      - name: Attach the bundle, wheel and sdist to the release
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: gh release upload "$TAG" "dist-bundle/emu-atlas-$TAG-x86_64-linux.tar.gz" dist/*.whl dist/*.tar.gz
