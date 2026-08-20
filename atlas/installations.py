@@ -387,14 +387,15 @@ RETRODECK_APP_ID = "net.retrodeck.retrodeck"
 RETROARCH_FLATPAK_APP_ID = "org.libretro.RetroArch"
 
 # The default XDG config home's directory name under ``home`` — where the
-# non-Flatpak markers live.
+# non-Flatpak markers live — and the data home's, its two-segment sibling.
 _XDG_CONFIG_DIRNAME = ".config"
+_XDG_DATA_SUFFIX = os.path.join(".local", "share")
 
 # The user Flatpak installation's base, as a ``home``-relative suffix —
 # ``g_get_user_data_dir()/flatpak`` (``flatpak_get_user_base_dir_location``,
 # flatpak-dir.c:1918-1940 at 1.16.6). Deploys (``app/...``) and the overrides
 # files alike hang off it.
-_FLATPAK_USER_BASE = os.path.join(".local", "share", "flatpak")
+_FLATPAK_USER_BASE = os.path.join(_XDG_DATA_SUFFIX, "flatpak")
 
 # Where each installation keeps its deployed apps: the system one absolute, the
 # user one a ``home``-relative suffix.
@@ -7368,8 +7369,8 @@ _FS_HOST_UNMOUNTED = frozenset(
      "proc", "root", "run", "sbin", "sys", "tmp", "usr", "var")
 )
 _FS_XDG_BASES = {
-    "xdg-data": os.path.join(".local", "share"),
-    "xdg-config": ".config",
+    "xdg-data": _XDG_DATA_SUFFIX,
+    "xdg-config": _XDG_CONFIG_DIRNAME,
     "xdg-cache": ".cache",
 }
 
@@ -11516,8 +11517,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if apps.status != GLOB_COMPLETE:
             return _EMUDECK_VARIANT_UNKNOWN
         flatpak_roots = (
-            "/var/lib/flatpak/app",
-            os.path.join(self._home, ".local", "share", "flatpak", "app"),
+            _FLATPAK_DEPLOY_SYSTEM,
+            os.path.join(self._home, _FLATPAK_DEPLOY_USER),
         )
         incomplete = False
         for root in flatpak_roots:
@@ -11537,8 +11538,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         (emuDeckCemu.sh:13), which is the plain XDG default.
         """
         return _XdgHomes(
-            data=os.path.join(self._home, ".local", "share"),
-            config=os.path.join(self._home, ".config"),
+            data=os.path.join(self._home, _XDG_DATA_SUFFIX),
+            config=os.path.join(self._home, _XDG_CONFIG_DIRNAME),
         )
 
     def _standalone_sandbox(self) -> _Sandbox:
