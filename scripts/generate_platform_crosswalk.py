@@ -209,12 +209,13 @@ def _platform_names(cpp: str) -> tuple[list[str], dict[str, str]]:
     body = _must(r"platformNames \{(.*?)\};", cpp, "platformNames", re.S)
     names = re.findall(r'"([^"]*)"', body)
     comments: dict[str, str] = {}
-    # Line-wise rather than one multiline pattern: the anchored lazy match
-    # backtracks super-linearly, a per-line match cannot.
+    # Line-wise, and the comment text is captured whole and trimmed in code:
+    # both keep the pattern free of ambiguous quantifier runs, which is what
+    # made the one-regex versions backtrack super-linearly.
     for line in body.splitlines():
-        annotated = re.match(r'\s*"([^"]+)",\s*//\s*(.*\S)', line)
+        annotated = re.match(r'\s*"([^"]+)",\s*//(.*)', line)
         if annotated:
-            comments[annotated.group(1)] = annotated.group(2)
+            comments[annotated.group(1)] = annotated.group(2).strip()
     return names, comments
 
 
