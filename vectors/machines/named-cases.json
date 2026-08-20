@@ -12872,6 +12872,139 @@
           ]
         }
       }
+    },
+    {
+      "name": "emudeck-the-appimage-embedded-catalogue-unseals",
+      "rationale": "The bundled es_systems.xml lives inside the AppImage's zstd squashfs, and a runtime that can open it reads the bundled layer itself (issue #65): the catalogue is complete, nothing is sealed, no list is derived — and an embedded system's own <platform> tag is read live, like any declared system's.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><fullname>Game Boy Advance</fullname><path>%ROMPATH%/gba</path>\n    <extension>.gba</extension>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n    <platform>gba</platform>\n  </system>\n  <system><name>dreamcast</name><fullname>Sega Dreamcast</fullname><path>%ROMPATH%/dreamcast</path>\n    <extension>.chd</extension>\n    <command label=\"Flycast\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>\n    <platform>dreamcast</platform>\n  </system>\n</systemList>\n"
+          }
+        },
+        "systems_query": {
+          "installation": "emudeck"
+        },
+        "platform_ids_query": {
+          "installation": "emudeck",
+          "system": "dreamcast"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "atarijaguar",
+            "dreamcast",
+            "gba"
+          ],
+          "caveats": []
+        },
+        "platform_ids": {
+          "system": "dreamcast",
+          "status": "declared",
+          "tags_source": "catalogue",
+          "platforms": [
+            "dreamcast"
+          ],
+          "identities": [
+            {
+              "platform": "dreamcast",
+              "igdb": [
+                {
+                  "id": 23,
+                  "slug": "dc",
+                  "name": "Dreamcast"
+                }
+              ],
+              "libretro": [
+                "Sega - Dreamcast"
+              ],
+              "screenscraper": 23,
+              "thegamesdb": 16
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "emudeck-a-runtime-without-the-codec-keeps-the-seal",
+      "rationale": "The capability is the runtime's, not the machine's: where the interpreter lacks the image's codec (compression.zstd arrives with Python 3.14), the bundled layer stays exactly what it always was — sealed, stated, and never guessed at.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": "capability-missing"
+        },
+        "systems_query": {
+          "installation": "emudeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "systems": {
+          "systems": [
+            "atarijaguar"
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {}
+            }
+          ]
+        }
+      }
     }
   ]
 }

@@ -2983,6 +2983,9 @@ class _CountingMachine:
         self.reads[resolve_links(self._inner, path) or path] += 1
         return self._inner.read_text(path)
 
+    def read_appimage_text(self, path, inner_path):
+        return self._inner.read_appimage_text(path, inner_path)
+
     def glob(self, pattern):
         return self._inner.glob(pattern)
 

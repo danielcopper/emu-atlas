@@ -33,6 +33,7 @@ INPUT_FIELDS_OPTIONAL = {
     "dirs",
     "inaccessible",
     "unlistable",
+    "appimages",
     "savefile_query",
     "aggregate_query",
     "catalogue_query",
@@ -785,7 +786,47 @@ def _validate_input(name: str, inp: Any) -> None:
     _validate_input_files(name, inp["files"])
     _validate_input_paths(name, inp)
     _validate_input_cores(name, inp.get("cores", {}))
+    _validate_input_appimages(name, inp.get("appimages", {}))
     _validate_input_queries(name, inp)
+
+
+# The AppImage modeling vocabulary — mirrored from FixtureMachine
+# (atlas/machine.py): whole-archive states RealMachine can report short of
+# opening the image, and per-entry states short of the entry's text. An absent
+# AppImage is an undeclared path, an absent entry an undeclared entry.
+APPIMAGE_STATES = {"unreadable", "not-appimage", "capability-missing"}
+APPIMAGE_ENTRY_STATES = {"unreadable", "invalid-text"}
+
+
+def _validate_input_appimages(name: str, appimages: Any) -> None:
+    if not isinstance(appimages, dict):
+        fail(f"{name}: input.appimages must be an object")
+    for path, spec in appimages.items():
+        if not isinstance(path, str) or not path.startswith("/"):
+            fail(f"{name}: appimage paths must be absolute, got {path!r}")
+        if isinstance(spec, str):
+            if spec not in APPIMAGE_STATES:
+                fail(
+                    f"{name}: appimage {path!r} whole-archive state must be one of "
+                    f"{sorted(APPIMAGE_STATES)}, got {spec!r}"
+                )
+            continue
+        if not isinstance(spec, dict):
+            fail(f"{name}: appimage {path!r} must map entries or name a whole-archive state")
+        for inner, value in spec.items():
+            if not isinstance(inner, str) or not inner or inner.startswith("/"):
+                fail(f"{name}: appimage {path!r} entry names must be relative paths, got {inner!r}")
+            if isinstance(value, str):
+                continue
+            if (
+                not isinstance(value, dict)
+                or set(value) != {"status"}
+                or value["status"] not in APPIMAGE_ENTRY_STATES
+            ):
+                fail(
+                    f"{name}: appimage {path!r} entry {inner!r} must be text or "
+                    f"{{'status': one of {sorted(APPIMAGE_ENTRY_STATES)}}}"
+                )
 
 
 def _validate_installations(name: str, installations: Any) -> None:

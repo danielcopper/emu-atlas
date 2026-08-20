@@ -35,7 +35,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        # 3.14 is the first interpreter with compression.zstd (PEP 784) — the
+        # squashfs reader's codec gate is open there and closed on the others,
+        # so the matrix covers both sides of the capability.
+        python-version: ["3.11", "3.12", "3.14"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

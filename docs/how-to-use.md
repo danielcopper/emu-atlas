@@ -1079,7 +1079,7 @@ machine and one of the two you may act on as "nothing here":
 | `emulator-catalogue-unavailable`   | this arrangement ships no frontend catalogue at all — the entries beside it are **derived** (see below)                                             | use them; `emulator-list-derived` states their nature                                    |
 | `emulator-catalogue-unestablished` | it may have one; atlas has not established where                                                                                                    | same — but do not report "no emulators"                                                  |
 | `emulator-catalogue-unreadable`    | atlas could not read a catalogue here — missing, unreadable, or empty                                                                               | surface it; the machine may be broken                                                    |
-| `emulator-catalogue-sealed`        | part of the catalogue is sealed away (EmuDeck's AppImage-embedded bundled layer); only the on-disk layers answered                                  | use the entries you got; an empty list is "nothing readable declares this", never "none" |
+| `emulator-catalogue-sealed`        | part of the catalogue is sealed away (EmuDeck's AppImage-embedded bundled layer could not be opened); only the on-disk layers answered              | use the entries you got; an empty list is "nothing readable declares this", never "none" |
 | `emulator-catalogue-exclusive`     | the custom `es_systems.xml` declares itself the whole catalogue (`<loadExclusive/>`); the bundled layer is not loaded — by the frontend or by atlas | trust it like a read catalogue; an empty list is a real "none"                           |
 
 `sealed` and `exclusive` are the two of the five that also accompany real entries, and they hedge in opposite
@@ -1088,6 +1088,14 @@ directions. On an EmuDeck machine with ES-DE, a system EmuDeck's own `custom_sys
 than the answer can list. `exclusive` says the opposite: a document-level `<loadExclusive/>` in the custom
 `es_systems.xml` makes ES-DE skip the bundled file wholesale, so the enumeration you got is the complete catalogue in
 force — on EmuDeck it replaces `sealed`, because nothing sealed away applies.
+
+`sealed` is also capability-dependent since the AppImage reader landed: atlas opens the AppImage's embedded
+`es_systems.xml` itself (a pure-stdlib squashfs walk, `atlas.squashfs`) wherever the interpreter has the image's codec —
+`compression.zstd` arrives with Python 3.14 — and the catalogue is then complete: nothing sealed, no list derived, and
+an embedded system's `<platform>` tag reads live like any other. On older interpreters, and wherever the image is
+missing, replaced or restructured, the sealed state stays exactly what it always was. The capability is the _runtime's_,
+so the same machine can answer differently under two Pythons — both answers are honest, and the caveat says which one
+you got.
 
 Read the four codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
 these, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken

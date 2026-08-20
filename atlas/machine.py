@@ -81,6 +81,8 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Callable, Iterable, Literal, Mapping, Protocol
 
+from atlas import squashfs
+
 _CORE_PROBE_TIMEOUT_SECONDS = 15
 SYMLINK_HOPS = 40
 """How many symlink hops a path may take before it counts as unresolvable.
@@ -107,10 +109,26 @@ ReadStatus = Literal["ok", "missing", "unreadable", "invalid-text"]
 PathKind = Literal["file", "directory", "missing", "inaccessible"]
 GlobStatus = Literal["complete", "incomplete"]
 
+# An AppImage read has three more ways to fail than a plain file read, and
+# each is a different claim a caller acts on differently: "not-appimage" is a
+# file that exists and is not an AppImage-with-squashfs (replaced, truncated,
+# some other executable); "entry-missing" is a healthy image without the asked
+# entry (an upstream restructuring); "capability-missing" is this interpreter
+# lacking the image's codec (zstd before Python 3.14) — the file is fine, the
+# runtime is what cannot open it, and reporting it as any file state would
+# blame the machine for the process.
+AppImageReadStatus = Literal[
+    "ok", "missing", "unreadable", "invalid-text", "not-appimage", "entry-missing", "capability-missing"
+]
+
 READ_OK: ReadStatus = "ok"
 READ_MISSING: ReadStatus = "missing"
 READ_UNREADABLE: ReadStatus = "unreadable"
 READ_INVALID_TEXT: ReadStatus = "invalid-text"
+
+APPIMAGE_NOT_APPIMAGE: AppImageReadStatus = "not-appimage"
+APPIMAGE_ENTRY_MISSING: AppImageReadStatus = "entry-missing"
+APPIMAGE_CAPABILITY_MISSING: AppImageReadStatus = "capability-missing"
 
 KIND_FILE: PathKind = "file"
 KIND_DIRECTORY: PathKind = "directory"
@@ -137,6 +155,25 @@ class ReadResult:
     def __post_init__(self) -> None:
         if (self.text is None) == (self.status == READ_OK):
             raise ValueError(f"ReadResult: text must be set exactly when status is 'ok' (got {self.status!r})")
+
+
+@dataclass(frozen=True, slots=True)
+class AppImageReadResult:
+    """One AppImage-entry read's explicit outcome — the plain read's shape, wider.
+
+    The three extra statuses are documented on :data:`AppImageReadStatus`;
+    ``missing`` / ``unreadable`` / ``invalid-text`` mean what they mean on
+    :class:`ReadResult`, with ``invalid-text`` judging the *entry's* bytes.
+    """
+
+    status: AppImageReadStatus
+    text: str | None = None
+
+    def __post_init__(self) -> None:
+        if (self.text is None) == (self.status == READ_OK):
+            raise ValueError(
+                f"AppImageReadResult: text must be set exactly when status is 'ok' (got {self.status!r})"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -356,6 +393,8 @@ class Machine(Protocol):
 
     def read_text(self, path: str) -> ReadResult: ...
 
+    def read_appimage_text(self, path: str, inner_path: str) -> AppImageReadResult: ...
+
     def glob(self, pattern: str) -> GlobResult: ...
 
     def path_kind(self, path: str) -> PathKind: ...
@@ -407,6 +446,33 @@ class RealMachine:
         except OSError:
             # Permissions, I/O failure: present but unreadable.
             return ReadResult(READ_UNREADABLE)
+
+    def read_appimage_text(self, path: str, inner_path: str) -> AppImageReadResult:
+        """One entry out of an AppImage's embedded squashfs, decoded as UTF-8.
+
+        The reader is :mod:`atlas.squashfs`; every failure it can name maps to
+        its own status, because the caller's next step differs for each — a
+        missing file is the AppImage being gone, ``capability-missing`` is
+        this interpreter lacking the image's codec while the file is fine.
+        """
+        try:
+            data = squashfs.read_appimage_entry(path, inner_path)
+        except (FileNotFoundError, NotADirectoryError):
+            return AppImageReadResult(READ_MISSING)
+        except IsADirectoryError:
+            return AppImageReadResult(READ_UNREADABLE)
+        except squashfs.CodecUnavailable:
+            return AppImageReadResult(APPIMAGE_CAPABILITY_MISSING)
+        except squashfs.EntryNotFound:
+            return AppImageReadResult(APPIMAGE_ENTRY_MISSING)
+        except squashfs.SquashfsError:
+            return AppImageReadResult(APPIMAGE_NOT_APPIMAGE)
+        except OSError:
+            return AppImageReadResult(READ_UNREADABLE)
+        try:
+            return AppImageReadResult(READ_OK, data.decode("utf-8"))
+        except UnicodeDecodeError:
+            return AppImageReadResult(READ_INVALID_TEXT)
 
     def glob(self, pattern: str) -> GlobResult:
         return _GlobWalk(self._list_dir, self._is_dir, self._lexists).run(pattern)
@@ -748,6 +814,47 @@ def _ancestor_dirs(paths: Iterable[str]) -> set[str]:
     return dirs
 
 
+# The whole-archive states a fixture AppImage may declare, and the per-entry
+# ones: what RealMachine can report short of an entry's text. "missing" is not
+# among them — an absent AppImage is modeled by not declaring the path at all,
+# and an absent entry by not declaring the entry.
+_FIXTURE_APPIMAGE_STATES = ("unreadable", "not-appimage", "capability-missing")
+_FIXTURE_APPIMAGE_ENTRY_STATES = ("unreadable", "invalid-text")
+
+
+def _validate_fixture_appimages(
+    appimages: Mapping[str, Mapping[str, object] | str],
+) -> dict[str, dict[str, object] | str]:
+    validated: dict[str, dict[str, object] | str] = {}
+    for path, spec in appimages.items():
+        if isinstance(spec, str):
+            if spec not in _FIXTURE_APPIMAGE_STATES:
+                raise ValueError(
+                    f"appimage {path!r}: a whole-archive state must be one of "
+                    f"{_FIXTURE_APPIMAGE_STATES}, got {spec!r}"
+                )
+            validated[path] = spec
+            continue
+        entries: dict[str, object] = {}
+        for inner, value in spec.items():
+            if isinstance(value, str):
+                entries[inner] = value
+                continue
+            if (
+                isinstance(value, Mapping)
+                and set(value) == {"status"}
+                and value["status"] in _FIXTURE_APPIMAGE_ENTRY_STATES
+            ):
+                entries[inner] = dict(value)
+                continue
+            raise ValueError(
+                f"appimage {path!r} entry {inner!r}: expected text or "
+                f"{{'status': one of {_FIXTURE_APPIMAGE_ENTRY_STATES}}}, got {value!r}"
+            )
+        validated[path] = entries
+    return validated
+
+
 class FixtureMachine:
     """A machine backed by plain data: files, directories, symlinks, core answers.
 
@@ -809,10 +916,12 @@ class FixtureMachine:
         dirs: Iterable[str] | None = None,
         inaccessible: Iterable[str] | None = None,
         unlistable: Iterable[str] | None = None,
+        appimages: Mapping[str, Mapping[str, object] | str] | None = None,
     ) -> None:
         self._files, self._blobs = _index_fixture_files(files)
         self._symlinks = dict(symlinks or {})
         self._cores = dict(cores or {})
+        self._appimages = _validate_fixture_appimages(appimages or {})
         self._inaccessible = set(inaccessible or ())
         self._unlistable = set(unlistable or ())
         _refuse_both_unreadable_lists(self._inaccessible, self._unlistable)
@@ -908,6 +1017,29 @@ class FixtureMachine:
             return path
         landing = self._resolve(parent)
         return None if landing.path is None else os.path.join(landing.path, name)
+
+    def read_appimage_text(self, path: str, inner_path: str) -> AppImageReadResult:
+        """The modeled AppImage read — data in, the same outcomes RealMachine reports.
+
+        Modeling lives beside the seam rather than in ``files``: what a real
+        AppImage read needs (ELF layout, squashfs walk, a codec) is exactly
+        what a fixture must NOT need, or every vector would carry a binary
+        and only run where the codec exists. A path not declared here is a
+        missing AppImage; an entry not declared is ``entry-missing``.
+        """
+        spec = self._appimages.get(path)
+        if spec is None:
+            return AppImageReadResult(READ_MISSING)
+        if isinstance(spec, str):
+            status: AppImageReadStatus = spec  # type: ignore[assignment]  # validated at construction
+            return AppImageReadResult(status)
+        entry = spec.get(inner_path)
+        if entry is None:
+            return AppImageReadResult(APPIMAGE_ENTRY_MISSING)
+        if isinstance(entry, str):
+            return AppImageReadResult(READ_OK, entry)
+        entry_status: AppImageReadStatus = entry["status"]  # type: ignore[index,assignment]
+        return AppImageReadResult(entry_status)
 
     def read_text(self, path: str) -> ReadResult:
         if self._is_inaccessible(path):

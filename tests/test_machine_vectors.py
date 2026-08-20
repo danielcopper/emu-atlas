@@ -63,6 +63,7 @@ def _machine(inp) -> FixtureMachine:
         dirs=inp.get("dirs"),
         inaccessible=inp.get("inaccessible"),
         unlistable=inp.get("unlistable"),
+        appimages=inp.get("appimages"),
     )
 
 
