@@ -104,7 +104,8 @@ class TestTheSeamMapsEveryOutcome:
     def test_a_readable_entry_is_ok(self):
         result = RealMachine().read_appimage_text(GZIP_IMAGE, CATALOGUE_ENTRY)
         assert result.status == READ_OK
-        assert result.text is not None and "<systemList>" in result.text
+        assert result.text is not None
+        assert "<systemList>" in result.text
 
     def test_an_absent_appimage_is_missing(self):
         result = RealMachine().read_appimage_text("/nowhere/none.AppImage", CATALOGUE_ENTRY)

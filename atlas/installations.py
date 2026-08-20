@@ -10743,22 +10743,35 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             if not complete:
                 return {}, False, True, False, None
         else:
-            appimage_path = self._esde_appimage_path()
-            embedded = self._machine.read_appimage_text(
-                appimage_path, self._ESDE_APPIMAGE_CATALOGUE_ENTRY
-            )
-            if embedded.text is not None:
-                bundled = parse_es_systems(
-                    embedded.text, provenance="es_systems.xml (AppImage-embedded)"
-                )
-                if bundled.invalid is not None:
-                    return {}, True, False, False, _catalogue_invalid_finding(
-                        appimage_path, bundled.invalid
-                    )
+            embedded, invalid = self._embedded_bundled_layer()
+            if invalid is not None:
+                return {}, True, False, False, invalid
+            if embedded is not None:
                 # Read AND parsed, straight out of the image: the bundled
                 # layer itself, not a stand-in — nothing is sealed.
+                bundled = embedded
                 complete = True
         return merge_layers(bundled.systems, custom.systems), complete, False, False, None
+
+    def _embedded_bundled_layer(self) -> tuple[CatalogueLayer | None, Caveat | None]:
+        """The AppImage-embedded bundled layer → ``(layer, invalid finding)``.
+
+        ``(None, None)`` is every outcome short of text — no AppImage, not an
+        AppImage, no such entry, a runtime without the image's codec,
+        unreadable bytes — and leaves the caller's sealed state untouched. A
+        layer that parses invalid is the finding instead: ES-DE loads the
+        same embedded file and aborts its whole ``loadConfig`` on it.
+        """
+        appimage_path = self._esde_appimage_path()
+        embedded = self._machine.read_appimage_text(
+            appimage_path, self._ESDE_APPIMAGE_CATALOGUE_ENTRY
+        )
+        if embedded.text is None:
+            return None, None
+        bundled = parse_es_systems(embedded.text, provenance="es_systems.xml (AppImage-embedded)")
+        if bundled.invalid is not None:
+            return None, _catalogue_invalid_finding(appimage_path, bundled.invalid)
+        return bundled, None
 
     def _gamelist_selections(self, system: str) -> GamelistSelections:
         """The gamelist's emulator selections — EmuDeck seeds these itself.

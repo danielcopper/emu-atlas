@@ -804,29 +804,37 @@ def _validate_input_appimages(name: str, appimages: Any) -> None:
     for path, spec in appimages.items():
         if not isinstance(path, str) or not path.startswith("/"):
             fail(f"{name}: appimage paths must be absolute, got {path!r}")
-        if isinstance(spec, str):
-            if spec not in APPIMAGE_STATES:
-                fail(
-                    f"{name}: appimage {path!r} whole-archive state must be one of "
-                    f"{sorted(APPIMAGE_STATES)}, got {spec!r}"
-                )
-            continue
-        if not isinstance(spec, dict):
-            fail(f"{name}: appimage {path!r} must map entries or name a whole-archive state")
-        for inner, value in spec.items():
-            if not isinstance(inner, str) or not inner or inner.startswith("/"):
-                fail(f"{name}: appimage {path!r} entry names must be relative paths, got {inner!r}")
-            if isinstance(value, str):
-                continue
-            if (
-                not isinstance(value, dict)
-                or set(value) != {"status"}
-                or value["status"] not in APPIMAGE_ENTRY_STATES
-            ):
-                fail(
-                    f"{name}: appimage {path!r} entry {inner!r} must be text or "
-                    f"{{'status': one of {sorted(APPIMAGE_ENTRY_STATES)}}}"
-                )
+        _validate_appimage_spec(name, path, spec)
+
+
+def _validate_appimage_spec(name: str, path: str, spec: Any) -> None:
+    if isinstance(spec, str):
+        if spec not in APPIMAGE_STATES:
+            fail(
+                f"{name}: appimage {path!r} whole-archive state must be one of "
+                f"{sorted(APPIMAGE_STATES)}, got {spec!r}"
+            )
+        return
+    if not isinstance(spec, dict):
+        fail(f"{name}: appimage {path!r} must map entries or name a whole-archive state")
+    for inner, value in spec.items():
+        _validate_appimage_entry(name, path, inner, value)
+
+
+def _validate_appimage_entry(name: str, path: str, inner: Any, value: Any) -> None:
+    if not isinstance(inner, str) or not inner or inner.startswith("/"):
+        fail(f"{name}: appimage {path!r} entry names must be relative paths, got {inner!r}")
+    if isinstance(value, str):
+        return
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"status"}
+        or value["status"] not in APPIMAGE_ENTRY_STATES
+    ):
+        fail(
+            f"{name}: appimage {path!r} entry {inner!r} must be text or "
+            f"{{'status': one of {sorted(APPIMAGE_ENTRY_STATES)}}}"
+        )
 
 
 def _validate_installations(name: str, installations: Any) -> None:

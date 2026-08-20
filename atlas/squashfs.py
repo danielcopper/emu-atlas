@@ -330,6 +330,39 @@ class _Image:
         return bytes(out)
 
 
+def _relinked(components: list[str], index: int, target: str) -> list[str]:
+    """The component list after the link at *index* is replaced by *target*.
+
+    An absolute target restarts from the root; a relative one resolves
+    against the link's own directory, with ``..`` stepping back through that
+    prefix and never past the root. Either way the components after the link
+    stay — the walk restarts from the root over the rewritten list.
+    """
+    target_parts = [part for part in target.split("/") if part and part != "."]
+    rest = components[index + 1 :]
+    if target.startswith("/"):
+        return target_parts + rest
+    prefix = components[:index]
+    for part in target_parts:
+        if part == "..":
+            if not prefix:
+                raise SquashfsError("symlink escapes the image root")
+            prefix.pop()
+        else:
+            prefix.append(part)
+    return prefix + rest
+
+
+def _child_inode(image: _Image, node: dict[str, Any], components: list[str], index: int) -> dict[str, Any]:
+    """The inode *components[index]* names inside *node*, refusals spelled out."""
+    if node["kind"] != _DIR:
+        raise EntryNotFound(f"{'/'.join(components[:index])!r} is not a directory")
+    ref = image.child_ref(node, components[index].encode("utf-8"))
+    if ref is None:
+        raise EntryNotFound(f"no entry {components[index]!r} in the image")
+    return image.inode(ref)
+
+
 def _resolve(image: _Image, inner_path: str) -> bytes:
     """Walk *inner_path* from the root, following in-image symlinks, and read it."""
     components = [part for part in inner_path.split("/") if part]
@@ -339,34 +372,13 @@ def _resolve(image: _Image, inner_path: str) -> bytes:
     node = image.inode(image.root_ref)
     index = 0
     while index < len(components):
-        if node["kind"] != _DIR:
-            raise EntryNotFound(f"{'/'.join(components[:index])!r} is not a directory")
-        ref = image.child_ref(node, components[index].encode("utf-8"))
-        if ref is None:
-            raise EntryNotFound(f"no entry {components[index]!r} in the image")
-        child = image.inode(ref)
+        child = _child_inode(image, node, components, index)
         if child["kind"] == _SYMLINK:
             followed += 1
             if followed > _MAX_SYMLINK_DEPTH:
                 raise SquashfsError("symlink chain deeper than the reader follows")
             target = bytes(child["target"]).decode("utf-8", errors="replace")
-            target_parts = [part for part in target.split("/") if part and part != "."]
-            rest = components[index + 1 :]
-            if target.startswith("/"):
-                components = target_parts + rest
-            else:
-                # Relative to the link's own directory: the components before
-                # the link stay, the target replaces the link itself. `..`
-                # steps back through that prefix.
-                prefix = components[:index]
-                for part in target_parts:
-                    if part == "..":
-                        if not prefix:
-                            raise SquashfsError("symlink escapes the image root")
-                        prefix.pop()
-                    else:
-                        prefix.append(part)
-                components = prefix + rest
+            components = _relinked(components, index, target)
             node = image.inode(image.root_ref)
             index = 0
             continue
