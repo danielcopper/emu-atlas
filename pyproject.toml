@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "emu-atlas"
 version = "0.3.0"
-description = "The map of where emulators keep things — config-aware save/BIOS location knowledge."
+description = "The map of where emulators keep things — a live resolver for emulator installations: saves, firmware, textures, mods, ROMs, systems and platform identities."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
