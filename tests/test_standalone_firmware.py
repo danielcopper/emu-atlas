@@ -92,9 +92,11 @@ class TestTheLoaderFailsClosed:
             load_standalone_firmware(bad)
 
     def test_an_empty_file_list_is_refused(self):
+        bad = _doc(files=[])
         with pytest.raises(ValueError, match="files must be a non-empty list"):
-            load_standalone_firmware(_doc(files=[]))
+            load_standalone_firmware(bad)
 
     def test_missing_provenance_is_refused(self):
+        bad = _doc(provenance={})
         with pytest.raises(ValueError, match="provenance.source"):
-            load_standalone_firmware(_doc(provenance={}))
+            load_standalone_firmware(bad)

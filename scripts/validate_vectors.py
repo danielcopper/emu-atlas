@@ -1372,9 +1372,8 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
     requirements = core["requirements"]
     if not isinstance(requirements, list):
         fail(f"{name}: firmware core requirements must be a list")
-    if core["declaration"] not in ("read", "packaged"):
-        if requirements:
-            fail(f"{name}: a core atlas could not read declares nothing — its requirements must be empty")
+    if core["declaration"] not in ("read", "packaged") and requirements:
+        fail(f"{name}: a core atlas could not read declares nothing — its requirements must be empty")
     if core["declaration"] != "read" and not core["caveats"]:
         fail(
             f"{name}: a declaration that was not read off the machine must state why (or, "
