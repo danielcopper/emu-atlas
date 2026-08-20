@@ -7307,47 +7307,88 @@ def _merge_filesystems(
     return base_table, table
 
 
+def _fs_resolve_entry(key: str, home: str) -> str | None:
+    """One table key as the host path its export would cover — ``None`` outside the model.
+
+    ``None`` for the special tokens (they compete through their own branches)
+    and for every token the model does not place (the xdg-user-dirs aliases):
+    those cover nothing and suppress nothing, which the module comment above
+    the vocabulary states as the boundary.
+    """
+    if key in _FS_SPECIAL_TOKENS:
+        return None
+    if key.startswith("/"):
+        return key
+    if key.startswith("~/"):
+        return os.path.join(home, key[2:])
+    token, _, rest = key.partition("/")
+    if token in _FS_XDG_BASES:
+        base = os.path.join(home, _FS_XDG_BASES[token])
+        return os.path.join(base, rest) if rest else base
+    return None
+
+
+def _host_export_prefix(path: str) -> str | None:
+    """The export a ``host`` grant covers *path* through — ``None`` where it binds nothing.
+
+    A ``host`` grant binds every root entry except flatpak's own reserved
+    names, plus ``/run/media`` explicitly (flatpak-context.c:2856-2888).
+    """
+    if path == "/run/media" or path.startswith("/run/media/"):
+        return "/run/media"
+    first = path.split("/", 2)[1] if path.startswith("/") else ""
+    if first and first not in _FS_HOST_UNMOUNTED:
+        return f"/{first}"
+    return None
+
+
+class _FsCompetition:
+    """The export that decides one path's visibility — flatpak's own tie rules.
+
+    The most specific covering export wins (path_is_mapped walks the sorted
+    keys and lets the longest covering prefix overwrite the verdict,
+    flatpak-exports.c:340-378). Two entries resolving to the SAME path
+    collapse into one export with the higher mode winning — a grant beats
+    the tmpfs hide (do_export_path, :760-798; FAKE_MODE_TMPFS is MODE_NONE,
+    :102). Live consequence: ``!/run/media`` beside a ``host`` grant hides
+    nothing, because host exports ``/run/media`` itself.
+    """
+
+    def __init__(self, path: str) -> None:
+        self._path = path
+        self._best = -1
+        self.decider: _FsEntry | None = None
+
+    def offer(self, prefix: str, entry: _FsEntry) -> None:
+        if self._path != prefix and not self._path.startswith(prefix.rstrip("/") + "/"):
+            return
+        grant_wins_tie = (
+            len(prefix) == self._best
+            and self.decider is not None
+            and self.decider.hidden
+            and not entry.hidden
+        )
+        if len(prefix) > self._best or grant_wins_tie:
+            self._best = len(prefix)
+            self.decider = entry
+
+
 def _fs_visible(table: dict[str, _FsEntry], home: str, path: str) -> tuple[bool, _FsEntry | None]:
     """Whether *path* is visible under *table* — and the entry that decided.
 
-    The application semantics, ported: every covering export competes and the
-    most specific one wins (path_is_mapped walks the sorted keys and lets the
-    longest covering prefix overwrite the verdict, flatpak-exports.c:340-378);
-    a revoked path entry is exported as a tmpfs and therefore hides even
-    under a broader grant (flatpak_exports_add_path_expose_or_hide,
-    :1096-1108), while a revoked special token simply exports nothing
-    (flatpak_context_export skips a NONE mode, flatpak-context.c:2844-2919).
-    A ``host`` grant binds every root entry except flatpak's own reserved
-    names, plus ``/run/media`` explicitly (:2856-2888).
+    The application semantics, ported (:class:`_FsCompetition` holds the tie
+    rules): a revoked path entry is exported as a tmpfs and therefore hides
+    even under a broader grant (flatpak_exports_add_path_expose_or_hide,
+    flatpak-exports.c:1096-1108), while a revoked special token simply
+    exports nothing (flatpak_context_export skips a NONE mode,
+    flatpak-context.c:2844-2919).
     """
-    decider: _FsEntry | None = None
-    best = -1
-
-    def compete(prefix: str, entry: _FsEntry) -> None:
-        nonlocal decider, best
-        if path != prefix and not path.startswith(prefix.rstrip("/") + "/"):
-            return
-        # Two entries resolving to the SAME path collapse into one export,
-        # and the higher mode wins there — a grant beats the tmpfs hide
-        # (do_export_path, flatpak-exports.c:760-798; FAKE_MODE_TMPFS is
-        # MODE_NONE, :102). Live consequence: '!/run/media' beside a 'host'
-        # grant hides nothing, because host exports /run/media itself.
-        if len(prefix) > best or (
-            len(prefix) == best
-            and decider is not None
-            and decider.hidden
-            and not entry.hidden
-        ):
-            best = len(prefix)
-            decider = entry
-
+    competition = _FsCompetition(path)
     host = table.get("host")
     if host is not None and not host.hidden:
-        first = path.split("/", 2)[1] if path.startswith("/") else ""
-        if path.startswith("/run/media/") or path == "/run/media":
-            compete("/run/media", host)
-        elif first and first not in _FS_HOST_UNMOUNTED:
-            compete(f"/{first}", host)
+        prefix = _host_export_prefix(path)
+        if prefix is not None:
+            competition.offer(prefix, host)
     # A 'home' grant exports $HOME (flatpak-context.c:2903-2919). A negated
     # one exports nothing — special tokens are never mounted over as tmpfs
     # (context_export skips them, :2930-2932) — so under a live 'host' grant
@@ -7355,21 +7396,12 @@ def _fs_visible(table: dict[str, _FsEntry], home: str, path: str) -> tuple[bool,
     # says: 'home' is not among the reserved root names.
     home_entry = table.get("home")
     if home_entry is not None and not home_entry.hidden:
-        compete(home, home_entry)
+        competition.offer(home, home_entry)
     for key, entry in table.items():
-        if key in _FS_SPECIAL_TOKENS:
-            continue
-        if key.startswith("/"):
-            resolved = key
-        elif key.startswith("~/"):
-            resolved = os.path.join(home, key[2:])
-        elif key.split("/", 1)[0] in _FS_XDG_BASES:
-            token, _, rest = key.partition("/")
-            base = os.path.join(home, _FS_XDG_BASES[token])
-            resolved = os.path.join(base, rest) if rest else base
-        else:
-            continue  # outside the model — covers nothing, suppresses nothing
-        compete(resolved.rstrip("/") or "/", entry)
+        resolved = _fs_resolve_entry(key, home)
+        if resolved is not None:
+            competition.offer(resolved.rstrip("/") or "/", entry)
+    decider = competition.decider
     if decider is None:
         return False, None
     return not decider.hidden, decider
