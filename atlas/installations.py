@@ -5952,13 +5952,14 @@ def _azahar_sdmc_root(
     sandbox: _Sandbox,
     card: StandaloneSaveCard,
     ini_path: str,
-) -> tuple[str | None, tuple[OptionReading, ...]] | Unresolved:
-    """The configured SD root and the readings that decided it — or a refusal.
+) -> tuple[str | None, tuple[OptionReading, ...], Unresolved | None]:
+    """(configured SD root, the readings that decided it, the refusal if any).
 
     ``None`` for the root means the compiled default governs: custom storage
     off, or on with an empty path (UpdateUserPath returns on empty). A
     configured path only the emulator's sandbox could read refuses the whole
-    question — nothing here could anchor an answer.
+    question — nothing here could anchor an answer — and the refusal rides
+    the third slot so every return carries one shape.
     """
     section = "Data Storage"
     custom, custom_configured = _azahar_setting(values, section, "use_custom_storage", "false")
@@ -5979,7 +5980,7 @@ def _azahar_sdmc_root(
         )
     ]
     if custom.casefold() != "true":
-        return None, tuple(readings)
+        return None, tuple(readings), None
     configured_dir, dir_configured = _azahar_setting(values, section, "sdmc_directory", "")
     readings.append(
         _reading_with_file(
@@ -5998,16 +5999,17 @@ def _azahar_sdmc_root(
         )
     )
     if not dir_configured:
-        return None, tuple(readings)
+        return None, tuple(readings), None
     resolved = sandbox.host("sdmc_directory", configured_dir)
     if resolved.path is None:
-        return Unresolved(
+        refusal = Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"the SD path Azahar's configuration names could not be located from here "
             f"({ini_path}) — nothing this answer could anchor at",
             {"emulator": card.token, "config": ini_path},
         )
-    return resolved.path, tuple(readings)
+        return None, tuple(readings), refusal
+    return resolved.path, tuple(readings), None
 
 
 def _azahar_savefile_placement(
@@ -6044,10 +6046,11 @@ def _azahar_savefile_placement(
     caveats: list[Caveat] = [*extra_caveats]
     stated_ini = ini_path if result.status == READ_OK else None
     caveats.extend(_azahar_virtual_sd_caveats(values, card))
-    root = _azahar_sdmc_root(values, stated_ini, sandbox=sandbox, card=card, ini_path=ini_path)
-    if isinstance(root, Unresolved):
-        return root
-    sdmc_root, readings = root
+    sdmc_root, readings, refusal = _azahar_sdmc_root(
+        values, stated_ini, sandbox=sandbox, card=card, ini_path=ini_path
+    )
+    if refusal is not None:
+        return refusal
     if sdmc_root is None:
         sdmc_root = os.path.join(homes.base("data"), "azahar-emu", "sdmc")
     container = os.path.join(sdmc_root, _AZAHAR_CONTAINER)
