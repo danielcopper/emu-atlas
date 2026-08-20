@@ -94,6 +94,10 @@ installations + placements out.
 
 ## Integration opportunities
 
+A consumer does not have to be Python: `emu-atlas` (or `python -m atlas`) answers every question as its contract JSON on
+stdout, one question per invocation, held to the same bytes as the library by the conformance vectors — any language
+runs a subprocess and parses. See [the command line](docs/how-to-use.md#the-command-line).
+
 Places this knowledge could plug in — options, not commitments:
 
 - **[decky-romm-sync](https://github.com/danielcopper/decky-romm-sync)** (first consumer): the PlatformEnvironment seam
