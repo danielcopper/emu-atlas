@@ -35,14 +35,17 @@ from atlas.contract import (
     installation_contract,
     launchable_contract,
     mod_answer_contract,
+    platform_systems_contract,
     rom_placement_contract,
     savefile_answer_contract,
     savestate_answer_contract,
     screenshot_answer_contract,
     soft_patch_answer_contract,
+    system_platforms_contract,
     systems_contract,
     texture_answer_contract,
 )
+from atlas.platforms import KNOWN_PLATFORM_VOCABULARIES
 from atlas.detect import detect
 from atlas.every_installation import EveryInstallation
 from atlas.installations import Installation
@@ -92,6 +95,14 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
         soft_patch_answer_contract,
     ),
     "systems": (lambda target, _args: target.systems(), systems_contract),
+    "systems-for-platform": (
+        lambda target, args: target.systems_for_platform(args.vocabulary, args.value),
+        platform_systems_contract,
+    ),
+    "platform-ids": (
+        lambda target, args: target.platform_ids(args.system),
+        system_platforms_contract,
+    ),
     "emulators-for": (
         lambda target, args: target.emulators_for(args.system, content_path=args.content),
         catalogue_contract,
@@ -181,6 +192,27 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser(
         "systems", parents=[common, selecting], help="what the frontend catalogue declares"
     )
+
+    for_platform = commands.add_parser(
+        "systems-for-platform",
+        parents=[common, selecting],
+        help="which systems here answer to a public platform id",
+    )
+    for_platform.add_argument(
+        "vocabulary",
+        choices=KNOWN_PLATFORM_VOCABULARIES,
+        help="the public vocabulary the id comes from",
+    )
+    for_platform.add_argument(
+        "value", help="the id in that vocabulary, e.g. an IGDB slug or numeric id"
+    )
+
+    platform_ids = commands.add_parser(
+        "platform-ids",
+        parents=[common, selecting],
+        help="a system's platform tags and their public identities",
+    )
+    platform_ids.add_argument("system", help=_SYSTEM_ID_HELP)
 
     emulators = commands.add_parser(
         "emulators-for",

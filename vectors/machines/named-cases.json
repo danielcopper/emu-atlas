@@ -12433,6 +12433,445 @@
           "granularity": null
         }
       }
+    },
+    {
+      "name": "a-platform-id-answers-with-status-per-system",
+      "rationale": "The forward question: an IGDB numeric id resolves through the crosswalk to its platforms, the catalogue's own <platform> tags say which systems here answer to them (declared, tags read live), and the vocabulary snapshot names the regional siblings this catalogue does not declare (absent) — three claims a raw folder guess collapses into one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "igdb",
+          "value": "19"
+        },
+        "platform_ids_query": {
+          "system": "sfc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "igdb",
+          "value": "19",
+          "platforms": [
+            "snes",
+            "snes-msu1"
+          ],
+          "matches": [
+            {
+              "system": "snes",
+              "status": "declared",
+              "platforms": [
+                "snes"
+              ],
+              "tags_source": "catalogue"
+            },
+            {
+              "system": "sfc",
+              "status": "absent",
+              "platforms": [
+                "snes"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "snesna",
+              "status": "absent",
+              "platforms": [
+                "snes"
+              ],
+              "tags_source": "vocabulary"
+            }
+          ],
+          "caveats": []
+        },
+        "platform_ids": {
+          "system": "sfc",
+          "status": "absent",
+          "tags_source": "vocabulary",
+          "platforms": [
+            "snes"
+          ],
+          "identities": [
+            {
+              "platform": "snes",
+              "igdb": [
+                {
+                  "id": 19,
+                  "slug": "snes",
+                  "name": "Super Nintendo Entertainment System"
+                },
+                {
+                  "id": 58,
+                  "slug": "sfam",
+                  "name": "Super Famicom"
+                }
+              ],
+              "libretro": [
+                "Nintendo - Super Nintendo Entertainment System"
+              ],
+              "screenscraper": 4,
+              "thegamesdb": 6
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-deliberately-disabled-system-answers-disabled",
+      "rationale": "RetroDECK ships 31 systems only as commented-out blocks. A commented block is not a declaration — ES-DE never sees it — but it is a fact about the file: present and deliberately off, which is a different consumer decision than never shipped. Both directions state it, and the name is right there in the catalogue's text.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "igdb",
+          "value": "xbox360"
+        },
+        "platform_ids_query": {
+          "system": "xbox360"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "igdb",
+          "value": "xbox360",
+          "platforms": [
+            "xbox360"
+          ],
+          "matches": [
+            {
+              "system": "xbox360",
+              "status": "disabled",
+              "platforms": [
+                "xbox360"
+              ],
+              "tags_source": "catalogue"
+            }
+          ],
+          "caveats": []
+        },
+        "platform_ids": {
+          "system": "xbox360",
+          "status": "disabled",
+          "tags_source": "catalogue",
+          "platforms": [
+            "xbox360"
+          ],
+          "identities": [
+            {
+              "platform": "xbox360",
+              "igdb": [
+                {
+                  "id": 12,
+                  "slug": "xbox360",
+                  "name": "Xbox 360"
+                }
+              ],
+              "libretro": [],
+              "screenscraper": 33,
+              "thegamesdb": 15
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "an-id-nothing-maps-answers-unmapped",
+      "rationale": "A public id no crosswalk row carries, and a system name neither the machine nor the vocabulary knows: both answer nothing plus the platform-unmapped caveat, because inventing a folder from the raw id is the silent failure this question exists to prevent.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "igdb",
+          "value": "not-a-platform"
+        },
+        "platform_ids_query": {
+          "system": "nonsense-system"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "igdb",
+          "value": "not-a-platform",
+          "platforms": [],
+          "matches": [],
+          "caveats": [
+            {
+              "code": "platform-unmapped",
+              "data": {
+                "vocabulary": "igdb",
+                "value": "not-a-platform"
+              }
+            }
+          ]
+        },
+        "platform_ids": {
+          "system": "nonsense-system",
+          "status": "absent",
+          "tags_source": "vocabulary",
+          "platforms": [],
+          "identities": [],
+          "caveats": [
+            {
+              "code": "platform-unmapped",
+              "data": {
+                "system": "nonsense-system"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-custom-systems-own-tag-translates-it",
+      "rationale": "A user-declared system carries its own <platform> tag, so it translates without any table knowing it — the machine does the system-to-platform hop. A tag outside the platform vocabulary is stated (platform-unknown), exactly the token ES-DE itself warns about and drops.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system><name>ps4-homebrew</name><fullname>PS4 Homebrew</fullname><path>/mnt/sd/retrodeck/roms/ps4</path>\n    <extension>.pkg</extension>\n    <command label=\"Kyty\">%EMULATOR_KYTY% %ROM%</command>\n    <platform>ps4</platform>\n  </system>\n  <system><name>homegrown</name><fullname>Homegrown Engine</fullname><path>/mnt/sd/retrodeck/roms/homegrown</path>\n    <extension>.hgx</extension>\n    <command label=\"HG\">%EMULATOR_HG% %ROM%</command>\n    <platform>selfmade</platform>\n  </system>\n  <system><name>secret</name><fullname>Private Shelf</fullname><path>/mnt/sd/retrodeck/roms/secret</path>\n    <extension>.bin</extension>\n    <command label=\"Runner\">%EMULATOR_RUNNER% %ROM%</command>\n    <platform>ignore</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "igdb",
+          "value": "ps4--1"
+        },
+        "platform_ids_query": {
+          "system": "homegrown"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "igdb",
+          "value": "ps4--1",
+          "platforms": [
+            "ps4"
+          ],
+          "matches": [
+            {
+              "system": "ps4-homebrew",
+              "status": "declared",
+              "platforms": [
+                "ps4"
+              ],
+              "tags_source": "catalogue"
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-exclusive",
+              "data": {}
+            }
+          ]
+        },
+        "platform_ids": {
+          "system": "homegrown",
+          "status": "declared",
+          "tags_source": "catalogue",
+          "platforms": [
+            "selfmade"
+          ],
+          "identities": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-exclusive",
+              "data": {}
+            },
+            {
+              "code": "platform-unknown",
+              "data": {
+                "system": "homegrown",
+                "token": "selfmade"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an-ignore-tag-is-a-deliberate-opt-out",
+      "rationale": "ES-DE's `ignore` platform clears the system's platform list on purpose — the catalogue's own way of saying `match this with nothing`. atlas states it as its own caveat, because a deliberate opt-out is a different fact than a missing tag.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system><name>ps4-homebrew</name><fullname>PS4 Homebrew</fullname><path>/mnt/sd/retrodeck/roms/ps4</path>\n    <extension>.pkg</extension>\n    <command label=\"Kyty\">%EMULATOR_KYTY% %ROM%</command>\n    <platform>ps4</platform>\n  </system>\n  <system><name>homegrown</name><fullname>Homegrown Engine</fullname><path>/mnt/sd/retrodeck/roms/homegrown</path>\n    <extension>.hgx</extension>\n    <command label=\"HG\">%EMULATOR_HG% %ROM%</command>\n    <platform>selfmade</platform>\n  </system>\n  <system><name>secret</name><fullname>Private Shelf</fullname><path>/mnt/sd/retrodeck/roms/secret</path>\n    <extension>.bin</extension>\n    <command label=\"Runner\">%EMULATOR_RUNNER% %ROM%</command>\n    <platform>ignore</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_ids_query": {
+          "system": "secret"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "platform_ids": {
+          "system": "secret",
+          "status": "declared",
+          "tags_source": "catalogue",
+          "platforms": [
+            "ignore"
+          ],
+          "identities": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-exclusive",
+              "data": {}
+            },
+            {
+              "code": "platform-scraping-ignored",
+              "data": {
+                "system": "secret"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-derived-systems-tags-come-from-the-vocabulary",
+      "rationale": "A catalogue-less arrangement's systems are derived from its cores (issue #133) — no catalogue text carries a <platform> tag for them, so the tags come from the stated build's snapshot column and the answer says so: tags_source vocabulary, never passed off as a read.",
+      "input": {
+        "home": "/home/user",
+        "files": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+        },
+        "cores": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          },
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte"
+          }
+        },
+        "platform_ids_query": {
+          "system": "gba"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_flatpak",
+            "kinds": [
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
+            "health": []
+          }
+        ],
+        "platform_ids": {
+          "system": "gba",
+          "status": "declared",
+          "tags_source": "vocabulary",
+          "platforms": [
+            "gba"
+          ],
+          "identities": [
+            {
+              "platform": "gba",
+              "igdb": [
+                {
+                  "id": 24,
+                  "slug": "gba",
+                  "name": "Game Boy Advance"
+                }
+              ],
+              "libretro": [
+                "Nintendo - Game Boy Advance"
+              ],
+              "screenscraper": 12,
+              "thegamesdb": 5
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-list-derived",
+              "data": {}
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_flatpak"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

@@ -39,6 +39,7 @@ def _document(**overrides) -> str:
         "description": "description",
         "sources": {},
         "systems": ["gb", "n64"],
+        "platforms": {"gb": ["gb"], "n64": ["n64"]},
         **overrides,
     }
     return json.dumps(document)
@@ -77,6 +78,23 @@ class TestTheLoaderRefusesAListItCannotPlace:
 
     def test_a_wellformed_list_loads(self):
         assert load_system_ids(_document()) == frozenset({"gb", "n64"})
+
+    def test_a_platform_column_not_covering_the_id_set_is_rejected(self):
+        # The column exists to answer for exactly the vocabulary — a missing
+        # system would silently turn "snapshot says X" into "snapshot is mute".
+        document = _document(platforms={"gb": ["gb"]})
+        with pytest.raises(ValueError, match="platforms"):
+            load_system_ids(document)
+
+    def test_a_platform_tag_that_is_not_a_string_is_rejected(self):
+        document = _document(platforms={"gb": ["gb"], "n64": [64]})
+        with pytest.raises(ValueError, match="non-empty string"):
+            load_system_ids(document)
+
+    def test_a_platform_value_that_is_not_a_list_is_rejected(self):
+        document = _document(platforms={"gb": ["gb"], "n64": "n64"})
+        with pytest.raises(ValueError, match="list of tags"):
+            load_system_ids(document)
 
 
 class TestTheCanonicalIds:
@@ -129,3 +147,19 @@ class TestTheIdSetIsTheBuildsIdSet:
 
     def test_the_packaged_ids_are_exactly_what_the_build_declares(self):
         assert sorted(_shipped()["systems"]) == sorted(self._declared())
+
+    def test_the_packaged_platform_tags_are_the_builds_tags(self):
+        # Same guard, second column: the snapshot's platform tags must be what
+        # the stated build's own <platform> text reads as — an edited tag would
+        # otherwise pass every test, because everything else only looks tags up.
+        # The read goes through the public parser, so the guard and the
+        # resolvers can never disagree about how a tag list is read.
+        from atlas.esde import parse_es_systems
+
+        if not DEPLOYED_ES_SYSTEMS.exists():
+            pytest.skip(f"RetroDECK's ES-DE is not deployed at {DEPLOYED_ES_SYSTEMS}")
+        layer = parse_es_systems(
+            DEPLOYED_ES_SYSTEMS.read_text(encoding="utf-8"), provenance="guard"
+        )
+        declared = {name: list(decl.platforms) for name, decl in layer.systems.items()}
+        assert _shipped()["platforms"] == declared

@@ -45,6 +45,7 @@ from atlas.esde import (
     EmulatorSpec,
     GamelistSelections,
     SystemDeclaration,
+    commented_out_systems,
     emulator_token,
     esde_extension,
     expand_home_path,
@@ -55,6 +56,15 @@ from atlas.esde import (
     resolve_rom_path,
 )
 from atlas.evidence import arrangement_caveats
+from atlas.platforms import (
+    CAVEAT_PLATFORM_SCRAPING_IGNORED,
+    CAVEAT_PLATFORM_UNKNOWN,
+    CAVEAT_PLATFORM_UNMAPPED,
+    PlatformIdentities,
+    platform_identities,
+    platforms_for,
+)
+from atlas.systems import known_systems, vocabulary_platform_tags
 from atlas.firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
@@ -6864,6 +6874,81 @@ class SystemsAnswer:
     caveats: tuple[Caveat, ...] = ()
 
 
+# The three statuses a platform question states about a system (issue #68).
+# "declared" — this installation's own systems answer lists it. "disabled" —
+# the catalogue's text carries it only inside an XML comment: present and
+# deliberately off, which is a different fact than never shipped. "absent" —
+# the vocabulary knows the system and this installation does not have it.
+# They never collapse, because the consumer's next step differs for each:
+# place content, ask the user to enable, or don't place it here at all.
+PLATFORM_STATUS_DECLARED = "declared"
+PLATFORM_STATUS_DISABLED = "disabled"
+PLATFORM_STATUS_ABSENT = "absent"
+
+# Where a statement's platform tags came from. "catalogue" is a read of this
+# machine — the system's own <platform> text (a commented block included).
+# "vocabulary" is the snapshot column of the stated build (atlas.systems):
+# what backs an absent system, and a declared one whose catalogue is sealed —
+# world knowledge, marked as such per the boundary rule.
+PLATFORM_TAGS_CATALOGUE = "catalogue"
+PLATFORM_TAGS_VOCABULARY = "vocabulary"
+
+
+@dataclass(frozen=True, slots=True)
+class PlatformSystemMatch:
+    """One system answering to a public platform id, and how firmly it is here.
+
+    ``platforms`` is the system's whole tag list (not just the matching tag) —
+    a consumer deciding between two matches wants to see that ``naomi`` is an
+    ``arcade`` system while ``dreamcast`` is the family's own platform.
+    """
+
+    system: str
+    status: str
+    platforms: tuple[str, ...]
+    tags_source: str
+
+
+@dataclass(frozen=True, slots=True)
+class PlatformSystemsAnswer:
+    """Which of this installation's systems answer to a public platform id.
+
+    ``platforms`` is what the crosswalk resolved the id to — empty exactly
+    when the ``platform-unmapped`` caveat states why. ``matches`` is ordered:
+    declared systems first, then disabled, then absent, each alphabetical.
+    An empty match list under resolved platforms is a statement about this
+    machine — the platform is real and nothing here answers to it.
+    """
+
+    vocabulary: str
+    value: str
+    platforms: tuple[str, ...] = ()
+    matches: tuple[PlatformSystemMatch, ...] = ()
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class SystemPlatformsAnswer:
+    """One system's platform tags and their public identities, status-qualified.
+
+    ``identities`` carries one entry per tag the crosswalk knows; a tag it
+    does not know states ``platform-unknown`` instead, and the ``ignore``
+    sentinel states ``platform-scraping-ignored`` — so the identity list, the
+    tag list and the caveats always add up. An empty ``platforms`` under
+    ``status: declared`` is the catalogue's own statement: the system block
+    carries no ``<platform>`` tag (ES-DE warns about exactly that state).
+    """
+
+    system: str
+    status: str
+    tags_source: str
+    platforms: tuple[str, ...] = ()
+    identities: tuple[PlatformIdentities, ...] = ()
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
 # The launchability verdicts (issue #36) — four claims that never collapse.
 # "not-accepted" is a read of the machine: the frontend's accept-list for the
 # system does not carry this file's extension, so ES-DE never scans it and
@@ -8426,6 +8511,53 @@ def _entry_mod_with_caveats(
     return cast(ModPlacement, _dc_replace(outcome, caveats=(*outcome.caveats, *extra)))
 
 
+_CROSSWALK_SOURCE = "platform crosswalk (platform_ids_crosswalk.json, pinned sources cited inside)"
+
+
+@dataclass(frozen=True, slots=True)
+class _PlatformView:
+    """One handle's platform-relevant reading of its catalogue, taken once per query.
+
+    ``declared`` maps every system this installation's systems answer lists to
+    its platform tags; ``vocabulary_backed`` names the subset whose tags could
+    not be read live and came from the snapshot column instead (a sealed
+    catalogue's derived systems, a catalogue-less arrangement's whole list).
+    ``disabled`` maps the systems the catalogue's text carries only inside XML
+    comments — read where the handle can read them (the RetroDECK layers; a
+    sealed bundled file cannot be scanned, so on those handles a commented
+    system degrades to *absent*, which is stated in the answer's tags rather
+    than silently wrong). ``caveats`` is the route's full caveat list in the
+    handle's pinned order — findings first, then the catalogue-status
+    statements — the same list the systems answer states.
+    """
+
+    declared: Mapping[str, tuple[str, ...]]
+    vocabulary_backed: frozenset[str]
+    disabled: Mapping[str, tuple[str, ...]]
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...]
+
+
+def _absent_vocabulary_systems(view: _PlatformView) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """``(system, snapshot tags)`` for every vocabulary system the view neither declares nor disables."""
+    return tuple(
+        (system, vocabulary_platform_tags(system) or ())
+        for system in known_systems()
+        if system not in view.declared and system not in view.disabled
+    )
+
+
+def _commented_map(texts: tuple[str | None, ...]) -> dict[str, tuple[str, ...]]:
+    """The commented-out systems of *texts*, first sighting of a name winning."""
+    disabled: dict[str, tuple[str, ...]] = {}
+    for text in texts:
+        if text is None:
+            continue
+        for name, tags in commented_out_systems(text):
+            disabled.setdefault(name, tags)
+    return disabled
+
+
 class _CatalogueQueries:
     """The catalogue entry points, answered by every handle — including with a refusal.
 
@@ -8456,6 +8588,166 @@ class _CatalogueQueries:
         answer, version = self._systems_answer()
         return _systems_with_caveats(
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
+        )
+
+    def _platform_view(self) -> tuple[_PlatformView, str | None]:
+        raise NotImplementedError  # pragma: no cover - every handle supplies one
+
+    def systems_for_platform(self, vocabulary: str, value: str) -> PlatformSystemsAnswer:
+        """Which systems here answer to a public platform id, and how firmly.
+
+        The two halves of the question are answered from their two rightful
+        places: what the id *corresponds to* comes from the crosswalk (world
+        knowledge, pinned and cited), and whether the corresponding systems
+        *are here* is read off this installation — its catalogue's own
+        ``<platform>`` tags connect each system to its platform, so a system
+        the user added by hand translates without any table knowing it.
+
+        *vocabulary* is one of :data:`atlas.platforms.KNOWN_PLATFORM_VOCABULARIES`
+        and anything else raises — the set is atlas's own and closed. A *value*
+        no crosswalk row carries answers no platforms, no matches and the
+        ``platform-unmapped`` caveat: "no platform corresponds" is an answer,
+        and inventing a folder name out of the raw id is exactly the failure
+        this question exists to prevent.
+
+        Each match's status says what the consumer's next step is: a
+        ``declared`` system takes content now, a ``disabled`` one exists in
+        the catalogue's text and is deliberately off, an ``absent`` one is
+        vocabulary knowledge only — this installation never scans a folder
+        for it. The match's ``tags_source`` states whether its tags were read
+        off the machine or taken from the stated build's snapshot column.
+        """
+        view, version = self._platform_view()
+        tail = arrangement_caveats(self.kind, observed_version=version)
+        resolved = platforms_for(vocabulary, value)
+        if not resolved:
+            unmapped = Caveat(
+                CAVEAT_PLATFORM_UNMAPPED,
+                "no platform in the crosswalk answers to this id — placing content under "
+                "the raw id would name a folder no catalogue declares",
+                {"vocabulary": vocabulary, "value": value},
+            )
+            return PlatformSystemsAnswer(
+                vocabulary, value, caveats=(*view.caveats, unmapped, *tail)
+            )
+        wanted = frozenset(resolved)
+        matches = [
+            PlatformSystemMatch(
+                system,
+                PLATFORM_STATUS_DECLARED,
+                view.declared[system],
+                PLATFORM_TAGS_VOCABULARY
+                if system in view.vocabulary_backed
+                else PLATFORM_TAGS_CATALOGUE,
+            )
+            for system in sorted(view.declared)
+            if wanted & frozenset(view.declared[system])
+        ]
+        matches += [
+            PlatformSystemMatch(
+                system, PLATFORM_STATUS_DISABLED, view.disabled[system], PLATFORM_TAGS_CATALOGUE
+            )
+            for system in sorted(view.disabled)
+            if system not in view.declared and wanted & frozenset(view.disabled[system])
+        ]
+        matches += [
+            PlatformSystemMatch(
+                system, PLATFORM_STATUS_ABSENT, tags, PLATFORM_TAGS_VOCABULARY
+            )
+            for system, tags in _absent_vocabulary_systems(view)
+            if wanted & frozenset(tags)
+        ]
+        return PlatformSystemsAnswer(
+            vocabulary,
+            value,
+            resolved,
+            tuple(matches),
+            (*view.sources, _CROSSWALK_SOURCE),
+            (*view.caveats, *tail),
+        )
+
+    def platform_ids(self, system: str) -> SystemPlatformsAnswer:
+        """One system's platform tags and their public identities, status-qualified.
+
+        The reverse direction: which IGDB platform, libretro database names
+        and scraper ids belong to *system* — read from the system's own
+        ``<platform>`` tags where this installation declares it (a commented
+        block included), and from the stated build's snapshot column where it
+        does not (``tags_source`` says which). A name neither this machine
+        nor the vocabulary knows answers no identities and the
+        ``platform-unmapped`` caveat.
+        """
+        view, version = self._platform_view()
+        tail = arrangement_caveats(self.kind, observed_version=version)
+        if system in view.declared:
+            status = PLATFORM_STATUS_DECLARED
+            tags = view.declared[system]
+            tags_source = (
+                PLATFORM_TAGS_VOCABULARY
+                if system in view.vocabulary_backed
+                else PLATFORM_TAGS_CATALOGUE
+            )
+        elif system in view.disabled:
+            status, tags, tags_source = (
+                PLATFORM_STATUS_DISABLED,
+                view.disabled[system],
+                PLATFORM_TAGS_CATALOGUE,
+            )
+        else:
+            snapshot = vocabulary_platform_tags(system)
+            if snapshot is None:
+                unmapped = Caveat(
+                    CAVEAT_PLATFORM_UNMAPPED,
+                    "neither this installation's catalogue nor the vocabulary knows a "
+                    "system of this name, so there are no platform tags to translate",
+                    {"system": system},
+                )
+                return SystemPlatformsAnswer(
+                    system,
+                    PLATFORM_STATUS_ABSENT,
+                    PLATFORM_TAGS_VOCABULARY,
+                    caveats=(*view.caveats, unmapped, *tail),
+                )
+            status, tags, tags_source = (
+                PLATFORM_STATUS_ABSENT,
+                snapshot,
+                PLATFORM_TAGS_VOCABULARY,
+            )
+        identities: list[PlatformIdentities] = []
+        notes: list[Caveat] = []
+        for tag in tags:
+            if tag == "ignore":
+                notes.append(
+                    Caveat(
+                        CAVEAT_PLATFORM_SCRAPING_IGNORED,
+                        "the catalogue tags this system `ignore` — ES-DE's deliberate "
+                        "opt-out from platform matching, a different fact than a "
+                        "missing tag",
+                        {"system": system},
+                    )
+                )
+                continue
+            row = platform_identities(tag)
+            if row is None:
+                notes.append(
+                    Caveat(
+                        CAVEAT_PLATFORM_UNKNOWN,
+                        "a <platform> token outside the platform vocabulary — ES-DE "
+                        "warns about and drops exactly this token, so it matches "
+                        "nothing anywhere",
+                        {"system": system, "token": tag},
+                    )
+                )
+                continue
+            identities.append(row)
+        return SystemPlatformsAnswer(
+            system,
+            status,
+            tags_source,
+            tags,
+            tuple(identities),
+            (*view.sources, _CROSSWALK_SOURCE),
+            (*view.caveats, *notes, *tail),
         )
 
     def rom_location(self, system: str) -> RomPlacement:
@@ -8868,7 +9160,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     def _read_catalogue(
         self, root: str
     ) -> tuple[dict[str, SystemDeclaration], bool, bool, Caveat | None]:
-        """The merged ES-DE catalogue → ``(by_system, read, exclusive, invalid)``.
+        """The merged ES-DE catalogue → ``(by_system, read, exclusive, invalid)``."""
+        by_system, read, exclusive, invalid, _ = self._read_catalogue_full(root)
+        return by_system, read, exclusive, invalid
+
+    def _read_catalogue_full(self, root: str) -> tuple[
+        dict[str, SystemDeclaration], bool, bool, Caveat | None, dict[str, tuple[str, ...]]
+    ]:
+        """The merged ES-DE catalogue → ``(by_system, read, exclusive, invalid, disabled)``.
 
         ``read`` is not a detail: an empty catalogue because the shipped
         ``es_systems.xml`` was unreadable says nothing about which emulators
@@ -8893,31 +9192,48 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         the health finding naming the file. It is set only where the file's
         bytes were read: a file atlas cannot read may parse fine for the
         frontend, and stays the unread state it always was.
+
+        ``disabled`` (issue #68) is the commented-out systems of the same
+        texts this read already holds — the layers in force only, from the
+        same single read (a second read could see a different machine): an
+        exclusive overlay's comments alone, otherwise the bundled file's and
+        the overlay's. An invalid layer contributes nothing — a file the
+        frontend refuses wholesale has no "deliberately off" blocks, only an
+        aborted load.
         """
         empty: dict[str, SystemDeclaration] = {}
+        no_disabled: dict[str, tuple[str, ...]] = {}
         custom = CatalogueLayer(systems={})
         overlay_path = self._overlay_path(root)
         custom_text = self._machine.read_text(overlay_path).text
         if custom_text is not None:
             custom = parse_es_systems(custom_text, provenance="es_systems.xml (custom_systems overlay)")
         if custom.invalid is not None:
-            return empty, True, False, _catalogue_invalid_finding(overlay_path, custom.invalid)
+            return empty, True, False, _catalogue_invalid_finding(overlay_path, custom.invalid), no_disabled
         if custom.load_exclusive:
-            return dict(custom.systems), True, True, None
+            return dict(custom.systems), True, True, None, _commented_map((custom_text,))
         bundled = CatalogueLayer(systems={})
         read = False
+        bundled_text: str | None = None
         bundled_path = self._sandbox().bundled(self._ESDE_BUNDLED_SANDBOX)
         if bundled_path is not None:
             text = self._machine.read_text(bundled_path).text
             if text is not None:
                 bundled = parse_es_systems(text, provenance="es_systems.xml (bundled)")
                 if bundled.invalid is not None:
-                    return empty, True, False, _catalogue_invalid_finding(bundled_path, bundled.invalid)
+                    return empty, True, False, _catalogue_invalid_finding(bundled_path, bundled.invalid), no_disabled
                 # Read AND parsed. RetroDECK ships the custom overlay fully
                 # commented out inside an empty <systemList/>, so it parses to
                 # zero systems by design and can never stand in for this.
                 read = True
-        return merge_layers(bundled.systems, custom.systems), read, False, None
+                bundled_text = text
+        return (
+            merge_layers(bundled.systems, custom.systems),
+            read,
+            False,
+            None,
+            _commented_map((bundled_text, custom_text)),
+        )
 
     _CATALOGUE_SOURCE = "ES-DE catalogue read live (es_systems.xml, bundled + custom_systems overlay)"
     _ROM_DIRECTORY_SOURCE = "ES-DE ROMDirectory read live (es_settings.xml)"
@@ -9116,6 +9432,34 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
             version,
         )
+
+    def _platform_view(self) -> tuple[_PlatformView, str | None]:
+        """RetroDECK's platform reading — live tags per declared system, commented blocks scanned.
+
+        The same snapshot discipline as :meth:`_systems_answer`: one read of
+        the marker, one of the catalogue — the disabled map comes out of that
+        same read (:meth:`_read_catalogue_full`), never a second one.
+        """
+        config, marker_issues = self._read_marker()
+        findings = self._health_from(config, marker_issues).issues
+        root = self._config_path(config, "rd_home_path", "")[0]
+        by_system, read, exclusive, catalogue_invalid, disabled = self._read_catalogue_full(root)
+        version = _marker_version(config)
+        if not read:
+            view = _PlatformView(
+                {}, frozenset(), {}, (), (*findings, *_catalogue_unread_caveat())
+            )
+            return view, version
+        invalid = (catalogue_invalid,) if catalogue_invalid is not None else ()
+        status = self._catalogue_exclusive(root) if exclusive else ()
+        view = _PlatformView(
+            {name: declaration.platforms for name, declaration in by_system.items()},
+            frozenset(),
+            disabled,
+            (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
+            (*findings, *invalid, *status),
+        )
+        return view, version
 
     def _gamelist_selections_at(self, root: str, system: str) -> GamelistSelections:
         gamelist_path = os.path.join(root, "ES-DE", "gamelists", system, "gamelist.xml")
@@ -10624,6 +10968,62 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             version,
         )
 
+    def _platform_view(self) -> tuple[_PlatformView, str | None]:
+        """EmuDeck's platform reading — overlay tags live, derived systems vocabulary-backed.
+
+        Mirrors :meth:`_systems_answer` decision for decision: the readable
+        layers' systems carry their own ``<platform>`` tags; while the bundled
+        layer is sealed, the derived systems (issue #133) join with the
+        snapshot column's tags, named as vocabulary-backed. The sealed file's
+        text cannot be scanned, so no ``disabled`` map exists on this handle —
+        a commented system degrades to *absent*, which is a true statement
+        (nothing readable declares it), never a silently wrong one.
+        """
+        version = self._observed_backend_head()
+        snapshot = self._esde_snapshot()
+        if snapshot.refusal is not None:
+            return _PlatformView({}, frozenset(), {}, (), snapshot.refusal), version
+        declared = {
+            name: declaration.platforms for name, declaration in snapshot.by_system.items()
+        }
+        vocabulary_backed: set[str] = set()
+        sources: tuple[str, ...] = (
+            _CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,
+        )
+        derived_mark: tuple[Caveat, ...] = ()
+        if not snapshot.complete:
+            context = self._derived_context(snapshot)
+            derived = {
+                core.system for core in context.cores if core.system != "_unknown"
+            } | {
+                declaration.system
+                for core in context.cores
+                for declaration in core.firmware
+                if declaration.system != "_unknown"
+            }
+            for system in derived - set(declared):
+                declared[system] = vocabulary_platform_tags(system) or ()
+                vocabulary_backed.add(system)
+            if vocabulary_backed:
+                sources = (*sources, *context.sources)
+                derived_mark = (
+                    Caveat(
+                        CAVEAT_EMULATOR_LIST_DERIVED,
+                        "the readable layers declare only part of the catalogue, so the systems "
+                        "the installed cores' own declarations file under join this list — the "
+                        "sealed bundled layer may declare a different set",
+                        {},
+                    ),
+                )
+        view = _PlatformView(
+            declared,
+            frozenset(vocabulary_backed),
+            {},
+            sources,
+            (*snapshot.findings, *snapshot.tail, *derived_mark),
+        )
+        return view, version
+
     def _catalogue_answer(
         self, system: str, *, content_path: str | None = None
     ) -> tuple[CatalogueAnswer, str | None]:
@@ -11527,6 +11927,47 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             None,
         )
 
+    def _platform_view(self) -> tuple[_PlatformView, str | None]:
+        """A bare RetroArch's platform reading — every tag vocabulary-backed.
+
+        No frontend catalogue exists here, so no system carries a live
+        ``<platform>`` tag and nothing can be a commented block: the declared
+        list is the derived one (:meth:`_systems_answer`, issue #133), its
+        tags the snapshot column's, all of it named vocabulary-backed. The
+        caveats mirror the systems answer's exactly — the derived mark and
+        the enumeration statements ride here the same way.
+        """
+        context, health = self._derived_context()
+        if not context.cores_read:
+            view = _PlatformView(
+                {}, frozenset(), {}, (), (*health.issues, self._catalogue_absence())
+            )
+            return view, None
+        systems = {core.system for core in context.cores if core.system != "_unknown"} | {
+            declaration.system
+            for core in context.cores
+            for declaration in core.firmware
+            if declaration.system != "_unknown"
+        }
+        view = _PlatformView(
+            {system: vocabulary_platform_tags(system) or () for system in systems},
+            frozenset(systems),
+            {},
+            context.sources,
+            (
+                *health.issues,
+                Caveat(
+                    CAVEAT_EMULATOR_LIST_DERIVED,
+                    "this installation ships no emulator catalogue, so the systems listed "
+                    "are those the installed cores' own declarations file under — what a "
+                    "catalogue would have declared is unknown",
+                    {},
+                ),
+                *(c for c in context.caveats if c.code in _ENUMERATION_CAVEAT_CODES),
+            ),
+        )
+        return view, None
+
     def _catalogue_answer(
         self, system: str, *, content_path: str | None = None
     ) -> tuple[CatalogueAnswer, str | None]:
@@ -11717,6 +12158,10 @@ class Installation(Protocol):
     ) -> SoftPatchAnswer | Unresolved: ...
 
     def systems(self) -> SystemsAnswer: ...
+
+    def systems_for_platform(self, vocabulary: str, value: str) -> PlatformSystemsAnswer: ...
+
+    def platform_ids(self, system: str) -> SystemPlatformsAnswer: ...
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer: ...
 

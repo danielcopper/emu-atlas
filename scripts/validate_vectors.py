@@ -50,6 +50,8 @@ INPUT_FIELDS_OPTIONAL = {
     "entry_mod_query",
     "firmware_query",
     "identify_query",
+    "platform_systems_query",
+    "platform_ids_query",
 }
 # The savefile, savestate and texture-pack questions take the same three
 # arguments, because they are one question asked about three families — one
@@ -74,6 +76,14 @@ KNOWN_LAUNCH_VERDICTS = {
 # ROM placement is asked of one system; content plays no part in where a
 # system's ROMs live, so unlike the catalogue query this one takes no path.
 ROM_LOCATION_QUERY_FIELDS = {"installation", "system"}
+# The platform questions (issue #68): forward takes a public vocabulary and a
+# value in it, reverse takes one system. The vocabularies, statuses and tag
+# sources mirror atlas.platforms / atlas.installations — closed sets.
+PLATFORM_SYSTEMS_QUERY_FIELDS = {"installation", "vocabulary", "value"}
+PLATFORM_IDS_QUERY_FIELDS = {"installation", "system"}
+KNOWN_PLATFORM_VOCABULARIES = {"igdb", "libretro", "screenscraper", "thegamesdb"}
+KNOWN_PLATFORM_STATUSES = {"declared", "disabled", "absent"}
+KNOWN_PLATFORM_TAG_SOURCES = {"catalogue", "vocabulary"}
 ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
 # The aggregate asks EVERY detected handle one question, so it names the
 # question instead of a handle. The fan-out is the same for every question it
@@ -335,6 +345,9 @@ KNOWN_CAVEAT_CODES = {
     "entry-format-unclaimed",
     "archive-contents-unread",
     "entry-format-unestablished",
+    "platform-unmapped",
+    "platform-unknown",
+    "platform-scraping-ignored",
     # An installation's health findings are caveats with their own stable
     # codes, and an answer computed on a broken installation carries them
     # directly — so the caveat vocabulary contains the health vocabulary by
@@ -523,6 +536,35 @@ def _validate_launchable_query(name: str, query: Any) -> None:
     _validate_handle_selector(name, "launchable_query", query)
 
 
+def _validate_platform_systems_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict):
+        fail(f"{name}: input.platform_systems_query must be an object")
+    keys = set(query)
+    if not {"vocabulary", "value"} <= keys or not keys <= PLATFORM_SYSTEMS_QUERY_FIELDS:
+        fail(
+            f"{name}: input.platform_systems_query must carry 'vocabulary' and 'value' plus "
+            "optional 'installation'"
+        )
+    if query["vocabulary"] not in KNOWN_PLATFORM_VOCABULARIES:
+        fail(
+            f"{name}: input.platform_systems_query.vocabulary must be one of "
+            f"{sorted(KNOWN_PLATFORM_VOCABULARIES)}"
+        )
+    if not isinstance(query["value"], str) or not query["value"]:
+        fail(f"{name}: input.platform_systems_query.value must be a non-empty string")
+    _validate_handle_selector(name, "platform_systems_query", query)
+
+
+def _validate_platform_ids_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict) or not {"system"} <= set(query) <= PLATFORM_IDS_QUERY_FIELDS:
+        fail(
+            f"{name}: input.platform_ids_query must carry 'system' plus optional 'installation'"
+        )
+    if not isinstance(query["system"], str) or not query["system"]:
+        fail(f"{name}: input.platform_ids_query.system must be a non-empty string")
+    _validate_handle_selector(name, "platform_ids_query", query)
+
+
 def _validate_aggregate_question(name: str, query: dict[str, Any]) -> None:
     """Each question carries what that question is asked by, and nothing else.
 
@@ -700,6 +742,8 @@ _OWN_QUERY_VALIDATORS = {
     "rom_location_query": _validate_rom_location_query,
     "firmware_query": _validate_firmware_query,
     "identify_query": _validate_identify_query,
+    "platform_systems_query": _validate_platform_systems_query,
+    "platform_ids_query": _validate_platform_ids_query,
 }
 
 
@@ -1521,6 +1565,102 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
         fail(f"{name}: expected.catalogue states entries and {unread} without emulator-list-derived")
 
 
+def _validate_platform_systems(name: str, answer: Any) -> None:
+    """A forward platform answer: resolved platforms, matches with status and provenance."""
+    fields = {"vocabulary", "value", "platforms", "matches", "caveats"}
+    if not isinstance(answer, dict) or set(answer) != fields:
+        fail(f"{name}: expected.systems_for_platform must carry exactly {sorted(fields)}")
+    if answer["vocabulary"] not in KNOWN_PLATFORM_VOCABULARIES:
+        fail(
+            f"{name}: expected.systems_for_platform.vocabulary must be one of "
+            f"{sorted(KNOWN_PLATFORM_VOCABULARIES)}"
+        )
+    if not isinstance(answer["value"], str) or not answer["value"]:
+        fail(f"{name}: expected.systems_for_platform.value must be a non-empty string")
+    if not isinstance(answer["platforms"], list) or not all(
+        isinstance(p, str) and p for p in answer["platforms"]
+    ):
+        fail(f"{name}: expected.systems_for_platform.platforms must be a list of non-empty strings")
+    if not isinstance(answer["matches"], list):
+        fail(f"{name}: expected.systems_for_platform.matches must be a list")
+    for match in answer["matches"]:
+        _validate_platform_match(name, match)
+    _validate_caveats(name, answer["caveats"])
+    unmapped = any(c["code"] == "platform-unmapped" for c in answer["caveats"])
+    if bool(answer["platforms"]) == unmapped:
+        fail(
+            f"{name}: expected.systems_for_platform must resolve platforms or state "
+            "platform-unmapped — exactly one of the two"
+        )
+
+
+def _validate_platform_match(name: str, match: Any) -> None:
+    fields = {"system", "status", "platforms", "tags_source"}
+    if not isinstance(match, dict) or set(match) != fields:
+        fail(f"{name}: each systems_for_platform match must carry exactly {sorted(fields)}")
+    if not isinstance(match["system"], str) or not match["system"]:
+        fail(f"{name}: a match's system must be a non-empty string")
+    if match["status"] not in KNOWN_PLATFORM_STATUSES:
+        fail(f"{name}: a match's status must be one of {sorted(KNOWN_PLATFORM_STATUSES)}")
+    if match["tags_source"] not in KNOWN_PLATFORM_TAG_SOURCES:
+        fail(f"{name}: a match's tags_source must be one of {sorted(KNOWN_PLATFORM_TAG_SOURCES)}")
+    if not isinstance(match["platforms"], list) or not all(
+        isinstance(p, str) and p for p in match["platforms"]
+    ):
+        fail(f"{name}: a match's platforms must be a list of non-empty strings")
+
+
+def _validate_platform_ids(name: str, answer: Any) -> None:
+    """A reverse platform answer: the tags, their identities, and the qualifying status."""
+    fields = {"system", "status", "tags_source", "platforms", "identities", "caveats"}
+    if not isinstance(answer, dict) or set(answer) != fields:
+        fail(f"{name}: expected.platform_ids must carry exactly {sorted(fields)}")
+    if not isinstance(answer["system"], str) or not answer["system"]:
+        fail(f"{name}: expected.platform_ids.system must be a non-empty string")
+    if answer["status"] not in KNOWN_PLATFORM_STATUSES:
+        fail(f"{name}: expected.platform_ids.status must be one of {sorted(KNOWN_PLATFORM_STATUSES)}")
+    if answer["tags_source"] not in KNOWN_PLATFORM_TAG_SOURCES:
+        fail(
+            f"{name}: expected.platform_ids.tags_source must be one of "
+            f"{sorted(KNOWN_PLATFORM_TAG_SOURCES)}"
+        )
+    if not isinstance(answer["platforms"], list) or not all(
+        isinstance(p, str) and p for p in answer["platforms"]
+    ):
+        fail(f"{name}: expected.platform_ids.platforms must be a list of non-empty strings")
+    if not isinstance(answer["identities"], list):
+        fail(f"{name}: expected.platform_ids.identities must be a list")
+    for identity in answer["identities"]:
+        _validate_platform_identity(name, identity)
+    _validate_caveats(name, answer["caveats"])
+
+
+def _validate_platform_identity(name: str, identity: Any) -> None:
+    fields = {"platform", "igdb", "libretro", "screenscraper", "thegamesdb"}
+    if not isinstance(identity, dict) or set(identity) != fields:
+        fail(f"{name}: each platform identity must carry exactly {sorted(fields)}")
+    if not isinstance(identity["platform"], str) or not identity["platform"]:
+        fail(f"{name}: an identity's platform must be a non-empty string")
+    if not isinstance(identity["igdb"], list):
+        fail(f"{name}: an identity's igdb must be a list")
+    for entry in identity["igdb"]:
+        if (
+            not isinstance(entry, dict)
+            or set(entry) != {"id", "slug", "name"}
+            or not isinstance(entry["id"], int)
+            or not isinstance(entry["slug"], str)
+            or not isinstance(entry["name"], str)
+        ):
+            fail(f"{name}: each igdb identity must be {{'id': int, 'slug': str, 'name': str}}")
+    if not isinstance(identity["libretro"], list) or not all(
+        isinstance(n, str) and n for n in identity["libretro"]
+    ):
+        fail(f"{name}: an identity's libretro must be a list of non-empty strings")
+    for key in ("screenscraper", "thegamesdb"):
+        if identity[key] is not None and not isinstance(identity[key], int):
+            fail(f"{name}: an identity's {key} must be an integer or null")
+
+
 def _validate_launchable(name: str, answer: Any) -> None:
     """A launchability answer: the verdict, and the couplings only it may state.
 
@@ -1634,6 +1774,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         "entry_mod_location",
         "firmware",
         "identification",
+        "systems_for_platform",
+        "platform_ids",
     }
     if "installations" not in keys or not keys <= allowed:
         fail(f"{name}: expected keys must be 'installations' plus optional {sorted(allowed - {'installations'})}")
@@ -1643,6 +1785,10 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         fail(f"{name}: catalogue_query and catalogue expectation must appear together")
     if ("systems" in keys) != ("systems_query" in inp):
         fail(f"{name}: systems_query and systems expectation must appear together")
+    if ("systems_for_platform" in keys) != ("platform_systems_query" in inp):
+        fail(f"{name}: platform_systems_query and systems_for_platform expectation must appear together")
+    if ("platform_ids" in keys) != ("platform_ids_query" in inp):
+        fail(f"{name}: platform_ids_query and platform_ids expectation must appear together")
     if ("launchable" in keys) != ("launchable_query" in inp):
         fail(f"{name}: launchable_query and launchable expectation must appear together")
     if ("rom_location" in keys) != ("rom_location_query" in inp):
@@ -1695,6 +1841,8 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
             "launchable",
             "firmware",
             "identification",
+            "systems_for_platform",
+            "platform_ids",
         }
     ) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
@@ -1708,6 +1856,10 @@ def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
         _validate_rom_location(name, expected["rom_location"])
     if "systems" in keys:
         _validate_systems(name, expected["systems"])
+    if "systems_for_platform" in keys:
+        _validate_platform_systems(name, expected["systems_for_platform"])
+    if "platform_ids" in keys:
+        _validate_platform_ids(name, expected["platform_ids"])
     if "launchable" in keys:
         _validate_launchable(name, expected["launchable"])
     if "savestate_location" in keys:

@@ -267,14 +267,55 @@ stops — a missing or unreadable file, a ref packed away — states no version 
 The deployed ES-DE's version is part of the verification record's provenance, not of the runtime comparison: on disk it
 only exists in `~/ES-DE/logs/es_log.txt` after a first launch, and a fresh installation has none.
 
-## Validating your own platform map
+## Arriving from a public platform id
 
 Every question about a system — `emulators_for`, `firmware_for_system` — takes an id in **ES-DE's vocabulary**: `gb`,
 `n64`, `dreamcast`. That is what a frontend catalogue on the machine declares, so it is what an answer can be about.
 
-If your library speaks some other vocabulary, the map from it into these ids is **yours**. atlas does not carry one and
-will not: another product's platform identifiers are versioned by that product, they change without telling atlas, and
-they would reach you two releases late. What atlas gives you is the target set, so you can check your map against it:
+If your catalogue speaks a public vocabulary — IGDB, libretro's database names, ScreenScraper or TheGamesDB ids — atlas
+translates it, and qualifies the translation by this installation:
+
+```python
+answer = inst.systems_for_platform("igdb", "dc")     # slug or numeric id, both match
+# answer.platforms == ('dreamcast',)                  ← the crosswalk half: what the id corresponds to
+# answer.matches   == (PlatformSystemMatch(system='dreamcast', status='declared',
+#                                          platforms=('dreamcast',), tags_source='catalogue'),)
+```
+
+The question is answered from its two rightful places. What the id _corresponds to_ is world knowledge — a pinned,
+source-cited crosswalk (`atlas/data/platform_ids_crosswalk.json`), keyed on ES-DE's **platform** vocabulary and, for
+IGDB, on the **numeric id** (IGDB slugs drift: platform 117 renamed `philips-cd-i` → `philips-cdi` under the same
+number). Whether the corresponding systems _are here_ is read off the machine: every catalogue system carries a
+`<platform>` tag connecting it to its platform family (`sfc` → `snes`, `naomi` → `arcade`), so a system the user added
+by hand translates without any table knowing it.
+
+Each match's `status` says what your next step is, and the three never collapse:
+
+- **`declared`** — this installation's catalogue lists it: place content now.
+- **`disabled`** — the catalogue's text carries it only inside an XML comment (RetroDECK ships 31 systems that way):
+  present and deliberately off — the user would have to enable it.
+- **`absent`** — the vocabulary knows the system and this installation does not have it: don't place content here.
+
+`tags_source` says where the tags came from: `catalogue` is a live read; `vocabulary` is the stated build's snapshot
+column (what backs an `absent` system, and a sealed catalogue's derived systems). A value nothing maps to answers no
+platforms plus the `platform-unmapped` caveat — placing content under the raw id would name a folder no catalogue
+declares, which is exactly the quiet failure this question exists to prevent.
+
+The reverse direction reads the system's own tags and translates them out:
+
+```python
+answer = inst.platform_ids("sfc")
+# answer.platforms  == ('snes',)                      ← the tag, read live when declared
+# answer.identities[0].igdb  == (IgdbIdentity(id=19, slug='snes', ...), IgdbIdentity(id=58, slug='sfam', ...))
+# answer.identities[0].libretro == ('Nintendo - Super Nintendo Entertainment System',)
+```
+
+Two caveats state the tags a translation cannot use: `platform-unknown` (a token outside the platform vocabulary — the
+same token ES-DE itself warns about and drops) and `platform-scraping-ignored` (the catalogue's deliberate `ignore`
+opt-out). RomM's own slugs are deliberately not a vocabulary here: RomM publishes each platform's IGDB identifiers
+itself, so a RomM client arrives via `igdb` without atlas learning a server product's private namespace.
+
+**If you keep a private map anyway**, validate it — the target set is still the contract:
 
 ```python
 atlas.from_esde_system("dreamcast")       # 'dreamcast' — a name that IS an id, echoed back
@@ -282,24 +323,8 @@ atlas.from_esde_system("sega-dreamcast")  # None — not an id, whatever it look
 atlas.known_systems()                     # every id, sorted — the whole vocabulary
 ```
 
-**Make that check a test in your own suite**, over every target your map can produce:
-
-```python
-def test_every_platform_maps_to_a_system_atlas_knows():
-    unknown = sorted(t for t in MY_PLATFORM_MAP.values() if atlas.from_esde_system(t) is None)
-    assert unknown == []
-```
-
-That test is worth writing because of one specific failure, and it is quiet. Suppose your map sends a platform to a name
-that _looks_ like the right id but is not the one the frontend declares — an abbreviation where the catalogue spells the
-machine out, or a name from a different frontend's naming scheme. Nothing raises. `emulators_for` answers with **no
-entries**, which the section below tells you to read as "the frontend knows no emulator for this system" — so one wrong
-table entry becomes a claim about the user's machine, and every game of that platform silently syncs nowhere. The check
-above turns that into a red test on the side that can fix it.
-
-The id set is packaged data (`atlas/data/system_ids.json`), cited to the `es_systems.xml` of a pinned build and guarded
-by a test that parses that build's own file. It moves with atlas releases, not with your code — so pin your atlas
-version and re-run your check when you bump it.
+The id set and the crosswalk are packaged data, cited to pinned builds and guarded by tests. They move with atlas
+releases, not with your code — so pin your atlas version and re-run your checks when you bump it.
 
 ## Where does this save live?
 
@@ -669,6 +694,9 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `archive-contents-unread`                   | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread     |
 | `entry-format-unestablished`                | launchable: what the running entry reads was never established — not the same as "refuses"          |
 | `emulator-list-derived`                     | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command |
+| `platform-unmapped`                         | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id |
+| `platform-unknown`                          | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too  |
+| `platform-scraping-ignored`                 | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                   |
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
@@ -1445,9 +1473,9 @@ emu-atlas health
 ```
 
 Every question above has a subcommand under its own name (`savestate-location`, `screenshot-location`,
-`texture-pack-location`, `mod-location`, `soft-patch-candidates`, `systems`, `rom-location`, `firmware-for-system`,
-`firmware-inventory`); `emu-atlas --help` lists them. Two answer forms, both from the sections above: without
-`--installation` every detected installation answers and the output is the labelled list
+`texture-pack-location`, `mod-location`, `soft-patch-candidates`, `systems`, `systems-for-platform`, `platform-ids`,
+`rom-location`, `firmware-for-system`, `firmware-inventory`); `emu-atlas --help` lists them. Two answer forms, both from
+the sections above: without `--installation` every detected installation answers and the output is the labelled list
 (`installation_answers_contract`); with `--installation <kind>` the first handle of that kind answers alone, in the
 question's bare shape. `--home` asks about another home directory.
 

@@ -31,6 +31,8 @@ _VECTOR_DIR = _REPO_ROOT / "vectors" / "machines"
 _QUERY_KEY = {
     "catalogue": "catalogue_query",
     "systems": "systems_query",
+    "systems_for_platform": "platform_systems_query",
+    "platform_ids": "platform_ids_query",
     "launchable": "launchable_query",
     "rom_location": "rom_location_query",
     "aggregate": "aggregate_query",
@@ -98,6 +100,10 @@ def _question_argv(question: str, query) -> list[str]:
         return ["soft-patch-candidates", query["content_path"]] + _flag("--core", query.get("core_so"))
     if question == "systems":
         return ["systems"]
+    if question == "systems_for_platform":
+        return ["systems-for-platform", query["vocabulary"], query["value"]]
+    if question == "platform_ids":
+        return ["platform-ids", query["system"]]
     # "catalogue" is the expected block's name for the question, "emulators_for"
     # the aggregate query's — one spelling answers both.
     if question in ("emulators_for", "catalogue"):

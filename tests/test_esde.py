@@ -7,6 +7,7 @@ from atlas.installations import parse_gamelist
 from atlas.machine import FixtureMachine
 from atlas.esde import (
     EmulatorSpec,
+    commented_out_systems,
     esde_extension,
     expand_home_path,
     merge_layers,
@@ -890,3 +891,50 @@ class TestAnAnchorThatCannotBeResolvedSaysSo:
         codes = [c.code for c in placed(placement).caveats]
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE in codes
         assert atlas.CAVEAT_ROM_PATH_UNDECLARED not in codes
+
+
+class TestThePlatformTagIsReadTheWayEsdeReadsIt:
+    """SystemData.cpp:1074-1092 @ v3.4.1 — lowercased, readList-split, ignore clears."""
+
+    def _platforms(self, tag: str) -> tuple[str, ...]:
+        layer = parse_es_systems(
+            "<systemList><system><name>s</name><path>/r</path>"
+            f"<extension>.x</extension><command label=\"E\">e %ROM%</command>{tag}"
+            "</system></systemList>",
+            provenance="test",
+        )
+        return layer.systems["s"].platforms
+
+    def test_the_list_is_lowercased_and_comma_split(self):
+        # The same readList the extension list uses — comma included.
+        assert self._platforms("<platform>Daphne, ARCADE</platform>") == ("daphne", "arcade")
+
+    def test_an_ignore_token_clears_the_whole_list(self):
+        # Upstream clears everything before it and stops the read: the sole
+        # platform becomes the sentinel, wherever it stood in the list.
+        assert self._platforms("<platform>arcade ignore daphne</platform>") == ("ignore",)
+
+    def test_a_missing_tag_is_an_empty_list(self):
+        assert self._platforms("") == ()
+
+    def test_unknown_tokens_are_kept_for_the_answer_to_judge(self):
+        # ES-DE drops them with a warning; atlas states them (platform-unknown)
+        # — so the parser keeps what the file says and the resolver judges it.
+        assert self._platforms("<platform>selfmade</platform>") == ("selfmade",)
+
+
+class TestACommentedOutSystemIsReadAsAFact:
+    def test_a_wellformed_commented_block_is_reported_with_its_tags(self):
+        text = (
+            "<systemList><system><name>live</name><path>/r</path><extension>.x</extension>"
+            '<command label="E">e %ROM%</command><platform>arcade</platform></system>'
+            "<!-- shipped off:\n<system><name>xbox360</name><path>/r</path>"
+            '<extension>.xex</extension><command label="X">x %ROM%</command>'
+            "<platform>xbox360</platform></system>\n--></systemList>"
+        )
+        assert commented_out_systems(text) == (("xbox360", ("xbox360",)),)
+
+    def test_prose_comments_are_not_systems(self):
+        # A comment is prose until it parses — half a block proves nothing.
+        text = "<!-- <system><name>broken</name> --><!-- just words -->"
+        assert commented_out_systems(text) == ()

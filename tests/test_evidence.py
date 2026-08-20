@@ -305,6 +305,10 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
             c.code for c in handle.soft_patch_candidates("/roms/gb/Game.gb").caveats
         ),
         "systems": tuple(c.code for c in handle.systems().caveats),
+        "systems_for_platform": tuple(
+            c.code for c in handle.systems_for_platform("igdb", "gb").caveats
+        ),
+        "platform_ids": tuple(c.code for c in handle.platform_ids(SYSTEM).caveats),
         "emulators_for": tuple(c.code for c in handle.emulators_for(SYSTEM).caveats),
         "launchable": tuple(c.code for c in handle.launchable(SYSTEM, "/roms/gb/Game.gb").caveats),
         "rom_location": tuple(c.code for c in handle.rom_location(SYSTEM).caveats),
