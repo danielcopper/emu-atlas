@@ -68,7 +68,7 @@ import os
 import re
 from dataclasses import dataclass
 from glob import escape as _glob_escape
-from typing import Any, Literal, Mapping
+from typing import Any, Literal, Mapping, cast
 
 from atlas.core_info import (
     UNREAD_EMPTY,
@@ -94,6 +94,7 @@ from atlas.machine import (
     ReadStatus,
 )
 from atlas.oddities import SaveMode, load_oddities
+from atlas.standalone_firmware import StandaloneFirmwareCard, lookup_standalone_firmware_card
 from atlas.placement import (
     ROOT_SYSTEM_DIRECTORY,
     UNRESOLVED_CORE_NOT_INSTALLED,
@@ -127,6 +128,11 @@ FIRMWARE_CHECKED = ("verified", "mismatch", "unchecked", "unknown")
 CAVEAT_NO_FIRMWARE_DECLARATION = "no-firmware-declaration"
 CAVEAT_NO_FIRMWARE_REQUIREMENT = "no-firmware-requirement"
 CAVEAT_FIRMWARE_DECLARATION_UNKNOWN = "firmware-declaration-unknown"
+# The entry's declaration is atlas's packaged card, not a machine read — the
+# provenance statement every ``packaged`` entry carries, so the distinction
+# between "the emulator declares" and "atlas's card states" is never lost in
+# a requirement list that looks like any other.
+CAVEAT_FIRMWARE_PACKAGED_DECLARATION = "firmware-packaged-declaration"
 CAVEAT_INFO_PATH_UNRESOLVED = "info-path-unresolved"
 CAVEAT_CORE_DIR_UNRESOLVED = "core-dir-unresolved"
 CAVEAT_FIRMWARE_ROOT_MISSING = "firmware-root-missing"
@@ -680,12 +686,16 @@ _NON_SLUG = re.compile(r"[^a-z0-9]+")
 # signal, so it is looked for literally; the spacing around it says nothing.
 _SEVERAL_SYSTEMS_SEPARATOR = "/"
 
-SystemSource = Literal["override", "systemname", "slug", "none"]
+SystemSource = Literal["override", "systemname", "slug", "none", "card"]
 
 SOURCE_OVERRIDE: SystemSource = "override"
 SOURCE_SYSTEMNAME: SystemSource = "systemname"
 SOURCE_SLUG: SystemSource = "slug"
 SOURCE_NONE: SystemSource = "none"
+# The system came from a standalone firmware card's own list — the card
+# declares which catalogue systems it answers for, exactly as the standalone
+# save cards do, so there is no per-file derivation to weigh.
+SOURCE_CARD: SystemSource = "card"
 
 
 def system_decision(file_name: str, systemname: str) -> tuple[str, SystemSource]:
@@ -1081,7 +1091,9 @@ class FirmwareRequirement:
     not ``unknown`` (it could not be established), and neither is a verdict.
     """
 
-    core_so: str
+    # ``None`` exactly for a card-declared requirement: a standalone emulator
+    # has no ``.so``, and inventing one would collide with the real namespace.
+    core_so: str | None
     system: str
     system_source: SystemSource
     need: FirmwareNeed
@@ -1176,7 +1188,7 @@ class RefusedDeclaration:
     reason: str
 
 
-CoreDeclarationState = Literal["read", "unreadable", "absent", "unsupported"]
+CoreDeclarationState = Literal["read", "unreadable", "absent", "unsupported", "packaged"]
 
 DECLARATION_READ: CoreDeclarationState = "read"
 DECLARATION_UNREADABLE: CoreDeclarationState = "unreadable"
@@ -1185,8 +1197,17 @@ DECLARATION_ABSENT: CoreDeclarationState = "absent"
 # atlas has no source for what it wants. Spelled the way the placement route
 # spells the same fact, because it *is* the same fact asked twice.
 DECLARATION_UNSUPPORTED: CoreDeclarationState = "unsupported"
+# The declaration is atlas's packaged card, not a file read off this machine:
+# a standalone emulator ships no ``.info``, so what it expects is established
+# from its source at the shipped release and packaged with citations
+# (:mod:`atlas.standalone_firmware`). Only the declaration is packaged — the
+# destinations are resolved against this arrangement's own trees the way the
+# emulator resolves them, and what sits there is read live, exactly like the
+# ``.info`` route. The entry's caveat states the provenance, so a client
+# never mistakes a card for a machine read.
+DECLARATION_PACKAGED: CoreDeclarationState = "packaged"
 
-CORE_DECLARATION_STATES = ("read", "unreadable", "absent", "unsupported")
+CORE_DECLARATION_STATES = ("read", "unreadable", "absent", "unsupported", "packaged")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1243,10 +1264,15 @@ class CoreFirmware:
             raise ValueError(
                 f"CoreFirmware: declaration must be one of {CORE_DECLARATION_STATES}, got {self.declaration!r}"
             )
-        if self.declaration != DECLARATION_READ and self.requirements:
-            raise ValueError("CoreFirmware: requirements can only come from a declaration that was read")
+        if self.declaration not in (DECLARATION_READ, DECLARATION_PACKAGED) and self.requirements:
+            raise ValueError(
+                "CoreFirmware: requirements can only come from a declaration that was read or packaged"
+            )
         if self.declaration != DECLARATION_READ and not self.caveats:
-            raise ValueError("CoreFirmware: an unread declaration must state why, or its empty list lies")
+            raise ValueError(
+                "CoreFirmware: a declaration that was not read off the machine must state why "
+                "(or, packaged, its provenance) — an unexplained list lies"
+            )
         if self.refused and not self.caveats:
             raise ValueError("CoreFirmware: a refused declaration must state why, or it vanishes")
 
@@ -1384,15 +1410,29 @@ class FirmwareContext:
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
     arrangement_version: str | None = None
+    # The XDG bases this arrangement's standalone emulators resolve their own
+    # trees against — where a packaged firmware card's destinations land. Both
+    # ``None`` on an arrangement that has not established them; a card then
+    # stays unanswered rather than guessed at.
+    standalone_data_home: str | None = None
+    standalone_config_home: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class CatalogueEntry:
-    """One emulator a frontend catalogue declares for a system."""
+    """One emulator a frontend catalogue declares for a system.
+
+    ``standalone_token`` is the emulator identity the launch command states
+    for a standalone entry — the ``%EMULATOR_…%`` token, or on EmuDeck the
+    launcher route's resolved word — set by the handle that read the
+    catalogue, because what a command identifies is arrangement knowledge.
+    ``None`` where the command identifies nothing atlas can act on.
+    """
 
     label: str
     kind: str
     core_so: str | None
+    standalone_token: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -2259,21 +2299,102 @@ def _uncatalogued_word_caveat(system: str) -> Caveat:
     )
 
 
+def _packaged_standalone_core(
+    machine: Machine,
+    context: FirmwareContext,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    system: str,
+    *,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """A carded standalone entry: packaged declaration, live destinations.
+
+    The card names the XDG base and the emulator-relative path the emulator
+    itself probes; the arrangement supplied its standalone bases on the
+    context, so the destination is the join the emulator performs — then
+    resolved through symlinks the way every requirement path is, and what
+    sits there is read live (:func:`_observe`, identity-less: no packaged
+    identity can exist for a user-supplied file, so a present file answers
+    ``unknown`` and stays honestly unverifiable).
+    """
+    requirements: list[FirmwareRequirement] = []
+    answer_caveats: list[Caveat] = []
+    for declared in card.files:
+        base = (
+            context.standalone_data_home
+            if declared.base == "data"
+            else context.standalone_config_home
+        )
+        assert base is not None  # the caller routes here only with the bases established
+        composed = os.path.join(base, declared.subdir, declared.name)
+        path = resolve_links(machine, composed) or composed
+        found, checked, caveat = _observe(machine, path, None, verify=verify)
+        if caveat is not None:
+            answer_caveats.append(caveat)
+        requirements.append(
+            FirmwareRequirement(
+                core_so=None,
+                system=system,
+                system_source=SOURCE_CARD,
+                # The loader validated the card's need against this same
+                # closed pair; the cast bridges the module boundary the
+                # import direction imposes (standalone_firmware cannot
+                # import the Literal from here without a cycle).
+                need=cast(FirmwareNeed, declared.need),
+                file_name=declared.name,
+                path=path,
+                declared=os.path.join(declared.subdir, declared.name),
+                description=declared.purpose,
+                identity=None,
+                found=found,
+                checked=checked,
+            )
+        )
+    provenance = Caveat(
+        CAVEAT_FIRMWARE_PACKAGED_DECLARATION,
+        f"{entry.label}'s expectations are atlas's packaged card, established from the "
+        f"emulator's source at the shipped release, not a declaration read off this machine "
+        f"— {card.provenance}",
+        {"label": entry.label, "token": card.token},
+    )
+    return (
+        CoreFirmware(
+            core_so=None,
+            label=entry.label,
+            declaration=DECLARATION_PACKAGED,
+            requirements=tuple(sorted(requirements, key=lambda r: r.path)),
+            caveats=(provenance,),
+        ),
+        answer_caveats,
+    )
+
+
 def _catalogue_entry_core(
     machine: Machine,
     context: FirmwareContext,
     entry: CatalogueEntry,
     by_stem: Mapping[str, CoreDeclarations],
+    system: str,
     *,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """One catalogue entry resolved, plus the observations it produced.
 
-    Four states, kept apart: a standalone emulator (here, and outside atlas's
-    coverage), a core the catalogue names that is not installed (not here), an
+    Five states, kept apart: a carded standalone emulator (packaged
+    declaration, live destinations), a standalone one outside atlas's
+    coverage, a core the catalogue names that is not installed (not here), an
     installed core whose ``.info`` could not be read, and one that was read.
     """
     if entry.kind != KIND_LIBRETRO or entry.core_so is None:
+        card = lookup_standalone_firmware_card(entry.standalone_token)
+        if (
+            card is not None
+            and system in card.systems
+            and context.standalone_data_home is not None
+            and context.standalone_config_home is not None
+        ):
+            return _packaged_standalone_core(machine, context, entry, card, system, verify=verify)
         return (
             CoreFirmware(
                 core_so=entry.core_so,
@@ -2469,7 +2590,9 @@ def firmware_for_system(
             caveats.append(catalogue.hole)
         by_stem = {core.stem: core for core in context.cores}
         for entry in catalogue.entries:
-            core, observed = _catalogue_entry_core(machine, context, entry, by_stem, verify=verify)
+            core, observed = _catalogue_entry_core(
+                machine, context, entry, by_stem, system, verify=verify
+            )
             resolved.append(core)
             caveats.extend(observed)
 

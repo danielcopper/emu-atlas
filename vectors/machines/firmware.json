@@ -6665,6 +6665,193 @@
           ]
         }
       }
+    },
+    {
+      "name": "retrodeck-cemus-keys-are-a-packaged-expectation",
+      "rationale": "A standalone emulator ships no .info, so what it expects is a packaged card, and the answer says so: declaration 'packaged' with the provenance caveat, never dressed up as a machine read. The destination is the emulator's own probe — Cemu reads its keys at GetUserDataPath('keys.txt') (KeyCache.cpp:63 at 2.6), the flatpak's data home here — resolved through the arrangement's symlink into the BIOS staging path, and what sits there is read live. No packaged identity can exist for a user-supplied key file, so a present file answers 'unknown' and stays honestly unverifiable.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nlibretro_info_path = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.wua .WUA</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% -g %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/bios/cemu/keys.txt": "# title keys\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/Cemu/keys.txt": "/mnt/sd/retrodeck/bios/cemu/keys.txt"
+        },
+        "firmware_query": {
+          "kind": "system",
+          "system": "wiiu"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "Cemu (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "wiiu",
+                  "system_source": "card",
+                  "need": "optional",
+                  "file_name": "keys.txt",
+                  "path": "/mnt/sd/retrodeck/bios/cemu/keys.txt",
+                  "declared": "Cemu/keys.txt",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "Cemu (Standalone)",
+                    "token": "CEMU"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_info_path",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-the-launcher-route-carries-the-keys-expectation",
+      "rationale": "EmuDeck's catalogue names the launcher script, and the launcher route's word — variant-gated, exactly as the save route gates it — carries the same packaged card to the firmware answer. The destination is the AppImage's own probe on the host XDG tree (~/.local/share/Cemu/keys.txt), and here nothing sits at it: EmuDeck's installer parks a found keys.txt in the config directory instead (emuDeckCemu.sh), a path the shipped Linux build's key probe never reads — so the honest answer is a missing file at the door the emulator actually opens.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu/roms</path>\n    <extension>.wua .WUA</extension>\n    <command label=\"Cemu (Native)\">/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -f -g %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/Cemu.AppImage": "",
+          "/home/deck/.config/Cemu/keys.txt": "# parked where the probe never looks\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "wiiu"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "Cemu (Native)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "wiiu",
+                  "system_source": "card",
+                  "need": "optional",
+                  "file_name": "keys.txt",
+                  "path": "/home/deck/.local/share/Cemu/keys.txt",
+                  "declared": "Cemu/keys.txt",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "Cemu (Native)",
+                    "token": "CEMU"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-root-missing",
+              "data": {
+                "path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/system"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "wiiu"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

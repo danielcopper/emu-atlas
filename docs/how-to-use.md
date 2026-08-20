@@ -1185,6 +1185,17 @@ the firmware route as a caveat on a core whose `declaration` is `"unsupported"`.
 is installed, atlas has no source for its rules — which is a different axis from `arrangement-unverified`: that one says
 a reading was never confirmed on a live machine, this one says there was no reading to confirm.
 
+A carded standalone emulator answers instead of refusing: its `declaration` is `"packaged"`, and the entry carries real
+requirements — Cemu's `keys.txt` is the first (the title/disc keys encrypted dumps need; `need` is `optional` because
+decrypted content runs without it). Packaged means exactly what it says: the emulator ships no `.info`, so what it
+expects is atlas's card, established from the emulator's source at the shipped release and stated as such by the
+`firmware-packaged-declaration` caveat on the entry — never dressed up as a machine read. Everything about _this_
+machine stays live: the destination is the emulator's own probe path resolved against this arrangement's trees (through
+symlinks, like every requirement path), `found` is what actually sits there, and `checked` stays `"unknown"` on a
+present file because no packaged identity can exist for a user-supplied key file. Such a requirement carries
+`core_so: null` and `system_source: "card"`, and its `path` may lie outside the firmware root — the emulator's own tree
+is the door that matters.
+
 ## Where do this system's ROMs live? (and what launches them)
 
 The same catalogue declares, per system, the directory its ROMs sit in and the file extensions the frontend will launch.

@@ -823,7 +823,7 @@ FIRMWARE_CORE_CASES = [
          "a core atlas could not read declares nothing", id="core-unread-with-requirements"),
     case(_base_firmware(cores=[_core(declaration="absent", requirements=[], requirements_met=None)],
                         caveats=[{"code": "no-firmware-declaration", "data": {}}]),
-         "must state why, or it reads as", id="core-unread-without-caveat"),
+         "an unexplained list reads as 'needs nothing'", id="core-unread-without-caveat"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(core_so="other.so")])]),
          "a requirement must name the core it is listed under", id="requirement-names-other-core"),
     case(_base_firmware(cores=[_core(requirements_met="no")]),

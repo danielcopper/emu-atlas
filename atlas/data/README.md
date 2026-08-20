@@ -454,10 +454,24 @@ spelling of "no file governs this" — and savedata is one unnamed directory per
 (v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml`, stated as one shared file with the
 `save-inside-image` caveat carrying the inside layout (`UDATA/<title id>`), the EEPROM beside it as a named settings
 group. Cemu (2.6): the MLC resolved the way the emulator resolves it (`--mlc` flag outranks `settings.xml` outranks the
-default), one unnamed subtree per title below `usr/save` — the shipped binary carries that scheme as a whole literal.
-The answers root at `emulator_directory` — no frontend hands a standalone emulator a save directory. EmuDeck's
-standalone entries still refuse: it installs each emulator as its own flatpak, and none of that per-app wiring is read
-yet.
+default), and the per-title unit templated below it — `usr/save/<save_id>`, granularity `per-game-directory`, the fill
+spelled in the caveat (nn_save.cpp:133-145). The answers root at `emulator_directory` — no frontend hands a standalone
+emulator a save directory. On EmuDeck the catalogue names no token — its commands run launcher scripts — so an
+allowlisted launcher (`cemu.sh` today) reaches the same card through the launcher route, variant-gated: only the
+AppImage variant's config tree is established, and the other variants refuse with `standalone-variant-unestablished`.
+
+## `standalone_firmware.json` — what a standalone emulator expects beside its content
+
+Read by `atlas.standalone_firmware`, keyed like the save cards beside it, and consumed by the firmware questions: a
+carded standalone catalogue entry answers `declaration: "packaged"` with real requirements instead of refusing
+`unsupported`. The card states what no machine read can recover — which file the emulator probes and where, established
+from its source at the shipped release — and everything about this machine stays live: the destination is the join the
+emulator performs against the arrangement's own XDG bases, resolved through symlinks, and `found` is what actually sits
+there. A card names the **emulator's probe**, never an installer's staging spot: Cemu (2.6) reads its keys at
+`GetUserDataPath("keys.txt")` (KeyCache.cpp:63) — RetroDECK links `bios/cemu/keys.txt` to exactly that path, while
+EmuDeck's installer parks a found `keys.txt` in the config directory the Linux build's key probe never reads, which is
+precisely why the card records the door and not the intention. No packaged identity exists for a user-supplied key file,
+so a present file stays `checked: "unknown"`.
 
 ## `save_memory.json` — which files RetroArch writes for a core, per system
 

@@ -6546,6 +6546,7 @@ def _retroarch_firmware_context(
     findings: tuple[Caveat, ...],
     arrangement_version: str | None,
     extra_sources: tuple[str, ...] = (),
+    standalone_homes: _XdgHomes | None = None,
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
 
@@ -6673,6 +6674,8 @@ def _retroarch_firmware_context(
         sources=tuple(sources),
         caveats=tuple(caveats),
         arrangement_version=arrangement_version,
+        standalone_data_home=standalone_homes.data if standalone_homes is not None else None,
+        standalone_config_home=standalone_homes.config if standalone_homes is not None else None,
     )
 
 
@@ -6923,6 +6926,16 @@ class _CatalogueHost(Protocol):
         *,
         content_path: str | None = None,
     ) -> ModPlacement | Unresolved: ...
+
+    def standalone_firmware_token(self, command: str) -> str | None:
+        """The emulator identity *command* states, for the firmware seam.
+
+        Arrangement knowledge on purpose: RetroDECK's commands carry the
+        ``%EMULATOR_…%`` token, EmuDeck's run launcher scripts — each handle
+        answers with its own reading, and ``None`` where the command
+        identifies nothing atlas can act on.
+        """
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -7906,7 +7919,16 @@ def _firmware_catalogue_entries(
         content_path=None,
     )
     return tuple(
-        CatalogueEntry(label=entry.label, kind=entry.kind, core_so=entry.core_so)
+        CatalogueEntry(
+            label=entry.label,
+            kind=entry.kind,
+            core_so=entry.core_so,
+            standalone_token=(
+                host.standalone_firmware_token(entry.command)
+                if entry.kind != KIND_LIBRETRO
+                else None
+            ),
+        )
         for entry in entries
     )
 
@@ -8661,6 +8683,15 @@ class _CatalogueQueries:
     """
 
     kind: str
+
+    def standalone_firmware_token(self, command: str) -> str | None:
+        """The emulator identity *command* states, for the firmware seam.
+
+        The ES-DE default: the ``%EMULATOR_…%`` token is the catalogue's own
+        identifier. EmuDeck overrides this with its launcher-route reading —
+        what a command identifies is arrangement knowledge.
+        """
+        return emulator_token(command)
 
     def _catalogue_absence(self) -> Caveat:
         raise NotImplementedError  # pragma: no cover - every handle supplies one
@@ -10017,6 +10048,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             findings=self._health_from(config, marker_issues).issues,
             arrangement_version=_marker_version(config),
             extra_sources=environment_sources,
+            standalone_homes=self._xdg_homes(),
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
@@ -11542,6 +11574,30 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             config=os.path.join(self._home, _XDG_CONFIG_DIRNAME),
         )
 
+    def standalone_firmware_token(self, command: str) -> str | None:
+        """The launcher route's word, variant-gated — EmuDeck's own reading.
+
+        A token only where the launch would really run the binary whose trees
+        the cards describe: an allowlisted launcher, not forced to Proton by
+        ``-w``, whose probe would pick the AppImage. Every other launch
+        answers ``None`` and stays honestly unsupported — the same gating the
+        save route applies, because it is the same question about the same
+        command.
+        """
+        token = emulator_token(command)
+        if token is not None:
+            return token
+        launcher = _emudeck_launcher(command)
+        if launcher is None:
+            return None
+        name, args = launcher
+        token = _EMUDECK_LAUNCHER_CARDS.get(name)
+        if token is None or "-w" in args:
+            return None
+        if self._launcher_binary_variant(name) != _EMUDECK_VARIANT_APPIMAGE:
+            return None
+        return token
+
     def _standalone_sandbox(self) -> _Sandbox:
         """No sandbox: an AppImage's config paths are real host paths."""
         return _Sandbox(self._machine, self._home, None, expansion_home=self._home)
@@ -11808,6 +11864,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             # ``settings.sh`` names no EmuDeck version — the backend
             # checkout's HEAD is the version this machine states about itself.
             arrangement_version=self._observed_backend_head(),
+            standalone_homes=self._standalone_xdg_homes(),
             extra_sources=environment_sources,
         )
 
