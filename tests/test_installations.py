@@ -1807,10 +1807,13 @@ TRIO_ESDE = (
     '<command label="xemu (Standalone)">%EMULATOR_XEMU% %ROM%</command></system>'
     "<system><name>wiiu</name><path>%ROMPATH%/wiiu</path><extension>.wua</extension>"
     '<command label="Cemu (Standalone)">%EMULATOR_CEMU% --mlc /tmp/other %ROM%</command></system>'
+    "<system><name>n3ds</name><path>%ROMPATH%/n3ds</path><extension>.3ds</extension>"
+    '<command label="Azahar (Standalone)">%EMULATOR_AZAHAR% %ROM%</command></system>'
     "</systemList>"
 )
 XEMU_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
 CEMU_XML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml"
+AZAHAR_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/azahar-emu/qt-config.ini"
 
 
 class TestMoreStandaloneSaves:
@@ -1886,6 +1889,66 @@ class TestMoreStandaloneSaves:
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
+    def test_azahar_a_default_marked_directory_is_read_as_the_default(self):
+        # `<key>\default=true` makes the compiled default win over any stored
+        # value (ReadSetting, config.cpp:1442-1450) — a stored path with the
+        # marker set must NOT govern.
+        p = self._answer(
+            "n3ds",
+            files={
+                AZAHAR_INI_PATH: (
+                    "[Data%20Storage]\nuse_custom_storage=true\n"
+                    "use_custom_storage\\default=true\n"
+                    "sdmc_directory=/mnt/elsewhere/sdmc/\nsdmc_directory\\default=false\n"
+                )
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert "/data/azahar-emu/sdmc/" in p.dir
+        assert p.dir.endswith("/title/<save_id>/data/00000001")
+        assert p.needs == ("save_id",)
+
+    def test_azahar_custom_storage_with_an_empty_path_leaves_the_default(self):
+        # UpdateUserPath returns on an empty path — custom switched on with
+        # nothing configured changes nothing.
+        p = self._answer(
+            "n3ds",
+            files={
+                AZAHAR_INI_PATH: (
+                    "[Data%20Storage]\nuse_custom_storage=true\n"
+                    "use_custom_storage\\default=false\n"
+                )
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert "/data/azahar-emu/sdmc/" in p.dir
+
+    def test_azahar_with_the_virtual_sd_off_says_so(self):
+        p = self._answer(
+            "n3ds",
+            files={
+                AZAHAR_INI_PATH: (
+                    "[Data%20Storage]\nuse_virtual_sd=false\nuse_virtual_sd\\default=false\n"
+                )
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        assert "use_virtual_sd" in stated[0].data["reason"]
+
+    def test_azahar_with_an_unreadable_ini_refuses(self):
+        p = self._answer("n3ds", files={AZAHAR_INI_PATH: {"status": "unreadable"}})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_azahar_the_extdata_tree_rides_as_its_own_group(self):
+        p = self._answer("n3ds")
+        assert not isinstance(p, atlas.Unresolved)
+        extdata = [g for g in p.file_set.groups if g.dir.endswith("/extdata")]
+        assert len(extdata) == 1
+        assert extdata[0].files is None
+
 
 class TestEmuDeckStandaloneLaunchers:
     """The launcher route's refusal corners the vector family does not carry."""
@@ -1902,6 +1965,9 @@ class TestEmuDeckStandaloneLaunchers:
         "  </system>\n  <system>\n    <name>n64</name>\n"
         "    <path>%ROMPATH%/n64</path>\n    <extension>.z64</extension>\n"
         '    <command label="Somewhere Else">/usr/bin/some-emulator %ROM%</command>\n'
+        "  </system>\n  <system>\n    <name>n3ds</name>\n"
+        "    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n"
+        '    <command label="Azahar (Standalone)">%EMULATOR_AZAHAR% %ROM%</command>\n'
         "  </system>\n</systemList>\n"
     )
     BASE = {
@@ -1962,6 +2028,38 @@ class TestEmuDeckStandaloneLaunchers:
         p = self._answer("wiiu", files={f"{HOME}/Applications/cemu-2.6.appimage": ""})
         assert not isinstance(p, atlas.Unresolved)
         assert p.dir.endswith("/mlc01/usr/save/<save_id>")
+
+    def test_a_token_entry_goes_through_the_same_variant_gate(self):
+        # EmuDeck overlays also name emulators by %EMULATOR_...% token — the
+        # binary is still picked at run time (ES-DE's find rules), so the
+        # same AppImage-first gate applies.
+        p = self._answer(
+            "n3ds",
+            files={
+                f"{HOME}/Applications/azahar.AppImage": "",
+                f"{HOME}/.config/azahar-emu/qt-config.ini": (
+                    "[Data%20Storage]\nuse_custom_storage=true\n"
+                    "use_custom_storage\\default=false\n"
+                    "sdmc_directory=/home/deck/Emulation/storage/azahar/sdmc/\n"
+                    "sdmc_directory\\default=false\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir.startswith("/home/deck/Emulation/storage/azahar/sdmc/")
+        assert p.dir.endswith("/title/<save_id>/data/00000001")
+
+    def test_a_token_entry_with_only_a_flatpak_refuses_the_variant(self):
+        p = self._answer(
+            "n3ds",
+            dirs=[
+                f"{HOME}/Applications",
+                "/var/lib/flatpak/app/io.github.azahar.Azahar",
+            ],
+        )
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert p.data["variant"] == "flatpak"
 
 
 class TestEmuDeck:
