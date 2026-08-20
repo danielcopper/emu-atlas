@@ -1426,6 +1426,39 @@ catalogue's would restate `entries` plus the refusal codes, an identification's 
 spelling of the same fact, to be kept in step through every future change, and the day the two disagree you would
 believe the summary. Read the field that _is_ the answer.
 
+## The command line
+
+The same answers from any language: `emu-atlas` (installed with the package; `python -m atlas` works without the console
+script) takes one question per invocation and writes its contract JSON to stdout. The output is exactly the
+serialization above — no CLI dialect — and the conformance vectors are run through the CLI too, so a subprocess consumer
+is held to the same bytes a Python caller is.
+
+```bash
+emu-atlas detect
+emu-atlas savefile-location --core mgba_libretro.so --content /roms/gba/Game.gba
+emu-atlas savefile-location --core mgba_libretro.so --installation retrodeck
+emu-atlas emulators-for gba
+emu-atlas launchable dreamcast /roms/dc/Game.chd
+emu-atlas firmware-for-core --core mgba_libretro.so --verify
+emu-atlas identify-firmware --md5 a860e8c0b6d573d191e4ec7db1b1e4f6
+emu-atlas health
+```
+
+Every question above has a subcommand under its own name (`savestate-location`, `screenshot-location`,
+`texture-pack-location`, `mod-location`, `soft-patch-candidates`, `systems`, `rom-location`, `firmware-for-system`,
+`firmware-inventory`); `emu-atlas --help` lists them. Two answer forms, both from the sections above: without
+`--installation` every detected installation answers and the output is the labelled list
+(`installation_answers_contract`); with `--installation <kind>` the first handle of that kind answers alone, in the
+question's bare shape. `--home` asks about another home directory.
+
+The exit code separates answering from asking. `0` is an answer — an `unresolved` payload and an empty list are answers,
+exactly as in the library. `2` is a question that could not be put: a usage error, or an `--installation` kind this
+machine does not have (stderr says so; stdout stays empty). Nothing else rides the exit code, so `emu-atlas ... | jq`
+never parses a half-answer.
+
+The entry routes (asking one catalogue entry directly) stay library-only for now: naming an entry on a command line is a
+design of its own, and the conformance suite names them as deliberately uncovered.
+
 ## Chained flows
 
 The composite questions a sync plugin actually asks, each as a chain of the queries above. The shapes follow

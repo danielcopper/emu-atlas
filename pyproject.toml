@@ -14,6 +14,9 @@ dependencies = []
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov"]
 
+[project.scripts]
+emu-atlas = "atlas.cli:main"
+
 [tool.pytest.ini_options]
 # The repo root on sys.path: tests/test_generate_coverage_matrix.py imports
 # scripts.*, which is not a package and never installed. Without this a bare
