@@ -10727,31 +10727,45 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return {}, True, False, False, _catalogue_invalid_finding(overlay_path, custom.invalid)
         if custom.load_exclusive:
             return dict(custom.systems), True, False, True, None
-        bundled = CatalogueLayer(systems={})
-        complete = False
+        bundled, complete, shadow_broken, bundled_invalid = self._bundled_layer(appdata)
+        if bundled_invalid is not None:
+            return {}, True, False, False, bundled_invalid
+        if shadow_broken:
+            return {}, False, True, False, None
+        return merge_layers(bundled.systems, custom.systems), complete, False, False, None
+
+    def _bundled_layer(self, appdata: str) -> tuple[CatalogueLayer, bool, bool, Caveat | None]:
+        """The bundled layer's one reading → ``(layer, complete, shadow_broken, invalid)``.
+
+        ES-DE's own precedence: the on-disk resource-override shadow outranks
+        the AppImage-embedded file, so the embedded read runs only where no
+        shadow exists at all. Read and parsed — from either source — the
+        layer is the bundled one and ``complete`` is ``True``; a shadow that
+        exists and yields no text is ``shadow_broken``; a layer that parses
+        invalid is the finding; and every unreadable-image outcome is the
+        sealed state the caller already spells: nothing read, nothing broken.
+        """
+        empty = CatalogueLayer(systems={})
         shadow_path = os.path.join(appdata, self._ESDE_SHADOW_SUFFIX)
         shadow = self._machine.read_text(shadow_path)
         if shadow.status != READ_MISSING:
-            if shadow.text is not None:
-                bundled = parse_es_systems(
-                    shadow.text, provenance="es_systems.xml (resource-override shadow)"
-                )
-                if bundled.invalid is not None:
-                    return {}, True, False, False, _catalogue_invalid_finding(shadow_path, bundled.invalid)
-                # Read AND parsed: the shadow is the bundled layer, on disk.
-                complete = True
-            if not complete:
-                return {}, False, True, False, None
-        else:
-            embedded, invalid = self._embedded_bundled_layer()
-            if invalid is not None:
-                return {}, True, False, False, invalid
-            if embedded is not None:
-                # Read AND parsed, straight out of the image: the bundled
-                # layer itself, not a stand-in — nothing is sealed.
-                bundled = embedded
-                complete = True
-        return merge_layers(bundled.systems, custom.systems), complete, False, False, None
+            if shadow.text is None:
+                return empty, False, True, None
+            bundled = parse_es_systems(
+                shadow.text, provenance="es_systems.xml (resource-override shadow)"
+            )
+            if bundled.invalid is not None:
+                return empty, True, False, _catalogue_invalid_finding(shadow_path, bundled.invalid)
+            # Read AND parsed: the shadow is the bundled layer, on disk.
+            return bundled, True, False, None
+        embedded, invalid = self._embedded_bundled_layer()
+        if invalid is not None:
+            return empty, True, False, invalid
+        if embedded is not None:
+            # Read AND parsed, straight out of the image: the bundled layer
+            # itself, not a stand-in — nothing is sealed.
+            return embedded, True, False, None
+        return empty, False, False, None
 
     def _embedded_bundled_layer(self) -> tuple[CatalogueLayer | None, Caveat | None]:
         """The AppImage-embedded bundled layer → ``(layer, invalid finding)``.
