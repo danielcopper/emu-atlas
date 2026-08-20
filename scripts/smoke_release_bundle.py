@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tarfile
@@ -31,6 +32,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ZSTD_FIXTURE = REPO_ROOT / "tests" / "data" / "esde-like.zstd.appimage"
 CATALOGUE_ENTRY = "usr/share/es-de/resources/systems/linux/es_systems.xml"
+
+
+def _confined(path: Path) -> Path:
+    """Canonicalize a CLI-named path and confine it to the invocation directory.
+
+    The tarball this tool smokes lives under the tree it is run from — the CI
+    workspace, or a local working directory. Confining the argument there
+    keeps a faulty invocation (a mistyped flag, an agent-driven call) from
+    reaching anything else on the machine.
+    """
+    resolved = os.path.realpath(path)
+    base = os.path.realpath(os.getcwd())
+    if resolved != base and not resolved.startswith(base + os.sep):
+        raise SystemExit(f"path {path} resolves outside the invocation directory {base}")
+    return Path(resolved)
 
 
 def _run(command: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -109,12 +125,13 @@ def main(argv: list[str]) -> int:
         help="skip the full-test-suite check (launcher, codec and import checks always run)",
     )
     args = parser.parse_args(argv)
-    if not args.tarball.exists():
-        raise SystemExit(f"bundle not found: {args.tarball}")
+    tarball = _confined(args.tarball)
+    if not tarball.exists():
+        raise SystemExit(f"bundle not found: {tarball}")
 
     with tempfile.TemporaryDirectory(prefix="emu-atlas-smoke-") as scratch_dir:
         scratch = Path(scratch_dir)
-        with tarfile.open(args.tarball, "r:gz") as tar:
+        with tarfile.open(tarball, "r:gz") as tar:
             tar.extractall(scratch, filter="tar")
         roots = [path for path in scratch.iterdir() if path.is_dir()]
         if len(roots) != 1:

@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
+import re
 import shutil
 import stat
 import sys
@@ -43,6 +45,10 @@ RUNTIME_URL = (
 
 BUNDLE_PLATFORM = "x86_64-linux"
 
+# A tag names the bundle directory and the tarball — it is a name, never a
+# path, and anything a release tag legitimately contains matches this.
+_TAG_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+
 _LAUNCHER = """\
 #!/bin/sh
 # emu-atlas — answers with the interpreter bundled beside this script; no
@@ -51,6 +57,21 @@ _LAUNCHER = """\
 here="$(dirname "$(readlink -f "$0")")"
 exec "$here/python/bin/python3" -m atlas "$@"
 """
+
+
+def _confined(path: Path) -> Path:
+    """Canonicalize a CLI-named path and confine it to the invocation directory.
+
+    Every path this tool takes lives under the tree it is run from — the CI
+    workspace, or a local working directory. Confining the arguments there
+    keeps a faulty invocation (a mistyped flag, an agent-driven call) from
+    reaching anything else on the machine.
+    """
+    resolved = os.path.realpath(path)
+    base = os.path.realpath(os.getcwd())
+    if resolved != base and not resolved.startswith(base + os.sep):
+        raise SystemExit(f"path {path} resolves outside the invocation directory {base}")
+    return Path(resolved)
 
 
 def _sha256(path: Path) -> str:
@@ -150,9 +171,14 @@ def main(argv: list[str]) -> int:
         help="use this local runtime archive instead of downloading (still checksum-verified)",
     )
     args = parser.parse_args(argv)
-    if not args.wheel.exists():
-        raise SystemExit(f"wheel not found: {args.wheel}")
-    build(args.tag, args.wheel, args.out, args.runtime_archive)
+    if not _TAG_PATTERN.match(args.tag):
+        raise SystemExit(f"tag {args.tag!r} is not a plain release-tag name")
+    wheel = _confined(args.wheel)
+    out_dir = _confined(args.out)
+    runtime = None if args.runtime_archive is None else _confined(args.runtime_archive)
+    if not wheel.exists():
+        raise SystemExit(f"wheel not found: {wheel}")
+    build(args.tag, wheel, out_dir, runtime)
     return 0
 
 
