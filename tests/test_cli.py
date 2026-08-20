@@ -189,8 +189,9 @@ class TestTheExitCodeSeparatesAnsweringFromAsking:
         assert "retrodeck" in captured.err
 
     def test_an_unknown_question_is_a_usage_error(self):
+        machine = FixtureMachine({})
         with pytest.raises(SystemExit) as excinfo:
-            run(["no-such-question"], home="/home/deck", machine=FixtureMachine({}))
+            run(["no-such-question"], home="/home/deck", machine=machine)
         assert excinfo.value.code == 2
 
     def test_the_home_flag_wins_over_the_binding(self, capsys):

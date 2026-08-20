@@ -120,6 +120,11 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
 }
 
 
+# Help texts shared by every subcommand that takes the same input.
+_SYSTEM_ID_HELP = "system id, e.g. gba"
+_VERIFY_HELP = "hash present files against known dumps"
+
+
 def build_parser() -> argparse.ArgumentParser:
     """One subcommand per existing question, the question's own inputs as flags.
 
@@ -182,13 +187,13 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[common, selecting],
         help="which emulators would launch this system",
     )
-    emulators.add_argument("system", help="system id, e.g. gba")
+    emulators.add_argument("system", help=_SYSTEM_ID_HELP)
     emulators.add_argument("--content", help="path of the content file being asked about")
 
     rom = commands.add_parser(
         "rom-location", parents=[common, selecting], help="where this system's ROMs are kept"
     )
-    rom.add_argument("system", help="system id, e.g. gba")
+    rom.add_argument("system", help=_SYSTEM_ID_HELP)
 
     launch = commands.add_parser(
         "launchable",
@@ -204,22 +209,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="what this core wants under the firmware root",
     )
     for_core.add_argument("--core", required=True, help="libretro core .so name")
-    for_core.add_argument("--verify", action="store_true", help="hash present files against known dumps")
+    for_core.add_argument("--verify", action="store_true", help=_VERIFY_HELP)
 
     for_system = commands.add_parser(
         "firmware-for-system",
         parents=[common, selecting],
         help="which cores run this system, and what each wants",
     )
-    for_system.add_argument("--system", required=True, help="system id, e.g. gba")
-    for_system.add_argument("--verify", action="store_true", help="hash present files against known dumps")
+    for_system.add_argument("--system", required=True, help=_SYSTEM_ID_HELP)
+    for_system.add_argument("--verify", action="store_true", help=_VERIFY_HELP)
 
     inventory = commands.add_parser(
         "firmware-inventory",
         parents=[common, selecting],
         help="the whole firmware tree — declared, present, unclaimed",
     )
-    inventory.add_argument("--verify", action="store_true", help="hash present files against known dumps")
+    inventory.add_argument("--verify", action="store_true", help=_VERIFY_HELP)
 
     identify = commands.add_parser(
         "identify-firmware",
