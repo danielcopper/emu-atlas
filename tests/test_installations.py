@@ -560,6 +560,107 @@ class TestADerivedEmulatorList:
         assert atlas.CAVEAT_EMULATOR_LIST_DERIVED not in [c.code for c in answer.caveats]
 
 
+class TestARevokedSaveRootIsStated:
+    """Issue #103: an override can take filesystem access away, and the answer says so.
+
+    Differential on purpose: the caveat fires exactly when visibility flips
+    from the app's own metadata grants to the effective (override-merged)
+    table — a root the metadata never granted is not *revoked*.
+    """
+
+    METADATA = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata"
+    DEPLOY = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files"
+    USER_APP = f"{HOME}/.local/share/flatpak/overrides/net.retrodeck.retrodeck"
+    CORE = f"{DEPLOY}/cores/mgba_libretro.so"
+    ROM = "/run/media/mmcblk0p1/retrodeck/roms/gba/Game.gba"
+    CFG = (
+        'savefile_directory = "/run/media/mmcblk0p1/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n'
+        'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+    )
+
+    def _placement(self, override=None, metadata='[Context]\nfilesystems=host;\n'):
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: self.CFG,
+            self.METADATA: metadata,
+            self.ROM: "",
+        }
+        if override is not None:
+            files[self.USER_APP] = override
+        machine = FixtureMachine(
+            files,
+            cores={self.CORE: {"library_name": "mGBA"}},
+            dirs=["/run/media/mmcblk0p1/retrodeck/saves", self.DEPLOY],
+        )
+        rd = atlas.RetroDeck(HOME, machine)
+        return placed(rd.savefile_location(content_path=self.ROM, core_so="mgba_libretro.so"))
+
+    def _revoked(self, placement):
+        return [c for c in placement.caveats if c.code == atlas.CAVEAT_SAVE_ROOT_REVOKED]
+
+    def test_a_revoking_entry_over_the_save_root_is_stated(self):
+        placement = self._placement(
+            override="[Context]\nfilesystems=!/run/media/mmcblk0p1;\n"
+        )
+        stated = self._revoked(placement)
+        assert [c.data for c in stated] == [
+            {
+                "path": "/run/media/mmcblk0p1/retrodeck/saves",
+                "entry": "!/run/media/mmcblk0p1",
+                "options_file": self.USER_APP,
+            }
+        ]
+        # The answer stands — the config really names this directory.
+        assert placement.dir == "/run/media/mmcblk0p1/retrodeck/saves"
+
+    def test_a_more_specific_grant_restores_the_tree(self):
+        # flatpak's application: the longest covering entry wins
+        # (path_is_mapped, flatpak-exports.c:340-378) — a grant below the
+        # revoked tree brings the save root back.
+        placement = self._placement(
+            override=(
+                "[Context]\nfilesystems=!/run/media/mmcblk0p1;"
+                "/run/media/mmcblk0p1/retrodeck;\n"
+            )
+        )
+        assert self._revoked(placement) == []
+
+    def test_a_dropped_special_grant_is_stated_with_its_entry(self):
+        placement = self._placement(override="[Context]\nfilesystems=!host;\n")
+        stated = self._revoked(placement)
+        assert len(stated) == 1
+        assert stated[0].data["entry"] == "!host"
+
+    def test_a_root_the_metadata_never_granted_is_not_revoked(self):
+        # Visibility did not flip: nothing was taken away, and "the app never
+        # had access" is a statement nobody asked this question for.
+        placement = self._placement(
+            override="[Context]\nfilesystems=!/run/media/mmcblk0p1;\n",
+            metadata="[Context]\nfilesystems=xdg-music;\n",
+        )
+        assert self._revoked(placement) == []
+
+    def test_without_overrides_nothing_fires(self):
+        assert self._revoked(self._placement()) == []
+
+    def test_a_hide_colliding_with_hosts_own_export_is_powerless(self):
+        # 'host' exports /run/media itself (flatpak-context.c:2884-2888), and
+        # two entries on the SAME path collapse with the higher mode winning
+        # (do_export_path, flatpak-exports.c:760-798) — so '!/run/media'
+        # beside a host grant hides nothing, and neither does the answer
+        # claim it would. Verified live before this test pinned it.
+        placement = self._placement(override="[Context]\nfilesystems=!/run/media;\n")
+        assert self._revoked(placement) == []
+
+    def test_host_reset_drops_the_grant_base(self):
+        # '!host-reset' clears everything merged so far and implies '!host'
+        # (flatpak-context.c:1086-1090, :1046-1051); with no rebuilt grant
+        # covering the root, the revocation stands.
+        placement = self._placement(override="[Context]\nfilesystems=!host:reset;\n")
+        assert len(self._revoked(placement)) == 1
+
+
 class TestRetroDeckPaths:
     def test_roots_from_json(self):
         rd = _retrodeck({RETRODECK_JSON: RD_JSON})

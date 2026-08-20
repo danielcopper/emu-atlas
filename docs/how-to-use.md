@@ -647,6 +647,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `save-inside-image`                         | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file    |
 | `save-writes-discarded`                     | nothing keeps a save at all: the writes are discarded — the granularity block names the way out     |
 | `save-root-redirected`                      | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip     |
+| `save-root-revoked`                         | a flatpak override revokes the tree the save root lives under — writes never land here on the host  |
 | `save-root-unresolvable`                    | the save trees anchor at the frontend _process's_ state (its working directory) — `data` names them |
 | `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below        |
 | `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                              |

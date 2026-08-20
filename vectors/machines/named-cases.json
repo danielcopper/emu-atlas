@@ -12316,6 +12316,123 @@
           ]
         }
       }
+    },
+    {
+      "name": "a-revoked-save-root-is-answered-with-the-statement",
+      "rationale": "The app's own metadata grants host access and a user override revokes the tree the configured save root lives under ('!'-prefixed entry). A revoked path is mounted over as an empty tmpfs even under the broader host grant (flatpak-exports.c:1096-1108, the longest covering entry wins per path_is_mapped :340-378 @ 1.16.6), so the directory exists on the host and the emulator cannot touch it: what it writes never lands where this answer points. The answer stands — the config really names this directory — and save-root-revoked carries the entry and the file a user would edit (issue #103).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/mmcblk0p1/retrodeck\", \"saves_path\": \"/run/media/mmcblk0p1/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/run/media/mmcblk0p1/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Context]\nfilesystems=host;\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=!/run/media/mmcblk0p1;\n",
+          "/run/media/mmcblk0p1/retrodeck/roms/gba/Game.gba": ""
+        },
+        "dirs": [
+          "/run/media/mmcblk0p1/retrodeck/saves",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/run/media/mmcblk0p1/retrodeck/roms/gba/Game.gba",
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/run/media/mmcblk0p1/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/run/media/mmcblk0p1/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "save-root-revoked",
+              "data": {
+                "path": "/run/media/mmcblk0p1/retrodeck/saves",
+                "entry": "!/run/media/mmcblk0p1",
+                "options_file": "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-more-specific-grant-restores-the-revoked-tree",
+      "rationale": "The same revocation with a grant below it: flatpak's application lets the longest covering entry win (path_is_mapped, flatpak-exports.c:340-378), so the grant on the retrodeck tree brings the save root back into the sandbox and nothing is revoked — the discriminating direction that keeps the statement honest on machines that carve access deliberately.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/mmcblk0p1/retrodeck\", \"saves_path\": \"/run/media/mmcblk0p1/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/run/media/mmcblk0p1/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Context]\nfilesystems=host;\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=!/run/media/mmcblk0p1;/run/media/mmcblk0p1/retrodeck;\n",
+          "/run/media/mmcblk0p1/retrodeck/roms/gba/Game.gba": ""
+        },
+        "dirs": [
+          "/run/media/mmcblk0p1/retrodeck/saves",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/run/media/mmcblk0p1/retrodeck/roms/gba/Game.gba",
+          "core_so": "mgba_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/run/media/mmcblk0p1/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/run/media/mmcblk0p1/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [],
+          "granularity": null
+        }
+      }
     }
   ]
 }

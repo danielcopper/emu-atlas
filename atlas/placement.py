@@ -321,6 +321,15 @@ CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED = "core-option-value-unestablished"
 # swept generically at all.
 CAVEAT_OPTION_ENTRY_RETIRED = "option-entry-retired"
 CAVEAT_SORTED_DIR_UNCREATABLE = "sorted-dir-uncreatable"
+# The resolved save root exists on the host and the app cannot touch it: a
+# flatpak override file revokes the filesystem access the app's own metadata
+# grants (a '!'-prefixed entry hides the tree as a tmpfs even under a broader
+# grant — flatpak 1.16.6, flatpak-context.c:1096-1108 via the tmpfs branch,
+# flatpak-exports.c:340-378 longest-covering-entry-wins — or a negated special
+# token drops the grant wholesale). The answer stands, because the config
+# really names this directory; the caveat is the statement that writes there
+# will not land where the answer points (issue #103).
+CAVEAT_SAVE_ROOT_REVOKED = "save-root-revoked"
 CAVEAT_DEAD_SYMLINK = "dead-symlink"
 CAVEAT_SYMLINK_LOOP = "symlink-loop"
 CAVEAT_SAVE_DIR_UNLISTABLE = "save-dir-unlistable"

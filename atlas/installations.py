@@ -174,6 +174,7 @@ from atlas.placement import (
     CAVEAT_SAVE_DIR_UNLISTABLE,
     CAVEAT_SAVE_INSIDE_CONTENT,
     CAVEAT_SAVE_INSIDE_IMAGE,
+    CAVEAT_SAVE_ROOT_REVOKED,
     CAVEAT_SAVE_WRITES_DISCARDED,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
@@ -999,6 +1000,13 @@ class _SaveQuery:
     system: str | None = None
     extra_sources: tuple[str, ...] = ()
     extra_caveats: tuple[Caveat, ...] = ()
+    # The flatpak filesystem-revocation check for one resolved host path
+    # (issue #103): None on the arrangements nothing sandboxes, a callable
+    # answering None-or-caveat on the flatpak ones. It rides the query so the
+    # save resolvers apply it to their one final directory — every route
+    # through them, the entry routes included, inherits it without a second
+    # wiring.
+    revocation: "Callable[[str], Caveat | None] | None" = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -3941,7 +3949,33 @@ def _working_directory_placement(
     )
 
 
+def _with_revocation(
+    outcome: "SavefilePlacement | SavestatePlacement | Unresolved", query: _SaveQuery
+) -> "SavefilePlacement | SavestatePlacement | Unresolved":
+    """*outcome* with the query's revocation statement, where one holds for its directory.
+
+    The one place the check runs, so every route through the two save
+    resolvers — the entry routes included — inherits it. A refusal has no
+    directory to check, and a template directory (a ``<cwd>`` root) is not an
+    absolute host path, which the check itself declines.
+    """
+    if query.revocation is None or isinstance(outcome, Unresolved):
+        return outcome
+    caveat = query.revocation(outcome.dir)
+    if caveat is None:
+        return outcome
+    return _dc_replace(outcome, caveats=(*outcome.caveats, caveat))
+
+
 def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> SavefilePlacement | Unresolved:
+    """:func:`_savefile_location_resolved` plus the filesystem-revocation statement (issue #103)."""
+    return cast(
+        "SavefilePlacement | Unresolved",
+        _with_revocation(_savefile_location_resolved(machine, query), query),
+    )
+
+
+def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> SavefilePlacement | Unresolved:
     """Where the savefile lands: the shared chain, then the per-core rule cards.
 
     The cards are what this route has and the savestate one does not — cores
@@ -4202,6 +4236,14 @@ def _core_info_unreadable_caveat(core_so: str, status: ReadStatus) -> Caveat:
 
 
 def _retroarch_savestate_location(machine: Machine, query: _SaveQuery) -> SavestatePlacement | Unresolved:
+    """:func:`_savestate_location_resolved` plus the filesystem-revocation statement (issue #103)."""
+    return cast(
+        "SavestatePlacement | Unresolved",
+        _with_revocation(_savestate_location_resolved(machine, query), query),
+    )
+
+
+def _savestate_location_resolved(machine: Machine, query: _SaveQuery) -> SavestatePlacement | Unresolved:
     """Where the savestate lands: the shared chain, and nothing per-core after it.
 
     The savefile route continues into rule cards here, because a core writes
@@ -7047,7 +7089,11 @@ def _flatpak_override_files(machine: Machine, home: str, app_id: str) -> tuple[s
     speak about — only the always-loaded user files are read then
     (flatpak-dir.c:3053-3083).
     """
-    deploy = _running_deploy(machine, home, app_id)
+    return _flatpak_override_files_for(_running_deploy(machine, home, app_id), home, app_id)
+
+
+def _flatpak_override_files_for(deploy: _Deploy | None, home: str, app_id: str) -> tuple[str, ...]:
+    """:func:`_flatpak_override_files` over an already-resolved deploy — one resolution per query."""
     directories = []
     if deploy is not None and deploy.system:
         directories.append(_FLATPAK_OVERRIDES_SYSTEM)
@@ -7072,9 +7118,18 @@ def _flatpak_environment(
     had the last word travels with each value, so a statement can name
     what a user would edit.
     """
+    files = _flatpak_override_files(machine, home, app_id)
+    return _flatpak_environment_from(
+        tuple((path, machine.read_text(path).text) for path in files)
+    )
+
+
+def _flatpak_environment_from(
+    texts: tuple[tuple[str, str | None], ...],
+) -> dict[str, tuple[str | None, str]]:
+    """:func:`_flatpak_environment` over already-read texts — one read per query."""
     merged: dict[str, tuple[str | None, str]] = {}
-    for path in _flatpak_override_files(machine, home, app_id):
-        text = machine.read_text(path).text
+    for path, text in texts:
         if text is None:
             continue
         for key, value in _environment_overrides(text).items():
@@ -7107,6 +7162,13 @@ def _flatpak_cfg_sandbox(machine: Machine, home: str, app_id: str) -> tuple[_San
     source line is the statement that an override is in force at all.
     """
     environment = _flatpak_environment(machine, home, app_id)
+    return _sandbox_from_environment(machine, home, app_id, environment)
+
+
+def _sandbox_from_environment(
+    machine: Machine, home: str, app_id: str, environment: dict[str, tuple[str | None, str]]
+) -> tuple[_Sandbox, tuple[str, ...]]:
+    """The ``~``-base decision of :func:`_flatpak_cfg_sandbox`, over a merged environment."""
     if "HOME" not in environment:
         return _Sandbox(machine, home, app_id, expansion_home=home), ()
     value, path = environment["HOME"]
@@ -7122,6 +7184,310 @@ def _flatpak_cfg_sandbox(machine: Machine, home: str, app_id: str) -> tuple[_San
             f"against {value!r}"
         )
     return _Sandbox(machine, home, app_id, expansion_home=value or None), (line,)
+
+
+# The filesystem half of the same override files (issue #103). Only what the
+# revocation statement needs is modelled, and the model's edges are explicit:
+# entries resolve to host paths for 'host', 'home', absolute paths, '~/…' and
+# the three fixed XDG bases; every other token (the xdg-user-dirs aliases,
+# host-os, host-etc) covers nothing here — those resolve through the user's
+# user-dirs.dirs or name trees no save root lives under, and a token this
+# model cannot place must neither fire a statement nor suppress one.
+_FS_SPECIAL_TOKENS = frozenset(("home", "host", "host-etc", "host-os", "host-reset"))
+# The '/' entries flatpak refuses to bind into the sandbox root under a 'host'
+# grant (dont_mount_in_root, flatpak-context.c:2765-2786); /run/media is the
+# carve-out exported explicitly beside them (:2884-2888).
+_FS_HOST_UNMOUNTED = frozenset(
+    ("app", "bin", "boot", "dev", "efi", "etc", "lib", "lib32", "lib64",
+     "proc", "root", "run", "sbin", "sys", "tmp", "usr", "var")
+)
+_FS_XDG_BASES = {
+    "xdg-data": os.path.join(".local", "share"),
+    "xdg-config": ".config",
+    "xdg-cache": ".cache",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class _FsEntry:
+    """One effective filesystem entry: hidden or granted, and who last said so."""
+
+    hidden: bool
+    source: str
+    raw: str
+
+
+def _context_filesystems(text: str) -> tuple[str, ...] | None:
+    """The ``[Context]`` group's ``filesystems`` list of one file — ``None`` when absent.
+
+    The same GKeyFile grammar the environment reads use: group names match
+    exactly, the value is a ``;``-separated string list
+    (:func:`_gkeyfile_list`).
+    """
+    group: str | None = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            group = line[1:-1]
+            continue
+        if group != "Context" or "=" not in raw:
+            continue
+        key, _, value = raw.partition("=")
+        if key.strip() == "filesystems":
+            return _gkeyfile_list(value.lstrip(" \t"))
+    return None
+
+
+def _fs_entry_key(entry: str) -> tuple[str, bool]:
+    """One filesystems entry → its table key and whether it is a revocation.
+
+    Flatpak's own parse, reduced to what the visibility question needs: the
+    ``!`` prefix (parse_negated, flatpak-context.c:1720), the ``:ro``/``:rw``/
+    ``:create``/``:reset`` suffix cut (parse_filesystem_flags, :816-935 —
+    a negated entry's mode is NONE whatever the suffix says), backslash
+    escapes in the path part (:826-836), and ``!host:reset`` spelling
+    ``host-reset`` (:906-909). Mode distinctions among the grants are
+    deliberately not kept: ``:ro`` still *shows* the tree, and whether a
+    read-only save root is its own finding is outside this issue's scope.
+    """
+    negated = entry.startswith("!")
+    body = entry[1:] if negated else entry
+    key_chars: list[str] = []
+    i = 0
+    while i < len(body) and body[i] != ":":
+        if body[i] == "\\" and i + 1 < len(body):
+            key_chars.append(body[i + 1])
+            i += 2
+            continue
+        key_chars.append(body[i])
+        i += 1
+    key = "".join(key_chars)
+    suffix = body[i + 1 :] if i < len(body) else ""
+    if key == "host" and suffix == "reset":
+        key = "host-reset"
+    return key, negated
+
+
+def _merge_filesystems(
+    base: tuple[tuple[str, str | None], ...],
+    overrides: tuple[tuple[str, str | None], ...],
+) -> tuple[dict[str, _FsEntry], dict[str, _FsEntry]]:
+    """The (metadata-only, effective) filesystem tables of one app's runs.
+
+    Flatpak's merge, per layer: a layer carrying ``host-reset`` first clears
+    everything merged so far (flatpak-context.c:1086-1090 — the override that
+    says "start over"), then every entry is one hash insert per key
+    (:1092-1096 via flatpak_context_take_filesystem). ``host-reset`` also
+    implies ``!host`` (:1046-1051).
+    """
+    table: dict[str, _FsEntry] = {}
+
+    def apply(path: str, text: str | None) -> None:
+        if text is None:
+            return
+        entries = _context_filesystems(text)
+        if entries is None:
+            return
+        parsed = [(entry, *_fs_entry_key(entry)) for entry in entries]
+        if any(key == "host-reset" for _, key, _n in parsed):
+            table.clear()
+            table["host"] = _FsEntry(hidden=True, source=path, raw="!host-reset")
+        for raw, key, negated in parsed:
+            if key == "host-reset":
+                continue
+            table[key] = _FsEntry(hidden=negated, source=path, raw=raw)
+
+    for path, text in base:
+        apply(path, text)
+    base_table = dict(table)
+    for path, text in overrides:
+        apply(path, text)
+    return base_table, table
+
+
+def _fs_resolve_entry(key: str, home: str) -> str | None:
+    """One table key as the host path its export would cover — ``None`` outside the model.
+
+    ``None`` for the special tokens (they compete through their own branches)
+    and for every token the model does not place (the xdg-user-dirs aliases):
+    those cover nothing and suppress nothing, which the module comment above
+    the vocabulary states as the boundary.
+    """
+    if key in _FS_SPECIAL_TOKENS:
+        return None
+    if key.startswith("/"):
+        return key
+    if key.startswith("~/"):
+        return os.path.join(home, key[2:])
+    token, _, rest = key.partition("/")
+    if token in _FS_XDG_BASES:
+        base = os.path.join(home, _FS_XDG_BASES[token])
+        return os.path.join(base, rest) if rest else base
+    return None
+
+
+def _host_export_prefix(path: str) -> str | None:
+    """The export a ``host`` grant covers *path* through — ``None`` where it binds nothing.
+
+    A ``host`` grant binds every root entry except flatpak's own reserved
+    names, plus ``/run/media`` explicitly (flatpak-context.c:2856-2888).
+    """
+    if path == "/run/media" or path.startswith("/run/media/"):
+        return "/run/media"
+    first = path.split("/", 2)[1] if path.startswith("/") else ""
+    if first and first not in _FS_HOST_UNMOUNTED:
+        return f"/{first}"
+    return None
+
+
+class _FsCompetition:
+    """The export that decides one path's visibility — flatpak's own tie rules.
+
+    The most specific covering export wins (path_is_mapped walks the sorted
+    keys and lets the longest covering prefix overwrite the verdict,
+    flatpak-exports.c:340-378). Two entries resolving to the SAME path
+    collapse into one export with the higher mode winning — a grant beats
+    the tmpfs hide (do_export_path, :760-798; FAKE_MODE_TMPFS is MODE_NONE,
+    :102). Live consequence: ``!/run/media`` beside a ``host`` grant hides
+    nothing, because host exports ``/run/media`` itself.
+    """
+
+    def __init__(self, path: str) -> None:
+        self._path = path
+        self._best = -1
+        self.decider: _FsEntry | None = None
+
+    def offer(self, prefix: str, entry: _FsEntry) -> None:
+        if self._path != prefix and not self._path.startswith(prefix.rstrip("/") + "/"):
+            return
+        grant_wins_tie = (
+            len(prefix) == self._best
+            and self.decider is not None
+            and self.decider.hidden
+            and not entry.hidden
+        )
+        if len(prefix) > self._best or grant_wins_tie:
+            self._best = len(prefix)
+            self.decider = entry
+
+
+def _fs_visible(table: dict[str, _FsEntry], home: str, path: str) -> tuple[bool, _FsEntry | None]:
+    """Whether *path* is visible under *table* — and the entry that decided.
+
+    The application semantics, ported (:class:`_FsCompetition` holds the tie
+    rules): a revoked path entry is exported as a tmpfs and therefore hides
+    even under a broader grant (flatpak_exports_add_path_expose_or_hide,
+    flatpak-exports.c:1096-1108), while a revoked special token simply
+    exports nothing (flatpak_context_export skips a NONE mode,
+    flatpak-context.c:2844-2919).
+    """
+    competition = _FsCompetition(path)
+    host = table.get("host")
+    if host is not None and not host.hidden:
+        prefix = _host_export_prefix(path)
+        if prefix is not None:
+            competition.offer(prefix, host)
+    # A 'home' grant exports $HOME (flatpak-context.c:2903-2919). A negated
+    # one exports nothing — special tokens are never mounted over as tmpfs
+    # (context_export skips them, :2930-2932) — so under a live 'host' grant
+    # $HOME stays reachable through the /home root bind whatever '!home'
+    # says: 'home' is not among the reserved root names.
+    home_entry = table.get("home")
+    if home_entry is not None and not home_entry.hidden:
+        competition.offer(home, home_entry)
+    for key, entry in table.items():
+        resolved = _fs_resolve_entry(key, home)
+        if resolved is not None:
+            competition.offer(resolved.rstrip("/") or "/", entry)
+    decider = competition.decider
+    if decider is None:
+        return False, None
+    return not decider.hidden, decider
+
+
+@dataclass(frozen=True, slots=True)
+class _FlatpakQueryContext:
+    """One query's read of the flatpak seams: the cfg sandbox, and the revocation check.
+
+    ``revocation`` answers for one resolved host path: ``None`` when the app
+    can see it (or when nothing establishes it cannot), the caveat when an
+    override file revokes access the app's own metadata grants. Differential
+    on purpose: a path the metadata never granted is not *revoked* — that is
+    a different statement nobody asked for here — so the check fires exactly
+    when visibility flips from the metadata-only table to the effective one.
+    """
+
+    sandbox: _Sandbox
+    sources: tuple[str, ...]
+    base_table: dict[str, _FsEntry]
+    effective_table: dict[str, _FsEntry]
+    home: str
+
+    def revocation(self, path: str) -> Caveat | None:
+        if not path.startswith("/"):
+            return None
+        visible_before, _ = _fs_visible(self.base_table, self.home, path)
+        visible_after, decider = _fs_visible(self.effective_table, self.home, path)
+        if not visible_before or visible_after:
+            return None
+        if decider is not None and decider.hidden and decider.source:
+            taken = f"{decider.source} revokes it ({decider.raw})"
+            data = {"path": path, "entry": decider.raw, "options_file": decider.source}
+        else:
+            # The grant fell away wholesale (a negated special token): name
+            # the entry that dropped it, which is the last hidden special
+            # token an override stated.
+            dropped = next(
+                (
+                    entry
+                    for key, entry in self.effective_table.items()
+                    if key in _FS_SPECIAL_TOKENS and entry.hidden and entry.source
+                ),
+                None,
+            )
+            if dropped is None:
+                return None
+            taken = f"{dropped.source} drops the grant ({dropped.raw})"
+            data = {"path": path, "entry": dropped.raw, "options_file": dropped.source}
+        return Caveat(
+            CAVEAT_SAVE_ROOT_REVOKED,
+            f"the app cannot touch {path}: its own metadata grants the filesystem access and "
+            f"{taken} — a revoked path is mounted over as an empty tmpfs "
+            "(flatpak-exports.c:1096-1108 @ 1.16.6), so what the emulator writes there never "
+            "lands in this directory on the host",
+            data,
+        )
+
+
+def _flatpak_query_context(machine: Machine, home: str, app_id: str) -> _FlatpakQueryContext:
+    """One read of every flatpak seam a save query consults (issue #101 + #103).
+
+    The deploy is resolved once and serves both consumers: the override-file
+    scope, and the app metadata whose ``[Context] filesystems`` is the grant
+    base the revocation check measures against. Every file is read exactly
+    once — the environment merge and the filesystem merge run over the same
+    texts.
+    """
+    deploy = _running_deploy(machine, home, app_id)
+    files = _flatpak_override_files_for(deploy, home, app_id)
+    texts = tuple((path, machine.read_text(path).text) for path in files)
+    sandbox, sources = _sandbox_from_environment(
+        machine, home, app_id, _flatpak_environment_from(texts)
+    )
+    metadata: tuple[tuple[str, str | None], ...] = ()
+    if deploy is not None:
+        metadata_path = os.path.join(os.path.dirname(deploy.files), "metadata")
+        metadata = ((metadata_path, machine.read_text(metadata_path).text),)
+    base_table, effective_table = _merge_filesystems(metadata, texts)
+    return _FlatpakQueryContext(
+        sandbox=sandbox,
+        sources=sources,
+        base_table=base_table,
+        effective_table=effective_table,
+        home=home,
+    )
 
 
 # The ways a READ catalogue still yields no ROM directory. The first two are
@@ -8950,16 +9316,19 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         override chain and the same core, so one question object serves both.
 
         The sandbox arrives with its ``~`` base composed from the override
-        files (:meth:`_cfg_sandbox`) — the cfg-reading queries' one read of
-        those files — and every resolution in the query goes through that one
-        sandbox, the core path included, so no two parts of one answer can
-        read the same cfg value against different homes.
+        files (:func:`_flatpak_query_context`) — the cfg-reading queries' one
+        read of those files — and every resolution in the query goes through
+        that one sandbox, the core path included, so no two parts of one
+        answer can read the same cfg value against different homes. The same
+        context's filesystem tables ride along as the revocation check the
+        save resolvers apply to their final directory (issue #103).
         """
         health = self._health_from(config, marker_issues)
         global_cfg_path = os.path.join(self._home, RETRODECK_CFG_SUFFIX)
         global_text = self._machine.read_text(global_cfg_path).text
         version = _marker_version(config)
-        sandbox, environment_sources = self._cfg_sandbox()
+        context = _flatpak_query_context(self._machine, self._home, self._APP_ID)
+        sandbox = context.sandbox
         return _SaveQuery(
             sandbox=sandbox,
             global_cfg_path=global_cfg_path,
@@ -8973,12 +9342,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             arrangement="retrodeck",
             arrangement_version=version,
             system=system,
-            extra_sources=environment_sources,
+            extra_sources=context.sources,
             extra_caveats=(
                 *extra_caveats,
                 *health.issues,
                 *arrangement_caveats(self.kind, observed_version=version),
             ),
+            revocation=context.revocation,
         )
 
     def _savefile_location_from(
@@ -10621,7 +10991,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         cfg = self._machine.read_text(global_cfg_path)
         health = self._health_from(settings, marker_issues, cfg.status)
         version = self._observed_backend_head()
-        sandbox, environment_sources = self._cfg_sandbox()
+        context = _flatpak_query_context(self._machine, self._home, self._RA_APP_ID)
+        sandbox = context.sandbox
         return _SaveQuery(
             sandbox=sandbox,
             global_cfg_path=global_cfg_path,
@@ -10635,12 +11006,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             arrangement="emudeck",
             arrangement_version=version,
             system=system,
-            extra_sources=environment_sources,
+            extra_sources=context.sources,
             extra_caveats=(
                 *extra_caveats,
                 *health.issues,
                 *arrangement_caveats(self.kind, observed_version=version),
             ),
+            revocation=context.revocation,
         )
 
     def savefile_location(
@@ -10945,13 +11317,21 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         """The placement question, over one read of this install's cfg.
 
         The sandbox arrives with its ``~`` base composed by
-        :meth:`_cfg_sandbox` — on the Flatpak install that is this query's
-        one read of the app's override files — and every resolution goes
-        through that one sandbox, the core path included.
+        :func:`_flatpak_query_context` on the Flatpak install — that query's
+        one read of the app's override files, whose filesystem tables also
+        ride as the revocation check (issue #103) — and every resolution goes
+        through that one sandbox, the core path included. A native install
+        reads no override files and nothing can revoke its filesystem.
         """
         cfg = self._machine.read_text(self._cfg_path())
         health = self._health_from(cfg.status)
-        sandbox, environment_sources = self._cfg_sandbox()
+        revocation = None
+        if self._app_id is not None:
+            context = _flatpak_query_context(self._machine, self._home, self._app_id)
+            sandbox, environment_sources = context.sandbox, context.sources
+            revocation = context.revocation
+        else:
+            sandbox, environment_sources = self._cfg_sandbox()
         return _SaveQuery(
             sandbox=sandbox,
             global_cfg_path=self._cfg_path(),
@@ -10967,6 +11347,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             arrangement_version=None,
             extra_sources=environment_sources,
             extra_caveats=(*extra_caveats, *health.issues, *arrangement_caveats(self.kind)),
+            revocation=revocation,
         )
 
     def savefile_location(
