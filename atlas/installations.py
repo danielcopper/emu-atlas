@@ -5927,6 +5927,89 @@ def _azahar_setting(
     return stored, True
 
 
+def _azahar_virtual_sd_caveats(
+    values: Mapping[tuple[str, str], str], card: StandaloneSaveCard
+) -> tuple[Caveat, ...]:
+    """The one statement ``use_virtual_sd = false`` earns — no SD, said so."""
+    virtual_sd, _ = _azahar_setting(values, "Data Storage", "use_virtual_sd", "true")
+    if virtual_sd.casefold() == "true":
+        return ()
+    return (
+        Caveat(
+            CAVEAT_CORE_MODE_UNESTABLISHED,
+            "use_virtual_sd is switched off — no SD card is emulated, so whether and where "
+            "a game's save lands is not established; the tree below is where the "
+            "configuration would put it",
+            {"core": card.token, "reason": "use_virtual_sd = false disables the emulated SD"},
+        ),
+    )
+
+
+def _azahar_sdmc_root(
+    values: Mapping[tuple[str, str], str],
+    stated_ini: str | None,
+    *,
+    sandbox: _Sandbox,
+    card: StandaloneSaveCard,
+    ini_path: str,
+) -> tuple[str | None, tuple[OptionReading, ...]] | Unresolved:
+    """The configured SD root and the readings that decided it — or a refusal.
+
+    ``None`` for the root means the compiled default governs: custom storage
+    off, or on with an empty path (UpdateUserPath returns on empty). A
+    configured path only the emulator's sandbox could read refuses the whole
+    question — nothing here could anchor an answer.
+    """
+    section = "Data Storage"
+    custom, custom_configured = _azahar_setting(values, section, "use_custom_storage", "false")
+    readings = [
+        _reading_with_file(
+            OptionReading(
+                "use_custom_storage",
+                custom if custom_configured else None,
+                (
+                    f'qt-config.ini: [Data Storage] use_custom_storage = "{custom}"'
+                    if custom_configured
+                    else "use_custom_storage is unset or marked default — the compiled default "
+                    "false governs (settings.h:485 at 2125.1.1)"
+                ),
+                None,
+            ),
+            stated_ini,
+        )
+    ]
+    if custom.casefold() != "true":
+        return None, tuple(readings)
+    configured_dir, dir_configured = _azahar_setting(values, section, "sdmc_directory", "")
+    readings.append(
+        _reading_with_file(
+            OptionReading(
+                "sdmc_directory",
+                configured_dir if dir_configured else None,
+                (
+                    f'qt-config.ini: [Data Storage] sdmc_directory = "{configured_dir}"'
+                    if dir_configured
+                    else "sdmc_directory names nothing — an empty custom path leaves the "
+                    "default standing (UpdateUserPath returns on empty)"
+                ),
+                None,
+            ),
+            stated_ini,
+        )
+    )
+    if not dir_configured:
+        return None, tuple(readings)
+    resolved = sandbox.host("sdmc_directory", configured_dir)
+    if resolved.path is None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"the SD path Azahar's configuration names could not be located from here "
+            f"({ini_path}) — nothing this answer could anchor at",
+            {"emulator": card.token, "config": ini_path},
+        )
+    return resolved.path, tuple(readings)
+
+
 def _azahar_savefile_placement(
     machine: Machine,
     *,
@@ -5958,66 +6041,13 @@ def _azahar_savefile_placement(
             {"emulator": card.token, "config": ini_path},
         )
     values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
-    section = "Data Storage"
     caveats: list[Caveat] = [*extra_caveats]
-    virtual_sd, _ = _azahar_setting(values, section, "use_virtual_sd", "true")
-    custom, custom_configured = _azahar_setting(values, section, "use_custom_storage", "false")
     stated_ini = ini_path if result.status == READ_OK else None
-    readings = [
-        _reading_with_file(
-            OptionReading(
-                "use_custom_storage",
-                custom if custom_configured else None,
-                (
-                    f'qt-config.ini: [Data Storage] use_custom_storage = "{custom}"'
-                    if custom_configured
-                    else "use_custom_storage is unset or marked default — the compiled default "
-                    "false governs (settings.h:485 at 2125.1.1)"
-                ),
-                None,
-            ),
-            stated_ini,
-        )
-    ]
-    if virtual_sd.casefold() != "true":
-        caveats.append(
-            Caveat(
-                CAVEAT_CORE_MODE_UNESTABLISHED,
-                "use_virtual_sd is switched off — no SD card is emulated, so whether and where "
-                "a game's save lands is not established; the tree below is where the "
-                "configuration would put it",
-                {"core": card.token, "reason": "use_virtual_sd = false disables the emulated SD"},
-            )
-        )
-    sdmc_root: str | None = None
-    if custom.casefold() == "true":
-        configured_dir, dir_configured = _azahar_setting(values, section, "sdmc_directory", "")
-        readings.append(
-            _reading_with_file(
-                OptionReading(
-                    "sdmc_directory",
-                    configured_dir if dir_configured else None,
-                    (
-                        f'qt-config.ini: [Data Storage] sdmc_directory = "{configured_dir}"'
-                        if dir_configured
-                        else "sdmc_directory names nothing — an empty custom path leaves the "
-                        "default standing (UpdateUserPath returns on empty)"
-                    ),
-                    None,
-                ),
-                stated_ini,
-            )
-        )
-        if dir_configured:
-            resolved = sandbox.host("sdmc_directory", configured_dir)
-            if resolved.path is None:
-                return Unresolved(
-                    UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                    f"the SD path Azahar's configuration names could not be located from here "
-                    f"({ini_path}) — nothing this answer could anchor at",
-                    {"emulator": card.token, "config": ini_path},
-                )
-            sdmc_root = resolved.path
+    caveats.extend(_azahar_virtual_sd_caveats(values, card))
+    root = _azahar_sdmc_root(values, stated_ini, sandbox=sandbox, card=card, ini_path=ini_path)
+    if isinstance(root, Unresolved):
+        return root
+    sdmc_root, readings = root
     if sdmc_root is None:
         sdmc_root = os.path.join(homes.base("data"), "azahar-emu", "sdmc")
     container = os.path.join(sdmc_root, _AZAHAR_CONTAINER)
