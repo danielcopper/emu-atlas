@@ -24,10 +24,13 @@ kernel reads it (little endian throughout):
   headers followed by entries naming a child and its inode reference.
 
 The zstd codec arrives in the stdlib with Python 3.14 (PEP 784,
-``compression.zstd``); on older interpreters an image compressed with zstd
-raises :class:`CodecUnavailable`, which the machine seam reports as the
-capability being absent — never as the file being absent. gzip images
-decompress everywhere through ``zlib``.
+``compression.zstd``); the same code is published for older interpreters as
+``backports.zstd``, and the probe accepts either — a host application that
+vendors the backport grants its runtime the capability. That is discovery,
+not a dependency: atlas requires neither. Where no provider exists, an image
+compressed with zstd raises :class:`CodecUnavailable`, which the machine seam
+reports as the capability being absent — never as the file being absent.
+gzip images decompress everywhere through ``zlib``.
 """
 
 from __future__ import annotations
@@ -81,17 +84,30 @@ class EntryNotFound(SquashfsError):
     """The image is fine and carries no entry of that name."""
 
 
+# The PEP 784 zstd API, in probe order: the stdlib home first (Python 3.14),
+# then the published backport of the same code for older interpreters.
+_ZSTD_PROVIDERS = ("compression.zstd", "backports.zstd")
+
+
+def _zstd_module() -> Any:
+    for name in _ZSTD_PROVIDERS:
+        try:
+            return importlib.import_module(name)
+        except ModuleNotFoundError:
+            continue
+    return None
+
+
 def _decompressor(compressor: int) -> Callable[[bytes], bytes]:
     if compressor == _COMPRESSOR_GZIP:
         return zlib.decompress
     if compressor == _COMPRESSOR_ZSTD:
-        try:
-            zstd = importlib.import_module("compression.zstd")
-        except ModuleNotFoundError as error:
+        zstd = _zstd_module()
+        if zstd is None:
             raise CodecUnavailable(
-                "the image is zstd-compressed and this interpreter has no "
-                "compression.zstd (Python >= 3.14)"
-            ) from error
+                "the image is zstd-compressed and this runtime has neither "
+                "compression.zstd (Python >= 3.14) nor backports.zstd"
+            )
         return zstd.decompress
     raise CodecUnavailable(f"unsupported squashfs compressor id {compressor}")
 

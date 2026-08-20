@@ -1090,12 +1090,13 @@ than the answer can list. `exclusive` says the opposite: a document-level `<load
 force — on EmuDeck it replaces `sealed`, because nothing sealed away applies.
 
 `sealed` is also capability-dependent since the AppImage reader landed: atlas opens the AppImage's embedded
-`es_systems.xml` itself (a pure-stdlib squashfs walk, `atlas.squashfs`) wherever the interpreter has the image's codec —
-`compression.zstd` arrives with Python 3.14 — and the catalogue is then complete: nothing sealed, no list derived, and
-an embedded system's `<platform>` tag reads live like any other. On older interpreters, and wherever the image is
-missing, replaced or restructured, the sealed state stays exactly what it always was. The capability is the _runtime's_,
-so the same machine can answer differently under two Pythons — both answers are honest, and the caveat says which one
-you got.
+`es_systems.xml` itself (a pure-stdlib squashfs walk, `atlas.squashfs`) wherever the runtime has the image's codec —
+`compression.zstd` arrives with Python 3.14, and `backports.zstd` (the same code, published for older interpreters) is
+accepted equally, so a host application that vendors the backport grants its 3.11 runtime the capability without atlas
+gaining a dependency — and the catalogue is then complete: nothing sealed, no list derived, and an embedded system's
+`<platform>` tag reads live like any other. On older interpreters, and wherever the image is missing, replaced or
+restructured, the sealed state stays exactly what it always was. The capability is the _runtime's_, so the same machine
+can answer differently under two Pythons — both answers are honest, and the caveat says which one you got.
 
 Read the four codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
 these, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken

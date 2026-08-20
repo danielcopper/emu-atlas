@@ -4,14 +4,17 @@ The fixtures are genuine mksquashfs images behind a minimal ELF prefix
 (``tests/data/make_appimage_fixtures.py``), one per codec: the gzip twin
 proves the walk — directories, fragments, multi-block files, all three
 symlink shapes — on every interpreter, and the zstd twin proves exactly the
-codec gate: readable where ``compression.zstd`` exists, the honest
-``capability-missing`` where it does not. The two carry identical content,
+codec gate: readable where a PEP 784 provider exists (``compression.zstd``,
+or its published backport ``backports.zstd``), the honest
+``capability-missing`` where none does. The two carry identical content,
 so nothing about the walk hides behind the codec.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -33,14 +36,17 @@ ZSTD_IMAGE = str(DATA / "esde-like.zstd.appimage")
 CATALOGUE_ENTRY = "usr/share/es-de/resources/systems/linux/es_systems.xml"
 
 
-def _zstd_available() -> bool:
+def _provider_exists(name: str) -> bool:
+    # find_spec raises where the dotted parent itself is absent (a 3.12
+    # interpreter has no `compression` package at all).
     try:
-        return importlib.util.find_spec("compression.zstd") is not None
+        return importlib.util.find_spec(name) is not None
     except ModuleNotFoundError:
         return False
 
 
-_HAS_ZSTD = _zstd_available()
+_HAS_STDLIB_ZSTD = _provider_exists("compression.zstd")
+_HAS_ZSTD = _HAS_STDLIB_ZSTD or _provider_exists("backports.zstd")
 
 
 class TestTheReaderWalksARealImage:
@@ -96,6 +102,40 @@ class TestTheCodecGate:
             pytest.skip("this interpreter has the codec — the gate cannot fire")
         with pytest.raises(squashfs.CodecUnavailable):
             squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
+
+    def test_with_no_provider_at_all_the_gate_fires_on_any_interpreter(self, monkeypatch):
+        # A None entry in sys.modules makes the import raise ModuleNotFoundError,
+        # so the both-absent state is testable even where the stdlib module exists.
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", None)
+        with pytest.raises(squashfs.CodecUnavailable):
+            squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
+
+    def test_the_backport_serves_where_the_stdlib_module_is_absent(self, monkeypatch):
+        # backports.zstd is the same code under another name — aliasing the real
+        # module to that name is exactly the state a host that vendors it creates.
+        if not _HAS_STDLIB_ZSTD:
+            pytest.skip("proving the fallback needs the real stdlib codec to alias")
+        real = importlib.import_module("compression.zstd")
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", real)
+        assert squashfs.read_appimage_entry(
+            ZSTD_IMAGE, CATALOGUE_ENTRY
+        ) == squashfs.read_appimage_entry(GZIP_IMAGE, CATALOGUE_ENTRY)
+
+    def test_the_stdlib_module_outranks_the_backport(self, monkeypatch):
+        # A poisoned backport proves the probe never reaches it while the
+        # stdlib module answers.
+        if not _HAS_STDLIB_ZSTD:
+            pytest.skip("the stdlib module must exist to outrank anything")
+
+        def poisoned(_data: bytes) -> bytes:
+            raise AssertionError("the probe must prefer compression.zstd")
+
+        monkeypatch.setitem(
+            sys.modules, "backports.zstd", types.SimpleNamespace(decompress=poisoned)
+        )
+        assert b"<systemList>" in squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
 
 
 class TestTheSeamMapsEveryOutcome:
