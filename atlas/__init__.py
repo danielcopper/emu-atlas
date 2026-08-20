@@ -48,7 +48,19 @@ from atlas.every_installation import EveryInstallation, InstallationAnswer, ever
 # ES-DE's system names, and the two ways to check a name against them. A
 # consumer holding some other product's identifiers owns that mapping and
 # validates it here — atlas carries no foreign vocabulary (atlas/systems.py).
-from atlas.systems import from_esde_system, known_systems
+from atlas.systems import from_esde_system, known_systems, vocabulary_platform_tags
+from atlas.platforms import (
+    CAVEAT_PLATFORM_SCRAPING_IGNORED,
+    CAVEAT_PLATFORM_UNKNOWN,
+    CAVEAT_PLATFORM_UNMAPPED,
+    KNOWN_PLATFORM_VOCABULARIES,
+    IgdbIdentity,
+    PlatformIdentities,
+    known_platforms,
+    load_platform_crosswalk,
+    platform_identities,
+    platforms_for,
+)
 
 # --- The handles every question is asked of ----------------------------------
 from atlas.installations import (
@@ -78,8 +90,10 @@ from atlas.contract import (
     installation_answers_contract,
     installation_contract,
     launchable_contract,
+    platform_systems_contract,
     savefile_answer_contract,
     savefile_placement_contract,
+    system_platforms_contract,
     systems_contract,
     unresolved_contract,
 )
@@ -102,6 +116,11 @@ from atlas.installations import (
     CAVEAT_ENTRY_FORMAT_UNCLAIMED,
     CAVEAT_ENTRY_FORMAT_UNESTABLISHED,
     LAUNCH_VERDICTS,
+    PLATFORM_STATUS_ABSENT,
+    PLATFORM_STATUS_DECLARED,
+    PLATFORM_STATUS_DISABLED,
+    PLATFORM_TAGS_CATALOGUE,
+    PLATFORM_TAGS_VOCABULARY,
     VERDICT_ENTRY_NOT_ACCEPTED,
     VERDICT_LAUNCHABLE,
     VERDICT_NEEDS_INSTALLATION,
@@ -111,7 +130,10 @@ from atlas.installations import (
     EmulatorEntry,
     Health,
     LaunchabilityAnswer,
+    PlatformSystemMatch,
+    PlatformSystemsAnswer,
     RomPlacement,
+    SystemPlatformsAnswer,
     SystemsAnswer,
 )
 from atlas.launch_formats import (
@@ -345,6 +367,15 @@ __all__ = [
     # The vocabulary the questions take, and how to check a name against it
     "from_esde_system",
     "known_systems",
+    "vocabulary_platform_tags",
+    # Platform translation — the crosswalk half (atlas.platforms)
+    "KNOWN_PLATFORM_VOCABULARIES",
+    "IgdbIdentity",
+    "PlatformIdentities",
+    "known_platforms",
+    "load_platform_crosswalk",
+    "platform_identities",
+    "platforms_for",
     # The aggregate over detect
     "EveryInstallation",
     "InstallationAnswer",
@@ -372,6 +403,17 @@ __all__ = [
     "Health",
     "CatalogueAnswer",
     "SystemsAnswer",
+    "PlatformSystemsAnswer",
+    "PlatformSystemMatch",
+    "SystemPlatformsAnswer",
+    "PLATFORM_STATUS_DECLARED",
+    "PLATFORM_STATUS_DISABLED",
+    "PLATFORM_STATUS_ABSENT",
+    "PLATFORM_TAGS_CATALOGUE",
+    "PLATFORM_TAGS_VOCABULARY",
+    "CAVEAT_PLATFORM_UNMAPPED",
+    "CAVEAT_PLATFORM_UNKNOWN",
+    "CAVEAT_PLATFORM_SCRAPING_IGNORED",
     "LaunchabilityAnswer",
     "LAUNCH_VERDICTS",
     "VERDICT_LAUNCHABLE",
@@ -418,6 +460,8 @@ __all__ = [
     "rom_placement_contract",
     "emulator_contract",
     "systems_contract",
+    "platform_systems_contract",
+    "system_platforms_contract",
     "launchable_contract",
     "firmware_contract",
     "identification_contract",

@@ -40,9 +40,12 @@ from atlas.installations import (
     Health,
     Installation,
     LaunchabilityAnswer,
+    PlatformSystemsAnswer,
     RomPlacement,
+    SystemPlatformsAnswer,
     SystemsAnswer,
 )
+from atlas.platforms import PlatformIdentities
 from atlas.placement import (
     ModPlacement,
     SavefilePlacement,
@@ -451,6 +454,62 @@ def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
     """The stable form of a systems answer — what the catalogue declares, or why nothing."""
     return {
         "systems": list(answer.systems),
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+    }
+
+
+def platform_systems_contract(answer: PlatformSystemsAnswer) -> dict[str, Any]:
+    """The stable form of a forward platform answer — resolved platforms, matches, statuses.
+
+    ``platforms`` empty means the id resolved to nothing and the
+    ``platform-unmapped`` caveat says so; an empty ``matches`` under resolved
+    platforms is the different statement that nothing on this machine answers
+    to a real platform. Every match carries its status and where its tags came
+    from — the two fields a consumer branches on.
+    """
+    return {
+        "vocabulary": answer.vocabulary,
+        "value": answer.value,
+        "platforms": list(answer.platforms),
+        "matches": [
+            {
+                "system": m.system,
+                "status": m.status,
+                "platforms": list(m.platforms),
+                "tags_source": m.tags_source,
+            }
+            for m in answer.matches
+        ],
+        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+    }
+
+
+def _platform_identities_contract(identities: PlatformIdentities) -> dict[str, Any]:
+    return {
+        "platform": identities.platform,
+        "igdb": [{"id": i.id, "slug": i.slug, "name": i.name} for i in identities.igdb],
+        "libretro": list(identities.libretro),
+        "screenscraper": identities.screenscraper,
+        "thegamesdb": identities.thegamesdb,
+    }
+
+
+def system_platforms_contract(answer: SystemPlatformsAnswer) -> dict[str, Any]:
+    """The stable form of a reverse platform answer — the tags and their identities.
+
+    ``identities`` carries one entry per tag the crosswalk knows; the tags it
+    does not know are stated by the ``platform-unknown`` / ``platform-scraping-ignored``
+    caveats, so tags, identities and caveats always add up. ``status`` and
+    ``tags_source`` qualify the whole answer: whether the system is here, and
+    whether its tags were read off the machine or taken from the vocabulary
+    snapshot.
+    """
+    return {
+        "system": answer.system,
+        "status": answer.status,
+        "tags_source": answer.tags_source,
+        "platforms": list(answer.platforms),
+        "identities": [_platform_identities_contract(i) for i in answer.identities],
         "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
     }
 

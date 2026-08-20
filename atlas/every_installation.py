@@ -51,7 +51,9 @@ from atlas.installations import (
     Health,
     Installation,
     LaunchabilityAnswer,
+    PlatformSystemsAnswer,
     RomPlacement,
+    SystemPlatformsAnswer,
     SystemsAnswer,
 )
 from atlas.machine import Machine
@@ -220,6 +222,23 @@ class EveryInstallation:
     def systems(self) -> tuple[InstallationAnswer[SystemsAnswer], ...]:
         """What each installation's frontend catalogue declares, or why it states nothing."""
         return self._ask(lambda installation: installation.systems())
+
+    def systems_for_platform(
+        self, vocabulary: str, value: str
+    ) -> tuple[InstallationAnswer[PlatformSystemsAnswer], ...]:
+        """Which of each installation's systems answer to a public platform id.
+
+        The fan-out this question was made for: the same IGDB id lands on a
+        declared system here, a disabled one there and nothing at all on the
+        third arrangement — and all three are true, each with its status.
+        """
+        return self._ask(
+            lambda installation: installation.systems_for_platform(vocabulary, value)
+        )
+
+    def platform_ids(self, system: str) -> tuple[InstallationAnswer[SystemPlatformsAnswer], ...]:
+        """Each installation's platform tags and public identities for *system*."""
+        return self._ask(lambda installation: installation.platform_ids(system))
 
     def emulators_for(
         self, system: str, *, content_path: str | None = None

@@ -158,6 +158,25 @@ def esde_extension(path: str) -> str:
     return "."
 
 
+def _platform_tokens(text: str) -> tuple[str, ...]:
+    """The ``<platform>`` list the way ES-DE reads it — tokens, not judgments.
+
+    ``SystemData.cpp:1074-1092`` @ v3.4.1: the text is lowercased
+    (``Utils::String::toLower`` — the tags are ASCII in every shipped
+    catalogue), split by the same ``readList`` the extension list uses, and an
+    ``ignore`` token clears everything before it and stops the read — the
+    system's sole platform becomes ``ignore``. What this deliberately does
+    *not* replicate is ``getPlatformId``'s validity judgment (an unknown token
+    is warned about and dropped upstream): whether a token is in the platform
+    vocabulary is the crosswalk's question, answered where the vocabulary
+    lives — the parser states what the file says.
+    """
+    tokens = _read_list(text.lower())
+    if "ignore" in tokens:
+        return ("ignore",)
+    return tokens
+
+
 @dataclass(frozen=True, slots=True)
 class SystemDeclaration:
     """One ``<system>`` as declared: what launches it, where it lives, what counts.
@@ -169,12 +188,16 @@ class SystemDeclaration:
     ``readList`` splits it (space, tab, CR, LF **and comma** —
     SystemData.cpp:795 @ v3.4.1), each token exactly as declared: ES-DE lists
     both cases separately (``.z64 .Z64``), and normalizing would state a
-    vocabulary the file does not.
+    vocabulary the file does not. ``platforms`` is the ``<platform>`` list the
+    way ES-DE reads it (see :func:`_platform_tokens`) — the tag that connects
+    a system to the platform vocabulary, and through it to the public platform
+    identities.
     """
 
     entries: tuple[EmulatorSpec, ...] = ()
     rom_path: str | None = None
     extensions: tuple[str, ...] = ()
+    platforms: tuple[str, ...] = ()
 
 
 # The two reads ES-DE refuses its whole catalogue load on — the values
@@ -270,8 +293,38 @@ def parse_es_systems(text: str, *, provenance: str) -> CatalogueLayer:
             entries=_launch_entries(system_el, system=name, provenance=provenance),
             rom_path=declared_path or None,
             extensions=_read_list(system_el.findtext("extension") or ""),
+            platforms=_platform_tokens(system_el.findtext("platform") or ""),
         )
     return CatalogueLayer(systems=result, load_exclusive=load_exclusive)
+
+
+def commented_out_systems(text: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """``(name, platforms)`` of every ``<system>`` living only inside an XML comment.
+
+    ES-DE's parser never sees these — pugixml drops comments like every XML
+    reader — so a commented block is **not** a declaration and never reaches
+    :func:`parse_es_systems`. It is still a fact about the file worth stating:
+    RetroDECK ships 31 systems this way (``xbox360``, ``atarijaguarcd``, …),
+    present in the catalogue's text and deliberately off, which is a different
+    answer than "this build never carried it".
+
+    Only well-formed ``<system>`` fragments inside comments count — a comment
+    is prose until it parses. Order is file order; a name appearing both live
+    and commented is reported here too (the caller who knows the declared set
+    decides what that means).
+    """
+    found: list[tuple[str, tuple[str, ...]]] = []
+    for comment in re.findall(r"<!--(.*?)-->", text, re.S):
+        for fragment in re.findall(r"<system>.*?</system>", comment, re.S):
+            try:
+                system_el = ET.fromstring(fragment)
+            except ET.ParseError:
+                continue
+            name = (system_el.findtext("name") or "").strip()
+            if not name:
+                continue
+            found.append((name, _platform_tokens(system_el.findtext("platform") or "")))
+    return tuple(found)
 
 
 def merge_layers(
