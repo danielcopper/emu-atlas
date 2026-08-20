@@ -15,5 +15,9 @@ coverage.xml
 build/
 scripts/logo/out/
 
+# Packaging outputs (wheel/sdist and the release bundle)
+dist/
+dist-bundle/
+
 # Local working state: worktrees and maintainer notes about one particular machine
 .claude/
