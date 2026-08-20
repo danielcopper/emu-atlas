@@ -53,33 +53,38 @@ class TestTheLoaderRefusesATableItCannotPlace:
             load_platform_crosswalk('{"schema": 99}')
 
     def test_an_empty_table_is_rejected(self):
+        document = json.dumps({"schema": 1, "platforms": {}})
         with pytest.raises(ValueError, match="non-empty"):
-            load_platform_crosswalk(json.dumps({"schema": 1, "platforms": {}}))
+            load_platform_crosswalk(document)
 
     def test_a_row_with_stray_keys_is_rejected(self):
+        document = _document(gba=_row(extra=1))
         with pytest.raises(ValueError, match="exactly"):
-            load_platform_crosswalk(_document(gba=_row(extra=1)))
+            load_platform_crosswalk(document)
 
     def test_an_igdb_identity_without_a_numeric_id_is_rejected(self):
         # The numeric id is the stable key — a string there would let a
         # drifted slug pose as one.
-        row = _row(igdb=[{"id": "24", "slug": "gba", "name": "Game Boy Advance"}])
+        document = _document(gba=_row(igdb=[{"id": "24", "slug": "gba", "name": "Game Boy Advance"}]))
         with pytest.raises(ValueError, match="integer"):
-            load_platform_crosswalk(_document(gba=row))
+            load_platform_crosswalk(document)
 
     def test_a_repeated_igdb_id_is_rejected(self):
-        row = _row(
-            igdb=[
-                {"id": 24, "slug": "gba", "name": "Game Boy Advance"},
-                {"id": 24, "slug": "gba-again", "name": "Game Boy Advance"},
-            ]
+        document = _document(
+            gba=_row(
+                igdb=[
+                    {"id": 24, "slug": "gba", "name": "Game Boy Advance"},
+                    {"id": 24, "slug": "gba-again", "name": "Game Boy Advance"},
+                ]
+            )
         )
         with pytest.raises(ValueError, match="repeats"):
-            load_platform_crosswalk(_document(gba=row))
+            load_platform_crosswalk(document)
 
     def test_a_scraper_id_that_is_not_an_integer_is_rejected(self):
+        document = _document(gba=_row(screenscraper="12"))
         with pytest.raises(ValueError, match="integer or null"):
-            load_platform_crosswalk(_document(gba=_row(screenscraper="12")))
+            load_platform_crosswalk(document)
 
     def test_a_wellformed_table_loads(self):
         table = load_platform_crosswalk(_document())
@@ -124,7 +129,8 @@ class TestTheLookupsSpeakTheDocumentedRules:
     def test_an_unknown_tag_is_none_and_an_empty_row_is_not(self):
         assert platform_identities("selfmade") is None
         engines = platform_identities("mugen")
-        assert engines is not None and engines.igdb == ()
+        assert engines is not None
+        assert engines.igdb == ()
 
     def test_the_vocabularies_are_the_documented_four(self):
         assert KNOWN_PLATFORM_VOCABULARIES == ("igdb", "libretro", "screenscraper", "thegamesdb")

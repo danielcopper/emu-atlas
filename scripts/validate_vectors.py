@@ -1635,6 +1635,17 @@ def _validate_platform_ids(name: str, answer: Any) -> None:
     _validate_caveats(name, answer["caveats"])
 
 
+def _validate_igdb_identity(name: str, entry: Any) -> None:
+    if (
+        not isinstance(entry, dict)
+        or set(entry) != {"id", "slug", "name"}
+        or not isinstance(entry["id"], int)
+        or not isinstance(entry["slug"], str)
+        or not isinstance(entry["name"], str)
+    ):
+        fail(f"{name}: each igdb identity must be {{'id': int, 'slug': str, 'name': str}}")
+
+
 def _validate_platform_identity(name: str, identity: Any) -> None:
     fields = {"platform", "igdb", "libretro", "screenscraper", "thegamesdb"}
     if not isinstance(identity, dict) or set(identity) != fields:
@@ -1644,14 +1655,7 @@ def _validate_platform_identity(name: str, identity: Any) -> None:
     if not isinstance(identity["igdb"], list):
         fail(f"{name}: an identity's igdb must be a list")
     for entry in identity["igdb"]:
-        if (
-            not isinstance(entry, dict)
-            or set(entry) != {"id", "slug", "name"}
-            or not isinstance(entry["id"], int)
-            or not isinstance(entry["slug"], str)
-            or not isinstance(entry["name"], str)
-        ):
-            fail(f"{name}: each igdb identity must be {{'id': int, 'slug': str, 'name': str}}")
+        _validate_igdb_identity(name, entry)
     if not isinstance(identity["libretro"], list) or not all(
         isinstance(n, str) and n for n in identity["libretro"]
     ):

@@ -208,7 +208,13 @@ def _platform_names(cpp: str) -> tuple[list[str], dict[str, str]]:
     """``platformNames`` in order, and each name's source comment."""
     body = _must(r"platformNames \{(.*?)\};", cpp, "platformNames", re.S)
     names = re.findall(r'"([^"]*)"', body)
-    comments = dict(re.findall(r'"([^"]+)",\s*//\s*(.+?)\s*$', body, re.M))
+    comments: dict[str, str] = {}
+    # Line-wise rather than one multiline pattern: the anchored lazy match
+    # backtracks super-linearly, a per-line match cannot.
+    for line in body.splitlines():
+        annotated = re.match(r'\s*"([^"]+)",\s*//\s*(.*\S)', line)
+        if annotated:
+            comments[annotated.group(1)] = annotated.group(2)
     return names, comments
 
 
@@ -226,8 +232,10 @@ def _ups_values(base_handler: str) -> dict[str, str]:
         "UniversalPlatformSlug",
         re.S,
     )
-    # A long member wraps its value into parentheses on the next line.
-    return dict(re.findall(r'([A-Z_][A-Z0-9_]*)\s*=\s*\(?\s*"([^"]+)"', body, re.S))
+    # A long member wraps its value into parentheses on the next line; one
+    # character class for the run between '=' and the quote keeps the match
+    # linear where two adjacent \s* quantifiers would backtrack.
+    return dict(re.findall(r'([A-Z_][A-Z0-9_]*)\s*=[\s(]*"([^"]+)"', body))
 
 
 def _igdb_records(igdb_py: str, ups: dict[str, str]) -> dict[str, dict[str, Any]]:
@@ -256,6 +264,31 @@ def _libretro_names(libretro_py: str, ups: dict[str, str]) -> dict[str, str]:
     return {ups[member]: value for member, value in re.findall(r'UPS\.([A-Z0-9_]+):\s*"([^"]+)"', body)}
 
 
+def _platform_row(
+    name: str,
+    comments: dict[str, str],
+    igdb: dict[str, dict[str, Any]],
+    libretro: dict[str, str],
+) -> dict[str, Any]:
+    """One platform's identity columns off the hand join — refusing what it cannot place."""
+    join = HAND_JOIN.get(name, [name])
+    for key in join:
+        if key not in igdb and key not in libretro:
+            raise SystemExit(f"join key {key!r} for platform {name!r} matches no pinned record")
+    if name not in HAND_JOIN and name not in igdb and name not in libretro:
+        raise SystemExit(f"platform {name!r} is neither hand-joined nor same-named in a pinned table")
+    libretro_names: list[str] = []
+    for key in join:
+        value = libretro.get(key)
+        if key not in LIBRETRO_EXCLUDES and value is not None and value not in libretro_names:
+            libretro_names.append(value)
+    return {
+        "comment": comments.get(name, ""),
+        "igdb": [igdb[key] for key in join if key in igdb],
+        "libretro": libretro_names,
+    }
+
+
 def main() -> int:
     texts = {key: _fetch(url) for key, url in SOURCES.items()}
 
@@ -282,21 +315,8 @@ def main() -> int:
     for name in names:
         if name in SENTINELS:
             continue
-        join = HAND_JOIN.get(name, [name])
-        for key in join:
-            if key not in igdb and key not in libretro:
-                raise SystemExit(f"join key {key!r} for platform {name!r} matches no pinned record")
-        if name not in HAND_JOIN and name not in igdb and name not in libretro:
-            raise SystemExit(f"platform {name!r} is neither hand-joined nor same-named in a pinned table")
-        libretro_names = []
-        for key in join:
-            value = libretro.get(key)
-            if key not in LIBRETRO_EXCLUDES and value is not None and value not in libretro_names:
-                libretro_names.append(value)
         platforms[name] = {
-            "comment": comments.get(name, ""),
-            "igdb": [igdb[key] for key in join if key in igdb],
-            "libretro": libretro_names,
+            **_platform_row(name, comments, igdb, libretro),
             "screenscraper": screenscraper.get(name),
             "thegamesdb": thegamesdb.get(name),
         }
