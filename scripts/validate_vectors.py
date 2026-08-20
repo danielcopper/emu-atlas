@@ -191,8 +191,8 @@ FIRMWARE_REQUIREMENT_FIELDS = {
     "checked",
     "satisfied",
 }
-KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent", "unsupported"}
-KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none"}
+KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent", "unsupported", "packaged"}
+KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none", "card"}
 UNCLAIMED_FIELDS = {"path", "identity", "known_as"}
 IDENTIFICATION_FIELDS = {"identity", "known_as", "requirements", "caveats"}
 IDENTITY_FIELDS = {"md5", "sha1", "size"}
@@ -300,6 +300,7 @@ KNOWN_CAVEAT_CODES = {
     "no-firmware-declaration",
     "no-firmware-requirement",
     "firmware-declaration-unknown",
+    "firmware-packaged-declaration",
     "info-path-unresolved",
     "core-dir-unresolved",
     "firmware-root-missing",
@@ -1243,9 +1244,16 @@ def _validate_identity(name: str, identity: Any, what: str) -> None:
 
 def _validate_requirement_fields(name: str, entry: Any) -> None:
     _require_exact(name, entry, FIRMWARE_REQUIREMENT_FIELDS, "each firmware requirement")
-    for key in ("core_so", "system", "file_name", "path", "declared"):
+    for key in ("system", "file_name", "path", "declared"):
         if not isinstance(entry[key], str) or not entry[key]:
             fail(f"{name}: firmware requirement {key} must be a non-empty string")
+    # core_so is null exactly for a card-declared requirement: a standalone
+    # emulator has no .so, and inventing one would collide with the real
+    # namespace.
+    if entry["core_so"] is not None and (not isinstance(entry["core_so"], str) or not entry["core_so"]):
+        fail(f"{name}: firmware requirement core_so must be null or a non-empty string")
+    if (entry["core_so"] is None) != (entry["system_source"] == "card"):
+        fail(f"{name}: a requirement without a core is exactly a card-declared one")
     if entry["need"] not in KNOWN_FIRMWARE_NEEDS:
         fail(f"{name}: firmware requirement need must be one of {sorted(KNOWN_FIRMWARE_NEEDS)}")
     if entry["system_source"] not in KNOWN_SYSTEM_SOURCES:
@@ -1258,7 +1266,15 @@ def _validate_requirement_path(name: str, entry: Any, root: str) -> None:
     # The root itself is a legal destination: LRPS2 declares the FOLDER
     # "pcsx2/bios", and RetroDECK links it back to the firmware root, so that
     # declaration resolves to the root exactly.
-    if entry["path"] != root and not entry["path"].startswith(f"{root}/"):
+    #
+    # A card-declared requirement is the exception to containment: its
+    # destination is the standalone emulator's own tree (Cemu probes its keys
+    # below its user data path), which no firmware root contains.
+    if (
+        entry["system_source"] != "card"
+        and entry["path"] != root
+        and not entry["path"].startswith(f"{root}/")
+    ):
         fail(f"{name}: a requirement's path must be the absolute destination under the root {root!r}")
     if os.path.normpath(entry["path"]) != entry["path"]:
         fail(f"{name}: a requirement's path must be normalized — no '..' segment may survive into an answer")
@@ -1356,14 +1372,13 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
     requirements = core["requirements"]
     if not isinstance(requirements, list):
         fail(f"{name}: firmware core requirements must be a list")
-    if core["declaration"] != "read":
-        if requirements:
-            fail(f"{name}: a core atlas could not read declares nothing — its requirements must be empty")
-        if not core["caveats"]:
-            fail(
-                f"{name}: an empty requirement list from an unread core must state why, or it reads as "
-                "'needs nothing'"
-            )
+    if core["declaration"] not in ("read", "packaged") and requirements:
+        fail(f"{name}: a core atlas could not read declares nothing — its requirements must be empty")
+    if core["declaration"] != "read" and not core["caveats"]:
+        fail(
+            f"{name}: a declaration that was not read off the machine must state why (or, "
+            "packaged, its provenance) — an unexplained list reads as 'needs nothing'"
+        )
     for entry in requirements:
         if entry["core_so"] != core["core_so"]:
             fail(f"{name}: a requirement must name the core it is listed under")
@@ -1446,8 +1461,13 @@ def _validate_unclaimed(name: str, entry: Any, *, root: str, hash_checked: bool)
 
 
 def _validate_firmware_coverage(name: str, firmware: Any, cores: Any) -> None:
-    """An answer that established nothing must say so, and never overclaim."""
-    if not any(core["declaration"] == "read" for core in cores) and not any(
+    """An answer that established nothing must say so, and never overclaim.
+
+    A packaged declaration counts as an establishment: the card is the
+    source, its provenance caveat rides the entry, and the destinations were
+    read live — the answer is not empty-for-lack-of-looking.
+    """
+    if not any(core["declaration"] in ("read", "packaged") for core in cores) and not any(
         c["code"] in NOTHING_READ_CODES for c in firmware["caveats"]
     ):
         fail(

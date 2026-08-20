@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "spec": "Standalone firmware cards: what a standalone emulator expects beside its content, for the firmware questions. World knowledge under DESIGN.md's boundary rule — a standalone emulator ships no .info to read, so which file it probes and where is established from its source at the shipped release and packaged here with citations, while everything about THIS machine (whether the file is there, what kind of path sits at the destination) is read live. Each file names the XDG base and the emulator-relative path the emulator itself probes — never the staging spot an arrangement's installer uses, because the emulator's probe is the only door that matters at run time. 'need' speaks the firmware model's own vocabulary (required | optional): optional states that the emulator runs without the file and the caveat prose says what stops working. Cards are keyed by the %EMULATOR_…% token, like the standalone save cards beside them.",
+  "emulators": {
+    "CEMU": {
+      "systems": ["wiiu"],
+      "files": [
+        {
+          "name": "keys.txt",
+          "base": "data",
+          "subdir": "Cemu",
+          "need": "optional",
+          "purpose": "user-supplied title and disc keys — encrypted dumps do not decrypt without their key; decrypted content runs without the file, and Cemu creates an empty commented one where none exists",
+          "citation": "KeyCache.cpp:63 at Cemu 2.6 — the one probe is ActiveSettings::GetUserDataPath(\"keys.txt\"); :70-80 creates it with comments when absent"
+        }
+      ],
+      "provenance": {
+        "source": "Cemu 2.6. The keys file lives below the user data path (KeyCache.cpp:63), which is the XDG data home's Cemu directory on a non-portable Linux build (CemuApp.cpp DeterminePaths, Linux branch: XDG_DATA_HOME else ~/.local/share, plus /Cemu; a 'portable' directory next to the executable — for an AppImage, next to the AppImage file — outranks it). RetroDECK stages the file at bios/cemu/keys.txt and links it to exactly that probe path when present (component_prepare.sh). EmuDeck's installer moves a found keys.txt into the config directory instead (emuDeckCemu.sh, CemuNative[configDir]) — a path the shipped Linux build's key probe never reads, which is precisely why the card states the emulator's door and not the installer's."
+      }
+    }
+  }
+}
