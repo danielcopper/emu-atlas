@@ -534,7 +534,7 @@
     },
     {
       "name": "cemus-mlc-holds-one-save-subtree-per-title",
-      "rationale": "The Wii U's internal storage (MLC) holds every save, and settings.xml says where it lives — the arrangement points it at the firmware tree and reroutes usr/save into the saves root with a symlink the answer walks. One subtree per title id below usr/save, the id the game's own: the shipped binary carries the scheme as the whole literal 'usr/save/{:08X}/{:08X}/user/', so the tree is stated and its entries refused.",
+      "rationale": "The Wii U's internal storage (MLC) holds every save, and settings.xml says where it lives — the arrangement points it at the firmware tree and reroutes usr/save into the saves root with a symlink the answer walks. The answer keys the per-title unit: usr/save/<save_id>, the id the game's own title id filled as two lowercase 8-hex segments (nn_save.cpp:133-145 at 2.6), granularity one directory per game — the unit a per-game sync client moves whole (rommapp/romm#3866).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -567,20 +567,22 @@
           }
         ],
         "entry_savefile_location": {
-          "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save",
+          "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save/<save_id>",
           "root_kind": "emulator_directory",
-          "needs": [],
+          "needs": [
+            "save_id"
+          ],
           "fallback_dir": null,
-          "physical_dir": "/mnt/sd/retrodeck/saves/wiiu/cemu",
+          "physical_dir": "/mnt/sd/retrodeck/saves/wiiu/cemu/<save_id>",
           "file_set": {
             "state": "declared",
             "files": [],
             "complete": false,
             "groups": [
               {
-                "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save",
+                "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save/<save_id>",
                 "files": null,
-                "granularity": "per-game-files",
+                "granularity": "per-game-directory",
                 "role": "battery"
               }
             ]
@@ -590,14 +592,15 @@
               "code": "file-names-unestablished",
               "data": {
                 "core": "CEMU",
-                "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save",
+                "dir": "/mnt/sd/retrodeck/bios/cemu/usr/save/<save_id>",
                 "role": "battery",
-                "citation": "the shipped binary composes 'usr/save/{:08X}/{:08X}/user/' (whole literal in Cemu 2.6)"
+                "save_id": "the Wii U title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "citation": "nn_save.cpp:133-145 at Cemu 2.6 — '/vol/storage_mlc01/usr/save/%08x/%08x/user/%08x/' and 'user/common/'"
               }
             }
           ],
           "granularity": {
-            "value": "per-game-files",
+            "value": "per-game-directory",
             "mode": "mlc",
             "readings": [
               {
@@ -607,6 +610,180 @@
               }
             ],
             "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-the-cemu-launcher-leads-to-the-appimages-config",
+      "rationale": "EmuDeck's catalogue launches Cemu through its own launcher script, so the script's basename is the identity the command states — the same save card the %EMULATOR_CEMU% token reaches. The launcher picks its binary at run time, AppImage first (cemu.sh:85-93 probes ~/Applications, vars.sh:4-5), and the AppImage reads the host's own XDG tree (emuDeckCemu.sh:13) — so the answer resolves settings.xml there, and the per-title unit templates below the configured MLC.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n    <fullname>Nintendo Wii U</fullname>\n    <path>%ROMPATH%/wiiu/roms</path>\n    <extension>.wua .WUA .rpx .RPX</extension>\n    <command label=\"Cemu (Native)\">/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -f -g %ROM%</command>\n    <command label=\"Cemu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -w -f -g z:%ROM%</command>\n    <platform>wiiu</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/Cemu.AppImage": "",
+          "/home/deck/.config/Cemu/settings.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<content>\n  <mlc_path>/home/deck/Emulation/roms/wiiu/mlc01</mlc_path>\n</content>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/roms/wiiu/mlc01/usr/save"
+        ],
+        "entry_savefile_query": {
+          "system": "wiiu",
+          "label": "Cemu (Native)"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/Emulation/roms/wiiu/mlc01/usr/save/<save_id>",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/roms/wiiu/mlc01/usr/save/<save_id>",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "CEMU",
+                "dir": "/home/deck/Emulation/roms/wiiu/mlc01/usr/save/<save_id>",
+                "role": "battery",
+                "save_id": "the Wii U title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "citation": "nn_save.cpp:133-145 at Cemu 2.6 — '/vol/storage_mlc01/usr/save/%08x/%08x/user/%08x/' and 'user/common/'"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "mlc",
+            "readings": [
+              {
+                "key": "mlc_path",
+                "value": "/home/deck/Emulation/roms/wiiu/mlc01",
+                "options_file": "/home/deck/.config/Cemu/settings.xml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-the-w-flag-forces-the-proton-variant-which-refuses",
+      "rationale": "-w forces the Windows build under Proton (cemu.sh:79-83); its settings live inside the Proton prefix, which atlas does not read — so the answer refuses with the variant named, rather than reading a tree the launched binary never opens.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n    <fullname>Nintendo Wii U</fullname>\n    <path>%ROMPATH%/wiiu/roms</path>\n    <extension>.wua .WUA .rpx .RPX</extension>\n    <command label=\"Cemu (Native)\">/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -f -g %ROM%</command>\n    <command label=\"Cemu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -w -f -g z:%ROM%</command>\n    <platform>wiiu</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/Cemu.AppImage": "",
+          "/home/deck/.config/Cemu/settings.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<content>\n  <mlc_path>/home/deck/Emulation/roms/wiiu/mlc01</mlc_path>\n</content>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/roms/wiiu/mlc01/usr/save"
+        ],
+        "entry_savefile_query": {
+          "system": "wiiu",
+          "label": "Cemu (Proton)"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "standalone-variant-unestablished",
+            "data": {
+              "label": "Cemu (Proton)",
+              "system": "wiiu",
+              "variant": "proton"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-without-an-appimage-the-launcher-falls-to-the-flatpak-which-refuses",
+      "rationale": "With no AppImage under ~/Applications the launcher falls through to an installed flatpak whose id carries the emulator's name (cemu.sh:85-93). That variant's own config tree is not established, so the refusal names the binary that would run — never an answer read from a tree it does not open.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n    <fullname>Nintendo Wii U</fullname>\n    <path>%ROMPATH%/wiiu/roms</path>\n    <extension>.wua .WUA .rpx .RPX</extension>\n    <command label=\"Cemu (Native)\">/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -f -g %ROM%</command>\n    <command label=\"Cemu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -w -f -g z:%ROM%</command>\n    <platform>wiiu</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.config/Cemu/settings.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<content>\n  <mlc_path>/home/deck/Emulation/roms/wiiu/mlc01</mlc_path>\n</content>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Applications",
+          "/var/lib/flatpak/app/info.cemu.Cemu"
+        ],
+        "entry_savefile_query": {
+          "system": "wiiu",
+          "label": "Cemu (Native)"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "standalone-variant-unestablished",
+            "data": {
+              "label": "Cemu (Native)",
+              "system": "wiiu",
+              "variant": "flatpak"
+            }
           }
         }
       }

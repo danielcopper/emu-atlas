@@ -251,7 +251,13 @@ KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
 # unknown, because a client reads it as work it is supposed to do. Nothing a
 # config states belongs here either; that is atlas's own to resolve.
 KNOWN_HOLES = {"content_dir", "content_dir_name", "cwd", "library_name", "region", "rom_stem", "save_id"}
-KNOWN_GRANULARITIES = {"shared-card", "shared-file", "per-game-file", "per-game-files"}
+KNOWN_GRANULARITIES = {
+    "shared-card",
+    "shared-file",
+    "per-game-file",
+    "per-game-files",
+    "per-game-directory",
+}
 KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings", "notes"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone"}
@@ -381,6 +387,7 @@ UNIDENTIFIED_CODES = {
 # deliberately the same string: one fact, one code on both routes.
 KNOWN_UNRESOLVED_CODES = {
     "standalone-unsupported",
+    "standalone-variant-unestablished",
     "core-not-installed",
     "texture-wiring-unestablished",
     "mod-wiring-unestablished",

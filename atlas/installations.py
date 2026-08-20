@@ -194,6 +194,7 @@ from atlas.placement import (
     HOLE_CONTENT_DIR_NAME,
     HOLE_CWD,
     HOLE_REGION,
+    HOLE_SAVE_ID,
     PATCH_FORMATS,
     ROLE_BATTERY,
     ROLE_SETTINGS,
@@ -208,6 +209,7 @@ from atlas.placement import (
     TEMPLATE_CONTENT_DIR_NAME,
     TEMPLATE_REGION,
     TEMPLATE_ROM_STEM,
+    TEMPLATE_SAVE_ID,
     FILE_SET_DECLARED,
     FILE_SET_OBSERVED,
     FILE_SET_UNKNOWN,
@@ -216,10 +218,12 @@ from atlas.placement import (
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_MOD_WIRING_UNESTABLISHED,
     UNRESOLVED_STANDALONE,
+    UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED,
     UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED,
     Caveat,
     FileGroup,
     FileSet,
+    GRANULARITY_PER_GAME_DIRECTORY,
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
     Granularity,
@@ -5788,34 +5792,68 @@ def _cemu_savefile_placement(
             f"({xml_path}) — nothing this answer could anchor at",
             {"emulator": card.token, "config": xml_path},
         )
-    directory = os.path.join(mlc_root, "usr", "save")
-    physical, link_caveats = _link_view(machine, directory)
+    tree = os.path.join(mlc_root, "usr", "save")
+    physical_tree, link_caveats = _link_view(machine, tree)
     caveats.extend(link_caveats)
+    # The per-title unit: one directory per game below usr/save, keyed by the
+    # title id — Cemu composes usr/save/<high>/<low>/user/<account>/ (and
+    # user/common/) at its runtime write sites, lowercase hex
+    # (nn_save.cpp:133-145 at 2.6). The id is the game's own, read from
+    # nothing atlas touches, so it stays a hole the caller fills — as two
+    # 8-hex path segments, which is one fact (the title id), one hole.
+    directory = os.path.join(tree, TEMPLATE_SAVE_ID)
+    physical = (
+        os.path.join(physical_tree, TEMPLATE_SAVE_ID) if physical_tree is not None else None
+    )
     caveats.append(
         Caveat(
             CAVEAT_FILE_NAMES_UNESTABLISHED,
-            "a Wii U save is one subtree per title below usr/save, keyed by the title id — "
-            "the game's own, following from nothing atlas reads; back the tree up whole",
+            "the files below a title's save directory are the game's own writes "
+            "(user/<account>/ and user/common/) — move the directory whole; fill "
+            "<save_id> with the title id, high word then low word, each 8 lowercase "
+            "hex digits, as two path segments",
             {
                 "core": card.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
-                "citation": "the shipped binary composes 'usr/save/{:08X}/{:08X}/user/' "
-                "(whole literal in Cemu 2.6)",
+                "save_id": "the Wii U title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "citation": "nn_save.cpp:133-145 at Cemu 2.6 — "
+                "'/vol/storage_mlc01/usr/save/%08x/%08x/user/%08x/' and 'user/common/'",
             },
         )
     )
     stated_xml = xml_path if result.status == READ_OK else None
-    return _unnamed_tree_placement(
-        card,
-        directory=directory,
-        mode="mlc",
-        readings=(_reading_with_file(reading, stated_xml),),
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(HOLE_SAVE_ID,),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=(
+                FileGroup(
+                    dir=directory,
+                    files=None,
+                    granularity=GRANULARITY_PER_GAME_DIRECTORY,
+                    role=ROLE_BATTERY,
+                ),
+            ),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
         caveats=tuple(caveats),
-        physical=physical,
-        provenance=(
-            f"standalone save card '{card.token}': the MLC from settings.xml "
-            "(ActiveSettings.cpp:242-268 at 2.6)"
+        physical_dir=physical,
+        granularity=Granularity(
+            value=GRANULARITY_PER_GAME_DIRECTORY,
+            mode="mlc",
+            readings=(_reading_with_file(reading, stated_xml),),
+            alternatives=(),
+            provenance=(
+                f"standalone save card '{card.token}': the MLC from settings.xml "
+                "(ActiveSettings.cpp:242-268 at 2.6)"
+            ),
         ),
     )
 
@@ -5869,6 +5907,49 @@ def _standalone_savefile_unresolved(spec: EmulatorSpec) -> Unresolved:
         "tree is shaped by a configuration of its own, and only emulators with a packaged "
         "standalone save card are read (issue #3 tracks the rest)",
         {"label": spec.label, "system": spec.system},
+    )
+
+
+# EmuDeck launches its standalone emulators through per-emulator scripts under
+# tools/launchers/, so the catalogue command carries no %EMULATOR_…% token —
+# the script's own name is the identity the command states. Only a launcher
+# whose wiring has been established maps to a card (issue #3, one emulator per
+# sub-issue), never the whole directory by pattern: each entry here says a
+# maintainer read that launcher and the config file it leads to. cemu.sh runs
+# Cemu against ${HOME}/.config/Cemu/settings.xml (emuDeckCemu.sh:13).
+_EMUDECK_LAUNCHER_CARDS = {"cemu": "CEMU"}
+
+# The binary variants an EmuDeck launcher picks between, in its probe order
+# (cemu.sh:37-93): an AppImage under ~/Applications (vars.sh:4-5), an
+# installed flatpak whose id carries the emulator's name, and otherwise the
+# Windows build under Proton. Only the AppImage variant's configuration is
+# established; the others refuse with the variant named.
+_EMUDECK_VARIANT_APPIMAGE = "appimage"
+_EMUDECK_VARIANT_FLATPAK = "flatpak"
+_EMUDECK_VARIANT_PROTON = "proton"
+_EMUDECK_VARIANT_UNKNOWN = "unestablished"
+
+
+def _emudeck_launcher(command: str) -> tuple[str, tuple[str, ...]] | None:
+    """The EmuDeck launcher script a command runs, and the arguments after it.
+
+    An EmuDeck catalogue command is a shell line naming the script by path —
+    ``/bin/bash …/tools/launchers/cemu.sh -f -g %ROM%`` — so the script's
+    basename identifies the emulator and the trailing arguments carry the
+    launcher's own flags (``-w`` forces the Windows build, cemu.sh:79-83).
+    """
+    tokens = command.split()
+    for index, token in enumerate(tokens):
+        if token.endswith(".sh") and "/tools/launchers/" in token:
+            return os.path.basename(token)[: -len(".sh")], tuple(tokens[index + 1 :])
+    return None
+
+
+def _emudeck_variant_unresolved(spec: EmulatorSpec, token: str, variant: str, why: str) -> Unresolved:
+    return Unresolved(
+        UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED,
+        f"this entry launches {token} as EmuDeck's {variant!r} variant — {why}",
+        {"label": spec.label, "system": spec.system, "variant": variant},
     )
 
 
@@ -11320,13 +11401,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         The placement itself is the companion RetroArch's, exactly as the
         direct question answers it; what the entry adds is its own catalogue
         caveats and, when content is named, the per-game override check.
-        A standalone entry still refuses here: EmuDeck installs each emulator
-        as its own flatpak with its own config tree, and none of that wiring
-        is read yet — the standalone save cards cover RetroDECK's one-flatpak
-        layout first, where the trees were verified live.
+        A standalone entry goes through the launcher route: EmuDeck's
+        catalogue launches these emulators through per-emulator scripts, and
+        an established launcher leads to the same save card RetroDECK's token
+        does — read against this arrangement's own config tree.
         """
         if spec.kind != KIND_LIBRETRO:
-            return _standalone_savefile_unresolved(spec)
+            return self._standalone_entry_savefile(spec, entry_caveats, content_path=content_path)
         placement = _retroarch_savefile_location(
             self._machine,
             self._query(
@@ -11340,6 +11421,129 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return placement
         extra = self._entry_caveats_for(spec, content_path)
         return _entry_savefile_with_caveats(placement, extra)
+
+    def _standalone_entry_savefile(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+    ) -> SavefilePlacement | Unresolved:
+        """A standalone entry's save answer, resolved the way the launcher launches.
+
+        The command names a script under ``tools/launchers/``; an allowlisted
+        script maps to a standalone save card. The launcher then picks the
+        binary at run time — ``-w`` forces the Windows build under Proton,
+        otherwise an AppImage under ``~/Applications`` outranks an installed
+        flatpak outranks the Proton fallback (cemu.sh:79-93) — and this route
+        performs the same probe, because which binary runs decides which
+        configuration tree speaks. Only the AppImage variant is established:
+        it reads the host's own XDG tree (emuDeckCemu.sh:13), which is what
+        the card resolves against. The other variants refuse with the variant
+        named rather than answering from a tree their binary never reads.
+        """
+        launcher = _emudeck_launcher(spec.command)
+        token = _EMUDECK_LAUNCHER_CARDS.get(launcher[0]) if launcher is not None else None
+        card = lookup_standalone_save_card(token)
+        if launcher is None or card is None or spec.system not in card.systems:
+            return _standalone_savefile_unresolved(spec)
+        name, args = launcher
+        if "-w" in args:
+            return _emudeck_variant_unresolved(
+                spec,
+                card.token,
+                _EMUDECK_VARIANT_PROTON,
+                f"{name}.sh -w runs the Windows build under Proton, whose configuration "
+                "lives inside the Proton prefix and is not read (a later slice)",
+            )
+        variant = self._launcher_binary_variant(name)
+        if variant == _EMUDECK_VARIANT_UNKNOWN:
+            return _emudeck_variant_unresolved(
+                spec,
+                card.token,
+                variant,
+                "the launcher's own probe could not be performed — the directories it "
+                "searches were not readable, so which binary would run is not established",
+            )
+        if variant != _EMUDECK_VARIANT_APPIMAGE:
+            why = (
+                "no AppImage sits under ~/Applications, so the launcher falls through to "
+                + (
+                    "the installed flatpak, whose own config tree is not established "
+                    "(a later slice)"
+                    if variant == _EMUDECK_VARIANT_FLATPAK
+                    else "the Windows build under Proton, whose configuration lives inside "
+                    "the Proton prefix and is not read (a later slice)"
+                )
+            )
+            return _emudeck_variant_unresolved(spec, card.token, variant, why)
+        _, marker_issues = self._read_marker()
+        extra = (
+            self._entry_caveats_for(spec, content_path) if content_path is not None else ()
+        )
+        return _standalone_savefile_placement(
+            self._machine,
+            card=card,
+            homes=self._standalone_xdg_homes(),
+            sandbox=self._standalone_sandbox(),
+            system=spec.system,
+            command=spec.command,
+            extra_caveats=(
+                *entry_caveats,
+                *extra,
+                *marker_issues,
+                *arrangement_caveats(self.kind, observed_version=self._observed_backend_head()),
+            ),
+        )
+
+    def _launcher_binary_variant(self, name: str) -> str:
+        """Which binary the launcher would pick — its probe, performed as reads.
+
+        ``getAppImage`` searches ``$emusFolder`` (``~/Applications``,
+        vars.sh:4-5) for ``<Name>*.AppImage`` case-insensitively;
+        ``getFlatpak`` greps the installed flatpak ids for the name
+        (cemu.sh:37-65). The flatpak probe reads the two flatpak app
+        directories, which is the installed-set that listing enumerates. An
+        unreadable directory makes the pick unestablished rather than "none":
+        the launcher would still look there.
+        """
+        wanted = name.casefold()
+        apps = self._machine.glob(os.path.join(self._home, "Applications", "*"))
+        for path in apps.matches:
+            base = os.path.basename(path).casefold()
+            if base.startswith(wanted) and base.endswith(".appimage"):
+                return _EMUDECK_VARIANT_APPIMAGE
+        if apps.status != GLOB_COMPLETE:
+            return _EMUDECK_VARIANT_UNKNOWN
+        flatpak_roots = (
+            "/var/lib/flatpak/app",
+            os.path.join(self._home, ".local", "share", "flatpak", "app"),
+        )
+        incomplete = False
+        for root in flatpak_roots:
+            listing = self._machine.glob(os.path.join(root, "*"))
+            if any(wanted in os.path.basename(p).casefold() for p in listing.matches):
+                return _EMUDECK_VARIANT_FLATPAK
+            incomplete = incomplete or listing.status != GLOB_COMPLETE
+        if incomplete:
+            return _EMUDECK_VARIANT_UNKNOWN
+        return _EMUDECK_VARIANT_PROTON
+
+    def _standalone_xdg_homes(self) -> _XdgHomes:
+        """The XDG bases an EmuDeck AppImage emulator reads — the host's own.
+
+        Nothing sandboxes an AppImage: EmuDeck's Cemu setup writes the config
+        it manages at ``${HOME}/.config/Cemu/settings.xml``
+        (emuDeckCemu.sh:13), which is the plain XDG default.
+        """
+        return _XdgHomes(
+            data=os.path.join(self._home, ".local", "share"),
+            config=os.path.join(self._home, ".config"),
+        )
+
+    def _standalone_sandbox(self) -> _Sandbox:
+        """No sandbox: an AppImage's config paths are real host paths."""
+        return _Sandbox(self._machine, self._home, None, expansion_home=self._home)
 
     def entry_savestate_location(
         self,
