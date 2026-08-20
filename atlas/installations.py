@@ -5927,21 +5927,19 @@ def _azahar_setting(
     return stored, True
 
 
-def _azahar_virtual_sd_caveats(
+def _azahar_virtual_sd_caveat(
     values: Mapping[tuple[str, str], str], card: StandaloneSaveCard
-) -> tuple[Caveat, ...]:
+) -> Caveat | None:
     """The one statement ``use_virtual_sd = false`` earns — no SD, said so."""
     virtual_sd, _ = _azahar_setting(values, "Data Storage", "use_virtual_sd", "true")
     if virtual_sd.casefold() == "true":
-        return ()
-    return (
-        Caveat(
-            CAVEAT_CORE_MODE_UNESTABLISHED,
-            "use_virtual_sd is switched off — no SD card is emulated, so whether and where "
-            "a game's save lands is not established; the tree below is where the "
-            "configuration would put it",
-            {"core": card.token, "reason": "use_virtual_sd = false disables the emulated SD"},
-        ),
+        return None
+    return Caveat(
+        CAVEAT_CORE_MODE_UNESTABLISHED,
+        "use_virtual_sd is switched off — no SD card is emulated, so whether and where "
+        "a game's save lands is not established; the tree below is where the "
+        "configuration would put it",
+        {"core": card.token, "reason": "use_virtual_sd = false disables the emulated SD"},
     )
 
 
@@ -6045,7 +6043,9 @@ def _azahar_savefile_placement(
     values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
     caveats: list[Caveat] = [*extra_caveats]
     stated_ini = ini_path if result.status == READ_OK else None
-    caveats.extend(_azahar_virtual_sd_caveats(values, card))
+    virtual_sd_caveat = _azahar_virtual_sd_caveat(values, card)
+    if virtual_sd_caveat is not None:
+        caveats.append(virtual_sd_caveat)
     sdmc_root, readings, refusal = _azahar_sdmc_root(
         values, stated_ini, sandbox=sandbox, card=card, ini_path=ini_path
     )
