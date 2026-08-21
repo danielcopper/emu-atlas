@@ -2579,6 +2579,93 @@ _STANDALONE_CONFIG_RESOLVERS = {
 }
 
 
+def _carded_standalone_core(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    system: str,
+    *,
+    data_home: str,
+    config_home: str,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """A carded standalone entry, routed by the shape its card states.
+
+    A ``config_files`` card's probe set is the emulator's own live decision,
+    so it needs a resolver registered beside it; a ``files`` card names its
+    paths outright and the one packaged route serves it.
+    """
+    if not card.config_files:
+        return _packaged_standalone_core(
+            machine,
+            entry,
+            card,
+            system,
+            data_home=data_home,
+            config_home=config_home,
+            verify=verify,
+        )
+    resolver = _STANDALONE_CONFIG_RESOLVERS.get(card.token)
+    if resolver is None:
+        raise ValueError(
+            f"standalone firmware card {card.token!r} states config_files but has no "
+            "resolver registered — the card and the code shipped out of step"
+        )
+    return resolver(machine, entry, card, system, config_home=config_home, verify=verify)
+
+
+def _standalone_entry_core(
+    machine: Machine,
+    context: FirmwareContext,
+    entry: CatalogueEntry,
+    system: str,
+    *,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """A standalone entry: its card's answer, or the honest refusal.
+
+    The bases are the entry's own where its launch establishes them — on
+    EmuDeck the picked variant decides which trees the emulator reads — and
+    otherwise the arrangement's pair.
+    """
+    card = lookup_standalone_firmware_card(entry.standalone_token)
+    data_home = entry.standalone_data_home or context.standalone_data_home
+    config_home = entry.standalone_config_home or context.standalone_config_home
+    if (
+        card is not None
+        and system in card.systems
+        and data_home is not None
+        and config_home is not None
+    ):
+        return _carded_standalone_core(
+            machine,
+            entry,
+            card,
+            system,
+            data_home=data_home,
+            config_home=config_home,
+            verify=verify,
+        )
+    return (
+        CoreFirmware(
+            core_so=entry.core_so,
+            label=entry.label,
+            declaration=DECLARATION_UNSUPPORTED,
+            requirements=(),
+            caveats=(
+                Caveat(
+                    CAVEAT_STANDALONE_UNSUPPORTED,
+                    f"{entry.label} is a standalone emulator — its firmware rules are outside "
+                    "the resolver's current coverage (ROADMAP.md), so the empty list means "
+                    "unknown; the emulator is here, atlas's source for it is not",
+                    {"label": entry.label},
+                ),
+            ),
+        ),
+        [],
+    )
+
+
 def _catalogue_entry_core(
     machine: Machine,
     context: FirmwareContext,
@@ -2596,53 +2683,7 @@ def _catalogue_entry_core(
     installed core whose ``.info`` could not be read, and one that was read.
     """
     if entry.kind != KIND_LIBRETRO or entry.core_so is None:
-        card = lookup_standalone_firmware_card(entry.standalone_token)
-        data_home = entry.standalone_data_home or context.standalone_data_home
-        config_home = entry.standalone_config_home or context.standalone_config_home
-        if (
-            card is not None
-            and system in card.systems
-            and data_home is not None
-            and config_home is not None
-        ):
-            if card.config_files:
-                resolver = _STANDALONE_CONFIG_RESOLVERS.get(card.token)
-                if resolver is None:
-                    raise ValueError(
-                        f"standalone firmware card {card.token!r} states config_files but "
-                        "has no resolver registered — the card and the code shipped out "
-                        "of step"
-                    )
-                return resolver(
-                    machine, entry, card, system, config_home=config_home, verify=verify
-                )
-            return _packaged_standalone_core(
-                machine,
-                entry,
-                card,
-                system,
-                data_home=data_home,
-                config_home=config_home,
-                verify=verify,
-            )
-        return (
-            CoreFirmware(
-                core_so=entry.core_so,
-                label=entry.label,
-                declaration=DECLARATION_UNSUPPORTED,
-                requirements=(),
-                caveats=(
-                    Caveat(
-                        CAVEAT_STANDALONE_UNSUPPORTED,
-                        f"{entry.label} is a standalone emulator — its firmware rules are outside "
-                        "the resolver's current coverage (ROADMAP.md), so the empty list means "
-                        "unknown; the emulator is here, atlas's source for it is not",
-                        {"label": entry.label},
-                    ),
-                ),
-            ),
-            [],
-        )
+        return _standalone_entry_core(machine, context, entry, system, verify=verify)
     core = by_stem.get(entry.core_so[: -len(".so")] if entry.core_so.endswith(".so") else entry.core_so)
     if core is None:
         # Same guard as the per-core route: absence is a claim, and it

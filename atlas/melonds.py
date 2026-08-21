@@ -37,22 +37,35 @@ SOURCE_TOML_INVALID = "toml-invalid"
 SOURCE_LEGACY = "legacy"
 SOURCE_DEFAULTS = "defaults"
 
+# The TOML paths this module reads, named once each so the legacy key table
+# and the probe sets below cannot spell one of them differently.
+KEY_SAVE_FILE_PATH = "Instance0.SaveFilePath"
+KEY_EXTERNAL_BIOS = "Emu.ExternalBIOSEnable"
+KEY_CONSOLE_TYPE = "Emu.ConsoleType"
+KEY_DS_BIOS9 = "DS.BIOS9Path"
+KEY_DS_BIOS7 = "DS.BIOS7Path"
+KEY_DS_FIRMWARE = "DS.FirmwarePath"
+KEY_DSI_BIOS9 = "DSi.BIOS9Path"
+KEY_DSI_BIOS7 = "DSi.BIOS7Path"
+KEY_DSI_FIRMWARE = "DSi.FirmwarePath"
+KEY_DSI_NAND = "DSi.NANDPath"
+
 # The slice of melonDS's legacy-key table this module reads (``LegacyFile``,
 # Config.cpp at 1.1): legacy name -> (TOML path, type), the type as the table
 # spells it (0 int, 1 bool, 2 string; LoadLegacyFile :747-767 converts with
 # strtol). ``SaveFilePath`` is instance-unique and lands in ``Instance0``
 # when read from the base file (:301, :688-700); the rest are global.
 _LEGACY_KEYS: Mapping[str, tuple[str, int]] = {
-    "SaveFilePath": ("Instance0.SaveFilePath", 2),  # :301
-    "ExternalBIOSEnable": ("Emu.ExternalBIOSEnable", 1),  # :237
-    "ConsoleType": ("Emu.ConsoleType", 0),  # :226
-    "BIOS9Path": ("DS.BIOS9Path", 2),  # :239
-    "BIOS7Path": ("DS.BIOS7Path", 2),  # :240
-    "FirmwarePath": ("DS.FirmwarePath", 2),  # :241
-    "DSiBIOS9Path": ("DSi.BIOS9Path", 2),  # :243
-    "DSiBIOS7Path": ("DSi.BIOS7Path", 2),  # :244
-    "DSiFirmwarePath": ("DSi.FirmwarePath", 2),  # :245
-    "DSiNANDPath": ("DSi.NANDPath", 2),  # :246
+    "SaveFilePath": (KEY_SAVE_FILE_PATH, 2),  # :301
+    "ExternalBIOSEnable": (KEY_EXTERNAL_BIOS, 1),  # :237
+    "ConsoleType": (KEY_CONSOLE_TYPE, 0),  # :226
+    "BIOS9Path": (KEY_DS_BIOS9, 2),  # :239
+    "BIOS7Path": (KEY_DS_BIOS7, 2),  # :240
+    "FirmwarePath": (KEY_DS_FIRMWARE, 2),  # :241
+    "DSiBIOS9Path": (KEY_DSI_BIOS9, 2),  # :243
+    "DSiBIOS7Path": (KEY_DSI_BIOS7, 2),  # :244
+    "DSiFirmwarePath": (KEY_DSI_FIRMWARE, 2),  # :245
+    "DSiNANDPath": (KEY_DSI_NAND, 2),  # :246
 }
 
 # The one range that matters here (IntRanges, Config.cpp:79): a console type
@@ -213,10 +226,9 @@ def console_type(config: MelonConfig) -> int:
 # switch is on; then in DSi mode the DSi BIOS pair, the DSi firmware (external
 # BIOS only) and the NAND; and in DS mode the DS firmware (external BIOS only).
 # What is not probed is not required, and an answer says so by leaving it out.
-_DS_BIOS_KEYS = ("DS.BIOS9Path", "DS.BIOS7Path")
-_DS_FIRMWARE_KEY = "DS.FirmwarePath"
-_DSI_KEYS_EXTBIOS = ("DSi.BIOS9Path", "DSi.BIOS7Path", "DSi.FirmwarePath", "DSi.NANDPath")
-_DSI_KEYS_BUILTIN = ("DSi.BIOS9Path", "DSi.BIOS7Path", "DSi.NANDPath")
+_DS_BIOS_KEYS = (KEY_DS_BIOS9, KEY_DS_BIOS7)
+_DSI_KEYS_EXTBIOS = (KEY_DSI_BIOS9, KEY_DSI_BIOS7, KEY_DSI_FIRMWARE, KEY_DSI_NAND)
+_DSI_KEYS_BUILTIN = (KEY_DSI_BIOS9, KEY_DSI_BIOS7, KEY_DSI_NAND)
 
 
 def probed_firmware_keys(extbios: bool, console: int) -> tuple[str, ...]:
@@ -230,7 +242,7 @@ def probed_firmware_keys(extbios: bool, console: int) -> tuple[str, ...]:
     if console == 1:
         return keys + (_DSI_KEYS_EXTBIOS if extbios else _DSI_KEYS_BUILTIN)
     if extbios:
-        return keys + (_DS_FIRMWARE_KEY,)
+        return keys + (KEY_DS_FIRMWARE,)
     return keys
 
 
