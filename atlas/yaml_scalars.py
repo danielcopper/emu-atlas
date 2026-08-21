@@ -137,7 +137,7 @@ def _is_skipping_value(value: str) -> bool:
 
 def _refusal_in(value: str) -> str | None:
     """The whole-file refusal this value triggers, if any."""
-    if value.startswith("&") or value.startswith("*"):
+    if value.startswith(("&", "*")):
         return REFUSAL_ANCHOR
     if value.startswith("!"):
         return REFUSAL_TAG
@@ -231,35 +231,57 @@ def _classify(line: str) -> _KeyLine:
     return _KeyLine(key=key, value=_scalar(raw_value))
 
 
-def read_scalars(text: str) -> YamlScalars:
-    """Read the flat top-level scalars of *text*, naming what was not read."""
-    values: dict[str, str] = {}
-    skipped: list[str] = []
-    pending_key: str | None = None
-    seen_content = False
+def _first_document(text: str) -> tuple[tuple[str, ...], str | None]:
+    """The content lines of the first document, blanks and comments dropped.
+
+    Document structure is settled here so the reading below sees nothing but
+    lines that carry content: an opening ``---`` is just "here begins the
+    document", a second one begins a document that may redefine everything
+    above it, and ``...`` ends the one being read.
+    """
+    lines: list[str] = []
     for raw_line in text.splitlines():
         if not raw_line.strip() or raw_line.lstrip().startswith("#"):
             continue
         if raw_line.startswith("---"):
-            # The opening marker is just "here begins the document"; a second
-            # one begins a document that may redefine everything above it.
-            if seen_content:
-                return YamlScalars(refusal=REFUSAL_SECOND_DOCUMENT)
+            if lines:
+                return (), REFUSAL_SECOND_DOCUMENT
             continue
         if raw_line.startswith("..."):
-            # The document ends here. Anything after it belongs to the next one.
             break
+        lines.append(raw_line)
+    return tuple(lines), None
+
+
+def _absorb_indent(
+    pending_key: str | None, values: dict[str, str], skipped: list[str]
+) -> bool:
+    """Take an indented line into the key above it — ``False`` if there is none.
+
+    An indented line makes the key above it a nested block after all: it stops
+    being a scalar and becomes one this reader names as unread. Indentation
+    under no key at all is a file this reader cannot attribute lines from.
+    """
+    if pending_key is None:
+        return False
+    if values.pop(pending_key, None) is not None:
+        skipped.append(pending_key)
+    return True
+
+
+def read_scalars(text: str) -> YamlScalars:
+    """Read the flat top-level scalars of *text*, naming what was not read."""
+    lines, refusal = _first_document(text)
+    if refusal is not None:
+        return YamlScalars(refusal=refusal)
+    values: dict[str, str] = {}
+    skipped: list[str] = []
+    pending_key: str | None = None
+    for raw_line in lines:
         if raw_line[:1].isspace():
-            # An indented line belongs to whatever key opened above it, which
-            # makes that key a nested block after all: it stops being a scalar
-            # and becomes one this reader names as unread. Indentation under no
-            # key at all is a file this reader cannot attribute lines from.
-            if pending_key is None:
+            if not _absorb_indent(pending_key, values, skipped):
                 return YamlScalars(refusal=REFUSAL_NOT_A_FLAT_MAPPING)
-            if values.pop(pending_key, None) is not None:
-                skipped.append(pending_key)
             continue
-        seen_content = True
         outcome = _classify(raw_line.rstrip())
         if outcome.refusal is not None:
             return YamlScalars(refusal=outcome.refusal)
@@ -267,8 +289,7 @@ def read_scalars(text: str) -> YamlScalars:
         if outcome.skip:
             skipped.append(outcome.key)
         else:
-            assert outcome.value is not None  # a non-skipping line carries one
-            values[outcome.key] = outcome.value
+            values[outcome.key] = outcome.value or ""
     resolved, refusal = _substitute(values)
     if refusal is not None:
         return YamlScalars(refusal=refusal)
