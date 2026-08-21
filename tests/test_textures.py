@@ -519,7 +519,8 @@ class TestTheShippedStandaloneTableSaysWhatItCanStandBehind:
         # subpath, and neither base nor subdir may be invented for it.
         card = lookup_standalone_texture_card("PCSX2")
         assert card is not None
-        assert card.base is None and card.subdir is None
+        assert card.base is None
+        assert card.subdir is None
         assert card.directory is not None
         assert (card.directory.section, card.directory.key) == ("Folders", "Textures")
         assert card.switch is not None
