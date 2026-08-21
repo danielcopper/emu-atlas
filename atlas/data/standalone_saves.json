@@ -83,6 +83,20 @@
       "provenance": {
         "source": "The DuckStation build RetroDECK ships as 'DuckStation (Legacy)' — the last freely distributed rolling build, frozen by RetroDECK's fork release of 2024-09-19; citations pin stenzek/duckstation@64655818e, the last commit before that freeze. Two memory-card slots, each picked by Card1Type/Card2Type from six modes (settings.cpp:1743-1745; loading :391-401, an unparseable value falls back to the compiled default PerGameTitle/None, settings.h:510-511). A per-game card is '<name>_<slot>.mcd' below [MemoryCards] Directory (settings.cpp:1799-1802) — the name the disc serial (PerGame), the sanitized database title with the playlist/disc-set preference (PerGameTitle, system.cpp:3688-3742), or the content file's own stem (PerGameFileTitle, :3744-3762). A shared card is CardXPath, absolute or Directory-relative, else shared_card_<slot>.mcd (:1785-1797). settings.ini lives in the DataRoot the launch environment picks — $XDG_CONFIG_HOME/duckstation where set (always, inside a flatpak), else ~/.local/share/duckstation (qthost.cpp:562-582) — so the reading probes both spellings and states which file answered; the card's config path names the config-side spelling, the probe's first candidate."
       }
+    },
+    "PCSX2": {
+      "saves": {
+        "config": {
+          "base": "config",
+          "path": "PCSX2/inis/PCSX2.ini"
+        },
+        "systems": [
+          "ps2"
+        ]
+      },
+      "provenance": {
+        "source": "PCSX2 v2.6.3, the release RetroDECK ships (the tag string rides in the binary). On Linux the DataRoot is $XDG_CONFIG_HOME/PCSX2 where set, else ~/.config/PCSX2 — both the config side (Pcsx2Config.cpp:2197-2217) — with inis/PCSX2.ini inside. [Folders] MemoryCards names the card directory (default 'memcards', a relative value joining the DataRoot, :2259 and :2272-2285). [MemoryCards] SlotN_Enable and SlotN_Filename pick each slot's card (defaults Mcd001.ps2/Mcd002.ps2; the six multitap slots carry MultitapP_SlotNN spellings and join only when enabled, :2035-2047; default names MemoryCardFile.cpp:244-250). The card's type is what sits at its full path — the memory-card directory joined with the filename (FullpathToMcd, :2065-2068): a directory there is a folder card, whose per-game saves live as subdirectories inside and are auto-managed (McdFolderAutoManage, default true); anything else is a file card, one shared .ps2 image (FileMcd_SetType, MemoryCardFile.cpp:584-604). An empty filename empties the slot. This card completes the ps2 pair beside the LRPS2 core rule, which keeps the libretro side's shared card."
+      }
     }
   }
 }

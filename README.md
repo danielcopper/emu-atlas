@@ -81,9 +81,9 @@ Map of the surface — layers, handles, answer types, and what to import from wh
    across the frontends that ship ES-DE (RetroDECK, EmuDeck, and a bare ES-DE install).
 4. **Standalone emulators** — per-emulator config parsing and save placement rules, read the way each emulator reads its
    own configuration: Dolphin (GC slots and the Wii NAND), PPSSPP, xemu, Cemu (the per-title MLC unit), Azahar (the
-   per-title unit on the 3DS's emulated SD) and DuckStation (two memory-card slots, six modes) today, one emulator per
-   sub-issue of the epic (#3) until every emulator RetroDECK ships resolves — on EmuDeck too, whichever way its
-   catalogue launches them.
+   per-title unit on the 3DS's emulated SD), DuckStation (two memory-card slots, six modes) and PCSX2 (slots whose card
+   type is read off the disk, file or folder) today, one emulator per sub-issue of the epic (#3) until every emulator
+   RetroDECK ships resolves — on EmuDeck too, whichever way its catalogue launches them.
 5. **The system vocabulary and the platform crosswalk** — the ids every question about a system takes are ES-DE's system
    names, shipped as packaged data cited to a stated build and guarded by a test that parses that build's own
    `es_systems.xml`; `known_systems()` and `from_esde_system()` let a client check its own map before using it. Beside
@@ -112,18 +112,15 @@ takes the release bundle instead — `emu-atlas-<tag>-x86_64-linux.tar.gz`, the 
 smoke-tested against the full suite before every release; unpack anywhere, run `./emu-atlas`, nothing installs itself
 elsewhere.
 
-Places this knowledge could plug in — options, not commitments:
+Where this knowledge plugs in — kinds of consumers, not commitments:
 
-- **[Tender](https://github.com/danielcopper/romm-tender)** (first consumer — the RomM Decky plugin): its
-  PlatformEnvironment seam resolves paths and invocations per installation; the save-placement model composes atlas
-  templates with sigil ids; the BIOS management already runs on the firmware knowledge extracted here.
-- **Other RomM clients**: [grout](https://github.com/rommapp/grout) (Go, retro handhelds — where path dialects diverge
-  hardest), [argosy](https://github.com/rommapp/argosy-launcher) (Android RetroArch layouts), and whatever comes next —
-  each currently carries its own path knowledge.
-- **Backup tooling**: exporting detected installations in the
-  [ludusavi manifest](https://github.com/mtkennerly/ludusavi-manifest) format would make atlas useful to an existing
-  user base without anyone adopting a library.
-- **The frontends themselves**: RetroDECK and EmuDeck maintain this knowledge as shell scripts today; a shared,
+- **Save-sync and library clients**, in any language: per-installation paths and launch invocations, save placements
+  with their granularity and holes, and BIOS state — the facts every such client currently re-derives and carries
+  itself.
+- **Backup tooling**: what to back up and what to leave (settings, screenshots, caches) is exactly the file-set and role
+  vocabulary the answers speak; exporting detected installations into an established manifest format needs no library
+  adoption at all.
+- **The distributions themselves**: the arrangements maintain this knowledge as shell scripts today; a shared,
   conformance-tested base is the same offer gavel makes for sync decisions.
 
 ## Status

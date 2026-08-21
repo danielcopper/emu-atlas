@@ -447,8 +447,8 @@ arrangement pins), the catalogue systems the card answers for, and the provenanc
 written nowhere on the machine, so it lives as cited code beside the card (`atlas/installations.py`), the same split the
 rule cards make with `atlas/mode_rules.py`. The loader refuses a card whose token has no resolver registered.
 
-Six cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s EXI
-device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
+Seven cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
+EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
 unnamed `title/` tree. PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's `config` is `null`, the honest
 spelling of "no file governs this" — and savedata is one unnamed directory per game below `PSP/SAVEDATA`. xemu
 (v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml`, stated as one shared file with the
@@ -463,7 +463,11 @@ the extdata tree stated beside it as its own group. DuckStation (the "Legacy" bu
 rolling release; citations at stenzek/duckstation@64655818e): two memory-card slots, six modes each — the Dolphin GC
 shape in DuckStation's vocabulary — a per-game `<name>_<slot>.mcd` below `[MemoryCards] Directory` keyed by serial,
 sanitized title, or the content file's own stem (which the resolver fills itself), a shared card at its configured or
-default path, and the DataRoot probed on both spellings the launch environment can pick (qthost.cpp:562-582). The
+default path, and the DataRoot probed on both spellings the launch environment can pick (qthost.cpp:562-582). PCSX2
+(v2.6.3): up to eight slots — two console ports and six multitap slots that join only when enabled — each card's type
+read off the disk the way `FileMcd_SetType` reads it: a directory at the card's full path is a folder card (per-game
+saves as auto-managed subdirectories, stated with its names refused), anything else the shared `.ps2` image it is; one
+config-side DataRoot either way (Pcsx2Config.cpp:2197-2217), completing the ps2 pair beside the LRPS2 core rule. The
 answers root at `emulator_directory` — no frontend hands a standalone emulator a save directory. On EmuDeck a standalone
 emulator is identified by `%EMULATOR_…%` token or by an allowlisted launcher script (`cemu.sh`, `azahar.sh` and
 `duckstation.sh` today), and either way the launch's binary probe gates the answer: only the AppImage variant's config

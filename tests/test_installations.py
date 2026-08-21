@@ -1811,12 +1811,15 @@ TRIO_ESDE = (
     '<command label="Azahar (Standalone)">%EMULATOR_AZAHAR% %ROM%</command></system>'
     "<system><name>psx</name><path>%ROMPATH%/psx</path><extension>.chd</extension>"
     '<command label="DuckStation (Legacy) (Standalone)">%EMULATOR_DUCKSTATION% -batch %ROM%</command></system>'
+    "<system><name>ps2</name><path>%ROMPATH%/ps2</path><extension>.chd</extension>"
+    '<command label="PCSX2 (Standalone)">%EMULATOR_PCSX2% -batch %ROM%</command></system>'
     "</systemList>"
 )
 XEMU_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
 CEMU_XML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml"
 AZAHAR_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/azahar-emu/qt-config.ini"
 DUCKSTATION_CONFIG_INI = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+PCSX2_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
 
 
 class TestMoreStandaloneSaves:
@@ -2040,6 +2043,56 @@ class TestMoreStandaloneSaves:
 
     def test_duckstation_with_an_unreadable_ini_refuses(self):
         p = self._answer("psx", files={DUCKSTATION_CONFIG_INI: {"status": "unreadable"}})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_pcsx2_defaults_without_an_ini_answer_the_dataroot_memcards(self):
+        # One DataRoot spelling on Linux — the config side either way
+        # (Pcsx2Config.cpp:2197-2217) — so no ini still answers one tree.
+        p = self._answer("ps2")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir.endswith("/config/PCSX2/memcards")
+        assert p.file_set.files == ("Mcd001.ps2", "Mcd002.ps2")
+        assert p.granularity is not None
+        assert p.granularity.mode == "file+file"
+
+    def test_pcsx2_an_enabled_multitap_slot_joins_the_answer(self):
+        p = self._answer(
+            "ps2",
+            files={
+                PCSX2_INI_PATH: (
+                    "[Folders]\nMemoryCards = /mnt/sd/memcards\n"
+                    "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
+                    "Slot2_Enable = false\n"
+                    "Multitap1_Slot2_Enable = true\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("Mcd001.ps2", "Mcd-Multitap1-Slot02.ps2")
+        assert p.granularity is not None
+        assert p.granularity.mode == "file+off+file"
+
+    def test_pcsx2_an_empty_filename_empties_the_slot(self):
+        p = self._answer(
+            "ps2",
+            files={
+                PCSX2_INI_PATH: (
+                    "[Folders]\nMemoryCards = /mnt/sd/memcards\n"
+                    "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename =\n"
+                    "Slot2_Enable = false\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.groups == ()
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_WRITES_DISCARDED]
+        assert stated
+        assert p.granularity is not None
+        assert p.granularity.mode == "empty+off"
+
+    def test_pcsx2_with_an_unreadable_ini_refuses(self):
+        p = self._answer("ps2", files={PCSX2_INI_PATH: {"status": "unreadable"}})
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
