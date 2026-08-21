@@ -6527,6 +6527,259 @@ def _duckstation_savefile_placement(
     )
 
 
+# PCSX2's eight slot spellings, in the emulator's own order: the two console
+# ports, then the six multitap slots (Pcsx2Config.cpp:2035-2047 at v2.6.3).
+# Each entry is (enable key, filename key, default filename, enabled default)
+# — the multitap slots default off and join the answer only when enabled.
+_PCSX2_SLOTS = tuple(
+    [
+        ("Slot1_Enable", "Slot1_Filename", "Mcd001.ps2", True),
+        ("Slot2_Enable", "Slot2_Filename", "Mcd002.ps2", True),
+    ]
+    + [
+        (
+            f"Multitap{port}_Slot{slot}_Enable",
+            f"Multitap{port}_Slot{slot}_Filename",
+            f"Mcd-Multitap{port}-Slot{slot:02d}.ps2",
+            False,
+        )
+        for port in (1, 2)
+        for slot in (2, 3, 4)
+    ]
+)
+
+
+def _pcsx2_slot_group(
+    machine: Machine,
+    values: Mapping[tuple[str, str], str],
+    slot: tuple[str, str, str, bool],
+    memcards_dir: str,
+    sandbox: _Sandbox,
+    card: StandaloneSaveCard,
+) -> tuple[str, FileGroup | None, tuple[OptionReading, ...], tuple[Caveat, ...]]:
+    """One slot: (type word, group, readings, caveats) — the type read off the disk.
+
+    ``FileMcd_SetType`` (MemoryCardFile.cpp:584-604): an empty filename
+    empties the slot; a directory at the card's full path makes it a folder
+    card — per-game saves as auto-managed subdirectories inside — and
+    anything else is a file card, one shared image that would be created on
+    first use.
+    """
+    enable_key, filename_key, default_name, enabled_default = slot
+    raw_enable = values.get(("MemoryCards", enable_key))
+    enabled = (
+        raw_enable.strip().casefold() == "true" if raw_enable is not None else enabled_default
+    )
+    readings = [
+        OptionReading(
+            enable_key,
+            raw_enable,
+            (
+                f'PCSX2.ini: [MemoryCards] {enable_key} = "{raw_enable}"'
+                if raw_enable is not None
+                else f"{enable_key} is unset — the default "
+                f"{'true' if enabled_default else 'false'} governs"
+            ),
+            None,
+        )
+    ]
+    if not enabled:
+        return "off", None, tuple(readings), ()
+    raw_name = values.get(("MemoryCards", filename_key))
+    name = raw_name if raw_name is not None else default_name
+    readings.append(
+        OptionReading(
+            filename_key,
+            raw_name,
+            (
+                f'PCSX2.ini: [MemoryCards] {filename_key} = "{raw_name}"'
+                if raw_name is not None
+                else f"{filename_key} is unset — the default {default_name} governs "
+                "(MemoryCardFile.cpp:244-250)"
+            ),
+            None,
+        )
+    )
+    if name == "":
+        return "empty", None, tuple(readings), ()
+    if os.path.isabs(name):
+        host = sandbox.host(filename_key, name)
+        if host.path is None:
+            return (
+                "file",
+                None,
+                tuple(readings),
+                (
+                    Caveat(
+                        CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                        f"PCSX2.ini sets {filename_key} to {name!r}, a path only the emulator's "
+                        "sandbox can read — the card could not be located from here",
+                        {"key": filename_key, "path": name},
+                    ),
+                ),
+            )
+        full = host.path
+    else:
+        full = os.path.join(memcards_dir, name)
+    if machine.path_kind(full) == KIND_DIRECTORY:
+        caveat = Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            f"the card at {os.path.basename(full)} is a folder card — each game's saves live "
+            "as subdirectories inside, auto-managed by the emulator — so the tree is stated "
+            "and its entries refused; back it up whole",
+            {
+                "core": card.token,
+                "dir": full,
+                "role": "memory-card",
+                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3 — a "
+                "directory at the card's full path is MemoryCardType::Folder "
+                "(McdFolderAutoManage default true, Pcsx2Config.cpp:1922)",
+            },
+        )
+        group = FileGroup(
+            dir=full, files=None, granularity=GRANULARITY_PER_GAME_FILES, role="memory-card"
+        )
+        return "folder", group, tuple(readings), (caveat,)
+    group = FileGroup(
+        dir=os.path.dirname(full),
+        files=(os.path.basename(full),),
+        granularity=GRANULARITY_SHARED_CARD,
+        role="memory-card",
+    )
+    return "file", group, tuple(readings), ()
+
+
+def _pcsx2_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavefilePlacement | Unresolved:
+    """PCSX2's save answer: up to eight card slots, each file or folder.
+
+    One DataRoot spelling on Linux — the config side whether or not
+    ``XDG_CONFIG_HOME`` is set (Pcsx2Config.cpp:2197-2217) — with
+    ``inis/PCSX2.ini`` inside. The type of every enabled card is read off the
+    disk the way ``FileMcd_SetType`` reads it, so a folder card answers as
+    the per-game tree it is and a file card as the shared image it is.
+    """
+    assert card.config_base is not None and card.config_path is not None
+    data_root = os.path.join(homes.base(card.config_base), "PCSX2")
+    ini_path = os.path.join(homes.base(card.config_base), card.config_path)
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"PCSX2's configuration ({ini_path}) exists and could not be read — which cards "
+            "its slots hold and where they live is unknowable here",
+            {"emulator": card.token, "config": ini_path},
+        )
+    values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
+    stated_ini = ini_path if result.status == READ_OK else None
+    caveats: list[Caveat] = [*extra_caveats]
+    raw_dir = values.get(("Folders", "MemoryCards"), "")
+    dir_reading = OptionReading(
+        "MemoryCards",
+        raw_dir or None,
+        (
+            f'PCSX2.ini: [Folders] MemoryCards = "{raw_dir}"'
+            if raw_dir
+            else "MemoryCards is unset — the default memcards below the DataRoot governs "
+            "(Pcsx2Config.cpp:2259)"
+        ),
+        None,
+    )
+    if not raw_dir:
+        memcards_dir = os.path.join(data_root, "memcards")
+    elif not os.path.isabs(raw_dir):
+        memcards_dir = os.path.join(data_root, raw_dir)
+    else:
+        host = sandbox.host("MemoryCards", raw_dir)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"the memory-card directory PCSX2's configuration names could not be located "
+                f"from here ({ini_path}) — nothing this answer could anchor at",
+                {"emulator": card.token, "config": ini_path},
+            )
+        memcards_dir = host.path
+    modes: list[str] = []
+    groups: list[FileGroup] = []
+    readings: list[OptionReading] = [dir_reading]
+    for slot in _PCSX2_SLOTS:
+        word, group, slot_readings, slot_caveats = _pcsx2_slot_group(
+            machine, values, slot, memcards_dir, sandbox, card
+        )
+        is_multitap = slot[0].startswith("Multitap")
+        if is_multitap and word == "off":
+            continue  # six disabled multitap slots would drown the answer in noise
+        modes.append(word)
+        readings.extend(slot_readings)
+        caveats.extend(slot_caveats)
+        if group is not None:
+            groups.append(group)
+    mode = "+".join(modes)
+    if groups:
+        directory = groups[0].dir
+        named_first = groups[0].files is not None
+        files = (
+            tuple(
+                name
+                for group in groups
+                if group.dir == directory and group.files
+                for name in group.files
+            )
+            if named_first
+            else ()
+        )
+    else:
+        directory = memcards_dir
+        files = ()
+        caveats.append(
+            Caveat(
+                CAVEAT_SAVE_WRITES_DISCARDED,
+                "no slot holds a card (SlotN_Enable / an empty SlotN_Filename) — a game finds "
+                "nowhere to save and nothing is kept; the granularity block names the switches "
+                "that would change that",
+                {"core": card.token, "mode": mode},
+            )
+        )
+    physical, link_caveats = _link_view(machine, memcards_dir)
+    caveats.extend(link_caveats)
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            files,
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=tuple(groups),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=groups[0].granularity if groups else GRANULARITY_NONE,
+            mode=mode,
+            readings=tuple(_reading_with_file(r, stated_ini) for r in readings),
+            alternatives=(),
+            provenance=(
+                f"standalone save card '{card.token}': the slot pair from PCSX2.ini "
+                "(Pcsx2Config.cpp:2035-2047 at v2.6.3), each card's type read off the disk "
+                "(FileMcd_SetType)"
+            ),
+        ),
+    )
+
+
 _STANDALONE_SAVE_RESOLVERS = {
     "DOLPHIN": _dolphin_savefile_placement,
     "PPSSPP": _ppsspp_savefile_placement,
@@ -6534,6 +6787,7 @@ _STANDALONE_SAVE_RESOLVERS = {
     "CEMU": _cemu_savefile_placement,
     "AZAHAR": _azahar_savefile_placement,
     "DUCKSTATION": _duckstation_savefile_placement,
+    "PCSX2": _pcsx2_savefile_placement,
 }
 
 
@@ -6596,8 +6850,14 @@ def _standalone_savefile_unresolved(spec: EmulatorSpec) -> Unresolved:
 # (emuDeckAzahar.sh:7). The legacy citra.sh stays out: it launches Citra, an
 # emulator no card describes. duckstation.sh runs DuckStation against the
 # DataRoot the launch environment picks (emuDeckDuckStation.sh:9 assumes the
-# environment-unset side, ~/.local/share/duckstation).
-_EMUDECK_LAUNCHER_CARDS = {"cemu": "CEMU", "azahar": "AZAHAR", "duckstation": "DUCKSTATION"}
+# environment-unset side, ~/.local/share/duckstation); pcsx2-qt.sh runs PCSX2
+# against ${HOME}/.config/PCSX2/inis/PCSX2.ini (emuDeckPCSX2QT.sh:6).
+_EMUDECK_LAUNCHER_CARDS = {
+    "cemu": "CEMU",
+    "azahar": "AZAHAR",
+    "duckstation": "DUCKSTATION",
+    "pcsx2-qt": "PCSX2",
+}
 
 # The binary variants an EmuDeck launcher picks between, in its probe order
 # (cemu.sh:37-93): an AppImage under ~/Applications (vars.sh:4-5), an

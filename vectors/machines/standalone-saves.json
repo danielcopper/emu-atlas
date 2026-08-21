@@ -1573,6 +1573,294 @@
           }
         }
       }
+    },
+    {
+      "name": "retrodeck-pcsx2s-two-file-cards-share-their-images",
+      "rationale": "PCSX2's slots are read the way the emulator reads them: [Folders] MemoryCards names the card directory (wired into the saves tree here), [MemoryCards] SlotN_Enable and SlotN_Filename pick each card, and the type is what sits at the card's full path (FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3) — nothing there means a file card that would be created on first use, one shared .ps2 image per slot. Both console ports answer as shared-card groups; the six multitap slots stay silent while disabled.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\nSlot2_Enable = true\nSlot2_Filename = Mcd002.ps2\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+file",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Filename",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-directory-at-the-card-path-is-a-folder-card",
+      "rationale": "The card's type is a fact of the disk, not of the config: a directory at the card's full path makes it a folder card (FileMcd_SetType, MemoryCardFile.cpp:584-604), whose per-game saves live as auto-managed subdirectories inside — so the answer states the tree as a per-game group with its names refused, while the other slot's file card stays the shared image it is.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = FolderCard\nSlot2_Enable = true\nSlot2_Filename = Mcd002.ps2\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "PCSX2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
+                "role": "memory-card",
+                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3 — a directory at the card's full path is MemoryCardType::Folder (McdFolderAutoManage default true, Pcsx2Config.cpp:1922)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "folder+file",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "FolderCard",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Filename",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-pcsx2-reaches-the-card-through-its-launcher",
+      "rationale": "EmuDeck's catalogue runs tools/launchers/pcsx2-qt.sh, and the launcher route carries the entry to the same card the %EMULATOR_PCSX2% token reaches — variant-gated, AppImage first. The AppImage reads the host's own config-side DataRoot (~/.config/PCSX2, Pcsx2Config.cpp:2197-2217; emuDeckPCSX2QT.sh:6), where EmuDeck points [Folders] MemoryCards into its saves tree.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/pcsx2-qt.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/pcsx2-Qt.AppImage": "",
+          "/home/deck/.config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /home/deck/Emulation/saves/pcsx2/saves\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\nSlot2_Enable = false\nSlot2_Filename = Mcd002.ps2\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/pcsx2/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/Emulation/saves/pcsx2/saves",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/pcsx2/saves",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+off",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/home/deck/Emulation/saves/pcsx2/saves",
+                "options_file": "/home/deck/.config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "false",
+                "options_file": "/home/deck/.config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }
