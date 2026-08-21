@@ -132,12 +132,7 @@ def _is_skipping_value(value: str) -> bool:
     would be a value nothing configured. An empty value with indented lines
     under it is the fifth, and only the caller can see what follows.
     """
-    return (
-        value in ("|", ">", "|-", ">-", "|+", ">+")
-        or value.startswith("- ")
-        or value.startswith("[")
-        or value.startswith("{")
-    )
+    return value in ("|", ">", "|-", ">-", "|+", ">+") or value.startswith(("- ", "[", "{"))
 
 
 def _refusal_in(value: str) -> str | None:
@@ -197,11 +192,50 @@ def _substitute(
     return resolved, None
 
 
+@dataclass(frozen=True, slots=True)
+class _KeyLine:
+    """What one top-level ``key: value`` line contributes.
+
+    Exactly one of the three says what happened: ``refusal`` stops the whole
+    file, ``skip`` records the key as stated-but-unread, and otherwise
+    ``value`` is the scalar to keep. ``pending`` marks a key whose meaning the
+    following lines still decide — an empty value is a scalar until an
+    indented line turns it into a block.
+    """
+
+    key: str = ""
+    value: str | None = None
+    skip: bool = False
+    pending: bool = False
+    refusal: str | None = None
+
+
+def _classify(line: str) -> _KeyLine:
+    """One top-level line, read the way this module reads: value, skip or refusal."""
+    split = _split_key(line)
+    if split is None:
+        # Not a key at all — a bare scalar or a list item at the top level.
+        # Nothing here can be attributed to a key.
+        return _KeyLine(refusal=REFUSAL_NOT_A_FLAT_MAPPING)
+    key, raw_value = split
+    value = raw_value.strip()
+    refusal = _refusal_in(value)
+    if refusal is not None:
+        return _KeyLine(refusal=refusal)
+    if _is_skipping_value(value):
+        return _KeyLine(key=key, skip=True, pending=True)
+    if value == "":
+        # An empty scalar, or the head of a nested block — the lines that
+        # follow decide, so it is recorded as empty and stays pending.
+        return _KeyLine(key=key, value="", pending=True)
+    return _KeyLine(key=key, value=_scalar(raw_value))
+
+
 def read_scalars(text: str) -> YamlScalars:
     """Read the flat top-level scalars of *text*, naming what was not read."""
     values: dict[str, str] = {}
     skipped: list[str] = []
-    pending_block_key: str | None = None
+    pending_key: str | None = None
     seen_content = False
     for raw_line in text.splitlines():
         if not raw_line.strip() or raw_line.lstrip().startswith("#"):
@@ -220,35 +254,21 @@ def read_scalars(text: str) -> YamlScalars:
             # makes that key a nested block after all: it stops being a scalar
             # and becomes one this reader names as unread. Indentation under no
             # key at all is a file this reader cannot attribute lines from.
-            if pending_block_key is None:
+            if pending_key is None:
                 return YamlScalars(refusal=REFUSAL_NOT_A_FLAT_MAPPING)
-            if pending_block_key in values:
-                del values[pending_block_key]
-                skipped.append(pending_block_key)
+            if values.pop(pending_key, None) is not None:
+                skipped.append(pending_key)
             continue
-        pending_block_key = None
         seen_content = True
-        split = _split_key(raw_line.rstrip())
-        if split is None:
-            # A top-level line that is not a key at all — a list item, a bare
-            # scalar. Nothing here can be attributed to a key.
-            return YamlScalars(refusal=REFUSAL_NOT_A_FLAT_MAPPING)
-        key, raw_value = split
-        refusal = _refusal_in(raw_value.strip())
-        if refusal is not None:
-            return YamlScalars(refusal=refusal)
-        if _is_skipping_value(raw_value.strip()):
-            skipped.append(key)
-            pending_block_key = key
-            continue
-        if raw_value.strip() == "":
-            # Either an empty scalar or the head of a nested block — the lines
-            # that follow decide, so the key is provisionally both: recorded as
-            # empty, and re-recorded as skipped when an indented line arrives.
-            values[key] = ""
-            pending_block_key = key
-            continue
-        values[key] = _scalar(raw_value)
+        outcome = _classify(raw_line.rstrip())
+        if outcome.refusal is not None:
+            return YamlScalars(refusal=outcome.refusal)
+        pending_key = outcome.key if outcome.pending else None
+        if outcome.skip:
+            skipped.append(outcome.key)
+        else:
+            assert outcome.value is not None  # a non-skipping line carries one
+            values[outcome.key] = outcome.value
     resolved, refusal = _substitute(values)
     if refusal is not None:
         return YamlScalars(refusal=refusal)
