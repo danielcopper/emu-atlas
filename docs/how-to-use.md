@@ -893,11 +893,16 @@ outcome.enabled       # None — always, on a standalone row
 its own roadmap block. Standalone rows are asked **through the entry route only** — the handle route's subject is a
 core, and a standalone emulator has none.
 
-Not every standalone emulator answers. Where the texture directory is a value an installer writes into the emulator's
-own settings rather than a default the emulator opens (PCSX2's `Folders/Textures`, Vita3K's `pref-path`), the entry
-refuses with `standalone-unsupported` — the split runs on evidence, not on the kind of entry. And EmuDeck's standalone
-entries all refuse: it installs each emulator as its own flatpak or AppImage, so the bases their trees hang off differ
-per emulator and atlas has established none of them.
+Not every standalone emulator answers, and one of them answers differently. Where the texture directory is a value in
+the emulator's own settings, a card may state the **key** instead of a subpath and its resolver reads it — PCSX2 does
+that with `[Folders] Textures`, and reads `[EmuCore/GS] LoadTextureReplacements` from the same file, so `enabled` is a
+reading there rather than `None`. Its `dir` is the load stage, `<Textures>/<serial>/replacements`, with `save_id` in
+`needs`: replacements are read one level below the per-game directory, and naming only the root would send a caller
+placing a pack where nothing reads it. Where nobody has read that configuration the entry still refuses with
+`standalone-unsupported` — Vita3K's `pref-path` lives in a `config.yml`, and atlas has no YAML reader — so the split
+runs on evidence, not on the kind of entry. And EmuDeck's standalone entries all refuse this question: it installs each
+emulator as its own flatpak or AppImage, and while the save route now establishes those bases per launch variant, the
+texture route has not been wired to them yet.
 
 Three ways this question answers with `Unresolved` instead of a directory, and each is a different instruction:
 
@@ -1002,11 +1007,11 @@ carries **no** config caveat and `enabled` is still `None` — Azahar, in both i
 the weaker statement on purpose: nobody has established that any switch exists, so the answer points nowhere rather than
 at a file that may govern nothing.
 
-**PCSX2 answers here and refuses the texture question — the same emulator, the opposite outcome.** That is evidence, not
-inconsistency: RetroDECK writes PCSX2's texture directory into the emulator's own `PCSX2.ini` (`Folders/Textures`), so
-the texture answer would have to model a configuration atlas does not read, while nothing writes `Folders/Patches` at
-all — the patches directory stays the emulator's own default, which is a path join. If you set `Folders/Patches`
-yourself, the mod answer moves out from under you and atlas will not see it.
+**PCSX2 answers here from a default and answers the texture question from a configuration — the same emulator, two
+different means.** That is evidence, not inconsistency: RetroDECK writes PCSX2's texture directory into the emulator's
+own `PCSX2.ini` (`Folders/Textures`), which the texture card now reads, while nothing writes `Folders/Patches` at all —
+the patches directory stays the emulator's own default, which is a path join. If you set `Folders/Patches` yourself, the
+mod answer moves out from under you and atlas will not see it, because this block reads no configuration.
 
 **Cemu appears in this question and in the texture one, with the same directory.** On that emulator a graphic pack is
 one mechanism: `rules.txt` replaces textures and `patches.txt` beside it patches the running title's code. Both

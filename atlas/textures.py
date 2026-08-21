@@ -338,12 +338,31 @@ def recorded_texture_core_words(entry: Mapping[str, Any]) -> frozenset[str]:
 
 
 def recorded_texture_emulator_words(entry: Mapping[str, Any]) -> frozenset[str]:
-    """Every word a standalone texture row states as this emulator's own."""
+    """Every word a standalone texture row states as this emulator's own.
+
+    A config-stated row records the emulator's own vocabulary too — the
+    section and key it reads, and the default it falls back to — so the
+    anchors gate proves those against the shipped binary the way it proves a
+    fixed subpath's segments.
+    """
     textures = entry.get("textures", {})
     words = path_segments(textures.get("subdir"))
     config = textures.get("config")
     if isinstance(config, dict) and isinstance(config.get("path"), str):
         words.append(config["path"].rsplit("/", 1)[-1])
+    # The directory setting's default is a path segment the emulator opens, so
+    # it is anchored like one; a switch's default is the spelling of a boolean
+    # and names nothing, so it is not.
+    for setting, fields in (
+        (textures.get("directory"), ("section", "key", "default")),
+        (textures.get("switch"), ("section", "key")),
+    ):
+        if not isinstance(setting, dict):
+            continue
+        for field in fields:
+            value = setting.get(field)
+            if isinstance(value, str) and value:
+                words.append(value)
     return frozenset(words)
 
 
@@ -415,6 +434,23 @@ class EmulatorConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class TextureSetting:
+    """One configuration key a card names, with the emulator's compiled default.
+
+    The card states where the value lives and what governs without it; the
+    resolver registered for the token reads it the way the emulator does.
+    ``default`` is the string the emulator falls back to — for a switch, the
+    spelling of its boolean default — so a card never has to say what a
+    missing key means twice.
+    """
+
+    section: str
+    key: str
+    default: str
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class StandaloneTextureCard:
     """Where a standalone emulator reads texture packs, below which XDG base.
 
@@ -428,14 +464,26 @@ class StandaloneTextureCard:
     Keyed by the ``%EMULATOR_…%`` token the frontend's launch command names,
     because for a standalone entry that token is the only identifier there is.
 
-    ``config`` names the settings file that would establish ``enabled`` and is
-    never read; ``keying`` follows the same cited-or-absent rule as everywhere
-    in this file.
+    A card states its directory one of two ways, and exactly one: ``base`` plus
+    ``subdir`` for an emulator that opens a fixed default, or ``directory`` —
+    the configuration key whose *value* is the directory, for one that opens
+    whatever its settings name (PCSX2's ``[Folders] Textures``). The second
+    shape needs a resolver registered beside it in :mod:`atlas.installations`
+    and fails the load without one, the same way a save card does: reading a
+    configuration is code, never a card DSL.
+
+    ``config`` names the settings file both shapes hang off. Where no
+    ``switch`` is stated it is never read and ``enabled`` stays ``None`` with
+    ``emulator-config-unread`` naming it; where one is, that key is the live
+    read behind ``enabled``. ``keying`` follows the same cited-or-absent rule
+    as everywhere in this file.
     """
 
     token: str
-    base: str
-    subdir: str
+    base: str | None
+    subdir: str | None
+    directory: TextureSetting | None
+    switch: TextureSetting | None
     keying: Keying | None
     keying_citation: str | None
     config: EmulatorConfig
@@ -457,6 +505,26 @@ def _emulator_config(value: object, where: str) -> EmulatorConfig:
     return EmulatorConfig(base=base, path=_expect_subdir(value.get("path"), f"{where}.path"))
 
 
+def _texture_setting(value: object, where: str) -> TextureSetting:
+    """One configuration key a card names — section, key, default, citation."""
+    if not isinstance(value, dict) or set(value) != {"section", "key", "default", "citation"}:
+        raise ValueError(
+            f"{where}: expected exactly section/key/default/citation, got {value!r}"
+        )
+    return TextureSetting(
+        section=_expect_str(value.get("section"), f"{where}.section"),
+        key=_expect_str(value.get("key"), f"{where}.key"),
+        # The default may legitimately be the empty string — an emulator whose
+        # unset key means "nothing configured" — so it is not _expect_str.
+        default=(
+            value["default"]
+            if isinstance(value["default"], str)
+            else _expect_str(value["default"], f"{where}.default")
+        ),
+        citation=_expect_str(value.get("citation"), f"{where}.citation"),
+    )
+
+
 def _standalone_card(token: str, entry: Any) -> StandaloneTextureCard:
     """One standalone emulator's card — validated, never coerced."""
     where = f"standalone texture card {token!r}"
@@ -465,9 +533,21 @@ def _standalone_card(token: str, entry: Any) -> StandaloneTextureCard:
     textures = entry.get("textures")
     if not isinstance(textures, dict):
         raise ValueError(f"{where}: expected a 'textures' object, got {textures!r}")
-    base = _expect_str(textures.get("base"), f"{where}: textures.base")
-    if base not in XDG_BASES:
-        raise ValueError(f"{where}: textures.base must be one of {sorted(XDG_BASES)}, got {base!r}")
+    stated_directory = textures.get("directory")
+    fixed = textures.get("base") is not None or textures.get("subdir") is not None
+    if fixed == (stated_directory is not None):
+        raise ValueError(
+            f"{where}: state either base+subdir or a 'directory' setting, never both or neither"
+        )
+    base: str | None = None
+    subdir: str | None = None
+    if fixed:
+        base = _expect_str(textures.get("base"), f"{where}: textures.base")
+        if base not in XDG_BASES:
+            raise ValueError(
+                f"{where}: textures.base must be one of {sorted(XDG_BASES)}, got {base!r}"
+            )
+        subdir = _expect_subdir(textures.get("subdir"), f"{where}: textures.subdir")
     keying, citation = _keying(textures.get("keying"), f"{where}: textures.keying")
     if entry.get("anchors") is not None:
         expect_table_anchors(
@@ -476,10 +556,19 @@ def _standalone_card(token: str, entry: Any) -> StandaloneTextureCard:
             vocabulary=recorded_texture_emulator_words(entry),
             binary_required=True,
         )
+    switch = textures.get("switch")
     return StandaloneTextureCard(
         token=token,
         base=base,
-        subdir=_expect_subdir(textures.get("subdir"), f"{where}: textures.subdir"),
+        subdir=subdir,
+        directory=(
+            _texture_setting(stated_directory, f"{where}: textures.directory")
+            if stated_directory is not None
+            else None
+        ),
+        switch=(
+            _texture_setting(switch, f"{where}: textures.switch") if switch is not None else None
+        ),
         keying=keying,
         keying_citation=citation,
         config=_emulator_config(textures.get("config"), f"{where}: textures.config"),

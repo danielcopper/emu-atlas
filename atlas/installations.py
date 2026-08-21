@@ -4880,26 +4880,156 @@ class _XdgHomes:
         return self.data if which == XDG_DATA else self.config
 
 
+def _pcsx2_texture_placement(
+    machine: Machine,
+    *,
+    card: StandaloneTextureCard,
+    homes: _XdgHomes,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> TexturePlacement | Unresolved:
+    """PCSX2's texture answer: the directory its configuration names, and the switch.
+
+    Two things set this apart from a card that opens a fixed default. The
+    directory is a configuration value — ``[Folders] Textures``, read through
+    the helper the memory-card directory goes through (LoadPathFromSettings,
+    Pcsx2Config.cpp:2272-2278 at v2.6.3), so an unset key means the compiled
+    ``textures`` below the DataRoot and a relative one resolves against it.
+    And ``enabled`` is a real read rather than ``None``: the switch is
+    ``[EmuCore/GS] LoadTextureReplacements``, compiled default off, and
+    nothing is scanned while it is off (GSTextureReplacements.cpp:391-393).
+
+    ``dir`` is the **load stage**, not the root, and that is deliberate. The
+    tree is staged twice below the root — ``<serial>/replacements`` is read,
+    ``<serial>/dumps`` is written — so an answer naming only the root would
+    send a caller placing a pack one level above everything that reads it. The
+    serial is the running disc's, which atlas does not read out of content, so
+    it stays a hole for the caller who knows it.
+    """
+    assert card.directory is not None  # the router sends only config-stated cards here
+    data_root = os.path.join(homes.base(card.config.base), "PCSX2")
+    ini_path = os.path.join(homes.base(card.config.base), card.config.path)
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"PCSX2's configuration ({ini_path}) exists and could not be read — where it "
+            "reads texture packs from, and whether it reads them at all, is unknowable here",
+            {"emulator": card.token, "config": ini_path},
+        )
+    values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
+    setting = card.directory
+    raw_dir = values.get((setting.section, setting.key), "")
+    if not raw_dir:
+        root = os.path.join(data_root, setting.default)
+    elif not os.path.isabs(raw_dir):
+        root = os.path.join(data_root, raw_dir)
+    else:
+        root = raw_dir
+    directory = os.path.join(root, TEMPLATE_SAVE_ID, _PCSX2_TEXTURE_LOAD_STAGE)
+    switch = card.switch
+    assert switch is not None  # the packaged card states one; the loader kept it
+    raw_switch = values.get((switch.section, switch.key))
+    enabled = (
+        raw_switch.strip().casefold() == "true"
+        if raw_switch is not None
+        else switch.default == "true"
+    )
+    physical_dir, link_caveats = _link_view(machine, root)
+    return TexturePlacement(
+        dir=directory,
+        needs=(HOLE_SAVE_ID,),
+        enabled=enabled,
+        keying=card.keying,
+        sources=(
+            f"texture card '{card.token}': the directory is [{setting.section}] "
+            f"{setting.key} in the emulator's own configuration — {setting.citation}",
+            f"texture card '{card.token}': replacement is [{switch.section}] {switch.key} "
+            f"— {switch.citation}",
+            *(
+                (f"texture card '{card.token}': keyed by {card.keying} — {card.keying_citation}",)
+                if card.keying is not None
+                else ()
+            ),
+            f"texture card '{card.token}': {card.provenance}",
+        ),
+        caveats=(
+            *extra_caveats,
+            *link_caveats,
+            Caveat(
+                CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+                "the directory is staged per game below the texture root: replacements are "
+                f"read from <serial>/{_PCSX2_TEXTURE_LOAD_STAGE} and dumps written to "
+                f"<serial>/{_PCSX2_TEXTURE_DUMP_STAGE}. Fill <save_id> with the disc's "
+                "serial as PCSX2 reads it off the running game; the spelling is exact, "
+                "because a wrongly-cased directory is warned about and left unused on a "
+                "case-sensitive filesystem",
+                {
+                    "core": card.token,
+                    "root": root,
+                    "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                    "load_stage": _PCSX2_TEXTURE_LOAD_STAGE,
+                    "dump_stage": _PCSX2_TEXTURE_DUMP_STAGE,
+                    "citation": (
+                        "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
+                    ),
+                },
+            ),
+        ),
+        physical_dir=(
+            os.path.join(physical_dir, TEMPLATE_SAVE_ID, _PCSX2_TEXTURE_LOAD_STAGE)
+            if physical_dir is not None
+            else None
+        ),
+    )
+
+
+# The two stages PCSX2 keeps below a game's texture directory — the emulator's
+# own spellings (GSTextureReplacements.cpp:39-40 at v2.6.3), and both whole
+# strings in the shipped binary.
+_PCSX2_TEXTURE_LOAD_STAGE = "replacements"
+_PCSX2_TEXTURE_DUMP_STAGE = "dumps"
+
+# Standalone texture cards whose directory is a configuration value rather than
+# a fixed subpath. Keyed by token like the save resolvers, and a card stating a
+# directory setting without one here fails loudly rather than answering a
+# default nobody read.
+_STANDALONE_TEXTURE_RESOLVERS = {
+    "PCSX2": _pcsx2_texture_placement,
+}
+
+
 def _standalone_texture_placement(
     machine: Machine,
     *,
     card: StandaloneTextureCard,
     homes: _XdgHomes,
     extra_caveats: tuple[Caveat, ...] = (),
-) -> TexturePlacement:
+) -> TexturePlacement | Unresolved:
     """Where a standalone emulator reads texture packs — an XDG join, then the links.
 
-    No config of the emulator's is read, and that is what the answer says: the
-    directory is its own default below a base the arrangement pins, so it
-    resolves without modelling the emulator, while the switch beside it does
-    not. ``enabled`` is therefore always ``None`` here, with
-    ``emulator-config-unread`` naming the file that would answer it — never
-    ``False``, which would be a reading nobody made.
+    Two shapes, and the card says which. Where it names a fixed subpath, no
+    config of the emulator's is read and the answer says so: the directory is
+    its own default below a base the arrangement pins, so it resolves without
+    modelling the emulator, while the switch beside it does not. ``enabled``
+    is then always ``None``, with ``emulator-config-unread`` naming the file
+    that would answer it — never ``False``, which would be a reading nobody
+    made. Where the card names a configuration key instead, its registered
+    resolver reads that configuration the way the emulator does, and answers
+    both the directory and the switch.
 
-    ``needs`` is always empty: nothing in this join comes from the content. A
-    standalone emulator's texture root belongs to the emulator, and the same
-    directory serves every game it launches.
+    ``needs`` is empty for the fixed shape: nothing in that join comes from
+    the content, and the same directory serves every game the emulator
+    launches.
     """
+    if card.directory is not None:
+        resolver = _STANDALONE_TEXTURE_RESOLVERS.get(card.token)
+        if resolver is None:
+            raise ValueError(
+                f"standalone texture card {card.token!r} states a directory setting but has "
+                "no resolver registered — the card and the code shipped out of step"
+            )
+        return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
+    assert card.base is not None and card.subdir is not None  # the loader enforces the pair
     directory = os.path.join(homes.base(card.base), card.subdir)
     config_path = os.path.join(homes.base(card.config.base), card.config.path)
     physical_dir, link_caveats = _link_view(machine, directory)
