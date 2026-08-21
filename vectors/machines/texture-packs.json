@@ -719,13 +719,13 @@
     },
     {
       "name": "a-standalone-entry-answers-the-texture-question-and-refuses-the-save-one",
-      "rationale": "One catalogue, two standalone entries, two different save outcomes — and the texture question answering beside them. DuckStation has a texture card and no standalone save card, so its entry refuses the save question with standalone-unsupported; Dolphin answers both since its save card landed. (Azahar was this proof until its own save card landed.) The asymmetry runs on what atlas has established, never on the kind of entry.",
+      "rationale": "One catalogue, two standalone entries, two different save outcomes — and the texture question answering beside them. PrimeHack has a texture card and no standalone save card, so its entry refuses the save question with standalone-unsupported; Dolphin answers both since its save card landed. (Azahar and then DuckStation were this proof, until their save cards landed.) The asymmetry runs on what atlas has established, never on the kind of entry.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>psp</name>\n    <fullname>Sony PlayStation Portable</fullname>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n    <platform>psp</platform>\n    <theme>psp</theme>\n  </system>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n    <theme>ps2</theme>\n  </system>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>psp</name>\n    <fullname>Sony PlayStation Portable</fullname>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n    <platform>psp</platform>\n    <theme>psp</theme>\n  </system>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n    <theme>ps2</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n    <platform>wii</platform>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/texture_packs/Dolphin/Textures/readme.txt": "put packs here"
         },
         "dirs": [
@@ -739,7 +739,7 @@
           "system": "gc"
         },
         "entry_savefile_query": {
-          "system": "psx"
+          "system": "wii"
         }
       },
       "expected": {
@@ -757,8 +757,8 @@
           "unresolved": {
             "code": "standalone-unsupported",
             "data": {
-              "label": "DuckStation (Standalone)",
-              "system": "psx"
+              "label": "PrimeHack (Standalone)",
+              "system": "wii"
             }
           }
         },

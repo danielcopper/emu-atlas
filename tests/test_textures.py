@@ -434,13 +434,13 @@ ESDE_SYSTEMS = """<?xml version="1.0"?>
     <theme>n3ds</theme>
   </system>
   <system>
-    <name>psx</name>
-    <fullname>Sony PlayStation</fullname>
-    <path>%ROMPATH%/psx</path>
-    <extension>.chd .CHD</extension>
-    <command label="DuckStation (Standalone)">%EMULATOR_DUCKSTATION% -batch %ROM%</command>
-    <platform>psx</platform>
-    <theme>psx</theme>
+    <name>wii</name>
+    <fullname>Nintendo Wii</fullname>
+    <path>%ROMPATH%/wii</path>
+    <extension>.rvz .RVZ</extension>
+    <command label="PrimeHack (Standalone)">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>
+    <platform>wii</platform>
+    <theme>wii</theme>
   </system>
 </systemList>
 """
@@ -582,10 +582,10 @@ class TestTheEntryRouteAsymmetryIsDeliberate:
     """
 
     def test_the_same_entry_answers_textures_and_refuses_its_save(self):
-        # DuckStation has a texture card and no standalone save card — the
-        # split inside one entry is evidence, not kind. (Azahar used to be
-        # this example, until its save card landed.)
-        entry = _entry("psx")
+        # PrimeHack has a texture card and no standalone save card — the
+        # split inside one entry is evidence, not kind. (Azahar and then
+        # DuckStation were this example, until their save cards landed.)
+        entry = _entry("wii")
         assert isinstance(entry.texture_pack_location(), TexturePlacement)
         refusal = entry.savefile_location()
         assert isinstance(refusal, Unresolved)
