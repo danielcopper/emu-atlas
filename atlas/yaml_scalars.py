@@ -161,16 +161,20 @@ def _split_key(line: str) -> tuple[str, str] | None:
 
 
 def _substitute(
-    values: dict[str, str],
+    values: dict[str, str], fallbacks: Mapping[str, str]
 ) -> tuple[dict[str, str], str | None]:
     """Resolve ``$(Name)`` against the file's own keys, or refuse.
 
     RPCS3 writes ``$(EmulatorDir): /path/`` and then composes every device path
     off it — the defining key is spelled exactly like the reference, so the
-    whole ``$(Name)`` token is what gets looked up, not the name inside it. A
-    token the file does not define is a refusal rather than an empty string:
-    the emulator would resolve it and atlas cannot, so answering the unexpanded
-    text would state a path nothing uses.
+    whole ``$(Name)`` token is what gets looked up, not the name inside it.
+
+    A token the file leaves empty or does not define at all falls to
+    *fallbacks*, which is where the caller puts what the emulator itself would
+    use — RPCS3 takes its config directory when ``$(EmulatorDir)`` is empty
+    (vfs_config.cpp:32-39). Without a fallback such a token is a refusal
+    rather than an empty string: the emulator would resolve it and atlas
+    cannot, so answering the unexpanded text would state a path nothing uses.
     """
     resolved: dict[str, str] = {}
     for key, value in values.items():
@@ -183,9 +187,10 @@ def _substitute(
             if end == -1:
                 break
             token = current[start : end + 1]
-            if token not in values:
+            replacement = values.get(token) or fallbacks.get(token)
+            if replacement is None:
                 return {}, REFUSAL_SUBSTITUTION_UNKNOWN
-            current = current[:start] + values[token] + current[end + 1 :]
+            current = current[:start] + replacement + current[end + 1 :]
         else:
             return {}, REFUSAL_SUBSTITUTION_CYCLE
         resolved[key] = current
@@ -286,8 +291,13 @@ def _absorb_key(
     return outcome.key if outcome.pending else None
 
 
-def read_scalars(text: str) -> YamlScalars:
-    """Read the flat top-level scalars of *text*, naming what was not read."""
+def read_scalars(text: str, *, fallbacks: Mapping[str, str] | None = None) -> YamlScalars:
+    """Read the flat top-level scalars of *text*, naming what was not read.
+
+    *fallbacks* supplies what a ``$(Name)`` token means where the file leaves
+    it empty or states it nowhere — the emulator's own rule, which only the
+    caller knows.
+    """
     lines, refusal = _first_document(text)
     if refusal is not None:
         return YamlScalars(refusal=refusal)
@@ -303,7 +313,7 @@ def read_scalars(text: str) -> YamlScalars:
         if outcome.refusal is not None:
             return YamlScalars(refusal=outcome.refusal)
         pending_key = _absorb_key(outcome, values, skipped)
-    resolved, refusal = _substitute(values)
+    resolved, refusal = _substitute(values, fallbacks or {})
     if refusal is not None:
         return YamlScalars(refusal=refusal)
     return YamlScalars(values=resolved, skipped=tuple(skipped))
