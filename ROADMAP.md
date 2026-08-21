@@ -85,10 +85,11 @@ Per-emulator config parsers and placement rules, one sub-issue per emulator, tar
 `es_systems.xml`. Carded and shipped: Dolphin (GC slots, Wii NAND), PPSSPP, xemu, Cemu — including the per-title MLC
 unit and its keys.txt BIOS expectation as a `packaged` firmware declaration (#207, #208) — Azahar (the 3DS virtual SD's
 per-title unit, the second half of the rommapp/romm#3866 demand, #213), DuckStation (two slots, six modes, #215), PCSX2
-(slots whose card type is read off the disk, #217) and melonDS (one `.sav` per game, the TOML/legacy-INI read, and the
-first flatpak-variant answer on EmuDeck, #219; its BIOS expectations are #220). Each sub-issue replaces the `Unresolved`
-standalone outcome for its emulator, save placement + BIOS expectations + config sources, on RetroDECK and EmuDeck both.
-Candidates next: PPSSPP deepening, RPCS3, Vita3K.
+(slots whose card type is read off the disk, #217) and melonDS — one `.sav` per game with the TOML/legacy-INI read and
+the first flatpak-variant answer on EmuDeck (#219), plus its BIOS expectations as the first `config_files` firmware card
+(#220: the paths are configuration values, and which of them a launch probes is `verifySetup`'s own live decision). Each
+sub-issue replaces the `Unresolved` standalone outcome for its emulator, save placement + BIOS expectations + config
+sources, on RetroDECK and EmuDeck both. Candidates next: PPSSPP deepening, RPCS3, Vita3K.
 
 ### 5. EmuDeck reality
 

@@ -1209,6 +1209,31 @@ present file because no packaged identity can exist for a user-supplied key file
 `core_so: null` and `system_source: "card"`, and its `path` may lie outside the firmware root — the emulator's own tree
 is the door that matters.
 
+A card states its probes one of two ways, and melonDS is the second: **the paths are configuration values**, not fixed
+names under a tree. Its card names the keys (`[DS] BIOS9Path`, `[DSi] NANDPath`, …) and the resolver reads each value
+the way `OpenLocalFile` reads it — absolute as spelled, anything else below the melonDS config directory. Which keys are
+probed at all is read live too, because the emulator decides it live: `verifySetup` asks two switches, so DSi mode adds
+the DSi BIOS pair and the NAND, and with `Emu.ExternalBIOSEnable` **off** — melonDS's compiled default — DS games boot
+on the emulator's built-in replacement and nothing external is probed:
+
+```python
+answer = inst.firmware_for_system("nds")
+core = answer.cores[0]                    # 'melonDS (Standalone)'
+core.declaration                           # 'packaged'
+[r.file_name for r in core.requirements]   # [] with the switch off — the true answer, not an unread one
+[c.code for c in core.caveats]             # [..., 'firmware-builtin-replacement']
+```
+
+That empty list is a statement, and `firmware-builtin-replacement` is what keeps it from reading as "nothing is
+configurable": its data names the switch (`Emu.ExternalBIOSEnable`) whose flip creates the requirements, and the console
+type as read. The two arrangements land on opposite sides of it — one switches external BIOS on and points the paths at
+its BIOS directory, the other writes all seven paths and leaves the switch off, so they are parked behind something that
+is not reading them. A probed key whose value names no file (unset, or ending in a directory step) is refused by name
+with `firmware-path-names-no-file` rather than answered with the config directory dressed up as a BIOS file, and the
+other keys of the same probe set still answer — so a caller sees exactly which one is unconfigured. When the governing
+configuration exists and cannot be read, the entry's `declaration` is `"unreadable"` with `emulator-config-unreadable`:
+which files this launch would probe is unknown, which is not "needs nothing".
+
 ## Where do this system's ROMs live? (and what launches them)
 
 The same catalogue declares, per system, the directory its ROMs sit in and the file extensions the frontend will launch.

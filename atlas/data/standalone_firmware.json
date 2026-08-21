@@ -3,7 +3,9 @@
   "spec": "Standalone firmware cards: what a standalone emulator expects beside its content, for the firmware questions. World knowledge under DESIGN.md's boundary rule — a standalone emulator ships no .info to read, so which file it probes and where is established from its source at the shipped release and packaged here with citations, while everything about THIS machine (whether the file is there, what kind of path sits at the destination) is read live. Each file names the XDG base and the emulator-relative path the emulator itself probes — never the staging spot an arrangement's installer uses, because the emulator's probe is the only door that matters at run time. 'need' speaks the firmware model's own vocabulary (required | optional): optional states that the emulator runs without the file and the caveat prose says what stops working. Cards are keyed by the %EMULATOR_…% token, like the standalone save cards beside them.",
   "emulators": {
     "CEMU": {
-      "systems": ["wiiu"],
+      "systems": [
+        "wiiu"
+      ],
       "files": [
         {
           "name": "keys.txt",
@@ -16,6 +18,51 @@
       ],
       "provenance": {
         "source": "Cemu 2.6. The keys file lives below the user data path (KeyCache.cpp:63), which is the XDG data home's Cemu directory on a non-portable Linux build (CemuApp.cpp DeterminePaths, Linux branch: XDG_DATA_HOME else ~/.local/share, plus /Cemu; a 'portable' directory next to the executable — for an AppImage, next to the AppImage file — outranks it). RetroDECK stages the file at bios/cemu/keys.txt and links it to exactly that probe path when present (component_prepare.sh). EmuDeck's installer moves a found keys.txt into the config directory instead (emuDeckCemu.sh, CemuNative[configDir]) — a path the shipped Linux build's key probe never reads, which is precisely why the card states the emulator's door and not the installer's."
+      }
+    },
+    "MELONDS": {
+      "systems": [
+        "nds"
+      ],
+      "config_files": [
+        {
+          "key": "DS.BIOS9Path",
+          "purpose": "the DS-mode ARM9 BIOS dump, exactly 4 KB — probed only while Emu.ExternalBIOSEnable is on; with the switch off the built-in replacement boots DS games without any file",
+          "citation": "verifyDSBIOS, EmuInstance.cpp:487-517 at 1.1; gated by verifySetup :637-644"
+        },
+        {
+          "key": "DS.BIOS7Path",
+          "purpose": "the DS-mode ARM7 BIOS dump, exactly 16 KB — probed only while Emu.ExternalBIOSEnable is on",
+          "citation": "verifyDSBIOS, EmuInstance.cpp:487-517 at 1.1"
+        },
+        {
+          "key": "DS.FirmwarePath",
+          "purpose": "the DS firmware image — 256 or 512 KB boots the DS menu, a 128 KB dump is accepted but not bootable — and it must be writable: melonDS stores Wi-Fi settings back into it; probed in DS mode while Emu.ExternalBIOSEnable is on",
+          "citation": "verifyDSFirmware, EmuInstance.cpp:553-583 at 1.1; the write-back is getEffectiveFirmwareSavePath :673-686"
+        },
+        {
+          "key": "DSi.BIOS9Path",
+          "purpose": "the DSi ARM9 BIOS dump, exactly 64 KB — required whenever the console type is DSi, external-BIOS switch or not",
+          "citation": "verifyDSiBIOS, EmuInstance.cpp:519-551 at 1.1; verifySetup :646-650"
+        },
+        {
+          "key": "DSi.BIOS7Path",
+          "purpose": "the DSi ARM7 BIOS dump, exactly 64 KB — required whenever the console type is DSi",
+          "citation": "verifyDSiBIOS, EmuInstance.cpp:519-551 at 1.1"
+        },
+        {
+          "key": "DSi.FirmwarePath",
+          "purpose": "the DSi firmware image, exactly 128 KB and writable — probed in DSi mode while Emu.ExternalBIOSEnable is on",
+          "citation": "verifyDSiFirmware, EmuInstance.cpp:585-610 at 1.1"
+        },
+        {
+          "key": "DSi.NANDPath",
+          "purpose": "the DSi NAND image, opened read-write — required whenever the console type is DSi; the DSi's own storage, titles and all, which melonDS writes into",
+          "citation": "verifyDSiNAND, EmuInstance.cpp:612-631 at 1.1; verifySetup :656-658"
+        }
+      ],
+      "provenance": {
+        "source": "melonDS 1.1, the release both arrangements run. Which of these files a launch probes is verifySetup's decision (EmuInstance.cpp:633-667), taken from two configuration switches read live: Emu.ExternalBIOSEnable — default off, the built-in replacement boots DS games with no file at all — and Emu.ConsoleType (DS or DSi). Every path is a configuration value in melonDS.toml (or the pre-1.0 melonDS.ini it migrates), resolved the way OpenLocalFile resolves it: absolute as spelled, anything else below the melonDS config directory (Platform.cpp:157-178). RetroDECK switches external BIOS on and points the DS set at its bios directory (component_prepare.sh). EmuDeck writes all seven paths but ships ExternalBIOSEnable=0 in its template (configs/net.kuribo64.melonDS/config/melonDS/melonDS.ini:77) — parked paths behind a switch that is off, so the answer reads the switch, not the intention."
       }
     }
   }

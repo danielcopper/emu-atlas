@@ -486,12 +486,23 @@ Read by `atlas.standalone_firmware`, keyed like the save cards beside it, and co
 carded standalone catalogue entry answers `declaration: "packaged"` with real requirements instead of refusing
 `unsupported`. The card states what no machine read can recover — which file the emulator probes and where, established
 from its source at the shipped release — and everything about this machine stays live: the destination is the join the
-emulator performs against the arrangement's own XDG bases, resolved through symlinks, and `found` is what actually sits
+emulator performs against the bases its launch reads, resolved through symlinks, and `found` is what actually sits
 there. A card names the **emulator's probe**, never an installer's staging spot: Cemu (2.6) reads its keys at
 `GetUserDataPath("keys.txt")` (KeyCache.cpp:63) — RetroDECK links `bios/cemu/keys.txt` to exactly that path, while
 EmuDeck's installer parks a found `keys.txt` in the config directory the Linux build's key probe never reads, which is
 precisely why the card records the door and not the intention. No packaged identity exists for a user-supplied key file,
 so a present file stays `checked: "unknown"`.
+
+A card states its probes one of two ways, and exactly one of them: `files` names fixed paths below an XDG base (Cemu's
+`keys.txt`), or `config_files` names the **configuration keys whose values are the paths** — melonDS (1.1), whose seven
+BIOS, firmware and NAND keys point wherever the user pointed them. A `config_files` card needs a resolver registered
+beside it in `atlas/firmware.py` and fails the load loudly without one, the same way a save card does: which keys a
+launch probes at all is the emulator's own live decision, not something a card can spell. melonDS's `verifySetup`
+(EmuInstance.cpp:633-667) asks two switches — `Emu.ExternalBIOSEnable`, whose compiled default is **off** because the
+emulator carries a built-in replacement, and `Emu.ConsoleType`, where DSi mode requires its BIOS pair and NAND either
+way. With the switch off the answer is an empty requirement list plus `firmware-builtin-replacement` naming the switch;
+the two arrangements sit on opposite sides of it, RetroDECK switching it on and EmuDeck shipping `ExternalBIOSEnable=0`
+beside all seven configured paths.
 
 ## `save_memory.json` — which files RetroArch writes for a core, per system
 

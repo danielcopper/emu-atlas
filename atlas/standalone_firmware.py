@@ -41,12 +41,36 @@ class StandaloneFirmwareFile:
 
 
 @dataclass(frozen=True, slots=True)
+class StandaloneFirmwareConfigFile:
+    """One file whose whole path is a configuration value the emulator reads.
+
+    The other shape a probe can take (melonDS's ``[DS] BIOS9Path`` names the
+    file, wherever the user pointed it): the card states the config key and
+    the claim, and the resolver registered for the token reads the value the
+    way the emulator does — including which keys the current switches make
+    the launch probe at all, which is code knowledge, never a card DSL.
+    """
+
+    key: str
+    purpose: str
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class StandaloneFirmwareCard:
-    """One standalone emulator's firmware expectations, with the systems they answer for."""
+    """One standalone emulator's firmware expectations, with the systems they answer for.
+
+    Exactly one of ``files`` and ``config_files`` is populated: a card names
+    fixed probe paths, or the config keys whose values are the paths — and a
+    ``config_files`` card without a resolver registered in
+    :mod:`atlas.firmware` fails loudly there, the way a save card without one
+    does.
+    """
 
     token: str
     systems: tuple[str, ...]
     files: tuple[StandaloneFirmwareFile, ...]
+    config_files: tuple[StandaloneFirmwareConfigFile, ...]
     provenance: str
 
 
@@ -85,6 +109,17 @@ def _file(token: str, index: int, entry: Any) -> StandaloneFirmwareFile:
     )
 
 
+def _config_file(token: str, index: int, entry: Any) -> StandaloneFirmwareConfigFile:
+    where = f"standalone firmware card {token!r}: config_files[{index}]"
+    if not isinstance(entry, dict) or set(entry) != {"key", "purpose", "citation"}:
+        raise ValueError(f"{where}: expected exactly key/purpose/citation, got {entry!r}")
+    return StandaloneFirmwareConfigFile(
+        key=_expect_str(entry["key"], f"{where}.key"),
+        purpose=_expect_str(entry["purpose"], f"{where}.purpose"),
+        citation=_expect_str(entry["citation"], f"{where}.citation"),
+    )
+
+
 def _card(token: str, entry: Any) -> StandaloneFirmwareCard:
     where = f"standalone firmware card {token!r}"
     if not isinstance(entry, dict):
@@ -93,15 +128,21 @@ def _card(token: str, entry: Any) -> StandaloneFirmwareCard:
     if not isinstance(systems, list) or not systems:
         raise ValueError(f"{where}: systems must be a non-empty list, got {systems!r}")
     files = entry.get("files")
-    if not isinstance(files, list) or not files:
+    config_files = entry.get("config_files")
+    if (files is None) == (config_files is None):
+        raise ValueError(f"{where}: exactly one of 'files' and 'config_files' must be given")
+    if files is not None and (not isinstance(files, list) or not files):
         raise ValueError(f"{where}: files must be a non-empty list, got {files!r}")
+    if config_files is not None and (not isinstance(config_files, list) or not config_files):
+        raise ValueError(f"{where}: config_files must be a non-empty list, got {config_files!r}")
     provenance = entry.get("provenance", {})
     if not isinstance(provenance, dict):
         raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
     return StandaloneFirmwareCard(
         token=token,
         systems=tuple(_expect_str(s, f"{where}: systems[]") for s in systems),
-        files=tuple(_file(token, i, f) for i, f in enumerate(files)),
+        files=tuple(_file(token, i, f) for i, f in enumerate(files or [])),
+        config_files=tuple(_config_file(token, i, f) for i, f in enumerate(config_files or [])),
         provenance=_expect_str(provenance.get("source"), f"{where}: provenance.source"),
     )
 

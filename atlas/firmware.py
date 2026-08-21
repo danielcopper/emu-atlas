@@ -93,11 +93,17 @@ from atlas.machine import (
     PathKind,
     ReadStatus,
 )
+from atlas import melonds
 from atlas.oddities import SaveMode, load_oddities
-from atlas.standalone_firmware import StandaloneFirmwareCard, lookup_standalone_firmware_card
+from atlas.standalone_firmware import (
+    StandaloneFirmwareCard,
+    StandaloneFirmwareConfigFile,
+    lookup_standalone_firmware_card,
+)
 from atlas.placement import (
     ROOT_SYSTEM_DIRECTORY,
     UNRESOLVED_CORE_NOT_INSTALLED,
+    UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_STANDALONE,
     Caveat,
 )
@@ -133,6 +139,17 @@ CAVEAT_FIRMWARE_DECLARATION_UNKNOWN = "firmware-declaration-unknown"
 # between "the emulator declares" and "atlas's card states" is never lost in
 # a requirement list that looks like any other.
 CAVEAT_FIRMWARE_PACKAGED_DECLARATION = "firmware-packaged-declaration"
+# The emulator boots on a built-in BIOS/firmware replacement while its
+# external-BIOS switch is off — melonDS's compiled default — so no external
+# file is probed and an empty requirement list is the true answer. Stated so
+# a checker never reads "nothing required" as "nothing configurable": the
+# data names the switch whose flip makes the external set required.
+CAVEAT_FIRMWARE_BUILTIN_REPLACEMENT = "firmware-builtin-replacement"
+# One fact, one code on both routes, the same sharing as the two below: the
+# save route refuses an emulator whose governing configuration exists and
+# cannot be read with this word, and the firmware route states the same read
+# failure as a caveat on an ``unreadable`` declaration.
+CAVEAT_EMULATOR_CONFIG_UNREADABLE = UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 CAVEAT_INFO_PATH_UNRESOLVED = "info-path-unresolved"
 CAVEAT_CORE_DIR_UNRESOLVED = "core-dir-unresolved"
 CAVEAT_FIRMWARE_ROOT_MISSING = "firmware-root-missing"
@@ -1427,12 +1444,20 @@ class CatalogueEntry:
     launcher route's resolved word — set by the handle that read the
     catalogue, because what a command identifies is arrangement knowledge.
     ``None`` where the command identifies nothing atlas can act on.
+
+    The two homes are the per-entry override of the context's standalone
+    bases: ``None`` means the arrangement's own pair governs, and a value
+    means this entry's launch picks a binary whose trees hang elsewhere —
+    EmuDeck's flatpak variant reads ``~/.var/app/<id>``, not the host's XDG
+    tree — set by the same handle for the same reason the token is.
     """
 
     label: str
     kind: str
     core_so: str | None
     standalone_token: str | None = None
+    standalone_data_home: str | None = None
+    standalone_config_home: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -2299,34 +2324,42 @@ def _uncatalogued_word_caveat(system: str) -> Caveat:
     )
 
 
+def _packaged_provenance_caveat(entry: CatalogueEntry, card: StandaloneFirmwareCard) -> Caveat:
+    """The provenance statement every ``packaged`` entry carries."""
+    return Caveat(
+        CAVEAT_FIRMWARE_PACKAGED_DECLARATION,
+        f"{entry.label}'s expectations are atlas's packaged card, established from the "
+        f"emulator's source at the shipped release, not a declaration read off this machine "
+        f"— {card.provenance}",
+        {"label": entry.label, "token": card.token},
+    )
+
+
 def _packaged_standalone_core(
     machine: Machine,
-    context: FirmwareContext,
     entry: CatalogueEntry,
     card: StandaloneFirmwareCard,
     system: str,
     *,
+    data_home: str,
+    config_home: str,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """A carded standalone entry: packaged declaration, live destinations.
 
     The card names the XDG base and the emulator-relative path the emulator
-    itself probes; the arrangement supplied its standalone bases on the
-    context, so the destination is the join the emulator performs — then
-    resolved through symlinks the way every requirement path is, and what
-    sits there is read live (:func:`_observe`, identity-less: no packaged
-    identity can exist for a user-supplied file, so a present file answers
-    ``unknown`` and stays honestly unverifiable).
+    itself probes; the caller supplied the bases this entry's binary reads —
+    the arrangement's own, or the entry's per-launch override — so the
+    destination is the join the emulator performs, resolved through symlinks
+    the way every requirement path is, and what sits there is read live
+    (:func:`_observe`, identity-less: no packaged identity can exist for a
+    user-supplied file, so a present file answers ``unknown`` and stays
+    honestly unverifiable).
     """
     requirements: list[FirmwareRequirement] = []
     answer_caveats: list[Caveat] = []
     for declared in card.files:
-        base = (
-            context.standalone_data_home
-            if declared.base == "data"
-            else context.standalone_config_home
-        )
-        assert base is not None  # the caller routes here only with the bases established
+        base = data_home if declared.base == "data" else config_home
         composed = os.path.join(base, declared.subdir, declared.name)
         path = resolve_links(machine, composed) or composed
         found, checked, caveat = _observe(machine, path, None, verify=verify)
@@ -2351,22 +2384,285 @@ def _packaged_standalone_core(
                 checked=checked,
             )
         )
-    provenance = Caveat(
-        CAVEAT_FIRMWARE_PACKAGED_DECLARATION,
-        f"{entry.label}'s expectations are atlas's packaged card, established from the "
-        f"emulator's source at the shipped release, not a declaration read off this machine "
-        f"— {card.provenance}",
-        {"label": entry.label, "token": card.token},
-    )
     return (
         CoreFirmware(
             core_so=None,
             label=entry.label,
             declaration=DECLARATION_PACKAGED,
             requirements=tuple(sorted(requirements, key=lambda r: r.path)),
-            caveats=(provenance,),
+            caveats=(_packaged_provenance_caveat(entry, card),),
         ),
         answer_caveats,
+    )
+
+
+def _melonds_config_unreadable_core(entry: CatalogueEntry, path: str) -> CoreFirmware:
+    """The governing config exists and could not be read — present, unexplained."""
+    return CoreFirmware(
+        core_so=None,
+        label=entry.label,
+        declaration=DECLARATION_UNREADABLE,
+        requirements=(),
+        caveats=(
+            Caveat(
+                CAVEAT_EMULATOR_CONFIG_UNREADABLE,
+                f"melonDS's configuration ({path}) exists and could not be read — which "
+                "files this launch would probe is unknown, so the empty list below is not "
+                "'needs nothing'",
+                {"label": entry.label, "config": path},
+            ),
+        ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _ConfigProbe:
+    """One probed configuration key: the requirement it names, or why it names none."""
+
+    requirement: FirmwareRequirement | None = None
+    entry_caveats: tuple[Caveat, ...] = ()
+    answer_caveats: tuple[Caveat, ...] = ()
+
+
+def _melonds_probe(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    declared: StandaloneFirmwareConfigFile,
+    config: melonds.MelonConfig,
+    system: str,
+    *,
+    config_home: str,
+    verify: bool,
+) -> _ConfigProbe:
+    """One key read the way the emulator reads it, then observed live.
+
+    The value is resolved the way ``OpenLocalFile`` resolves it — absolute as
+    spelled, anything else below the melonDS config directory
+    (Platform.cpp:157-178) — and a value that names no file at all (unset, or
+    ending in a directory step) is refused with the vocabulary the core route
+    refuses such a declaration with, rather than answered with a directory
+    dressed as a file.
+    """
+    value = melonds.get_string(config, declared.key)
+    if os.path.basename(value) in ("", ".", ".."):
+        return _ConfigProbe(
+            entry_caveats=(
+                Caveat(
+                    CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
+                    f"{entry.label}'s {declared.key} is {value!r}, which ends in a directory "
+                    "step ('.', '..', or nothing at all) and so names no file — this launch "
+                    "probes it and its own check fails, so no destination is stated for a "
+                    "file the launch does require",
+                    {
+                        "label": entry.label,
+                        "token": card.token,
+                        "key": declared.key,
+                        "declared": value,
+                        "need": NEED_REQUIRED,
+                    },
+                ),
+            )
+        )
+    composed = melonds.local_file_path(config_home, value)
+    path = resolve_links(machine, composed) or composed
+    found, checked, observed = _observe(machine, path, None, verify=verify)
+    return _ConfigProbe(
+        requirement=FirmwareRequirement(
+            core_so=None,
+            system=system,
+            system_source=SOURCE_CARD,
+            need=NEED_REQUIRED,
+            # The name the configuration spelled, not the one symlinks end at
+            # — the same rule the card-declared route follows, so a resolved
+            # destination never renames what the emulator asked for.
+            file_name=os.path.basename(value),
+            path=path,
+            declared=value,
+            description=declared.purpose,
+            identity=None,
+            found=found,
+            checked=checked,
+        ),
+        answer_caveats=() if observed is None else (observed,),
+    )
+
+
+def _melonds_standalone_core(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    system: str,
+    *,
+    config_home: str,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """melonDS's expectations: ``verifySetup`` performed as reads.
+
+    Which files the launch probes is decided by two configuration switches
+    read live — ``Emu.ExternalBIOSEnable`` and ``Emu.ConsoleType``
+    (verifySetup, EmuInstance.cpp:633-667 at 1.1) — and every probed path is
+    a configuration value. With the external-BIOS switch off — the compiled
+    default — DS games boot on the built-in replacement, and the empty
+    requirement list is the true answer, stated with the switch named.
+    """
+    read = melonds.read_config(machine, config_home)
+    if read.unreadable is not None:
+        return _melonds_config_unreadable_core(entry, read.unreadable), []
+    config = read.config
+    assert config is not None  # a read is either a document or an unreadable path
+    extbios = melonds.get_bool(config, "Emu.ExternalBIOSEnable")
+    console = melonds.console_type(config)
+    by_key = {declared.key: declared for declared in card.config_files}
+    requirements: list[FirmwareRequirement] = []
+    answer_caveats: list[Caveat] = []
+    caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
+    for key in melonds.probed_firmware_keys(extbios, console):
+        declared = by_key.get(key)
+        if declared is None:
+            raise ValueError(
+                f"standalone firmware card {card.token!r} names no entry for {key!r} — the "
+                "card and the code shipped out of step"
+            )
+        probe = _melonds_probe(
+            machine,
+            entry,
+            card,
+            declared,
+            config,
+            system,
+            config_home=config_home,
+            verify=verify,
+        )
+        if probe.requirement is not None:
+            requirements.append(probe.requirement)
+        caveats.extend(probe.entry_caveats)
+        answer_caveats.extend(probe.answer_caveats)
+    if not extbios:
+        caveats.append(
+            Caveat(
+                CAVEAT_FIRMWARE_BUILTIN_REPLACEMENT,
+                f"{entry.label} boots DS games on its built-in BIOS/firmware replacement — "
+                "Emu.ExternalBIOSEnable is off (the compiled default), so no external DS "
+                "BIOS or firmware is probed, and Wi-Fi settings persist in wfcsettings.bin "
+                "in the config directory instead (EmuInstance.cpp:673-686); switching it on "
+                "makes the DS.* paths required. In DSi mode the DSi BIOS pair and NAND stay "
+                "required regardless",
+                {
+                    "label": entry.label,
+                    "token": card.token,
+                    "switch": "Emu.ExternalBIOSEnable",
+                    # The value as read, so a client can compare it against
+                    # the configuration it would edit: 0 is DS, 1 is DSi.
+                    "console_type": str(console),
+                },
+            )
+        )
+    return (
+        CoreFirmware(
+            core_so=None,
+            label=entry.label,
+            declaration=DECLARATION_PACKAGED,
+            requirements=tuple(sorted(requirements, key=lambda r: r.path)),
+            caveats=tuple(caveats),
+        ),
+        answer_caveats,
+    )
+
+
+# The resolvers for ``config_files`` cards, keyed by token the way the save
+# resolvers are — the card states the keys and the claims, the code here
+# reads the emulator's own gating, and a card without its function is the
+# card and the code shipped out of step.
+_STANDALONE_CONFIG_RESOLVERS = {
+    "MELONDS": _melonds_standalone_core,
+}
+
+
+def _carded_standalone_core(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    system: str,
+    *,
+    data_home: str,
+    config_home: str,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """A carded standalone entry, routed by the shape its card states.
+
+    A ``config_files`` card's probe set is the emulator's own live decision,
+    so it needs a resolver registered beside it; a ``files`` card names its
+    paths outright and the one packaged route serves it.
+    """
+    if not card.config_files:
+        return _packaged_standalone_core(
+            machine,
+            entry,
+            card,
+            system,
+            data_home=data_home,
+            config_home=config_home,
+            verify=verify,
+        )
+    resolver = _STANDALONE_CONFIG_RESOLVERS.get(card.token)
+    if resolver is None:
+        raise ValueError(
+            f"standalone firmware card {card.token!r} states config_files but has no "
+            "resolver registered — the card and the code shipped out of step"
+        )
+    return resolver(machine, entry, card, system, config_home=config_home, verify=verify)
+
+
+def _standalone_entry_core(
+    machine: Machine,
+    context: FirmwareContext,
+    entry: CatalogueEntry,
+    system: str,
+    *,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """A standalone entry: its card's answer, or the honest refusal.
+
+    The bases are the entry's own where its launch establishes them — on
+    EmuDeck the picked variant decides which trees the emulator reads — and
+    otherwise the arrangement's pair.
+    """
+    card = lookup_standalone_firmware_card(entry.standalone_token)
+    data_home = entry.standalone_data_home or context.standalone_data_home
+    config_home = entry.standalone_config_home or context.standalone_config_home
+    if (
+        card is not None
+        and system in card.systems
+        and data_home is not None
+        and config_home is not None
+    ):
+        return _carded_standalone_core(
+            machine,
+            entry,
+            card,
+            system,
+            data_home=data_home,
+            config_home=config_home,
+            verify=verify,
+        )
+    return (
+        CoreFirmware(
+            core_so=entry.core_so,
+            label=entry.label,
+            declaration=DECLARATION_UNSUPPORTED,
+            requirements=(),
+            caveats=(
+                Caveat(
+                    CAVEAT_STANDALONE_UNSUPPORTED,
+                    f"{entry.label} is a standalone emulator — its firmware rules are outside "
+                    "the resolver's current coverage (ROADMAP.md), so the empty list means "
+                    "unknown; the emulator is here, atlas's source for it is not",
+                    {"label": entry.label},
+                ),
+            ),
+        ),
+        [],
     )
 
 
@@ -2387,32 +2683,7 @@ def _catalogue_entry_core(
     installed core whose ``.info`` could not be read, and one that was read.
     """
     if entry.kind != KIND_LIBRETRO or entry.core_so is None:
-        card = lookup_standalone_firmware_card(entry.standalone_token)
-        if (
-            card is not None
-            and system in card.systems
-            and context.standalone_data_home is not None
-            and context.standalone_config_home is not None
-        ):
-            return _packaged_standalone_core(machine, context, entry, card, system, verify=verify)
-        return (
-            CoreFirmware(
-                core_so=entry.core_so,
-                label=entry.label,
-                declaration=DECLARATION_UNSUPPORTED,
-                requirements=(),
-                caveats=(
-                    Caveat(
-                        CAVEAT_STANDALONE_UNSUPPORTED,
-                        f"{entry.label} is a standalone emulator — its firmware rules are outside "
-                        "the resolver's current coverage (ROADMAP.md), so the empty list means "
-                        "unknown; the emulator is here, atlas's source for it is not",
-                        {"label": entry.label},
-                    ),
-                ),
-            ),
-            [],
-        )
+        return _standalone_entry_core(machine, context, entry, system, verify=verify)
     core = by_stem.get(entry.core_so[: -len(".so")] if entry.core_so.endswith(".so") else entry.core_so)
     if core is None:
         # Same guard as the per-core route: absence is a claim, and it
