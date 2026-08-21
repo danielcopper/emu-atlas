@@ -6570,19 +6570,12 @@ def _pcsx2_slot_group(
     enabled = (
         raw_enable.strip().casefold() == "true" if raw_enable is not None else enabled_default
     )
-    readings = [
-        OptionReading(
-            enable_key,
-            raw_enable,
-            (
-                f'PCSX2.ini: [MemoryCards] {enable_key} = "{raw_enable}"'
-                if raw_enable is not None
-                else f"{enable_key} is unset — the default "
-                f"{'true' if enabled_default else 'false'} governs"
-            ),
-            None,
-        )
-    ]
+    default_word = "true" if enabled_default else "false"
+    if raw_enable is not None:
+        enable_provenance = f'PCSX2.ini: [MemoryCards] {enable_key} = "{raw_enable}"'
+    else:
+        enable_provenance = f"{enable_key} is unset — the default {default_word} governs"
+    readings = [OptionReading(enable_key, raw_enable, enable_provenance, None)]
     if not enabled:
         return "off", None, tuple(readings), ()
     raw_name = values.get(("MemoryCards", filename_key))
@@ -6649,6 +6642,50 @@ def _pcsx2_slot_group(
     return "file", group, tuple(readings), ()
 
 
+def _pcsx2_memcards_dir(
+    values: Mapping[tuple[str, str], str],
+    data_root: str,
+    *,
+    sandbox: _Sandbox,
+    card: StandaloneSaveCard,
+    ini_path: str,
+) -> tuple[str | None, OptionReading, Unresolved | None]:
+    """(memory-card directory, its reading, the refusal if any) — one shape per return."""
+    raw_dir = values.get(("Folders", "MemoryCards"), "")
+    if raw_dir:
+        provenance = f'PCSX2.ini: [Folders] MemoryCards = "{raw_dir}"'
+    else:
+        provenance = (
+            "MemoryCards is unset — the default memcards below the DataRoot governs "
+            "(Pcsx2Config.cpp:2259)"
+        )
+    reading = OptionReading("MemoryCards", raw_dir or None, provenance, None)
+    if not raw_dir:
+        return os.path.join(data_root, "memcards"), reading, None
+    if not os.path.isabs(raw_dir):
+        return os.path.join(data_root, raw_dir), reading, None
+    host = sandbox.host("MemoryCards", raw_dir)
+    if host.path is None:
+        refusal = Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"the memory-card directory PCSX2's configuration names could not be located "
+            f"from here ({ini_path}) — nothing this answer could anchor at",
+            {"emulator": card.token, "config": ini_path},
+        )
+        return None, reading, refusal
+    return host.path, reading, None
+
+
+def _pcsx2_first_directory_files(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
+    """Every established name in the first group's directory — the FileSet invariant."""
+    if groups[0].files is None:
+        return ()
+    directory = groups[0].dir
+    return tuple(
+        name for group in groups if group.dir == directory and group.files for name in group.files
+    )
+
+
 def _pcsx2_savefile_placement(
     machine: Machine,
     *,
@@ -6682,32 +6719,12 @@ def _pcsx2_savefile_placement(
     values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
     stated_ini = ini_path if result.status == READ_OK else None
     caveats: list[Caveat] = [*extra_caveats]
-    raw_dir = values.get(("Folders", "MemoryCards"), "")
-    dir_reading = OptionReading(
-        "MemoryCards",
-        raw_dir or None,
-        (
-            f'PCSX2.ini: [Folders] MemoryCards = "{raw_dir}"'
-            if raw_dir
-            else "MemoryCards is unset — the default memcards below the DataRoot governs "
-            "(Pcsx2Config.cpp:2259)"
-        ),
-        None,
+    memcards_dir, dir_reading, refusal = _pcsx2_memcards_dir(
+        values, data_root, sandbox=sandbox, card=card, ini_path=ini_path
     )
-    if not raw_dir:
-        memcards_dir = os.path.join(data_root, "memcards")
-    elif not os.path.isabs(raw_dir):
-        memcards_dir = os.path.join(data_root, raw_dir)
-    else:
-        host = sandbox.host("MemoryCards", raw_dir)
-        if host.path is None:
-            return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"the memory-card directory PCSX2's configuration names could not be located "
-                f"from here ({ini_path}) — nothing this answer could anchor at",
-                {"emulator": card.token, "config": ini_path},
-            )
-        memcards_dir = host.path
+    if refusal is not None:
+        return refusal
+    assert memcards_dir is not None  # the helper refuses whenever it cannot name one
     modes: list[str] = []
     groups: list[FileGroup] = []
     readings: list[OptionReading] = [dir_reading]
@@ -6715,8 +6732,7 @@ def _pcsx2_savefile_placement(
         word, group, slot_readings, slot_caveats = _pcsx2_slot_group(
             machine, values, slot, memcards_dir, sandbox, card
         )
-        is_multitap = slot[0].startswith("Multitap")
-        if is_multitap and word == "off":
+        if word == "off" and slot[0].startswith("Multitap"):
             continue  # six disabled multitap slots would drown the answer in noise
         modes.append(word)
         readings.extend(slot_readings)
@@ -6726,17 +6742,7 @@ def _pcsx2_savefile_placement(
     mode = "+".join(modes)
     if groups:
         directory = groups[0].dir
-        named_first = groups[0].files is not None
-        files = (
-            tuple(
-                name
-                for group in groups
-                if group.dir == directory and group.files
-                for name in group.files
-            )
-            if named_first
-            else ()
-        )
+        files = _pcsx2_first_directory_files(tuple(groups))
     else:
         directory = memcards_dir
         files = ()
