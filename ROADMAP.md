@@ -82,12 +82,13 @@ probe-failure reporting. Design in `docs/research/core-audit.md`.
 ### 4. Standalone emulators (the second big block — issue #3)
 
 Per-emulator config parsers and placement rules, one sub-issue per emulator, target list derived from RetroDECK's own
-`es_systems.xml`. Carded and shipped: Dolphin (GC slots, Wii NAND), PPSSPP, xemu, Cemu — Cemu including the per-title
-unit (`usr/save/<save_id>`, granularity `per-game-directory`) and the EmuDeck launcher route (#207); Cemu's BIOS
-expectations are the next slice (#208). Each sub-issue replaces the `Unresolved` standalone outcome for its emulator,
-save placement + BIOS expectations + config sources, on RetroDECK and EmuDeck both. Candidates next: Citra/Azahar (the
-3DS virtual SD tree, the second half of the rommapp/romm#3866 demand), DuckStation (PerGameTitle naming → `<save_id>`
-hole), PCSX2, melonDS.
+`es_systems.xml`. Carded and shipped: Dolphin (GC slots, Wii NAND), PPSSPP, xemu, Cemu — including the per-title MLC
+unit and its keys.txt BIOS expectation as a `packaged` firmware declaration (#207, #208) — Azahar (the 3DS virtual SD's
+per-title unit, the second half of the rommapp/romm#3866 demand, #213), DuckStation (two slots, six modes, #215), PCSX2
+(slots whose card type is read off the disk, #217) and melonDS (one `.sav` per game, the TOML/legacy-INI read, and the
+first flatpak-variant answer on EmuDeck, #219; its BIOS expectations are #220). Each sub-issue replaces the `Unresolved`
+standalone outcome for its emulator, save placement + BIOS expectations + config sources, on RetroDECK and EmuDeck both.
+Candidates next: PPSSPP deepening, RPCS3, Vita3K.
 
 ### 5. EmuDeck reality
 

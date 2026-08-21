@@ -521,6 +521,9 @@ TEMPLATE_CONTENT_DIR_NAME = "<content_dir_name>"
 # The whole-directory template the content-rooted answers keep when no content
 # was named — the spelling `needs`'s content_dir hole fills.
 TEMPLATE_CONTENT_DIR = "<content_dir>"
+# The whole-directory template a working-directory-rooted answer keeps — the
+# spelling `needs`'s cwd hole fills, and never a directory atlas read.
+TEMPLATE_CWD = "<cwd>"
 # The segment template a region-keyed emulator tree keeps until a caller fills
 # the ``region`` hole — one path segment, exactly like the subdir templates,
 # because that is the granularity Dolphin swaps it at (GetGCIFolderPath

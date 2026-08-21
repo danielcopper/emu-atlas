@@ -1813,6 +1813,8 @@ TRIO_ESDE = (
     '<command label="DuckStation (Legacy) (Standalone)">%EMULATOR_DUCKSTATION% -batch %ROM%</command></system>'
     "<system><name>ps2</name><path>%ROMPATH%/ps2</path><extension>.chd</extension>"
     '<command label="PCSX2 (Standalone)">%EMULATOR_PCSX2% -batch %ROM%</command></system>'
+    "<system><name>nds</name><path>%ROMPATH%/nds</path><extension>.nds .zip</extension>"
+    '<command label="melonDS (Standalone)">%EMULATOR_MELONDS% %ROM%</command></system>'
     "</systemList>"
 )
 XEMU_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
@@ -1820,6 +1822,8 @@ CEMU_XML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.x
 AZAHAR_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/azahar-emu/qt-config.ini"
 DUCKSTATION_CONFIG_INI = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
 PCSX2_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+MELONDS_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+MELONDS_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.ini"
 
 
 class TestMoreStandaloneSaves:
@@ -2096,6 +2100,116 @@ class TestMoreStandaloneSaves:
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
+    def _melonds(self, files=None, content_path=None):
+        rd = _retrodeck({**self.BASE, **(files or {})}, dirs=["/mnt/sd/retrodeck/saves"])
+        entry = rd.emulators_for("nds").entries[0]
+        return entry.savefile_location(content_path=content_path)
+
+    def test_melonds_answers_the_configured_save_directory(self):
+        p = self._melonds(
+            {MELONDS_TOML_PATH: '[Instance0]\nSaveFilePath = "/mnt/sd/retrodeck/saves/nds/melonds"\n'}
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/retrodeck/saves/nds/melonds"
+        assert p.file_set.files == ("<rom_stem>.sav",)
+        assert p.needs == ("rom_stem",)
+        assert p.granularity is not None
+        assert p.granularity.value == atlas.GRANULARITY_PER_GAME_FILE
+        assert p.granularity.mode == "save-file-path"
+
+    def test_melonds_fills_the_stem_when_content_is_named(self):
+        p = self._melonds(
+            {MELONDS_TOML_PATH: '[Instance0]\nSaveFilePath = "/mnt/sd/retrodeck/saves/nds/melonds/"\n'},
+            content_path="/mnt/sd/retrodeck/roms/nds/Some Game.nds",
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        # The trailing separator comes off the way getAssetPath trims it.
+        assert p.dir == "/mnt/sd/retrodeck/saves/nds/melonds"
+        assert p.file_set.files == ("Some Game.sav",)
+        assert p.needs == ()
+
+    def test_melonds_archive_content_keeps_the_hole_open(self):
+        # The save is named after the file INSIDE the archive
+        # (EmuInstance.cpp:1846-1848) — the zip's own stem must not be stated.
+        p = self._melonds(
+            {MELONDS_TOML_PATH: '[Instance0]\nSaveFilePath = "/mnt/sd/retrodeck/saves/nds/melonds"\n'},
+            content_path="/mnt/sd/retrodeck/roms/nds/Some Game.zip",
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("<rom_stem>.sav",)
+        assert p.needs == ("rom_stem",)
+        stated = [
+            c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL
+        ]
+        assert stated
+        assert "archive" in stated[0].message
+
+    def test_melonds_empty_save_path_lands_beside_the_rom(self):
+        p = self._melonds({MELONDS_TOML_PATH: '[Instance0]\nSaveFilePath = ""\n'})
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "content_directory"
+        assert p.dir == "<content_dir>"
+        assert p.needs == ("content_dir", "rom_stem")
+
+    def test_melonds_empty_save_path_with_content_names_the_roms_directory(self):
+        p = self._melonds(
+            {MELONDS_TOML_PATH: '[Instance0]\nSaveFilePath = ""\n'},
+            content_path="/mnt/sd/retrodeck/roms/nds/Some Game.nds",
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "content_directory"
+        assert p.dir == "/mnt/sd/retrodeck/roms/nds"
+        assert p.file_set.files == ("Some Game.sav",)
+        assert p.needs == ()
+
+    def test_melonds_unparseable_toml_is_factory_defaults_not_the_legacy_file(self):
+        # melonDS catches the syntax error and keeps an empty table
+        # (Config.cpp:796-803) — it never steps to melonDS.ini, so a legacy
+        # value beside a broken TOML must NOT govern.
+        p = self._melonds(
+            {
+                MELONDS_TOML_PATH: "[Instance0\nnot toml",
+                MELONDS_INI_PATH: "SaveFilePath=/mnt/sd/elsewhere\n",
+            }
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "content_directory"
+        assert p.granularity is not None
+        assert "factory defaults" in p.granularity.readings[0].provenance
+
+    def test_melonds_missing_toml_reads_the_legacy_ini(self):
+        # The built-in migration: 1.1 reads the pre-1.0 file line by line
+        # while no TOML exists (Config.cpp:785-795).
+        p = self._melonds({MELONDS_INI_PATH: "SaveFilePath=/mnt/sd/legacy/saves\n"})
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/legacy/saves"
+        assert p.granularity is not None
+        assert p.granularity.readings[0].options_file == MELONDS_INI_PATH
+
+    def test_melonds_with_neither_config_lands_beside_the_rom(self):
+        p = self._melonds()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "content_directory"
+        assert p.granularity is not None
+        assert p.granularity.readings[0].options_file is None
+
+    def test_melonds_relative_save_path_is_the_launchs_working_directory(self):
+        # getAssetPath composes the value verbatim and the process opens it —
+        # a relative value anchors at the launch's cwd, not anywhere atlas
+        # could read.
+        p = self._melonds({MELONDS_TOML_PATH: '[Instance0]\nSaveFilePath = "saves"\n'})
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "working_directory"
+        assert p.dir == "<cwd>/saves"
+        assert p.needs == ("cwd", "rom_stem")
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT]
+        assert stated
+
+    def test_melonds_with_an_unreadable_toml_refuses(self):
+        p = self._melonds({MELONDS_TOML_PATH: {"status": "unreadable"}})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
 
 class TestEmuDeckStandaloneLaunchers:
     """The launcher route's refusal corners the vector family does not carry."""
@@ -2207,6 +2321,88 @@ class TestEmuDeckStandaloneLaunchers:
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
         assert p.data["variant"] == "flatpak"
+
+    MELONDS_OVERLAY = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>nds</name>\n'
+        "    <path>%ROMPATH%/nds</path>\n    <extension>.nds</extension>\n"
+        '    <command label="melonDS (Standalone)">/bin/bash '
+        "/home/deck/Emulation/tools/launchers/melonds.sh %ROM%</command>\n"
+        '    <command label="melonDS (Token)">%EMULATOR_MELONDS% -f %ROM%</command>\n'
+        "  </system>\n</systemList>\n"
+    )
+    MELONDS_APP_INI = f"{HOME}/.var/app/net.kuribo64.melonDS/config/melonDS/melonDS.ini"
+
+    def _melonds(self, files=None, **kwargs):
+        merged = {
+            **self.BASE,
+            f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.MELONDS_OVERLAY,
+            **(files or {}),
+        }
+        return atlas.EmuDeck(HOME, FixtureMachine(merged, **kwargs))
+
+    def test_melonds_launcher_pins_the_flatpak_over_any_appimage(self):
+        # melonds.sh performs no probe — it runs the installed flatpak
+        # outright (melonds.sh:4) — so an AppImage under ~/Applications must
+        # NOT reroute the answer to the host tree: the app's own INI governs.
+        ed = self._melonds(
+            {
+                f"{HOME}/Applications/melonDS.AppImage": "",
+                f"{HOME}/.config/melonDS/melonDS.ini": "SaveFilePath=/wrong/host/tree\n",
+                self.MELONDS_APP_INI: "SaveFilePath=/home/deck/Emulation/saves/melonds/saves\n",
+            }
+        )
+        p = ed.emulators_for("nds").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/home/deck/Emulation/saves/melonds/saves"
+        assert p.file_set.files == ("<rom_stem>.sav",)
+
+    def test_melonds_token_route_answers_from_the_flatpaks_own_homes(self):
+        # The token goes through the probe: no AppImage, the installed
+        # flatpak matches — and the card names its app id, so the variant
+        # answers from ~/.var/app instead of refusing.
+        ed = self._melonds(
+            {self.MELONDS_APP_INI: "SaveFilePath=/home/deck/Emulation/saves/melonds/saves\n"},
+            dirs=[
+                f"{HOME}/Applications",
+                "/var/lib/flatpak/app/net.kuribo64.melonDS",
+            ],
+        )
+        entry = next(e for e in ed.emulators_for("nds").entries if e.label == "melonDS (Token)")
+        p = entry.savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/home/deck/Emulation/saves/melonds/saves"
+
+    def test_melonds_flatpak_without_any_config_lands_beside_the_rom(self):
+        ed = self._melonds(
+            dirs=[
+                f"{HOME}/Applications",
+                "/var/lib/flatpak/app/net.kuribo64.melonDS",
+            ],
+        )
+        entry = next(e for e in ed.emulators_for("nds").entries if e.label == "melonDS (Token)")
+        p = entry.savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "content_directory"
+
+    def test_melonds_firmware_token_follows_the_same_gate(self):
+        ed = self._melonds(
+            dirs=[
+                f"{HOME}/Applications",
+                "/var/lib/flatpak/app/net.kuribo64.melonDS",
+            ],
+        )
+        assert ed.standalone_firmware_token("%EMULATOR_MELONDS% -f %ROM%") == "MELONDS"
+
+    def test_a_carded_flatpak_without_an_app_id_still_refuses_the_firmware_token(self):
+        # Azahar's card names no flatpak id — a flatpak-only launch stays
+        # ungated for firmware exactly as it does for saves.
+        ed = self._melonds(
+            dirs=[
+                f"{HOME}/Applications",
+                "/var/lib/flatpak/app/io.github.azahar.Azahar",
+            ],
+        )
+        assert ed.standalone_firmware_token("%EMULATOR_AZAHAR% %ROM%") is None
 
 
 class TestEmuDeck:

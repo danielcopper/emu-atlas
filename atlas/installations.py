@@ -208,6 +208,7 @@ from atlas.placement import (
     SUBDIR_TEMPLATE_HOLES,
     TEMPLATE_CONTENT_DIR,
     TEMPLATE_CONTENT_DIR_NAME,
+    TEMPLATE_CWD,
     TEMPLATE_REGION,
     TEMPLATE_ROM_STEM,
     TEMPLATE_SAVE_ID,
@@ -3936,7 +3937,7 @@ def _working_directory_placement(
     """
     del sandbox, cfg_label, layers, retroarch_config_dir, excluded
     root = _SystemRoot(
-        "<cwd>",
+        TEMPLATE_CWD,
         ROOT_WORKING_DIRECTORY,
         needs=(HOLE_CWD,),
         reachable=False,
@@ -6786,6 +6787,355 @@ def _pcsx2_savefile_placement(
     )
 
 
+# ---------------------------------------------------------------------------
+# melonDS 1.1 — one .sav per game, in the directory [Instance0] SaveFilePath
+# names, read the way Config::Load reads it: melonDS.toml where it exists —
+# even unparseable, because the emulator catches the syntax error and runs on
+# factory defaults rather than falling back — and the pre-1.0 melonDS.ini
+# line by line only where no TOML exists (Config.cpp:682-803 at 1.1). The
+# empty default puts the save beside the ROM itself (getAssetPath,
+# EmuInstance.cpp:445-484).
+# ---------------------------------------------------------------------------
+
+# The archive suffixes melonDS's frontend recognizes, matched
+# case-insensitively against the file name's end (Window.cpp:124-148 at 1.1).
+# Content inside one names its save after the archived file — a name the
+# archive's own path does not derive — so the <rom_stem> hole stays open.
+_MELONDS_ARCHIVE_SUFFIXES = (
+    ".zip",
+    ".7z",
+    ".rar",
+    ".tar",
+    ".tar.gz",
+    ".tgz",
+    ".tar.xz",
+    ".txz",
+    ".tar.bz2",
+    ".tbz2",
+    ".tar.lz4",
+    ".tlz4",
+    ".tar.zst",
+    ".tzst",
+    ".tar.z",
+    ".taz",
+    ".tar.lz",
+    ".tar.lzma",
+    ".tlz",
+    ".tar.lrz",
+    ".tlrz",
+    ".tar.lzo",
+    ".tzo",
+)
+
+
+def _melonds_is_archive(content_path: str) -> bool:
+    """Whether melonDS's frontend would open this content as an archive."""
+    return os.path.basename(content_path).casefold().endswith(_MELONDS_ARCHIVE_SUFFIXES)
+
+
+def _melonds_stem(content_name: str) -> str:
+    """The loaded file's name minus its last extension (EmuInstance.cpp:1884).
+
+    A name that is all extension leaves the base empty, and getAssetPath then
+    writes ``firmware`` in its place (:473-476) — mirrored, not repaired.
+    """
+    dot = content_name.rfind(".")
+    stem = content_name[:dot] if dot != -1 else content_name
+    return stem or "firmware"
+
+
+def _melonds_legacy_save_path(text: str) -> str | None:
+    """The legacy INI's ``SaveFilePath``, read the way LoadLegacyFile reads it.
+
+    One scan per line — the key, an immediate ``=``, then everything up to a
+    tab or the line's end, at least one byte of it (an empty value fails the
+    scan and leaves the entry untouched) — and a later line overwrites an
+    earlier one (Config.cpp:705-717 at 1.1).
+    """
+    value: str | None = None
+    for line in text.splitlines():
+        name, separator, rest = line.partition("=")
+        if not separator or name != "SaveFilePath":
+            continue
+        candidate = rest.partition("\t")[0]
+        if candidate:
+            value = candidate
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class _MelonConfig:
+    """What the config read established: the raw value, and its own story."""
+
+    raw: str | None
+    provenance: str
+    stated_file: str | None
+
+
+def _melonds_toml_reading(text: str) -> tuple[str | None, str]:
+    """``[Instance0] SaveFilePath`` out of an existing melonDS.toml.
+
+    An unparseable TOML is melonDS running on factory defaults — the emulator
+    catches the syntax error and keeps an empty table (Config.cpp:796-803) —
+    so the answer steps to the defaults, never to the legacy file.
+    """
+    try:
+        doc = tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return None, (
+            "melonDS.toml exists and is not parseable TOML — melonDS catches the syntax "
+            "error and runs on factory defaults (Config.cpp:796-803), so the empty default "
+            "governs and the save lands beside the ROM"
+        )
+    instance = doc.get("Instance0")
+    value = instance.get("SaveFilePath") if isinstance(instance, Mapping) else None
+    if isinstance(value, str) and value:
+        return value, f'melonDS.toml: [Instance0] SaveFilePath = "{value}"'
+    if isinstance(value, str):
+        return None, (
+            'melonDS.toml: [Instance0] SaveFilePath = "" — the empty value routes the save '
+            "beside the ROM (getAssetPath, EmuInstance.cpp:448-449)"
+        )
+    return None, (
+        "melonDS.toml states no [Instance0] SaveFilePath (unset, or not a string, reads as "
+        "the empty default — Config.cpp:596) — the save lands beside the ROM"
+    )
+
+
+def _melonds_ini_reading(text: str) -> tuple[str | None, str]:
+    """``SaveFilePath`` out of the pre-1.0 melonDS.ini, the migration source."""
+    value = _melonds_legacy_save_path(text)
+    if value is not None:
+        return value, (
+            "melonDS.toml is absent, so the pre-1.0 melonDS.ini speaks until the first "
+            f"launch migrates it (Config.cpp:785-795): SaveFilePath={value}"
+        )
+    return None, (
+        "melonDS.toml is absent and the pre-1.0 melonDS.ini it falls back to states no "
+        "SaveFilePath — the empty default governs and the save lands beside the ROM"
+    )
+
+
+def _melonds_config_unreadable(card: StandaloneSaveCard, path: str) -> Unresolved:
+    return Unresolved(
+        UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+        f"melonDS's configuration ({path}) exists and could not be read — where every "
+        "game's .sav lands is unknowable here",
+        {"emulator": card.token, "config": path},
+    )
+
+
+def _melonds_config(
+    machine: Machine, homes: _XdgHomes, card: StandaloneSaveCard
+) -> _MelonConfig | Unresolved:
+    """``[Instance0] SaveFilePath``, read the way Config::Load reads it.
+
+    The TOML speaks wherever it exists; only a TOML that does not exist
+    reaches the legacy INI beside it; and where neither exists the compiled
+    defaults govern (Config.cpp:785-803 at 1.1).
+    """
+    assert card.config_base is not None and card.config_path is not None
+    toml_path = os.path.join(homes.base(card.config_base), card.config_path)
+    result = machine.read_text(toml_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return _melonds_config_unreadable(card, toml_path)
+    if result.status == READ_OK:
+        raw, provenance = _melonds_toml_reading(result.text or "")
+        return _MelonConfig(raw=raw, provenance=provenance, stated_file=toml_path)
+    ini_path = os.path.join(os.path.dirname(toml_path), "melonDS.ini")
+    legacy = machine.read_text(ini_path)
+    if legacy.status not in (READ_OK, READ_MISSING):
+        return _melonds_config_unreadable(card, ini_path)
+    if legacy.status == READ_OK:
+        raw, provenance = _melonds_ini_reading(legacy.text or "")
+        return _MelonConfig(raw=raw, provenance=provenance, stated_file=ini_path)
+    return _MelonConfig(
+        raw=None,
+        provenance=(
+            "neither melonDS.toml nor the pre-1.0 melonDS.ini exists — the compiled "
+            "defaults govern and the save lands beside the ROM (getAssetPath, "
+            "EmuInstance.cpp:445-484)"
+        ),
+        stated_file=None,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _MelonRoot:
+    """Where the save directory anchors, resolved the way getAssetPath composes it."""
+
+    directory: str
+    root_kind: RootKind
+    mode: str
+    needs: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+    refusal: Unresolved | None = None
+
+
+def _melonds_root(
+    config: _MelonConfig,
+    card: StandaloneSaveCard,
+    sandbox: _Sandbox,
+    content_path: str | None,
+) -> _MelonRoot:
+    """The three places a .sav can anchor: the configured directory, the ROM's own, the cwd.
+
+    getAssetPath uses the configured value only after trimming its trailing
+    separators (EmuInstance.cpp:459-467), so a value of only separators falls
+    to the working directory the way any relative value does — the composed
+    path is opened verbatim by the process, a property of the launch.
+    """
+    if not config.raw:
+        if content_path is not None:
+            return _MelonRoot(
+                directory=os.path.dirname(content_path),
+                root_kind=ROOT_CONTENT_DIRECTORY,
+                mode="rom-dir",
+            )
+        return _MelonRoot(
+            directory=TEMPLATE_CONTENT_DIR,
+            root_kind=ROOT_CONTENT_DIRECTORY,
+            mode="rom-dir",
+            needs=(HOLE_CONTENT_DIR,),
+        )
+    trimmed = config.raw.rstrip("/\\")
+    if not os.path.isabs(trimmed):
+        return _MelonRoot(
+            directory=os.path.join(TEMPLATE_CWD, trimmed) if trimmed else TEMPLATE_CWD,
+            root_kind=ROOT_WORKING_DIRECTORY,
+            mode="cwd-relative",
+            needs=(HOLE_CWD,),
+            caveats=(
+                Caveat(
+                    CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
+                    f"SaveFilePath is the relative value {config.raw!r}, which melonDS opens "
+                    "relative to the working directory of the launching process (getAssetPath "
+                    "composes it verbatim, EmuInstance.cpp:445-484) — a property of the "
+                    "launch, not of the machine; fill 'cwd' with the launcher's working "
+                    "directory to complete the path",
+                    {"core": card.token},
+                ),
+            ),
+        )
+    host = sandbox.host("SaveFilePath", trimmed)
+    if host.path is None:
+        refusal = Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"the save directory melonDS's configuration names could not be located from "
+            f"here ({config.stated_file}) — nothing this answer could anchor at",
+            {"emulator": card.token, "config": config.stated_file or ""},
+        )
+        return _MelonRoot(
+            directory="", root_kind=ROOT_EMULATOR_DIRECTORY, mode="", refusal=refusal
+        )
+    return _MelonRoot(
+        directory=host.path, root_kind=ROOT_EMULATOR_DIRECTORY, mode="save-file-path"
+    )
+
+
+def _melonds_files(
+    card: StandaloneSaveCard, content_path: str | None
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[Caveat, ...]]:
+    """The one save name: the content's stem where it derives, the open hole where not."""
+    if content_path is not None and not _melonds_is_archive(content_path):
+        return (f"{_melonds_stem(os.path.basename(content_path))}.sav",), (), ()
+    if content_path is not None:
+        sentence = (
+            "the content is an archive — melonDS names the save after the file inside it "
+            "(EmuInstance.cpp:1846-1848), which the archive's own path does not derive; "
+            "fill <rom_stem> with the archived file's name without its last extension"
+        )
+    else:
+        sentence = (
+            "the save is named after the loaded file — its name without the last extension, "
+            "and for a ROM inside an archive the name of the file inside it "
+            "(EmuInstance.cpp:1884, :1846-1848); fill <rom_stem> with that name"
+        )
+    caveat = Caveat(
+        CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+        sentence,
+        {
+            "core": card.token,
+            "files": f"{TEMPLATE_ROM_STEM}.sav",
+            "rom_stem": "the loaded file's name without its last extension — for an "
+            "archive, the archived file's",
+            "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1",
+        },
+    )
+    return (f"{TEMPLATE_ROM_STEM}.sav",), (HOLE_ROM_STEM,), (caveat,)
+
+
+def _melonds_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavefilePlacement | Unresolved:
+    """melonDS's save answer: one ``<rom stem>.sav`` where SaveFilePath points.
+
+    No slots and no modes — the whole answer is one directory and one name.
+    The directory is the configured one, the ROM's own where the value is
+    empty, or the launching process's working directory where it is relative;
+    the name is the content's, filled where the content is named and a plain
+    file, held open as ``<rom_stem>`` where it is an archive or unnamed.
+    The multi-instance suffix stays out: instance 0, the launch the catalogue
+    performs, appends nothing (EmuInstance.cpp:176-181, :1891).
+    """
+    config = _melonds_config(machine, homes, card)
+    if isinstance(config, Unresolved):
+        return config
+    root = _melonds_root(config, card, sandbox, content_path)
+    if root.refusal is not None:
+        return root.refusal
+    files, name_needs, name_caveats = _melonds_files(card, content_path)
+    caveats: list[Caveat] = [*extra_caveats, *root.caveats, *name_caveats]
+    if root.directory.startswith("<"):
+        physical = None
+    else:
+        physical, link_caveats = _link_view(machine, root.directory)
+        caveats.extend(link_caveats)
+    reading = OptionReading("SaveFilePath", config.raw, config.provenance, None)
+    return SavefilePlacement(
+        dir=root.directory,
+        root_kind=root.root_kind,
+        needs=(*root.needs, *name_needs),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            files,
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=(
+                FileGroup(
+                    dir=root.directory,
+                    files=files,
+                    granularity=GRANULARITY_PER_GAME_FILE,
+                    role=ROLE_BATTERY,
+                ),
+            ),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=GRANULARITY_PER_GAME_FILE,
+            mode=root.mode,
+            readings=(_reading_with_file(reading, config.stated_file),),
+            alternatives=(),
+            provenance=(
+                f"standalone save card '{card.token}': SaveFilePath from melonDS.toml, the "
+                "pre-1.0 melonDS.ini it migrates, or the compiled default (Config::Load, "
+                "Config.cpp:785-803 at 1.1)"
+            ),
+        ),
+    )
+
+
 _STANDALONE_SAVE_RESOLVERS = {
     "DOLPHIN": _dolphin_savefile_placement,
     "PPSSPP": _ppsspp_savefile_placement,
@@ -6794,6 +7144,7 @@ _STANDALONE_SAVE_RESOLVERS = {
     "AZAHAR": _azahar_savefile_placement,
     "DUCKSTATION": _duckstation_savefile_placement,
     "PCSX2": _pcsx2_savefile_placement,
+    "MELONDS": _melonds_savefile_placement,
 }
 
 
@@ -6857,23 +7208,52 @@ def _standalone_savefile_unresolved(spec: EmulatorSpec) -> Unresolved:
 # emulator no card describes. duckstation.sh runs DuckStation against the
 # DataRoot the launch environment picks (emuDeckDuckStation.sh:9 assumes the
 # environment-unset side, ~/.local/share/duckstation); pcsx2-qt.sh runs PCSX2
-# against ${HOME}/.config/PCSX2/inis/PCSX2.ini (emuDeckPCSX2QT.sh:6).
+# against ${HOME}/.config/PCSX2/inis/PCSX2.ini (emuDeckPCSX2QT.sh:6);
+# melonds.sh runs the net.kuribo64.melonDS flatpak against the app's own XDG
+# config tree (melonds.sh:4).
 _EMUDECK_LAUNCHER_CARDS = {
     "cemu": "CEMU",
     "azahar": "AZAHAR",
     "duckstation": "DUCKSTATION",
     "pcsx2-qt": "PCSX2",
+    "melonds": "MELONDS",
 }
 
 # The binary variants an EmuDeck launcher picks between, in its probe order
 # (cemu.sh:37-93): an AppImage under ~/Applications (vars.sh:4-5), an
 # installed flatpak whose id carries the emulator's name, and otherwise the
-# Windows build under Proton. Only the AppImage variant's configuration is
-# established; the others refuse with the variant named.
+# Windows build under Proton. The AppImage variant reads the host's own XDG
+# tree; the flatpak variant reads the app's own homes below ~/.var/app, and
+# answers only where the card names the app id (the rest, and Proton, refuse
+# with the variant named).
 _EMUDECK_VARIANT_APPIMAGE = "appimage"
 _EMUDECK_VARIANT_FLATPAK = "flatpak"
 _EMUDECK_VARIANT_PROTON = "proton"
 _EMUDECK_VARIANT_UNKNOWN = "unestablished"
+
+# The launchers that perform no probe at all: melonds.sh runs the installed
+# flatpak unconditionally (melonds.sh:4), so for that script the variant is
+# the script's own fact rather than the probe's answer. The ES-DE token route
+# keeps the probe — its find rules try AppImage paths before the flatpak
+# exports (es_find_rules.xml), the order the probe mirrors.
+_EMUDECK_LAUNCHER_PINNED_VARIANTS = {
+    "melonds": _EMUDECK_VARIANT_FLATPAK,
+}
+
+
+@dataclass(frozen=True, slots=True)
+class _StandaloneLaunch:
+    """What a catalogue command identifies: card token, probe name, launcher args.
+
+    ``pinned_variant`` is non-``None`` for a launcher script that picks no
+    binary at run time — the variant is then the script's, and the probe
+    never runs.
+    """
+
+    token: str | None
+    probe_name: str | None
+    args: tuple[str, ...]
+    pinned_variant: str | None = None
 
 
 def _emudeck_launcher(command: str) -> tuple[str, tuple[str, ...]] | None:
@@ -12416,26 +12796,28 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         for the token; the script's own probe, where ``-w`` forces the
         Windows build under Proton and otherwise an AppImage under
         ``~/Applications`` outranks an installed flatpak outranks the Proton
-        fallback, cemu.sh:79-93). This route performs the same probe, because
-        which binary runs decides which configuration tree speaks. Only the
-        AppImage variant is established: it reads the host's own XDG tree
-        (emuDeckCemu.sh:13, emuDeckAzahar.sh:7), which is what the card
-        resolves against. The other variants refuse with the variant named
-        rather than answering from a tree their binary never reads.
+        fallback, cemu.sh:79-93 — except the scripts that pin their binary
+        outright, melonds.sh:4). This route performs the same probe, because
+        which binary runs decides which configuration tree speaks. Two
+        variants are established: the AppImage reads the host's own XDG tree
+        (emuDeckCemu.sh:13, emuDeckAzahar.sh:7), and a flatpak whose app id
+        the card names reads its own homes below ``~/.var/app``. The rest
+        refuse with the variant named rather than answering from a tree
+        their binary never reads.
         """
-        token, name, args = self._standalone_launch_identity(spec.command)
-        card = lookup_standalone_save_card(token)
-        if name is None or card is None or spec.system not in card.systems:
+        launch = self._standalone_launch_identity(spec.command)
+        card = lookup_standalone_save_card(launch.token)
+        if launch.probe_name is None or card is None or spec.system not in card.systems:
             return _standalone_savefile_unresolved(spec)
-        if "-w" in args:
+        if "-w" in launch.args:
             return _emudeck_variant_unresolved(
                 spec,
                 card.token,
                 _EMUDECK_VARIANT_PROTON,
-                f"{name}.sh -w runs the Windows build under Proton, whose configuration "
-                "lives inside the Proton prefix and is not read (a later slice)",
+                f"{launch.probe_name}.sh -w runs the Windows build under Proton, whose "
+                "configuration lives inside the Proton prefix and is not read (a later slice)",
             )
-        variant = self._launcher_binary_variant(name)
+        variant = self._launch_variant(launch)
         if variant == _EMUDECK_VARIANT_UNKNOWN:
             return _emudeck_variant_unresolved(
                 spec,
@@ -12444,17 +12826,25 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 "the launch's own binary probe could not be performed — the directories it "
                 "searches were not readable, so which binary would run is not established",
             )
-        if variant != _EMUDECK_VARIANT_APPIMAGE:
-            why = (
-                "no AppImage sits under ~/Applications, so the launch falls through to "
-                + (
-                    "the installed flatpak, whose own config tree is not established "
-                    "(a later slice)"
-                    if variant == _EMUDECK_VARIANT_FLATPAK
-                    else "the Windows build under Proton, whose configuration lives inside "
+        homes = self._standalone_homes_for(variant, card)
+        if homes is None:
+            if variant == _EMUDECK_VARIANT_PROTON:
+                why = (
+                    "no AppImage sits under ~/Applications, so the launch falls through to "
+                    "the Windows build under Proton, whose configuration lives inside "
                     "the Proton prefix and is not read (a later slice)"
                 )
-            )
+            elif launch.pinned_variant is not None:
+                why = (
+                    "the launcher script runs the installed flatpak outright, and no card "
+                    "names the app id its configuration trees hang off (a later slice)"
+                )
+            else:
+                why = (
+                    "no AppImage sits under ~/Applications, so the launch falls through to "
+                    "the installed flatpak, whose own config tree is not established "
+                    "(a later slice)"
+                )
             return _emudeck_variant_unresolved(spec, card.token, variant, why)
         _, marker_issues = self._read_marker()
         extra = (
@@ -12463,7 +12853,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return _standalone_savefile_placement(
             self._machine,
             card=card,
-            homes=self._standalone_xdg_homes(),
+            homes=homes,
             sandbox=self._standalone_sandbox(),
             system=spec.system,
             command=spec.command,
@@ -12521,48 +12911,97 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             config=os.path.join(self._home, _XDG_CONFIG_DIRNAME),
         )
 
-    def _standalone_launch_identity(
-        self, command: str
-    ) -> tuple[str | None, str | None, tuple[str, ...]]:
-        """(card token, probe name, launcher args) — what this command identifies.
+    def _standalone_launch_identity(self, command: str) -> _StandaloneLaunch:
+        """What this command identifies — card token, probe name, launcher args.
 
         Two spellings identify an emulator on EmuDeck, and its overlays
         genuinely use both: the ES-DE ``%EMULATOR_…%`` token, and a
         ``tools/launchers/<name>.sh`` script. Either way the binary is picked
         at run time (ES-DE's find rules for the token, the script's own probe
-        for the launcher), so both go through the same variant gate. The
+        for the launcher), so both go through the same variant gate — except
+        a script that pins its binary, which carries that pin instead. The
         probe name is the token casefolded, or the script's basename; the
         args are the launcher's (a token entry has none — ``-w`` is the
         launcher's spelling).
         """
         token = emulator_token(command)
         if token is not None:
-            return token, token.casefold(), ()
+            return _StandaloneLaunch(token, token.casefold(), ())
         launcher = _emudeck_launcher(command)
         if launcher is None:
-            return None, None, ()
+            return _StandaloneLaunch(None, None, ())
         name, args = launcher
-        return _EMUDECK_LAUNCHER_CARDS.get(name), name, args
+        return _StandaloneLaunch(
+            _EMUDECK_LAUNCHER_CARDS.get(name),
+            name,
+            args,
+            _EMUDECK_LAUNCHER_PINNED_VARIANTS.get(name),
+        )
+
+    def _launch_variant(self, launch: _StandaloneLaunch) -> str:
+        """The variant this launch runs — the script's own pin, else the probe."""
+        if launch.pinned_variant is not None:
+            return launch.pinned_variant
+        assert launch.probe_name is not None  # callers gate on the identity first
+        return self._launcher_binary_variant(launch.probe_name)
+
+    def _standalone_homes_for(
+        self, variant: str, card: StandaloneSaveCard
+    ) -> _XdgHomes | None:
+        """The XDG bases the picked binary reads, or ``None`` where none are established.
+
+        The AppImage variant reads the host's own tree (emuDeckCemu.sh:13,
+        vars.sh:4-5). The flatpak variant reads the app's own homes below
+        ``~/.var/app`` — established only where the card names the app id the
+        arrangement installs; EmuDeck grants every emulator flatpak
+        ``--filesystem=host`` (installEmuFP.sh:33), so paths configured
+        inside those homes stay host paths. Proton, and a flatpak no card
+        names an id for, have no established bases.
+        """
+        if variant == _EMUDECK_VARIANT_APPIMAGE:
+            return self._standalone_xdg_homes()
+        if variant == _EMUDECK_VARIANT_FLATPAK and card.flatpak is not None:
+            app_dir = os.path.join(self._home, ".var", "app", card.flatpak)
+            return _XdgHomes(
+                data=os.path.join(app_dir, "data"),
+                config=os.path.join(app_dir, "config"),
+            )
+        return None
 
     def standalone_firmware_token(self, command: str) -> str | None:
         """The command's word, variant-gated — EmuDeck's own reading.
 
         A token only where the launch would really run the binary whose trees
         the cards describe: identified by token or allowlisted launcher, not
-        forced to Proton by ``-w``, and picking the AppImage. Every other
-        launch answers ``None`` and stays honestly unsupported — the same
-        gating the save route applies, because it is the same question about
-        the same command.
+        forced to Proton by ``-w``, and picking a binary whose homes are
+        established — the AppImage, or a flatpak whose app id the save card
+        names. Every other launch answers ``None`` and stays honestly
+        unsupported — the same gating the save route applies, because it is
+        the same question about the same command.
         """
-        token, name, args = self._standalone_launch_identity(command)
-        if token is None or name is None or "-w" in args:
+        launch = self._standalone_launch_identity(command)
+        if launch.token is None or launch.probe_name is None or "-w" in launch.args:
             return None
-        if self._launcher_binary_variant(name) != _EMUDECK_VARIANT_APPIMAGE:
-            return None
-        return token
+        variant = self._launch_variant(launch)
+        if variant == _EMUDECK_VARIANT_APPIMAGE:
+            return launch.token
+        card = lookup_standalone_save_card(launch.token)
+        if (
+            variant == _EMUDECK_VARIANT_FLATPAK
+            and card is not None
+            and card.flatpak is not None
+        ):
+            return launch.token
+        return None
 
     def _standalone_sandbox(self) -> _Sandbox:
-        """No sandbox: an AppImage's config paths are real host paths."""
+        """No path translation: both established variants read host paths.
+
+        Nothing sandboxes an AppImage, and EmuDeck grants every emulator
+        flatpak ``--filesystem=host`` (installEmuFP.sh:33) — either way a
+        configured path means the host path it spells, and ``~`` expands to
+        the host home (flatpak leaves ``$HOME`` itself untouched).
+        """
         return _Sandbox(self._machine, self._home, None, expansion_home=self._home)
 
     def entry_savestate_location(
