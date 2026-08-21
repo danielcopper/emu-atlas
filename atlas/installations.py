@@ -208,6 +208,7 @@ from atlas.placement import (
     SUBDIR_TEMPLATE_HOLES,
     TEMPLATE_CONTENT_DIR,
     TEMPLATE_CONTENT_DIR_NAME,
+    TEMPLATE_CWD,
     TEMPLATE_REGION,
     TEMPLATE_ROM_STEM,
     TEMPLATE_SAVE_ID,
@@ -3936,7 +3937,7 @@ def _working_directory_placement(
     """
     del sandbox, cfg_label, layers, retroarch_config_dir, excluded
     root = _SystemRoot(
-        "<cwd>",
+        TEMPLATE_CWD,
         ROOT_WORKING_DIRECTORY,
         needs=(HOLE_CWD,),
         reachable=False,
@@ -7000,7 +7001,7 @@ def _melonds_root(
     trimmed = config.raw.rstrip("/\\")
     if not os.path.isabs(trimmed):
         return _MelonRoot(
-            directory=os.path.join("<cwd>", trimmed) if trimmed else "<cwd>",
+            directory=os.path.join(TEMPLATE_CWD, trimmed) if trimmed else TEMPLATE_CWD,
             root_kind=ROOT_WORKING_DIRECTORY,
             mode="cwd-relative",
             needs=(HOLE_CWD,),
