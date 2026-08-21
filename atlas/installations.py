@@ -194,6 +194,7 @@ from atlas.placement import (
     HOLE_CONTENT_DIR_NAME,
     HOLE_CWD,
     HOLE_REGION,
+    HOLE_ROM_STEM,
     HOLE_SAVE_ID,
     PATCH_FORMATS,
     ROLE_BATTERY,
@@ -226,6 +227,7 @@ from atlas.placement import (
     GRANULARITY_PER_GAME_DIRECTORY,
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
+    GRANULARITY_SHARED_CARD,
     Granularity,
     ModeAlternative,
     ModPlacement,
@@ -5404,6 +5406,7 @@ def _dolphin_savefile_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Dolphin's save answer, read from Dolphin.ini the way the emulator reads it."""
     assert card.config_base is not None and card.config_path is not None
@@ -5472,6 +5475,7 @@ def _ppsspp_savefile_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """PPSSPP's save answer — a compiled-in XDG join, then the links."""
     directory = os.path.join(homes.base("config"), "ppsspp", "PSP", "SAVEDATA")
@@ -5635,6 +5639,7 @@ def _xemu_savefile_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """xemu's save answer, read from xemu.toml the way the emulator reads it."""
     assert card.config_base is not None and card.config_path is not None
@@ -5750,6 +5755,7 @@ def _cemu_savefile_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Cemu's save answer, read from settings.xml the way the emulator reads it."""
     assert card.config_base is not None and card.config_path is not None
@@ -6019,6 +6025,7 @@ def _azahar_savefile_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Azahar's save answer: the per-title unit on the emulated SD.
 
@@ -6137,12 +6144,396 @@ def _azahar_savefile_placement(
     )
 
 
+# DuckStation's slot vocabulary, in the emulator's own declaration order
+# (settings.cpp:1743-1745 at stenzek/duckstation@64655818e — the last commit
+# before RetroDECK's 2024-09-19 "Legacy" freeze). Matching is case-insensitive
+# the way ParseMemoryCardTypeName matches, and an unparseable value falls back
+# to the compiled default the way ``.value_or`` does (settings.cpp:391-398).
+_DUCKSTATION_TYPE_NAMES = (
+    "None",
+    "Shared",
+    "PerGame",
+    "PerGameTitle",
+    "PerGameFileTitle",
+    "NonPersistent",
+)
+_DUCKSTATION_TYPE_DEFAULTS = ("PerGameTitle", "None")  # settings.h:510-511
+
+
+def _duckstation_sanitized(name: str) -> str:
+    """``Path::SanitizeFileName``'s Linux branch: ``/``, ``*`` and control bytes → ``_``.
+
+    file_system.cpp:69-90 and :142-163 at the pin — the Windows list is
+    longer, but the shipped Linux build replaces exactly these.
+    """
+    return "".join("_" if ch in "/*" or ord(ch) <= 31 else ch for ch in name)
+
+
+def _duckstation_settings(
+    machine: Machine, homes: _XdgHomes, card: StandaloneSaveCard
+) -> tuple[str, dict[tuple[str, str], str], str | None, tuple[Caveat, ...], Unresolved | None]:
+    """The DataRoot probe: (root, settings values, stated ini, caveats, refusal).
+
+    DuckStation's DataRoot is picked by the launch environment —
+    ``$XDG_CONFIG_HOME/duckstation`` where that variable is set and absolute,
+    else ``~/.local/share/duckstation`` (qthost.cpp:562-582) — and
+    ``settings.ini`` lives inside it. No file records the environment, so the
+    probe reads both spellings in that order and the file that exists speaks;
+    where neither does, the ambiguity is stated and the compiled defaults
+    hang off the environment-unset side.
+    """
+    candidates = (
+        os.path.join(homes.base("config"), "duckstation"),
+        os.path.join(homes.base("data"), "duckstation"),
+    )
+    for root in candidates:
+        ini_path = os.path.join(root, "settings.ini")
+        result = machine.read_text(ini_path)
+        if result.status == READ_MISSING:
+            continue
+        if result.status != READ_OK:
+            refusal = Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"DuckStation's configuration ({ini_path}) exists and could not be read — "
+                "which cards its slots hold and where they live is unknowable here",
+                {"emulator": card.token, "config": ini_path},
+            )
+            return root, {}, None, (), refusal
+        return root, _qt_ini_values(result.text or ""), ini_path, (), None
+    ambiguity = Caveat(
+        CAVEAT_CORE_MODE_UNESTABLISHED,
+        "no settings.ini exists on either DataRoot candidate — DuckStation picks its root "
+        "from the launch environment (XDG_CONFIG_HOME set routes it to the config side, "
+        "qthost.cpp:562-582), which no file records; the compiled defaults below hang off "
+        "the environment-unset side",
+        {"core": card.token, "reason": "the DataRoot is decided by the launch environment"},
+    )
+    return candidates[1], {}, None, (ambiguity,), None
+
+
+@dataclass(frozen=True, slots=True)
+class _DuckSlot:
+    """One memory-card slot's contribution to the answer."""
+
+    mode: str
+    group: FileGroup | None = None
+    readings: tuple[OptionReading, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+def _duckstation_shared_slot(
+    slot: int,
+    values: Mapping[tuple[str, str], str],
+    memcards_dir: str,
+    sandbox: _Sandbox,
+    type_reading: OptionReading,
+) -> _DuckSlot:
+    """The shared card: ``CardXPath`` — absolute or Directory-relative — else the default name."""
+    n = slot + 1
+    raw_path = values.get(("MemoryCards", f"Card{n}Path"), "")
+    path_reading = OptionReading(
+        f"Card{n}Path",
+        raw_path or None,
+        (
+            f'settings.ini: [MemoryCards] Card{n}Path = "{raw_path}"'
+            if raw_path
+            else f"Card{n}Path is unset — the default shared_card_{n}.mcd below the memory-card "
+            "directory governs (settings.cpp:1785-1797)"
+        ),
+        None,
+    )
+    if not raw_path:
+        resolved = os.path.join(memcards_dir, f"shared_card_{n}.mcd")
+    elif not os.path.isabs(raw_path):
+        resolved = os.path.join(memcards_dir, raw_path)
+    else:
+        host = sandbox.host(f"Card{n}Path", raw_path)
+        if host.path is None:
+            return _DuckSlot(
+                mode="Shared",
+                readings=(type_reading, path_reading),
+                caveats=(
+                    Caveat(
+                        CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                        f"settings.ini sets Card{n}Path to {raw_path!r}, a path only the "
+                        "emulator's sandbox can read — the shared card could not be located "
+                        "from here",
+                        {"key": f"Card{n}Path", "path": raw_path},
+                    ),
+                ),
+            )
+        resolved = host.path
+    return _DuckSlot(
+        mode="Shared",
+        group=FileGroup(
+            dir=os.path.dirname(resolved),
+            files=(os.path.basename(resolved),),
+            granularity=GRANULARITY_SHARED_CARD,
+            role="memory-card",
+        ),
+        readings=(type_reading, path_reading),
+    )
+
+
+def _duckstation_per_game_slot(
+    slot: int,
+    mode: str,
+    values: Mapping[tuple[str, str], str],
+    memcards_dir: str,
+    card: StandaloneSaveCard,
+    type_reading: OptionReading,
+    content_path: str | None,
+) -> _DuckSlot:
+    """The three per-game modes: one ``<name>_<slot>.mcd`` below the memory-card directory."""
+    n = slot + 1
+    shared_fallback = f"shared_card_{n}.mcd"
+    readings: list[OptionReading] = [type_reading]
+    if mode == "PerGameFileTitle":
+        stem = (
+            _duckstation_sanitized(os.path.splitext(os.path.basename(content_path))[0])
+            if content_path is not None
+            else None
+        )
+        name = f"{stem}_{n}.mcd" if stem is not None else f"{TEMPLATE_ROM_STEM}_{n}.mcd"
+        fill = (
+            "the content file's own name without its extension, sanitized the way "
+            "Path::SanitizeFileName sanitizes ('/', '*' and control bytes become '_')"
+        )
+        citation = "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e"
+    elif mode == "PerGame":
+        name = f"{TEMPLATE_SAVE_ID}_{n}.mcd"
+        fill = "the disc's serial, as DuckStation reads it off the running game"
+        citation = "system.cpp:3663-3685 and settings.cpp:1799-1802 at 64655818e"
+    else:
+        name = f"{TEMPLATE_SAVE_ID}_{n}.mcd"
+        raw_playlist = values.get(("MemoryCards", "UsePlaylistTitle"))
+        readings.append(
+            OptionReading(
+                "UsePlaylistTitle",
+                raw_playlist,
+                (
+                    f'settings.ini: [MemoryCards] UsePlaylistTitle = "{raw_playlist}"'
+                    if raw_playlist is not None
+                    else "UsePlaylistTitle is unset — the default true governs "
+                    "(settings.cpp:401)"
+                ),
+                None,
+            )
+        )
+        fill = (
+            "the game's title as DuckStation's database spells it, sanitized — a playlist or "
+            "disc-set game may use the set's name instead, and an existing disc-title card "
+            "outranks it"
+        )
+        citation = "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+    caveat = Caveat(
+        CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+        f"slot {n} names its card by {fill}; a running game without that fact falls back to "
+        f"the shared card ({shared_fallback})",
+        {
+            "core": card.token,
+            "mode": mode,
+            "files": name,
+            "files_without_save_id": shared_fallback,
+            "save_id": fill,
+            "citation": citation,
+        },
+    )
+    return _DuckSlot(
+        mode=mode,
+        group=FileGroup(
+            dir=memcards_dir,
+            files=(name,),
+            granularity=GRANULARITY_PER_GAME_FILE,
+            role="memory-card",
+        ),
+        readings=tuple(readings),
+        caveats=(caveat,),
+    )
+
+
+def _duckstation_slot(
+    slot: int,
+    values: Mapping[tuple[str, str], str],
+    memcards_dir: str,
+    sandbox: _Sandbox,
+    card: StandaloneSaveCard,
+    content_path: str | None,
+) -> _DuckSlot:
+    """One slot read the way the emulator reads it: the type first, then its paths."""
+    n = slot + 1
+    raw = values.get(("MemoryCards", f"Card{n}Type"))
+    parsed = next(
+        (
+            t
+            for t in _DUCKSTATION_TYPE_NAMES
+            if raw is not None and t.casefold() == raw.strip().casefold()
+        ),
+        None,
+    )
+    mode = parsed if parsed is not None else _DUCKSTATION_TYPE_DEFAULTS[slot]
+    if parsed is not None:
+        provenance = f'settings.ini: [MemoryCards] Card{n}Type = "{raw}"'
+    elif raw is not None:
+        provenance = (
+            f'settings.ini sets Card{n}Type to "{raw}", a value ParseMemoryCardTypeName '
+            f"does not know — the compiled default {mode} governs (.value_or, "
+            "settings.cpp:391-398)"
+        )
+    else:
+        provenance = (
+            f"Card{n}Type is unset — the compiled default {mode} governs (settings.h:510-511)"
+        )
+    type_reading = OptionReading(f"Card{n}Type", raw, provenance, None)
+    if mode == "None":
+        return _DuckSlot(mode=mode, readings=(type_reading,))
+    if mode == "NonPersistent":
+        return _DuckSlot(
+            mode=mode,
+            readings=(type_reading,),
+            caveats=(
+                Caveat(
+                    CAVEAT_SAVE_WRITES_DISCARDED,
+                    f"slot {n} holds a non-persistent card — writes into it are discarded at "
+                    "shutdown and nothing is kept (MemoryCardType::NonPersistent)",
+                    {"core": card.token, "mode": f"Card{n}Type = NonPersistent"},
+                ),
+            ),
+        )
+    if mode == "Shared":
+        return _duckstation_shared_slot(slot, values, memcards_dir, sandbox, type_reading)
+    return _duckstation_per_game_slot(
+        slot, mode, values, memcards_dir, card, type_reading, content_path
+    )
+
+
+def _duckstation_needs(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
+    """The holes the slot templates still carry, in first-appearance order."""
+    holes: list[str] = []
+    for group in groups:
+        for name in group.files or ():
+            if TEMPLATE_SAVE_ID in name:
+                holes.append(HOLE_SAVE_ID)
+            if TEMPLATE_ROM_STEM in name:
+                holes.append(HOLE_ROM_STEM)
+    return tuple(dict.fromkeys(holes))
+
+
+def _duckstation_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavefilePlacement | Unresolved:
+    """DuckStation's save answer: two memory-card slots, six modes each.
+
+    The Dolphin GC shape, spoken in DuckStation's vocabulary: each slot's
+    ``CardXType`` picks its scheme, the mode pair rides ``granularity.mode``,
+    and every group is a place a card really lands — a per-game
+    ``<name>_<slot>.mcd`` below the memory-card directory, or a shared card
+    at its configured or default path.
+    """
+    data_root, values, stated_ini, probe_caveats, refusal = _duckstation_settings(
+        machine, homes, card
+    )
+    if refusal is not None:
+        return refusal
+    caveats: list[Caveat] = [*extra_caveats, *probe_caveats]
+    raw_dir = values.get(("MemoryCards", "Directory"), "")
+    dir_reading = OptionReading(
+        "Directory",
+        raw_dir or None,
+        (
+            f'settings.ini: [MemoryCards] Directory = "{raw_dir}"'
+            if raw_dir
+            else "Directory is unset — the default memcards below the DataRoot governs "
+            "(settings.cpp:1943, :1974)"
+        ),
+        None,
+    )
+    if not raw_dir:
+        memcards_dir = os.path.join(data_root, "memcards")
+    elif not os.path.isabs(raw_dir):
+        memcards_dir = os.path.join(data_root, raw_dir)
+    else:
+        host = sandbox.host("Directory", raw_dir)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"the memory-card directory DuckStation's configuration names could not be "
+                f"located from here ({stated_ini}) — nothing this answer could anchor at",
+                {"emulator": card.token, "config": stated_ini or ""},
+            )
+        memcards_dir = host.path
+    slots = tuple(
+        _duckstation_slot(slot, values, memcards_dir, sandbox, card, content_path)
+        for slot in (0, 1)
+    )
+    groups = tuple(slot.group for slot in slots if slot.group is not None)
+    readings = [dir_reading]
+    for slot in slots:
+        readings.extend(slot.readings)
+    caveats.extend(c for slot in slots for c in slot.caveats)
+    mode = "+".join(slot.mode for slot in slots)
+    if groups:
+        directory = groups[0].dir
+        files = tuple(groups[0].files or ())
+        needs = _duckstation_needs(groups)
+    else:
+        directory = memcards_dir
+        files = ()
+        needs = ()
+        caveats.append(
+            Caveat(
+                CAVEAT_SAVE_WRITES_DISCARDED,
+                "no slot keeps a card (Card1Type/Card2Type) — a game finds nowhere to save "
+                "and nothing is kept; the granularity block names the switches that would "
+                "change that",
+                {"core": card.token, "mode": mode},
+            )
+        )
+    physical, link_caveats = _link_view(machine, memcards_dir)
+    caveats.extend(link_caveats)
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=needs,
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            files,
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=groups,
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=groups[0].granularity if groups else GRANULARITY_NONE,
+            mode=mode,
+            readings=tuple(_reading_with_file(r, stated_ini) for r in readings),
+            alternatives=(),
+            provenance=(
+                f"standalone save card '{card.token}': the slot pair from settings.ini "
+                "(settings.cpp:391-401 at 64655818e)"
+            ),
+        ),
+    )
+
+
 _STANDALONE_SAVE_RESOLVERS = {
     "DOLPHIN": _dolphin_savefile_placement,
     "PPSSPP": _ppsspp_savefile_placement,
     "XEMU": _xemu_savefile_placement,
     "CEMU": _cemu_savefile_placement,
     "AZAHAR": _azahar_savefile_placement,
+    "DUCKSTATION": _duckstation_savefile_placement,
 }
 
 
@@ -6155,12 +6546,15 @@ def _standalone_savefile_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Dispatch to the emulator's own resolver — a card without one fails loudly.
 
     The launch command rides along because an emulator's own flags can outrank
     its configuration (Cemu's ``--mlc``), and the catalogue command is the one
-    read that says whether this launch carries any.
+    read that says whether this launch carries any. The content path rides for
+    the one hole a resolver can fill itself — DuckStation's file-title mode
+    names the card after the content's own stem.
     """
     resolver = _STANDALONE_SAVE_RESOLVERS.get(card.token)
     if resolver is None:
@@ -6176,6 +6570,7 @@ def _standalone_savefile_placement(
         system=system,
         command=command,
         extra_caveats=extra_caveats,
+        content_path=content_path,
     )
 
 
@@ -6199,8 +6594,10 @@ def _standalone_savefile_unresolved(spec: EmulatorSpec) -> Unresolved:
 # Cemu against ${HOME}/.config/Cemu/settings.xml (emuDeckCemu.sh:13); azahar.sh
 # runs Azahar against ${HOME}/.config/azahar-emu/qt-config.ini
 # (emuDeckAzahar.sh:7). The legacy citra.sh stays out: it launches Citra, an
-# emulator no card describes.
-_EMUDECK_LAUNCHER_CARDS = {"cemu": "CEMU", "azahar": "AZAHAR"}
+# emulator no card describes. duckstation.sh runs DuckStation against the
+# DataRoot the launch environment picks (emuDeckDuckStation.sh:9 assumes the
+# environment-unset side, ~/.local/share/duckstation).
+_EMUDECK_LAUNCHER_CARDS = {"cemu": "CEMU", "azahar": "AZAHAR", "duckstation": "DUCKSTATION"}
 
 # The binary variants an EmuDeck launcher picks between, in its probe order
 # (cemu.sh:37-93): an AppImage under ~/Applications (vars.sh:4-5), an
@@ -10465,6 +10862,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     *health.issues,
                     *arrangement_caveats(self.kind, observed_version=_marker_version(config)),
                 ),
+                content_path=content_path,
             )
         placement = self._savefile_location_from(
             config,
@@ -11809,6 +12207,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 *marker_issues,
                 *arrangement_caveats(self.kind, observed_version=self._observed_backend_head()),
             ),
+            content_path=content_path,
         )
 
     def _launcher_binary_variant(self, name: str) -> str:

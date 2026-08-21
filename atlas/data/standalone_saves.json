@@ -69,6 +69,20 @@
       "provenance": {
         "source": "Azahar 2125.1.1, the release RetroDECK ships (components/azahar/bin/azahar reports it). A 3DS save lives on the emulated SD: the archive mounts '<sdmc>/Nintendo 3DS/<ID0>/<ID1>/title/' and the per-title save is '<high:08x>/<low:08x>/data/00000001/' below it (archive_source_sd_savedata.cpp:21-29), with ID0 and ID1 compile-time all-zero strings (archive.h:22-24) — so the unit is a directory keyed by the title id, the same <save_id> spelling Cemu's card fills. The SD root is read the way the emulator reads it: qt-config.ini's [Data Storage] group, where use_custom_storage routes sdmc_directory and nand_directory and false leaves the XDG defaults (config.cpp:480-498; a '<key>\\default=true' companion makes the default win, ReadSetting, config.cpp:1442-1450). The title directory also holds installed content (title/<high>/<low>/content/), which is why the unit anchors at data/ and never at the title directory. Beside the unit, extdata ('Nintendo 3DS/<ID0>/<ID1>/extdata/') keeps save-adjacent data keyed by the title's own extdata id (archive_extsavedata.cpp), and system titles save into the NAND ('nand/data/<ID0>/sysdata') — stated, not templated."
       }
+    },
+    "DUCKSTATION": {
+      "saves": {
+        "config": {
+          "base": "config",
+          "path": "duckstation/settings.ini"
+        },
+        "systems": [
+          "psx"
+        ]
+      },
+      "provenance": {
+        "source": "The DuckStation build RetroDECK ships as 'DuckStation (Legacy)' — the last freely distributed rolling build, frozen by RetroDECK's fork release of 2024-09-19; citations pin stenzek/duckstation@64655818e, the last commit before that freeze. Two memory-card slots, each picked by Card1Type/Card2Type from six modes (settings.cpp:1743-1745; loading :391-401, an unparseable value falls back to the compiled default PerGameTitle/None, settings.h:510-511). A per-game card is '<name>_<slot>.mcd' below [MemoryCards] Directory (settings.cpp:1799-1802) — the name the disc serial (PerGame), the sanitized database title with the playlist/disc-set preference (PerGameTitle, system.cpp:3688-3742), or the content file's own stem (PerGameFileTitle, :3744-3762). A shared card is CardXPath, absolute or Directory-relative, else shared_card_<slot>.mcd (:1785-1797). settings.ini lives in the DataRoot the launch environment picks — $XDG_CONFIG_HOME/duckstation where set (always, inside a flatpak), else ~/.local/share/duckstation (qthost.cpp:562-582) — so the reading probes both spellings and states which file answered; the card's config path names the config-side spelling, the probe's first candidate."
+      }
     }
   }
 }

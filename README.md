@@ -80,10 +80,10 @@ Map of the surface — layers, handles, answer types, and what to import from wh
 3. **ES-DE knowledge** — `es_systems.xml` / `es_find_rules.xml` parsing and launch-command classification, generalized
    across the frontends that ship ES-DE (RetroDECK, EmuDeck, and a bare ES-DE install).
 4. **Standalone emulators** — per-emulator config parsing and save placement rules, read the way each emulator reads its
-   own configuration: Dolphin (GC slots and the Wii NAND), PPSSPP, xemu, Cemu (the per-title MLC unit) and Azahar (the
-   per-title unit on the 3DS's emulated SD) today, one emulator per sub-issue of the epic (#3) until every emulator
-   RetroDECK ships resolves — on EmuDeck too, where the catalogue launches them through launcher scripts instead of
-   tokens.
+   own configuration: Dolphin (GC slots and the Wii NAND), PPSSPP, xemu, Cemu (the per-title MLC unit), Azahar (the
+   per-title unit on the 3DS's emulated SD) and DuckStation (two memory-card slots, six modes) today, one emulator per
+   sub-issue of the epic (#3) until every emulator RetroDECK ships resolves — on EmuDeck too, whichever way its
+   catalogue launches them.
 5. **The system vocabulary and the platform crosswalk** — the ids every question about a system takes are ES-DE's system
    names, shipped as packaged data cited to a stated build and guarded by a test that parses that build's own
    `es_systems.xml`; `known_systems()` and `from_esde_system()` let a client check its own map before using it. Beside

@@ -1809,11 +1809,14 @@ TRIO_ESDE = (
     '<command label="Cemu (Standalone)">%EMULATOR_CEMU% --mlc /tmp/other %ROM%</command></system>'
     "<system><name>n3ds</name><path>%ROMPATH%/n3ds</path><extension>.3ds</extension>"
     '<command label="Azahar (Standalone)">%EMULATOR_AZAHAR% %ROM%</command></system>'
+    "<system><name>psx</name><path>%ROMPATH%/psx</path><extension>.chd</extension>"
+    '<command label="DuckStation (Legacy) (Standalone)">%EMULATOR_DUCKSTATION% -batch %ROM%</command></system>'
     "</systemList>"
 )
 XEMU_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
 CEMU_XML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml"
 AZAHAR_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/azahar-emu/qt-config.ini"
+DUCKSTATION_CONFIG_INI = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
 
 
 class TestMoreStandaloneSaves:
@@ -1948,6 +1951,97 @@ class TestMoreStandaloneSaves:
         extdata = [g for g in p.file_set.groups if g.dir.endswith("/extdata")]
         assert len(extdata) == 1
         assert extdata[0].files is None
+
+    def test_duckstation_the_config_side_ini_outranks_the_data_side(self):
+        # Both DataRoot candidates carry a settings.ini — the probe reads the
+        # config side first, the order the launch environment implies
+        # (qthost.cpp:562-582), and the readings say which file answered.
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = PerGame\nCard2Type = None\n"
+                    "Directory = /mnt/sd/config-side\n"
+                ),
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/data/duckstation/settings.ini": (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = None\n"
+                    "Directory = /mnt/sd/data-side\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/config-side"
+        assert p.file_set.files == ("<save_id>_1.mcd",)
+
+    def test_duckstation_a_shared_slot_takes_its_configured_absolute_path(self):
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = None\n"
+                    "Card1Path = /mnt/sd/cards/everyone.mcd\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert p.file_set.files == ("everyone.mcd",)
+        assert p.granularity is not None
+        assert p.granularity.value == atlas.GRANULARITY_SHARED_CARD
+
+    def test_duckstation_a_relative_shared_path_joins_the_memcard_directory(self):
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = None\n"
+                    "Card1Path = my_card.mcd\nDirectory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/memcards"
+        assert p.file_set.files == ("my_card.mcd",)
+
+    def test_duckstation_two_empty_slots_state_the_discarded_writes(self):
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = None\nCard2Type = NonPersistent\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.groups == ()
+        assert p.granularity is not None
+        assert p.granularity.value == atlas.GRANULARITY_NONE
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_WRITES_DISCARDED]
+        assert len(stated) == 2  # the NonPersistent slot's own, and the answer's
+
+    def test_duckstation_an_unknown_type_falls_to_the_compiled_default(self):
+        # ParseMemoryCardTypeName -> .value_or(default) (settings.cpp:391-398):
+        # an unparseable value is the default, stated in the reading.
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = SomethingNew\nCard2Type = None\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("<save_id>_1.mcd",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "PerGameTitle+None"
+
+    def test_duckstation_with_an_unreadable_ini_refuses(self):
+        p = self._answer("psx", files={DUCKSTATION_CONFIG_INI: {"status": "unreadable"}})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
 
 class TestEmuDeckStandaloneLaunchers:
