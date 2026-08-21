@@ -6372,23 +6372,19 @@ def _duckstation_slot(
         None,
     )
     mode = parsed if parsed is not None else _DUCKSTATION_TYPE_DEFAULTS[slot]
-    type_reading = OptionReading(
-        f"Card{n}Type",
-        raw,
-        (
-            f'settings.ini: [MemoryCards] Card{n}Type = "{raw}"'
-            if parsed is not None
-            else (
-                f'settings.ini sets Card{n}Type to "{raw}", a value ParseMemoryCardTypeName '
-                f"does not know — the compiled default {mode} governs "
-                "(.value_or, settings.cpp:391-398)"
-                if raw is not None
-                else f"Card{n}Type is unset — the compiled default {mode} governs "
-                "(settings.h:510-511)"
-            )
-        ),
-        None,
-    )
+    if parsed is not None:
+        provenance = f'settings.ini: [MemoryCards] Card{n}Type = "{raw}"'
+    elif raw is not None:
+        provenance = (
+            f'settings.ini sets Card{n}Type to "{raw}", a value ParseMemoryCardTypeName '
+            f"does not know — the compiled default {mode} governs (.value_or, "
+            "settings.cpp:391-398)"
+        )
+    else:
+        provenance = (
+            f"Card{n}Type is unset — the compiled default {mode} governs (settings.h:510-511)"
+        )
+    type_reading = OptionReading(f"Card{n}Type", raw, provenance, None)
     if mode == "None":
         return _DuckSlot(mode=mode, readings=(type_reading,))
     if mode == "NonPersistent":
