@@ -301,6 +301,10 @@ KNOWN_CAVEAT_CODES = {
     "no-firmware-requirement",
     "firmware-declaration-unknown",
     "firmware-packaged-declaration",
+    "firmware-builtin-replacement",
+    # The save route's refusal word, doubling as the firmware route's caveat
+    # for the same fact — one fact, one code on both routes.
+    "emulator-config-unreadable",
     "info-path-unresolved",
     "core-dir-unresolved",
     "firmware-root-missing",

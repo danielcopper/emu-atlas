@@ -6852,6 +6852,604 @@
           ]
         }
       }
+    },
+    {
+      "name": "retrodeck-melonds-external-bios-makes-the-ds-set-required",
+      "rationale": "melonDS ships no .info, so its expectations are atlas's packaged card — and which files a launch probes is verifySetup's own decision, read live from two switches (EmuInstance.cpp:633-667 at 1.1). With Emu.ExternalBIOSEnable on and the console type left at DS, the probe set is the ARM9/ARM7 BIOS pair and the DS firmware, each at the path its configuration key names — here RetroDECK's bios directory, where two of the three really sit and the third does not.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Emu]\nExternalBIOSEnable = true\n[DS]\nBIOS9Path = \"/mnt/sd/retrodeck/bios/bios9.bin\"\nBIOS7Path = \"/mnt/sd/retrodeck/bios/bios7.bin\"\nFirmwarePath = \"/mnt/sd/retrodeck/bios/firmware.bin\"\n",
+          "/mnt/sd/retrodeck/bios/bios9.bin": "9999999999999999",
+          "/mnt/sd/retrodeck/bios/bios7.bin": "7777777777777777"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "melonDS (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "nds",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "bios7.bin",
+                  "path": "/mnt/sd/retrodeck/bios/bios7.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/bios7.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                },
+                {
+                  "core_so": null,
+                  "system": "nds",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "bios9.bin",
+                  "path": "/mnt/sd/retrodeck/bios/bios9.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/bios9.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                },
+                {
+                  "core_so": null,
+                  "system": "nds",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "firmware.bin",
+                  "path": "/mnt/sd/retrodeck/bios/firmware.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/firmware.bin",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "melonds-the-built-in-replacement-needs-no-external-bios",
+      "rationale": "Emu.ExternalBIOSEnable is off — melonDS's compiled default — so DS games boot on the built-in BIOS/firmware replacement and verifySetup probes nothing at all. The empty requirement list is the true answer here, not an unread one, and the firmware-builtin-replacement caveat names the switch whose flip would make the configured DS paths required. The paths are configured in this fixture precisely to prove they are not read while the switch is off.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Emu]\nExternalBIOSEnable = false\n[DS]\nBIOS9Path = \"/mnt/sd/retrodeck/bios/bios9.bin\"\nBIOS7Path = \"/mnt/sd/retrodeck/bios/bios7.bin\"\nFirmwarePath = \"/mnt/sd/retrodeck/bios/firmware.bin\"\n",
+          "/mnt/sd/retrodeck/bios/bios9.bin": "9999999999999999"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "melonDS (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS"
+                  }
+                },
+                {
+                  "code": "firmware-builtin-replacement",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS",
+                    "switch": "Emu.ExternalBIOSEnable",
+                    "console_type": "0"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "nds"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "melonds-dsi-mode-needs-its-bios-pair-and-nand-either-way",
+      "rationale": "The console type is the second switch, and it cuts across the first: in DSi mode the DSi BIOS pair and the NAND are probed whether or not external BIOS is on (verifySetup, EmuInstance.cpp:646-658) — only the DSi firmware rides the switch. With external BIOS off the answer therefore states three required files and still carries the built-in-replacement caveat, because that caveat is about the DS set.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Emu]\nExternalBIOSEnable = false\nConsoleType = 1\n[DS]\nBIOS9Path = \"/mnt/sd/retrodeck/bios/bios9.bin\"\nBIOS7Path = \"/mnt/sd/retrodeck/bios/bios7.bin\"\nFirmwarePath = \"/mnt/sd/retrodeck/bios/firmware.bin\"\n[DSi]\nBIOS9Path = \"/mnt/sd/retrodeck/bios/dsi_bios9.bin\"\nBIOS7Path = \"/mnt/sd/retrodeck/bios/dsi_bios7.bin\"\nFirmwarePath = \"/mnt/sd/retrodeck/bios/dsi_firmware.bin\"\nNANDPath = \"/mnt/sd/retrodeck/bios/dsi_nand.bin\"\n",
+          "/mnt/sd/retrodeck/bios/dsi_nand.bin": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "melonDS (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "nds",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "dsi_bios7.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dsi_bios7.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/dsi_bios7.bin",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": null,
+                  "system": "nds",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "dsi_bios9.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dsi_bios9.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/dsi_bios9.bin",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": null,
+                  "system": "nds",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "dsi_nand.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dsi_nand.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/dsi_nand.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS"
+                  }
+                },
+                {
+                  "code": "firmware-builtin-replacement",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS",
+                    "switch": "Emu.ExternalBIOSEnable",
+                    "console_type": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "melonds-an-unset-path-names-no-file-to-place",
+      "rationale": "A probed key whose value names no file — unset, or ending in a directory step — is refused with the same word the core route refuses such a declaration with (firmware-path-names-no-file), never answered with the config directory dressed as a BIOS file: melonDS opens the relative spelling below its own config directory (Platform.cpp:157-178) and its check fails. The other two keys of the same probe set still answer, so a caller sees exactly which one is unconfigured.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Emu]\nExternalBIOSEnable = true\n[DS]\nBIOS9Path = \"/mnt/sd/retrodeck/bios/bios9.bin\"\nBIOS7Path = \"\"\nFirmwarePath = \"/mnt/sd/retrodeck/bios/firmware.bin\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "melonDS (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "nds",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "bios9.bin",
+                  "path": "/mnt/sd/retrodeck/bios/bios9.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/bios9.bin",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": null,
+                  "system": "nds",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "firmware.bin",
+                  "path": "/mnt/sd/retrodeck/bios/firmware.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/firmware.bin",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS"
+                  }
+                },
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS",
+                    "key": "DS.BIOS7Path",
+                    "declared": "",
+                    "need": "required"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "melonds-an-unreadable-config-leaves-the-expectations-unknown",
+      "rationale": "The configuration that decides which files are probed exists and cannot be read, so what this launch expects is unknown — declaration 'unreadable' with the save route's own word for the same fact (emulator-config-unreadable), and an empty list that says so rather than 'needs nothing'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "melonDS (Standalone)",
+              "declaration": "unreadable",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "emulator-config-unreadable",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "nds"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-melonds-parks-its-bios-paths-behind-a-switch-that-is-off",
+      "rationale": "EmuDeck writes all seven melonDS path keys into the legacy INI it ships and leaves ExternalBIOSEnable=0 in the same file — so the paths are parked behind a switch that is off, and the honest answer names no DS requirement while saying which switch would create them. Two facts ride along: the launcher pins the flatpak variant (melonds.sh:4), so the expectations are read from the app's own config home below ~/.var/app rather than the host's; and the legacy INI is what melonDS 1.1 itself reads while no TOML exists.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS</extension>\n    <command label=\"melonDS (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/melonds.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.kuribo64.melonDS/config/melonDS/melonDS.ini": "ExternalBIOSEnable=0\nBIOS9Path=/home/deck/Emulation/bios/bios9.bin\nBIOS7Path=/home/deck/Emulation/bios/bios7.bin\nFirmwarePath=/home/deck/Emulation/bios/firmware.bin\nDSiBIOS9Path=/home/deck/Emulation/bios/dsi_bios9.bin\nDSiBIOS7Path=/home/deck/Emulation/bios/dsi_bios7.bin\nDSiFirmwarePath=/home/deck/Emulation/bios/dsi_firmware.bin\nDSiNANDPath=/home/deck/Emulation/bios/dsi_nand.bin\n",
+          "/home/deck/Emulation/bios/bios9.bin": "9999999999999999"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "melonDS (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS"
+                  }
+                },
+                {
+                  "code": "firmware-builtin-replacement",
+                  "data": {
+                    "label": "melonDS (Standalone)",
+                    "token": "MELONDS",
+                    "switch": "Emu.ExternalBIOSEnable",
+                    "console_type": "0"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "nds"
+              }
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "nds"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

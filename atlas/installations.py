@@ -250,6 +250,7 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
+from atlas import melonds
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
@@ -6844,25 +6845,6 @@ def _melonds_stem(content_name: str) -> str:
     return stem or "firmware"
 
 
-def _melonds_legacy_save_path(text: str) -> str | None:
-    """The legacy INI's ``SaveFilePath``, read the way LoadLegacyFile reads it.
-
-    One scan per line — the key, an immediate ``=``, then everything up to a
-    tab or the line's end, at least one byte of it (an empty value fails the
-    scan and leaves the entry untouched) — and a later line overwrites an
-    earlier one (Config.cpp:705-717 at 1.1).
-    """
-    value: str | None = None
-    for line in text.splitlines():
-        name, separator, rest = line.partition("=")
-        if not separator or name != "SaveFilePath":
-            continue
-        candidate = rest.partition("\t")[0]
-        if candidate:
-            value = candidate
-    return value
-
-
 @dataclass(frozen=True, slots=True)
 class _MelonConfig:
     """What the config read established: the raw value, and its own story."""
@@ -6872,56 +6854,40 @@ class _MelonConfig:
     stated_file: str | None
 
 
-def _melonds_toml_reading(text: str) -> tuple[str | None, str]:
-    """``[Instance0] SaveFilePath`` out of an existing melonDS.toml.
-
-    An unparseable TOML is melonDS running on factory defaults — the emulator
-    catches the syntax error and keeps an empty table (Config.cpp:796-803) —
-    so the answer steps to the defaults, never to the legacy file.
-    """
-    try:
-        doc = tomllib.loads(text)
-    except tomllib.TOMLDecodeError:
-        return None, (
+def _melonds_save_path_provenance(config: melonds.MelonConfig, raw: str | None) -> str:
+    """The sentence the SaveFilePath reading carries, per Load()'s branch."""
+    if config.source == melonds.SOURCE_TOML_INVALID:
+        return (
             "melonDS.toml exists and is not parseable TOML — melonDS catches the syntax "
             "error and runs on factory defaults (Config.cpp:796-803), so the empty default "
             "governs and the save lands beside the ROM"
         )
-    instance = doc.get("Instance0")
-    value = instance.get("SaveFilePath") if isinstance(instance, Mapping) else None
-    if isinstance(value, str) and value:
-        return value, f'melonDS.toml: [Instance0] SaveFilePath = "{value}"'
-    if isinstance(value, str):
-        return None, (
-            'melonDS.toml: [Instance0] SaveFilePath = "" — the empty value routes the save '
-            "beside the ROM (getAssetPath, EmuInstance.cpp:448-449)"
+    if config.source == melonds.SOURCE_TOML:
+        if raw:
+            return f'melonDS.toml: [Instance0] SaveFilePath = "{raw}"'
+        if isinstance(melonds.raw_value(config, "Instance0.SaveFilePath"), str):
+            return (
+                'melonDS.toml: [Instance0] SaveFilePath = "" — the empty value routes the '
+                "save beside the ROM (getAssetPath, EmuInstance.cpp:448-449)"
+            )
+        return (
+            "melonDS.toml states no [Instance0] SaveFilePath (unset, or not a string, reads "
+            "as the empty default — Config.cpp:596) — the save lands beside the ROM"
         )
-    return None, (
-        "melonDS.toml states no [Instance0] SaveFilePath (unset, or not a string, reads as "
-        "the empty default — Config.cpp:596) — the save lands beside the ROM"
-    )
-
-
-def _melonds_ini_reading(text: str) -> tuple[str | None, str]:
-    """``SaveFilePath`` out of the pre-1.0 melonDS.ini, the migration source."""
-    value = _melonds_legacy_save_path(text)
-    if value is not None:
-        return value, (
-            "melonDS.toml is absent, so the pre-1.0 melonDS.ini speaks until the first "
-            f"launch migrates it (Config.cpp:785-795): SaveFilePath={value}"
+    if config.source == melonds.SOURCE_LEGACY:
+        if raw:
+            return (
+                "melonDS.toml is absent, so the pre-1.0 melonDS.ini speaks until the first "
+                f"launch migrates it (Config.cpp:785-795): SaveFilePath={raw}"
+            )
+        return (
+            "melonDS.toml is absent and the pre-1.0 melonDS.ini it falls back to states no "
+            "SaveFilePath — the empty default governs and the save lands beside the ROM"
         )
-    return None, (
-        "melonDS.toml is absent and the pre-1.0 melonDS.ini it falls back to states no "
-        "SaveFilePath — the empty default governs and the save lands beside the ROM"
-    )
-
-
-def _melonds_config_unreadable(card: StandaloneSaveCard, path: str) -> Unresolved:
-    return Unresolved(
-        UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-        f"melonDS's configuration ({path}) exists and could not be read — where every "
-        "game's .sav lands is unknowable here",
-        {"emulator": card.token, "config": path},
+    return (
+        "neither melonDS.toml nor the pre-1.0 melonDS.ini exists — the compiled "
+        "defaults govern and the save lands beside the ROM (getAssetPath, "
+        "EmuInstance.cpp:445-484)"
     )
 
 
@@ -6930,33 +6896,27 @@ def _melonds_config(
 ) -> _MelonConfig | Unresolved:
     """``[Instance0] SaveFilePath``, read the way Config::Load reads it.
 
-    The TOML speaks wherever it exists; only a TOML that does not exist
-    reaches the legacy INI beside it; and where neither exists the compiled
-    defaults govern (Config.cpp:785-803 at 1.1).
+    The read chain lives in :mod:`atlas.melonds`, shared with the firmware
+    route — the TOML speaks wherever it exists, only a TOML that does not
+    exist reaches the legacy INI beside it, and where neither exists the
+    compiled defaults govern (Config.cpp:785-803 at 1.1).
     """
-    assert card.config_base is not None and card.config_path is not None
-    toml_path = os.path.join(homes.base(card.config_base), card.config_path)
-    result = machine.read_text(toml_path)
-    if result.status not in (READ_OK, READ_MISSING):
-        return _melonds_config_unreadable(card, toml_path)
-    if result.status == READ_OK:
-        raw, provenance = _melonds_toml_reading(result.text or "")
-        return _MelonConfig(raw=raw, provenance=provenance, stated_file=toml_path)
-    ini_path = os.path.join(os.path.dirname(toml_path), "melonDS.ini")
-    legacy = machine.read_text(ini_path)
-    if legacy.status not in (READ_OK, READ_MISSING):
-        return _melonds_config_unreadable(card, ini_path)
-    if legacy.status == READ_OK:
-        raw, provenance = _melonds_ini_reading(legacy.text or "")
-        return _MelonConfig(raw=raw, provenance=provenance, stated_file=ini_path)
+    read = melonds.read_config(machine, homes.base("config"))
+    if read.unreadable is not None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"melonDS's configuration ({read.unreadable}) exists and could not be read — "
+            "where every game's .sav lands is unknowable here",
+            {"emulator": card.token, "config": read.unreadable},
+        )
+    config = read.config
+    assert config is not None  # a read is either a document or an unreadable path
+    value = melonds.get_string(config, "Instance0.SaveFilePath")
+    raw = value or None
     return _MelonConfig(
-        raw=None,
-        provenance=(
-            "neither melonDS.toml nor the pre-1.0 melonDS.ini exists — the compiled "
-            "defaults govern and the save lands beside the ROM (getAssetPath, "
-            "EmuInstance.cpp:445-484)"
-        ),
-        stated_file=None,
+        raw=raw,
+        provenance=_melonds_save_path_provenance(config, raw),
+        stated_file=config.stated_file,
     )
 
 
@@ -8262,6 +8222,16 @@ class _CatalogueHost(Protocol):
         """
         ...
 
+    def standalone_firmware_homes(self, command: str) -> "_XdgHomes | None":
+        """Per-entry XDG bases where this launch's binary reads its own trees.
+
+        ``None`` means the arrangement's own standalone bases govern — the
+        pair the firmware context carries. A value means the entry's launch
+        picks a binary whose trees hang elsewhere (EmuDeck's flatpak variant
+        reads ``~/.var/app/<id>``, not the host's XDG tree).
+        """
+        ...
+
 
 @dataclass(frozen=True, slots=True)
 class CatalogueAnswer:
@@ -9243,19 +9213,24 @@ def _firmware_catalogue_entries(
         system_roms_dir=None,
         content_path=None,
     )
-    return tuple(
-        CatalogueEntry(
-            label=entry.label,
-            kind=entry.kind,
-            core_so=entry.core_so,
-            standalone_token=(
-                host.standalone_firmware_token(entry.command)
-                if entry.kind != KIND_LIBRETRO
-                else None
-            ),
+    shaped: list[CatalogueEntry] = []
+    for entry in entries:
+        token = None
+        homes = None
+        if entry.kind != KIND_LIBRETRO:
+            token = host.standalone_firmware_token(entry.command)
+            homes = host.standalone_firmware_homes(entry.command)
+        shaped.append(
+            CatalogueEntry(
+                label=entry.label,
+                kind=entry.kind,
+                core_so=entry.core_so,
+                standalone_token=token,
+                standalone_data_home=homes.data if homes is not None else None,
+                standalone_config_home=homes.config if homes is not None else None,
+            )
         )
-        for entry in entries
-    )
+    return tuple(shaped)
 
 
 @dataclass(frozen=True, slots=True)
@@ -10017,6 +9992,17 @@ class _CatalogueQueries:
         what a command identifies is arrangement knowledge.
         """
         return emulator_token(command)
+
+    def standalone_firmware_homes(self, command: str) -> "_XdgHomes | None":
+        """The per-entry override of the context's standalone bases — none by default.
+
+        One flatpak holds every emulator RetroDECK ships, so the pair the
+        firmware context carries is right for all of them. EmuDeck overrides
+        this: its launches pick a binary per entry, and which trees that
+        binary reads is the variant's fact, not the arrangement's.
+        """
+        del command
+        return None
 
     def _catalogue_absence(self) -> Caveat:
         raise NotImplementedError  # pragma: no cover - every handle supplies one
@@ -12993,6 +12979,22 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         ):
             return launch.token
         return None
+
+    def standalone_firmware_homes(self, command: str) -> _XdgHomes | None:
+        """The homes the gated launch reads — per entry, because the variant is.
+
+        The same identity and gate as the token: an ungated launch answers
+        ``None`` (its token is ``None`` too, so nothing consumes homes), the
+        AppImage answers the host pair, and a flatpak whose app id the save
+        card names answers the app's own trees below ``~/.var/app``.
+        """
+        launch = self._standalone_launch_identity(command)
+        if launch.token is None or launch.probe_name is None or "-w" in launch.args:
+            return None
+        card = lookup_standalone_save_card(launch.token)
+        if card is None:
+            return None
+        return self._standalone_homes_for(self._launch_variant(launch), card)
 
     def _standalone_sandbox(self) -> _Sandbox:
         """No path translation: both established variants read host paths.

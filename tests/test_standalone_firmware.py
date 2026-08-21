@@ -35,8 +35,67 @@ class TestTheLoaderFailsClosed:
         assert card is not None
         assert "wiiu" in card.systems
         assert card.files[0].name == "keys.txt"
+        assert card.config_files == ()
         assert lookup_standalone_firmware_card("NOPE") is None
         assert lookup_standalone_firmware_card(None) is None
+
+    def test_the_packaged_config_card_carries_its_keys(self):
+        card = lookup_standalone_firmware_card("MELONDS")
+        assert card is not None
+        assert card.files == ()
+        assert [f.key for f in card.config_files] == [
+            "DS.BIOS9Path",
+            "DS.BIOS7Path",
+            "DS.FirmwarePath",
+            "DSi.BIOS9Path",
+            "DSi.BIOS7Path",
+            "DSi.FirmwarePath",
+            "DSi.NANDPath",
+        ]
+
+    def test_a_card_with_neither_file_list_is_refused(self):
+        bad = json.dumps(
+            {
+                "schema": 1,
+                "emulators": {
+                    "CEMU": {"systems": ["wiiu"], "provenance": {"source": "Cemu 2.6"}}
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="exactly one of"):
+            load_standalone_firmware(bad)
+
+    def test_a_card_with_both_file_lists_is_refused(self):
+        bad = _doc(
+            config_files=[
+                {"key": "DS.BIOS9Path", "purpose": "bios", "citation": "EmuInstance.cpp:487"}
+            ]
+        )
+        with pytest.raises(ValueError, match="exactly one of"):
+            load_standalone_firmware(bad)
+
+    def test_a_stray_key_in_a_config_file_is_refused(self):
+        bad = json.dumps(
+            {
+                "schema": 1,
+                "emulators": {
+                    "MELONDS": {
+                        "systems": ["nds"],
+                        "config_files": [
+                            {
+                                "key": "DS.BIOS9Path",
+                                "purpose": "bios",
+                                "citation": "EmuInstance.cpp:487",
+                                "base": "config",
+                            }
+                        ],
+                        "provenance": {"source": "melonDS 1.1"},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="key/purpose/citation"):
+            load_standalone_firmware(bad)
 
     def test_a_wrong_schema_is_refused(self):
         with pytest.raises(ValueError, match="unsupported schema"):
