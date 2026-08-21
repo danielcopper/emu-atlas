@@ -442,6 +442,15 @@ ESDE_SYSTEMS = """<?xml version="1.0"?>
     <platform>wii</platform>
     <theme>wii</theme>
   </system>
+  <system>
+    <name>psvita</name>
+    <fullname>Sony PlayStation Vita</fullname>
+    <path>%ROMPATH%/psvita</path>
+    <extension>.psvita .PSVITA</extension>
+    <command label="Vita3K (Standalone)">%EMULATOR_VITA3K% %ROM%</command>
+    <platform>psvita</platform>
+    <theme>psvita</theme>
+  </system>
 </systemList>
 """
 
@@ -476,11 +485,18 @@ def _standalone_card(**textures) -> str:
 
 class TestTheShippedStandaloneTableSaysWhatItCanStandBehind:
     @pytest.mark.parametrize("card", load_standalone_texture_packs(), ids=lambda c: c.token)
-    def test_a_card_names_an_xdg_base_and_a_config_to_go_with_it(self, card):
-        assert card.base in XDG_BASES
+    def test_a_card_names_a_directory_one_way_and_a_config_to_go_with_it(self, card):
+        # Exactly one shape: a fixed subpath below an XDG base, or the
+        # configuration key whose value is the directory. Both, or neither,
+        # would leave the resolver picking.
+        fixed = card.base is not None
+        assert fixed == (card.subdir is not None)
+        assert fixed != (card.directory is not None)
+        if fixed:
+            assert card.base in XDG_BASES
         assert card.config.base in XDG_BASES
-        # The config is what emulator-config-unread points a caller at; a card
-        # without one would state the switch is unknown and say nowhere to look.
+        # The config is what the answer points a caller at — either as the file
+        # emulator-config-unread names, or as the file the switch was read from.
         assert card.config.path
 
     @pytest.mark.parametrize("card", load_standalone_texture_packs(), ids=lambda c: c.token)
@@ -488,16 +504,26 @@ class TestTheShippedStandaloneTableSaysWhatItCanStandBehind:
         assert (card.keying is None) == (card.keying_citation is None)
         assert card.keying is None or card.keying in KEYINGS
 
-    @pytest.mark.parametrize("token", ["PCSX2", "VITA3K"])
-    def test_the_config_written_emulators_are_absent_on_purpose(self, token):
-        # Neither opens a default: RetroDECK writes their texture directory into
-        # the emulator's own configuration (Folders/Textures in PCSX2.ini,
-        # pref-path in Vita3K's config.yml). Quoting the path the installer
-        # intended would state an arrangement's directory as an emulator's read
-        # location — the mistake the whole table exists to avoid — so the
-        # absence is a decision, and worth failing on if somebody reverses it
-        # without reading those configs.
-        assert lookup_standalone_texture_card(token) is None
+    def test_vita3k_is_absent_on_purpose(self):
+        # Vita3K opens no default either: its texture tree hangs off pref-path
+        # in config.yml. PCSX2 was absent for the same reason until its
+        # configuration was read (#223); Vita3K's is YAML, and atlas ships no
+        # YAML reader — so the absence stays a decision, and worth failing on
+        # if somebody reverses it by quoting the path the installer intended
+        # instead of reading the config.
+        assert lookup_standalone_texture_card("VITA3K") is None
+
+    def test_a_config_stated_card_answers_instead_of_naming_a_default(self):
+        # The other half of the same decision: PCSX2's directory IS its
+        # configuration's value, so the card states the key rather than a
+        # subpath, and neither base nor subdir may be invented for it.
+        card = lookup_standalone_texture_card("PCSX2")
+        assert card is not None
+        assert card.base is None and card.subdir is None
+        assert card.directory is not None
+        assert (card.directory.section, card.directory.key) == ("Folders", "Textures")
+        assert card.switch is not None
+        assert card.switch.key == "LoadTextureReplacements"
 
     def test_a_command_that_names_no_emulator_matches_nothing(self):
         assert lookup_standalone_texture_card(None) is None
@@ -606,10 +632,11 @@ class TestTheEntryRouteAsymmetryIsDeliberate:
         assert isinstance(refusal, Unresolved)
         assert refusal.code == atlas.UNRESOLVED_STANDALONE
 
-    def test_an_emulator_whose_directory_lives_in_its_own_config_refuses(self):
-        # The split inside the standalone kind: PCSX2's texture directory is a
-        # value written into PCSX2.ini, not a default it opens.
-        refusal = _entry("ps2").texture_pack_location()
+    def test_an_emulator_whose_directory_lives_in_an_unread_config_refuses(self):
+        # The split inside the standalone kind: Vita3K's texture tree hangs off
+        # pref-path in a config.yml nothing reads. (PCSX2 was this example
+        # until its own configuration was read, #223.)
+        refusal = _entry("psvita").texture_pack_location()
         assert isinstance(refusal, Unresolved)
         assert refusal.code == atlas.UNRESOLVED_STANDALONE
 
@@ -618,7 +645,26 @@ class TestTheEntryRouteAsymmetryIsDeliberate:
         # answers and one refuses, and the only difference is what atlas has
         # established about the emulator.
         assert isinstance(_entry("gc").texture_pack_location(), TexturePlacement)
-        assert isinstance(_entry("ps2").texture_pack_location(), Unresolved)
+        assert isinstance(_entry("psvita").texture_pack_location(), Unresolved)
+
+    def test_a_config_stated_directory_answers_the_switch_as_well(self):
+        # PCSX2 reads both halves out of one file: the directory from
+        # [Folders] Textures and the switch from [EmuCore/GS]
+        # LoadTextureReplacements — so enabled is a reading here, not None.
+        placement = _entry(
+            "ps2",
+            files={
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": (
+                    "[Folders]\nTextures = /mnt/sd/texture_packs/PCSX2/textures\n"
+                    "[EmuCore/GS]\nLoadTextureReplacements = true\n"
+                )
+            },
+        ).texture_pack_location()
+        placed = texture_placed(placement)
+        assert placed.enabled is True
+        assert placed.keying == "serial"
+        assert placed.dir == "/mnt/sd/texture_packs/PCSX2/textures/<save_id>/replacements"
+        assert placed.needs == ("save_id",)
 
 
 class TestAFeatureWithNoSwitchIsStatedAsOne:

@@ -373,11 +373,20 @@ whether replacement is on, and every standalone answer carries `emulator-config-
 left `None`. A card without one would tell a client the switch is unknown and give it nowhere to look. `base` and
 `subdir` are held to the same rules as the core block's root and fragment; `keying` to the same cited-or-absent rule.
 
-Two standalone emulators are **absent on purpose**, and a test holds the absence down: PCSX2 and Vita3K do not open a
-default at all — RetroDECK writes their texture directory _into the emulator's own configuration_ (`Folders/Textures` in
-`PCSX2.ini`, `pref-path` in Vita3K's `config.yml`). Reading that means modelling the configuration; quoting the path the
-installer intended would state an arrangement's directory as an emulator's read location. They refuse with
-`standalone-unsupported`, and the split inside the standalone kind is evidence rather than policy.
+A card states its directory one of two ways, and exactly one. Most name a fixed subpath below an XDG base — the default
+the emulator opens. PCSX2 names a **configuration key** instead (`textures.directory`: `[Folders] Textures`, with the
+compiled default and a citation), because that is where its directory really comes from, and a `switch` beside it
+(`[EmuCore/GS] LoadTextureReplacements`) makes `enabled` a live reading rather than `None`. The second shape needs a
+resolver registered beside it in `atlas/installations.py` and fails the load without one, the same way a save card does:
+reading a configuration is code, never a card DSL. PCSX2's answer also states the **load stage** rather than the root —
+replacements are read from `<Textures>/<serial>/replacements` — because an answer naming only the root would send a
+caller placing a pack one level above everything that reads it.
+
+Vita3K is still **absent on purpose**, and a test holds the absence down: it opens no default either — its texture tree
+hangs off `pref-path` in `config.yml` — and that file is YAML, which atlas has no reader for and no runtime dependency
+to gain one. Quoting the path the installer intended would state an arrangement's directory as an emulator's read
+location, so the entry refuses with `standalone-unsupported`. The split inside the standalone kind is evidence rather
+than policy, and it moves when the evidence does: PCSX2 sat on the refusing side until its configuration was read.
 
 ### Absence is a statement about atlas, not about the emulator
 
@@ -634,11 +643,13 @@ A **core** card may name one too, and that is where `emulator-config-unread` fir
 core's mod switch is not a core option but an ordinary `GFX.ini` inside the user tree the core builds, so the card gives
 a `path` relative to the same root the trees hang off (no `base` — the root is not an XDG one).
 
-MAME is **absent on purpose**, the same way PCSX2 and Vita3K are absent from the texture table: its plugin directories
-are values RetroDECK writes into `mame.ini` rather than defaults the emulator opens. PCSX2 goes the other way here and
-**answers**, because nothing writes `Folders/Patches` and the directory is the emulator's own default — the split runs
-on evidence, not on the emulator. A core this file does not reach answers `mod-wiring-unestablished`; a standalone
-emulator it does not reach answers `standalone-unsupported`.
+MAME is **absent on purpose**, the same way Vita3K is absent from the texture table: its plugin directories are values
+RetroDECK writes into `mame.ini` rather than defaults the emulator opens, and nothing here reads that file. PCSX2 goes
+the other way in this block and **answers from a default**, because nothing writes `Folders/Patches` — the patches
+directory stays the emulator's own default, which is a path join. (Its texture row does read a configuration, so the two
+blocks now answer the same emulator by different means: the split runs on what has been established per question, not on
+the emulator.) A core this file does not reach answers `mod-wiring-unestablished`; a standalone emulator it does not
+reach answers `standalone-unsupported`.
 
 ### `soft_patching` — what a shipped RetroArch was built to attempt
 

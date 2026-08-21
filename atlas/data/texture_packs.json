@@ -191,6 +191,56 @@
           }
         }
       }
+    },
+    "PCSX2": {
+      "textures": {
+        "directory": {
+          "section": "Folders",
+          "key": "Textures",
+          "default": "textures",
+          "citation": "Pcsx2Config.cpp:2293 at v2.6.3 reads it through LoadPathFromSettings (:2272-2278), which falls back to the compiled default and resolves a relative value against the DataRoot; :2265 writes that default into a fresh ini"
+        },
+        "switch": {
+          "section": "EmuCore/GS",
+          "key": "LoadTextureReplacements",
+          "default": "false",
+          "citation": "Pcsx2Config.cpp:774 is the compiled default and :1004 the ini key, the section at :908; ReloadReplacementMap returns before scanning while it is off (GSTextureReplacements.cpp:391-393 at v2.6.3)"
+        },
+        "config": {
+          "base": "config",
+          "path": "PCSX2/inis/PCSX2.ini"
+        },
+        "keying": {
+          "value": "serial",
+          "citation": "[V-source] GetGameTextureDirectory is Path::Combine(EmuFolders::Textures, s_current_serial) (GSTextureReplacements.cpp:262-265 at v2.6.3), and the serial is the running disc's (:335)"
+        }
+      },
+      "provenance": {
+        "source": "[V-source/V-binary/V-live] PCSX2 v2.6.3, the release RetroDECK ships. The directory is a configuration value rather than a default the emulator opens: [Folders] Textures, read through the same helper the memory-card directory goes through (LoadPathFromSettings, Pcsx2Config.cpp:2272-2278, :2293), with the compiled default 'textures' and a relative value resolved against the DataRoot — the config side on Linux either way (:2197-2217). Below it the tree is staged per game and both stages are named: replacements load from <Textures>/<serial>/replacements and dumps are written to <Textures>/<serial>/dumps (GSTextureReplacements.cpp:39-40, :262-265, :274, :281). The answer therefore states the load stage rather than the root, because a client placing a pack at the root would place it where nothing reads it. Case is not forgiven on a case-sensitive filesystem: a wrongly-cased serial or replacements directory is warned about and left unused (:400-412). Every name here is a whole string in the shipped binary. RetroDECK points [Folders] Textures at its own texture_packs/PCSX2/textures tree (component_prepare.sh:47), observed live."
+      },
+      "anchors": {
+        "binary": "pcsx2/bin/pcsx2-qt",
+        "names": {
+          "PCSX2.ini": {
+            "literal": "PCSX2.ini"
+          },
+          "Folders": {
+            "literal": "Folders"
+          },
+          "Textures": {
+            "literal": "Textures"
+          },
+          "textures": {
+            "literal": "textures"
+          },
+          "EmuCore/GS": {
+            "literal": "EmuCore/GS"
+          },
+          "LoadTextureReplacements": {
+            "literal": "LoadTextureReplacements"
+          }
+        }
+      }
     }
   },
   "cores": {
