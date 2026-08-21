@@ -1861,6 +1861,322 @@
           }
         }
       }
+    },
+    {
+      "name": "retrodeck-melonds-names-the-save-after-the-rom",
+      "rationale": "melonDS keeps one .sav per game, named after the loaded file without its extension (EmuInstance.cpp:1884 at 1.1), in the directory [Instance0] SaveFilePath names — RetroDECK pins it into the saves tree (component_prepare.sh). With the content named and a plain file, the resolver fills the stem itself; the answer is the whole path a sync client would copy.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS .zip .ZIP</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Instance0]\nSaveFilePath = \"/mnt/sd/retrodeck/saves/nds/melonds\"\n",
+          "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/nds/melonds"
+        ],
+        "entry_savefile_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Some Game.nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/nds/melonds",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Some Game.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/nds/melonds",
+                "files": [
+                  "Some Game.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "save-file-path",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": "/mnt/sd/retrodeck/saves/nds/melonds",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "melonds-a-missing-toml-reads-the-legacy-ini",
+      "rationale": "melonDS 1.1 reads melonDS.toml — and where none exists, it reads the pre-1.0 melonDS.ini line by line as its built-in migration source (Config.cpp:785-795, :682-775 at 1.1). EmuDeck still writes exactly that legacy file, so the fallback is a door a real arrangement walks through: the INI's SaveFilePath governs until the first launch writes the TOML.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS .zip .ZIP</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.ini": "SaveFilePath=/mnt/sd/retrodeck/saves/nds/melonds\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/nds/melonds"
+        ],
+        "entry_savefile_query": {
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/nds/melonds",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "rom_stem"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<rom_stem>.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/nds/melonds",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "MELONDS",
+                "files": "<rom_stem>.sav",
+                "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
+                "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "save-file-path",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": "/mnt/sd/retrodeck/saves/nds/melonds",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "melonds-an-empty-save-path-lands-beside-the-rom",
+      "rationale": "An empty SaveFilePath is melonDS's compiled default, and it puts the save beside the ROM itself (getAssetPath, EmuInstance.cpp:445-484; the default is empty, Config.cpp:596) — so the answer's root is the content's own directory, held as a <content_dir> template with its hole in needs while no content is named, never guessed into a fixed tree.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS .zip .ZIP</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Instance0]\nSaveFilePath = \"\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "<content_dir>",
+          "root_kind": "content_directory",
+          "needs": [
+            "content_dir",
+            "rom_stem"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<rom_stem>.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "<content_dir>",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "MELONDS",
+                "files": "<rom_stem>.sav",
+                "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
+                "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "rom-dir",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-melonds-answers-from-the-flatpaks-own-homes",
+      "rationale": "EmuDeck has melonDS only as a flatpak, and melonds.sh performs no probe — it runs net.kuribo64.melonDS outright (melonds.sh:4) — so the launcher pins the flatpak variant and the answer reads the app's own XDG homes below ~/.var/app, not the host's. The card names the app id; EmuDeck grants the flatpak --filesystem=host (installEmuFP.sh:33), so the configured path is the host path it spells. The legacy INI EmuDeck writes is 1.1's migration source while no TOML exists.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS</extension>\n    <command label=\"melonDS (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/melonds.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.kuribo64.melonDS/config/melonDS/melonDS.ini": "SaveFilePath=/home/deck/Emulation/saves/melonds/saves\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/melonds/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/Emulation/saves/melonds/saves",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "rom_stem"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<rom_stem>.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/melonds/saves",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "MELONDS",
+                "files": "<rom_stem>.sav",
+                "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
+                "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "save-file-path",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": "/home/deck/Emulation/saves/melonds/saves",
+                "options_file": "/home/deck/.var/app/net.kuribo64.melonDS/config/melonDS/melonDS.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

@@ -44,13 +44,18 @@ class StandaloneSaveCard:
     catalogue systems this card answers for: an emulator can serve several
     with different trees (Dolphin keeps GameCube cards and a Wii NAND), and a
     system outside the list is a question the card does not answer, stated
-    rather than stretched.
+    rather than stretched. ``flatpak`` is the app id the emulator installs
+    under where an arrangement is established to run it as a flatpak
+    (EmuDeck's melonDS) — the id whose per-app XDG trees the flatpak variant
+    reads. ``None`` for an emulator no established launch runs that way: an
+    id nothing launches would resolve nothing, so the variant keeps refusing.
     """
 
     token: str
     config_base: str | None
     config_path: str | None
     systems: tuple[str, ...]
+    flatpak: str | None
     provenance: str
 
 
@@ -82,6 +87,9 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
     systems = saves.get("systems")
     if not isinstance(systems, list) or not systems:
         raise ValueError(f"{where}: saves.systems must be a non-empty list, got {systems!r}")
+    flatpak = entry.get("flatpak")
+    if flatpak is not None:
+        flatpak = _expect_str(flatpak, f"{where}: flatpak")
     provenance = entry.get("provenance", {})
     if not isinstance(provenance, dict):
         raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
@@ -94,6 +102,7 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
             else None
         ),
         systems=tuple(_expect_str(s, f"{where}: saves.systems[]") for s in systems),
+        flatpak=flatpak,
         provenance=_expect_str(provenance.get("source"), f"{where}: provenance.source"),
     )
 

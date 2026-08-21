@@ -720,16 +720,18 @@ extensions; `complete` is `false`, and deciding which of those files are yours t
 ### Where a standalone emulator's saves live
 
 A standalone catalogue entry answers `savefile_location` where a **standalone save card** covers the emulator its launch
-command names — Dolphin, PPSSPP, xemu, Cemu, Azahar, DuckStation and PCSX2 today, keyed by the `%EMULATOR_…%` token the
-way the texture cards are. On EmuDeck the catalogue names no token — its commands run per-emulator launcher scripts — so
-an allowlisted launcher (`tools/launchers/cemu.sh` today) reaches the same card, resolved against the host's own XDG
-tree; the launcher picks its binary at run time, and a variant whose config is not the established one (the Windows
-build under Proton via `-w`, or the flatpak fallback when no AppImage is installed) refuses with
-`standalone-variant-unestablished` and the variant named in `data`. No frontend hands these emulators a save directory,
-so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the emulator's own
-configuration the way the emulator reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's `settings.xml` — each
-at the shipped release; PPSSPP's Linux memstick is fixed by the build, so its card names no config at all), and rerouted
-with symlinks the answer walks.
+command names — Dolphin, PPSSPP, xemu, Cemu, Azahar, DuckStation, PCSX2 and melonDS today, keyed by the `%EMULATOR_…%`
+token the way the texture cards are. An EmuDeck catalogue may name the token or run a per-emulator launcher script — an
+allowlisted launcher (`tools/launchers/cemu.sh`, `melonds.sh`, …) reaches the same card — and either way the launch's
+binary variant gates the answer. Two variants are established: an AppImage under `~/Applications` reads the host's own
+XDG tree, and a flatpak whose app id the card names (melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright,
+probing nothing) reads the app's own homes below `~/.var/app`. A variant whose config is not established (the Windows
+build under Proton via `-w`, a flatpak no card names an id for) refuses with `standalone-variant-unestablished` and the
+variant named in `data`. No frontend hands these emulators a save directory, so the answer's `root_kind` is
+`emulator_directory`: the emulator's own tree, its shape read from the emulator's own configuration the way the emulator
+reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's `settings.xml` — each at the shipped release; PPSSPP's
+Linux memstick is fixed by the build, so its card names no config at all), and rerouted with symlinks the answer walks.
+The one exception is the emulator whose own default walks into the content's directory — melonDS below.
 
 ```python
 entry = inst.emulators_for("gc").entries[0]   # 'Dolphin (Standalone)'
@@ -750,7 +752,7 @@ be read refuses the whole question with `emulator-config-unreadable` — there i
 Savestates stay refused (`standalone-unsupported`): the states tree is its own wiring, deliberately outside the save
 card.
 
-The other three cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
+Three more cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
 `PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the
 emulator resolves it (an `--mlc` launch flag outranks `settings.xml`, and the answer says so when it sees one) — with
 `needs: ('save_id',)`, granularity `per-game-directory`, and the caveat spelling the fill (the title id, high then low
@@ -760,6 +762,15 @@ lives **inside** the emulated Xbox hard disk, so the answer names the image as o
 carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id>`) — a file-level client backs the
 image up whole or leaves it, a tool that parses FATX has the layout stated instead of rediscovered, and per-game sync is
 honestly not on offer from outside.
+
+melonDS is the simplest card and the one whose default leaves the emulator's tree: one `<rom stem>.sav` per game where
+`[Instance0] SaveFilePath` points, and an empty or absent value lands the save **beside the ROM itself** — the answer's
+`root_kind` becomes `content_directory`, the directory a `<content_dir>` template until content is named. The resolver
+fills the stem from a named content file itself; for a ROM inside an archive the hole stays open with the caveat saying
+why (melonDS names the save after the file _inside_ the archive). The config is read the way `Config::Load` reads it:
+`melonDS.toml`, a missing TOML falling back to the pre-1.0 `melonDS.ini` line by line — the file EmuDeck still writes,
+so the migration door is one a real arrangement walks through — and an unparseable TOML yielding factory defaults rather
+than a refusal, because that is what the emulator itself does.
 
 ## Where do this ROM's savestates live?
 
@@ -863,15 +874,16 @@ binary documents `system/dc/textures/<game-id>/`, so that row states `game-id`; 
 **Standalone emulators answer here without a config read — the save question needs one, and answers only where a card
 carries it.** A texture pack usually lives at a default the emulator opens below an XDG base the distribution's flatpak
 pins, so every carded emulator answers this question; a save routes through the emulator's own configuration, so
-`savefile_location` answers only for emulators with a standalone _save_ card (Dolphin today — see
+`savefile_location` answers only for emulators with a standalone _save_ card (the eight named in
 [the standalone save answer](#where-a-standalone-emulators-saves-live)) and refuses for the rest. The same catalogue
 entry can therefore answer this question and refuse that one:
 
 ```python
-entry = inst.emulators_for("n3ds").entries[0]       # 'Azahar (Standalone)'
+entries = inst.emulators_for("wii").entries
+entry = next(e for e in entries if e.label == "PrimeHack (Standalone)")
 entry.savefile_location()                            # Unresolved: standalone-unsupported
 outcome = entry.texture_pack_location()
-outcome.dir           # '/home/deck/.var/app/net.retrodeck.retrodeck/data/azahar-emu/load/textures'
+outcome.dir           # '/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Load/Textures'
 outcome.physical_dir  # the shared tree the distribution linked it into
 outcome.enabled       # None — always, on a standalone row
 ```

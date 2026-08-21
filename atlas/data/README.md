@@ -447,7 +447,7 @@ arrangement pins), the catalogue systems the card answers for, and the provenanc
 written nowhere on the machine, so it lives as cited code beside the card (`atlas/installations.py`), the same split the
 rule cards make with `atlas/mode_rules.py`. The loader refuses a card whose token has no resolver registered.
 
-Seven cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
+Eight cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
 EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
 unnamed `title/` tree. PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's `config` is `null`, the honest
 spelling of "no file governs this" — and savedata is one unnamed directory per game below `PSP/SAVEDATA`. xemu
@@ -467,11 +467,18 @@ default path, and the DataRoot probed on both spellings the launch environment c
 (v2.6.3): up to eight slots — two console ports and six multitap slots that join only when enabled — each card's type
 read off the disk the way `FileMcd_SetType` reads it: a directory at the card's full path is a folder card (per-game
 saves as auto-managed subdirectories, stated with its names refused), anything else the shared `.ps2` image it is; one
-config-side DataRoot either way (Pcsx2Config.cpp:2197-2217), completing the ps2 pair beside the LRPS2 core rule. The
-answers root at `emulator_directory` — no frontend hands a standalone emulator a save directory. On EmuDeck a standalone
-emulator is identified by `%EMULATOR_…%` token or by an allowlisted launcher script (`cemu.sh`, `azahar.sh` and
-`duckstation.sh` today), and either way the launch's binary probe gates the answer: only the AppImage variant's config
-tree is established, and the other variants refuse with `standalone-variant-unestablished`.
+config-side DataRoot either way (Pcsx2Config.cpp:2197-2217), completing the ps2 pair beside the LRPS2 core rule. melonDS
+(1.1): one `<rom stem>.sav` per game in the directory `[Instance0] SaveFilePath` names, the config read the way
+`Config::Load` reads it — `melonDS.toml`, a missing TOML falling back to the pre-1.0 `melonDS.ini` line by line as the
+built-in migration, an unparseable TOML yielding factory defaults — and the empty default landing the save beside the
+ROM itself (root `content_directory`); the stem is filled from named content, held open as `<rom_stem>` for archives,
+whose saves are named after the file inside. The answers root at `emulator_directory` — no frontend hands a standalone
+emulator a save directory — except where the emulator's own default walks into the content's. On EmuDeck a standalone
+emulator is identified by `%EMULATOR_…%` token or by an allowlisted launcher script (`cemu.sh`, `azahar.sh`,
+`duckstation.sh`, `pcsx2-qt.sh` and `melonds.sh` today), and either way the launch's binary variant gates the answer.
+Two variants are established: the AppImage reads the host's own XDG tree, and a flatpak whose app id the card names
+(`flatpak` on the card — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its
+own homes below `~/.var/app`. The rest refuse with `standalone-variant-unestablished`.
 
 ## `standalone_firmware.json` — what a standalone emulator expects beside its content
 

@@ -97,6 +97,21 @@
       "provenance": {
         "source": "PCSX2 v2.6.3, the release RetroDECK ships (the tag string rides in the binary). On Linux the DataRoot is $XDG_CONFIG_HOME/PCSX2 where set, else ~/.config/PCSX2 — both the config side (Pcsx2Config.cpp:2197-2217) — with inis/PCSX2.ini inside. [Folders] MemoryCards names the card directory (default 'memcards', a relative value joining the DataRoot, :2259 and :2272-2285). [MemoryCards] SlotN_Enable and SlotN_Filename pick each slot's card (defaults Mcd001.ps2/Mcd002.ps2; the six multitap slots carry MultitapP_SlotNN spellings and join only when enabled, :2035-2047; default names MemoryCardFile.cpp:244-250). The card's type is what sits at its full path — the memory-card directory joined with the filename (FullpathToMcd, :2065-2068): a directory there is a folder card, whose per-game saves live as subdirectories inside and are auto-managed (McdFolderAutoManage, default true); anything else is a file card, one shared .ps2 image (FileMcd_SetType, MemoryCardFile.cpp:584-604). An empty filename empties the slot. This card completes the ps2 pair beside the LRPS2 core rule, which keeps the libretro side's shared card."
       }
+    },
+    "MELONDS": {
+      "flatpak": "net.kuribo64.melonDS",
+      "saves": {
+        "config": {
+          "base": "config",
+          "path": "melonDS/melonDS.toml"
+        },
+        "systems": [
+          "nds"
+        ]
+      },
+      "provenance": {
+        "source": "melonDS 1.1, the release the shipped binary carries as a whole version string (components/melonds/bin/melonDS) and the release Flathub currently installs for EmuDeck. One file per game: <rom stem>.sav, the loaded file's name without its extension — for a ROM inside an archive the name of the file inside it (EmuInstance.cpp:1884, :1846-1848 at 1.1; the archive suffixes are Window.cpp:124-140, matched case-insensitively :143-148), so archive content keeps the hole open. The directory is [Instance0] SaveFilePath, read the way Config::Load reads it: melonDS.toml under <config>/melonDS — a portable directory beside the executable would outrank that, and neither arrangement has one (pathInit, main.cpp:180-214) — with a missing TOML falling back to the pre-1.0 melonDS.ini line by line (Config.cpp:785-795, :682-775; the legacy key is instance-unique, :301) and a TOML that does not parse yielding factory defaults (:796-803). An empty or absent SaveFilePath puts the save beside the ROM itself (getAssetPath, EmuInstance.cpp:445-484; the default is empty, Config.cpp:116-121 with the fallback at :596); a relative value resolves against the launching process's working directory, trailing path separators trimmed either way (:459-467). Local-multiplayer instances append .2/.3 after the .sav; the normal window, instance 0, appends nothing (:176-181, :1891) — the answer is for the normal launch. On EmuDeck the emulator is the net.kuribo64.melonDS flatpak: melonds.sh runs it unconditionally (melonds.sh:4), EmuDeck grants it --filesystem=host (installEmuFP.sh:33) so configured paths are host paths, and its trees are the app's own XDG homes below ~/.var/app; the legacy INI EmuDeck writes there (emuDeckMelonDS.sh, melonDS_configFile) is 1.1's migration source while no TOML exists."
+      }
     }
   }
 }
