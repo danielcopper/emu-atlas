@@ -269,6 +269,23 @@ def _absorb_indent(
     return True
 
 
+def _absorb_key(
+    outcome: _KeyLine, values: dict[str, str], skipped: list[str]
+) -> str | None:
+    """Record one key line, and return the key the following lines still decide.
+
+    The twin of :func:`_absorb_indent`: that one takes a line into the key
+    above it, this one takes the key itself. A pending key is one whose
+    meaning is not settled by its own line — an empty value is a scalar until
+    something indented follows it.
+    """
+    if outcome.skip:
+        skipped.append(outcome.key)
+    else:
+        values[outcome.key] = outcome.value or ""
+    return outcome.key if outcome.pending else None
+
+
 def read_scalars(text: str) -> YamlScalars:
     """Read the flat top-level scalars of *text*, naming what was not read."""
     lines, refusal = _first_document(text)
@@ -285,11 +302,7 @@ def read_scalars(text: str) -> YamlScalars:
         outcome = _classify(raw_line.rstrip())
         if outcome.refusal is not None:
             return YamlScalars(refusal=outcome.refusal)
-        pending_key = outcome.key if outcome.pending else None
-        if outcome.skip:
-            skipped.append(outcome.key)
-        else:
-            values[outcome.key] = outcome.value or ""
+        pending_key = _absorb_key(outcome, values, skipped)
     resolved, refusal = _substitute(values)
     if refusal is not None:
         return YamlScalars(refusal=refusal)
