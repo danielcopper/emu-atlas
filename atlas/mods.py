@@ -459,10 +459,13 @@ def recorded_mod_words(entry: Mapping[str, Any]) -> frozenset[str]:
             words.extend(path_segments(tree.get("subdir")))
             directory = tree.get("directory")
             if isinstance(directory, dict):
-                # A configured tree states two names of the emulator's own —
-                # the key it reads and the fallback it composes without one —
-                # and both are pinned like any subpath segment.
-                for field in ("key", "default"):
+                # A configured tree states three names of the emulator's own —
+                # the section and key it reads, and the fallback it composes
+                # without one — and all three are pinned like any subpath
+                # segment. The section counts: a card whose key survives a
+                # rename of the section around it reads nothing, and the
+                # texture rows have always watched theirs.
+                for field in ("section", "key", "default"):
                     if isinstance(directory.get(field), str):
                         words.extend(path_segments(directory[field]))
     option = mods.get("option")

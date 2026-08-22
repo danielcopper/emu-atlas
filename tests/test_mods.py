@@ -546,6 +546,16 @@ class TestATreeIsAFixedPlaceOrAConfiguredOne:
         with pytest.raises(ValueError, match="exactly one of 'subdir' and 'directory'"):
             load_standalone_mod_cards(text)
 
+    def test_a_configured_trees_three_names_are_all_recorded(self):
+        # What a row records is what its anchors must watch, so a name missing
+        # from this set is a name no byte tripwire protects — the section
+        # included, since a key that survives a rename of the section around
+        # it reads nothing.
+        from atlas.mods import recorded_mod_words
+
+        entry = {"mods": {"trees": [{"directory": _SETTING, "keying": None}]}}
+        assert recorded_mod_words(entry) == {"Folders", "Cheats", "cheats"}
+
     def test_a_configured_card_names_no_xdg_base(self):
         # The root is what the configuration decides, so a base beside it
         # would be a second answer to the same question.
