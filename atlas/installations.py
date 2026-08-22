@@ -250,7 +250,7 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
-from atlas import melonds
+from atlas import melonds, qt_ini
 from atlas.yaml_scalars import read_scalars
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.retroarch_cfg import (
@@ -4917,7 +4917,7 @@ def _pcsx2_texture_placement(
             "reads texture packs from, and whether it reads them at all, is unknowable here",
             {"emulator": card.token, "config": ini_path},
         )
-    values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
+    values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     setting = card.directory
     raw_dir = values.get((setting.section, setting.key), "")
     if not raw_dir:
@@ -6006,49 +6006,6 @@ _AZAHAR_ZERO_ID = "00000000000000000000000000000000"
 _AZAHAR_CONTAINER = os.path.join("Nintendo 3DS", _AZAHAR_ZERO_ID, _AZAHAR_ZERO_ID)
 
 
-def _qt_ini_values(text: str) -> dict[tuple[str, str], str]:
-    """A Qt settings file as ``(section, key) -> raw value`` — read, not interpreted.
-
-    The two spellings that matter here: a section name is ``%``-escaped in the
-    file (``[Data%20Storage]`` is the group ``Data Storage``), and a key may
-    carry a ``\\default`` companion — semantics the caller applies, because
-    they are the emulator's (ReadSetting, config.cpp:1442-1450), not the file
-    format's.
-    """
-    values: dict[tuple[str, str], str] = {}
-    section = ""
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith(";") or line.startswith("#"):
-            continue
-        if line.startswith("[") and line.endswith("]"):
-            section = _qt_ini_unescape(line[1:-1])
-            continue
-        key, separator, value = line.partition("=")
-        if separator:
-            values[(section, key.strip())] = value.strip()
-    return values
-
-
-def _qt_ini_unescape(name: str) -> str:
-    """QSettings' ``%XX`` section-name escaping, undone byte-wise."""
-    out = bytearray()
-    index = 0
-    encoded = name.encode("utf-8")
-    while index < len(encoded):
-        if encoded[index : index + 1] == b"%" and index + 2 < len(encoded) + 1:
-            hex_pair = encoded[index + 1 : index + 3]
-            try:
-                out.append(int(hex_pair, 16))
-                index += 3
-                continue
-            except ValueError:
-                pass
-        out.append(encoded[index])
-        index += 1
-    return out.decode("utf-8", errors="replace")
-
-
 def _azahar_setting(
     values: Mapping[tuple[str, str], str], section: str, key: str, default: str
 ) -> tuple[str, bool]:
@@ -6180,7 +6137,7 @@ def _azahar_savefile_placement(
             "emulated SD and every save on it live is unknowable here",
             {"emulator": card.token, "config": ini_path},
         )
-    values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
+    values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     caveats: list[Caveat] = [*extra_caveats]
     stated_ini = ini_path if result.status == READ_OK else None
     virtual_sd_caveat = _azahar_virtual_sd_caveat(values, card)
@@ -6332,7 +6289,7 @@ def _duckstation_settings(
                 {"emulator": card.token, "config": ini_path},
             )
             return root, {}, None, (), refusal
-        return root, _qt_ini_values(result.text or ""), ini_path, (), None
+        return root, qt_ini.values(result.text or ""), ini_path, (), None
     ambiguity = Caveat(
         CAVEAT_CORE_MODE_UNESTABLISHED,
         "no settings.ini exists on either DataRoot candidate — DuckStation picks its root "
@@ -6849,7 +6806,7 @@ def _pcsx2_savefile_placement(
             "its slots hold and where they live is unknowable here",
             {"emulator": card.token, "config": ini_path},
         )
-    values = _qt_ini_values(result.text) if result.status == READ_OK and result.text else {}
+    values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     stated_ini = ini_path if result.status == READ_OK else None
     caveats: list[Caveat] = [*extra_caveats]
     memcards_dir, dir_reading, refusal = _pcsx2_memcards_dir(

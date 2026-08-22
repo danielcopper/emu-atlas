@@ -527,6 +527,14 @@ way. With the switch off the answer is an empty requirement list plus `firmware-
 the two arrangements sit on opposite sides of it, RetroDECK switching it on and EmuDeck shipping `ExternalBIOSEnable=0`
 beside all seven configured paths.
 
+PCSX2 (v2.6.3) is the second `config_files` card, and its expectation takes **two** settings rather than one:
+`[Folders] Bios` names the directory — the same `LoadPathFromSettings` shape the memory-card and texture directories use
+— and `[Filenames] BIOS` names the image inside it. `FullpathToBios` combines them and composes nothing at all while the
+name is empty (Pcsx2Config.cpp:2057-2062), which is the state a fresh install is in: RetroDECK points the directory at
+its BIOS root and leaves the choice to the user. So an empty name is stated with `firmware-path-names-no-file` carrying
+the directory a BIOS belongs in, rather than being passed over — a PlayStation 2 boots nothing until one is picked, and
+that is worth saying.
+
 ## `save_memory.json` — which files RetroArch writes for a core, per system
 
 Read by `atlas.save_memory`, and it is the only table here keyed by **core _and_ system**. The name of a save is not in

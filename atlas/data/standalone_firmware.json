@@ -64,6 +64,26 @@
       "provenance": {
         "source": "melonDS 1.1, the release both arrangements run. Which of these files a launch probes is verifySetup's decision (EmuInstance.cpp:633-667), taken from two configuration switches read live: Emu.ExternalBIOSEnable — default off, the built-in replacement boots DS games with no file at all — and Emu.ConsoleType (DS or DSi). Every path is a configuration value in melonDS.toml (or the pre-1.0 melonDS.ini it migrates), resolved the way OpenLocalFile resolves it: absolute as spelled, anything else below the melonDS config directory (Platform.cpp:157-178). RetroDECK switches external BIOS on and points the DS set at its bios directory (component_prepare.sh). EmuDeck writes all seven paths but ships ExternalBIOSEnable=0 in its template (configs/net.kuribo64.melonDS/config/melonDS/melonDS.ini:77) — parked paths behind a switch that is off, so the answer reads the switch, not the intention."
       }
+    },
+    "PCSX2": {
+      "systems": [
+        "ps2"
+      ],
+      "config_files": [
+        {
+          "key": "Folders/Bios",
+          "purpose": "the directory PCSX2 looks for BIOS images in — not a file itself, but what the chosen file name resolves against",
+          "citation": "Pcsx2Config.cpp:2282 at v2.6.3 reads it through LoadPathFromSettings (:2272-2278), compiled default 'bios' below the DataRoot; :2256 writes that default into a fresh ini"
+        },
+        {
+          "key": "Filenames/BIOS",
+          "purpose": "the BIOS image the user picked, a name inside the BIOS directory — a PlayStation 2 does not boot without one, and the emulator composes no path at all while the name is empty",
+          "citation": "FullpathToBios, Pcsx2Config.cpp:2057-2062 at v2.6.3 — Path::Combine(EmuFolders::Bios, BaseFilenames.Bios), and an empty name returns the empty string; the key is [Filenames] BIOS (:1667-1671)"
+        }
+      ],
+      "provenance": {
+        "source": "PCSX2 v2.6.3, the release RetroDECK ships. The expectation takes two settings rather than one: [Folders] Bios names the directory, read through the same LoadPathFromSettings helper as the memory-card and texture directories (Pcsx2Config.cpp:2272-2278, :2282), and [Filenames] BIOS names the image inside it (:1667-1671). FullpathToBios combines them and returns the empty string when no name is set (:2057-2062), which is the shipped state: RetroDECK points the directory at its BIOS root (component_prepare.sh:16, :80) and leaves the name empty for the user to choose in the emulator. So an unset name is the normal starting state rather than a broken configuration — but it does mean no game boots yet, which the answer states rather than passing over. Every name here is a whole string in the shipped binary."
+      }
     }
   }
 }
