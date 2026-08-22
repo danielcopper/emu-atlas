@@ -25,6 +25,7 @@ from atlas.mods import (
     lookup_soft_patch_build,
     lookup_standalone_mod_card,
 )
+from atlas.emulator_settings import settings_file
 from atlas.placement import KEYINGS, PATCH_FORMATS, ModPlacement, SoftPatchAnswer, Unresolved
 from tests.answers import mod_placed
 
@@ -421,7 +422,10 @@ class TestTheShippedCardsSayWhatTheyCanStandBehind:
         # the root is what that configuration decides.
         fixed = [tree for tree in card.trees if tree.subdir is not None]
         assert card.base in ("data", "config") if fixed else card.base is None
-        assert card.config is None or card.config.base in ("data", "config")
+        # The settings file is named, and its address is the settings table's
+        # to hold — so what this card must stand behind is that the name is
+        # one the table carries.
+        assert card.settings is None or settings_file(card.token, card.settings)
 
     def test_the_core_that_reads_three_trees_states_all_three(self):
         card = lookup_mod_card(so_basename="fbneo_libretro.so", library_name=None)
@@ -449,7 +453,7 @@ class TestTheShippedCardsSayWhatTheyCanStandBehind:
     def test_the_emulator_with_no_established_switch_names_no_config(self):
         card = lookup_standalone_mod_card("AZAHAR")
         assert card is not None
-        assert card.config is None
+        assert card.settings is None
 
     def test_azahar_is_the_only_card_allowed_to_name_no_config(self):
         # Omitting the config silently drops emulator-config-unread, which is
@@ -458,7 +462,7 @@ class TestTheShippedCardsSayWhatTheyCanStandBehind:
         # future card omitting it for a lesser reason would state a weaker
         # claim than it can, and nothing else would notice.
         silent = sorted(
-            card.token for card in load_standalone_mod_cards() if card.config is None
+            card.token for card in load_standalone_mod_cards() if card.settings is None
         )
         assert silent == ["AZAHAR"]
 
@@ -627,10 +631,16 @@ class TestATreeIsAFixedPlaceOrAConfiguredOne:
         with pytest.raises(ValueError, match="default"):
             load_mod_cards(text)
 
-    def test_a_standalone_config_base_outside_the_vocabulary_is_refused(self):
-        text = _standalone_card(config={"base": "cache", "path": "x.ini"})
-        with pytest.raises(ValueError, match="config.base"):
+    def test_a_settings_name_that_is_not_a_name_is_refused(self):
+        text = _standalone_card(settings={"base": "config", "path": "x.ini"})
+        with pytest.raises(ValueError, match="mods.settings"):
             load_standalone_mod_cards(text)
+
+    def test_a_card_naming_a_file_the_table_does_not_carry_fails_loudly(self):
+        # The two shipped out of step, and answering from a path nobody stated
+        # is the exact failure the settings table exists to remove.
+        with pytest.raises(ValueError, match="no settings file"):
+            settings_file("PCSX2", "nowhere.ini")
 
 
 class TestTheAnswerJoinsALiveRootToRecordedTrees:

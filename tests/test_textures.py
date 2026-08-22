@@ -11,6 +11,7 @@ import atlas
 from atlas.machine import FixtureMachine
 from atlas.oddities import AuditEntry, lookup_audit
 from atlas.placement import KEYINGS, ROOT_KINDS, TexturePlacement, Unresolved
+from atlas.emulator_settings import settings_file
 from atlas.textures import (
     TEXTURE_PACKS_SCHEMA,
     XDG_BASES,
@@ -473,7 +474,7 @@ def _standalone_card(**textures) -> str:
                     "textures": {
                         "base": "data",
                         "subdir": "demo/textures",
-                        "config": {"base": "config", "path": "demo/settings.ini"},
+                        "settings": "settings.ini",
                         **textures,
                     },
                     "provenance": {"source": "[V] a citation"},
@@ -494,10 +495,11 @@ class TestTheShippedStandaloneTableSaysWhatItCanStandBehind:
         assert fixed != (card.directory is not None)
         if fixed:
             assert card.base in XDG_BASES
-        assert card.config.base in XDG_BASES
-        # The config is what the answer points a caller at — either as the file
-        # emulator-config-unread names, or as the file the switch was read from.
-        assert card.config.path
+        # The settings file is what the answer points a caller at — either as
+        # the file emulator-config-unread names, or as the one the switch was
+        # read from — and it is named here while the settings table addresses
+        # it, so what this card must stand behind is a name that table carries.
+        assert settings_file(card.token, card.settings)
 
     @pytest.mark.parametrize("card", load_standalone_texture_packs(), ids=lambda c: c.token)
     def test_a_card_that_states_a_keying_cites_it(self, card):
@@ -541,16 +543,18 @@ class TestTheStandaloneLoaderRefusesWhatItCannotStand:
         with pytest.raises(ValueError, match="absolute|climbs"):
             load_standalone_texture_packs(text)
 
-    def test_a_card_without_a_config_is_refused(self):
+    def test_a_card_without_a_settings_file_is_refused(self):
         table = json.loads(_standalone_card())
-        del table["emulators"]["DEMO"]["textures"]["config"]
+        del table["emulators"]["DEMO"]["textures"]["settings"]
         text = json.dumps(table)
-        with pytest.raises(ValueError, match="textures.config"):
+        with pytest.raises(ValueError, match="textures.settings"):
             load_standalone_texture_packs(text)
 
-    def test_a_config_path_that_escapes_its_base_is_refused(self):
-        text = _standalone_card(config={"base": "config", "path": "../../etc/passwd"})
-        with pytest.raises(ValueError, match="absolute|climbs"):
+    def test_a_settings_address_where_a_name_belongs_is_refused(self):
+        # An address here would be the second copy this table exists to
+        # remove, so the loader takes a name and nothing else.
+        text = _standalone_card(settings={"base": "config", "path": "demo.ini"})
+        with pytest.raises(ValueError, match="textures.settings"):
             load_standalone_texture_packs(text)
 
     def test_a_keying_without_a_citation_is_refused(self):

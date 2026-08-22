@@ -365,16 +365,17 @@ are pinned, which is exactly why these rows need no config of the emulator's to 
     "base": "data",
     "subdir": "dolphin-emu/Load/Textures",
     "keying": { "value": "game-id", "citation": "[V-binary] the shipped dolphin-emu carries \"…<game_id>/…\"" },
-    "config": { "base": "config", "path": "dolphin-emu/GFX.ini" }
+    "settings": "GFX.ini"
   },
   "provenance": { "source": "[V-binary/V-script] …" }
 }
 ```
 
-`config` is **required** and is the one field here that is never read: it names the settings file that would establish
+`settings` is **required** and is the one field here that is never read: it names the settings file that would establish
 whether replacement is on, and every standalone answer carries `emulator-config-unread` pointing at it with `enabled`
-left `None`. A card without one would tell a client the switch is unknown and give it nowhere to look. `base` and
-`subdir` are held to the same rules as the core block's root and fragment; `keying` to the same cited-or-absent rule.
+left `None`. A card without one would tell a client the switch is unknown and give it nowhere to look. It is a **name**,
+not an address — where that file lives is stated once in `emulator_settings.json`, below. `base` and `subdir` are held
+to the same rules as the core block's root and fragment; `keying` to the same cited-or-absent rule.
 
 A card states its directory one of two ways, and exactly one. Most name a fixed subpath below an XDG base — the default
 the emulator opens. PCSX2 names a **configuration key** instead (`textures.directory`: `[Folders] Textures`, with the
@@ -461,19 +462,21 @@ texture table's standalone half uses, because for a standalone entry that token 
 savefile question answers a standalone catalogue entry exactly where a card here covers its emulator, and refuses with
 `standalone-unsupported` everywhere else; which of the two it is runs on evidence, never on the kind of entry.
 
-A card is deliberately **thin**: the configuration file that governs the emulator's save tree (below the XDG base the
-arrangement pins), the catalogue systems the card answers for, and the provenance behind both. That base is the one the
-**emulator** opens the file under, never the one an arrangement finds tidy to keep it in: a distribution is free to put
-the real directory elsewhere and link it into place, and the read walks the link like any other. Naming the storage side
-instead would answer correctly on the arrangement that happens to build that link and wrongly everywhere else — which is
-precisely what a card exists to prevent. Everything else — what `SlotA = 8` means, what an empty path key defaults to,
-how a configured card path templates its region — is knowledge written nowhere on the machine, so it lives as cited code
+A card is deliberately **thin**: the name of the settings file that governs the emulator's save tree, the catalogue
+systems the card answers for, and the provenance behind both. The file is **named, not addressed** — where it lives is
+stated once in `emulator_settings.json`, because up to four questions of one emulator open it — and the base stated
+there is the one the **emulator** opens it under, never the one an arrangement finds tidy to keep it in: a distribution
+is free to put the real directory elsewhere and link it into place, and the read walks the link like any other. Naming
+the storage side instead would answer correctly on the arrangement that happens to build that link and wrongly
+everywhere else — which is precisely what a card exists to prevent, and what a single address makes impossible to get
+differently wrong per question. Everything else — what `SlotA = 8` means, what an empty path key defaults to, how a
+configured card path templates its region — is knowledge written nowhere on the machine, so it lives as cited code
 beside the card (`atlas/installations.py`), the same split the rule cards make with `atlas/mode_rules.py`. The loader
 refuses a card whose token has no resolver registered.
 
 Ten cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s EXI
 device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
-unnamed `title/` tree. PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's `config` is `null`, the honest
+unnamed `title/` tree. PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's `settings` is `null`, the honest
 spelling of "no file governs this" — and savedata is one unnamed directory per game below `PSP/SAVEDATA`. xemu
 (v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml` — read under the **data** home,
 where the emulator opens it — stated as one shared file with the `save-inside-image` caveat carrying the inside layout
@@ -692,7 +695,7 @@ same `LoadPathFromSettings` shape every folder of that emulator goes through:
         "keying": { "value": "title", "citation": "[V-binary/V-source] …" }
       }
     ],
-    "config": { "base": "config", "path": "duckstation/settings.ini" }
+    "settings": "settings.ini"
   }
 }
 ```
@@ -721,9 +724,9 @@ the record is the last resort, not the first word. Like every claim about a buil
 machine running another build gets the value with `unverified-version` beside it. The loader refuses a default outside
 the option's own `values`, which would reach an answer as a value it then declines to interpret.
 
-### `config` — optional here, unlike the texture cards
+### `settings` — optional here, unlike the texture cards
 
-A standalone card's `config` names the settings file that would establish whether loading is on, and its answer then
+A standalone card's `settings` names the settings file that would establish whether loading is on, and its answer then
 carries `emulator-config-unread` pointing at it. Here the field may be **`null`**, and exactly one shipped card uses
 that (a test holds the count down): for Azahar nobody has established that any switch exists at all — not a core option,
 not a CLI flag — so naming a file would signpost one that may govern nothing. That row states `enabled` as unanswered
@@ -895,6 +898,46 @@ place, so nothing here is a fallthrough. One upstream error is excluded by hand 
 
 The machine-read half — which systems declare which platform, and whether they are declared, disabled or absent on this
 installation — is never tabled here; the resolvers read the catalogue's own `<platform>` tags live.
+
+## `emulator_settings.json` — one address per settings file
+
+Where each standalone emulator keeps a settings file, keyed by the `%EMULATOR_…%` token and then by the file's own name.
+Read by `atlas.emulator_settings`.
+
+This table exists because the address was being stated once per **question**. A save card, a texture card and a mod card
+named one path between them — up to three copies — with a fourth as a constant in the firmware resolver, and nothing
+said the four were the same file. Two of them had already drifted in shipped releases: xemu's save card named the config
+home while its BIOS resolver read the data one (#250), and DuckStation's texture card named a fixed base while its mod
+card read the DataRoot the launch picks (#256). Both were found by hand, on a real machine, after they shipped.
+
+So a card names a file by **name** and the address lives here, once. What is here is only _where_:
+
+```json
+"DUCKSTATION": {
+  "files": {
+    "settings.ini": {
+      "bases": ["config", "data"],
+      "path": "duckstation/settings.ini",
+      "citation": "[V-source] the DataRoot is $XDG_CONFIG_HOME/duckstation where that variable is set …"
+    }
+  }
+}
+```
+
+- The **key is the file's own name**, and the loader refuses a key that is not the last segment of `path`: two spellings
+  of one file is the thing this table exists to prevent.
+- `bases` is a **list** because one emulator's root is a property of its launch rather than of the emulator. DuckStation
+  picks `$XDG_CONFIG_HOME/duckstation` where that variable is set and absolute and the data home otherwise, so a reader
+  probes in the stated order and the file that exists speaks. Everyone else states one base, and asking such a file for
+  its single location is what resolvers do; asking a two-base file for one raises rather than answering the first
+  candidate, because that would be a guess dressed as an address.
+- `citation` is required like every other recorded fact here.
+- Two tests cross the table with the cards: every card names a file the table carries, and the table carries no file no
+  card asks for. Together they are what makes a disagreement inexpressible rather than merely unlikely.
+
+What a file _means_ for a question stays with the card and the code that reads it — which keys govern a save tree,
+whether a switch exists, how a legacy file is migrated. An emulator may have two: Dolphin keeps its save settings in
+`Dolphin.ini` and its graphics settings in `GFX.ini`, and the cards name one each.
 
 ## `duckstation_bios.json` — what a PlayStation BIOS _is_, by content
 

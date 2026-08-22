@@ -347,9 +347,12 @@ def recorded_texture_emulator_words(entry: Mapping[str, Any]) -> frozenset[str]:
     """
     textures = entry.get("textures", {})
     words = path_segments(textures.get("subdir"))
-    config = textures.get("config")
-    if isinstance(config, dict) and isinstance(config.get("path"), str):
-        words.append(config["path"].rsplit("/", 1)[-1])
+    # The settings file is named rather than addressed here, and the name is
+    # the emulator's own word for it — so it is anchored exactly as the
+    # address's last segment used to be.
+    settings = textures.get("settings")
+    if isinstance(settings, str):
+        words.append(settings)
     # The directory setting's default is a path segment the emulator opens, so
     # it is anchored like one; a switch's default is the spelling of a boolean
     # and names nothing, so it is not.
@@ -420,20 +423,6 @@ def _texture_card(key: str, entry: Any) -> TextureCard:
 
 
 @dataclass(frozen=True, slots=True)
-class EmulatorConfig:
-    """The emulator's own settings file, named but never read.
-
-    It is what would answer whether replacement is switched on, and reading it
-    means modelling that emulator's configuration — a different piece of work
-    (issue #3). So the answer names the file instead of guessing at the switch,
-    and ``emulator-config-unread`` carries this pair.
-    """
-
-    base: str
-    path: str
-
-
-@dataclass(frozen=True, slots=True)
 class TextureSetting:
     """One configuration key a card names, with the emulator's compiled default.
 
@@ -486,23 +475,22 @@ class StandaloneTextureCard:
     switch: TextureSetting | None
     keying: Keying | None
     keying_citation: str | None
-    config: EmulatorConfig
+    settings: str
     provenance: str
 
 
-def _emulator_config(value: object, where: str) -> EmulatorConfig:
-    """The settings file a standalone card names — required, and never read.
+def _settings_name(value: object, where: str) -> str:
+    """The settings file a standalone card names — required, and never read here.
 
     Required because the answer it belongs to always states
     ``emulator-config-unread``: a caveat that named no file would tell a client
-    the switch is unknown and leave it nowhere to go.
+    the switch is unknown and leave it nowhere to go. It is a **name** rather
+    than an address, and that is the whole point: where the file lives is
+    stated once, in ``atlas/data/emulator_settings.json``, because up to four
+    questions of one emulator open the same file and each carrying its own
+    copy is how two of them came to disagree in shipped releases.
     """
-    if not isinstance(value, dict) or set(value) != {"base", "path"}:
-        raise ValueError(f"{where}: expected {{'base': …, 'path': …}}, got {value!r}")
-    base = _expect_str(value.get("base"), f"{where}.base")
-    if base not in XDG_BASES:
-        raise ValueError(f"{where}.base: must be one of {sorted(XDG_BASES)}, got {base!r}")
-    return EmulatorConfig(base=base, path=_expect_subdir(value.get("path"), f"{where}.path"))
+    return _expect_str(value, where)
 
 
 def _texture_setting(value: object, where: str) -> TextureSetting:
@@ -571,7 +559,7 @@ def _standalone_card(token: str, entry: Any) -> StandaloneTextureCard:
         ),
         keying=keying,
         keying_citation=citation,
-        config=_emulator_config(textures.get("config"), f"{where}: textures.config"),
+        settings=_settings_name(textures.get("settings"), f"{where}: textures.settings"),
         provenance=_expect_str(
             entry.get("provenance", {}).get("source"), f"{where}: provenance.source"
         ),

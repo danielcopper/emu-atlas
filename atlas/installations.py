@@ -250,7 +250,7 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
-from atlas import duckstation, melonds, qt_ini
+from atlas import duckstation, emulator_settings, melonds, qt_ini
 from atlas.yaml_scalars import read_scalars
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.retroarch_cfg import (
@@ -4907,8 +4907,9 @@ def _pcsx2_texture_placement(
     it stays a hole for the caller who knows it.
     """
     assert card.directory is not None  # the router sends only config-stated cards here
-    data_root = os.path.join(homes.base(card.config.base), "PCSX2")
-    ini_path = os.path.join(homes.base(card.config.base), card.config.path)
+    settings = emulator_settings.settings_file(card.token, card.settings)
+    data_root = os.path.join(homes.base(settings.bases[0]), "PCSX2")
+    ini_path = settings.only(config_home=homes.base("config"), data_home=homes.base("data"))
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -5112,7 +5113,9 @@ def _standalone_texture_placement(
         return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
     assert card.base is not None and card.subdir is not None  # the loader enforces the pair
     directory = os.path.join(homes.base(card.base), card.subdir)
-    config_path = os.path.join(homes.base(card.config.base), card.config.path)
+    config_path = emulator_settings.settings_file(card.token, card.settings).only(
+        config_home=homes.base("config"), data_home=homes.base("data")
+    )
     physical_dir, link_caveats = _link_view(machine, directory)
     return TexturePlacement(
         dir=directory,
@@ -5622,8 +5625,7 @@ def _dolphin_savefile_placement(
     content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Dolphin's save answer, read from Dolphin.ini the way the emulator reads it."""
-    assert card.config_base is not None and card.config_path is not None
-    ini_path = os.path.join(homes.base(card.config_base), card.config_path)
+    ini_path = _standalone_settings_path(card, homes)
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -5721,6 +5723,19 @@ def _ppsspp_savefile_placement(
             f"standalone save card '{card.token}': the memstick is fixed by the build "
             "(NativeApp.cpp:473-482 at v1.20.4) — no switch selects anything"
         ),
+    )
+
+
+def _standalone_settings(card: StandaloneSaveCard) -> emulator_settings.SettingsFile:
+    """The settings file this save card names, from the one table that addresses it."""
+    assert card.settings is not None  # callers gate on a card that names one
+    return emulator_settings.settings_file(card.token, card.settings)
+
+
+def _standalone_settings_path(card: StandaloneSaveCard, homes: _XdgHomes) -> str:
+    """Where this launch opens the file the card names."""
+    return _standalone_settings(card).only(
+        config_home=homes.base("config"), data_home=homes.base("data")
     )
 
 
@@ -5858,8 +5873,7 @@ def _xemu_savefile_placement(
     content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """xemu's save answer, read from xemu.toml the way the emulator reads it."""
-    assert card.config_base is not None and card.config_path is not None
-    toml_path = os.path.join(homes.base(card.config_base), card.config_path)
+    toml_path = _standalone_settings_path(card, homes)
     parsed = _xemu_document(machine, card, toml_path)
     if isinstance(parsed, Unresolved):
         return parsed
@@ -5974,8 +5988,7 @@ def _cemu_savefile_placement(
     content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Cemu's save answer, read from settings.xml the way the emulator reads it."""
-    assert card.config_base is not None and card.config_path is not None
-    xml_path = os.path.join(homes.base(card.config_base), card.config_path)
+    xml_path = _standalone_settings_path(card, homes)
     result = machine.read_text(xml_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -6210,8 +6223,7 @@ def _azahar_savefile_placement(
     The extdata tree beside it is stated as its own group: save-adjacent data
     keyed by an id of its own, which no title id fills.
     """
-    assert card.config_base is not None and card.config_path is not None
-    ini_path = os.path.join(homes.base(card.config_base), card.config_path)
+    ini_path = _standalone_settings_path(card, homes)
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -6873,9 +6885,9 @@ def _pcsx2_savefile_placement(
     disk the way ``FileMcd_SetType`` reads it, so a folder card answers as
     the per-game tree it is and a file card as the shared image it is.
     """
-    assert card.config_base is not None and card.config_path is not None
-    data_root = os.path.join(homes.base(card.config_base), "PCSX2")
-    ini_path = os.path.join(homes.base(card.config_base), card.config_path)
+    settings = _standalone_settings(card)
+    data_root = os.path.join(homes.base(settings.bases[0]), "PCSX2")
+    ini_path = settings.only(config_home=homes.base("config"), data_home=homes.base("data"))
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -7414,9 +7426,9 @@ def _rpcs3_savefile_placement(
     force, so every user home that exists becomes a group and the caveat says
     the running emulator uses one of them.
     """
-    assert card.config_base is not None and card.config_path is not None
-    config_dir = os.path.join(homes.base(card.config_base), "rpcs3")
-    vfs_path = os.path.join(homes.base(card.config_base), card.config_path)
+    settings = _standalone_settings(card)
+    config_dir = os.path.join(homes.base(settings.bases[0]), "rpcs3")
+    vfs_path = settings.only(config_home=homes.base("config"), data_home=homes.base("data"))
     result = machine.read_text(vfs_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -7532,8 +7544,7 @@ def _vita3k_savefile_placement(
     id (io.cpp:136-143). Which user is current is a runtime property no file
     records, so every user directory found becomes a group of its own.
     """
-    assert card.config_base is not None and card.config_path is not None
-    config_path = os.path.join(homes.base(card.config_base), card.config_path)
+    config_path = _standalone_settings_path(card, homes)
     result = machine.read_text(config_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -8136,8 +8147,10 @@ def _standalone_mod_placement(
             sources.append(
                 f"mod card '{card.token}': keyed by {spec.keying} — {spec.keying_citation}"
             )
-    if card.config is not None:
-        config_path = os.path.join(homes.base(card.config.base or card.base), card.config.path)
+    if card.settings is not None:
+        config_path = emulator_settings.settings_file(card.token, card.settings).only(
+            config_home=homes.base("config"), data_home=homes.base("data")
+        )
         caveats.append(
             Caveat(
                 CAVEAT_EMULATOR_CONFIG_UNREAD,
