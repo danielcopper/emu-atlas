@@ -7646,6 +7646,23 @@ class _StandaloneLaunch:
     pinned_variant: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class _EmuDeckGate:
+    """One launch put through the variant gate: what runs, and what it reads.
+
+    ``homes`` and ``why`` are the two outcomes and never both: bases the
+    picked binary reads, or the reason nothing is established for it.
+    ``variant`` is ``None`` only where the command identifies no emulator at
+    all, which is a different refusal — nothing about a variant is known
+    because no launch was recognised.
+    """
+
+    launch: _StandaloneLaunch
+    variant: str | None
+    homes: _XdgHomes | None
+    why: str | None
+
+
 def _emudeck_launcher(command: str) -> tuple[str, tuple[str, ...]] | None:
     """The EmuDeck launcher script a command runs, and the arguments after it.
 
@@ -13340,24 +13357,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             )
         homes = self._standalone_homes_for(variant, card)
         if homes is None:
-            if variant == _EMUDECK_VARIANT_PROTON:
-                why = (
-                    "no AppImage sits under ~/Applications, so the launch falls through to "
-                    "the Windows build under Proton, whose configuration lives inside "
-                    "the Proton prefix and is not read (a later slice)"
-                )
-            elif launch.pinned_variant is not None:
-                why = (
-                    "the launcher script runs the installed flatpak outright, and no card "
-                    "names the app id its configuration trees hang off (a later slice)"
-                )
-            else:
-                why = (
-                    "no AppImage sits under ~/Applications, so the launch falls through to "
-                    "the installed flatpak, whose own config tree is not established "
-                    "(a later slice)"
-                )
-            return _emudeck_variant_unresolved(spec, card.token, variant, why)
+            return _emudeck_variant_unresolved(
+                spec, card.token, variant, self._variant_reason(launch, variant)
+            )
         _, marker_issues = self._read_marker()
         extra = (
             self._entry_caveats_for(spec, content_path) if content_path is not None else ()
@@ -13505,15 +13507,90 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         inside those homes stay host paths. Proton, and a flatpak no card
         names an id for, have no established bases.
         """
+        return self._homes_for_token(variant, card.token)
+
+    def _homes_for_token(self, variant: str, token: str) -> _XdgHomes | None:
+        """The same rule, reached from a token rather than from a save card.
+
+        Every route asks this about one launch, and only one of them holds a
+        save card while asking — the texture and mod routes hold their own
+        cards, and the firmware route holds none. What the flatpak branch
+        needs is the app id, which lives on the save card because that is
+        where the arrangement's installation of the emulator is recorded; so
+        the lookup happens here, once, instead of at three call sites that
+        could drift apart about which card names the trees.
+        """
         if variant in (_EMUDECK_VARIANT_APPIMAGE, _EMUDECK_VARIANT_BINARY):
             return self._standalone_xdg_homes()
-        if variant == _EMUDECK_VARIANT_FLATPAK and card.flatpak is not None:
-            app_dir = os.path.join(self._home, ".var", "app", card.flatpak)
-            return _XdgHomes(
-                data=os.path.join(app_dir, "data"),
-                config=os.path.join(app_dir, "config"),
+        if variant != _EMUDECK_VARIANT_FLATPAK:
+            return None
+        card = lookup_standalone_save_card(token)
+        if card is None or card.flatpak is None:
+            return None
+        app_dir = os.path.join(self._home, ".var", "app", card.flatpak)
+        return _XdgHomes(
+            data=os.path.join(app_dir, "data"),
+            config=os.path.join(app_dir, "config"),
+        )
+
+    def _variant_reason(self, launch: _StandaloneLaunch, variant: str) -> str:
+        """Why a launch whose variant *is* established still has no trees to read.
+
+        One text per case, shared by every route that asks: the save answer,
+        the texture answer and the mod answer describe the same launch, and a
+        caller comparing them must not find three tellings of one fact.
+        """
+        if variant == _EMUDECK_VARIANT_PROTON:
+            return (
+                "no AppImage sits under ~/Applications, so the launch falls through to "
+                "the Windows build under Proton, whose configuration lives inside "
+                "the Proton prefix and is not read (a later slice)"
             )
-        return None
+        if launch.pinned_variant is not None:
+            return (
+                "the launcher script runs the installed flatpak outright, and no card "
+                "names the app id its configuration trees hang off (a later slice)"
+            )
+        return (
+            "no AppImage sits under ~/Applications, so the launch falls through to "
+            "the installed flatpak, whose own config tree is not established "
+            "(a later slice)"
+        )
+
+    def _standalone_launch_gate(self, spec: EmulatorSpec) -> "_EmuDeckGate":
+        """The variant gate, performed once for whichever question is asking.
+
+        The save route has run this since #219 and the firmware route since
+        #220; the texture and mod routes did not, which is why every
+        standalone entry refused them here. What the gate answers is the same
+        for all four: which binary this launch runs, and which XDG bases that
+        binary reads — or, where nothing is established, the refusal that
+        names the variant instead of an invented tree.
+        """
+        launch = self._standalone_launch_identity(spec.command)
+        if launch.token is None or launch.probe_name is None:
+            return _EmuDeckGate(launch, None, None, None)
+        if "-w" in launch.args:
+            return _EmuDeckGate(
+                launch,
+                _EMUDECK_VARIANT_PROTON,
+                None,
+                f"{launch.probe_name}.sh -w runs the Windows build under Proton, whose "
+                "configuration lives inside the Proton prefix and is not read (a later slice)",
+            )
+        variant = self._launch_variant(launch)
+        if variant == _EMUDECK_VARIANT_UNKNOWN:
+            return _EmuDeckGate(
+                launch,
+                variant,
+                None,
+                "the launch's own binary probe could not be performed — the directories it "
+                "searches were not readable, so which binary would run is not established",
+            )
+        homes = self._homes_for_token(variant, launch.token)
+        if homes is None:
+            return _EmuDeckGate(launch, variant, None, self._variant_reason(launch, variant))
+        return _EmuDeckGate(launch, variant, homes, None)
 
     def standalone_firmware_token(self, command: str) -> str | None:
         """The command's word, variant-gated — EmuDeck's own reading.
@@ -13596,16 +13673,15 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     ) -> TexturePlacement | Unresolved:
         """The texture-pack entry route — same sources, the entry's own caveats.
 
-        A standalone entry refuses here, and not because its emulator is
-        unknown: EmuDeck installs each standalone emulator as its own flatpak or
-        AppImage, so the XDG bases their trees hang off differ per emulator and
-        atlas has established none of them. RetroDECK's standalone rows resolve
-        precisely because one flatpak pins one pair of bases for all of them —
-        so this refusal is about what nobody has established here, and answering
-        it with RetroDECK's homes would name directories on the wrong tree.
+        A standalone entry answers through the same variant gate the save
+        route uses: which binary the launch runs decides which XDG tree its
+        packs sit in, and EmuDeck's per-emulator installs are exactly why that
+        cannot be one arrangement-wide pair. Where the variant is not
+        established the refusal names it, rather than answering from a tree
+        the binary never reads.
         """
         if spec.kind != KIND_LIBRETRO:
-            return _standalone_texture_unresolved(spec)
+            return self._standalone_entry_texture(spec, entry_caveats, content_path=content_path)
         placement = _retroarch_texture_pack_location(
             self._machine,
             self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
@@ -13621,16 +13697,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
     ) -> ModPlacement | Unresolved:
-        """The mod entry route — same sources, the entry's own caveats.
-
-        A standalone entry refuses here for the reason it refuses the texture
-        question: EmuDeck installs each standalone emulator as its own flatpak
-        or AppImage, so the XDG bases their trees hang off differ per emulator
-        and atlas has established none of them. Answering with RetroDECK's homes
-        would name directories on the wrong tree.
-        """
+        """The mod entry route — the texture route's twin, gate included."""
         if spec.kind != KIND_LIBRETRO:
-            return _standalone_mod_unresolved(spec)
+            return self._standalone_entry_mod(spec, entry_caveats, content_path=content_path)
         placement = _retroarch_mod_location(
             self._machine,
             self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
@@ -13638,6 +13707,81 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if content_path is None:
             return placement
         return _entry_mod_with_caveats(placement, self._entry_caveats_for(spec, content_path))
+
+    def _standalone_entry_texture(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+    ) -> TexturePlacement | Unresolved:
+        """A standalone entry's texture answer, resolved the way the launch resolves.
+
+        The card is the same one RetroDECK's token reaches; what differs is
+        the pair of bases it hangs off, and that is a property of this launch
+        rather than of the arrangement. A card whose directory is a
+        configuration value reads that configuration inside these homes too,
+        so the whole answer — directory and switch alike — comes off the tree
+        the picked binary actually opens.
+        """
+        gate = self._standalone_launch_gate(spec)
+        card = lookup_standalone_texture_card(gate.launch.token)
+        if card is None or gate.variant is None:
+            return _standalone_texture_unresolved(spec)
+        if gate.homes is None:
+            assert gate.why is not None  # a gate without homes always says why
+            return _emudeck_variant_unresolved(spec, card.token, gate.variant, gate.why)
+        return _standalone_texture_placement(
+            self._machine,
+            card=card,
+            homes=gate.homes,
+            extra_caveats=self._standalone_entry_caveats(spec, entry_caveats, content_path),
+        )
+
+    def _standalone_entry_mod(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+    ) -> ModPlacement | Unresolved:
+        """A standalone entry's mod answer — the texture route's twin, gate included."""
+        gate = self._standalone_launch_gate(spec)
+        card = lookup_standalone_mod_card(gate.launch.token)
+        if card is None or gate.variant is None:
+            return _standalone_mod_unresolved(spec)
+        if gate.homes is None:
+            assert gate.why is not None  # a gate without homes always says why
+            return _emudeck_variant_unresolved(spec, card.token, gate.variant, gate.why)
+        return _standalone_mod_placement(
+            self._machine,
+            card=card,
+            homes=gate.homes,
+            extra_caveats=self._standalone_entry_caveats(spec, entry_caveats, content_path),
+        )
+
+    def _standalone_entry_caveats(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...],
+        content_path: str | None,
+    ) -> tuple[Caveat, ...]:
+        """What every standalone answer of this arrangement carries beside its own.
+
+        The entry's own caveats, the per-game override check where content is
+        named, the marker's health, and the arrangement's version evidence —
+        the same four the save route assembles, in the same order, so two
+        answers about one entry never disagree about the machine they were
+        read on.
+        """
+        _, marker_issues = self._read_marker()
+        extra = self._entry_caveats_for(spec, content_path) if content_path is not None else ()
+        return (
+            *entry_caveats,
+            *extra,
+            *marker_issues,
+            *arrangement_caveats(self.kind, observed_version=self._observed_backend_head()),
+        )
 
     def _retroarch_config_dir(self) -> str:
         return os.path.join(self._home, ".var", "app", self._RA_APP_ID, "config", "retroarch")

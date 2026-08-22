@@ -704,52 +704,6 @@
       }
     },
     {
-      "name": "emudeck-duckstations-cheats-hang-off-the-data-side-dataroot",
-      "rationale": "The arrangement that makes the shape matter. EmuDeck installs DuckStation as an AppImage under ~/Applications and keeps its settings under the data home (emuDeckDuckStation.sh:8), which is the DataRoot a launch outside a flatpak sandbox picks — so the same card answers below a different root, and a card naming 'config' outright would have pointed at a directory this emulator never opens.",
-      "input": {
-        "home": "/home/deck",
-        "files": {
-          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
-          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
-          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n</systemList>\n",
-          "/home/deck/Applications/DuckStation.AppImage": {
-            "status": "invalid-text"
-          },
-          "/home/deck/.local/share/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\n"
-        },
-        "dirs": [
-          "/home/deck/Emulation/saves",
-          "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
-        ],
-        "entry_mod_query": {
-          "system": "psx"
-        }
-      },
-      "expected": {
-        "installations": [
-          {
-            "kind": "emudeck",
-            "kinds": [
-              "emudeck",
-              "bare_retroarch_flatpak"
-            ],
-            "root": "/home/deck/Emulation",
-            "health": []
-          }
-        ],
-        "entry_mod_location": {
-          "unresolved": {
-            "code": "standalone-unsupported",
-            "data": {
-              "label": "DuckStation (Standalone)",
-              "system": "psx"
-            }
-          }
-        }
-      }
-    },
-    {
       "name": "duckstations-cheat-files-sit-where-its-own-default-puts-them",
       "rationale": "Cheat files are DuckStation's patch mechanism, the counterpart of PCSX2's .pnach patches. The directory is [Folders] Cheats, and RetroDECK never writes that key — so the emulator's own default governs: 'cheats' below the DataRoot, composed the way every folder of this emulator is composed. The tree is stated as a configuration key rather than a fixed XDG subpath because the root it hangs off is not a fixed XDG join at all, which is what a card naming a base outright would get wrong on the other arrangement.",
       "input": {
@@ -953,6 +907,107 @@
             "data": {
               "emulator": "DUCKSTATION",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-duckstations-cheats-hang-off-the-data-side-dataroot",
+      "rationale": "The arrangement that makes the shape matter. EmuDeck installs DuckStation as an AppImage under ~/Applications and keeps its settings under the data home (emuDeckDuckStation.sh:8), which is the DataRoot a launch outside a flatpak sandbox picks — so the same card answers below a different root, and a card naming 'config' outright would have pointed at a directory this emulator never opens. The answer arrives at all because the mod route now goes through the same variant gate the save route uses.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"DuckStation (Standalone)\">%EMULATOR_DUCKSTATION% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.local/share/duckstation/cheats",
+              "physical_dir": null,
+              "keying": "title"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-a-mod-answer-refused-for-the-variant-names-it-the-same-way",
+      "rationale": "The mod route's half of the same gate, and it must refuse in the same words: two questions about one launch that disagreed about which binary runs would be worse than either refusing. The card exists; the tree does not, because nothing establishes what the Proton build reads.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"DuckStation (Standalone)\">%EMULATOR_DUCKSTATION% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "unresolved": {
+            "code": "standalone-variant-unestablished",
+            "data": {
+              "label": "DuckStation (Standalone)",
+              "system": "psx",
+              "variant": "proton"
             }
           }
         }

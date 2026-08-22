@@ -777,10 +777,14 @@ class TestEmuDeckAnswersItsCoresAndRefusesItsStandaloneEmulators:
     )
 
     def _emudeck(self) -> atlas.EmuDeck:
+        return self._emudeck_with({})
+
+    def _emudeck_with(self, extra: dict[str, FixtureFileSpec]) -> atlas.EmuDeck:
         machine = FixtureMachine(
             {
                 f"{HOME}/.config/EmuDeck/settings.sh": self._SETTINGS,
                 f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": self._CFG,
+                **extra,
             },
             cores={"/mnt/sd/Emulation/cores/fbneo_libretro.so": {"library_name": "FinalBurn Neo"}},
             dirs=["/mnt/sd/Emulation/saves/retroarch/saves", "/mnt/sd/Emulation/cores"],
@@ -801,10 +805,11 @@ class TestEmuDeckAnswersItsCoresAndRefusesItsStandaloneEmulators:
         ]
         assert all(tree.physical_dir is None for tree in placement.trees)
 
-    def test_a_standalone_entry_refuses(self):
+    @staticmethod
+    def _dolphin_spec():
         from atlas.esde import KIND_STANDALONE, EmulatorSpec
 
-        spec = EmulatorSpec(
+        return EmulatorSpec(
             system="gc",
             label="Dolphin (Standalone)",
             kind=KIND_STANDALONE,
@@ -812,6 +817,40 @@ class TestEmuDeckAnswersItsCoresAndRefusesItsStandaloneEmulators:
             command="%EMULATOR_DOLPHIN% -b -e %ROM%",
             provenance="test",
         )
-        outcome = self._emudeck().entry_mod_location(spec)
+
+    def test_a_standalone_entry_whose_binary_is_unestablished_names_the_variant(self):
+        # Nothing under ~/Applications and no installed flatpak: the launch
+        # falls through to the Windows build under Proton, whose configuration
+        # nobody reads — which is a different statement from "this emulator is
+        # not covered", and the one a caller can act on.
+        outcome = self._emudeck().entry_mod_location(self._dolphin_spec())
+        assert isinstance(outcome, Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert outcome.data["variant"] == "proton"
+
+    def test_a_standalone_entry_answers_where_the_appimage_establishes_its_homes(self):
+        emudeck = self._emudeck_with(
+            {f"{HOME}/Applications/Dolphin-1234.AppImage": {"status": "invalid-text"}}
+        )
+        placement = mod_placed(emudeck.entry_mod_location(self._dolphin_spec()))
+        assert [tree.dir for tree in placement.trees] == [
+            f"{HOME}/.local/share/dolphin-emu/Load/GraphicMods"
+        ]
+
+    def test_an_emulator_no_card_covers_is_still_unsupported(self):
+        from atlas.esde import KIND_STANDALONE, EmulatorSpec
+
+        spec = EmulatorSpec(
+            system="n64",
+            label="Ares (Standalone)",
+            kind=KIND_STANDALONE,
+            core_so=None,
+            command="%EMULATOR_ARES% %ROM%",
+            provenance="test",
+        )
+        emudeck = self._emudeck_with(
+            {f"{HOME}/Applications/ares-1234.AppImage": {"status": "invalid-text"}}
+        )
+        outcome = emudeck.entry_mod_location(spec)
         assert isinstance(outcome, Unresolved)
         assert outcome.code == atlas.UNRESOLVED_STANDALONE
