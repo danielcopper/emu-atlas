@@ -31,6 +31,7 @@ the command line rather than by the package layout.
 
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -41,8 +42,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPO_ROOT / "atlas" / "data" / "duckstation_bios.json"
 
-BIOS_CPP = Path("src") / "core" / "bios.cpp"
-BIOS_H = Path("src") / "core" / "bios.h"
+BIOS_CPP = os.path.join("src", "core", "bios.cpp")
+BIOS_H = os.path.join("src", "core", "bios.h")
 
 # {"SCPH-1001, DTL-H1001 (v2.0 05-07-95 A)", ConsoleRegion::NTSC_U,
 #  MakeHashFromString("dc2b…"), ImageInfo::FastBootPatch::Type1, 10},
@@ -71,25 +72,30 @@ REGIONS = {
 }
 
 
-def resolve_source(raw: str) -> Path:
-    """Resolve ``--source`` to the checkout this generator reads two files from.
+def resolve_source(raw: str) -> tuple[str, str]:
+    """Resolve ``--source`` to the two files this generator reads, and nothing else.
 
     The checkout is a clone the user made wherever they keep sources, so no
-    base directory bounds it; what identifies a usable one is the pair of
-    files below it. Both are resolved and then required to still be inside the
-    resolved checkout, so a symlinked ``src/`` cannot point the read at
-    something else. Raises ``ValueError`` for the caller to report.
+    base directory bounds the argument itself; what bounds the *reads* is that
+    only two fixed paths below it are ever opened. Each is canonicalised and
+    then required to still sit under the canonical checkout — the order that
+    matters, since a check applied to the spelling rather than to the resolved
+    path is no check at all, and the trailing separator is what keeps a
+    sibling directory whose name merely starts the same from passing. Raises
+    ``ValueError`` for the caller to report as an argument error.
     """
-    checkout = Path(raw).expanduser().resolve()
-    if not checkout.is_dir():
+    checkout = os.path.realpath(os.path.expanduser(raw))
+    if not os.path.isdir(checkout):
         raise ValueError(f"not a directory: {checkout}")
+    resolved = []
     for relative in (BIOS_CPP, BIOS_H):
-        target = (checkout / relative).resolve()
-        if not target.is_file():
-            raise ValueError(f"{checkout} has no {relative} — is this a duckstation checkout?")
-        if not target.is_relative_to(checkout):
+        target = os.path.realpath(os.path.join(checkout, relative))
+        if not target.startswith(checkout + os.sep):
             raise ValueError(f"{relative} resolves outside {checkout}")
-    return checkout
+        if not os.path.isfile(target):
+            raise ValueError(f"{checkout} has no {relative} — is this a duckstation checkout?")
+        resolved.append(target)
+    return resolved[0], resolved[1]
 
 
 def parse_sizes(header: str) -> dict[str, int]:
@@ -150,9 +156,7 @@ def parse_images(source: str) -> list[dict[str, object]]:
     return images
 
 
-def build(checkout: Path, revision: str) -> tuple[dict[str, object], int]:
-    source = (checkout / BIOS_CPP).read_text(encoding="utf-8")
-    header = (checkout / BIOS_H).read_text(encoding="utf-8")
+def build(source: str, header: str, revision: str) -> tuple[dict[str, object], int]:
     images = parse_images(source)
     hashes = [str(image["md5"]) for image in images]
     duplicates = sorted({md5 for md5 in hashes if hashes.count(md5) > 1})
@@ -160,7 +164,7 @@ def build(checkout: Path, revision: str) -> tuple[dict[str, object], int]:
         raise ValueError(f"the table has repeated hashes: {duplicates}")
     table: dict[str, object] = {
         "_meta": {
-            "generated_from": f"stenzek/duckstation {BIOS_CPP.as_posix()} and {BIOS_H.as_posix()}",
+            "generated_from": f"stenzek/duckstation {BIOS_CPP} and {BIOS_H}",
             "revision": revision,
             "generated_at": datetime.now(timezone.utc).date().isoformat(),
             "images": len(images),
@@ -178,8 +182,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--revision", required=True, help="the revision the checkout is at")
     args = parser.parse_args(argv)
     try:
-        checkout = resolve_source(args.source)
-        table, count = build(checkout, args.revision)
+        bios_cpp, bios_h = resolve_source(args.source)
+        with open(bios_cpp, encoding="utf-8") as handle:
+            source = handle.read()
+        with open(bios_h, encoding="utf-8") as handle:
+            header = handle.read()
+        table, count = build(source, header, args.revision)
     except ValueError as error:
         parser.error(str(error))
     DEFAULT_OUTPUT.write_text(
