@@ -2609,7 +2609,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user is not recorded on disk",
+                "reason": "the active user account is not recorded on disk",
                 "users": "00"
               }
             }
@@ -2698,7 +2698,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user is not recorded on disk",
+                "reason": "the active user account is not recorded on disk",
                 "users": "00,01"
               }
             }
@@ -2823,7 +2823,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user is not recorded on disk",
+                "reason": "the active user account is not recorded on disk",
                 "users": "00"
               }
             }

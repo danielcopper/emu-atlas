@@ -7248,11 +7248,111 @@ _RPCS3_FIRST_USER = "00000001"
 _RPCS3_VMC_SUBDIR = os.path.join("savedata", "vmc")
 
 
-def _rpcs3_user_homes(machine: Machine, hdd0: str) -> tuple[tuple[str, ...], bool]:
-    """The user homes on this drive, and whether the listing was complete."""
-    listing = machine.glob(os.path.join(hdd0, "home", "*"))
-    names = tuple(sorted(os.path.basename(path) for path in listing.matches))
-    return names, listing.status == GLOB_COMPLETE
+@dataclass(frozen=True, slots=True)
+class _PerUserSaves:
+    """The shape two emulators share: one save tree per user account.
+
+    RPCS3 keeps saves at ``dev_hdd0/home/<user>/savedata`` and Vita3K at
+    ``ux0/user/<user>/savedata``. Both pick the user at run time, and neither
+    writes down which one is current — so both state *every* user directory
+    that exists rather than guessing at the one in force, and the assembly is
+    theirs jointly. What differs is the words and the citations, which each
+    card supplies.
+
+    ``user_root`` is the directory holding the user directories,
+    ``first_user`` the one the emulator starts with — used only where nothing
+    could be listed, never as a claim that it is the one running.
+    """
+
+    user_root: str
+    first_user: str
+    names_citation: str
+    user_sentence: str
+    mode: str
+    reading: OptionReading
+    reading_file: str | None
+    provenance: str
+
+
+def _per_user_savedata_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    shape: _PerUserSaves,
+    extra_caveats: tuple[Caveat, ...],
+    trailing_caveats: tuple[Caveat, ...] = (),
+) -> SavefilePlacement:
+    """One group per user account, each a per-game-directory tree.
+
+    ``extra_caveats`` lead and ``trailing_caveats`` follow the two this shape
+    always states, which is the order each emulator's answer already had.
+    """
+    listing = machine.glob(os.path.join(shape.user_root, "*"))
+    users = tuple(sorted(os.path.basename(path) for path in listing.matches))
+    groups = tuple(
+        FileGroup(
+            dir=os.path.join(shape.user_root, user, "savedata"),
+            files=None,
+            granularity=GRANULARITY_PER_GAME_DIRECTORY,
+            role=ROLE_BATTERY,
+        )
+        for user in (users or (shape.first_user,))
+    )
+    directory = groups[0].dir
+    caveats: list[Caveat] = [
+        *extra_caveats,
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "each directory below savedata is one title's own, named by its title id and "
+            "written by the game — move a directory whole rather than its files",
+            {
+                "core": card.token,
+                "dir": directory,
+                "role": ROLE_BATTERY,
+                "citation": shape.names_citation,
+            },
+        ),
+        Caveat(
+            CAVEAT_CORE_MODE_UNESTABLISHED,
+            shape.user_sentence
+            + (
+                ""
+                if listing.status == GLOB_COMPLETE
+                else "; the tree could not be listed in full"
+            ),
+            {
+                "core": card.token,
+                "reason": "the active user account is not recorded on disk",
+                "users": ",".join(users) if users else shape.first_user,
+            },
+        ),
+        *trailing_caveats,
+    ]
+    physical, link_caveats = _link_view(machine, directory)
+    caveats.extend(link_caveats)
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=groups,
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=GRANULARITY_PER_GAME_DIRECTORY,
+            mode=shape.mode,
+            readings=(_reading_with_file(shape.reading, shape.reading_file),),
+            alternatives=(),
+            provenance=shape.provenance,
+        ),
+    )
 
 
 def _rpcs3_savefile_placement(
@@ -7317,93 +7417,44 @@ def _rpcs3_savefile_placement(
             {"emulator": card.token, "config": vfs_path},
         )
     hdd0 = host.path
-    users, complete = _rpcs3_user_homes(machine, hdd0)
-    caveats: list[Caveat] = [*extra_caveats]
-    groups = tuple(
-        FileGroup(
-            dir=os.path.join(hdd0, "home", user, "savedata"),
-            files=None,
-            granularity=GRANULARITY_PER_GAME_DIRECTORY,
-            role=ROLE_BATTERY,
-        )
-        for user in (users or (_RPCS3_FIRST_USER,))
-    )
-    directory = groups[0].dir
-    caveats.append(
-        Caveat(
-            CAVEAT_FILE_NAMES_UNESTABLISHED,
-            "each directory below savedata is one title's own, named by its title id and "
-            "written by the game — move a directory whole rather than its files",
-            {
-                "core": card.token,
-                "dir": directory,
-                "role": ROLE_BATTERY,
-                "citation": (
-                    "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary "
-                    "(build 7c6b3dcd)"
-                ),
-            },
-        )
-    )
-    caveats.append(
-        Caveat(
-            CAVEAT_CORE_MODE_UNESTABLISHED,
-            "which user account the emulator runs as is a runtime selection — it starts at "
-            f"{_RPCS3_FIRST_USER} (Emulator::m_usr, System.h:164) and the user manager "
-            "changes it — and no file records the current one, so every user home found here "
-            "is stated"
-            + ("" if complete else "; the home directory could not be listed in full"),
-            {
-                "core": card.token,
-                "reason": "the active user account is not recorded on disk",
-                "users": ",".join(users) if users else _RPCS3_FIRST_USER,
-            },
-        )
-    )
-    caveats.append(
-        Caveat(
-            CAVEAT_SAVE_INSIDE_IMAGE,
-            "PS1 and PS2 classics save onto virtual memory cards outside the per-user tree, "
-            f"at {os.path.join(hdd0, _RPCS3_VMC_SUBDIR)} — a sync that walks only the "
-            "per-user savedata tree misses them. What lands there and under which names has "
-            "not been read, so the place is stated and its contents are not",
-            {
-                "emulator": card.token,
-                "image": os.path.join(hdd0, _RPCS3_VMC_SUBDIR),
-                "layout": os.path.join("savedata", "vmc"),
-            },
-        )
-    )
-    physical, link_caveats = _link_view(machine, directory)
-    caveats.extend(link_caveats)
-    return SavefilePlacement(
-        dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(),
-        fallback_dir=None,
-        file_set=FileSet(
-            FILE_SET_DECLARED,
-            (),
-            f"declared by standalone save card '{card.token}'",
-            complete=False,
-            groups=groups,
-        ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
-        caveats=tuple(caveats),
-        physical_dir=physical,
-        granularity=Granularity(
-            value=GRANULARITY_PER_GAME_DIRECTORY,
-            mode="hdd0",
-            readings=(
-                _reading_with_file(
-                    OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),
-                    vfs_path if result.status == READ_OK else None,
-                ),
+    vmc = os.path.join(hdd0, _RPCS3_VMC_SUBDIR)
+    return _per_user_savedata_placement(
+        machine,
+        card=card,
+        shape=_PerUserSaves(
+            user_root=os.path.join(hdd0, "home"),
+            first_user=_RPCS3_FIRST_USER,
+            names_citation=(
+                "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary "
+                "(build 7c6b3dcd)"
             ),
-            alternatives=(),
+            user_sentence=(
+                "which user account the emulator runs as is a runtime selection — it starts "
+                f"at {_RPCS3_FIRST_USER} (Emulator::m_usr, System.h:164) and the user manager "
+                "changes it — and no file records the current one, so every user home found "
+                "here is stated"
+            ),
+            mode="hdd0",
+            reading=OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),
+            reading_file=vfs_path if result.status == READ_OK else None,
             provenance=(
                 f"standalone save card '{card.token}': the drive from vfs.yml "
                 "(cfg_vfs::get, vfs_config.cpp:14-62 at build 7c6b3dcd)"
+            ),
+        ),
+        extra_caveats=extra_caveats,
+        trailing_caveats=(
+            Caveat(
+                CAVEAT_SAVE_INSIDE_IMAGE,
+                "PS1 and PS2 classics save onto virtual memory cards outside the per-user "
+                f"tree, at {vmc} — a sync that walks only the per-user savedata tree misses "
+                "them. What lands there and under which names has not been read, so the "
+                "place is stated and its contents are not",
+                {
+                    "emulator": card.token,
+                    "image": vmc,
+                    "layout": os.path.join("savedata", "vmc"),
+                },
             ),
         ),
     )
@@ -7481,82 +7532,32 @@ def _vita3k_savefile_placement(
             f"here ({config_path}) — nothing this answer could anchor at",
             {"emulator": card.token, "config": config_path},
         )
-    user_root = os.path.join(host.path, _VITA3K_USER_TREE)
-    listing = machine.glob(os.path.join(user_root, "*"))
-    users = tuple(sorted(os.path.basename(path) for path in listing.matches))
-    groups = tuple(
-        FileGroup(
-            dir=os.path.join(user_root, user, "savedata"),
-            files=None,
-            granularity=GRANULARITY_PER_GAME_DIRECTORY,
-            role=ROLE_BATTERY,
-        )
-        for user in (users or (_VITA3K_FIRST_USER,))
-    )
-    directory = groups[0].dir
-    caveats: list[Caveat] = [
-        *extra_caveats,
-        Caveat(
-            CAVEAT_FILE_NAMES_UNESTABLISHED,
-            "each directory below savedata is one title's own, named by its title id and "
-            "written by the game — move a directory whole rather than its files",
-            {
-                "core": card.token,
-                "dir": directory,
-                "role": ROLE_BATTERY,
-                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
-            },
-        ),
-        Caveat(
-            CAVEAT_CORE_MODE_UNESTABLISHED,
-            "which user the emulator runs as is a runtime property — its own redirect names "
-            f"user {_VITA3K_FIRST_USER} (io.cpp:203) — and no file records the current one, "
-            "so every user directory found here is stated"
-            + ("" if listing.status == GLOB_COMPLETE else "; the tree could not be listed in full"),
-            {
-                "core": card.token,
-                "reason": "the active user is not recorded on disk",
-                "users": ",".join(users) if users else _VITA3K_FIRST_USER,
-            },
-        ),
-    ]
-    physical, link_caveats = _link_view(machine, directory)
-    caveats.extend(link_caveats)
-    return SavefilePlacement(
-        dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(),
-        fallback_dir=None,
-        file_set=FileSet(
-            FILE_SET_DECLARED,
-            (),
-            f"declared by standalone save card '{card.token}'",
-            complete=False,
-            groups=groups,
-        ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
-        caveats=tuple(caveats),
-        physical_dir=physical,
-        granularity=Granularity(
-            value=GRANULARITY_PER_GAME_DIRECTORY,
-            mode="pref-path",
-            readings=(
-                _reading_with_file(
-                    OptionReading(
-                        _VITA3K_PREF_PATH_KEY,
-                        stated,
-                        f'config.yml: {_VITA3K_PREF_PATH_KEY}: "{stated}"',
-                        None,
-                    ),
-                    config_path if result.status == READ_OK else None,
-                ),
+    return _per_user_savedata_placement(
+        machine,
+        card=card,
+        shape=_PerUserSaves(
+            user_root=os.path.join(host.path, _VITA3K_USER_TREE),
+            first_user=_VITA3K_FIRST_USER,
+            names_citation="init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
+            user_sentence=(
+                "which user the emulator runs as is a runtime property — its own redirect "
+                f"names user {_VITA3K_FIRST_USER} (io.cpp:203) — and no file records the "
+                "current one, so every user directory found here is stated"
             ),
-            alternatives=(),
+            mode="pref-path",
+            reading=OptionReading(
+                _VITA3K_PREF_PATH_KEY,
+                stated,
+                f'config.yml: {_VITA3K_PREF_PATH_KEY}: "{stated}"',
+                None,
+            ),
+            reading_file=config_path if result.status == READ_OK else None,
             provenance=(
                 f"standalone save card '{card.token}': the preference path from config.yml "
                 "(config.cpp:189-190 at commit cb1f592c)"
             ),
         ),
+        extra_caveats=extra_caveats,
     )
 
 
@@ -13350,14 +13351,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             base = os.path.basename(path).casefold()
             if base.startswith(wanted) and base.endswith(".appimage"):
                 return _EMUDECK_VARIANT_APPIMAGE
-        for path in apps.matches:
-            if os.path.basename(path).casefold() != wanted:
-                continue
-            inner = self._machine.glob(os.path.join(path, "*"))
-            if any(os.path.basename(p).casefold() == wanted for p in inner.matches):
-                return _EMUDECK_VARIANT_BINARY
-            if inner.status != GLOB_COMPLETE:
-                return _EMUDECK_VARIANT_UNKNOWN
+        unpacked = self._unpacked_binary_variant(wanted, apps.matches)
+        if unpacked is not None:
+            return unpacked
         if apps.status != GLOB_COMPLETE:
             return _EMUDECK_VARIANT_UNKNOWN
         flatpak_roots = (
@@ -13419,6 +13415,29 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return launch.pinned_variant
         assert launch.probe_name is not None  # callers gate on the identity first
         return self._launcher_binary_variant(launch.probe_name)
+
+    def _unpacked_binary_variant(
+        self, wanted: str, apps: tuple[str, ...]
+    ) -> str | None:
+        """The variant an unpacked executable answers, or ``None`` where none does.
+
+        EmuDeck unpacks some emulators out of their AppImage and keeps the
+        executable at ``~/Applications/<Name>/<Name>``
+        (emuDeckVita3K.sh:21-24), which is the path ES-DE's own find rule
+        looks for right after the AppImage patterns. The directory alone is
+        not the variant: the executable inside it is what a launch runs, and a
+        directory that cannot be listed leaves the pick unestablished rather
+        than answering "not here".
+        """
+        for path in apps:
+            if os.path.basename(path).casefold() != wanted:
+                continue
+            inner = self._machine.glob(os.path.join(path, "*"))
+            if any(os.path.basename(p).casefold() == wanted for p in inner.matches):
+                return _EMUDECK_VARIANT_BINARY
+            if inner.status != GLOB_COMPLETE:
+                return _EMUDECK_VARIANT_UNKNOWN
+        return None
 
     def _standalone_homes_for(
         self, variant: str, card: StandaloneSaveCard
