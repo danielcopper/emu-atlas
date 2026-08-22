@@ -1012,6 +1012,64 @@
           }
         }
       }
+    },
+    {
+      "name": "emudeck-the-flatpaks-own-data-home-carries-its-mod-tree-too",
+      "rationale": "The mod half of the same gate. Dolphin reads graphic mods from a second fixed subpath below the same data home, so the two answers of this entry name sibling directories on one tree — which is what a caller comparing them should find.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 8\nSlotB = 255\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Applications",
+          "/home/deck/.local/share/flatpak/app/org.DolphinEmu.dolphin-emu",
+          "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC"
+        ],
+        "entry_mod_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/Load/GraphicMods",
+              "physical_dir": null,
+              "keying": null
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DOLPHIN",
+                "config": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/GFX.ini"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

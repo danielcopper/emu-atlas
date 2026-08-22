@@ -1688,6 +1688,59 @@
           ]
         }
       }
+    },
+    {
+      "name": "emudeck-the-flatpaks-own-data-home-carries-its-texture-tree-too",
+      "rationale": "The same launch, asked the texture question: one variant gate serves all four routes, so an id that establishes the save answer establishes this one in the same read. The tree is the emulator's own fixed subpath, below the app's data home rather than the host's.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 8\nSlotB = 255\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Applications",
+          "/home/deck/.local/share/flatpak/app/org.DolphinEmu.dolphin-emu",
+          "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC"
+        ],
+        "entry_texture_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/Load/Textures",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": "game-id",
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DOLPHIN",
+                "config": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/GFX.ini"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
