@@ -1441,6 +1441,253 @@
           ]
         }
       }
+    },
+    {
+      "name": "duckstations-texture-directory-is-its-own-default-below-the-dataroot",
+      "rationale": "The directory is [Folders] Textures, read the way every folder of this emulator is read, and RetroDECK never writes that key — so the compiled default governs: 'textures' below the DataRoot. On this arrangement the DataRoot is the config side, because the flatpak sets XDG_CONFIG_HOME, which is why the answer here is the one the old fixed join happened to give. What changed is that it is now read rather than assumed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"texture_packs_path\": \"/mnt/sd/retrodeck/texture_packs\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs"
+        ],
+        "entry_texture_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/textures",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-a-configured-texture-directory-is-taken-as-it-stands",
+      "rationale": "An absolute [Folders] Textures is taken as it stands, the way LoadPathFromSettings takes it — the same helper the BIOS search directory, the memory cards and the cheat directory all go through. A relative one would hang off the DataRoot instead.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"texture_packs_path\": \"/mnt/sd/retrodeck/texture_packs\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Folders]\nTextures = /mnt/sd/retrodeck/texture_packs/Duckstation/textures\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs",
+          "/mnt/sd/retrodeck/texture_packs/Duckstation/textures"
+        ],
+        "entry_texture_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/mnt/sd/retrodeck/texture_packs/Duckstation/textures",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-with-no-settings-file-the-texture-root-is-unestablished",
+      "rationale": "Neither DataRoot candidate holds a settings.ini, so which root this launch would use is decided by an environment variable no file records. The answer names the environment-unset side and says so in the same words the save, BIOS and mod answers of this emulator use — one fact, one telling.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"texture_packs_path\": \"/mnt/sd/retrodeck/texture_packs\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs"
+        ],
+        "entry_texture_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/textures",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": null,
+          "caveats": [
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "DUCKSTATION",
+                "reason": "the DataRoot is decided by the launch environment"
+              }
+            },
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-an-unreadable-settings-file-refuses-the-texture-question",
+      "rationale": "The file that would name the directory exists and cannot be read, so the question is refused rather than answered with a default that file may well have overridden — the same stance the mod route takes on the same file.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"texture_packs_path\": \"/mnt/sd/retrodeck/texture_packs\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs"
+        ],
+        "entry_texture_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "unresolved": {
+            "code": "emulator-config-unreadable",
+            "data": {
+              "emulator": "DUCKSTATION",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-duckstations-textures-and-cheats-agree-about-the-dataroot",
+      "rationale": "The machine the fixed join got wrong. EmuDeck installs DuckStation as an AppImage and the launch keeps its settings under the data home, so the texture directory hangs off that root — and now says the same thing this emulator's cheat directory says on the same machine. Under the old card the two answers of one emulator named two different roots, which is the state a card exists to prevent.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios"
+        ],
+        "entry_texture_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.local/share/duckstation/textures",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

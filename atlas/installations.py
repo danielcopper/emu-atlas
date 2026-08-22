@@ -4984,6 +4984,85 @@ def _pcsx2_texture_placement(
     )
 
 
+def _duckstation_dataroot_caveat(token: str) -> Caveat:
+    """The one statement every DuckStation answer makes about an unrecorded launch.
+
+    Two directories can be this emulator's DataRoot and an environment
+    variable decides which — a fact no file on the machine holds. Every route
+    that reads this emulator says it in these words, so a caller comparing the
+    save, BIOS, texture and mod answers of one entry finds one fact, not four
+    tellings of it.
+    """
+    return Caveat(
+        CAVEAT_CORE_MODE_UNESTABLISHED,
+        "no settings.ini exists on either DataRoot candidate — DuckStation picks its "
+        "root from the launch environment (XDG_CONFIG_HOME set routes it to the config "
+        "side, qthost.cpp:562-582), which no file records; the directory below hangs "
+        "off the environment-unset side",
+        {"core": token, "reason": "the DataRoot is decided by the launch environment"},
+    )
+
+
+def _duckstation_texture_placement(
+    machine: Machine,
+    *,
+    card: StandaloneTextureCard,
+    homes: _XdgHomes,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> TexturePlacement | Unresolved:
+    """DuckStation's texture directory: a configuration value, below the root its launch picks.
+
+    The same reading its cheat tree gets, and for the same reason — the
+    directory is ``[Folders] Textures`` and the root that key resolves
+    against is the config home or the data home depending on how the launch
+    was started, so a fixed XDG join answers correctly on one arrangement and
+    wrongly on the other. ``enabled`` stays unstated: the card names no
+    switch, so nothing is read for one.
+    """
+    setting = card.directory
+    assert setting is not None  # the router sends only config-stated cards here
+    read = duckstation.read_settings(
+        machine, config_home=homes.base("config"), data_home=homes.base("data")
+    )
+    if read.unreadable is not None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
+            "where it reads texture packs from is unknowable here",
+            {"emulator": card.token, "config": read.unreadable},
+        )
+    directory = duckstation.load_path(
+        read.values, read.root, setting.section, setting.key, setting.default
+    )
+    physical_dir, link_caveats = _link_view(machine, directory)
+    caveats: list[Caveat] = [*extra_caveats, *link_caveats]
+    if read.ambiguous:
+        caveats.append(_duckstation_dataroot_caveat(card.token))
+    config_path = os.path.join(read.root, duckstation.CONFIG_FILENAME)
+    caveats.append(
+        Caveat(
+            CAVEAT_EMULATOR_CONFIG_UNREAD,
+            f"whether {card.token} has texture replacement switched on is not established — the "
+            f"setting lives in {config_path}, which this answer reads for the directory and not "
+            "for the switch, because the card states none",
+            {"emulator": card.token, "config": config_path},
+        )
+    )
+    return TexturePlacement(
+        dir=directory,
+        needs=(),
+        enabled=None,
+        keying=card.keying,
+        sources=(
+            f"texture card '{card.token}': the directory is [{setting.section}] {setting.key} in "
+            f"the emulator's own configuration — {setting.citation}",
+            f"texture card '{card.token}': {card.provenance}",
+        ),
+        caveats=tuple(caveats),
+        physical_dir=physical_dir,
+    )
+
+
 # The two stages PCSX2 keeps below a game's texture directory — the emulator's
 # own spellings (GSTextureReplacements.cpp:39-40 at v2.6.3), and both whole
 # strings in the shipped binary.
@@ -4996,6 +5075,7 @@ _PCSX2_TEXTURE_DUMP_STAGE = "dumps"
 # default nobody read.
 _STANDALONE_TEXTURE_RESOLVERS = {
     "PCSX2": _pcsx2_texture_placement,
+    "DUCKSTATION": _duckstation_texture_placement,
 }
 
 
@@ -7973,16 +8053,7 @@ def _duckstation_mod_placement(
     physical, link_caveats = _link_view(machine, directory)
     caveats: list[Caveat] = [*extra_caveats, *link_caveats]
     if read.ambiguous:
-        caveats.append(
-            Caveat(
-                CAVEAT_CORE_MODE_UNESTABLISHED,
-                "no settings.ini exists on either DataRoot candidate — DuckStation picks its "
-                "root from the launch environment (XDG_CONFIG_HOME set routes it to the config "
-                "side, qthost.cpp:562-582), which no file records; the directory below hangs "
-                "off the environment-unset side",
-                {"core": card.token, "reason": "the DataRoot is decided by the launch environment"},
-            )
-        )
+        caveats.append(_duckstation_dataroot_caveat(card.token))
     config_path = os.path.join(read.root, duckstation.CONFIG_FILENAME)
     caveats.append(
         Caveat(

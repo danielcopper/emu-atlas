@@ -913,12 +913,15 @@ outcome.enabled       # None — always, on a standalone row
 its own roadmap block. Standalone rows are asked **through the entry route only** — the handle route's subject is a
 core, and a standalone emulator has none.
 
-Not every standalone emulator answers, and one of them answers differently. Where the texture directory is a value in
-the emulator's own settings, a card may state the **key** instead of a subpath and its resolver reads it — PCSX2 does
-that with `[Folders] Textures`, and reads `[EmuCore/GS] LoadTextureReplacements` from the same file, so `enabled` is a
-reading there rather than `None`. Its `dir` is the load stage, `<Textures>/<serial>/replacements`, with `save_id` in
-`needs`: replacements are read one level below the per-game directory, and naming only the root would send a caller
-placing a pack where nothing reads it. Where nobody has read that configuration the entry still refuses with
+Not every standalone emulator answers, and two of them answer differently. Where the texture directory is a value in the
+emulator's own settings, a card may state the **key** instead of a subpath and its resolver reads it — PCSX2 does that
+with `[Folders] Textures`, and reads `[EmuCore/GS] LoadTextureReplacements` from the same file, so `enabled` is a
+reading there rather than `None`. DuckStation states the same key for a second reason: the root it resolves against is
+the config home or the data home depending on how the launch was started, so a fixed base would answer correctly on one
+arrangement and wrongly on the other — and its texture answer would disagree with its own cheat answer about where the
+emulator keeps things. Its `dir` is the load stage, `<Textures>/<serial>/replacements`, with `save_id` in `needs`:
+replacements are read one level below the per-game directory, and naming only the root would send a caller placing a
+pack where nothing reads it. Where nobody has read that configuration the entry still refuses with
 `standalone-unsupported` — Vita3K's `pref-path` lives in a `config.yml`, and atlas has no YAML reader — so the split
 runs on evidence, not on the kind of entry. **On EmuDeck the same cards answer**, below the bases the launch's own
 binary reads: an AppImage under `~/Applications` (or the executable EmuDeck unpacks from one) reads the host's XDG tree,
