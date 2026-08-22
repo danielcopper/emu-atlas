@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.4.0](https://github.com/danielcopper/emu-atlas/compare/v0.3.0...v0.4.0) (2026-08-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **duckstation:** read the texture directory where the emulator resolves it ([#257](https://github.com/danielcopper/emu-atlas/issues/257))
+* **emudeck:** the texture and mod answers go through the same variant gate the saves do ([#255](https://github.com/danielcopper/emu-atlas/issues/255))
+* **xemu:** read the configuration where the emulator opens it, not where the arrangement keeps it ([#251](https://github.com/danielcopper/emu-atlas/issues/251))
+* **rpcs3:** the save tree the emulated PS3's VFS names ([#232](https://github.com/danielcopper/emu-atlas/issues/232))
+* **pcsx2:** the texture directory the configuration names, and whether replacement is on ([#224](https://github.com/danielcopper/emu-atlas/issues/224))
+* **duckstation:** the standalone texture/save asymmetry proof retargets from DuckStation to PrimeHack — DuckStation gained a save card, so the vector `a-standalone-entry-answers-the-texture-question-and-refuses-the-save-one` carries a PrimeHack entry now and its expected changed accordingly.
+* **azahar:** the standalone texture/save asymmetry proof retargets from Azahar to DuckStation — Azahar gained a save card, so the vector `a-standalone-entry-answers-the-texture-question-and-refuses-the-save-one` carries a DuckStation entry now and its expected changed accordingly.
+* **cemu:** CEMU savefile vector expecteds change shape — `dir` and `physical_dir` gain the `/<save_id>` template segment, `needs` gains `save_id`, `granularity.value` becomes `per-game-directory` (a new vocabulary value), and the `file-names-unestablished` caveat data now carries the `save_id` fill and the nn_save citation.
+
+### Features
+
+* **azahar:** the per-title save unit on the virtual SD, on both arrangements ([#214](https://github.com/danielcopper/emu-atlas/issues/214)) ([c555452](https://github.com/danielcopper/emu-atlas/commit/c555452dd4e999c7dbb64905f32cea9a6036b04d)), closes [#213](https://github.com/danielcopper/emu-atlas/issues/213)
+* **cemu:** key the per-title save unit, on both arrangements ([#209](https://github.com/danielcopper/emu-atlas/issues/209)) ([d097648](https://github.com/danielcopper/emu-atlas/commit/d0976489cc2f491621869b48fc4152d455d9c05c)), closes [#207](https://github.com/danielcopper/emu-atlas/issues/207)
+* **cemu:** state the keys expectation as packaged firmware knowledge ([#212](https://github.com/danielcopper/emu-atlas/issues/212)) ([20843e2](https://github.com/danielcopper/emu-atlas/commit/20843e2ac74e0e1e56f4f569e1487b6bd5440e43)), closes [#208](https://github.com/danielcopper/emu-atlas/issues/208)
+* **config:** read the flat half of a YAML file, and name the rest ([#230](https://github.com/danielcopper/emu-atlas/issues/230)) ([689e95a](https://github.com/danielcopper/emu-atlas/commit/689e95a5e3b98d1637ce159d0cf03f1458b9fe76)), closes [#229](https://github.com/danielcopper/emu-atlas/issues/229)
+* **duckstation:** the BIOS it searches for, recognised by content rather than by name ([#253](https://github.com/danielcopper/emu-atlas/issues/253)) ([6d7f822](https://github.com/danielcopper/emu-atlas/commit/6d7f822555a19fd9282044244ef0f6bdc09bc694))
+* **duckstation:** the cheat files it patches games with, below the root its launch picks ([#254](https://github.com/danielcopper/emu-atlas/issues/254)) ([090f39d](https://github.com/danielcopper/emu-atlas/commit/090f39d01b10bd24fb6627e9aabecb79128524fa)), closes [#236](https://github.com/danielcopper/emu-atlas/issues/236)
+* **duckstation:** the two-slot memory-card model, on both arrangements ([#216](https://github.com/danielcopper/emu-atlas/issues/216)) ([7881d70](https://github.com/danielcopper/emu-atlas/commit/7881d7063585720c08273e4ba570419584a05cfd)), closes [#215](https://github.com/danielcopper/emu-atlas/issues/215)
+* **emudeck:** name the flatpak app ids Dolphin and PPSSPP are installed as ([#261](https://github.com/danielcopper/emu-atlas/issues/261)) ([59cc1a4](https://github.com/danielcopper/emu-atlas/commit/59cc1a4329fe2c08164cf6ef816a38a5e6423347)), closes [#260](https://github.com/danielcopper/emu-atlas/issues/260)
+* **emudeck:** the texture and mod answers go through the same variant gate the saves do ([#255](https://github.com/danielcopper/emu-atlas/issues/255)) ([cad4f20](https://github.com/danielcopper/emu-atlas/commit/cad4f207a478c1514363490ef38394e46f65d857)), closes [#226](https://github.com/danielcopper/emu-atlas/issues/226)
+* **melonds:** the BIOS expectations, read from the switches that decide them ([#222](https://github.com/danielcopper/emu-atlas/issues/222)) ([8a87d3d](https://github.com/danielcopper/emu-atlas/commit/8a87d3ddf3e2457a606160b615410ed6f9c71f2a)), closes [#220](https://github.com/danielcopper/emu-atlas/issues/220)
+* **melonds:** the per-game .sav where SaveFilePath points, on both arrangements ([#221](https://github.com/danielcopper/emu-atlas/issues/221)) ([a85aada](https://github.com/danielcopper/emu-atlas/commit/a85aada9a56899160fbc3ea8451d1585f47427e0)), closes [#219](https://github.com/danielcopper/emu-atlas/issues/219)
+* **pcsx2:** the BIOS image its configuration picks, and the state where none is ([#248](https://github.com/danielcopper/emu-atlas/issues/248)) ([41336c0](https://github.com/danielcopper/emu-atlas/commit/41336c06fd8d5a0567558ff9f370df22f83ee134)), closes [#235](https://github.com/danielcopper/emu-atlas/issues/235)
+* **pcsx2:** the memory-card slots, file or folder, on both arrangements ([#218](https://github.com/danielcopper/emu-atlas/issues/218)) ([64b75ab](https://github.com/danielcopper/emu-atlas/commit/64b75ab5b1378dcccb2304db05fe60216bccaee9)), closes [#217](https://github.com/danielcopper/emu-atlas/issues/217)
+* **pcsx2:** the texture directory the configuration names, and whether replacement is on ([#224](https://github.com/danielcopper/emu-atlas/issues/224)) ([f61d748](https://github.com/danielcopper/emu-atlas/commit/f61d7485a5809566f1ea776ce6c7fd8baed08541)), closes [#223](https://github.com/danielcopper/emu-atlas/issues/223)
+* **rpcs3:** the save tree the emulated PS3's VFS names ([#232](https://github.com/danielcopper/emu-atlas/issues/232)) ([544c652](https://github.com/danielcopper/emu-atlas/commit/544c6521eba99590b681118ece32ab2182db0474)), closes [#231](https://github.com/danielcopper/emu-atlas/issues/231)
+* **vita3k:** the ux0 tree below the preference path, and the binary variant ([#234](https://github.com/danielcopper/emu-atlas/issues/234)) ([03876f8](https://github.com/danielcopper/emu-atlas/commit/03876f837a251e314d6b52f81bca48658d9a2109)), closes [#233](https://github.com/danielcopper/emu-atlas/issues/233)
+* **xemu:** the three machine files that refuse the start, and the fourth that does not ([#249](https://github.com/danielcopper/emu-atlas/issues/249)) ([77f204a](https://github.com/danielcopper/emu-atlas/commit/77f204a12d53bfc11b68f7ac14c86a60a2545b9d)), closes [#237](https://github.com/danielcopper/emu-atlas/issues/237)
+
+
+### Bug Fixes
+
+* **duckstation:** read the texture directory where the emulator resolves it ([#257](https://github.com/danielcopper/emu-atlas/issues/257)) ([ed2f227](https://github.com/danielcopper/emu-atlas/commit/ed2f2273206e62709c1dd4b3459c99f1df68d2bd)), closes [#256](https://github.com/danielcopper/emu-atlas/issues/256)
+* **mods:** pin the configuration section a mod card reads its key from ([#259](https://github.com/danielcopper/emu-atlas/issues/259)) ([addd187](https://github.com/danielcopper/emu-atlas/commit/addd1876f0e6551404d14d5991dc5a2ebc58a46a)), closes [#258](https://github.com/danielcopper/emu-atlas/issues/258)
+* **xemu:** read the configuration where the emulator opens it, not where the arrangement keeps it ([#251](https://github.com/danielcopper/emu-atlas/issues/251)) ([1fec753](https://github.com/danielcopper/emu-atlas/commit/1fec753efb66159c8c31b40fb6a58f04efed5a21)), closes [#250](https://github.com/danielcopper/emu-atlas/issues/250)
+
+
+### Documentation
+
+* bring the prose in line with the shipped surface ([#211](https://github.com/danielcopper/emu-atlas/issues/211)) ([2f2bbeb](https://github.com/danielcopper/emu-atlas/commit/2f2bbeb80cb45fb66bb20b0ad35a4cb893f7387a))
+
 ## [0.3.0](https://github.com/danielcopper/emu-atlas/compare/v0.2.0...v0.3.0) (2026-08-20)
 
 
