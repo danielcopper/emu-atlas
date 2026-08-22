@@ -442,7 +442,7 @@
     },
     {
       "name": "xemus-saves-live-inside-the-emulated-hard-disk",
-      "rationale": "Every Xbox save lives on the emulated hard disk — a disk image xemu.toml names, which the arrangement keeps beside the firmware. The image is one shared file; per-title structure exists only inside its FATX filesystem, so the save-inside-image caveat states the layout machine-readably (UDATA/<title id>) for a tool that can parse it, and a file-level client backs the image up whole. The EEPROM rides as its own named settings group.",
+      "rationale": "Every Xbox save lives on the emulated hard disk — a disk image xemu.toml names, which the arrangement keeps beside the firmware. The image is one shared file; per-title structure exists only inside its FATX filesystem, so the save-inside-image caveat states the layout machine-readably (UDATA/<title id>) for a tool that can parse it, and a file-level client backs the image up whole. The EEPROM rides as its own named settings group. The configuration is read where xemu opens it — under the data home — which on this arrangement is a link back to a directory in the config tree, the shape RetroDECK builds on purpose ('linking back to original location where component will look', component_prepare.sh:16-17). The answer walks the link and names the location the emulator opens, not the one the distribution finds tidy.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -450,6 +450,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\neeprom_path = '/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin'\nhdd_path = '/mnt/sd/retrodeck/bios/xbox_hdd.qcow2'\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -519,12 +522,108 @@
               {
                 "key": "hdd_path",
                 "value": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
-                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
               },
               {
                 "key": "eeprom_path",
                 "value": "/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin",
-                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-xemu-reads-the-flatpaks-own-data-home",
+      "rationale": "The arrangement that makes the base matter. EmuDeck installs xemu as the app.xemu.xemu flatpak (emuDeckXemu.sh:4-5) and links nothing: the configuration sits where the emulator puts it, below the app's own data home, and there is no config-tree twin to find it under. The save answer reads it there and states the same file the firmware answer does, so the two agree about where one file lives.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/app.xemu.xemu/data/xemu/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/home/deck/Emulation/bios/mcpx_1.0.bin'\neeprom_path = '/home/deck/Emulation/saves/xemu/xbox-eeprom.bin'\nhdd_path = '/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2'\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/xemu",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Emulation/storage/xemu",
+          "/var/lib/flatpak/app/app.xemu.xemu"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/Emulation/storage/xemu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/storage/xemu",
+                "files": [
+                  "xbox_hdd.qcow2"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/home/deck/Emulation/saves/xemu",
+                "files": [
+                  "xbox-eeprom.bin"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "save-inside-image",
+              "data": {
+                "emulator": "XEMU",
+                "image": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
+                "layout": "UDATA/<title id>"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "hdd",
+            "readings": [
+              {
+                "key": "hdd_path",
+                "value": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
+                "options_file": "/home/deck/.var/app/app.xemu.xemu/data/xemu/xemu/xemu.toml"
+              },
+              {
+                "key": "eeprom_path",
+                "value": "/home/deck/Emulation/saves/xemu/xbox-eeprom.bin",
+                "options_file": "/home/deck/.var/app/app.xemu.xemu/data/xemu/xemu/xemu.toml"
               }
             ],
             "alternatives": []

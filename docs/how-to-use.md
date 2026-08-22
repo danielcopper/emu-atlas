@@ -731,8 +731,10 @@ refuses with `standalone-variant-unestablished` and the variant named in `data`.
 save directory, so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the
 emulator's own configuration the way the emulator reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's
 `settings.xml` — each at the shipped release; PPSSPP's Linux memstick is fixed by the build, so its card names no config
-at all), and rerouted with symlinks the answer walks. The one exception is the emulator whose own default walks into the
-content's directory — melonDS below.
+at all). Each is looked for under the XDG base the **emulator** opens it from, which is not always where an arrangement
+keeps it — xemu's `xemu.toml` lives under the data home while RetroDECK keeps the real directory in its config tree and
+links it into place — and rerouted with symlinks the answer walks. The one exception is the emulator whose own default
+walks into the content's directory — melonDS below.
 
 ```python
 entry = inst.emulators_for("gc").entries[0]   # 'Dolphin (Standalone)'

@@ -31,15 +31,15 @@
     "XEMU": {
       "saves": {
         "config": {
-          "base": "config",
-          "path": "xemu/xemu.toml"
+          "base": "data",
+          "path": "xemu/xemu/xemu.toml"
         },
         "systems": [
           "xbox"
         ]
       },
       "provenance": {
-        "source": "xemu v0.8.135, the release the shipped binary carries as a whole version string (components/xemu/bin/xemu). Every game's save lives on the emulated Xbox hard disk: a disk image xemu.toml names in [sys.files] hdd_path, beside the console's EEPROM in eeprom_path (config_spec.yml:359-363). The image is one shared file — its FATX filesystem keeps one directory per title id under UDATA/, addressable only by parsing the image, which the save-inside-image caveat states machine-readably with the layout. The EEPROM holds the console's settings and rides as its own named group. On EmuDeck the emulator is the app.xemu.xemu flatpak (emuDeckXemu.sh:4-5), so the launch's flatpak variant reads the app's own XDG homes below ~/.var/app; EmuDeck grants every emulator flatpak --filesystem=host (installEmuFP.sh:33), so configured paths stay host paths."
+        "source": "xemu v0.8.135, the release the shipped binary carries as a whole version string (components/xemu/bin/xemu). xemu keeps xemu.toml under the DATA home, not the config one — the shipped binary takes its base path from SDL_GetPrefPath, which on Linux is $XDG_DATA_HOME/<org>/<app>/, and RetroDECK says the same in its own words while linking a config-tree directory there: 'linking back to original location where component will look', dir_prep \"$XDG_CONFIG_HOME/xemu\" \"$XDG_DATA_HOME/xemu/xemu\" (component_prepare.sh:16-17). The card names the location the emulator opens; where an arrangement keeps the real directory is its own business, and the read walks the link. Every game's save lives on the emulated Xbox hard disk: a disk image xemu.toml names in [sys.files] hdd_path, beside the console's EEPROM in eeprom_path (config_spec.yml:359-363). The image is one shared file — its FATX filesystem keeps one directory per title id under UDATA/, addressable only by parsing the image, which the save-inside-image caveat states machine-readably with the layout. The EEPROM holds the console's settings and rides as its own named group. On EmuDeck the emulator is the app.xemu.xemu flatpak (emuDeckXemu.sh:4-5), so the launch's flatpak variant reads the app's own XDG homes below ~/.var/app; EmuDeck grants every emulator flatpak --filesystem=host (installEmuFP.sh:33), so configured paths stay host paths."
       },
       "flatpak": "app.xemu.xemu"
     },

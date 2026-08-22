@@ -451,57 +451,62 @@ savefile question answers a standalone catalogue entry exactly where a card here
 `standalone-unsupported` everywhere else; which of the two it is runs on evidence, never on the kind of entry.
 
 A card is deliberately **thin**: the configuration file that governs the emulator's save tree (below the XDG base the
-arrangement pins), the catalogue systems the card answers for, and the provenance behind both. Everything else — what
-`SlotA = 8` means, what an empty path key defaults to, how a configured card path templates its region — is knowledge
-written nowhere on the machine, so it lives as cited code beside the card (`atlas/installations.py`), the same split the
-rule cards make with `atlas/mode_rules.py`. The loader refuses a card whose token has no resolver registered.
+arrangement pins), the catalogue systems the card answers for, and the provenance behind both. That base is the one the
+**emulator** opens the file under, never the one an arrangement finds tidy to keep it in: a distribution is free to put
+the real directory elsewhere and link it into place, and the read walks the link like any other. Naming the storage side
+instead would answer correctly on the arrangement that happens to build that link and wrongly everywhere else — which is
+precisely what a card exists to prevent. Everything else — what `SlotA = 8` means, what an empty path key defaults to,
+how a configured card path templates its region — is knowledge written nowhere on the machine, so it lives as cited code
+beside the card (`atlas/installations.py`), the same split the rule cards make with `atlas/mode_rules.py`. The loader
+refuses a card whose token has no resolver registered.
 
 Ten cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s EXI
 device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
 unnamed `title/` tree. PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's `config` is `null`, the honest
 spelling of "no file governs this" — and savedata is one unnamed directory per game below `PSP/SAVEDATA`. xemu
-(v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml`, stated as one shared file with the
-`save-inside-image` caveat carrying the inside layout (`UDATA/<title id>`), the EEPROM beside it as a named settings
-group. Cemu (2.6): the MLC resolved the way the emulator resolves it (`--mlc` flag outranks `settings.xml` outranks the
-default), and the per-title unit templated below it — `usr/save/<save_id>`, granularity `per-game-directory`, the fill
-spelled in the caveat (nn_save.cpp:133-145). Azahar (2125.1.1): the emulated SD read from `qt-config.ini`'s
-`[Data Storage]` group the way the emulator reads it (`use_custom_storage` routes `sdmc_directory`, `\default`
-companions honored — ReadSetting, config.cpp:1442-1450), the per-title unit
-`Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001` below it with compile-time all-zero ids (archive.h:22-24), and
-the extdata tree stated beside it as its own group. DuckStation (the "Legacy" build RetroDECK froze from the 2024-09
-rolling release; citations at stenzek/duckstation@64655818e): two memory-card slots, six modes each — the Dolphin GC
-shape in DuckStation's vocabulary — a per-game `<name>_<slot>.mcd` below `[MemoryCards] Directory` keyed by serial,
-sanitized title, or the content file's own stem (which the resolver fills itself), a shared card at its configured or
-default path, and the DataRoot probed on both spellings the launch environment can pick (qthost.cpp:562-582). PCSX2
-(v2.6.3): up to eight slots — two console ports and six multitap slots that join only when enabled — each card's type
-read off the disk the way `FileMcd_SetType` reads it: a directory at the card's full path is a folder card (per-game
-saves as auto-managed subdirectories, stated with its names refused), anything else the shared `.ps2` image it is; one
-config-side DataRoot either way (Pcsx2Config.cpp:2197-2217), completing the ps2 pair beside the LRPS2 core rule. melonDS
-(1.1): one `<rom stem>.sav` per game in the directory `[Instance0] SaveFilePath` names, the config read the way
-`Config::Load` reads it — `melonDS.toml`, a missing TOML falling back to the pre-1.0 `melonDS.ini` line by line as the
-built-in migration, an unparseable TOML yielding factory defaults — and the empty default landing the save beside the
-ROM itself (root `content_directory`); the stem is filled from named content, held open as `<rom_stem>` for archives,
-whose saves are named after the file inside. RPCS3 (build 7c6b3dcd): the save tree hangs off the emulated PS3's internal
-drive, and `vfs.yml` states where that drive lives — `/dev_hdd0/`, composed off `$(EmulatorDir)`, which `cfg_vfs::get`
-replaces everywhere it appears and which means the emulator's config directory when empty (vfs_config.cpp:14-62). It is
-the first card read through the YAML scalar reader (`atlas.yaml_scalars`), which names the one key of that file it does
-not read rather than guessing at it. Below the drive the unit is `home/<user>/savedata`, one directory per title id; the
-active user is a runtime selection no file records, so **every user home that exists becomes its own group** and a
-caveat says which ones were found — the same stance the Dolphin card takes with its region trees. A second save location
-is stated and not walked: `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, which a sync walking only
-the per-user tree would miss. Vita3K (build 3996, commit `cb1f592c`): one key carries the whole tree — `pref-path` in
-`config.yml`, with everything the emulator keeps hanging off it as `ux0/…`, and saves at `ux0/user/<user>/savedata`, one
-directory per title id (io.cpp:136-143). Its user segment gets the same treatment as RPCS3's, and an empty `pref-path`
-is a refusal rather than a guess: the emulator falls back to a default it derives at run time and writes nowhere
-(config.cpp:189-190). The answers root at `emulator_directory` — no frontend hands a standalone emulator a save
-directory — except where the emulator's own default walks into the content's. On EmuDeck a standalone emulator is
-identified by `%EMULATOR_…%` token or by an allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`,
-`pcsx2-qt.sh`, `melonds.sh` and `vita3k.sh` today), and either way the launch's binary variant gates the answer. Three
-variants are established: an **AppImage** under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app
-id the card names (`flatpak` on the card — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing
-nothing) reads its own homes below `~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which
-EmuDeck unpacks some emulators into (Vita3K) and which ES-DE's own find rule looks for right after the AppImage
-patterns, reads the host's tree like an AppImage does. The rest refuse with `standalone-variant-unestablished`.
+(v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml` — read under the **data** home,
+where the emulator opens it — stated as one shared file with the `save-inside-image` caveat carrying the inside layout
+(`UDATA/<title id>`), the EEPROM beside it as a named settings group. Cemu (2.6): the MLC resolved the way the emulator
+resolves it (`--mlc` flag outranks `settings.xml` outranks the default), and the per-title unit templated below it —
+`usr/save/<save_id>`, granularity `per-game-directory`, the fill spelled in the caveat (nn_save.cpp:133-145). Azahar
+(2125.1.1): the emulated SD read from `qt-config.ini`'s `[Data Storage]` group the way the emulator reads it
+(`use_custom_storage` routes `sdmc_directory`, `\default` companions honored — ReadSetting, config.cpp:1442-1450), the
+per-title unit `Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001` below it with compile-time all-zero ids
+(archive.h:22-24), and the extdata tree stated beside it as its own group. DuckStation (the "Legacy" build RetroDECK
+froze from the 2024-09 rolling release; citations at stenzek/duckstation@64655818e): two memory-card slots, six modes
+each — the Dolphin GC shape in DuckStation's vocabulary — a per-game `<name>_<slot>.mcd` below `[MemoryCards] Directory`
+keyed by serial, sanitized title, or the content file's own stem (which the resolver fills itself), a shared card at its
+configured or default path, and the DataRoot probed on both spellings the launch environment can pick
+(qthost.cpp:562-582). PCSX2 (v2.6.3): up to eight slots — two console ports and six multitap slots that join only when
+enabled — each card's type read off the disk the way `FileMcd_SetType` reads it: a directory at the card's full path is
+a folder card (per-game saves as auto-managed subdirectories, stated with its names refused), anything else the shared
+`.ps2` image it is; one config-side DataRoot either way (Pcsx2Config.cpp:2197-2217), completing the ps2 pair beside the
+LRPS2 core rule. melonDS (1.1): one `<rom stem>.sav` per game in the directory `[Instance0] SaveFilePath` names, the
+config read the way `Config::Load` reads it — `melonDS.toml`, a missing TOML falling back to the pre-1.0 `melonDS.ini`
+line by line as the built-in migration, an unparseable TOML yielding factory defaults — and the empty default landing
+the save beside the ROM itself (root `content_directory`); the stem is filled from named content, held open as
+`<rom_stem>` for archives, whose saves are named after the file inside. RPCS3 (build 7c6b3dcd): the save tree hangs off
+the emulated PS3's internal drive, and `vfs.yml` states where that drive lives — `/dev_hdd0/`, composed off
+`$(EmulatorDir)`, which `cfg_vfs::get` replaces everywhere it appears and which means the emulator's config directory
+when empty (vfs_config.cpp:14-62). It is the first card read through the YAML scalar reader (`atlas.yaml_scalars`),
+which names the one key of that file it does not read rather than guessing at it. Below the drive the unit is
+`home/<user>/savedata`, one directory per title id; the active user is a runtime selection no file records, so **every
+user home that exists becomes its own group** and a caveat says which ones were found — the same stance the Dolphin card
+takes with its region trees. A second save location is stated and not walked: `savedata/vmc`, the virtual memory cards
+for PS1 and PS2 classics, which a sync walking only the per-user tree would miss. Vita3K (build 3996, commit
+`cb1f592c`): one key carries the whole tree — `pref-path` in `config.yml`, with everything the emulator keeps hanging
+off it as `ux0/…`, and saves at `ux0/user/<user>/savedata`, one directory per title id (io.cpp:136-143). Its user
+segment gets the same treatment as RPCS3's, and an empty `pref-path` is a refusal rather than a guess: the emulator
+falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). The answers root at
+`emulator_directory` — no frontend hands a standalone emulator a save directory — except where the emulator's own
+default walks into the content's. On EmuDeck a standalone emulator is identified by `%EMULATOR_…%` token or by an
+allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`, `pcsx2-qt.sh`, `melonds.sh` and `vita3k.sh`
+today), and either way the launch's binary variant gates the answer. Three variants are established: an **AppImage**
+under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app id the card names (`flatpak` on the card —
+melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its own homes below
+`~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which EmuDeck unpacks some emulators into
+(Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads the host's tree like an
+AppImage does. The rest refuse with `standalone-variant-unestablished`.
 
 ## `standalone_firmware.json` — what a standalone emulator expects beside its content
 
