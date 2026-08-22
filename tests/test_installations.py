@@ -2393,6 +2393,25 @@ class TestEmuDeckStandaloneLaunchers:
         )
         assert ed.standalone_firmware_token("%EMULATOR_MELONDS% -f %ROM%") == "MELONDS"
 
+    def test_an_unpacked_binary_is_a_variant_of_its_own(self):
+        # EmuDeck unpacks some emulators out of their AppImage and keeps the
+        # executable at ~/Applications/<Name>/<Name> (emuDeckVita3K.sh:21-24),
+        # which is where ES-DE's own find rule looks right after the AppImage
+        # patterns. The directory alone is not enough — the executable inside
+        # it is what the probe answers on.
+        machine = FixtureMachine(
+            {**self.BASE, f"{HOME}/Applications/Vita3K/Vita3K": ""},
+        )
+        ed = atlas.EmuDeck(HOME, machine)
+        assert ed.standalone_firmware_token("%EMULATOR_VITA3K% %ROM%") == "VITA3K"
+
+    def test_a_directory_without_the_executable_is_not_the_binary_variant(self):
+        machine = FixtureMachine(
+            self.BASE, dirs=[f"{HOME}/Applications/Vita3K"]
+        )
+        ed = atlas.EmuDeck(HOME, machine)
+        assert ed.standalone_firmware_token("%EMULATOR_VITA3K% %ROM%") is None
+
     def test_a_carded_flatpak_without_an_app_id_still_refuses_the_firmware_token(self):
         # Azahar's card names no flatpak id — a flatpak-only launch stays
         # ungated for firmware exactly as it does for saves.

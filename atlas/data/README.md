@@ -456,8 +456,8 @@ arrangement pins), the catalogue systems the card answers for, and the provenanc
 written nowhere on the machine, so it lives as cited code beside the card (`atlas/installations.py`), the same split the
 rule cards make with `atlas/mode_rules.py`. The loader refuses a card whose token has no resolver registered.
 
-Nine cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
-EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
+Ten cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s EXI
+device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
 unnamed `title/` tree. PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's `config` is `null`, the honest
 spelling of "no file governs this" — and savedata is one unnamed directory per game below `PSP/SAVEDATA`. xemu
 (v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml`, stated as one shared file with the
@@ -489,13 +489,19 @@ not read rather than guessing at it. Below the drive the unit is `home/<user>/sa
 active user is a runtime selection no file records, so **every user home that exists becomes its own group** and a
 caveat says which ones were found — the same stance the Dolphin card takes with its region trees. A second save location
 is stated and not walked: `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, which a sync walking only
-the per-user tree would miss. The answers root at `emulator_directory` — no frontend hands a standalone emulator a save
+the per-user tree would miss. Vita3K (build 3996, commit `cb1f592c`): one key carries the whole tree — `pref-path` in
+`config.yml`, with everything the emulator keeps hanging off it as `ux0/…`, and saves at `ux0/user/<user>/savedata`, one
+directory per title id (io.cpp:136-143). Its user segment gets the same treatment as RPCS3's, and an empty `pref-path`
+is a refusal rather than a guess: the emulator falls back to a default it derives at run time and writes nowhere
+(config.cpp:189-190). The answers root at `emulator_directory` — no frontend hands a standalone emulator a save
 directory — except where the emulator's own default walks into the content's. On EmuDeck a standalone emulator is
 identified by `%EMULATOR_…%` token or by an allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`,
-`pcsx2-qt.sh` and `melonds.sh` today), and either way the launch's binary variant gates the answer. Two variants are
-established: the AppImage reads the host's own XDG tree, and a flatpak whose app id the card names (`flatpak` on the
-card — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its own homes below
-`~/.var/app`. The rest refuse with `standalone-variant-unestablished`.
+`pcsx2-qt.sh`, `melonds.sh` and `vita3k.sh` today), and either way the launch's binary variant gates the answer. Three
+variants are established: an **AppImage** under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app
+id the card names (`flatpak` on the card — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing
+nothing) reads its own homes below `~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which
+EmuDeck unpacks some emulators into (Vita3K) and which ES-DE's own find rule looks for right after the AppImage
+patterns, reads the host's tree like an AppImage does. The rest refuse with `standalone-variant-unestablished`.
 
 ## `standalone_firmware.json` — what a standalone emulator expects beside its content
 
