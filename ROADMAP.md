@@ -102,8 +102,12 @@ deepening.
 ### 5. EmuDeck reality
 
 The arrangement was verified against a live installation at a pinned backend revision (issue #11, closed) and its
-answers carry that evidence. What remains: its own emulator set (coverage-matrix `?` cells), frontend variants (ES-DE
-elsewhere / Pegasus / SRM), companion-health semantics beyond the config-missing case.
+answers carry that evidence. All four standalone questions now go through one variant gate (#226): which binary the
+launch runs decides which XDG bases its trees hang off, so the texture and mod routes answer where the save and firmware
+routes do and refuse with the variant named where nothing is established. What remains: its own emulator set
+(coverage-matrix `?` cells), frontend variants (ES-DE elsewhere / Pegasus / SRM), companion-health semantics beyond the
+config-missing case, and the two variants that establish nothing yet — the Windows build under Proton, and a flatpak no
+save card names an app id for.
 
 ### 6. Firmware follow-ups
 

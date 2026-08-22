@@ -920,19 +920,22 @@ reading there rather than `None`. Its `dir` is the load stage, `<Textures>/<seri
 `needs`: replacements are read one level below the per-game directory, and naming only the root would send a caller
 placing a pack where nothing reads it. Where nobody has read that configuration the entry still refuses with
 `standalone-unsupported` — Vita3K's `pref-path` lives in a `config.yml`, and atlas has no YAML reader — so the split
-runs on evidence, not on the kind of entry. And EmuDeck's standalone entries all refuse this question: it installs each
-emulator as its own flatpak or AppImage, and while the save route now establishes those bases per launch variant, the
-texture route has not been wired to them yet.
+runs on evidence, not on the kind of entry. **On EmuDeck the same cards answer**, below the bases the launch's own
+binary reads: an AppImage under `~/Applications` (or the executable EmuDeck unpacks from one) reads the host's XDG tree,
+and a flatpak whose app id the save card names reads the app's own homes. A launch whose binary establishes neither —
+the Windows build under Proton, a flatpak no card names an id for — refuses with `standalone-variant-unestablished` and
+the variant in `data`, which is a different instruction from "this emulator is not covered".
 
-Three ways this question answers with `Unresolved` instead of a directory, and each is a different instruction:
+Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction:
 
-| Code                           | Meaning                                                                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `core-not-installed`           | the machine established the core is not here — the same code the save routes use                                                     |
-| `standalone-unsupported`       | a standalone emulator whose directory is named only in its own config — or one on an arrangement whose XDG bases are not established |
-| `texture-wiring-unestablished` | atlas carries no texture wiring for this core                                                                                        |
+| Code                               | Meaning                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `core-not-installed`               | the machine established the core is not here — the same code the save routes use                                    |
+| `standalone-unsupported`           | a standalone emulator whose directory is named only in its own config, so no card covers it                         |
+| `standalone-variant-unestablished` | the card covers it, but nothing establishes which tree the launch's binary reads (EmuDeck; `data.variant` names it) |
+| `texture-wiring-unestablished`     | atlas carries no texture wiring for this core                                                                       |
 
-The third is a statement about atlas, never about the emulator. It does **not** say the emulator has no texture-pack
+The last is a statement about atlas, never about the emulator. It does **not** say the emulator has no texture-pack
 feature; most cores are simply outside the packaged knowledge.
 
 Three caveats are this question's own:
@@ -1013,13 +1016,14 @@ and says so with `core-mode-unestablished` — the same word the save route uses
 unknown. Where the file exists and cannot be read, the question is refused rather than answered with a default that file
 may well have overridden.
 
-Three ways this question answers with `Unresolved`:
+Four ways this question answers with `Unresolved`:
 
-| Code                       | Meaning                                                                                                             |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `core-not-installed`       | the machine established the core is not here                                                                        |
-| `standalone-unsupported`   | a standalone emulator whose mod directory is named only in its own config (MAME's `pluginspath`), or one on EmuDeck |
-| `mod-wiring-unestablished` | atlas carries no mod wiring for this core — a statement about atlas, never about the emulator                       |
+| Code                               | Meaning                                                                                                            |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `core-not-installed`               | the machine established the core is not here                                                                       |
+| `standalone-unsupported`           | a standalone emulator whose mod directory is named only in its own config (MAME's `pluginspath`)                   |
+| `standalone-variant-unestablished` | the card covers it, but which tree the launch's binary reads is not established (EmuDeck; `data.variant` names it) |
+| `mod-wiring-unestablished`         | atlas carries no mod wiring for this core — a statement about atlas, never about the emulator                      |
 
 Standalone emulators answer through the catalogue entry, exactly as they do for texture packs and with the same
 asymmetry against their saves. Two caveats are worth branching on, and one absence:
