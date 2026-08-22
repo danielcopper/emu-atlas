@@ -374,8 +374,10 @@ are pinned, which is exactly why these rows need no config of the emulator's to 
 `settings` is **required** and is the one field here that is never read: it names the settings file that would establish
 whether replacement is on, and every standalone answer carries `emulator-config-unread` pointing at it with `enabled`
 left `None`. A card without one would tell a client the switch is unknown and give it nowhere to look. It is a **name**,
-not an address — where that file lives is stated once in `emulator_settings.json`, below. `base` and `subdir` are held
-to the same rules as the core block's root and fragment; `keying` to the same cited-or-absent rule.
+not an address — where that file lives is stated once in `emulator_settings.json`, below. `subdir` hangs off the
+emulator's own directory, which is stated there too, so a row states the tree and never the emulator's name for itself;
+`base` and `subdir` are otherwise held to the same rules as the core block's root and fragment, and `keying` to the same
+cited-or-absent rule.
 
 A card states its directory one of two ways, and exactly one. Most name a fixed subpath below an XDG base — the default
 the emulator opens. PCSX2 names a **configuration key** instead (`textures.directory`: `[Folders] Textures`, with the
@@ -899,7 +901,7 @@ place, so nothing here is a fallthrough. One upstream error is excluded by hand 
 The machine-read half — which systems declare which platform, and whether they are declared, disabled or absent on this
 installation — is never tabled here; the resolvers read the catalogue's own `<platform>` tags live.
 
-## `emulator_settings.json` — one address per settings file
+## `emulator_settings.json` — the emulator's own directory, and one address per settings file
 
 Where each standalone emulator keeps a settings file, keyed by the `%EMULATOR_…%` token and then by the file's own name.
 Read by `atlas.emulator_settings`.
@@ -914,16 +916,26 @@ So a card names a file by **name** and the address lives here, once. What is her
 
 ```json
 "DUCKSTATION": {
+  "directory": {
+    "name": "duckstation",
+    "citation": "[V-source] the DataRoot is the duckstation directory below whichever base the launch picks …",
+    "anchors": { "binary": "duckstation/bin/duckstation-qt", "names": { "duckstation": { "literal": "duckstation" } } }
+  },
   "files": {
     "settings.ini": {
       "bases": ["config", "data"],
-      "path": "duckstation/settings.ini",
+      "path": "settings.ini",
       "citation": "[V-source] the DataRoot is $XDG_CONFIG_HOME/duckstation where that variable is set …"
     }
   }
 }
 ```
 
+- `directory` is the emulator's **own directory** below whichever XDG base a thing of its hangs off, and every path in
+  this table is stated below it. It is one fact rather than a prefix: Dolphin's `Dolphin.ini`, its `Load/Textures` tree
+  and its `GC` cards all live below the directory Dolphin itself calls the user directory, so spelling it into each of
+  them is how one name comes to be written down four times. The texture and mod cards' `subdir` hangs off it too, and
+  the loader refuses a `path` that begins with it.
 - The **key is the file's own name**, and the loader refuses a key that is not the last segment of `path`: two spellings
   of one file is the thing this table exists to prevent.
 - `bases` is a **list** because one emulator's root is a property of its launch rather than of the emulator. DuckStation
@@ -934,6 +946,46 @@ So a card names a file by **name** and the address lives here, once. What is her
 - `citation` is required like every other recorded fact here.
 - Two tests cross the table with the cards: every card names a file the table carries, and the table carries no file no
   card asks for. Together they are what makes a disagreement inexpressible rather than merely unlikely.
+
+### When the directory belongs to the build rather than to the emulator
+
+PrimeHack renamed its user directory from `dolphin-emu` to `primehack` and later renamed it back, and the two
+arrangements ship builds from either side of that change: RetroDECK's component is built from a revision that spells it
+`primehack`, and the Flathub flatpak EmuDeck installs from one that spells it `dolphin-emu`. Both trees exist, under
+those two names, on a machine that has both. So `directory` may state one name per **installation**:
+
+```json
+"PRIMEHACK": {
+  "directory": {
+    "name": "primehack",
+    "citation": "[V-source/V-binary] … CommonPaths.h:22 at shiiion/dolphin 81bfb96 sets NORMAL_USER_DIR \"primehack\" …",
+    "anchors": { "binary": "primehack/bin/primehack", "names": { "primehack": { "literal": ".primehack/" } } },
+    "installations": {
+      "io.github.shiiion.primehack": {
+        "name": "dolphin-emu",
+        "citation": "[V-source/V-binary/V-live] … CommonPaths.h:21 at 53f53e0 sets NORMAL_USER_DIR \"dolphin-emu\" …",
+        "anchors": {
+          "flatpak": "io.github.shiiion.primehack",
+          "binary": "bin/dolphin-emu",
+          "names": { "dolphin-emu": { "literal": ".dolphin-emu/" } }
+        }
+      }
+    }
+  }
+}
+```
+
+The key is the flatpak app id whose build spells it differently — the id a save card names, which is how a resolver
+knows which installation this launch runs. An override stating the default's own name is refused: it reads as
+"established for this installation" while establishing nothing.
+
+`anchors` is why a stated name cannot rot quietly. The name is a compiled-in constant, so the binary that carries it is
+the only honest check, and the block is the same tripwire the texture and mod rows carry (#105) with one addition: an
+anchor may name a `flatpak`, because a build living in an app of its own is not below RetroDECK's components tree. Where
+two spellings exist, each build must carry its own literal **and none of the others** — which is what turns a rename
+into a red test instead of an answer pointing at a directory nothing writes to. RetroDECK's build repository has already
+moved to a PrimeHack revision that spells the directory the other way; the release it currently ships has not, and the
+weekly canary is what will say so first.
 
 What a file _means_ for a question stays with the card and the code that reads it — which keys govern a save tree,
 whether a switch exists, how a legacy file is migrated. An emulator may have two: Dolphin keeps its save settings in

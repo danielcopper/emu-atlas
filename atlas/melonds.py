@@ -101,7 +101,7 @@ class MelonConfigRead:
     unreadable: str | None
 
 
-def _settings_path(name: str, config_home: str) -> str:
+def _settings_path(name: str, config_home: str, flatpak: str | None) -> str:
     """Where this launch opens one of melonDS's two settings files.
 
     The address is the settings table's, not this module's: the save answer,
@@ -109,13 +109,13 @@ def _settings_path(name: str, config_home: str) -> str:
     reader is how two of them came to disagree about another emulator's.
     """
     return emulator_settings.settings_file(TOKEN, name).only(
-        config_home=config_home, data_home=config_home
+        config_home=config_home, data_home=config_home, flatpak=flatpak
     )
 
 
-def config_dir(config_home: str) -> str:
+def config_dir(config_home: str, flatpak: str | None = None) -> str:
     """``emuDirectory`` for a non-portable launch — the directory the TOML sits in."""
-    return os.path.dirname(_settings_path(CONFIG_FILENAME, config_home))
+    return os.path.dirname(_settings_path(CONFIG_FILENAME, config_home, flatpak))
 
 
 def _strtol(raw: str) -> int:
@@ -170,9 +170,9 @@ def _legacy_document(text: str) -> dict[str, Any]:
     return document
 
 
-def read_config(machine: Machine, config_home: str) -> MelonConfigRead:
+def read_config(machine: Machine, config_home: str, flatpak: str | None = None) -> MelonConfigRead:
     """``Config::Load``, performed as reads — the TOML, the legacy INI, or defaults."""
-    toml_path = _settings_path(CONFIG_FILENAME, config_home)
+    toml_path = _settings_path(CONFIG_FILENAME, config_home, flatpak)
     result = machine.read_text(toml_path)
     if result.status not in (READ_OK, READ_MISSING):
         return MelonConfigRead(config=None, unreadable=toml_path)
@@ -186,7 +186,7 @@ def read_config(machine: Machine, config_home: str) -> MelonConfigRead:
         return MelonConfigRead(
             config=MelonConfig(document, toml_path, SOURCE_TOML), unreadable=None
         )
-    ini_path = _settings_path(LEGACY_FILENAME, config_home)
+    ini_path = _settings_path(LEGACY_FILENAME, config_home, flatpak)
     legacy = machine.read_text(ini_path)
     if legacy.status not in (READ_OK, READ_MISSING):
         return MelonConfigRead(config=None, unreadable=ini_path)
@@ -262,7 +262,7 @@ def probed_firmware_keys(extbios: bool, console: int) -> tuple[str, ...]:
     return keys
 
 
-def local_file_path(config_home: str, value: str) -> str:
+def local_file_path(config_home: str, value: str, flatpak: str | None = None) -> str:
     """``Platform::GetLocalFilePath`` — absolute stays, anything else joins the config dir.
 
     Platform.cpp:157-172 at 1.1: a relative spelling (the empty string
@@ -274,5 +274,5 @@ def local_file_path(config_home: str, value: str) -> str:
     """
     if os.path.isabs(value):
         return value
-    directory = config_dir(config_home)
+    directory = config_dir(config_home, flatpak)
     return os.path.join(directory, value) if value else directory

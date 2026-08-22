@@ -55,7 +55,9 @@ class SettingsRead:
     ambiguous: bool
 
 
-def settings_candidates(*, config_home: str, data_home: str) -> tuple[str, ...]:
+def settings_candidates(
+    *, config_home: str, data_home: str, flatpak: str | None = None
+) -> tuple[str, ...]:
     """Where this launch may open ``settings.ini``, in the order the probe reads.
 
     The order and the two bases are the settings table's statement, not this
@@ -65,21 +67,29 @@ def settings_candidates(*, config_home: str, data_home: str) -> tuple[str, ...]:
     candidates and the file that exists speaks for itself.
     """
     return emulator_settings.settings_file(TOKEN, CONFIG_FILENAME).locations(
-        config_home=config_home, data_home=data_home
+        config_home=config_home, data_home=data_home, flatpak=flatpak
     )
 
 
-def data_root_candidates(*, config_home: str, data_home: str) -> tuple[str, ...]:
+def data_root_candidates(
+    *, config_home: str, data_home: str, flatpak: str | None = None
+) -> tuple[str, ...]:
     """The DataRoots those candidates hang off — each settings file's own directory."""
     return tuple(
         os.path.dirname(path)
-        for path in settings_candidates(config_home=config_home, data_home=data_home)
+        for path in settings_candidates(
+            config_home=config_home, data_home=data_home, flatpak=flatpak
+        )
     )
 
 
-def read_settings(machine: Machine, *, config_home: str, data_home: str) -> SettingsRead:
+def read_settings(
+    machine: Machine, *, config_home: str, data_home: str, flatpak: str | None = None
+) -> SettingsRead:
     """Read ``settings.ini`` from whichever DataRoot holds one."""
-    candidates = settings_candidates(config_home=config_home, data_home=data_home)
+    candidates = settings_candidates(
+        config_home=config_home, data_home=data_home, flatpak=flatpak
+    )
     for path in candidates:
         root = os.path.dirname(path)
         result = machine.read_text(path)

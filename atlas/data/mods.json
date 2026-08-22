@@ -19,7 +19,7 @@
         "base": "data",
         "trees": [
           {
-            "subdir": "dolphin-emu/Load/GraphicMods",
+            "subdir": "Load/GraphicMods",
             "keying": null
           }
         ],
@@ -39,9 +39,6 @@
           },
           "Load": {
             "literal": "Load"
-          },
-          "dolphin-emu": {
-            "literal": "dolphin-emu"
           }
         }
       }
@@ -51,7 +48,7 @@
         "base": "data",
         "trees": [
           {
-            "subdir": "primehack/Load/GraphicMods",
+            "subdir": "Load/GraphicMods",
             "keying": null
           }
         ],
@@ -71,9 +68,6 @@
           },
           "Load": {
             "literal": "Load"
-          },
-          "primehack": {
-            "literal": "primehack"
           }
         }
       }
@@ -83,7 +77,7 @@
         "base": "data",
         "trees": [
           {
-            "subdir": "azahar-emu/load/mods",
+            "subdir": "load/mods",
             "keying": {
               "value": "title-id",
               "citation": "[V-binary] the shipped azahar (RetroDECK 0.10.9b components/azahar/bin/azahar) carries the mod loader's path template \"{}mods/{:016X}/\" as a whole NUL-delimited run (0x1ae76e3) — a 16-hex-digit component is a 3DS title id, the same evidence the texture row's keying rests on."
@@ -98,9 +92,6 @@
       "anchors": {
         "binary": "azahar/bin/azahar",
         "names": {
-          "azahar-emu": {
-            "literal": "azahar-emu"
-          },
           "load": {
             "literal": "load"
           },
@@ -115,7 +106,7 @@
         "base": "config",
         "trees": [
           {
-            "subdir": "ppsspp/PSP/PLUGINS",
+            "subdir": "PSP/PLUGINS",
             "keying": {
               "value": "pack",
               "citation": "[V-binary/V-source] The shipped PPSSPPSDL carries \"PLUGINS\" as a whole NUL-delimited run (0x1537b9d) and the loader's error literal \"Failed to load plugin ini: %s/plugin.ini\"; upstream ppsspp@c19acc0 Core/HLE/Plugins.cpp:92-104 walks the plugins directory for SUBDIRECTORIES and takes each one that holds a plugin.ini, composing the plugin's own file as ms0:/PSP/PLUGINS/<subdir>/<file> (:60). The level below the root is therefore a pack directory, not a per-game one."
@@ -136,9 +127,6 @@
           "PSP": {
             "literal": "PSP"
           },
-          "ppsspp": {
-            "literal": "ppsspp"
-          },
           "ppsspp.ini": {
             "literal": "ppsspp.ini"
           }
@@ -150,7 +138,7 @@
         "base": "config",
         "trees": [
           {
-            "subdir": "PCSX2/patches",
+            "subdir": "patches",
             "keying": {
               "value": "serial",
               "citation": "[V-binary] The shipped pcsx2-qt carries the patch file's name template \"{}_{:08X}{}.pnach\" (0x14beb2) and the serial glob \"{}_*.pnach\" (0x121783) as whole NUL-delimited runs: the game's serial and the CRC name the FILE. This is the one row in the family where the keyed level is a file rather than a directory — the patches directory is flat — and the keying is stated anyway, with the file-level fact here, the way the LRPS2 texture card states its fixed 'replacements' sub-level rather than inventing a field for it."
@@ -165,9 +153,6 @@
       "anchors": {
         "binary": "pcsx2/bin/pcsx2-qt",
         "names": {
-          "PCSX2": {
-            "literal": "PCSX2"
-          },
           "PCSX2.ini": {
             "literal": "PCSX2.ini"
           },
@@ -182,7 +167,7 @@
         "base": "data",
         "trees": [
           {
-            "subdir": "Cemu/graphicPacks",
+            "subdir": "graphicPacks",
             "keying": {
               "value": "pack",
               "citation": "[V-binary] the shipped Cemu_relwithdebinfo carries \"graphicPacks\", \"graphicPacks/downloadedGraphicPacks/{}\" and \"rules.txt\" as NUL-delimited literals: the level below the root is a pack directory holding a rules.txt, which is the same evidence — and the same answer — the texture card records for this emulator."
@@ -197,9 +182,6 @@
       "anchors": {
         "binary": "cemu/bin/Cemu_relwithdebinfo",
         "names": {
-          "Cemu": {
-            "literal": "Cemu"
-          },
           "graphicPacks": {
             "literal": "graphicPacks"
           },
