@@ -1254,6 +1254,13 @@ other keys of the same probe set still answer — so a caller sees exactly which
 configuration exists and cannot be read, the entry's `declaration` is `"unreadable"` with `emulator-config-unreadable`:
 which files this launch would probe is unknown, which is not "needs nothing".
 
+**PCSX2 takes two settings to name one file**, and the pair is worth knowing about: `[Folders] Bios` gives the directory
+and `[Filenames] BIOS` the image inside it, chosen by the user in the emulator. A fresh install has the directory set
+and the name empty, and then no game boots at all — so an empty name is stated with `firmware-path-names-no-file` whose
+data carries the `dir` a BIOS belongs in. That is a different answer from a _chosen_ image that is not there, which is a
+required requirement reported `found: "missing"`, and a client would act differently on the two: one says "pick one",
+the other says "fetch this one".
+
 ## Where do this system's ROMs live? (and what launches them)
 
 The same catalogue declares, per system, the directory its ROMs sit in and the file extensions the frontend will launch.

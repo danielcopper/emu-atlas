@@ -87,13 +87,14 @@ from atlas.machine import (
     KIND_FILE,
     KIND_INACCESSIBLE,
     KIND_MISSING,
+    READ_MISSING,
     READ_OK,
     SYMLINK_HOPS,
     Machine,
     PathKind,
     ReadStatus,
 )
-from atlas import melonds
+from atlas import melonds, qt_ini
 from atlas.oddities import SaveMode, load_oddities
 from atlas.standalone_firmware import (
     StandaloneFirmwareCard,
@@ -2574,7 +2575,132 @@ def _melonds_standalone_core(
 # resolvers are — the card states the keys and the claims, the code here
 # reads the emulator's own gating, and a card without its function is the
 # card and the code shipped out of step.
+# PCSX2 v2.6.3 — the expectation takes two settings, not one: a directory to
+# look in and a name to look for. ``FullpathToBios`` combines them and returns
+# nothing at all while the name is empty (Pcsx2Config.cpp:2057-2062), which is
+# the state a fresh install is in.
+_PCSX2_INI = os.path.join("PCSX2", "inis", "PCSX2.ini")
+_PCSX2_DATA_ROOT = "PCSX2"
+_PCSX2_BIOS_DIR_KEY = ("Folders", "Bios")
+_PCSX2_BIOS_DIR_DEFAULT = "bios"
+_PCSX2_BIOS_NAME_KEY = ("Filenames", "BIOS")
+
+
+def _pcsx2_standalone_core(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    system: str,
+    *,
+    config_home: str,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """PCSX2's expectation: the image named inside the directory named.
+
+    Two settings of one file. ``[Folders] Bios`` gives the directory — the
+    same ``LoadPathFromSettings`` shape the memory-card and texture
+    directories use, so a relative value resolves against the DataRoot — and
+    ``[Filenames] BIOS`` gives the image inside it. An empty name is the
+    shipped state rather than a fault: RetroDECK points the directory at its
+    BIOS root and leaves the choice to the user. The answer says so, because
+    "no BIOS chosen" is why a game would not boot.
+    """
+    ini_path = os.path.join(config_home, _PCSX2_INI)
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return (
+            CoreFirmware(
+                core_so=None,
+                label=entry.label,
+                declaration=DECLARATION_UNREADABLE,
+                requirements=(),
+                caveats=(
+                    Caveat(
+                        CAVEAT_EMULATOR_CONFIG_UNREADABLE,
+                        f"PCSX2's configuration ({ini_path}) exists and could not be read — "
+                        "which BIOS image this launch expects is unknown, so the empty list "
+                        "below is not 'needs nothing'",
+                        {"label": entry.label, "config": ini_path},
+                    ),
+                ),
+            ),
+            [],
+        )
+    values = qt_ini.values(result.text or "") if result.status == READ_OK else {}
+    data_root = os.path.join(config_home, _PCSX2_DATA_ROOT)
+    stated_dir = values.get(_PCSX2_BIOS_DIR_KEY, "")
+    if not stated_dir:
+        bios_dir = os.path.join(data_root, _PCSX2_BIOS_DIR_DEFAULT)
+    elif not os.path.isabs(stated_dir):
+        bios_dir = os.path.join(data_root, stated_dir)
+    else:
+        bios_dir = stated_dir
+    by_key = {declared.key: declared for declared in card.config_files}
+    declared = by_key.get("Filenames/BIOS")
+    if declared is None:
+        raise ValueError(
+            f"standalone firmware card {card.token!r} names no entry for the BIOS image — "
+            "the card and the code shipped out of step"
+        )
+    caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
+    name = values.get(_PCSX2_BIOS_NAME_KEY, "")
+    if not name:
+        caveats.append(
+            Caveat(
+                CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
+                f"{entry.label} has no BIOS image chosen — [Filenames] BIOS is empty, and "
+                "FullpathToBios then composes no path at all (Pcsx2Config.cpp:2057-2062), so "
+                "no game boots until one is picked. It would be picked from "
+                f"{bios_dir}, which is where a PlayStation 2 BIOS belongs on this machine",
+                {
+                    "label": entry.label,
+                    "token": card.token,
+                    "key": "Filenames/BIOS",
+                    "declared": "",
+                    "need": NEED_REQUIRED,
+                    "dir": bios_dir,
+                },
+            )
+        )
+        return (
+            CoreFirmware(
+                core_so=None,
+                label=entry.label,
+                declaration=DECLARATION_PACKAGED,
+                requirements=(),
+                caveats=tuple(caveats),
+            ),
+            [],
+        )
+    path = resolve_links(machine, os.path.join(bios_dir, name)) or os.path.join(bios_dir, name)
+    found, checked, observed = _observe(machine, path, None, verify=verify)
+    requirement = FirmwareRequirement(
+        core_so=None,
+        system=system,
+        system_source=SOURCE_CARD,
+        need=NEED_REQUIRED,
+        file_name=os.path.basename(name),
+        path=path,
+        declared=name,
+        description=declared.purpose,
+        identity=None,
+        found=found,
+        checked=checked,
+    )
+    return (
+        CoreFirmware(
+            core_so=None,
+            label=entry.label,
+            declaration=DECLARATION_PACKAGED,
+            requirements=(requirement,),
+            caveats=tuple(caveats),
+        ),
+        [] if observed is None else [observed],
+    )
+
+
 _STANDALONE_CONFIG_RESOLVERS = {
+    "PCSX2": _pcsx2_standalone_core,
     "MELONDS": _melonds_standalone_core,
 }
 
