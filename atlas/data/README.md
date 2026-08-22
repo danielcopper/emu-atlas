@@ -382,6 +382,14 @@ reading a configuration is code, never a card DSL. PCSX2's answer also states th
 replacements are read from `<Textures>/<serial>/replacements` — because an answer naming only the root would send a
 caller placing a pack one level above everything that reads it.
 
+DuckStation names the same key (`[Folders] Textures`, default `textures`) for a different reason, and it is the one
+worth learning from: its directory hangs off a **DataRoot the launch environment picks** — the config home where
+`XDG_CONFIG_HOME` is set and absolute, else `~/.local/share/duckstation`. The card used to name `config` plus a subpath,
+which is right on RetroDECK, whose flatpak sets the variable, and wrong on an EmuDeck AppImage, where the same
+emulator's mod card already read the other root. One emulator's two answers naming two roots is exactly the state a card
+exists to prevent, so the directory is stated as the key it is and read through the probe every question of this
+emulator shares. It states no `switch`, so `enabled` stays `None` with the settings file that would answer it named.
+
 Vita3K is still **absent on purpose**, and a test holds the absence down: it opens no default either — its texture tree
 hangs off `pref-path` in `config.yml` — and that file is YAML, which atlas has no reader for and no runtime dependency
 to gain one. Quoting the path the installer intended would state an arrangement's directory as an emulator's read
