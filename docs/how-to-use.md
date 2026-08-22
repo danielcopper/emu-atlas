@@ -720,7 +720,7 @@ extensions; `complete` is `false`, and deciding which of those files are yours t
 ### Where a standalone emulator's saves live
 
 A standalone catalogue entry answers `savefile_location` where a **standalone save card** covers the emulator its launch
-command names — Dolphin, PPSSPP, xemu, Cemu, Azahar, DuckStation, PCSX2, melonDS and RPCS3 today, keyed by the
+command names — Dolphin, PPSSPP, xemu, Cemu, Azahar, DuckStation, PCSX2, melonDS, RPCS3 and Vita3K today, keyed by the
 `%EMULATOR_…%` token the way the texture cards are. An EmuDeck catalogue may name the token or run a per-emulator
 launcher script — an allowlisted launcher (`tools/launchers/cemu.sh`, `melonds.sh`, …) reaches the same card — and
 either way the launch's binary variant gates the answer. Two variants are established: an AppImage under
@@ -763,6 +763,10 @@ lives **inside** the emulated Xbox hard disk, so the answer names the image as o
 carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id>`) — a file-level client backs the
 image up whole or leaves it, a tool that parses FATX has the layout stated instead of rediscovered, and per-game sync is
 honestly not on offer from outside.
+
+Vita3K is the shortest of the config-read cards: one key, `pref-path`, and the whole `ux0/…` tree hangs off it, with
+saves at `ux0/user/<user>/savedata` — the same per-user shape as RPCS3, answered the same way. An empty `pref-path` is a
+refusal rather than a guess: the emulator falls back to a default it derives at run time and writes nowhere.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the

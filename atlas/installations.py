@@ -7409,6 +7409,157 @@ def _rpcs3_savefile_placement(
     )
 
 
+# ---------------------------------------------------------------------------
+# Vita3K build 3996 (commit cb1f592c) — one configuration key carries the whole
+# tree. ``pref-path`` in config.yml, and everything the emulator keeps hangs
+# off it as ``ux0/…``; saves are ``ux0/user/<user id>/savedata/<title id>``
+# (io.cpp:136-143). Same user-account shape as RPCS3, and the same answer to
+# it: every user directory that exists is stated.
+# ---------------------------------------------------------------------------
+
+_VITA3K_PREF_PATH_KEY = "pref-path"
+_VITA3K_USER_TREE = os.path.join("ux0", "user")
+# The user the emulator's own redirect comment names (io.cpp:203), used where
+# no user directory can be listed — never as a claim that it is the one in use.
+_VITA3K_FIRST_USER = "00"
+
+
+def _vita3k_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavefilePlacement | Unresolved:
+    """Vita3K's save answer: the ux0 tree below the preference path.
+
+    ``pref-path`` is the one key that matters, and an empty one means the
+    emulator's own default preference path (config.cpp:189-190) — a location
+    this build derives at run time rather than writing down, so an unset key
+    is a refusal here rather than an invented directory.
+
+    Below it the unit is ``ux0/user/<user>/savedata``, one directory per title
+    id (io.cpp:136-143). Which user is current is a runtime property no file
+    records, so every user directory found becomes a group of its own.
+    """
+    assert card.config_base is not None and card.config_path is not None
+    config_path = os.path.join(homes.base(card.config_base), card.config_path)
+    result = machine.read_text(config_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) exists and could not be read — where "
+            "its ux0 tree lives is unknowable here",
+            {"emulator": card.token, "config": config_path},
+        )
+    read = read_scalars(result.text or "" if result.status == READ_OK else "")
+    if read.refusal is not None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) states a construct atlas does not read "
+            f"({read.refusal}) — where its ux0 tree lives is unknowable here",
+            {"emulator": card.token, "config": config_path, "reason": read.refusal},
+        )
+    stated = read.get(_VITA3K_PREF_PATH_KEY) if _VITA3K_PREF_PATH_KEY not in read.skipped else None
+    if not stated:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) names no pref-path, and an empty one "
+            "means a default this build derives at run time rather than writing down "
+            "(config.cpp:189-190) — where its ux0 tree lives is not established here",
+            {"emulator": card.token, "config": config_path},
+        )
+    host = sandbox.host(_VITA3K_PREF_PATH_KEY, stated)
+    if host.path is None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"the preference path Vita3K's configuration names could not be located from "
+            f"here ({config_path}) — nothing this answer could anchor at",
+            {"emulator": card.token, "config": config_path},
+        )
+    user_root = os.path.join(host.path, _VITA3K_USER_TREE)
+    listing = machine.glob(os.path.join(user_root, "*"))
+    users = tuple(sorted(os.path.basename(path) for path in listing.matches))
+    groups = tuple(
+        FileGroup(
+            dir=os.path.join(user_root, user, "savedata"),
+            files=None,
+            granularity=GRANULARITY_PER_GAME_DIRECTORY,
+            role=ROLE_BATTERY,
+        )
+        for user in (users or (_VITA3K_FIRST_USER,))
+    )
+    directory = groups[0].dir
+    caveats: list[Caveat] = [
+        *extra_caveats,
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "each directory below savedata is one title's own, named by its title id and "
+            "written by the game — move a directory whole rather than its files",
+            {
+                "core": card.token,
+                "dir": directory,
+                "role": ROLE_BATTERY,
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
+            },
+        ),
+        Caveat(
+            CAVEAT_CORE_MODE_UNESTABLISHED,
+            "which user the emulator runs as is a runtime property — its own redirect names "
+            f"user {_VITA3K_FIRST_USER} (io.cpp:203) — and no file records the current one, "
+            "so every user directory found here is stated"
+            + ("" if listing.status == GLOB_COMPLETE else "; the tree could not be listed in full"),
+            {
+                "core": card.token,
+                "reason": "the active user is not recorded on disk",
+                "users": ",".join(users) if users else _VITA3K_FIRST_USER,
+            },
+        ),
+    ]
+    physical, link_caveats = _link_view(machine, directory)
+    caveats.extend(link_caveats)
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=groups,
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=GRANULARITY_PER_GAME_DIRECTORY,
+            mode="pref-path",
+            readings=(
+                _reading_with_file(
+                    OptionReading(
+                        _VITA3K_PREF_PATH_KEY,
+                        stated,
+                        f'config.yml: {_VITA3K_PREF_PATH_KEY}: "{stated}"',
+                        None,
+                    ),
+                    config_path if result.status == READ_OK else None,
+                ),
+            ),
+            alternatives=(),
+            provenance=(
+                f"standalone save card '{card.token}': the preference path from config.yml "
+                "(config.cpp:189-190 at commit cb1f592c)"
+            ),
+        ),
+    )
+
+
 _STANDALONE_SAVE_RESOLVERS = {
     "DOLPHIN": _dolphin_savefile_placement,
     "PPSSPP": _ppsspp_savefile_placement,
@@ -7419,6 +7570,7 @@ _STANDALONE_SAVE_RESOLVERS = {
     "PCSX2": _pcsx2_savefile_placement,
     "MELONDS": _melonds_savefile_placement,
     "RPCS3": _rpcs3_savefile_placement,
+    "VITA3K": _vita3k_savefile_placement,
 }
 
 
@@ -7492,6 +7644,7 @@ _EMUDECK_LAUNCHER_CARDS = {
     "pcsx2-qt": "PCSX2",
     "melonds": "MELONDS",
     "rpcs3": "RPCS3",
+    "vita3k": "VITA3K",
 }
 
 # The binary variants an EmuDeck launcher picks between, in its probe order
@@ -7502,6 +7655,12 @@ _EMUDECK_LAUNCHER_CARDS = {
 # answers only where the card names the app id (the rest, and Proton, refuse
 # with the variant named).
 _EMUDECK_VARIANT_APPIMAGE = "appimage"
+# An emulator EmuDeck extracts out of its AppImage and keeps as a plain
+# executable at ``~/Applications/<Name>/<Name>`` (emuDeckVita3K.sh:21-24).
+# ES-DE's own find rule lists that path right after the AppImage patterns
+# (es_find_rules.xml), so the probe tries it in the same order. Its trees are
+# the host's own, because nothing sandboxes it any more than an AppImage.
+_EMUDECK_VARIANT_BINARY = "binary"
 _EMUDECK_VARIANT_FLATPAK = "flatpak"
 _EMUDECK_VARIANT_PROTON = "proton"
 _EMUDECK_VARIANT_UNKNOWN = "unestablished"
@@ -13177,6 +13336,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         directories, which is the installed-set that listing enumerates. An
         unreadable directory makes the pick unestablished rather than "none":
         the launcher would still look there.
+
+        Between those two sits the extracted binary: EmuDeck unpacks some
+        emulators out of their AppImage and keeps the executable at
+        ``~/Applications/<Name>/<Name>`` (emuDeckVita3K.sh:21-24), which is
+        exactly where ES-DE's own find rules look right after the AppImage
+        patterns (es_find_rules.xml), and which ``vita3k.sh`` finds by name
+        inside that directory.
         """
         wanted = name.casefold()
         apps = self._machine.glob(os.path.join(self._home, "Applications", "*"))
@@ -13184,6 +13350,14 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             base = os.path.basename(path).casefold()
             if base.startswith(wanted) and base.endswith(".appimage"):
                 return _EMUDECK_VARIANT_APPIMAGE
+        for path in apps.matches:
+            if os.path.basename(path).casefold() != wanted:
+                continue
+            inner = self._machine.glob(os.path.join(path, "*"))
+            if any(os.path.basename(p).casefold() == wanted for p in inner.matches):
+                return _EMUDECK_VARIANT_BINARY
+            if inner.status != GLOB_COMPLETE:
+                return _EMUDECK_VARIANT_UNKNOWN
         if apps.status != GLOB_COMPLETE:
             return _EMUDECK_VARIANT_UNKNOWN
         flatpak_roots = (
@@ -13252,14 +13426,16 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """The XDG bases the picked binary reads, or ``None`` where none are established.
 
         The AppImage variant reads the host's own tree (emuDeckCemu.sh:13,
-        vars.sh:4-5). The flatpak variant reads the app's own homes below
-        ``~/.var/app`` — established only where the card names the app id the
-        arrangement installs; EmuDeck grants every emulator flatpak
+        vars.sh:4-5), and so does the extracted binary — nothing sandboxes
+        either, and EmuDeck writes the one it unpacks at the plain XDG default
+        (emuDeckVita3K.sh:7). The flatpak variant reads the app's own homes
+        below ``~/.var/app`` — established only where the card names the app
+        id the arrangement installs; EmuDeck grants every emulator flatpak
         ``--filesystem=host`` (installEmuFP.sh:33), so paths configured
         inside those homes stay host paths. Proton, and a flatpak no card
         names an id for, have no established bases.
         """
-        if variant == _EMUDECK_VARIANT_APPIMAGE:
+        if variant in (_EMUDECK_VARIANT_APPIMAGE, _EMUDECK_VARIANT_BINARY):
             return self._standalone_xdg_homes()
         if variant == _EMUDECK_VARIANT_FLATPAK and card.flatpak is not None:
             app_dir = os.path.join(self._home, ".var", "app", card.flatpak)
@@ -13284,7 +13460,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if launch.token is None or launch.probe_name is None or "-w" in launch.args:
             return None
         variant = self._launch_variant(launch)
-        if variant == _EMUDECK_VARIANT_APPIMAGE:
+        if variant in (_EMUDECK_VARIANT_APPIMAGE, _EMUDECK_VARIANT_BINARY):
+            # Both read the host's own tree, so the token stands whether or not
+            # a save card exists for the emulator — the same rule
+            # :meth:`_standalone_homes_for` applies.
             return launch.token
         card = lookup_standalone_save_card(launch.token)
         if (

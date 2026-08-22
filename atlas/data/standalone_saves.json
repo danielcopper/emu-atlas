@@ -126,6 +126,20 @@
       "provenance": {
         "source": "RPCS3 build 7c6b3dcd, the revision the shipped binary names. The save tree hangs off the emulated PS3's internal drive, whose host directory vfs.yml states: the key /dev_hdd0/, defaulting to $(EmulatorDir)dev_hdd0/ (vfs_config.h:13). $(EmulatorDir) is itself a key of that file, and an empty one means the emulator's config directory — cfg_vfs::get replaces the token everywhere it appears and appends a separator where one is missing (vfs_config.cpp:14-62). Below the drive, saves are one directory per title id under home/<user>/savedata: the binary carries '/dev_hdd0/home/%08u/savedata/' as a whole string, beside '/dev_hdd0/home/%08d/' and the trophy tree. The user is a runtime selection — Emulator::m_usr initialises to '00000001' (System.h:164) and the user manager changes it — and nothing on disk records which one is current, so the answer states the tree of every user home that exists and names the uncertainty. Both arrangements wire the first user: RetroDECK links saves/ps3/rpcs3 at dev_hdd0/home/00000001/savedata (component_prepare.sh), EmuDeck the same path from its own saves folder (emuDeckRPCS3.sh:189) and runs the AppImage (emuDeckRPCS3.sh:4-5). A second save location sits outside the per-user tree entirely — '/dev_hdd0/savedata/vmc/', the virtual memory cards for PS1 and PS2 classics, also a whole string in the binary — and is stated as a caveat rather than a group, because what is written there and under which names has not been read. config.yml stays unread: it is nested YAML, and nothing this answer needs is in it."
       }
+    },
+    "VITA3K": {
+      "saves": {
+        "config": {
+          "base": "config",
+          "path": "Vita3K/config.yml"
+        },
+        "systems": [
+          "psvita"
+        ]
+      },
+      "provenance": {
+        "source": "Vita3K build 3996, whose corresponding commit is cb1f592c. One configuration key carries the whole tree: pref-path in config.yml, and everything the emulator keeps hangs off it as ux0/… — an empty value means the emulator's own default preference path (config.cpp:189-190, :362-363). Saves are per user then per title: init_savedata_app_path composes <pref-path>/ux0/user/<user id>/savedata/<title id> (io.cpp:136-143), and the redirect comment at :203 spells the norm — 'Redirect savedata0: to ux0:user/00/savedata/<title_id>'. Which user is current is a runtime property no file records, so every user directory found is stated as its own tree; RetroDECK links saves/psvita/vita3k at the first one and marks its own uncertainty in the script ('# Multi-user safe?'), EmuDeck links its saves folder at the same path (emuDeckVita3K.sh:75). EmuDeck installs the emulator as an extracted binary rather than an AppImage — ~/Applications/Vita3K/Vita3K (:5-6, :21-24), which ES-DE's own find rule lists right after the AppImage patterns — and its configuration is the host's own $HOME/.config/Vita3K/config.yml (:7). The config file is read with the YAML scalar reader, which names the keys it does not read: config.yml carries five lists it skips, and none of them is this one."
+      }
     }
   }
 }
