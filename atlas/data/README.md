@@ -958,8 +958,10 @@ git clone https://github.com/stenzek/duckstation ~/src/duckstation
 python scripts/generate_duckstation_bios.py --source ~/src/duckstation --revision 64655818e
 ```
 
-With no `-o`, each output defaults to its sibling beside this file, resolved relative to the repo root so the command
-works from any working directory. Pass `-o <path>` to write elsewhere.
+The firmware-hash generator takes `-o <path>` to write elsewhere; with no `-o`, each output goes to its sibling beside
+this file, resolved relative to the repo root so the command works from any working directory. The DuckStation one takes
+no destination at all: it produces exactly one packaged file, and a writable destination would put a filesystem write in
+the hands of whoever composed the command line rather than in the package layout.
 
 ## Update discipline
 

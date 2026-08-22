@@ -22,9 +22,11 @@ the network. Clone it first, then run the generator against the checkout:
     python scripts/generate_duckstation_bios.py --source ~/src/duckstation \\
         --revision 64655818e
 
-With no ``-o`` the output defaults to ``atlas/data/duckstation_bios.json``
-(resolved relative to the repo root, so the command works from any working
-directory); ``-o`` may name another ``.json`` path inside the repository.
+The output is always ``atlas/data/duckstation_bios.json``, resolved relative to
+the repo root so the command works from any working directory. There is no
+destination argument: this generator produces one packaged data file, and a
+writable destination would be a filesystem write decided by whoever composed
+the command line rather than by the package layout.
 """
 
 import argparse
@@ -88,29 +90,6 @@ def resolve_source(raw: str) -> Path:
         if not target.is_relative_to(checkout):
             raise ValueError(f"{relative} resolves outside {checkout}")
     return checkout
-
-
-def resolve_output(raw: str) -> Path:
-    """Resolve ``-o`` to the JSON file this run writes, and refuse anything else.
-
-    What this generator produces is one packaged data file, so every
-    legitimate destination is inside this repository — and confining the write
-    to it is what keeps a wandering argument (``../../…``, a symlinked
-    directory) from turning a dev-time step into an arbitrary write. The order
-    matters: resolve first, then test, since a check applied to the spelling
-    rather than to the resolved path is no check at all. Raises ``ValueError``
-    like :func:`resolve_source`.
-    """
-    output = Path(raw).expanduser().resolve()
-    if output.suffix != ".json":
-        raise ValueError(f"the output must be a .json path, got {raw}")
-    if not output.is_relative_to(REPO_ROOT):
-        raise ValueError(f"the output must be inside {REPO_ROOT}, got {output}")
-    if output.is_dir():
-        raise ValueError(f"the output path is a directory: {output}")
-    if not output.parent.is_dir():
-        raise ValueError(f"no directory to write into: {output.parent}")
-    return output
 
 
 def parse_sizes(header: str) -> dict[str, int]:
@@ -197,16 +176,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, help="local duckstation checkout to read")
     parser.add_argument("--revision", required=True, help="the revision the checkout is at")
-    parser.add_argument("-o", "--output", default=str(DEFAULT_OUTPUT), help="where to write")
     args = parser.parse_args(argv)
     try:
         checkout = resolve_source(args.source)
-        output = resolve_output(args.output)
         table, count = build(checkout, args.revision)
     except ValueError as error:
         parser.error(str(error))
-    output.write_text(json.dumps(table, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"{output}: {count} images at {args.revision}")
+    DEFAULT_OUTPUT.write_text(
+        json.dumps(table, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(f"{DEFAULT_OUTPUT}: {count} images at {args.revision}")
     return 0
 
 
