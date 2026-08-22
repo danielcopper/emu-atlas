@@ -724,11 +724,12 @@ command names — Dolphin, PPSSPP, xemu, Cemu, Azahar, DuckStation, PCSX2, melon
 `%EMULATOR_…%` token the way the texture cards are. An EmuDeck catalogue may name the token or run a per-emulator
 launcher script — an allowlisted launcher (`tools/launchers/cemu.sh`, `melonds.sh`, …) reaches the same card — and
 either way the launch's binary variant gates the answer. Two variants are established: an AppImage under
-`~/Applications` reads the host's own XDG tree, and a flatpak whose app id the card names (melonDS's
-`net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads the app's own homes below `~/.var/app`.
-A variant whose config is not established (the Windows build under Proton via `-w`, a flatpak no card names an id for)
-refuses with `standalone-variant-unestablished` and the variant named in `data`. No frontend hands these emulators a
-save directory, so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the
+`~/Applications` reads the host's own XDG tree, and a flatpak whose app id the card names reads the app's own homes
+below `~/.var/app` — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright and probes nothing for, plus
+xemu, Dolphin and PPSSPP, which EmuDeck installs as flatpaks and the probe finds among the installed ones. A variant
+whose config is not established (the Windows build under Proton via `-w`, a flatpak no card names an id for) refuses
+with `standalone-variant-unestablished` and the variant named in `data`. No frontend hands these emulators a save
+directory, so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the
 emulator's own configuration the way the emulator reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's
 `settings.xml` — each at the shipped release; PPSSPP's Linux memstick is fixed by the build, so its card names no config
 at all). Each is looked for under the XDG base the **emulator** opens it from, which is not always where an arrangement
