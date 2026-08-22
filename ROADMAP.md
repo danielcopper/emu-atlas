@@ -90,10 +90,12 @@ the first flatpak-variant answer on EmuDeck (#219), plus its BIOS expectations a
 (#220: the paths are configuration values, and which of them a launch probes is `verifySetup`'s own live decision), and
 RPCS3 (#231: the save tree the emulated PS3's own VFS names, one directory per title id below every user home that
 exists — read through the YAML scalar reader of #229, which is what unblocked it), and Vita3K (#233: the `ux0` tree
-below `pref-path`, plus the extracted-binary launch variant EmuDeck installs it as). Each sub-issue replaces the
-`Unresolved` standalone outcome for its emulator, save placement + BIOS expectations + config sources, on RetroDECK and
-EmuDeck both. Candidates next: Vita3K's texture directory and its firmware, RPCS3's own BIOS slice (`dev_flash`), PPSSPP
-deepening.
+below `pref-path`, plus the extracted-binary launch variant EmuDeck installs it as), and DuckStation's BIOS expectations
+(#236: the first `search` firmware card — the emulator names no file, so the answer is a directory, the emulator's own
+size filter, and its recognition table packaged from source, with the pick stated only where a content check was asked
+for). Each sub-issue replaces the `Unresolved` standalone outcome for its emulator, save placement + BIOS expectations +
+config sources, on RetroDECK and EmuDeck both. Candidates next: Vita3K's texture directory and its firmware, RPCS3's own
+BIOS slice (`dev_flash`), PPSSPP deepening.
 
 ### 5. EmuDeck reality
 

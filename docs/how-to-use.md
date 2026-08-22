@@ -1231,7 +1231,7 @@ present file because no packaged identity can exist for a user-supplied key file
 `core_so: null` and `system_source: "card"`, and its `path` may lie outside the firmware root — the emulator's own tree
 is the door that matters.
 
-A card states its probes one of two ways, and melonDS is the second: **the paths are configuration values**, not fixed
+A card states its probes one of three ways, and melonDS is the second: **the paths are configuration values**, not fixed
 names under a tree. Its card names the keys (`[DS] BIOS9Path`, `[DSi] NANDPath`, …) and the resolver reads each value
 the way `OpenLocalFile` reads it — absolute as spelled, anything else below the melonDS config directory. Which keys are
 probed at all is read live too, because the emulator decides it live: `verifySetup` asks two switches, so DSi mode adds
@@ -1269,6 +1269,33 @@ in the firmware answer at all, because the emulator generates one where none exi
 — the save answer already names it as a settings group, and stating it twice would file save data under firmware. The
 hard disk _is_ in both answers on purpose: the console needs one to start, and every save lives inside it, so each
 answer names it and says which aspect it means.
+
+**DuckStation names no file at all**, which is the third way a card can state its probes and the one that changes what
+`verify` means. `[BIOS] SearchDirectory` names a directory, three per-region keys may name an image inside it, and where
+they are empty — the state both arrangements ship — the emulator keeps every file of an accepted size and works out what
+it is by hashing it against a table compiled into its binary. Atlas carries that table, so the answer can name the
+image; what it will not do is claim one without reading the bytes:
+
+```python
+answer = inst.firmware_for_system("psx")             # no verify: presence is not the question here
+core = answer.cores[0]                                # 'DuckStation (Legacy) (Standalone)'
+[r.file_name for r in core.requirements]              # [] — nothing was hashed, so nothing is claimed
+[c.code for c in core.caveats]                        # [..., 'firmware-search-unverified']
+
+answer = inst.firmware_for_system("psx", verify=True)
+core = answer.cores[0]
+[r.file_name for r in core.requirements]              # ['scph5500.bin'] — the image this launch would boot
+[c.code for c in core.caveats]                        # [..., 'firmware-image-identified', 'firmware-image-ambiguous']
+```
+
+Read those three codes as one sentence about content. `firmware-search-unverified` carries the directory and the count
+of files whose size the emulator accepts — on the reference machine 27, several of them Saturn dumps that happen to be
+exactly 512 KiB, which is why the size test cannot be the answer. `firmware-image-identified` names what the picked file
+_is_ in the emulator's own words (`SCPH-5500 (v3.0 09-09-96 J)`) and the region it belongs to. And
+`firmware-image-ambiguous` is the honest limit: where several images rank alike, the emulator keeps whichever one the
+directory hands it last, and no read reproduces that order — five images tie on the reference machine, so the file named
+is one of them rather than the one that boots. An image the table does not know is not a fault either: DuckStation boots
+it with a warning, so it is stated as the pick with `firmware-content-unidentified` beside it.
 
 ## Where do this system's ROMs live? (and what launches them)
 

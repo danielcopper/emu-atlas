@@ -95,14 +95,16 @@ from atlas.machine import (
     PathKind,
     ReadStatus,
 )
-from atlas import melonds, qt_ini
+from atlas import duckstation, melonds, qt_ini
 from atlas.oddities import SaveMode, load_oddities
 from atlas.standalone_firmware import (
     StandaloneFirmwareCard,
     StandaloneFirmwareConfigFile,
+    StandaloneFirmwareSearch,
     lookup_standalone_firmware_card,
 )
 from atlas.placement import (
+    CAVEAT_CORE_MODE_UNESTABLISHED,
     ROOT_SYSTEM_DIRECTORY,
     UNRESOLVED_CORE_NOT_INSTALLED,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -217,6 +219,23 @@ CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY = "firmware-content-contradictory"
 # content (unidentified), the fields describe no single file (contradictory),
 # or — this one — the request never named content at all.
 CAVEAT_FIRMWARE_CONTENT_UNSTATED = "firmware-content-unstated"
+
+# The search family: an emulator that names no file, only a directory to look
+# in. All three are statements about what a *content* read did or did not
+# establish, which is the only thing such an answer can rest on.
+# The bytes at this path are a row of the emulator's own recognition table, so
+# this is the image it would boot — the positive counterpart of
+# CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED, and stated rather than left implicit
+# because a caller cannot re-derive it without the table.
+CAVEAT_FIRMWARE_IMAGE_IDENTIFIED = "firmware-image-identified"
+# Two or more images rank exactly alike and the emulator keeps whichever one
+# the directory hands it last — an order no read reproduces, so which of them
+# boots is not established.
+CAVEAT_FIRMWARE_IMAGE_AMBIGUOUS = "firmware-image-ambiguous"
+# Files of an accepted size are there and nothing was hashed, so whether any
+# of them is a BIOS is unanswered — the degradation of asking a content
+# question without asking for a content check.
+CAVEAT_FIRMWARE_SEARCH_UNVERIFIED = "firmware-search-unverified"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
 # both declare firmware0_path = "filename.ext" with opt = "true/false". The
@@ -2831,10 +2850,353 @@ def _xemu_standalone_core(
     )
 
 
+# DuckStation (the frozen fork build, 2024-09-19) — the emulator that names no
+# file. A directory is searched, every file of an accepted size is kept, and
+# what it *is* is decided by hashing it against a table compiled into the
+# binary. So the answer is a question about content, and without a content
+# check there is nothing to answer with: the honest degradation is to name the
+# directory and say the identification was not asked for.
+_DUCKSTATION_ANY_REGION = "any"
+
+
+def _duckstation_unreadable_core(entry: CatalogueEntry, path: str) -> CoreFirmware:
+    """The settings file exists and could not be read — present, unexplained."""
+    return CoreFirmware(
+        core_so=None,
+        label=entry.label,
+        declaration=DECLARATION_UNREADABLE,
+        requirements=(),
+        caveats=(
+            Caveat(
+                CAVEAT_EMULATOR_CONFIG_UNREADABLE,
+                f"DuckStation's configuration ({path}) exists and could not be read — where "
+                "this launch searches for a BIOS image is unknown, so the empty list below "
+                "is not 'needs nothing'",
+                {"label": entry.label, "config": path},
+            ),
+        ),
+    )
+
+
+def _duckstation_named_image(
+    machine: Machine,
+    entry: CatalogueEntry,
+    *,
+    system: str,
+    region: str,
+    key: str,
+    name: str,
+    bios_dir: str,
+    purpose: str,
+    verify: bool,
+) -> tuple[FirmwareRequirement, Caveat | None]:
+    """One region key that names an image: a plain path, composed the way the emulator composes it.
+
+    The value is joined onto the search directory rather than read as a path
+    of its own (``Path::Combine(EmuFolders::Bios, bios_name)``, bios.cpp:349),
+    which is why a name is what belongs in the setting.
+    """
+    composed = os.path.join(bios_dir, name)
+    path = resolve_links(machine, composed) or composed
+    found, checked, observed = _observe(machine, path, None, verify=verify)
+    requirement = FirmwareRequirement(
+        core_so=None,
+        system=system,
+        system_source=SOURCE_CARD,
+        need=NEED_REQUIRED,
+        file_name=os.path.basename(name),
+        path=path,
+        declared=name,
+        description=f"{purpose} — the image this launch opens for a {region} console ({key})",
+        identity=None,
+        found=found,
+        checked=checked,
+    )
+    del entry
+    return requirement, observed
+
+
+def _duckstation_sized_files(
+    machine: Machine, table: duckstation.BiosTable, bios_dir: str
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Every file in the directory the search would keep, and where the walk stopped short.
+
+    Two globs, because upstream's ``FindFiles`` is asked for hidden names too
+    (``FILESYSTEM_FIND_HIDDEN_FILES``) and a wildcard here never matches a
+    leading dot. The size test is the emulator's own first filter, and it is
+    free: a wrong size settles the file without reading a byte of it.
+    """
+    matches: list[str] = []
+    unreadable: list[str] = []
+    for pattern in ("*", ".*"):
+        result = machine.glob(os.path.join(bios_dir, pattern))
+        matches.extend(result.matches)
+        unreadable.extend(result.unreadable)
+    kept = [path for path in sorted(set(matches)) if table.accepts_size(machine.file_size(path))]
+    return tuple(kept), tuple(sorted(set(unreadable)))
+
+
+def _duckstation_candidates(
+    machine: Machine, table: duckstation.BiosTable, paths: tuple[str, ...]
+) -> tuple[duckstation.BiosCandidate, ...]:
+    """The kept files with their identities — the content read the emulator performs."""
+    candidates = []
+    for path in paths:
+        digest = machine.file_digest(path, DIGEST_MD5)
+        image = None if digest is None else table.identify(digest)
+        candidates.append(duckstation.BiosCandidate(path=path, image=image))
+    return tuple(candidates)
+
+
+def _duckstation_search_caveats(
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    *,
+    bios_dir: str,
+    pick: duckstation.BiosPick,
+    table: duckstation.BiosTable,
+) -> list[Caveat]:
+    """What the pick is, and the two ways it is less than a decision."""
+    caveats: list[Caveat] = []
+    image = pick.chosen.image
+    if image is None:
+        caveats.append(
+            Caveat(
+                CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED,
+                f"{pick.chosen.path} is of a size this emulator accepts and its bytes are in "
+                "no row of DuckStation's own table, so what console it is stays unknown — the "
+                "emulator boots such an image anyway and says 'Using an unknown BIOS'. The one "
+                "image it recognises without a hash is the OpenBIOS replacement, by an "
+                f"eight-byte signature at offset {table.openbios.get('offset')}, which no read "
+                "through atlas's seam reaches",
+                {"path": pick.chosen.path, "dir": bios_dir, "token": card.token},
+            )
+        )
+    else:
+        caveats.append(
+            Caveat(
+                CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
+                f"{pick.chosen.path} is {image.name} — DuckStation's own table knows these "
+                f"bytes, and this is the image it would boot; region {image.region}",
+                {
+                    "path": pick.chosen.path,
+                    "image": image.name,
+                    "region": image.region,
+                    "token": card.token,
+                    "table": str(table.meta.get("revision", "")),
+                },
+            )
+        )
+    if not pick.decided:
+        caveats.append(
+            Caveat(
+                CAVEAT_FIRMWARE_IMAGE_AMBIGUOUS,
+                f"{entry.label} has {len(pick.tied)} images in {bios_dir} that rank exactly "
+                "alike, and the emulator keeps the last one the directory hands it — an order "
+                "no read reproduces, so which of them boots is not established here",
+                {
+                    "label": entry.label,
+                    "dir": bios_dir,
+                    "tied": str(len(pick.tied)),
+                    "chosen": pick.chosen.path,
+                },
+            )
+        )
+    return caveats
+
+
+def _duckstation_standalone_core(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    system: str,
+    *,
+    data_home: str,
+    config_home: str,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """DuckStation's expectation: a directory, and whatever in it is a BIOS.
+
+    Three region keys may name an image and each is answered on its own, since
+    the console region a disc sets decides which one is read. Where a key is
+    empty — the state both arrangements ship — the search governs, and the
+    search is a content question: without a hash check there is a directory
+    and a count, and saying more than that would be a guess dressed as an
+    answer.
+    """
+    search = card.search
+    assert search is not None  # the dispatch only routes search cards here
+    read = duckstation.read_settings(machine, config_home=config_home, data_home=data_home)
+    if read.unreadable is not None:
+        return _duckstation_unreadable_core(entry, read.unreadable), []
+    caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
+    if read.ambiguous:
+        caveats.append(
+            Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED,
+                "no settings.ini exists on either DataRoot candidate — DuckStation picks its "
+                "root from the launch environment (XDG_CONFIG_HOME set routes it to the config "
+                "side, qthost.cpp:562-582), which no file records; the search directory below "
+                "hangs off the environment-unset side",
+                {
+                    "core": card.token,
+                    "reason": "the DataRoot is decided by the launch environment",
+                },
+            )
+        )
+    section, name = search.directory_key.split("/", 1)
+    composed = duckstation.load_path(
+        read.values, read.root, section, name, search.directory_default
+    )
+    bios_dir = resolve_links(machine, composed) or composed
+    requirements: list[FirmwareRequirement] = []
+    answer_caveats: list[Caveat] = []
+    searched: list[str] = []
+    for region, key in search.region_keys:
+        key_section, key_name = key.split("/", 1)
+        value = read.values.get((key_section, key_name), "")
+        if not value:
+            searched.append(region)
+            continue
+        requirement, observed = _duckstation_named_image(
+            machine,
+            entry,
+            system=system,
+            region=region,
+            key=key,
+            name=value,
+            bios_dir=bios_dir,
+            purpose=search.purpose,
+            verify=verify,
+        )
+        requirements.append(requirement)
+        if observed is not None:
+            answer_caveats.append(observed)
+    if searched:
+        found, search_caveats, observed = _duckstation_search(
+            machine,
+            entry,
+            card,
+            system=system,
+            search=search,
+            bios_dir=bios_dir,
+            regions=tuple(searched),
+            verify=verify,
+        )
+        requirements.extend(found)
+        caveats.extend(search_caveats)
+        answer_caveats.extend(observed)
+    return (
+        CoreFirmware(
+            core_so=None,
+            label=entry.label,
+            declaration=DECLARATION_PACKAGED,
+            requirements=tuple(sorted(requirements, key=lambda r: r.path)),
+            caveats=tuple(caveats),
+        ),
+        answer_caveats,
+    )
+
+
+def _duckstation_search(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    *,
+    system: str,
+    search: StandaloneFirmwareSearch,
+    bios_dir: str,
+    regions: tuple[str, ...],
+    verify: bool,
+) -> tuple[list[FirmwareRequirement], list[Caveat], list[Caveat]]:
+    """The search itself: what the directory holds, and what that establishes.
+
+    The regions left to it share one answer, because the pick differs between
+    them only in preference: an image of another region still boots, with a
+    warning (bios.cpp:352-359), so what a launch needs is *an* image rather
+    than one per region.
+    """
+    table = duckstation.bios_table()
+    caveats: list[Caveat] = []
+    kept, unreadable = _duckstation_sized_files(machine, table, bios_dir)
+    if unreadable:
+        caveats.append(
+            Caveat(
+                CAVEAT_FIRMWARE_SCAN_INCOMPLETE,
+                f"{', '.join(unreadable)} could not be listed, so the search below saw only "
+                "part of what this launch would see",
+                {"dir": bios_dir, "unreadable": ", ".join(unreadable)},
+            )
+        )
+    if not kept:
+        state = (
+            "holds no file of a size this emulator accepts"
+            if machine.path_kind(bios_dir) == KIND_DIRECTORY
+            else "is not a directory this launch can search"
+        )
+        caveats.append(
+            Caveat(
+                CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
+                f"{entry.label} has no BIOS image to boot: {bios_dir} {state}, and nothing in "
+                "the configuration names one either "
+                f"({', '.join(key for _, key in search.region_keys)} are all empty). A "
+                "PlayStation starts nothing until an image is there",
+                {
+                    "label": entry.label,
+                    "token": card.token,
+                    "key": search.directory_key,
+                    "declared": "",
+                    "need": NEED_REQUIRED,
+                    "dir": bios_dir,
+                    "regions": ", ".join(regions),
+                },
+            )
+        )
+        return [], caveats, []
+    if not verify:
+        caveats.append(
+            Caveat(
+                CAVEAT_FIRMWARE_SEARCH_UNVERIFIED,
+                f"{bios_dir} holds {len(kept)} files of a size this emulator accepts, and "
+                "which of them is a BIOS is a question about their bytes — DuckStation hashes "
+                "them against its own table, and this answer was asked for without a content "
+                "check, so nothing here says one is there",
+                {
+                    "label": entry.label,
+                    "dir": bios_dir,
+                    "candidates": str(len(kept)),
+                    "need": NEED_REQUIRED,
+                },
+            )
+        )
+        return [], caveats, []
+    pick = table.pick(_duckstation_candidates(machine, table, kept), _DUCKSTATION_ANY_REGION)
+    assert pick is not None  # kept is non-empty
+    caveats.extend(
+        _duckstation_search_caveats(entry, card, bios_dir=bios_dir, pick=pick, table=table)
+    )
+    found, checked, observed = _observe(machine, pick.chosen.path, None, verify=False)
+    requirement = FirmwareRequirement(
+        core_so=None,
+        system=system,
+        system_source=SOURCE_CARD,
+        need=NEED_REQUIRED,
+        file_name=os.path.basename(pick.chosen.path),
+        path=pick.chosen.path,
+        declared=os.path.basename(pick.chosen.path),
+        description=f"{search.purpose} — found by the search, not named by any setting",
+        identity=None,
+        found=found,
+        checked=checked,
+    )
+    return [requirement], caveats, [] if observed is None else [observed]
+
+
 _STANDALONE_CONFIG_RESOLVERS = {
     "PCSX2": _pcsx2_standalone_core,
     "XEMU": _xemu_standalone_core,
     "MELONDS": _melonds_standalone_core,
+    "DUCKSTATION": _duckstation_standalone_core,
 }
 
 
@@ -2850,11 +3212,12 @@ def _carded_standalone_core(
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """A carded standalone entry, routed by the shape its card states.
 
-    A ``config_files`` card's probe set is the emulator's own live decision,
-    so it needs a resolver registered beside it; a ``files`` card names its
-    paths outright and the one packaged route serves it.
+    A ``config_files`` card's probe set is the emulator's own live decision
+    and a ``search`` card's is a directory read, so both need a resolver
+    registered beside them; a ``files`` card names its paths outright and the
+    one packaged route serves it.
     """
-    if not card.config_files:
+    if not card.config_files and card.search is None:
         return _packaged_standalone_core(
             machine,
             entry,
@@ -2866,8 +3229,9 @@ def _carded_standalone_core(
         )
     resolver = _STANDALONE_CONFIG_RESOLVERS.get(card.token)
     if resolver is None:
+        shape = "config_files" if card.config_files else "search"
         raise ValueError(
-            f"standalone firmware card {card.token!r} states config_files but has no "
+            f"standalone firmware card {card.token!r} states {shape} but has no "
             "resolver registered — the card and the code shipped out of step"
         )
     # Both bases go to every resolver: which one an emulator keeps its

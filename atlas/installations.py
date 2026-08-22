@@ -250,7 +250,7 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
-from atlas import melonds, qt_ini
+from atlas import duckstation, melonds, qt_ini
 from atlas.yaml_scalars import read_scalars
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.retroarch_cfg import (
@@ -6275,24 +6275,19 @@ def _duckstation_settings(
     where neither does, the ambiguity is stated and the compiled defaults
     hang off the environment-unset side.
     """
-    candidates = (
-        os.path.join(homes.base("config"), "duckstation"),
-        os.path.join(homes.base("data"), "duckstation"),
+    read = duckstation.read_settings(
+        machine, config_home=homes.base("config"), data_home=homes.base("data")
     )
-    for root in candidates:
-        ini_path = os.path.join(root, "settings.ini")
-        result = machine.read_text(ini_path)
-        if result.status == READ_MISSING:
-            continue
-        if result.status != READ_OK:
-            refusal = Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"DuckStation's configuration ({ini_path}) exists and could not be read — "
-                "which cards its slots hold and where they live is unknowable here",
-                {"emulator": card.token, "config": ini_path},
-            )
-            return root, {}, None, (), refusal
-        return root, qt_ini.values(result.text or ""), ini_path, (), None
+    if read.unreadable is not None:
+        refusal = Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
+            "which cards its slots hold and where they live is unknowable here",
+            {"emulator": card.token, "config": read.unreadable},
+        )
+        return read.root, {}, None, (), refusal
+    if not read.ambiguous:
+        return read.root, dict(read.values), read.stated_path, (), None
     ambiguity = Caveat(
         CAVEAT_CORE_MODE_UNESTABLISHED,
         "no settings.ini exists on either DataRoot candidate — DuckStation picks its root "
@@ -6301,7 +6296,7 @@ def _duckstation_settings(
         "the environment-unset side",
         {"core": card.token, "reason": "the DataRoot is decided by the launch environment"},
     )
-    return candidates[1], {}, None, (ambiguity,), None
+    return read.root, {}, None, (ambiguity,), None
 
 
 @dataclass(frozen=True, slots=True)
