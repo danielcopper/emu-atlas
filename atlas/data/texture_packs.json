@@ -10,10 +10,7 @@
           "value": "game-id",
           "citation": "[V-binary] the shipped dolphin-emu (RetroDECK 0.10.9b components/dolphin/bin/dolphin-emu) carries the setting description \"Loads custom textures from User/Load/Textures/<game_id>/ …\" as a NUL-delimited literal — the emulator states the keying itself. ('User/' is the portable-build spelling of the user directory; on Linux that directory IS $XDG_DATA_HOME/dolphin-emu.)"
         },
-        "config": {
-          "base": "config",
-          "path": "dolphin-emu/GFX.ini"
-        }
+        "settings": "GFX.ini"
       },
       "provenance": {
         "source": "[V-binary/V-script] The shipped binary carries \"dolphin-emu\" as its user-directory name and \"Load/\" beside the description literal above; RetroDECK names the same path in components/dolphin/component_functions.sh:18 ($XDG_DATA_HOME/dolphin-emu/Load/Textures) and links it into its shared tree (component_prepare.sh:26,:45). The replacement switch lives in GFX.ini, which RetroDECK ships into the emulator's config directory (components/dolphin/rd_config/GFX.ini beside the Dolphin.ini that component_functions.sh:3 pins to $XDG_CONFIG_HOME/dolphin-emu) — atlas does not read it."
@@ -44,10 +41,7 @@
           "value": "game-id",
           "citation": "[V-binary] the shipped primehack (RetroDECK 0.10.9b components/primehack/bin/primehack) carries the same Dolphin-line description literal \"Loads custom textures from User/Load/Textures/<game_id>/ …\" — the fork inherits the keying with the code that reads it."
         },
-        "config": {
-          "base": "config",
-          "path": "primehack/GFX.ini"
-        }
+        "settings": "GFX.ini"
       },
       "provenance": {
         "source": "[V-script/D-binary] A Dolphin fork with its own user directory: RetroDECK links $XDG_DATA_HOME/primehack/Load/Textures (components/primehack/component_prepare.sh:22,:40), and the binary carries the Dolphin description literal but no directory name of its own, so the 'primehack' component is [D] from the fork's own user-directory convention as the script spells it. Its GFX.ini ships under components/primehack/rd_config/config/GFX.ini, next to the Dolphin.ini component_functions.sh:3 pins to $XDG_CONFIG_HOME/primehack."
@@ -74,10 +68,7 @@
       "textures": {
         "base": "config",
         "subdir": "ppsspp/PSP/TEXTURES",
-        "config": {
-          "base": "config",
-          "path": "ppsspp/PSP/SYSTEM/ppsspp.ini"
-        }
+        "settings": "ppsspp.ini"
       },
       "provenance": {
         "source": "[V-binary/V-script] The shipped PPSSPPSDL carries \"ppsspp\", \"TEXTURES\" and the pack manifest name \"textures.ini\" as whole NUL-delimited literals; \"PSP/\" is NOT one there — it appears only inside longer runs (\"ms:/PSP/\", \"PSP/GAME/\") and as an instruction immediate, so that component rests on the arrangement script rather than on the binary (the libretro core does carry \"PSP/\" whole, which is a different build). RetroDECK names the joined path in components/ppsspp/component_functions.sh:9 ($XDG_CONFIG_HOME/ppsspp/PSP/TEXTURES) and links it (component_prepare.sh:18,:48). The replacement switch lives in ppsspp.ini, pinned by component_functions.sh:3 — atlas does not read it. [O] how the tree below TEXTURES is keyed is not stated in the binary, so no keying is recorded."
@@ -108,10 +99,7 @@
           "default": "textures",
           "citation": "settings.cpp:1978 at stenzek/duckstation@64655818e reads it through LoadPathFromSettings (:1953-1962), which falls back to the compiled default and resolves a relative value against the DataRoot; the shipped binary carries \"Textures\" and \"textures\" as whole NUL-delimited runs"
         },
-        "config": {
-          "base": "config",
-          "path": "duckstation/settings.ini"
-        }
+        "settings": "settings.ini"
       },
       "provenance": {
         "source": "[V-binary/V-source/V-script] The DuckStation build RetroDECK ships as 'DuckStation (Legacy)', the fork release frozen 2024-09-19; citations pin stenzek/duckstation@64655818e. The directory is a configuration value rather than a default the emulator opens at a fixed XDG join: [Folders] Textures, read through the same LoadPathFromSettings helper every folder of this emulator goes through (settings.cpp:1978 with :1953-1962), so an unset or empty key means the compiled default 'textures' below the DataRoot and a relative value hangs off it. That DataRoot is what makes the fixed shape wrong here: it is $XDG_CONFIG_HOME/duckstation where that variable is set and absolute, else ~/.local/share/duckstation (qthost.cpp:562-582), so the config-side join is right on RetroDECK — whose flatpak sets the variable — and wrong on an EmuDeck AppImage, where the same emulator's mod answer already read the other root. RetroDECK writes no such key: it links its shared tree at the default location (component_functions.sh:5, component_prepare.sh:21,:39), which is why the answer there is unchanged. settings.ini is named as the config-side spelling the arrangement pins (component_functions.sh:3); the resolver probes both DataRoot candidates and names the one that spoke. [O] the binary's serial machinery is about file names elsewhere and does not establish how the texture tree is keyed, so no keying is recorded."
@@ -142,10 +130,7 @@
           "value": "pack",
           "citation": "[V-binary] the shipped Cemu_relwithdebinfo carries \"graphicPacks\", \"graphicPacks/downloadedGraphicPacks/{}\" and \"rules.txt\" as NUL-delimited literals: the level below the root is a pack directory holding a rules.txt, not a per-game directory — which is why this row is 'pack' where every other row is keyed by the content."
         },
-        "config": {
-          "base": "config",
-          "path": "Cemu/settings.xml"
-        }
+        "settings": "settings.xml"
       },
       "provenance": {
         "source": "[V-binary/V-script] The shipped binary carries \"Cemu\" and \"graphicPacks\"; RetroDECK names the joined path in components/cemu/component_functions.sh:8 ($XDG_DATA_HOME/Cemu/graphicPacks) and links it (component_prepare.sh:20,:32). settings.xml is pinned by component_functions.sh:3 and is not read here."
@@ -173,10 +158,7 @@
           "value": "title-id",
           "citation": "[V-binary] the shipped azahar (RetroDECK 0.10.9b components/azahar/bin/azahar) carries the custom-texture loader's path template \"{}textures/{:016X}/\" as a NUL-delimited literal — a 16-hex-digit component is a 3DS title id."
         },
-        "config": {
-          "base": "config",
-          "path": "azahar-emu/qt-config.ini"
-        }
+        "settings": "qt-config.ini"
       },
       "provenance": {
         "source": "[V-binary/V-script] The shipped binary carries \"/azahar-emu/\" as its user-directory name and the loader template above; RetroDECK names the joined path in components/azahar/component_functions.sh:6 ($XDG_DATA_HOME/azahar-emu/load/textures) and links it (component_prepare.sh:28,:46). qt-config.ini is pinned by component_functions.sh:4 and is not read here. Unlike the azahar libretro core's row, this one has no open root question: a standalone emulator opens its own XDG directory, and both the binary and the arrangement name the same one."
@@ -213,14 +195,11 @@
           "default": "false",
           "citation": "Pcsx2Config.cpp:774 is the compiled default and :1004 the ini key, the section at :908; ReloadReplacementMap returns before scanning while it is off (GSTextureReplacements.cpp:391-393 at v2.6.3)"
         },
-        "config": {
-          "base": "config",
-          "path": "PCSX2/inis/PCSX2.ini"
-        },
         "keying": {
           "value": "serial",
           "citation": "[V-source] GetGameTextureDirectory is Path::Combine(EmuFolders::Textures, s_current_serial) (GSTextureReplacements.cpp:262-265 at v2.6.3), and the serial is the running disc's (:335)"
-        }
+        },
+        "settings": "PCSX2.ini"
       },
       "provenance": {
         "source": "[V-source/V-binary/V-live] PCSX2 v2.6.3, the release RetroDECK ships. The directory is a configuration value rather than a default the emulator opens: [Folders] Textures, read through the same helper the memory-card directory goes through (LoadPathFromSettings, Pcsx2Config.cpp:2272-2278, :2293), with the compiled default 'textures' and a relative value resolved against the DataRoot — the config side on Linux either way (:2197-2217). Below it the tree is staged per game and both stages are named: replacements load from <Textures>/<serial>/replacements and dumps are written to <Textures>/<serial>/dumps (GSTextureReplacements.cpp:39-40, :262-265, :274, :281). The answer therefore states the load stage rather than the root, because a client placing a pack at the root would place it where nothing reads it. Case is not forgiven on a case-sensitive filesystem: a wrongly-cased serial or replacements directory is warned about and left unused (:400-412). Every name here is a whole string in the shipped binary. RetroDECK points [Folders] Textures at its own texture_packs/PCSX2/textures tree (component_prepare.sh:47), observed live."

@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "spec": "Where each standalone emulator keeps a settings file, keyed by the %EMULATOR_…% token and then by the file's own name. This exists because the location was being stated once per question — a save card, a texture card and a mod card naming one path between them, with a fourth copy in the firmware resolver's code — and two of those statements had already drifted apart in shipped releases (#250, #256: one route read the config home while another read the data home for the same file). A card now names a file by NAME and the address lives here, once, so a disagreement is not expressible. What is here is only WHERE: bases in the order a launch may pick them, and the path below. What the file means for a question — which keys govern a save tree, whether a switch exists, how a legacy file is migrated — stays with the card and the code that read it. 'bases' is a list because one emulator's root is a property of its launch rather than of the emulator: DuckStation picks $XDG_CONFIG_HOME where that variable is set and absolute and the data home otherwise, so a reader probes in the stated order and the file that exists speaks.",
+  "emulators": {
+    "DOLPHIN": {
+      "files": {
+        "Dolphin.ini": {
+          "bases": [
+            "config"
+          ],
+          "path": "dolphin-emu/Dolphin.ini",
+          "citation": "[V-script] components/dolphin/component_functions.sh:3 pins it at $XDG_CONFIG_HOME/dolphin-emu/Dolphin.ini"
+        },
+        "GFX.ini": {
+          "bases": [
+            "config"
+          ],
+          "path": "dolphin-emu/GFX.ini",
+          "citation": "[V-live] the graphics settings sit beside the Dolphin.ini components/dolphin/component_functions.sh:3 pins, in the same emulator-owned config directory"
+        }
+      }
+    },
+    "PRIMEHACK": {
+      "files": {
+        "GFX.ini": {
+          "bases": [
+            "config"
+          ],
+          "path": "primehack/GFX.ini",
+          "citation": "[V-live] the fork's graphics settings sit beside the Dolphin.ini components/primehack/component_functions.sh:3 pins at $XDG_CONFIG_HOME/primehack"
+        }
+      }
+    },
+    "PPSSPP": {
+      "files": {
+        "ppsspp.ini": {
+          "bases": [
+            "config"
+          ],
+          "path": "ppsspp/PSP/SYSTEM/ppsspp.ini",
+          "citation": "[V-script] components/ppsspp/component_functions.sh:3 pins it at $XDG_CONFIG_HOME/ppsspp/PSP/SYSTEM/ppsspp.ini"
+        }
+      }
+    },
+    "XEMU": {
+      "files": {
+        "xemu.toml": {
+          "bases": [
+            "data"
+          ],
+          "path": "xemu/xemu/xemu.toml",
+          "citation": "[V-binary/V-script] the shipped binary takes its base path from SDL_GetPrefPath, which on Linux is $XDG_DATA_HOME/<org>/<app>/; RetroDECK says the same while linking a config-tree directory there — 'linking back to original location where component will look' (components/xemu/component_prepare.sh:16-17)"
+        }
+      }
+    },
+    "CEMU": {
+      "files": {
+        "settings.xml": {
+          "bases": [
+            "config"
+          ],
+          "path": "Cemu/settings.xml",
+          "citation": "[V-script] components/cemu/component_functions.sh:3 pins it at $XDG_CONFIG_HOME/Cemu/settings.xml"
+        }
+      }
+    },
+    "AZAHAR": {
+      "files": {
+        "qt-config.ini": {
+          "bases": [
+            "config"
+          ],
+          "path": "azahar-emu/qt-config.ini",
+          "citation": "[V-script] components/azahar/component_functions.sh:3-4 pins it at $XDG_CONFIG_HOME/azahar-emu/qt-config.ini"
+        }
+      }
+    },
+    "DUCKSTATION": {
+      "files": {
+        "settings.ini": {
+          "bases": [
+            "config",
+            "data"
+          ],
+          "path": "duckstation/settings.ini",
+          "citation": "[V-source] the DataRoot is $XDG_CONFIG_HOME/duckstation where that variable is set and absolute, else ~/.local/share/duckstation (qthost.cpp:562-582 at stenzek/duckstation@64655818e), and settings.ini lives inside it; no file records which branch a launch took, so both are candidates in that order"
+        }
+      }
+    },
+    "PCSX2": {
+      "files": {
+        "PCSX2.ini": {
+          "bases": [
+            "config"
+          ],
+          "path": "PCSX2/inis/PCSX2.ini",
+          "citation": "[V-script] components/pcsx2/component_functions.sh:3 pins it at $XDG_CONFIG_HOME/PCSX2/inis/PCSX2.ini"
+        }
+      }
+    },
+    "MELONDS": {
+      "files": {
+        "melonDS.toml": {
+          "bases": [
+            "config"
+          ],
+          "path": "melonDS/melonDS.toml",
+          "citation": "[V-script] components/melonds/component_functions.sh:3 pins it at $XDG_CONFIG_HOME/melonDS/melonDS.toml"
+        },
+        "melonDS.ini": {
+          "bases": [
+            "config"
+          ],
+          "path": "melonDS/melonDS.ini",
+          "citation": "[V-source] the pre-1.0 file Config::Load falls back to where no TOML exists, read line by line as the built-in migration (LoadLegacyFile, Config.cpp:705-717 at melonDS 1.1) from the same directory as the TOML"
+        }
+      }
+    },
+    "RPCS3": {
+      "files": {
+        "vfs.yml": {
+          "bases": [
+            "config"
+          ],
+          "path": "rpcs3/vfs.yml",
+          "citation": "[V-source/V-script] the emulator keeps its VFS mapping beside the config.yml components/rpcs3/component_functions.sh:3 pins at $XDG_CONFIG_HOME/rpcs3; vfs_config.cpp:14-62 at build 7c6b3dcd is what reads it"
+        }
+      }
+    },
+    "VITA3K": {
+      "files": {
+        "config.yml": {
+          "bases": [
+            "config"
+          ],
+          "path": "Vita3K/config.yml",
+          "citation": "[V-script] components/vita3k/component_functions.sh:3 pins it at $XDG_CONFIG_HOME/Vita3K/config.yml"
+        }
+      }
+    }
+  }
+}

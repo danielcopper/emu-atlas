@@ -23,13 +23,16 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from atlas import qt_ini
+from atlas import emulator_settings, qt_ini
 from atlas.machine import READ_MISSING, READ_OK, Machine
 
 # The emulator's own directory name below whichever XDG base the launch picked,
 # and the settings file inside it.
 CONFIG_DIRECTORY = "duckstation"
 CONFIG_FILENAME = "settings.ini"
+# The card token this emulator answers under, and the key its settings file is
+# addressed by in atlas/data/emulator_settings.json.
+TOKEN = "DUCKSTATION"
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,25 +55,33 @@ class SettingsRead:
     ambiguous: bool
 
 
-def data_root_candidates(*, config_home: str, data_home: str) -> tuple[str, str]:
-    """The two DataRoots a Linux launch can pick, in the order the probe reads them.
+def settings_candidates(*, config_home: str, data_home: str) -> tuple[str, ...]:
+    """Where this launch may open ``settings.ini``, in the order the probe reads.
 
-    ``$XDG_CONFIG_HOME/duckstation`` where that variable is set and absolute,
-    else ``~/.local/share/duckstation`` (qthost.cpp:562-582). Nothing on the
-    machine records which branch a launch took, so both are candidates and the
-    file that exists speaks for itself.
+    The order and the two bases are the settings table's statement, not this
+    module's: ``$XDG_CONFIG_HOME/duckstation`` where that variable is set and
+    absolute, else ``~/.local/share/duckstation`` (qthost.cpp:562-582).
+    Nothing on the machine records which branch a launch took, so both are
+    candidates and the file that exists speaks for itself.
     """
-    return (
-        os.path.join(config_home, CONFIG_DIRECTORY),
-        os.path.join(data_home, CONFIG_DIRECTORY),
+    return emulator_settings.settings_file(TOKEN, CONFIG_FILENAME).locations(
+        config_home=config_home, data_home=data_home
+    )
+
+
+def data_root_candidates(*, config_home: str, data_home: str) -> tuple[str, ...]:
+    """The DataRoots those candidates hang off — each settings file's own directory."""
+    return tuple(
+        os.path.dirname(path)
+        for path in settings_candidates(config_home=config_home, data_home=data_home)
     )
 
 
 def read_settings(machine: Machine, *, config_home: str, data_home: str) -> SettingsRead:
     """Read ``settings.ini`` from whichever DataRoot holds one."""
-    candidates = data_root_candidates(config_home=config_home, data_home=data_home)
-    for root in candidates:
-        path = os.path.join(root, CONFIG_FILENAME)
+    candidates = settings_candidates(config_home=config_home, data_home=data_home)
+    for path in candidates:
+        root = os.path.dirname(path)
         result = machine.read_text(path)
         if result.status == READ_MISSING:
             continue
@@ -86,7 +97,11 @@ def read_settings(machine: Machine, *, config_home: str, data_home: str) -> Sett
             ambiguous=False,
         )
     return SettingsRead(
-        root=candidates[1], values={}, stated_path=None, unreadable=None, ambiguous=True
+        root=os.path.dirname(candidates[-1]),
+        values={},
+        stated_path=None,
+        unreadable=None,
+        ambiguous=True,
     )
 
 

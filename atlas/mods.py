@@ -285,7 +285,7 @@ class StandaloneModCard:
     token: str
     base: str | None
     trees: tuple[ModTreeSpec, ...]
-    config: EmulatorConfig | None
+    settings: str | None
     provenance: str
 
     @property
@@ -433,16 +433,17 @@ def _core_config(value: object, where: str) -> EmulatorConfig | None:
     return EmulatorConfig(path=_expect_subdir(value.get("path"), f"{where}.path"))
 
 
-def _standalone_config(value: object, where: str) -> EmulatorConfig | None:
-    """The settings file a standalone card names — or ``None`` where none is established."""
-    if value is None:
-        return None
-    if not isinstance(value, dict) or set(value) != {"base", "path"}:
-        raise ValueError(f"{where}: expected {{'base': …, 'path': …}} or null, got {value!r}")
-    base = _expect_str(value.get("base"), f"{where}.base")
-    if base not in XDG_BASES:
-        raise ValueError(f"{where}.base: must be one of {sorted(XDG_BASES)}, got {base!r}")
-    return EmulatorConfig(base=base, path=_expect_subdir(value.get("path"), f"{where}.path"))
+def _settings_name(value: object, where: str) -> str | None:
+    """The settings file a standalone card names, or ``None`` where none is established.
+
+    A **name**, not an address: where the file lives is stated once in
+    ``atlas/data/emulator_settings.json``, since the save, texture, mod and
+    firmware answers of one emulator open the same file. ``None`` keeps this
+    family's own meaning — for one emulator nobody has established that a
+    switch exists at all, and naming a file would signpost one that may govern
+    nothing.
+    """
+    return None if value is None else _expect_str(value, where)
 
 
 def recorded_mod_words(entry: Mapping[str, Any]) -> frozenset[str]:
@@ -471,6 +472,12 @@ def recorded_mod_words(entry: Mapping[str, Any]) -> frozenset[str]:
     option = mods.get("option")
     if isinstance(option, dict) and isinstance(option.get("setting"), str):
         words.append(option["setting"])
+    # A standalone row names its settings file rather than addressing it, and
+    # the name is the emulator's own word for the file; a core row still gives
+    # a path, relative to the user tree the core builds.
+    settings = mods.get("settings")
+    if isinstance(settings, str):
+        words.append(settings)
     config = mods.get("config")
     if isinstance(config, dict) and isinstance(config.get("path"), str):
         words.append(config["path"].rsplit("/", 1)[-1])
@@ -555,7 +562,7 @@ def _standalone_mod_card(token: str, entry: Any) -> StandaloneModCard:
         token=token,
         base=base,
         trees=trees,
-        config=_standalone_config(mods.get("config"), f"{where}: mods.config"),
+        settings=_settings_name(mods.get("settings"), f"{where}: mods.settings"),
         provenance=_expect_str(
             entry.get("provenance", {}).get("source"), f"{where}: provenance.source"
         ),

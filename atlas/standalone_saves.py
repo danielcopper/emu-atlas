@@ -28,19 +28,20 @@ SAVES_SCHEMA = 1
 
 # The XDG bases a card's configuration file may hang off — the same two words
 # the texture cards use, because they are the same fact: one flatpak pins both.
-_CONFIG_BASES = ("config", "data")
 
 
 @dataclass(frozen=True, slots=True)
 class StandaloneSaveCard:
     """One standalone emulator's save knowledge: config file, systems, citations.
 
-    ``config_base`` and ``config_path`` name the configuration file the
-    resolver reads the way the emulator does — below the XDG base the
-    arrangement pins. They are ``None`` for an emulator whose save tree is
-    fixed by the build rather than by any file (PPSSPP's Linux memstick is a
-    compiled-in XDG join): naming a file the resolver never reads would state
-    a governing config that does not govern. ``systems`` is the closed list of
+    ``settings`` names the configuration file the resolver reads the way the
+    emulator does — by **name**, with its address stated once in
+    ``atlas/data/emulator_settings.json``, because the save, texture, mod and
+    firmware answers of one emulator open the same file and each carrying its
+    own copy is how two of them came to disagree about it. It is ``None`` for
+    an emulator whose save tree is fixed by the build rather than by any file
+    (PPSSPP's Linux memstick is a compiled-in XDG join): naming a file the
+    resolver never reads would state a governing config that does not govern. ``systems`` is the closed list of
     catalogue systems this card answers for: an emulator can serve several
     with different trees (Dolphin keeps GameCube cards and a Wii NAND), and a
     system outside the list is a question the card does not answer, stated
@@ -52,8 +53,7 @@ class StandaloneSaveCard:
     """
 
     token: str
-    config_base: str | None
-    config_path: str | None
+    settings: str | None
     systems: tuple[str, ...]
     flatpak: str | None
     provenance: str
@@ -73,17 +73,9 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
     saves = entry.get("saves")
     if not isinstance(saves, dict):
         raise ValueError(f"{where}: expected a 'saves' object, got {saves!r}")
-    config = saves.get("config")
-    if config is not None:
-        if not isinstance(config, dict) or set(config) != {"base", "path"}:
-            raise ValueError(
-                f"{where}: saves.config must name exactly 'base' and 'path', got {config!r}"
-            )
-        base = _expect_str(config["base"], f"{where}: saves.config.base")
-        if base not in _CONFIG_BASES:
-            raise ValueError(
-                f"{where}: saves.config.base must be one of {_CONFIG_BASES}, got {base!r}"
-            )
+    settings = saves.get("settings")
+    if settings is not None:
+        settings = _expect_str(settings, f"{where}: saves.settings")
     systems = saves.get("systems")
     if not isinstance(systems, list) or not systems:
         raise ValueError(f"{where}: saves.systems must be a non-empty list, got {systems!r}")
@@ -95,12 +87,7 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
         raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
     return StandaloneSaveCard(
         token=token,
-        config_base=config["base"] if config is not None else None,
-        config_path=(
-            _expect_str(config["path"], f"{where}: saves.config.path")
-            if config is not None
-            else None
-        ),
+        settings=settings,
         systems=tuple(_expect_str(s, f"{where}: saves.systems[]") for s in systems),
         flatpak=flatpak,
         provenance=_expect_str(provenance.get("source"), f"{where}: provenance.source"),

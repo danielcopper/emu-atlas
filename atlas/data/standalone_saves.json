@@ -4,10 +4,7 @@
   "emulators": {
     "DOLPHIN": {
       "saves": {
-        "config": {
-          "base": "config",
-          "path": "dolphin-emu/Dolphin.ini"
-        },
+        "settings": "Dolphin.ini",
         "systems": [
           "gc",
           "wii"
@@ -20,7 +17,7 @@
     },
     "PPSSPP": {
       "saves": {
-        "config": null,
+        "settings": null,
         "systems": [
           "psp"
         ]
@@ -32,10 +29,7 @@
     },
     "XEMU": {
       "saves": {
-        "config": {
-          "base": "data",
-          "path": "xemu/xemu/xemu.toml"
-        },
+        "settings": "xemu.toml",
         "systems": [
           "xbox"
         ]
@@ -47,10 +41,7 @@
     },
     "CEMU": {
       "saves": {
-        "config": {
-          "base": "config",
-          "path": "Cemu/settings.xml"
-        },
+        "settings": "settings.xml",
         "systems": [
           "wiiu"
         ]
@@ -61,10 +52,7 @@
     },
     "AZAHAR": {
       "saves": {
-        "config": {
-          "base": "config",
-          "path": "azahar-emu/qt-config.ini"
-        },
+        "settings": "qt-config.ini",
         "systems": [
           "n3ds"
         ]
@@ -75,10 +63,7 @@
     },
     "DUCKSTATION": {
       "saves": {
-        "config": {
-          "base": "config",
-          "path": "duckstation/settings.ini"
-        },
+        "settings": "settings.ini",
         "systems": [
           "psx"
         ]
@@ -89,10 +74,7 @@
     },
     "PCSX2": {
       "saves": {
-        "config": {
-          "base": "config",
-          "path": "PCSX2/inis/PCSX2.ini"
-        },
+        "settings": "PCSX2.ini",
         "systems": [
           "ps2"
         ]
@@ -104,10 +86,7 @@
     "MELONDS": {
       "flatpak": "net.kuribo64.melonDS",
       "saves": {
-        "config": {
-          "base": "config",
-          "path": "melonDS/melonDS.toml"
-        },
+        "settings": "melonDS.toml",
         "systems": [
           "nds"
         ]
@@ -118,10 +97,7 @@
     },
     "RPCS3": {
       "saves": {
-        "config": {
-          "base": "config",
-          "path": "rpcs3/vfs.yml"
-        },
+        "settings": "vfs.yml",
         "systems": [
           "ps3"
         ]
@@ -132,10 +108,7 @@
     },
     "VITA3K": {
       "saves": {
-        "config": {
-          "base": "config",
-          "path": "Vita3K/config.yml"
-        },
+        "settings": "config.yml",
         "systems": [
           "psvita"
         ]

@@ -95,7 +95,7 @@ from atlas.machine import (
     PathKind,
     ReadStatus,
 )
-from atlas import duckstation, melonds, qt_ini
+from atlas import duckstation, emulator_settings, melonds, qt_ini
 from atlas.oddities import SaveMode, load_oddities
 from atlas.standalone_firmware import (
     StandaloneFirmwareCard,
@@ -2601,7 +2601,6 @@ def _melonds_standalone_core(
 # look in and a name to look for. ``FullpathToBios`` combines them and returns
 # nothing at all while the name is empty (Pcsx2Config.cpp:2057-2062), which is
 # the state a fresh install is in.
-_PCSX2_INI = os.path.join("PCSX2", "inis", "PCSX2.ini")
 _PCSX2_DATA_ROOT = "PCSX2"
 _PCSX2_BIOS_DIR_KEY = ("Folders", "Bios")
 _PCSX2_BIOS_DIR_DEFAULT = "bios"
@@ -2628,8 +2627,11 @@ def _pcsx2_standalone_core(
     BIOS root and leaves the choice to the user. The answer says so, because
     "no BIOS chosen" is why a game would not boot.
     """
-    del data_home  # PCSX2 keeps its settings under the config home
-    ini_path = os.path.join(config_home, _PCSX2_INI)
+    # Which home the file sits under is the settings table's to say, so both
+    # go to the lookup and neither is assumed here.
+    ini_path = emulator_settings.settings_file(card.token, "PCSX2.ini").only(
+        config_home=config_home, data_home=data_home
+    )
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
         return (
@@ -2727,7 +2729,6 @@ def _pcsx2_standalone_core(
 # firmware. The boot ROM, the flash image and the hard disk each refuse the
 # start when missing, in the emulator's own words; the EEPROM is generated
 # where none exists and belongs to the save answer, which already states it.
-_XEMU_TOML = os.path.join("xemu", "xemu", "xemu.toml")
 _XEMU_FILE_KEYS = (
     "sys.files/bootrom_path",
     "sys.files/flashrom_path",
@@ -2780,8 +2781,11 @@ def _xemu_standalone_core(
     on purpose: a console does not start without one, and every save lives
     inside it.
     """
-    del config_home  # xemu keeps its settings under the data home, not this one
-    toml_path = os.path.join(data_home, _XEMU_TOML)
+    # Which home the file sits under is the settings table's to say — xemu's
+    # is the data one, and this resolver no longer has to know that.
+    toml_path = emulator_settings.settings_file(card.token, "xemu.toml").only(
+        config_home=config_home, data_home=data_home
+    )
     result = machine.read_text(toml_path)
     if result.status not in (READ_OK, READ_MISSING):
         return _xemu_unreadable_core(entry, toml_path, "exists and could not be read"), []

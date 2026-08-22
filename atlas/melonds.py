@@ -24,9 +24,13 @@ import tomllib
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from atlas import emulator_settings
 from atlas.machine import Machine, READ_MISSING, READ_OK
 
 CONFIG_DIRNAME = "melonDS"
+# The card token this emulator answers under, and the key its settings files
+# are addressed by in atlas/data/emulator_settings.json.
+TOKEN = "MELONDS"
 CONFIG_FILENAME = "melonDS.toml"
 LEGACY_FILENAME = "melonDS.ini"
 
@@ -97,9 +101,21 @@ class MelonConfigRead:
     unreadable: str | None
 
 
+def _settings_path(name: str, config_home: str) -> str:
+    """Where this launch opens one of melonDS's two settings files.
+
+    The address is the settings table's, not this module's: the save answer,
+    the BIOS answer and this reader all open the same file, and a copy per
+    reader is how two of them came to disagree about another emulator's.
+    """
+    return emulator_settings.settings_file(TOKEN, name).only(
+        config_home=config_home, data_home=config_home
+    )
+
+
 def config_dir(config_home: str) -> str:
-    """``emuDirectory`` for a non-portable launch: ``<config home>/melonDS``."""
-    return os.path.join(config_home, CONFIG_DIRNAME)
+    """``emuDirectory`` for a non-portable launch — the directory the TOML sits in."""
+    return os.path.dirname(_settings_path(CONFIG_FILENAME, config_home))
 
 
 def _strtol(raw: str) -> int:
@@ -156,7 +172,7 @@ def _legacy_document(text: str) -> dict[str, Any]:
 
 def read_config(machine: Machine, config_home: str) -> MelonConfigRead:
     """``Config::Load``, performed as reads — the TOML, the legacy INI, or defaults."""
-    toml_path = os.path.join(config_dir(config_home), CONFIG_FILENAME)
+    toml_path = _settings_path(CONFIG_FILENAME, config_home)
     result = machine.read_text(toml_path)
     if result.status not in (READ_OK, READ_MISSING):
         return MelonConfigRead(config=None, unreadable=toml_path)
@@ -170,7 +186,7 @@ def read_config(machine: Machine, config_home: str) -> MelonConfigRead:
         return MelonConfigRead(
             config=MelonConfig(document, toml_path, SOURCE_TOML), unreadable=None
         )
-    ini_path = os.path.join(config_dir(config_home), LEGACY_FILENAME)
+    ini_path = _settings_path(LEGACY_FILENAME, config_home)
     legacy = machine.read_text(ini_path)
     if legacy.status not in (READ_OK, READ_MISSING):
         return MelonConfigRead(config=None, unreadable=ini_path)
