@@ -24,7 +24,7 @@ the network. Clone it first, then run the generator against the checkout:
 
 With no ``-o`` the output defaults to ``atlas/data/duckstation_bios.json``
 (resolved relative to the repo root, so the command works from any working
-directory).
+directory); ``-o`` may name another ``.json`` path inside the repository.
 """
 
 import argparse
@@ -93,15 +93,19 @@ def resolve_source(raw: str) -> Path:
 def resolve_output(raw: str) -> Path:
     """Resolve ``-o`` to the JSON file this run writes, and refuse anything else.
 
-    One file into a directory that already exists: the generator creates no
-    tree, so a mistyped or wandering path is refused here rather than acted
-    on. Resolving first is what makes the check meaningful — a relative walk
-    (``../..``) is settled before the suffix and parent tests see it. Raises
-    ``ValueError`` like :func:`resolve_source`.
+    What this generator produces is one packaged data file, so every
+    legitimate destination is inside this repository — and confining the write
+    to it is what keeps a wandering argument (``../../…``, a symlinked
+    directory) from turning a dev-time step into an arbitrary write. The order
+    matters: resolve first, then test, since a check applied to the spelling
+    rather than to the resolved path is no check at all. Raises ``ValueError``
+    like :func:`resolve_source`.
     """
     output = Path(raw).expanduser().resolve()
     if output.suffix != ".json":
         raise ValueError(f"the output must be a .json path, got {raw}")
+    if not output.is_relative_to(REPO_ROOT):
+        raise ValueError(f"the output must be inside {REPO_ROOT}, got {output}")
     if output.is_dir():
         raise ValueError(f"the output path is a directory: {output}")
     if not output.parent.is_dir():
