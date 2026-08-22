@@ -535,6 +535,16 @@ its BIOS root and leaves the choice to the user. So an empty name is stated with
 the directory a BIOS belongs in, rather than being passed over — a PlayStation 2 boots nothing until one is picked, and
 that is worth saying.
 
+xemu (v0.8.135) is the third, and its interest is which keys belong here at all. Four files sit in `[sys.files]` and
+only three are firmware: the MCPX boot ROM, the flash image and the hard disk each refuse the start when missing, and
+the shipped binary says so in whole strings. The fourth, `eeprom_path`, is left to the save answer on purpose — xemu
+**generates** an EEPROM where none exists, and it holds the console's own settings, which the standalone save card
+already states as a named settings group; claiming it here too would file save data under firmware and state one file
+twice. The hard disk is the opposite case and is claimed by both answers deliberately: a console does not start without
+one, and every save lives inside it, so each answer names it and says which aspect it means. Note also where xemu keeps
+its settings — under the **data** home, not the config one — which is why a card's resolver receives both bases and
+takes the one its emulator uses.
+
 ## `save_memory.json` — which files RetroArch writes for a core, per system
 
 Read by `atlas.save_memory`, and it is the only table here keyed by **core _and_ system**. The name of a save is not in

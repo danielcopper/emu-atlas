@@ -84,6 +84,31 @@
       "provenance": {
         "source": "PCSX2 v2.6.3, the release RetroDECK ships. The expectation takes two settings rather than one: [Folders] Bios names the directory, read through the same LoadPathFromSettings helper as the memory-card and texture directories (Pcsx2Config.cpp:2272-2278, :2282), and [Filenames] BIOS names the image inside it (:1667-1671). FullpathToBios combines them and returns the empty string when no name is set (:2057-2062), which is the shipped state: RetroDECK points the directory at its BIOS root (component_prepare.sh:16, :80) and leaves the name empty for the user to choose in the emulator. So an unset name is the normal starting state rather than a broken configuration — but it does mean no game boots yet, which the answer states rather than passing over. Every name here is a whole string in the shipped binary."
       }
+    },
+    "XEMU": {
+      "systems": [
+        "xbox"
+      ],
+      "config_files": [
+        {
+          "key": "sys.files/bootrom_path",
+          "purpose": "the MCPX boot ROM, exactly 512 bytes — the first thing the console runs, and xemu refuses to start without it",
+          "citation": "the shipped binary carries \"Failed to open BootROM file '%s'. Please check machine settings.\" and \"Invalid BootROM file '%s' size %d. Expected 512 bytes.\" as whole strings (xemu v0.8.135)"
+        },
+        {
+          "key": "sys.files/flashrom_path",
+          "purpose": "the Xbox BIOS image the console boots into after the MCPX hands over — xemu refuses to start without it",
+          "citation": "the shipped binary carries \"Failed to open flash file '%s'. Please check machine settings.\" as a whole string (xemu v0.8.135)"
+        },
+        {
+          "key": "sys.files/hdd_path",
+          "purpose": "the emulated Xbox hard disk — required to start, and the same image every game's save lives inside, which the save answer states from its own side",
+          "citation": "the shipped binary carries \"Failed to open hard disk image file '%s'. Please check machine settings.\" as a whole string (xemu v0.8.135); RetroDECK copies a blank image in where none exists (component_prepare.sh:31-32)"
+        }
+      ],
+      "provenance": {
+        "source": "xemu v0.8.135, the release the shipped binary carries as a whole version string. Four files sit in [sys.files] (config_spec.yml:359-364, all plain strings with no compiled default, so an unset one names nothing), and they are deliberately not all firmware. Three refuse the start when missing, and the emulator says so itself in whole strings: the MCPX boot ROM, the flash image, and the hard disk. The fourth, eeprom_path, is left to the save answer on purpose: xemu generates an EEPROM where none exists — the binary carries 'Failed to generate EEPROM file' beside 'Failed to open EEPROM file' — and it holds the console's own settings, which the standalone save card already states as a named settings group. Claiming it here too would file save data under firmware and state one file twice. The hard disk is the opposite case and is claimed twice on purpose: a console does not start without one, and every game's save lives inside it, so both answers name it and each says which aspect it means. RetroDECK points the boot ROM and flash at its BIOS root (component_prepare.sh:23-24), keeps the EEPROM under saves (:26), and copies a blank hard disk in where none exists (:31-32)."
+      }
     }
   }
 }
