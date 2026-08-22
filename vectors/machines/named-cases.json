@@ -2388,20 +2388,20 @@
     },
     {
       "name": "entry-route-standalone-is-unresolved",
-      "rationale": "A standalone catalogue entry asked for its save location is a domain outcome with a stable code — outside current coverage, never a guess and never an exception.",
+      "rationale": "The entry route answers a standalone emulator atlas has no card for with a typed domain outcome rather than an exception — Ruffle here, a Flash player whose save behaviour nobody has read. RPCS3 held this example until its own VFS was read (#231), which is the point: the refusal is about evidence, not about the standalone kind.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
-          "/mnt/sd/retrodeck/roms/ps3/game/PS3_GAME/USRDIR/EBOOT.BIN": ""
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% %ROM%</command>\n    <platform>flash</platform>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/flash/game.swf": ""
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves"
         ],
         "entry_savefile_query": {
-          "system": "ps3",
-          "content_path": "/mnt/sd/retrodeck/roms/ps3/game"
+          "system": "flash",
+          "content_path": "/mnt/sd/retrodeck/roms/flash/game.swf"
         }
       },
       "expected": {
@@ -2419,8 +2419,8 @@
           "unresolved": {
             "code": "standalone-unsupported",
             "data": {
-              "label": "RPCS3 Directory (Standalone)",
-              "system": "ps3"
+              "label": "Ruffle (Standalone)",
+              "system": "flash"
             }
           }
         }
@@ -6850,26 +6850,26 @@
     },
     {
       "name": "a-standalone-emulator-reads-the-same-on-both-routes",
-      "rationale": "One machine, one standalone emulator, both questions: the placement route answers the typed Unresolved outcome 'standalone-unsupported', and the firmware route answers declaration 'unsupported' with the caveat code 'standalone-unsupported'. Same word for the same fact — the emulator is installed and atlas has no source for its rules — so a client that learned it on one route reads the other. It is not the evidence axis: nothing here was read and left unconfirmed, there was nothing to read.",
+      "rationale": "One entry, two routes, one word: a standalone emulator outside atlas's coverage refuses the placement question and answers the firmware one with declaration 'unsupported' carrying the same code. Ruffle carries the example since RPCS3 gained a card (#231).",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>ps3</name>\n  <path>%ROMPATH%/ps3</path>\n  <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% %ROM%</command>\n    <platform>flash</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\n",
           "/mnt/sd/retrodeck/bios/.keep": "",
-          "/mnt/sd/retrodeck/roms/ps3/Game.iso": ""
+          "/mnt/sd/retrodeck/roms/flash/Game.swf": ""
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves"
         ],
         "entry_savefile_query": {
-          "system": "ps3"
+          "system": "flash"
         },
         "firmware_query": {
           "kind": "system",
-          "system": "ps3"
+          "system": "flash"
         }
       },
       "expected": {
@@ -6889,7 +6889,7 @@
           "cores": [
             {
               "core_so": null,
-              "label": "RPCS3 (Standalone)",
+              "label": "Ruffle (Standalone)",
               "declaration": "unsupported",
               "requirements_met": null,
               "requirements": [],
@@ -6898,7 +6898,7 @@
                 {
                   "code": "standalone-unsupported",
                   "data": {
-                    "label": "RPCS3 (Standalone)"
+                    "label": "Ruffle (Standalone)"
                   }
                 }
               ]
@@ -6913,7 +6913,7 @@
             {
               "code": "firmware-declaration-unknown",
               "data": {
-                "system": "ps3"
+                "system": "flash"
               }
             }
           ]
@@ -6922,8 +6922,8 @@
           "unresolved": {
             "code": "standalone-unsupported",
             "data": {
-              "label": "RPCS3 (Standalone)",
-              "system": "ps3"
+              "label": "Ruffle (Standalone)",
+              "system": "flash"
             }
           }
         }

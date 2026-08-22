@@ -251,6 +251,7 @@ from atlas.placement import (
     needs_with_file_set,
 )
 from atlas import melonds
+from atlas.yaml_scalars import read_scalars
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
@@ -7226,6 +7227,188 @@ def _melonds_savefile_placement(
     )
 
 
+# ---------------------------------------------------------------------------
+# RPCS3 build 7c6b3dcd — the save tree hangs off the emulated PS3's internal
+# drive, whose host directory vfs.yml states (/dev_hdd0/, defaulting to
+# $(EmulatorDir)dev_hdd0/, vfs_config.h:13). Below it, one directory per title
+# id under home/<user>/savedata; the user is a runtime selection nothing on
+# disk records, so every user home that exists is stated as its own tree.
+# ---------------------------------------------------------------------------
+
+_RPCS3_EMULATOR_DIR_KEY = "$(EmulatorDir)"
+_RPCS3_HDD0_KEY = "/dev_hdd0/"
+_RPCS3_HDD0_DEFAULT = "$(EmulatorDir)dev_hdd0/"
+# The user home the emulator starts with (Emulator::m_usr, System.h:164), used
+# where no home directory can be listed — never as a claim that it is the one
+# in force, which the caveat states.
+_RPCS3_FIRST_USER = "00000001"
+# The virtual memory cards for PS1 and PS2 classics, outside the per-user tree
+# — a whole string in the shipped binary. Stated, not walked: what lands there
+# and under which names has not been read.
+_RPCS3_VMC_SUBDIR = os.path.join("savedata", "vmc")
+
+
+def _rpcs3_user_homes(machine: Machine, hdd0: str) -> tuple[tuple[str, ...], bool]:
+    """The user homes on this drive, and whether the listing was complete."""
+    listing = machine.glob(os.path.join(hdd0, "home", "*"))
+    names = tuple(sorted(os.path.basename(path) for path in listing.matches))
+    return names, listing.status == GLOB_COMPLETE
+
+
+def _rpcs3_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavefilePlacement | Unresolved:
+    """RPCS3's save answer: the drive vfs.yml names, then one directory per title.
+
+    Two steps, both the emulator's own. ``cfg_vfs::get`` takes the configured
+    ``/dev_hdd0/`` or its compiled default, replaces ``$(EmulatorDir)``
+    everywhere — an empty one meaning the config directory — and appends a
+    separator (vfs_config.cpp:14-62). Below the drive the tree is
+    ``home/<user>/savedata``, one directory per title id.
+
+    The user is where this answer stops short of certainty: it is a runtime
+    selection (``m_usr``, System.h:164) and no file records which one is in
+    force, so every user home that exists becomes a group and the caveat says
+    the running emulator uses one of them.
+    """
+    assert card.config_base is not None and card.config_path is not None
+    config_dir = os.path.join(homes.base(card.config_base), "rpcs3")
+    vfs_path = os.path.join(homes.base(card.config_base), card.config_path)
+    result = machine.read_text(vfs_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"RPCS3's VFS configuration ({vfs_path}) exists and could not be read — which "
+            "drive its saves live on is unknowable here",
+            {"emulator": card.token, "config": vfs_path},
+        )
+    text = result.text or "" if result.status == READ_OK else ""
+    read = read_scalars(text, fallbacks={_RPCS3_EMULATOR_DIR_KEY: f"{config_dir}/"})
+    if read.refusal is not None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"RPCS3's VFS configuration ({vfs_path}) states a construct atlas does not read "
+            f"({read.refusal}) — which drive its saves live on is unknowable here",
+            {"emulator": card.token, "config": vfs_path, "reason": read.refusal},
+        )
+    stated = read.get(_RPCS3_HDD0_KEY) if _RPCS3_HDD0_KEY not in read.skipped else None
+    if stated:
+        provenance = f'vfs.yml: {_RPCS3_HDD0_KEY} = "{stated}"'
+    else:
+        provenance = (
+            f"{_RPCS3_HDD0_KEY} is unset — the compiled default "
+            f"{_RPCS3_HDD0_DEFAULT} governs (vfs_config.h:13)"
+        )
+    raw = stated or f"{config_dir}/dev_hdd0/"
+    host = sandbox.host(_RPCS3_HDD0_KEY, raw)
+    if host.path is None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"the drive RPCS3's VFS configuration names could not be located from here "
+            f"({vfs_path}) — nothing this answer could anchor at",
+            {"emulator": card.token, "config": vfs_path},
+        )
+    hdd0 = host.path
+    users, complete = _rpcs3_user_homes(machine, hdd0)
+    caveats: list[Caveat] = [*extra_caveats]
+    groups = tuple(
+        FileGroup(
+            dir=os.path.join(hdd0, "home", user, "savedata"),
+            files=None,
+            granularity=GRANULARITY_PER_GAME_DIRECTORY,
+            role=ROLE_BATTERY,
+        )
+        for user in (users or (_RPCS3_FIRST_USER,))
+    )
+    directory = groups[0].dir
+    caveats.append(
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "each directory below savedata is one title's own, named by its title id and "
+            "written by the game — move a directory whole rather than its files",
+            {
+                "core": card.token,
+                "dir": directory,
+                "role": ROLE_BATTERY,
+                "citation": (
+                    "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary "
+                    "(build 7c6b3dcd)"
+                ),
+            },
+        )
+    )
+    caveats.append(
+        Caveat(
+            CAVEAT_CORE_MODE_UNESTABLISHED,
+            "which user account the emulator runs as is a runtime selection — it starts at "
+            f"{_RPCS3_FIRST_USER} (Emulator::m_usr, System.h:164) and the user manager "
+            "changes it — and no file records the current one, so every user home found here "
+            "is stated"
+            + ("" if complete else "; the home directory could not be listed in full"),
+            {
+                "core": card.token,
+                "reason": "the active user account is not recorded on disk",
+                "users": ",".join(users) if users else _RPCS3_FIRST_USER,
+            },
+        )
+    )
+    caveats.append(
+        Caveat(
+            CAVEAT_SAVE_INSIDE_IMAGE,
+            "PS1 and PS2 classics save onto virtual memory cards outside the per-user tree, "
+            f"at {os.path.join(hdd0, _RPCS3_VMC_SUBDIR)} — a sync that walks only the "
+            "per-user savedata tree misses them. What lands there and under which names has "
+            "not been read, so the place is stated and its contents are not",
+            {
+                "emulator": card.token,
+                "image": os.path.join(hdd0, _RPCS3_VMC_SUBDIR),
+                "layout": os.path.join("savedata", "vmc"),
+            },
+        )
+    )
+    physical, link_caveats = _link_view(machine, directory)
+    caveats.extend(link_caveats)
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=groups,
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=GRANULARITY_PER_GAME_DIRECTORY,
+            mode="hdd0",
+            readings=(
+                _reading_with_file(
+                    OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),
+                    vfs_path if result.status == READ_OK else None,
+                ),
+            ),
+            alternatives=(),
+            provenance=(
+                f"standalone save card '{card.token}': the drive from vfs.yml "
+                "(cfg_vfs::get, vfs_config.cpp:14-62 at build 7c6b3dcd)"
+            ),
+        ),
+    )
+
+
 _STANDALONE_SAVE_RESOLVERS = {
     "DOLPHIN": _dolphin_savefile_placement,
     "PPSSPP": _ppsspp_savefile_placement,
@@ -7235,6 +7418,7 @@ _STANDALONE_SAVE_RESOLVERS = {
     "DUCKSTATION": _duckstation_savefile_placement,
     "PCSX2": _pcsx2_savefile_placement,
     "MELONDS": _melonds_savefile_placement,
+    "RPCS3": _rpcs3_savefile_placement,
 }
 
 
@@ -7307,6 +7491,7 @@ _EMUDECK_LAUNCHER_CARDS = {
     "duckstation": "DUCKSTATION",
     "pcsx2-qt": "PCSX2",
     "melonds": "MELONDS",
+    "rpcs3": "RPCS3",
 }
 
 # The binary variants an EmuDeck launcher picks between, in its probe order

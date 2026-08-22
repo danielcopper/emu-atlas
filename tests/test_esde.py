@@ -42,9 +42,9 @@ BUNDLED_XML = """<?xml version="1.0"?>
     <command label="ParaLLEl N64">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>
   </system>
   <system>
-    <name>ps3</name>
-    <path>%ROMPATH%/ps3</path>
-    <command label="RPCS3 Directory (Standalone)">%EMULATOR_RPCS3% --no-gui %ROM%</command>
+    <name>flash</name>
+    <path>%ROMPATH%/flash</path>
+    <command label="Ruffle (Standalone)">%EMULATOR_RUFFLE% %ROM%</command>
   </system>
 </systemList>
 """
@@ -53,7 +53,7 @@ BUNDLED_XML = """<?xml version="1.0"?>
 class TestParse:
     def test_systems_and_order(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test").systems
-        assert set(parsed) == {"dreamcast", "n64", "ps3"}
+        assert set(parsed) == {"dreamcast", "flash", "n64"}
         assert [e.label for e in parsed["n64"].entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
 
     def test_libretro_classification_extracts_core_so(self):
@@ -64,7 +64,7 @@ class TestParse:
 
     def test_standalone_classification(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test").systems
-        entry = parsed["ps3"].entries[0]
+        entry = parsed["flash"].entries[0]
         assert entry.kind == atlas.KIND_STANDALONE
         assert entry.core_so is None
 
@@ -84,7 +84,7 @@ class TestParse:
         # before the wrap, expat skipped a leading BOM by itself, so refusing
         # it now would regress a file the frontend reads fine.
         parsed = parse_es_systems(f"\ufeff{BUNDLED_XML}", provenance="test").systems
-        assert set(parsed) == {"dreamcast", "n64", "ps3"}
+        assert set(parsed) == {"dreamcast", "flash", "n64"}
 
 
 class TestTheExtensionTokenIsEsdes:
@@ -426,7 +426,7 @@ class TestRetroDeckCatalogue:
         assert [c.code for c in listing.caveats] == [atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE]
 
     def test_systems_listing(self):
-        assert _catalogue_fixture().systems().systems == ("dreamcast", "n64", "ps3")
+        assert _catalogue_fixture().systems().systems == ("dreamcast", "flash", "n64")
 
     def test_custom_overlay_overrides(self):
         rd = _catalogue_fixture(
@@ -471,11 +471,11 @@ class TestEntrySavefileLocation:
     def test_standalone_entry_is_a_domain_outcome(self):
         # Outside the resolver's coverage is an answer, not an exception (M8).
         rd = _catalogue_fixture()
-        entry = _entries(rd.emulators_for("ps3"))[0]
-        outcome = entry.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps3/game")
+        entry = _entries(rd.emulators_for("flash"))[0]
+        outcome = entry.savefile_location(content_path="/mnt/sd/retrodeck/roms/flash/game")
         assert isinstance(outcome, atlas.Unresolved)
         assert outcome.code == atlas.UNRESOLVED_STANDALONE
-        assert outcome.data["system"] == "ps3"
+        assert outcome.data["system"] == "flash"
 
 
 class TestGamelistAlternative:

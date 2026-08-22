@@ -2177,6 +2177,375 @@
           }
         }
       }
+    },
+    {
+      "name": "retrodeck-rpcs3-saves-under-the-drive-its-vfs-names",
+      "rationale": "RPCS3's saves hang off the emulated PS3's internal drive, and vfs.yml states where that drive lives: /dev_hdd0/ composed off $(EmulatorDir), which cfg_vfs::get replaces everywhere it appears (vfs_config.cpp:14-62 at build 7c6b3dcd) — the shape RetroDECK writes when it points the drive at its storage tree. Below it the tree is home/<user>/savedata, one directory per title id; the user is a runtime selection nothing on disk records, so every user home found becomes its own group and the caveat says so. The virtual memory cards for PS1 and PS2 classics sit outside that tree and are stated as a place, not walked.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir): /mnt/sd/retrodeck/storage/rpcs3/\n/dev_hdd0/: $(EmulatorDir)dev_hdd0/\n/app_home/: \"\"\n/dev_usb***/:\n  /dev_usb000:\n    Path: $(EmulatorDir)dev_usb000/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "reason": "the active user account is not recorded on disk",
+                "users": "00000001"
+              }
+            },
+            {
+              "code": "save-inside-image",
+              "data": {
+                "emulator": "RPCS3",
+                "image": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "layout": "savedata/vmc"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-every-user-home-that-exists-is-a-tree-of-its-own",
+      "rationale": "Which user account the emulator runs as is a runtime selection — it starts at 00000001 (Emulator::m_usr, System.h:164) and the user manager changes it — and no file records the current one. A machine with two accounts therefore gets two groups rather than a guess at which is in force, the way the Dolphin card states every region tree.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/hdd0/home/00000001/savedata",
+          "/mnt/sd/hdd0/home/00000002/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/hdd0/home/00000002/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "reason": "the active user account is not recorded on disk",
+                "users": "00000001,00000002"
+              }
+            },
+            {
+              "code": "save-inside-image",
+              "data": {
+                "emulator": "RPCS3",
+                "image": "/mnt/sd/hdd0/savedata/vmc",
+                "layout": "savedata/vmc"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "/mnt/sd/hdd0/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-an-unset-drive-is-the-compiled-default-below-the-config-directory",
+      "rationale": "An unset /dev_hdd0/ is not an unknown drive: the compiled default is $(EmulatorDir)dev_hdd0/ (vfs_config.h:13), and an empty $(EmulatorDir) means the emulator's own config directory (vfs_config.cpp:32-39). With no vfs.yml at all the answer is therefore still a real directory — the one a fresh install would use.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "reason": "the active user account is not recorded on disk",
+                "users": "00000001"
+              }
+            },
+            {
+              "code": "save-inside-image",
+              "data": {
+                "emulator": "RPCS3",
+                "image": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/savedata/vmc",
+                "layout": "savedata/vmc"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": null,
+                "options_file": null
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-rpcs3-reads-the-vfs-in-the-appimages-own-home",
+      "rationale": "EmuDeck runs RPCS3 as an AppImage (emuDeckRPCS3.sh:4-5), so the launcher route's variant gate answers from the host's own XDG tree — and that is where EmuDeck writes the VFS it points at its storage folder (emuDeckRPCS3.sh:183), linking its saves folder at dev_hdd0/home/00000001/savedata (:189). The same card, reached the other arrangement's way.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"RPCS3 (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/rpcs3.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/rpcs3.AppImage": "",
+          "/home/deck/.config/rpcs3/vfs.yml": "$(EmulatorDir): /home/deck/Emulation/storage/rpcs3/\n/dev_hdd0/: $(EmulatorDir)dev_hdd0/\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/storage/rpcs3/dev_hdd0/home/00000001/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "dir": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "reason": "the active user account is not recorded on disk",
+                "users": "00000001"
+              }
+            },
+            {
+              "code": "save-inside-image",
+              "data": {
+                "emulator": "RPCS3",
+                "image": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "layout": "savedata/vmc"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/",
+                "options_file": "/home/deck/.config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

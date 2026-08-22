@@ -112,6 +112,20 @@
       "provenance": {
         "source": "melonDS 1.1, the release the shipped binary carries as a whole version string (components/melonds/bin/melonDS) and the release Flathub currently installs for EmuDeck. One file per game: <rom stem>.sav, the loaded file's name without its extension — for a ROM inside an archive the name of the file inside it (EmuInstance.cpp:1884, :1846-1848 at 1.1; the archive suffixes are Window.cpp:124-140, matched case-insensitively :143-148), so archive content keeps the hole open. The directory is [Instance0] SaveFilePath, read the way Config::Load reads it: melonDS.toml under <config>/melonDS — a portable directory beside the executable would outrank that, and neither arrangement has one (pathInit, main.cpp:180-214) — with a missing TOML falling back to the pre-1.0 melonDS.ini line by line (Config.cpp:785-795, :682-775; the legacy key is instance-unique, :301) and a TOML that does not parse yielding factory defaults (:796-803). An empty or absent SaveFilePath puts the save beside the ROM itself (getAssetPath, EmuInstance.cpp:445-484; the default is empty, Config.cpp:116-121 with the fallback at :596); a relative value resolves against the launching process's working directory, trailing path separators trimmed either way (:459-467). Local-multiplayer instances append .2/.3 after the .sav; the normal window, instance 0, appends nothing (:176-181, :1891) — the answer is for the normal launch. On EmuDeck the emulator is the net.kuribo64.melonDS flatpak: melonds.sh runs it unconditionally (melonds.sh:4), EmuDeck grants it --filesystem=host (installEmuFP.sh:33) so configured paths are host paths, and its trees are the app's own XDG homes below ~/.var/app; the legacy INI EmuDeck writes there (emuDeckMelonDS.sh, melonDS_configFile) is 1.1's migration source while no TOML exists."
       }
+    },
+    "RPCS3": {
+      "saves": {
+        "config": {
+          "base": "config",
+          "path": "rpcs3/vfs.yml"
+        },
+        "systems": [
+          "ps3"
+        ]
+      },
+      "provenance": {
+        "source": "RPCS3 build 7c6b3dcd, the revision the shipped binary names. The save tree hangs off the emulated PS3's internal drive, whose host directory vfs.yml states: the key /dev_hdd0/, defaulting to $(EmulatorDir)dev_hdd0/ (vfs_config.h:13). $(EmulatorDir) is itself a key of that file, and an empty one means the emulator's config directory — cfg_vfs::get replaces the token everywhere it appears and appends a separator where one is missing (vfs_config.cpp:14-62). Below the drive, saves are one directory per title id under home/<user>/savedata: the binary carries '/dev_hdd0/home/%08u/savedata/' as a whole string, beside '/dev_hdd0/home/%08d/' and the trophy tree. The user is a runtime selection — Emulator::m_usr initialises to '00000001' (System.h:164) and the user manager changes it — and nothing on disk records which one is current, so the answer states the tree of every user home that exists and names the uncertainty. Both arrangements wire the first user: RetroDECK links saves/ps3/rpcs3 at dev_hdd0/home/00000001/savedata (component_prepare.sh), EmuDeck the same path from its own saves folder (emuDeckRPCS3.sh:189) and runs the AppImage (emuDeckRPCS3.sh:4-5). A second save location sits outside the per-user tree entirely — '/dev_hdd0/savedata/vmc/', the virtual memory cards for PS1 and PS2 classics, also a whole string in the binary — and is stated as a caveat rather than a group, because what is written there and under which names has not been read. config.yml stays unread: it is nested YAML, and nothing this answer needs is in it."
+      }
     }
   }
 }

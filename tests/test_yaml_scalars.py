@@ -108,6 +108,26 @@ class TestWhatItRefusesWholesale:
         # plain-looking line above it means.
         assert read.values == {}
 
+    def test_a_fallback_fills_a_token_the_file_leaves_empty(self):
+        # RPCS3's own rule: an empty $(EmulatorDir) means its config directory
+        # (vfs_config.cpp:32-39), so the caller supplies what the emulator
+        # would use and the file's own value still wins where it has one.
+        text = '$(EmulatorDir): ""\n/dev_hdd0/: $(EmulatorDir)dev_hdd0/\n'
+        read = read_scalars(text, fallbacks={"$(EmulatorDir)": "/config/rpcs3/"})
+        assert read.get("/dev_hdd0/") == "/config/rpcs3/dev_hdd0/"
+
+    def test_the_files_own_value_outranks_the_fallback(self):
+        text = "$(EmulatorDir): /storage/\n/dev_hdd0/: $(EmulatorDir)dev_hdd0/\n"
+        read = read_scalars(text, fallbacks={"$(EmulatorDir)": "/config/rpcs3/"})
+        assert read.get("/dev_hdd0/") == "/storage/dev_hdd0/"
+
+    def test_a_token_the_file_never_defines_falls_back_too(self):
+        read = read_scalars(
+            "/dev_hdd0/: $(EmulatorDir)dev_hdd0/\n",
+            fallbacks={"$(EmulatorDir)": "/config/rpcs3/"},
+        )
+        assert read.get("/dev_hdd0/") == "/config/rpcs3/dev_hdd0/"
+
     def test_a_substitution_cycle_refuses_instead_of_looping(self):
         read = read_scalars("$(A): $(B)\n$(B): $(A)\n")
         assert read.refusal == REFUSAL_SUBSTITUTION_CYCLE

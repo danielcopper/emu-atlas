@@ -720,18 +720,19 @@ extensions; `complete` is `false`, and deciding which of those files are yours t
 ### Where a standalone emulator's saves live
 
 A standalone catalogue entry answers `savefile_location` where a **standalone save card** covers the emulator its launch
-command names — Dolphin, PPSSPP, xemu, Cemu, Azahar, DuckStation, PCSX2 and melonDS today, keyed by the `%EMULATOR_…%`
-token the way the texture cards are. An EmuDeck catalogue may name the token or run a per-emulator launcher script — an
-allowlisted launcher (`tools/launchers/cemu.sh`, `melonds.sh`, …) reaches the same card — and either way the launch's
-binary variant gates the answer. Two variants are established: an AppImage under `~/Applications` reads the host's own
-XDG tree, and a flatpak whose app id the card names (melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright,
-probing nothing) reads the app's own homes below `~/.var/app`. A variant whose config is not established (the Windows
-build under Proton via `-w`, a flatpak no card names an id for) refuses with `standalone-variant-unestablished` and the
-variant named in `data`. No frontend hands these emulators a save directory, so the answer's `root_kind` is
-`emulator_directory`: the emulator's own tree, its shape read from the emulator's own configuration the way the emulator
-reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's `settings.xml` — each at the shipped release; PPSSPP's
-Linux memstick is fixed by the build, so its card names no config at all), and rerouted with symlinks the answer walks.
-The one exception is the emulator whose own default walks into the content's directory — melonDS below.
+command names — Dolphin, PPSSPP, xemu, Cemu, Azahar, DuckStation, PCSX2, melonDS and RPCS3 today, keyed by the
+`%EMULATOR_…%` token the way the texture cards are. An EmuDeck catalogue may name the token or run a per-emulator
+launcher script — an allowlisted launcher (`tools/launchers/cemu.sh`, `melonds.sh`, …) reaches the same card — and
+either way the launch's binary variant gates the answer. Two variants are established: an AppImage under
+`~/Applications` reads the host's own XDG tree, and a flatpak whose app id the card names (melonDS's
+`net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads the app's own homes below `~/.var/app`.
+A variant whose config is not established (the Windows build under Proton via `-w`, a flatpak no card names an id for)
+refuses with `standalone-variant-unestablished` and the variant named in `data`. No frontend hands these emulators a
+save directory, so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the
+emulator's own configuration the way the emulator reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's
+`settings.xml` — each at the shipped release; PPSSPP's Linux memstick is fixed by the build, so its card names no config
+at all), and rerouted with symlinks the answer walks. The one exception is the emulator whose own default walks into the
+content's directory — melonDS below.
 
 ```python
 entry = inst.emulators_for("gc").entries[0]   # 'Dolphin (Standalone)'
@@ -762,6 +763,16 @@ lives **inside** the emulated Xbox hard disk, so the answer names the image as o
 carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id>`) — a file-level client backs the
 image up whole or leaves it, a tool that parses FATX has the layout stated instead of rediscovered, and per-game sync is
 honestly not on offer from outside.
+
+RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
+(`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the
+emulator's own config directory. Below the drive, saves are one directory per title id under `home/<user>/savedata`.
+Which user the emulator runs as is a runtime selection nothing on disk records, so **every user home that exists is a
+group of its own** and a caveat lists them: a machine with two accounts gets two trees rather than a guess at which is
+in force. Two more things ride along — the per-title directories keep their names refused (they are the games' own), and
+`save-inside-image` states a _second_ place saves live, `savedata/vmc`, the virtual memory cards for PS1 and PS2
+classics, which sit outside the per-user tree entirely. That card is also the first to read YAML, through a reader that
+names the keys it does not read rather than guessing (`atlas.yaml_scalars`).
 
 melonDS is the simplest card and the one whose default leaves the emulator's tree: one `<rom stem>.sav` per game where
 `[Instance0] SaveFilePath` points, and an empty or absent value lands the save **beside the ROM itself** — the answer's

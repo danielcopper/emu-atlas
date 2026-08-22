@@ -82,9 +82,9 @@ Map of the surface — layers, handles, answer types, and what to import from wh
 4. **Standalone emulators** — per-emulator config parsing and save placement rules, read the way each emulator reads its
    own configuration: Dolphin (GC slots and the Wii NAND), PPSSPP, xemu, Cemu (the per-title MLC unit), Azahar (the
    per-title unit on the 3DS's emulated SD), DuckStation (two memory-card slots, six modes), PCSX2 (slots whose card
-   type is read off the disk, file or folder) and melonDS (one `.sav` per game, beside the ROM by default) today, one
-   emulator per sub-issue of the epic (#3) until every emulator RetroDECK ships resolves — on EmuDeck too, whichever way
-   its catalogue launches them, AppImage or flatpak.
+   type is read off the disk, file or folder), melonDS (one `.sav` per game, beside the ROM by default) and RPCS3 (the
+   save tree the emulated PS3's own VFS names) today, one emulator per sub-issue of the epic (#3) until every emulator
+   RetroDECK ships resolves — on EmuDeck too, whichever way its catalogue launches them, AppImage or flatpak.
 5. **The system vocabulary and the platform crosswalk** — the ids every question about a system takes are ES-DE's system
    names, shipped as packaged data cited to a stated build and guarded by a test that parses that build's own
    `es_systems.xml`; `known_systems()` and `from_esde_system()` let a client check its own map before using it. Beside
