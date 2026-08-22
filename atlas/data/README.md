@@ -317,7 +317,10 @@ rename. And the **encoding travels with the anchor** (`utf-8` unless stated): on
 `hires_texture` — exists only as UTF-32LE. A standalone row's block also names the component `binary` its literals were
 read from, because nothing derives it; a core row's binary is its key. Every recorded name — path segments, option
 settings, config file names — is either anchored or opted out with a reason, and the opt-out list is curated in
-`tests/test_anchor_tripwire.py` (empty today: even LRPS2's source-level settings key pins its own last segment).
+`tests/test_anchor_tripwire.py` (empty today: even LRPS2's source-level settings key pins its own last segment). A
+configured directory contributes **three** names to that vocabulary — the section, the key and the compiled default —
+because a key that survives a rename of the section around it reads nothing at all, which a tripwire watching only the
+key would let through.
 
 ```json
 "flycast": {
