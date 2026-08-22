@@ -90,6 +90,25 @@ def resolve_source(raw: str) -> Path:
     return checkout
 
 
+def resolve_output(raw: str) -> Path:
+    """Resolve ``-o`` to the JSON file this run writes, and refuse anything else.
+
+    One file into a directory that already exists: the generator creates no
+    tree, so a mistyped or wandering path is refused here rather than acted
+    on. Resolving first is what makes the check meaningful — a relative walk
+    (``../..``) is settled before the suffix and parent tests see it. Raises
+    ``ValueError`` like :func:`resolve_source`.
+    """
+    output = Path(raw).expanduser().resolve()
+    if output.suffix != ".json":
+        raise ValueError(f"the output must be a .json path, got {raw}")
+    if output.is_dir():
+        raise ValueError(f"the output path is a directory: {output}")
+    if not output.parent.is_dir():
+        raise ValueError(f"no directory to write into: {output.parent}")
+    return output
+
+
 def parse_sizes(header: str) -> dict[str, int]:
     """The three file sizes the search accepts, from ``bios.h``'s own constants.
 
@@ -178,10 +197,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         checkout = resolve_source(args.source)
+        output = resolve_output(args.output)
         table, count = build(checkout, args.revision)
     except ValueError as error:
         parser.error(str(error))
-    output = Path(args.output)
     output.write_text(json.dumps(table, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{output}: {count} images at {args.revision}")
     return 0
