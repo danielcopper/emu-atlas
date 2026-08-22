@@ -1261,6 +1261,13 @@ data carries the `dir` a BIOS belongs in. That is a different answer from a _cho
 required requirement reported `found: "missing"`, and a client would act differently on the two: one says "pick one",
 the other says "fetch this one".
 
+**xemu shows which files a card deliberately leaves out.** Four paths sit in its machine settings and only three are
+firmware: the boot ROM, the flash image and the hard disk each refuse the start when missing. The EEPROM does not appear
+in the firmware answer at all, because the emulator generates one where none exists and it is the console's own settings
+— the save answer already names it as a settings group, and stating it twice would file save data under firmware. The
+hard disk _is_ in both answers on purpose: the console needs one to start, and every save lives inside it, so each
+answer names it and says which aspect it means.
+
 ## Where do this system's ROMs live? (and what launches them)
 
 The same catalogue declares, per system, the directory its ROMs sit in and the file extensions the frontend will launch.

@@ -65,6 +65,7 @@ from __future__ import annotations
 import importlib.resources
 import json
 import os
+import tomllib
 import re
 from dataclasses import dataclass
 from glob import escape as _glob_escape
@@ -2495,6 +2496,7 @@ def _melonds_standalone_core(
     card: StandaloneFirmwareCard,
     system: str,
     *,
+    data_home: str,
     config_home: str,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
@@ -2507,6 +2509,7 @@ def _melonds_standalone_core(
     default — DS games boot on the built-in replacement, and the empty
     requirement list is the true answer, stated with the switch named.
     """
+    del data_home  # melonDS keeps its settings under the config home
     read = melonds.read_config(machine, config_home)
     if read.unreadable is not None:
         return _melonds_config_unreadable_core(entry, read.unreadable), []
@@ -2592,6 +2595,7 @@ def _pcsx2_standalone_core(
     card: StandaloneFirmwareCard,
     system: str,
     *,
+    data_home: str,
     config_home: str,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
@@ -2605,6 +2609,7 @@ def _pcsx2_standalone_core(
     BIOS root and leaves the choice to the user. The answer says so, because
     "no BIOS chosen" is why a game would not boot.
     """
+    del data_home  # PCSX2 keeps its settings under the config home
     ini_path = os.path.join(config_home, _PCSX2_INI)
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
@@ -2699,8 +2704,136 @@ def _pcsx2_standalone_core(
     )
 
 
+# xemu v0.8.135 — four files sit in ``[sys.files]`` and only three are
+# firmware. The boot ROM, the flash image and the hard disk each refuse the
+# start when missing, in the emulator's own words; the EEPROM is generated
+# where none exists and belongs to the save answer, which already states it.
+_XEMU_TOML = os.path.join("xemu", "xemu", "xemu.toml")
+_XEMU_FILE_KEYS = (
+    "sys.files/bootrom_path",
+    "sys.files/flashrom_path",
+    "sys.files/hdd_path",
+)
+
+
+def _xemu_file_value(document: Mapping[str, Any], key: str) -> str:
+    """One ``[sys.files]`` value as written, or the empty string."""
+    files = document.get("sys", {})
+    files = files.get("files", {}) if isinstance(files, Mapping) else {}
+    value = files.get(key.rsplit("/", 1)[-1]) if isinstance(files, Mapping) else None
+    return value if isinstance(value, str) else ""
+
+
+def _xemu_unreadable_core(entry: CatalogueEntry, path: str, why: str) -> CoreFirmware:
+    return CoreFirmware(
+        core_so=None,
+        label=entry.label,
+        declaration=DECLARATION_UNREADABLE,
+        requirements=(),
+        caveats=(
+            Caveat(
+                CAVEAT_EMULATOR_CONFIG_UNREADABLE,
+                f"xemu's configuration ({path}) {why} — which files this launch expects is "
+                "unknown, so the empty list below is not 'needs nothing'",
+                {"label": entry.label, "config": path},
+            ),
+        ),
+    )
+
+
+def _xemu_standalone_core(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    system: str,
+    *,
+    data_home: str,
+    config_home: str,
+    verify: bool,
+) -> tuple[CoreFirmware, list[Caveat]]:
+    """xemu's expectations: the three files in ``[sys.files]`` that refuse the start.
+
+    Each is a plain path the configuration states outright — no defaults, no
+    composition — so the reading is short and the interesting part is which of
+    the four keys belong here at all. The EEPROM does not: xemu generates one
+    where none exists, and it is the console's own settings, which the save
+    answer already states. The hard disk does, and is claimed by both answers
+    on purpose: a console does not start without one, and every save lives
+    inside it.
+    """
+    del config_home  # xemu keeps its settings under the data home, not this one
+    toml_path = os.path.join(data_home, _XEMU_TOML)
+    result = machine.read_text(toml_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return _xemu_unreadable_core(entry, toml_path, "exists and could not be read"), []
+    try:
+        document: Mapping[str, Any] = (
+            tomllib.loads(result.text or "") if result.status == READ_OK else {}
+        )
+    except tomllib.TOMLDecodeError:
+        return _xemu_unreadable_core(entry, toml_path, "is not parseable TOML"), []
+    by_key = {declared.key: declared for declared in card.config_files}
+    requirements: list[FirmwareRequirement] = []
+    caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
+    answer_caveats: list[Caveat] = []
+    for key in _XEMU_FILE_KEYS:
+        declared = by_key.get(key)
+        if declared is None:
+            raise ValueError(
+                f"standalone firmware card {card.token!r} names no entry for {key!r} — the "
+                "card and the code shipped out of step"
+            )
+        value = _xemu_file_value(document, key)
+        if not value:
+            caveats.append(
+                Caveat(
+                    CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
+                    f"{entry.label}'s {key} names no file — the setting is empty, and the "
+                    "console refuses to start without this one",
+                    {
+                        "label": entry.label,
+                        "token": card.token,
+                        "key": key,
+                        "declared": "",
+                        "need": NEED_REQUIRED,
+                    },
+                )
+            )
+            continue
+        path = resolve_links(machine, value) or value
+        found, checked, observed = _observe(machine, path, None, verify=verify)
+        if observed is not None:
+            answer_caveats.append(observed)
+        requirements.append(
+            FirmwareRequirement(
+                core_so=None,
+                system=system,
+                system_source=SOURCE_CARD,
+                need=NEED_REQUIRED,
+                file_name=os.path.basename(value),
+                path=path,
+                declared=value,
+                description=declared.purpose,
+                identity=None,
+                found=found,
+                checked=checked,
+            )
+        )
+    return (
+        CoreFirmware(
+            core_so=None,
+            label=entry.label,
+            declaration=DECLARATION_PACKAGED,
+            requirements=tuple(sorted(requirements, key=lambda r: r.path)),
+            caveats=tuple(caveats),
+        ),
+        answer_caveats,
+    )
+
+
 _STANDALONE_CONFIG_RESOLVERS = {
     "PCSX2": _pcsx2_standalone_core,
+    "XEMU": _xemu_standalone_core,
     "MELONDS": _melonds_standalone_core,
 }
 
@@ -2737,7 +2870,19 @@ def _carded_standalone_core(
             f"standalone firmware card {card.token!r} states config_files but has no "
             "resolver registered — the card and the code shipped out of step"
         )
-    return resolver(machine, entry, card, system, config_home=config_home, verify=verify)
+    # Both bases go to every resolver: which one an emulator keeps its
+    # settings under is the emulator's business, not the route's — xemu's live
+    # under the data home while melonDS's and PCSX2's live under the config
+    # one.
+    return resolver(
+        machine,
+        entry,
+        card,
+        system,
+        data_home=data_home,
+        config_home=config_home,
+        verify=verify,
+    )
 
 
 def _standalone_entry_core(
