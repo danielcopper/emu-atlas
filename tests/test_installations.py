@@ -1817,7 +1817,10 @@ TRIO_ESDE = (
     '<command label="melonDS (Standalone)">%EMULATOR_MELONDS% %ROM%</command></system>'
     "</systemList>"
 )
-XEMU_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
+# xemu opens its configuration under the data home; a config-tree copy is the
+# arrangement's own arrangement, reached only through the link it makes.
+XEMU_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+XEMU_CONFIG_TREE_TOML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml"
 CEMU_XML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml"
 AZAHAR_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/azahar-emu/qt-config.ini"
 DUCKSTATION_CONFIG_INI = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
@@ -1875,6 +1878,16 @@ class TestMoreStandaloneSaves:
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
         assert "hdd_path" in stated[0].data["reason"]
+
+    def test_xemu_does_not_read_a_config_tree_copy_no_link_reaches(self):
+        # The file sits where a distribution likes to keep it and nothing links
+        # it to where xemu opens it, so this launch has no configuration at all.
+        p = self._answer(
+            "xbox",
+            files={XEMU_CONFIG_TREE_TOML: "[sys.files]\nhdd_path = '/mnt/sd/hdd.qcow2'\n"},
+        )
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
     def test_xemu_with_unparseable_toml_refuses(self):
         p = self._answer("xbox", files={XEMU_TOML_PATH: "[sys.files\nnot toml"})

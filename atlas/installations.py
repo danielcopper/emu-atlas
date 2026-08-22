@@ -5651,6 +5651,9 @@ def _ppsspp_savefile_placement(
 # settings. Per-title structure exists inside the image's FATX filesystem —
 # one directory per title id under UDATA/ — but nothing outside the image
 # is addressable, which the save-inside-image caveat states machine-readably.
+# The card names that configuration under the *data* home, which is where the
+# emulator opens it (SDL_GetPrefPath); an arrangement that keeps the real
+# directory elsewhere and links it there is walked like any other symlink.
 # ---------------------------------------------------------------------------
 
 
