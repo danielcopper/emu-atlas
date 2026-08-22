@@ -179,8 +179,9 @@ class TestWhichImageWouldBoot:
 
 class TestTheLoaderRefusesAMalformedTable:
     def test_a_table_without_images_is_refused(self):
+        text = json.dumps({"sizes": {"ps1": 1}, "images": []})
         with pytest.raises(ValueError, match="images"):
-            duckstation.load_bios_table(json.dumps({"sizes": {"ps1": 1}, "images": []}))
+            duckstation.load_bios_table(text)
 
     def test_a_table_without_sizes_is_refused(self):
         text = json.dumps({"images": [{"name": "x", "region": "pal", "md5": "a", "priority": 1}]})
