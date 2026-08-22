@@ -57,20 +57,41 @@ class StandaloneFirmwareConfigFile:
 
 
 @dataclass(frozen=True, slots=True)
+class StandaloneFirmwareSearch:
+    """The third shape: no file is named at all, a directory is searched.
+
+    DuckStation is the case it exists for. One setting names the directory,
+    three more may name an image inside it per console region, and where they
+    are empty — the shipped state — the emulator keeps every file of an
+    accepted size and recognises it by its bytes. So the card can state where
+    to look and which keys speak, and nothing about *which file*: that is a
+    property of content, answered by the packaged recognition table beside the
+    resolver.
+    """
+
+    directory_key: str
+    directory_default: str
+    region_keys: tuple[tuple[str, str], ...]
+    purpose: str
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class StandaloneFirmwareCard:
     """One standalone emulator's firmware expectations, with the systems they answer for.
 
-    Exactly one of ``files`` and ``config_files`` is populated: a card names
-    fixed probe paths, or the config keys whose values are the paths — and a
-    ``config_files`` card without a resolver registered in
-    :mod:`atlas.firmware` fails loudly there, the way a save card without one
-    does.
+    Exactly one of ``files``, ``config_files`` and ``search`` is populated: a
+    card names fixed probe paths, or the config keys whose values are the
+    paths, or the directory a search runs in — and a card of either of the
+    latter two without a resolver registered in :mod:`atlas.firmware` fails
+    loudly there, the way a save card without one does.
     """
 
     token: str
     systems: tuple[str, ...]
     files: tuple[StandaloneFirmwareFile, ...]
     config_files: tuple[StandaloneFirmwareConfigFile, ...]
+    search: StandaloneFirmwareSearch | None
     provenance: str
 
 
@@ -120,6 +141,39 @@ def _config_file(token: str, index: int, entry: Any) -> StandaloneFirmwareConfig
     )
 
 
+def _search(token: str, entry: Any) -> StandaloneFirmwareSearch:
+    where = f"standalone firmware card {token!r}: search"
+    if not isinstance(entry, dict) or set(entry) != {
+        "directory_key",
+        "directory_default",
+        "region_keys",
+        "purpose",
+        "citation",
+    }:
+        raise ValueError(
+            f"{where}: expected exactly directory_key/directory_default/region_keys/purpose/"
+            f"citation, got {entry!r}"
+        )
+    region_keys = entry["region_keys"]
+    if not isinstance(region_keys, list) or not region_keys:
+        raise ValueError(f"{where}.region_keys must be a non-empty list, got {region_keys!r}")
+    pairs = []
+    for index, pair in enumerate(region_keys):
+        at = f"{where}.region_keys[{index}]"
+        if not isinstance(pair, dict) or set(pair) != {"region", "key"}:
+            raise ValueError(f"{at}: expected exactly region/key, got {pair!r}")
+        pairs.append(
+            (_expect_str(pair["region"], f"{at}.region"), _expect_str(pair["key"], f"{at}.key"))
+        )
+    return StandaloneFirmwareSearch(
+        directory_key=_expect_str(entry["directory_key"], f"{where}.directory_key"),
+        directory_default=_expect_str(entry["directory_default"], f"{where}.directory_default"),
+        region_keys=tuple(pairs),
+        purpose=_expect_str(entry["purpose"], f"{where}.purpose"),
+        citation=_expect_str(entry["citation"], f"{where}.citation"),
+    )
+
+
 def _card(token: str, entry: Any) -> StandaloneFirmwareCard:
     where = f"standalone firmware card {token!r}"
     if not isinstance(entry, dict):
@@ -129,8 +183,12 @@ def _card(token: str, entry: Any) -> StandaloneFirmwareCard:
         raise ValueError(f"{where}: systems must be a non-empty list, got {systems!r}")
     files = entry.get("files")
     config_files = entry.get("config_files")
-    if (files is None) == (config_files is None):
-        raise ValueError(f"{where}: exactly one of 'files' and 'config_files' must be given")
+    search = entry.get("search")
+    stated = [shape for shape in (files, config_files, search) if shape is not None]
+    if len(stated) != 1:
+        raise ValueError(
+            f"{where}: exactly one of 'files', 'config_files' and 'search' must be given"
+        )
     if files is not None and (not isinstance(files, list) or not files):
         raise ValueError(f"{where}: files must be a non-empty list, got {files!r}")
     if config_files is not None and (not isinstance(config_files, list) or not config_files):
@@ -143,6 +201,7 @@ def _card(token: str, entry: Any) -> StandaloneFirmwareCard:
         systems=tuple(_expect_str(s, f"{where}: systems[]") for s in systems),
         files=tuple(_file(token, i, f) for i, f in enumerate(files or [])),
         config_files=tuple(_config_file(token, i, f) for i, f in enumerate(config_files or [])),
+        search=None if search is None else _search(token, search),
         provenance=_expect_str(provenance.get("source"), f"{where}: provenance.source"),
     )
 

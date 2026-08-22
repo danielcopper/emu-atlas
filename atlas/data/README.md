@@ -521,11 +521,12 @@ EmuDeck's installer parks a found `keys.txt` in the config directory the Linux b
 precisely why the card records the door and not the intention. No packaged identity exists for a user-supplied key file,
 so a present file stays `checked: "unknown"`.
 
-A card states its probes one of two ways, and exactly one of them: `files` names fixed paths below an XDG base (Cemu's
-`keys.txt`), or `config_files` names the **configuration keys whose values are the paths** — melonDS (1.1), whose seven
-BIOS, firmware and NAND keys point wherever the user pointed them. A `config_files` card needs a resolver registered
-beside it in `atlas/firmware.py` and fails the load loudly without one, the same way a save card does: which keys a
-launch probes at all is the emulator's own live decision, not something a card can spell. melonDS's `verifySetup`
+A card states its probes one of three ways, and exactly one of them: `files` names fixed paths below an XDG base (Cemu's
+`keys.txt`), `config_files` names the **configuration keys whose values are the paths** — melonDS (1.1), whose seven
+BIOS, firmware and NAND keys point wherever the user pointed them — or `search` names a **directory to look in**, for
+the emulator that names no file at all (DuckStation, below). Either of the latter two needs a resolver registered beside
+it in `atlas/firmware.py` and fails the load loudly without one, the same way a save card does: which keys a launch
+probes at all is the emulator's own live decision, not something a card can spell. melonDS's `verifySetup`
 (EmuInstance.cpp:633-667) asks two switches — `Emu.ExternalBIOSEnable`, whose compiled default is **off** because the
 emulator carries a built-in replacement, and `Emu.ConsoleType`, where DSi mode requires its BIOS pair and NAND either
 way. With the switch off the answer is an empty requirement list plus `firmware-builtin-replacement` naming the switch;
@@ -549,6 +550,19 @@ twice. The hard disk is the opposite case and is claimed by both answers deliber
 one, and every save lives inside it, so each answer names it and says which aspect it means. Note also where xemu keeps
 its settings — under the **data** home, not the config one — which is why a card's resolver receives both bases and
 takes the one its emulator uses.
+
+DuckStation (the fork build frozen 2024-09-19) is the fourth, and the only `search` card: it names **no file**.
+`[BIOS] SearchDirectory` names a directory — read the same `LoadPathFromSettings` way, so an unset value is `bios` below
+the DataRoot — and three per-region keys (`PathNTSCU`, `PathNTSCJ`, `PathPAL`) may name an image inside it, each
+answered on its own because the console region a disc sets decides which one is read. Where they are empty, which is the
+state both arrangements ship, the emulator keeps every file whose size is exactly one of three and recognises what is
+left by **hashing it** against its own table (`duckstation_bios.json`, below). Three consequences are stated rather than
+smoothed over. Without a content check there is nothing to answer with, so an unverified query gets the directory, a
+count of accepted-size files and `firmware-search-unverified` — never a claim that a BIOS is there. An image the table
+does not know still boots (`Using an unknown BIOS`), so it is the pick with `firmware-content-unidentified` beside it
+rather than a fault. And where several images rank alike the emulator keeps whichever one the directory hands it last,
+an order no read reproduces — `firmware-image-ambiguous`, which on the reference machine's 27 accepted-size files fires
+over five equally ranked images.
 
 ## `save_memory.json` — which files RetroArch writes for a core, per system
 
@@ -843,6 +857,42 @@ place, so nothing here is a fallthrough. One upstream error is excluded by hand 
 The machine-read half — which systems declare which platform, and whether they are declared, disabled or absent on this
 installation — is never tabled here; the resolvers read the catalogue's own `<platform>` tags live.
 
+## `duckstation_bios.json` — what a PlayStation BIOS _is_, by content
+
+The other half of the emulator that names no file. DuckStation identifies a BIOS by hashing it against a table compiled
+into its binary, so answering "is one here" at all means carrying that table: **104 images**, each with the md5 of the
+whole file, the console region it belongs to, and the priority upstream ranks it by. Read by
+`atlas.duckstation.bios_table`.
+
+The hashes cannot be read off the shipped binary. They are `constexpr` in upstream's source and compile down to byte
+arrays, so a strings scan finds the descriptions beside them (`SCPH-1001, DTL-H1001 (v2.0 05-07-95 A)`) and nothing else
+— which is why this table is generated from the source at the pinned revision instead.
+
+Shape:
+
+```json
+{
+  "_meta": { "generated_from": "...", "revision": "64655818e", "generated_at": "...", "images": 104 },
+  "sizes": { "ps1": 524288, "ps2": 4194304, "ps3": 4089584 },
+  "openbios": { "signature": "OpenBIOS", "offset": 120 },
+  "images": [{ "name": "...", "region": "ntsc-u", "md5": "...", "priority": 10, "fast_boot_patch": "type1" }]
+}
+```
+
+- `sizes` is the first half of the same recognition rule, not a separate fact: a file of any other size is skipped
+  before a byte of it is read, which is what makes the search cheap and what makes a Saturn dump of exactly 512 KiB a
+  candidate the hash has to settle.
+- `priority` reads backwards from the word — **lower wins**. Launch-console images sit at 50, PS2 ones at 100 and PAL
+  PS2 ones at 150, each de-prioritised for a reason upstream states in a comment beside the table.
+- `region` is `ntsc-u`, `ntsc-j`, `pal`, or `any` for the images upstream marks region-less. A console of unstated
+  region matches every image, and a region mismatch is a warning rather than a refusal — so a launch needs _an_ image,
+  not one per region.
+- `openbios` is the one image with no hash at all: the free replacement BIOS is recognised by an eight-byte signature at
+  offset `0x78`. No read through atlas's seam reaches an arbitrary offset, so it is recorded as the limit it is and
+  named in the caveat an unidentified image carries.
+- The table ages with the emulator. It is pinned to the revision it was read at, and a build that ships a longer table
+  recognises images this one does not — which is a stated limit of the answer, not a silent one.
+
 ## `firmware_hashes.json`
 
 What a correct firmware file's bytes are: the `md5` / `sha1` / `size` triple that identifies it. This is world knowledge
@@ -900,8 +950,18 @@ git clone https://github.com/libretro/libretro-database ~/src/libretro-database
 python scripts/generate_firmware_hashes.py --database ~/src/libretro-database
 ```
 
-With no `-o`, the output defaults to `atlas/data/firmware_hashes.json` (this file's sibling), resolved relative to the
-repo root so the command works from any working directory. Pass `-o <path>` to write elsewhere.
+`duckstation_bios.json` is generated the same way, from the emulator's own source at the revision its card pins:
+
+```sh
+git clone https://github.com/stenzek/duckstation ~/src/duckstation
+
+python scripts/generate_duckstation_bios.py --source ~/src/duckstation --revision 64655818e
+```
+
+The firmware-hash generator takes `-o <path>` to write elsewhere; with no `-o`, each output goes to its sibling beside
+this file, resolved relative to the repo root so the command works from any working directory. The DuckStation one takes
+no destination at all: it produces exactly one packaged file, and a writable destination would put a filesystem write in
+the hands of whoever composed the command line rather than in the package layout.
 
 ## Update discipline
 

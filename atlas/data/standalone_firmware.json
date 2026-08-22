@@ -109,6 +109,34 @@
       "provenance": {
         "source": "xemu v0.8.135, the release the shipped binary carries as a whole version string. Four files sit in [sys.files] (config_spec.yml:359-364, all plain strings with no compiled default, so an unset one names nothing), and they are deliberately not all firmware. Three refuse the start when missing, and the emulator says so itself in whole strings: the MCPX boot ROM, the flash image, and the hard disk. The fourth, eeprom_path, is left to the save answer on purpose: xemu generates an EEPROM where none exists — the binary carries 'Failed to generate EEPROM file' beside 'Failed to open EEPROM file' — and it holds the console's own settings, which the standalone save card already states as a named settings group. Claiming it here too would file save data under firmware and state one file twice. The hard disk is the opposite case and is claimed twice on purpose: a console does not start without one, and every game's save lives inside it, so both answers name it and each says which aspect it means. RetroDECK points the boot ROM and flash at its BIOS root (component_prepare.sh:23-24), keeps the EEPROM under saves (:26), and copies a blank hard disk in where none exists (:31-32)."
       }
+    },
+    "DUCKSTATION": {
+      "systems": [
+        "psx"
+      ],
+      "search": {
+        "directory_key": "BIOS/SearchDirectory",
+        "directory_default": "bios",
+        "region_keys": [
+          {
+            "region": "ntsc-u",
+            "key": "BIOS/PathNTSCU"
+          },
+          {
+            "region": "ntsc-j",
+            "key": "BIOS/PathNTSCJ"
+          },
+          {
+            "region": "pal",
+            "key": "BIOS/PathPAL"
+          }
+        ],
+        "purpose": "a PlayStation BIOS image — the console runs it before any disc, and DuckStation starts nothing without one",
+        "citation": "the shipped binary carries \"No BIOS image found for {} region.\", \"DuckStation requires a PS1 or PS2 BIOS in order to run.\" and \"Searching for a {} BIOS in '{}'...\" as whole strings, beside the table's own descriptions (\"SCPH-1001, DTL-H1001 (v2.0 05-07-95 A)\"); the search itself is bios.cpp:364-400 at stenzek/duckstation@64655818e"
+      },
+      "provenance": {
+        "source": "The DuckStation build RetroDECK ships as 'DuckStation (Legacy)' — the fork release frozen 2024-09-19, which the shipped binary carries as its own build stamp (components/duckstation/bin/duckstation-qt); citations pin stenzek/duckstation@64655818e, the last commit before that freeze. DuckStation names no BIOS file. [BIOS] SearchDirectory names a directory, read the LoadPathFromSettings way every folder of this emulator is read (settings.cpp:1966 with :1953-1962: unset or empty is the default 'bios', and anything relative hangs off the DataRoot), and three per-region keys may name an image inside it — PathNTSCU, PathNTSCJ and PathPAL, picked by the console region the disc sets (bios.cpp:321-339). A value there is combined with the search directory rather than read as a path of its own (bios.cpp:349), which is why a name is what belongs in the setting. Where a key is empty — the state both arrangements ship, RetroDECK setting only SearchDirectory (component_prepare.sh:15,:33) — the emulator keeps every file in the directory whose size is exactly one of three (bios.h:24-26: 512 KiB, and the PS2 and PS3 sizes) and recognises what is left by hashing the whole file against a table of 104 images compiled into the binary (bios.cpp:47-152, :364-400). That table is packaged as atlas/data/duckstation_bios.json, generated from the same revision: the hashes are constexpr and compile to byte arrays, so the shipped binary carries the descriptions beside them but not the hashes themselves. A PlayStation boots nothing without an image, so this answer is required — but an image the table does not know still boots, with 'Using an unknown BIOS: {}', so unrecognised is not wrong, and a region mismatch is a warning rather than a refusal (bios.cpp:352-359), which is why the regions left to the search share one answer. Two limits are stated where they are met: the OpenBIOS replacement is recognised by an eight-byte signature at offset 0x78 rather than by a hash (bios.cpp:157-161), which no read through atlas's seam reaches; and where two images rank alike the emulator keeps the last one the directory hands it, an order no read reproduces."
+      }
     }
   }
 }
