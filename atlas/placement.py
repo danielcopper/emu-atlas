@@ -144,8 +144,21 @@ KEYING_SERIAL = "serial"
 KEYING_TITLE_ID = "title-id"
 KEYING_ROM_NAME = "rom-name"
 KEYING_PACK = "pack"
-KEYINGS = (KEYING_GAME_ID, KEYING_SERIAL, KEYING_TITLE_ID, KEYING_ROM_NAME, KEYING_PACK)
-Keying = Literal["game-id", "serial", "title-id", "rom-name", "pack"]
+# The game's *title* rather than any identifier of it: the name an emulator's
+# own database gives the disc, which a user may have overridden in that
+# emulator's list. Distinct from ``rom-name`` on purpose — the content file's
+# name is one of the things such a title falls back to, never the thing it is —
+# and a caller filling it reads it off the emulator, not off the content path.
+KEYING_TITLE = "title"
+KEYINGS = (
+    KEYING_GAME_ID,
+    KEYING_SERIAL,
+    KEYING_TITLE_ID,
+    KEYING_ROM_NAME,
+    KEYING_PACK,
+    KEYING_TITLE,
+)
+Keying = Literal["game-id", "serial", "title-id", "rom-name", "pack", "title"]
 
 # The patch formats RetroArch looks for beside the content, **in the order it
 # tries them** (``task_patch.c:1071-1075`` at RetroArch a79435a). The order is

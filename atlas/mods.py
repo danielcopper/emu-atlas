@@ -93,8 +93,33 @@ def _expect_subdir(value: object, where: str) -> str:
 
 
 @dataclass(frozen=True, slots=True)
+class ModSetting:
+    """A configuration key whose *value* is a directory, with what governs without it.
+
+    The card says where the value lives and what the emulator falls back to;
+    reading it is code beside the card, because reading a configuration always
+    is. ``default`` is the emulator's own compiled fallback, spelled the way
+    the emulator spells it, so a card never states twice what a missing key
+    means.
+    """
+
+    section: str
+    key: str
+    default: str
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class ModTreeSpec:
-    """One directory a card states mods are read from, below the card's root.
+    """One directory a card states mods are read from.
+
+    Stated one of two ways, and exactly one: ``subdir`` for a tree the
+    emulator opens at a fixed place below the card's XDG base, or
+    ``directory`` for one it opens wherever its own configuration points —
+    the shape an emulator needs when the root the tree hangs off is not a
+    fixed XDG join at all. A card carrying any ``directory`` tree needs a
+    resolver registered beside it in :mod:`atlas.installations` and fails the
+    load without one, exactly as a texture card does.
 
     ``role`` is the emulator's own word for this tree and is ``None`` on a card
     that states one — see :class:`~atlas.placement.ModTree` for why the field
@@ -102,7 +127,8 @@ class ModTreeSpec:
     keying here.
     """
 
-    subdir: str
+    subdir: str | None
+    directory: ModSetting | None
     role: str | None
     keying: Keying | None
     keying_citation: str | None
@@ -257,10 +283,15 @@ class StandaloneModCard:
     """
 
     token: str
-    base: str
+    base: str | None
     trees: tuple[ModTreeSpec, ...]
     config: EmulatorConfig | None
     provenance: str
+
+    @property
+    def configured(self) -> bool:
+        """Does any tree hang off a configuration value rather than a fixed join?"""
+        return any(tree.directory is not None for tree in self.trees)
 
 
 def _keying(value: object, where: str) -> tuple[Keying | None, str | None]:
@@ -300,9 +331,17 @@ def _trees(value: object, where: str) -> tuple[ModTreeSpec, ...]:
         if role is not None:
             role = _expect_str(role, f"{at}.role")
         keying, citation = _keying(entry.get("keying"), f"{at}.keying")
+        subdir = entry.get("subdir")
+        directory = entry.get("directory")
+        if (subdir is None) == (directory is None):
+            raise ValueError(
+                f"{at}: state exactly one of 'subdir' and 'directory' — a fixed place below the "
+                "card's base, or the configuration key whose value is the directory"
+            )
         trees.append(
             ModTreeSpec(
-                subdir=_expect_subdir(entry.get("subdir"), f"{at}.subdir"),
+                subdir=None if subdir is None else _expect_subdir(subdir, f"{at}.subdir"),
+                directory=None if directory is None else _mod_setting(directory, f"{at}.directory"),
                 role=role,
                 keying=keying,
                 keying_citation=citation,
@@ -320,6 +359,20 @@ def _trees(value: object, where: str) -> tuple[ModTreeSpec, ...]:
     elif len(set(roles)) != len(roles):
         raise ValueError(f"{where}: roles must tell the trees apart, got {roles}")
     return tuple(trees)
+
+
+def _mod_setting(value: object, where: str) -> ModSetting:
+    """The configuration key a tree hangs off — every field required, none inferred."""
+    if not isinstance(value, dict) or set(value) != {"section", "key", "default", "citation"}:
+        raise ValueError(
+            f"{where}: expected exactly section/key/default/citation, got {value!r}"
+        )
+    return ModSetting(
+        section=_expect_str(value.get("section"), f"{where}.section"),
+        key=_expect_str(value.get("key"), f"{where}.key"),
+        default=_expect_subdir(value.get("default"), f"{where}.default"),
+        citation=_expect_str(value.get("citation"), f"{where}.citation"),
+    )
 
 
 def _option_default(value: object, where: str) -> OptionDefault | None:
@@ -404,6 +457,14 @@ def recorded_mod_words(entry: Mapping[str, Any]) -> frozenset[str]:
     for tree in mods.get("trees") or ():
         if isinstance(tree, dict):
             words.extend(path_segments(tree.get("subdir")))
+            directory = tree.get("directory")
+            if isinstance(directory, dict):
+                # A configured tree states two names of the emulator's own —
+                # the key it reads and the fallback it composes without one —
+                # and both are pinned like any subpath segment.
+                for field in ("key", "default"):
+                    if isinstance(directory.get(field), str):
+                        words.extend(path_segments(directory[field]))
     option = mods.get("option")
     if isinstance(option, dict) and isinstance(option.get("setting"), str):
         words.append(option["setting"])
@@ -430,6 +491,13 @@ def _mod_card(key: str, entry: Any) -> ModCard:
     root = _expect_str(mods.get("root"), f"{where}: mods.root")
     if root not in set(ROOT_KINDS):
         raise ValueError(f"{where}: mods.root must be one of {sorted(ROOT_KINDS)}, got {root!r}")
+    trees = _trees(mods.get("trees"), f"{where}: mods.trees")
+    if any(tree.directory is not None for tree in trees):
+        raise ValueError(
+            f"{where}: a core is handed its root by RetroArch, so a tree here states the "
+            "fragment below it — a configuration key of an emulator's own has nothing to "
+            "name on this side"
+        )
     if entry.get("anchors") is not None:
         expect_table_anchors(
             entry["anchors"],
@@ -443,7 +511,7 @@ def _mod_card(key: str, entry: Any) -> ModCard:
             identifiers.get("library_name", []), f"{where}: identifiers.library_name"
         ),
         root=root,
-        trees=_trees(mods.get("trees"), f"{where}: mods.trees"),
+        trees=trees,
         option=_mod_option(mods.get("option"), f"{where}: mods.option"),
         config=_core_config(mods.get("config"), f"{where}: mods.config"),
         provenance=_expect_str(
@@ -460,8 +528,18 @@ def _standalone_mod_card(token: str, entry: Any) -> StandaloneModCard:
     mods = entry.get("mods")
     if not isinstance(mods, dict):
         raise ValueError(f"{where}: expected a 'mods' object, got {mods!r}")
-    base = _expect_str(mods.get("base"), f"{where}: mods.base")
-    if base not in XDG_BASES:
+    trees = _trees(mods.get("trees"), f"{where}: mods.trees")
+    raw_base = mods.get("base")
+    fixed = [tree for tree in trees if tree.subdir is not None]
+    if raw_base is None and fixed:
+        raise ValueError(f"{where}: mods.base is what a tree stating a subdir hangs off")
+    if raw_base is not None and not fixed:
+        raise ValueError(
+            f"{where}: mods.base names a root no tree uses — every tree here states a "
+            "configuration key instead"
+        )
+    base = None if raw_base is None else _expect_str(raw_base, f"{where}: mods.base")
+    if base is not None and base not in XDG_BASES:
         raise ValueError(f"{where}: mods.base must be one of {sorted(XDG_BASES)}, got {base!r}")
     if entry.get("anchors") is not None:
         expect_table_anchors(
@@ -473,7 +551,7 @@ def _standalone_mod_card(token: str, entry: Any) -> StandaloneModCard:
     return StandaloneModCard(
         token=token,
         base=base,
-        trees=_trees(mods.get("trees"), f"{where}: mods.trees"),
+        trees=trees,
         config=_standalone_config(mods.get("config"), f"{where}: mods.config"),
         provenance=_expect_str(
             entry.get("provenance", {}).get("source"), f"{where}: provenance.source"

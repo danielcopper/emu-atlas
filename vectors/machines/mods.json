@@ -702,6 +702,261 @@
           }
         }
       }
+    },
+    {
+      "name": "emudeck-duckstations-cheats-hang-off-the-data-side-dataroot",
+      "rationale": "The arrangement that makes the shape matter. EmuDeck installs DuckStation as an AppImage under ~/Applications and keeps its settings under the data home (emuDeckDuckStation.sh:8), which is the DataRoot a launch outside a flatpak sandbox picks — so the same card answers below a different root, and a card naming 'config' outright would have pointed at a directory this emulator never opens.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "unresolved": {
+            "code": "standalone-unsupported",
+            "data": {
+              "label": "DuckStation (Standalone)",
+              "system": "psx"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstations-cheat-files-sit-where-its-own-default-puts-them",
+      "rationale": "Cheat files are DuckStation's patch mechanism, the counterpart of PCSX2's .pnach patches. The directory is [Folders] Cheats, and RetroDECK never writes that key — so the emulator's own default governs: 'cheats' below the DataRoot, composed the way every folder of this emulator is composed. The tree is stated as a configuration key rather than a fixed XDG subpath because the root it hangs off is not a fixed XDG join at all, which is what a card naming a base outright would get wrong on the other arrangement.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"mods_path\": \"/mnt/sd/retrodeck/mods\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/mods"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/cheats",
+              "physical_dir": null,
+              "keying": "title"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-a-configured-cheats-directory-is-read-as-it-stands",
+      "rationale": "An absolute [Folders] Cheats is taken as it stands, the way LoadPathFromSettings takes it — the same helper the BIOS search directory and the memory cards go through. This is the state an arrangement that does wire the key would leave, and the answer follows the configuration rather than the emulator's default.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"mods_path\": \"/mnt/sd/retrodeck/mods\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Folders]\nCheats = /mnt/sd/retrodeck/mods/DuckStation/cheats\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/mods",
+          "/mnt/sd/retrodeck/mods/DuckStation/cheats"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/mnt/sd/retrodeck/mods/DuckStation/cheats",
+              "physical_dir": null,
+              "keying": "title"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-with-no-settings-file-the-root-the-tree-hangs-off-is-unestablished",
+      "rationale": "Neither DataRoot candidate holds a settings.ini, so which root this launch would use is decided by an environment variable no file records. The answer names the environment-unset side and says so — the same word the save route uses for the same fact, so the two routes never disagree about what is unknown here.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"mods_path\": \"/mnt/sd/retrodeck/mods\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/mods"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/cheats",
+              "physical_dir": null,
+              "keying": "title"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "DUCKSTATION",
+                "reason": "the DataRoot is decided by the launch environment"
+              }
+            },
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-an-unreadable-settings-file-refuses-the-mod-question",
+      "rationale": "The file that would name the directory exists and cannot be read. Where it reads cheat files from is then unknowable, and the question is refused rather than answered with the default the file might well have overridden.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"mods_path\": \"/mnt/sd/retrodeck/mods\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/mods"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "unresolved": {
+            "code": "emulator-config-unreadable",
+            "data": {
+              "emulator": "DUCKSTATION",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+            }
+          }
+        }
+      }
     }
   ]
 }
