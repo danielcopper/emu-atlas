@@ -14,8 +14,9 @@ arrays, so they are **not** in the shipped binary's strings — the source at th
 pinned revision is the only place they can be read. What the binary does carry,
 and what a live check confirms, are the descriptions beside them.
 
-The input is one local git checkout passed as an argument; nothing here touches
-the network. Clone it first, then run the generator against the checkout:
+The input is one local git checkout passed as an argument — inside your home
+directory, which is the only place this tool will read from — and nothing here
+touches the network. Clone it first, then run the generator against it:
 
     git clone https://github.com/stenzek/duckstation ~/src/duckstation
 
@@ -75,16 +76,21 @@ REGIONS = {
 def resolve_source(raw: str) -> tuple[str, str]:
     """Resolve ``--source`` to the two files this generator reads, and nothing else.
 
-    The checkout is a clone the user made wherever they keep sources, so no
-    base directory bounds the argument itself; what bounds the *reads* is that
-    only two fixed paths below it are ever opened. Each is canonicalised and
-    then required to still sit under the canonical checkout — the order that
-    matters, since a check applied to the spelling rather than to the resolved
-    path is no check at all, and the trailing separator is what keeps a
-    sibling directory whose name merely starts the same from passing. Raises
-    ``ValueError`` for the caller to report as an argument error.
+    Two bounds, and both are the point rather than ceremony. The checkout has
+    to sit inside the home directory — clone it where you keep sources — so
+    that a wrong argument cannot walk the generator into system files; and
+    only two fixed paths below it are ever opened, each canonicalised and then
+    required to still sit under the canonical checkout, so a symlinked
+    ``src/`` cannot redirect the read either. The order matters: a check
+    applied to the spelling rather than to the resolved path is no check at
+    all, and the trailing separator is what keeps a sibling directory whose
+    name merely starts the same from passing. Raises ``ValueError`` for the
+    caller to report as an argument error.
     """
+    base = os.path.realpath(os.path.expanduser("~")) + os.sep
     checkout = os.path.realpath(os.path.expanduser(raw))
+    if not checkout.startswith(base):
+        raise ValueError(f"the checkout must be inside {base}, got {checkout}")
     if not os.path.isdir(checkout):
         raise ValueError(f"not a directory: {checkout}")
     resolved = []
