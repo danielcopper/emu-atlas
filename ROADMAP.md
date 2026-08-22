@@ -93,9 +93,11 @@ exists — read through the YAML scalar reader of #229, which is what unblocked 
 below `pref-path`, plus the extracted-binary launch variant EmuDeck installs it as), and DuckStation's BIOS expectations
 (#236: the first `search` firmware card — the emulator names no file, so the answer is a directory, the emulator's own
 size filter, and its recognition table packaged from source, with the pick stated only where a content check was asked
-for). Each sub-issue replaces the `Unresolved` standalone outcome for its emulator, save placement + BIOS expectations +
-config sources, on RetroDECK and EmuDeck both. Candidates next: Vita3K's texture directory and its firmware, RPCS3's own
-BIOS slice (`dev_flash`), PPSSPP deepening.
+for) and its cheat files as the mod row of the same emulator — the first tree stated as a configuration key rather than
+an XDG subpath, because the root it hangs off is the one the launch environment picks. Each sub-issue replaces the
+`Unresolved` standalone outcome for its emulator, save placement + BIOS expectations + config sources, on RetroDECK and
+EmuDeck both. Candidates next: Vita3K's texture directory and its firmware, RPCS3's own BIOS slice (`dev_flash`), PPSSPP
+deepening.
 
 ### 5. EmuDeck reality
 

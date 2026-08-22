@@ -884,9 +884,12 @@ versioned and source-cited (`atlas/data/texture_packs.json`). Move `system_direc
 declared no default, or it is set to a value the record cannot interpret (`unknown-option-value` says which). A packs
 directory whose feature is off is still the right directory: that is why these are two fields and not one hedged answer.
 
-**`keying` is stated only where a citation backs it.** `game-id | serial | title-id | rom-name | pack` — Flycast's own
-binary documents `system/dc/textures/<game-id>/`, so that row states `game-id`; a row whose evidence stops short states
-`None`, which is not the claim that the tree is undivided.
+**`keying` is stated only where a citation backs it.** `game-id | serial | title-id | rom-name | pack | title` —
+Flycast's own binary documents `system/dc/textures/<game-id>/`, so that row states `game-id`; a row whose evidence stops
+short states `None`, which is not the claim that the tree is undivided. `title` is the odd one and is deliberately not
+`rom-name`: DuckStation names a cheat file after the game's **title** — a custom one you set in its own list, else the
+title its database gives the disc, and only failing both the content file's stem — so it is read off the emulator, not
+derived from the path.
 
 **Standalone emulators answer here without a config read — the save question needs one, and answers only where a card
 carries it.** A texture pack usually lives at a default the emulator opens below an XDG base the distribution's flatpak
@@ -1000,6 +1003,15 @@ where a citation backs it. Both handle and entry routes have it, and so does the
 for any probe to capture, and no options file mentions the key, so the card carries the upstream default (`enabled`)
 with the build it was read at. An options file still wins wherever it speaks, and a machine running another build of the
 core gets `unverified-version` beside the value.
+
+**A tree may hang off a configuration value rather than an XDG join**, and DuckStation is the row that needs it: its
+cheat files — the same mechanism PCSX2 keeps as `.pnach` patches — sit in `[Folders] Cheats`, and the root that key
+resolves against is the config home or the data home depending on how the launch was started. So the card names the key
+and its compiled default (`cheats`) instead of a base, and the answer follows the same read the save and BIOS questions
+of that emulator make. Where no `settings.ini` exists on either candidate, the answer names the environment-unset side
+and says so with `core-mode-unestablished` — the same word the save route uses, so the two never disagree about what is
+unknown. Where the file exists and cannot be read, the question is refused rather than answered with a default that file
+may well have overridden.
 
 Three ways this question answers with `Unresolved`:
 

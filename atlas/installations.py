@@ -7777,6 +7777,9 @@ def _mod_trees(
     sources: list[str] = []
     caveats: list[Caveat] = []
     for spec in card.trees:
+        # A core card states fragments below the root RetroArch hands it; the
+        # loader refuses a configured directory on this side outright.
+        assert spec.subdir is not None
         directory = os.path.join(root.base, spec.subdir)
         physical: str | None = None
         if root.reachable and not root.needs:
@@ -7917,13 +7920,96 @@ def _retroarch_mod_location(machine: Machine, query: _SaveQuery) -> ModPlacement
     )
 
 
+def _duckstation_mod_placement(
+    machine: Machine,
+    *,
+    card: StandaloneModCard,
+    homes: _XdgHomes,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> ModPlacement | Unresolved:
+    """DuckStation's cheat tree: the directory its configuration names, below the root it picks.
+
+    The reason this row needs a resolver rather than an XDG join is the same
+    one that made the save card wrong before #250: DuckStation's DataRoot is
+    the config home or the data home depending on the launch environment, so a
+    card naming either would answer correctly on one arrangement and wrongly on
+    the other. The directory itself is ``[Folders] Cheats`` read the way every
+    folder of this emulator is read, so an unset key is ``cheats`` below that
+    root and a relative value hangs off it.
+    """
+    spec = card.trees[0]
+    setting = spec.directory
+    assert setting is not None  # the router sends only configured cards here
+    read = duckstation.read_settings(
+        machine, config_home=homes.base("config"), data_home=homes.base("data")
+    )
+    if read.unreadable is not None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
+            "where it reads cheat files from is unknowable here",
+            {"emulator": card.token, "config": read.unreadable},
+        )
+    directory = duckstation.load_path(
+        read.values, read.root, setting.section, setting.key, setting.default
+    )
+    physical, link_caveats = _link_view(machine, directory)
+    caveats: list[Caveat] = [*extra_caveats, *link_caveats]
+    if read.ambiguous:
+        caveats.append(
+            Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED,
+                "no settings.ini exists on either DataRoot candidate — DuckStation picks its "
+                "root from the launch environment (XDG_CONFIG_HOME set routes it to the config "
+                "side, qthost.cpp:562-582), which no file records; the directory below hangs "
+                "off the environment-unset side",
+                {"core": card.token, "reason": "the DataRoot is decided by the launch environment"},
+            )
+        )
+    config_path = os.path.join(read.root, duckstation.CONFIG_FILENAME)
+    caveats.append(
+        Caveat(
+            CAVEAT_EMULATOR_CONFIG_UNREAD,
+            f"whether {card.token} has cheat loading switched on is not established — the "
+            f"setting lives in {config_path}, which this answer reads for the directory and "
+            "not for the switch, because the card states none",
+            {"emulator": card.token, "config": config_path},
+        )
+    )
+    sources = [
+        f"mod card '{card.token}': the directory is [{setting.section}] {setting.key} in the "
+        f"emulator's own configuration — {setting.citation}",
+        f"mod card '{card.token}': {card.provenance}",
+    ]
+    if spec.keying is not None:
+        sources.insert(
+            1, f"mod card '{card.token}': keyed by {spec.keying} — {spec.keying_citation}"
+        )
+    return ModPlacement(
+        trees=(ModTree(dir=directory, keying=spec.keying, role=spec.role, physical_dir=physical),),
+        needs=(),
+        enabled=None,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
+    )
+
+
+# Standalone mod cards whose tree hangs off a configuration value rather than a
+# fixed XDG join. Keyed by token like the texture resolvers beside them, and a
+# card stating a directory setting without one here fails loudly rather than
+# answering a default nobody read.
+_STANDALONE_MOD_RESOLVERS = {
+    "DUCKSTATION": _duckstation_mod_placement,
+}
+
+
 def _standalone_mod_placement(
     machine: Machine,
     *,
     card: StandaloneModCard,
     homes: _XdgHomes,
     extra_caveats: tuple[Caveat, ...] = (),
-) -> ModPlacement:
+) -> ModPlacement | Unresolved:
     """Where a standalone emulator reads mods — an XDG join, then the links.
 
     The texture family's standalone answer, with one difference that is evidence
@@ -7934,10 +8020,20 @@ def _standalone_mod_placement(
     where to look, which is a weaker claim than ``emulator-config-unread`` and
     the only honest one available.
     """
+    if card.configured:
+        resolver = _STANDALONE_MOD_RESOLVERS.get(card.token)
+        if resolver is None:
+            raise ValueError(
+                f"standalone mod card {card.token!r} states a directory setting but has no "
+                "resolver registered — the card and the code shipped out of step"
+            )
+        return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
+    assert card.base is not None  # the loader pairs a base with every subdir tree
     trees: list[ModTree] = []
     sources: list[str] = []
     caveats: list[Caveat] = [*extra_caveats]
     for spec in card.trees:
+        assert spec.subdir is not None  # no configured tree reaches this branch
         directory = os.path.join(homes.base(card.base), spec.subdir)
         physical, link_caveats = _link_view(machine, directory)
         caveats.extend(link_caveats)

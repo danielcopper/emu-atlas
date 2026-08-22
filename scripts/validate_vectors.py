@@ -156,7 +156,7 @@ PATCH_CONTINUATIONS = 9
 # How the tree below a texture root is divided per game. World knowledge, so it
 # is stated only where a citation backs it and is null otherwise — never a claim
 # that the tree is undivided.
-KNOWN_KEYINGS = {"game-id", "serial", "title-id", "rom-name", "pack"}
+KNOWN_KEYINGS = {"game-id", "serial", "title-id", "rom-name", "pack", "title"}
 FILE_SET_FIELDS = {"state", "files", "complete", "groups"}
 FILE_GROUP_FIELDS = {"dir", "files", "granularity", "role"}
 FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats"}

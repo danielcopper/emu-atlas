@@ -416,7 +416,11 @@ class TestTheShippedCardsSayWhatTheyCanStandBehind:
 
     @pytest.mark.parametrize("card", load_standalone_mod_cards(), ids=lambda c: c.token)
     def test_a_standalone_card_states_a_base_for_every_file_it_names(self, card):
-        assert card.base in ("data", "config")
+        # A base is stated exactly where a tree hangs off one: a card whose
+        # trees are all configuration keys names no XDG root at all, because
+        # the root is what that configuration decides.
+        fixed = [tree for tree in card.trees if tree.subdir is not None]
+        assert card.base in ("data", "config") if fixed else card.base is None
         assert card.config is None or card.config.base in ("data", "config")
 
     def test_the_core_that_reads_three_trees_states_all_three(self):
@@ -513,6 +517,68 @@ class TestTheCardLoaderRefusesWhatItCannotStand:
         text = _card(trees=[{"subdir": "a", "keying": None}, {"subdir": "b", "keying": None}])
         with pytest.raises(ValueError, match="names its role"):
             load_mod_cards(text)
+
+    def test_a_core_tree_may_not_name_a_configuration_key(self):
+        # RetroArch hands a core its root, so a setting of an emulator's own
+        # has nothing to name on that side.
+        text = _card(trees=[{"directory": _SETTING, "keying": None}])
+        with pytest.raises(ValueError, match="handed its root by RetroArch"):
+            load_mod_cards(text)
+
+
+# A configured tree's setting, in the shape the loader demands.
+_SETTING = {
+    "section": "Folders",
+    "key": "Cheats",
+    "default": "cheats",
+    "citation": "[V-source] a citation",
+}
+
+
+class TestATreeIsAFixedPlaceOrAConfiguredOne:
+    def test_a_tree_states_one_shape_and_not_both(self):
+        text = _standalone_card(trees=[{"subdir": "d", "directory": _SETTING, "keying": None}])
+        with pytest.raises(ValueError, match="exactly one of 'subdir' and 'directory'"):
+            load_standalone_mod_cards(text)
+
+    def test_a_tree_that_states_neither_is_refused(self):
+        text = _standalone_card(trees=[{"keying": None}])
+        with pytest.raises(ValueError, match="exactly one of 'subdir' and 'directory'"):
+            load_standalone_mod_cards(text)
+
+    def test_a_configured_card_names_no_xdg_base(self):
+        # The root is what the configuration decides, so a base beside it
+        # would be a second answer to the same question.
+        text = _standalone_card(base="data", trees=[{"directory": _SETTING, "keying": None}])
+        with pytest.raises(ValueError, match="names a root no tree uses"):
+            load_standalone_mod_cards(text)
+
+    def test_a_fixed_card_without_a_base_is_refused(self):
+        text = json.dumps(
+            {
+                "schema": MODS_SCHEMA,
+                "emulators": {
+                    "DEMO": {
+                        "mods": {"trees": [{"subdir": "demo/mods", "keying": None}]},
+                        "provenance": {"source": "[V] a citation"},
+                    }
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="mods.base is what a tree stating a subdir"):
+            load_standalone_mod_cards(text)
+
+    def test_a_setting_missing_a_field_is_refused(self):
+        setting = {"section": "Folders", "key": "Cheats", "default": "cheats"}
+        text = _standalone_card(base=None, trees=[{"directory": setting, "keying": None}])
+        with pytest.raises(ValueError, match="section/key/default/citation"):
+            load_standalone_mod_cards(text)
+
+    def test_a_default_that_climbs_out_of_the_root_is_refused(self):
+        setting = {**_SETTING, "default": "../cheats"}
+        text = _standalone_card(base=None, trees=[{"directory": setting, "keying": None}])
+        with pytest.raises(ValueError, match="climbs out"):
+            load_standalone_mod_cards(text)
 
     def test_repeated_roles_are_refused(self):
         text = _card(

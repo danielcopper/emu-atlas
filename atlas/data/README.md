@@ -663,6 +663,34 @@ card states a list and each entry carries its own `subdir` and `keying`:
 role — there is nothing to tell apart, and a made-up name would be vocabulary a client has to learn to ignore — while a
 card stating several requires one on each, all distinct. The loader refuses every other combination.
 
+### A tree is a fixed place, or a configured one
+
+A tree states `subdir` — a fragment below the card's XDG base — or `directory`, the configuration key whose **value** is
+the directory, and exactly one of them. DuckStation is why the second shape exists, and the reason is the one #250 made
+expensive: its DataRoot is `$XDG_CONFIG_HOME/duckstation` where that variable is set and absolute, else
+`~/.local/share/duckstation` (qthost.cpp:562-582), so a card naming either base outright would answer correctly on one
+arrangement and wrongly on the other. The key is `[Folders] Cheats` with the compiled default `cheats`, read through the
+same `LoadPathFromSettings` shape every folder of that emulator goes through:
+
+```json
+"DUCKSTATION": {
+  "mods": {
+    "trees": [
+      {
+        "directory": { "section": "Folders", "key": "Cheats", "default": "cheats", "citation": "[V-source] …" },
+        "keying": { "value": "title", "citation": "[V-binary/V-source] …" }
+      }
+    ],
+    "config": { "base": "config", "path": "duckstation/settings.ini" }
+  }
+}
+```
+
+Such a card names **no** `base` — the root is what the configuration decides — and needs a resolver registered beside it
+in `atlas/installations.py`, failing the load without one exactly as a texture card does. A **core** card may not state
+a configured tree at all: RetroArch hands a core its root, so a setting of an emulator's own has nothing to name on that
+side, and the loader says so.
+
 ### `option.default` — a switch value written down because no machine states it
 
 Ordinarily no default lives in a card: RetroArch falls back to the installed core's own registration, which is a live
