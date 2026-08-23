@@ -2582,19 +2582,47 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert "no user home exists" in caveat.message
         assert "would create" in caveat.message
 
+    def _unlistable_tree(self, system, files):
+        rd = _retrodeck(
+            {**self.BASE, **files},
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/hdd/home", "/mnt/sd/vita/ux0/user"],
+            unlistable=["/mnt/sd/hdd/home", "/mnt/sd/vita/ux0/user"],
+        )
+        return rd.emulators_for(system).entries[0].savefile_location()
+
     def test_an_unlistable_user_tree_is_a_structured_caveat(self):
         # "the tree could not be listed in full" used to be a clause glued onto
         # another caveat's prose, which no client can branch on.
-        rd = _retrodeck(
-            {**self.BASE, RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"},
-            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/hdd/home"],
-            unlistable=["/mnt/sd/hdd/home"],
-        )
-        p = rd.emulators_for("ps3").entries[0].savefile_location()
+        p = self._unlistable_tree("ps3", {RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"})
         assert not isinstance(p, atlas.Unresolved)
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_UNLISTABLE]
         assert stated
-        assert stated[0].data["dir"] == "/mnt/sd/hdd/home"
+        # `path` is the key the code's other emitter uses and the guide
+        # documents; a second shape for one code is a client reading nothing.
+        assert stated[0].data["path"] == "/mnt/sd/hdd/home"
+        assert stated[0].data["core"] == "RPCS3"
+
+    @pytest.mark.parametrize(
+        "system,files",
+        [
+            ("ps3", {RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"}),
+            ("psvita", {VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n"}),
+        ],
+    )
+    def test_a_tree_that_could_not_be_listed_does_not_say_it_is_empty(self, system, files):
+        # A failed listing establishes neither "these users exist" nor "none
+        # does". Answering it with the empty tree's sentence — "nothing has
+        # saved here yet" — is a claim about contents the listing never
+        # reached, beside a second caveat saying it was never read.
+        p = self._unlistable_tree(system, files)
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "which users exist here was not established"
+        assert "nothing has saved here yet" not in caveat.message
+        assert "could not be listed" in caveat.message
+        # And the two states it is not: neither existence sentence.
+        assert "every user" not in caveat.message
+        assert [c.code for c in p.caveats].count(atlas.CAVEAT_SAVE_DIR_UNLISTABLE) == 1
 
     def test_rpcs3_virtual_memory_cards_are_a_directory_group_not_an_image(self):
         # `save-inside-image` means the answer names a FILE and nothing inside

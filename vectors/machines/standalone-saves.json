@@ -2784,7 +2784,7 @@
     },
     {
       "name": "rpcs3-a-user-tree-that-cannot-be-listed-says-so-in-its-own-caveat",
-      "rationale": "The drive is where vfs.yml says, and the tree of user homes under it cannot be read. Which users exist is then unknown, and that is a degradation a client has to be able to branch on — it used to be a clause appended to another caveat's prose, which no client can read. The directory named below is the compiled default's, stated as such.",
+      "rationale": "The drive is where vfs.yml says, and the tree of user homes under it cannot be read. Two things follow, and the answer has to keep them apart. Which users exist is unknown, which is a degradation a client branches on — save-dir-unlistable, carrying the directory under the same 'path' key the other emitter of that code uses. And the answer's own account of the users must say neither of the two things a listing establishes: not 'these were found' and not 'none exists, nothing has saved here yet'. The empty-tree sentence beside a caveat saying the tree was never read is a claim about contents nobody reached — the same shape this round removed from DuckStation's BIOS search, and it is not allowed to survive here. The directory named below is the compiled default's, stated as such.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2853,7 +2853,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "no user directory was found",
+                "reason": "which users exist here was not established",
                 "users": "00000001"
               }
             },
@@ -2869,8 +2869,8 @@
             {
               "code": "save-dir-unlistable",
               "data": {
-                "core": "RPCS3",
-                "dir": "/mnt/sd/hdd0/home"
+                "path": "/mnt/sd/hdd0/home",
+                "core": "RPCS3"
               }
             }
           ],

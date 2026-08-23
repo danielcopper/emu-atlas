@@ -291,13 +291,17 @@ class TestTheStatedDirectoryIsTheOneTheBuildSpells:
 
     **What it does not cover.** Containment only catches a rename where the
     literal was the *only* reason the binary carried those bytes. Four rows
-    are like that — ``.dolphin-emu/``, ``.primehack/``, ``.ppsspp/`` and
-    Azahar's ``azahar-emu`` occur once each in their builds — and eight are
-    not, because their directory is spelled exactly like the program and the
-    binary says its own name everywhere. For those the wire is a presence
-    check and nothing more, and
-    :data:`DIRECTORY_ANCHORS_THE_WIRE_CANNOT_WATCH` says so out loud rather
-    than letting the class docstring imply otherwise.
+    are like that, and each occurs exactly once in its build: Dolphin's
+    ``.dolphin-emu/``, PrimeHack's ``.primehack/``, PPSSPP's ``.ppsspp/``, and
+    ``.dolphin-emu/`` again for the PrimeHack build Flathub ships, which spells
+    the directory the way the emulator it forked does. Eight rows are not, and
+    they are the ones :data:`DIRECTORY_ANCHORS_THE_WIRE_CANNOT_WATCH` lists —
+    ``azahar-emu`` occurs 20 times, ``duckstation`` 29, ``Cemu`` 110,
+    ``PCSX2`` 135, ``melonDS`` 183, ``xemu`` 197, ``Vita3K`` 763 and ``rpcs3``
+    1322, because the binary says its own name for a hundred unrelated
+    reasons. For those the wire is a presence check and nothing more, and the
+    constant says so out loud rather than letting this docstring imply
+    otherwise.
     """
 
     @pytest.mark.parametrize(

@@ -107,6 +107,7 @@ from atlas.machine import (
     SYMLINK_HOPS,
     CoreInfo,
     CoreOption,
+    GlobResult,
     Machine,
     ReadResult,
     ReadStatus,
@@ -7520,6 +7521,47 @@ class _PerUserSaves:
     configured_user: str | None = None
 
 
+def _per_user_state(
+    shape: _PerUserSaves,
+    card: StandaloneSaveCard,
+    users: tuple[str, ...],
+    listing: GlobResult,
+) -> tuple[str, dict[str, str]]:
+    """What the listing established about the users — three states, not two.
+
+    "Users were found" and "no user exists here" are the two an emptied result
+    reads as, and a listing that *failed* is neither: it establishes nothing at
+    all, and answering it with the empty tree's sentence claims contents the
+    failed listing never reached. That is the defect this round fixed for
+    DuckStation's BIOS directory, so it does not get to live on here.
+
+    ``users`` names the trees this answer points at, which is what it has
+    always named — where none were found, the compiled default stands in and
+    the sentence says so in as many words.
+    """
+    if listing.status != GLOB_COMPLETE:
+        sentence = (
+            f"{shape.user_root} could not be listed, so which users exist below it is not "
+            "established — the tree named is the one the emulator starts with, and whether "
+            "this machine has that user, others, or none is unknown here"
+        )
+        reason = "which users exist here was not established"
+    elif not users:
+        sentence, reason = shape.no_user_sentence, "no user directory was found"
+    else:
+        sentence, reason = shape.user_sentence, shape.user_reason
+    data = {
+        "core": card.token,
+        "reason": reason,
+        "users": ",".join(users) if users else shape.first_user,
+    }
+    # The recorded user is a reading of the configuration, not of the tree, so
+    # it holds whatever the listing did or did not establish.
+    if shape.configured_user is not None:
+        data["configured_user"] = shape.configured_user
+    return sentence, data
+
+
 def _per_user_savedata_placement(
     machine: Machine,
     *,
@@ -7574,33 +7616,22 @@ def _per_user_savedata_placement(
                 "citation": shape.names_citation,
             },
         ),
-        Caveat(
-            CAVEAT_CORE_MODE_UNESTABLISHED,
-            shape.user_sentence if users else shape.no_user_sentence,
-            {
-                "core": card.token,
-                "reason": shape.user_reason if users else "no user directory was found",
-                "users": ",".join(users) if users else shape.first_user,
-                **(
-                    {"configured_user": shape.configured_user}
-                    if shape.configured_user is not None
-                    else {}
-                ),
-            },
-        ),
+        Caveat(CAVEAT_CORE_MODE_UNESTABLISHED, *_per_user_state(shape, card, users, listing)),
         *trailing_caveats,
     ]
     if listing.status != GLOB_COMPLETE:
         # Structured, not an appended clause: "which users exist here is
         # unknown" is a degradation a client branches on, and prose is not
-        # something a client can branch on.
+        # something a client can branch on. ``path`` is the key the code's
+        # other emitter uses and the guide documents, so a client that
+        # branches on the code and reads it finds the directory here too.
         caveats.append(
             Caveat(
                 CAVEAT_SAVE_DIR_UNLISTABLE,
                 f"{shape.user_root} could not be listed, so which user directories are under "
                 "it is unknown — the tree below is what the compiled default names, not what "
                 "was found",
-                {"core": card.token, "dir": shape.user_root},
+                {"path": shape.user_root, "core": card.token},
             )
         )
     physical, link_caveats = _link_view(machine, directory)
