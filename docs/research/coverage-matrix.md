@@ -1,17 +1,18 @@
 # Coverage matrix — GENERATED, do not edit
 
 Regenerate with `python scripts/generate_coverage_matrix.py` (then `deno fmt`). Facts come from
-`atlas/data/core_audit.json`; the row set comes from RetroDECK's bundled `es_systems.xml`, so unaudited emulators appear
-automatically as the work list. Cells: ✔ verified (with the arrangement version the knowledge was proven against), ✖
-present but not verified, ? availability unknown there (EmuDeck ships its own emulator set — unresearched;
-bare-RetroArch cores are user-installed), — not applicable. Per-game capable: yes = at least one mode is proven by
-source, binary, or observation; no = absence is proven; ? = not established. This is capability, not the active mode on
-one machine. The row set is RetroDECK's shipped matrix. Verdicts and evidence levels are defined in
-`docs/research/core-audit.md`.
+`atlas/data/core_audit.json` for the libretro half and from the packaged cards for the standalone one; the row set comes
+from RetroDECK's bundled `es_systems.xml`, so an emulator nothing covers yet appears automatically as the work list.
+Cells: ✔ verified (with the arrangement version the knowledge was proven against), ✖ present but not verified, ?
+availability unknown there (EmuDeck ships its own emulator set — unresearched; bare-RetroArch cores are user-installed),
+— not applicable. Per-game capable: yes = at least one mode is proven by source, binary, or observation; no = absence is
+proven; ? = not established. This is capability, not the active mode on one machine. The row set is RetroDECK's shipped
+matrix. Verdicts and evidence levels are defined in `docs/research/core-audit.md`. Those columns describe the libretro
+half; the standalone half is one column per question, filled from the packaged cards.
 
 Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 3) sha256 `89ad46fbb616`.
 
-**Status:** libretro 59/159 audited · standalone 0/22 audited
+**Status:** libretro 59/159 audited · standalone save 11/22 · savestate 0/22 · texture 7/22 · mod 7/22 · firmware 5/22
 
 ## libretro cores
 
@@ -179,27 +180,31 @@ Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (sc
 
 ## standalone emulators
 
-| emulator      | systems                                    | verdict   | per-game capable | RetroDECK | EmuDeck | RetroArch (bare) | note |
-| ------------- | ------------------------------------------ | --------- | ---------------- | --------- | ------- | ---------------- | ---- |
-| `azahar`      | n3ds                                       | unaudited | ?                | ✖         | ?       | —                | —    |
-| `cemu`        | wiiu                                       | unaudited | ?                | ✖         | ?       | —                | —    |
-| `dolphin`     | gc, triforce, wii                          | unaudited | ?                | ✖         | ?       | —                | —    |
-| `duckstation` | psx                                        | unaudited | ?                | ✖         | ?       | —                | —    |
-| `gzdoom`      | doom                                       | unaudited | ?                | ✖         | ?       | —                | —    |
-| `ironwail`    | quake                                      | unaudited | ?                | ✖         | ?       | —                | —    |
-| `mame`        | adam, amstradcpc, apple2, apple2gs, … (54) | unaudited | ?                | ✖         | ?       | —                | —    |
-| `melonds`     | nds                                        | unaudited | ?                | ✖         | ?       | —                | —    |
-| `openbor`     | openbor                                    | unaudited | ?                | ✖         | ?       | —                | —    |
-| `os-shell`    | consolearcade, desktop, mugen, ps3         | unaudited | ?                | ✖         | ?       | —                | —    |
-| `pcsx2`       | ps2                                        | unaudited | ?                | ✖         | ?       | —                | —    |
-| `pico-8`      | pico8                                      | unaudited | ?                | ✖         | ?       | —                | —    |
-| `portmaster`  | portmaster                                 | unaudited | ?                | ✖         | ?       | —                | —    |
-| `ppsspp`      | psp                                        | unaudited | ?                | ✖         | ?       | —                | —    |
-| `primehack`   | gc, primehack, wii                         | unaudited | ?                | ✖         | ?       | —                | —    |
-| `rpcs3`       | consolearcade, ps3                         | unaudited | ?                | ✖         | ?       | —                | —    |
-| `ruffle`      | flash                                      | unaudited | ?                | ✖         | ?       | —                | —    |
-| `ryubing`     | switch                                     | unaudited | ?                | ✖         | ?       | —                | —    |
-| `solarus`     | solarus                                    | unaudited | ?                | ✖         | ?       | —                | —    |
-| `vita3k`      | psvita                                     | unaudited | ?                | ✖         | ?       | —                | —    |
-| `xemu`        | consolearcade, xbox                        | unaudited | ?                | ✖         | ?       | —                | —    |
-| `xroar`       | coco, dragon32, tanodragon                 | unaudited | ?                | ✖         | ?       | —                | —    |
+One column per question. ✔ a packaged card answers it; ✔ n/m the card answers for n of the m systems this row serves; ✖
+nothing answers it yet. There is no verdict column here: `core_audit.json` is the libretro save audit and holds no
+standalone entry, so the answer to "is this covered" is the cards themselves.
+
+| emulator      | systems                                    | save  | savestate | texture | mod | firmware |
+| ------------- | ------------------------------------------ | ----- | --------- | ------- | --- | -------- |
+| `azahar`      | n3ds                                       | ✔     | ✖         | ✔       | ✔   | ✖        |
+| `cemu`        | wiiu                                       | ✔     | ✖         | ✔       | ✔   | ✔        |
+| `dolphin`     | gc, triforce, wii                          | ✔ 2/3 | ✖         | ✔       | ✔   | ✖        |
+| `duckstation` | psx                                        | ✔     | ✖         | ✔       | ✔   | ✔        |
+| `melonds`     | nds                                        | ✔     | ✖         | ✖       | ✖   | ✔        |
+| `pcsx2`       | ps2                                        | ✔     | ✖         | ✔       | ✔   | ✔        |
+| `ppsspp`      | psp                                        | ✔     | ✖         | ✔       | ✔   | ✖        |
+| `primehack`   | gc, primehack, wii                         | ✔ 2/3 | ✖         | ✔       | ✔   | ✖        |
+| `rpcs3`       | consolearcade, ps3                         | ✔ 1/2 | ✖         | ✖       | ✖   | ✖        |
+| `vita3k`      | psvita                                     | ✔     | ✖         | ✖       | ✖   | ✖        |
+| `xemu`        | consolearcade, xbox                        | ✔ 1/2 | ✖         | ✖       | ✖   | ✔ 1/2    |
+| `gzdoom`      | doom                                       | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `ironwail`    | quake                                      | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `mame`        | adam, amstradcpc, apple2, apple2gs, … (54) | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `openbor`     | openbor                                    | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `os-shell`    | consolearcade, desktop, mugen, ps3         | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `pico-8`      | pico8                                      | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `portmaster`  | portmaster                                 | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `ruffle`      | flash                                      | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `ryubing`     | switch                                     | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `solarus`     | solarus                                    | ✖     | ✖         | ✖       | ✖   | ✖        |
+| `xroar`       | coco, dragon32, tanodragon                 | ✖     | ✖         | ✖       | ✖   | ✖        |
