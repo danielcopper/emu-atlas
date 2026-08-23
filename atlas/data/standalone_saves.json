@@ -8,12 +8,54 @@
         "systems": [
           "gc",
           "wii"
-        ]
+        ],
+        "citations": {
+          "build": "dolphin 2603a",
+          "slot_devices": "EXI_Device.h:25-45",
+          "slot_defaults": "MainSettings.cpp:133-136",
+          "session_overrides": "MainSettings.cpp:117-119",
+          "gci_names": "GCMemcardDirectory.cpp:56-60",
+          "nand_tree": "NandPaths.cpp:63-71",
+          "wii_dir": "CommonPaths.h:49"
+        }
       },
       "provenance": {
         "source": "Dolphin 2603a, the release the shipped binary names in its version strings (components/dolphin/bin/dolphin-emu-nogui). GameCube: which device sits in each card slot is [Core] SlotA/SlotB in Dolphin.ini, an EXI device id (EXI_Device.h:25-45 — 1 memory card, 8 GCI folder, 9 AGP, 255 none; registered defaults GCI folder for A, none for B, MainSettings.cpp:133-136). An empty MemcardA/BPath defaults to <user>/GC/MemoryCard<A|B>.<region>.raw and an empty GCIFolderA/BPath to <user>/GC/<region>/Card <A|B> (GetMemcardPath :767-774, GetGCIFolderPath :835-841); a configured value of either is a template whose region segment the running disc replaces (:777-819, :844-873), so the answer keeps a <region> hole rather than reading the value literally. GCI files are named from the save's own directory entry — makercode-gamecode-filename.gci (GCMemcardDirectory.cpp:56-60) — none of it derivable from the content path, so the folder groups are unnamed. A raw card of standard size carries no block suffix (EXI.cpp:123-124 defaults to the 2043-block card; a smaller MemoryCardSize appends one, GetMemcardPath :763-765). Wii: saves live in the NAND tree title/<hi:08x>/<lo:08x>/data below NANDRootPath (NandPaths.cpp:63-71), the title id from the disc — unnamed per title. The user directory is the emulator's XDG data tree, which the arrangement pins and reroutes with symlinks the answer walks. Not modelled and stated as such where met: the AGP device (slot id 9 saves onto a GBA cartridge image), the GBA-integration SavesPath, and the GCIFolder*PathOverride keys a movie or netplay session sets. On EmuDeck the emulator is the org.DolphinEmu.dolphin-emu flatpak (emuDeckDolphin.sh:4-5), so the launch's flatpak variant reads the app's own XDG homes below ~/.var/app; EmuDeck grants every emulator flatpak --filesystem=host (installEmuFP.sh:33), so configured paths stay host paths."
       },
       "flatpak": "org.DolphinEmu.dolphin-emu"
+    },
+    "PRIMEHACK": {
+      "saves": {
+        "settings": "Dolphin.ini",
+        "systems": [
+          "gc",
+          "wii"
+        ],
+        "citations": {
+          "build": "shiiion/dolphin 81bfb96",
+          "slot_devices": "EXI_Device.h:25-46",
+          "slot_defaults": "MainSettings.cpp:112-115",
+          "session_overrides": "MainSettings.cpp:95-98",
+          "gci_names": "GCMemcardDirectory.cpp:54-62",
+          "nand_tree": "NandPaths.cpp:49-58",
+          "wii_dir": "CommonPaths.h:58",
+          "installations": {
+            "io.github.shiiion.primehack": {
+              "build": "shiiion/dolphin 53f53e0",
+              "slot_devices": "EXI_Device.h:25-44",
+              "slot_defaults": "MainSettings.cpp:133-136",
+              "session_overrides": "MainSettings.cpp:116-119",
+              "gci_names": "GCMemcardDirectory.cpp:52-60",
+              "nand_tree": "NandPaths.cpp:63-71",
+              "wii_dir": "CommonPaths.h:49"
+            }
+          }
+        }
+      },
+      "provenance": {
+        "source": "PrimeHack, the Metroid Prime fork of Dolphin, read at shiiion/dolphin 81bfb96 — the revision RetroDECK's component master-230724.27 is built from and the one the Flathub flatpak EmuDeck installs is not (53f53e0). The save shape is Dolphin's, inherited whole, so the same reading serves both and the line numbers here are the fork's own. GameCube: which device sits in each card slot is [Core] SlotA/SlotB in Dolphin.ini, an EXI device id (EXI_Device.h:25-46 — 1 memory card, 8 GCI folder, 9 AGP, 255 none; registered defaults GCI folder for A, none for B, MainSettings.cpp:112-115). An empty MemcardA/BPath defaults to <user>/GC/MemoryCard<A|B>.<region>.raw and an empty GCIFolderA/BPath to <user>/GC/<region>/Card <A|B> (GetMemcardPath :635-649, GetGCIFolderPath :704-711); a configured value of either is a template whose region segment the running disc replaces (:652-688, :713-748), so the answer keeps a <region> hole rather than reading the value literally. GCI files are named from the save's own directory entry — makercode-gamecode-filename.gci (GCMemcardDirectory.cpp:54-62) — none of it derivable from the content path, so the folder groups are unnamed. A raw card of standard size carries no block suffix (EXI.cpp:116-119 defaults to the 2043-block card; a smaller MemoryCardSize appends one, GetMemcardPath :638-640). Wii: saves live in the NAND tree title/<hi:08x>/<lo:08x>/data below NANDRootPath (NandPaths.cpp:49-52), the title id from the disc — unnamed per title. The user directory is the fork's own, and which name that is belongs to the build rather than to the emulator (emulator_settings.json states both, #246). Not modelled and stated as such where met: the AGP device, the GBA-integration SavesPath, and the GCIFolder*PathOverride keys a movie or netplay session sets. On EmuDeck the emulator is the io.github.shiiion.primehack flatpak (emuDeckPrimehack.sh:5-6), so the launch's flatpak variant reads the app's own XDG homes below ~/.var/app — where the fork spells its directory dolphin-emu, not primehack. The Flathub flatpak is a later rebase of the fork (53f53e0), so the same reading answers for it with that build's own line numbers, stated beside the app id."
+      },
+      "flatpak": "io.github.shiiion.primehack"
     },
     "PPSSPP": {
       "saves": {

@@ -718,8 +718,8 @@
       }
     },
     {
-      "name": "a-standalone-entry-answers-the-texture-question-and-refuses-the-save-one",
-      "rationale": "One catalogue, two standalone entries, two different save outcomes — and the texture question answering beside them. PrimeHack has a texture card and no standalone save card, so its entry refuses the save question with standalone-unsupported; Dolphin answers both since its save card landed. (Azahar and then DuckStation were this proof, until their save cards landed.) The asymmetry runs on what atlas has established, never on the kind of entry.",
+      "name": "a-forks-entry-answers-both-questions-the-emulator-it-forks-answers",
+      "rationale": "One catalogue, two standalone entries, both answering — which is the state this vector now records. PrimeHack was the standing proof that the two standalone outcomes run on evidence rather than on kind: it answered the texture question and refused the save one. Its save card landed, and with it the last texture-carded emulator that refused its save, so the asymmetry now lives the other way round — Vita3K answers its save and refuses the texture question, because its directory hangs off a config nothing reads. (Azahar and then DuckStation were this proof before PrimeHack.)",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -754,12 +754,46 @@
           }
         ],
         "entry_savefile_location": {
-          "unresolved": {
-            "code": "standalone-unsupported",
-            "data": {
-              "label": "PrimeHack (Standalone)",
-              "system": "wii"
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "PRIMEHACK",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title",
+                "role": "battery",
+                "citation": "NandPaths.cpp:49-58 at shiiion/dolphin 81bfb96"
+              }
             }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "nand",
+            "readings": [
+              {
+                "key": "NANDRootPath",
+                "value": null,
+                "options_file": null
+              }
+            ],
+            "alternatives": []
           }
         },
         "entry_texture_pack_location": {
@@ -1736,6 +1770,58 @@
               "data": {
                 "emulator": "DOLPHIN",
                 "config": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/GFX.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-a-forks-textures-sit-below-the-name-its-build-spells",
+      "rationale": "The texture half of the same launch, and the reason the directory name had to leave the cards: this row's subpath is Dolphin's Load/Textures either way, and only the name above it differs. Before the app id was named, this entry refused with standalone-variant-unestablished; naming it without the second spelling would have answered a directory that does not exist here.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Applications",
+          "/home/deck/.local/share/flatpak/app/io.github.shiiion.primehack",
+          "/home/deck/.var/app/io.github.shiiion.primehack/data/dolphin-emu/Load/Textures"
+        ],
+        "entry_texture_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.var/app/io.github.shiiion.primehack/data/dolphin-emu/Load/Textures",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": "game-id",
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "PRIMEHACK",
+                "config": "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu/GFX.ini"
               }
             }
           ]

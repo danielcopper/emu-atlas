@@ -67,6 +67,13 @@
           ],
           "path": "GFX.ini",
           "citation": "[V-live] the fork's graphics settings sit beside the Dolphin.ini components/primehack/component_functions.sh:3 pins at $XDG_CONFIG_HOME/primehack"
+        },
+        "Dolphin.ini": {
+          "bases": [
+            "config"
+          ],
+          "path": "Dolphin.ini",
+          "citation": "[V-script] components/primehack/component_functions.sh:3 pins it at $XDG_CONFIG_HOME/primehack/Dolphin.ini, and EmuDeck names the same file below the flatpak's own config home (emuDeckPrimehack.sh:7)"
         }
       }
     },
