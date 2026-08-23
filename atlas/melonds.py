@@ -107,10 +107,20 @@ def _settings_path(name: str, config_home: str, flatpak: str | None) -> str:
     The address is the settings table's, not this module's: the save answer,
     the BIOS answer and this reader all open the same file, and a copy per
     reader is how two of them came to disagree about another emulator's.
+
+    Every caller of this module holds one home, the config one, because that
+    is where melonDS keeps both its files. Passing it as the data home too
+    would answer the config tree for a file the table moved to the data one —
+    silently, and only for melonDS — so the base the table states is checked
+    rather than assumed.
     """
-    return emulator_settings.settings_file(TOKEN, name).only(
-        config_home=config_home, data_home=config_home, flatpak=flatpak
-    )
+    settings = emulator_settings.settings_file(TOKEN, name)
+    if settings.bases != ("config",):
+        raise ValueError(
+            f"the settings table states bases {settings.bases} for melonDS's {name!r} and this "
+            "reader is given only the config home — the table and the code shipped out of step"
+        )
+    return settings.only(config_home=config_home, data_home=config_home, flatpak=flatpak)
 
 
 def config_dir(config_home: str, flatpak: str | None) -> str:

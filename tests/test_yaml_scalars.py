@@ -132,6 +132,32 @@ class TestWhatItRefusesWholesale:
         read = read_scalars("$(A): $(B)\n$(B): $(A)\n")
         assert read.refusal == REFUSAL_SUBSTITUTION_CYCLE
 
+    def test_many_tokens_on_one_line_are_one_link_not_many(self):
+        # Twelve different keys named once each is depth *one* and no cycle at
+        # all. The bound used to count replacements, so this refused as one.
+        text = "$(v): x\np: " + "$(v)" * 12 + "\n"
+        read = read_scalars(text)
+        assert read.refusal is None
+        assert read.get("p") == "x" * 12
+
+    def test_a_chain_longer_than_the_bound_still_refuses(self):
+        # What the bound is actually for: each key refers to the next, so the
+        # links are what has to stay countable.
+        depth = 9
+        lines = [f"$(k{i}): $(k{i + 1})" for i in range(depth)]
+        lines += [f"$(k{depth}): end", "p: $(k0)"]
+        assert read_scalars("\n".join(lines) + "\n").refusal == REFUSAL_SUBSTITUTION_CYCLE
+
+    def test_a_chain_inside_the_bound_resolves(self):
+        lines = [f"$(k{i}): $(k{i + 1})" for i in range(3)]
+        lines += ["$(k3): end", "p: $(k0)"]
+        assert read_scalars("\n".join(lines) + "\n").get("p") == "end"
+
+    def test_an_unterminated_token_ends_the_chain_rather_than_refusing(self):
+        # `$(` with no `)` is not a token; the text stays as written, the way
+        # an unterminated quote does.
+        assert read_scalars("p: /tmp/$(oops\n").get("p") == "/tmp/$(oops"
+
     def test_content_after_a_document_end_marker_is_not_read(self):
         read = read_scalars("a: 1\n...\nb: 2\n")
         assert read.refusal is None

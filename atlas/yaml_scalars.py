@@ -206,21 +206,55 @@ def _substitute(
     for key, value in values.items():
         current = value
         for _ in range(_MAX_SUBSTITUTION_DEPTH):
-            start = current.find("$(")
-            if start == -1:
+            expanded, refusal, found = _substitute_once(current, values, fallbacks)
+            if refusal is not None:
+                return {}, refusal
+            if not found:
                 break
-            end = current.find(")", start)
-            if end == -1:
-                break
-            token = current[start : end + 1]
-            replacement = values.get(token) or fallbacks.get(token)
-            if replacement is None:
-                return {}, REFUSAL_SUBSTITUTION_UNKNOWN
-            current = current[:start] + replacement + current[end + 1 :]
+            current = expanded
         else:
             return {}, REFUSAL_SUBSTITUTION_CYCLE
         resolved[key] = current
     return resolved, None
+
+
+def _substitute_once(
+    value: str, values: Mapping[str, str], fallbacks: Mapping[str, str]
+) -> tuple[str, str | None, bool]:
+    """Replace every token in *value* once — one link of the chain, not one token.
+
+    The bound above counts links, and this is what makes a link a link: a value
+    naming eight different keys is eight replacements at **depth one**, and
+    nothing about it is a cycle. Substituting one token per bounded step
+    counted the replacements instead, so such a value was refused as
+    ``substitution-cycle`` — a refusal that named the wrong thing about a file
+    that was perfectly resolvable.
+
+    Returns ``(text, refusal, found)``; ``found`` is ``False`` when the value
+    holds no complete ``$(…)`` token, which is what ends the chain. An
+    unterminated ``$(`` is not a token and ends it too, leaving the text as
+    written the way an unterminated quote is left as written.
+    """
+    out: list[str] = []
+    index = 0
+    found = False
+    while True:
+        start = value.find("$(", index)
+        if start == -1:
+            break
+        end = value.find(")", start)
+        if end == -1:
+            break
+        token = value[start : end + 1]
+        replacement = values.get(token) or fallbacks.get(token)
+        if replacement is None:
+            return "", REFUSAL_SUBSTITUTION_UNKNOWN, False
+        out.append(value[index:start])
+        out.append(replacement)
+        index = end + 1
+        found = True
+    out.append(value[index:])
+    return "".join(out), None, found
 
 
 @dataclass(frozen=True, slots=True)

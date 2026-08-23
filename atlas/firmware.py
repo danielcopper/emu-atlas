@@ -2478,6 +2478,27 @@ class _ConfigProbe:
     answer_caveats: tuple[Caveat, ...] = ()
 
 
+def _expect_card_keys(card: StandaloneFirmwareCard, read: tuple[str, ...]) -> None:
+    """The keys a card declares and the keys its resolver reads are one set.
+
+    The guard was one-way: a key the resolver reads and the card omits raises,
+    so nothing stopped a card from declaring a key no answer is derived from.
+    Such an entry is decorative — it carries a purpose and a citation that
+    describe a setting atlas never looks at, and it reads like coverage.
+    Crossing both ways is what keeps the card and the reading one statement.
+
+    Only for the resolvers whose key set is fixed. melonDS's is not: its card
+    declares every key ``verifySetup`` may probe, and which of them one answer
+    reads is decided by two switches read live, so a subset there is correct.
+    """
+    declared = {entry.key for entry in card.config_files}
+    if declared != set(read):
+        raise ValueError(
+            f"standalone firmware card {card.token!r} declares {sorted(declared)} and this "
+            f"resolver reads {sorted(read)} — the card and the code shipped out of step"
+        )
+
+
 def _sandbox_host_path(
     sandbox: SandboxTranslation | None,
     entry: CatalogueEntry,
@@ -2734,13 +2755,11 @@ def _pcsx2_standalone_core(
     values = qt_ini.values(result.text or "") if result.status == READ_OK else {}
     data_root = os.path.join(config_home, _PCSX2_DATA_ROOT)
     stated_dir = values.get(_PCSX2_BIOS_DIR_KEY, "")
+    _expect_card_keys(
+        card, ("/".join(_PCSX2_BIOS_DIR_KEY), "/".join(_PCSX2_BIOS_NAME_KEY))
+    )
     by_key = {declared.key: declared for declared in card.config_files}
-    declared = by_key.get("Filenames/BIOS")
-    if declared is None:
-        raise ValueError(
-            f"standalone firmware card {card.token!r} names no entry for the BIOS image — "
-            "the card and the code shipped out of step"
-        )
+    declared = by_key["/".join(_PCSX2_BIOS_NAME_KEY)]
     caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
     if not stated_dir:
         bios_dir = os.path.join(data_root, _PCSX2_BIOS_DIR_DEFAULT)
@@ -2902,17 +2921,13 @@ def _xemu_standalone_core(
         )
     except tomllib.TOMLDecodeError:
         return _xemu_unreadable_core(entry, toml_path, "is not parseable TOML"), []
+    _expect_card_keys(card, _XEMU_FILE_KEYS)
     by_key = {declared.key: declared for declared in card.config_files}
     requirements: list[FirmwareRequirement] = []
     caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
     answer_caveats: list[Caveat] = []
     for key in _XEMU_FILE_KEYS:
-        declared = by_key.get(key)
-        if declared is None:
-            raise ValueError(
-                f"standalone firmware card {card.token!r} names no entry for {key!r} — the "
-                "card and the code shipped out of step"
-            )
+        declared = by_key[key]
         value = xemu_file_value(document, key) or ""
         if not value:
             caveats.append(
