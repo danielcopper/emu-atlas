@@ -783,10 +783,14 @@ RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the em
 emulator's own config directory. Below the drive, saves are one directory per title id under `home/<user>/savedata`.
 Which user the emulator runs as is a runtime selection nothing on disk records, so **every user home that exists is a
 group of its own** and a caveat lists them: a machine with two accounts gets two trees rather than a guess at which is
-in force. Two more things ride along — the per-title directories keep their names refused (they are the games' own), and
-`save-inside-image` states a _second_ place saves live, `savedata/vmc`, the virtual memory cards for PS1 and PS2
-classics, which sit outside the per-user tree entirely. That card is also the first to read YAML, through a reader that
-names the keys it does not read rather than guessing (`atlas.yaml_scalars`).
+in force. Where the tree holds no user home at all, the caveat says exactly that — the directory named is the one the
+emulator would create on the first save, not one found here — and a tree that could not be listed carries
+`save-dir-unlistable` of its own, so "which users exist is unknown" is something a client can branch on. Two more things
+ride along: the per-title directories keep their names refused (they are the games' own), and a _second_ place saves
+live rides as its own group — `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, outside the per-user
+tree entirely, with `files: null` because what lands there has not been read, and `file-set-spans-roots` saying a sync
+that walks only the per-user tree misses it. That card is also the first to read YAML, through a reader that names the
+keys it does not read rather than guessing (`atlas.yaml_scalars`).
 
 melonDS is the simplest card and the one whose default leaves the emulator's tree: one `<rom stem>.sav` per game where
 `[Instance0] SaveFilePath` points, and an empty or absent value lands the save **beside the ROM itself** — the answer's

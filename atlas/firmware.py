@@ -3044,13 +3044,61 @@ def _duckstation_sized_files(
 def _duckstation_candidates(
     machine: Machine, table: duckstation.BiosTable, paths: tuple[str, ...]
 ) -> tuple[duckstation.BiosCandidate, ...]:
-    """The kept files with their identities — the content read the emulator performs."""
+    """The kept files with their identities — the content read the emulator performs.
+
+    A digest the seam could not produce is carried as such. Reading it as "the
+    table does not know these bytes" would be a verdict on content nobody saw,
+    which is the distinction ``_observe`` makes one screen up for the declared
+    route.
+    """
     candidates = []
     for path in paths:
         digest = machine.file_digest(path, DIGEST_MD5)
-        image = None if digest is None else table.identify(digest)
-        candidates.append(duckstation.BiosCandidate(path=path, image=image))
+        candidates.append(
+            duckstation.BiosCandidate(
+                path=path,
+                image=None if digest is None else table.identify(digest),
+                unreadable=digest is None,
+            )
+        )
     return tuple(candidates)
+
+
+def _duckstation_region_caveats(
+    candidates: tuple[duckstation.BiosCandidate, ...],
+    *,
+    bios_dir: str,
+    card: StandaloneFirmwareCard,
+) -> list[Caveat]:
+    """What a single pick does not say about a directory holding several regions.
+
+    The pick is made for a console of *any* region, because the region is the
+    running disc's and no configuration records it — the production route has
+    never had another value to pass. Where the directory holds known images of
+    more than one region, naming one of them and stopping reads as a claim
+    about what boots: ``IsValidBIOSForRegion`` is tried before ``priority``
+    (bios.cpp:387-395), so a disc of the other region is served by its own
+    image. One run-time fact atlas cannot read decides between them, which is
+    the same shape — and the same code — as the DataRoot the environment picks.
+    """
+    regions = sorted({c.image.region for c in candidates if c.image is not None})
+    if len(regions) < 2:
+        return []
+    return [
+        Caveat(
+            CAVEAT_CORE_MODE_UNESTABLISHED,
+            f"{bios_dir} holds images of more than one region ({', '.join(regions)}), and "
+            "which one boots is decided by the running disc — a fact no configuration "
+            "records. The image named above is the one the ranking puts first for a console "
+            "of any region; a disc of another region is served by its own",
+            {
+                "core": card.token,
+                "reason": "the console's region is the running disc's",
+                "dir": bios_dir,
+                "regions": ", ".join(regions),
+            },
+        )
+    ]
 
 
 def _duckstation_search_caveats(
@@ -3059,11 +3107,31 @@ def _duckstation_search_caveats(
     *,
     bios_dir: str,
     pick: duckstation.BiosPick,
+    candidates: tuple[duckstation.BiosCandidate, ...],
     table: duckstation.BiosTable,
 ) -> list[Caveat]:
-    """What the pick is, and the two ways it is less than a decision."""
-    caveats: list[Caveat] = []
+    """What the pick is, and the ways it is less than a decision."""
+    caveats: list[Caveat] = [
+        Caveat(
+            CAVEAT_FIRMWARE_UNREADABLE,
+            f"{candidate.path} is of a size this emulator accepts and its bytes cannot be "
+            "read, so what it is stays unestablished — a read failure, not a verdict on the "
+            "file"
+            + (
+                ", and it is the one the ranking reached first, so no image is named below"
+                if candidate.path == pick.chosen.path
+                else "; the emulator hashes it and may well boot it instead"
+            ),
+            {"path": candidate.path, "dir": bios_dir, "token": card.token},
+        )
+        for candidate in sorted(candidates, key=lambda c: c.path)
+        if candidate.unreadable
+    ]
+    # An unreadable pick is fully stated above, and nothing about its identity
+    # follows: the whole of what was established is that a read failed.
     image = pick.chosen.image
+    if pick.chosen.unreadable:
+        return caveats
     if image is None:
         caveats.append(
             Caveat(
@@ -3082,7 +3150,8 @@ def _duckstation_search_caveats(
             Caveat(
                 CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
                 f"{pick.chosen.path} is {image.name} — DuckStation's own table knows these "
-                f"bytes, and this is the image it would boot; region {image.region}",
+                f"bytes, and it is the image a console of any region boots from this "
+                f"directory; region {image.region}",
                 {
                     "path": pick.chosen.path,
                     "image": image.name,
@@ -3092,6 +3161,7 @@ def _duckstation_search_caveats(
                 },
             )
         )
+    caveats.extend(_duckstation_region_caveats(candidates, bios_dir=bios_dir, card=card))
     if not pick.decided:
         caveats.append(
             Caveat(
@@ -3262,6 +3332,11 @@ def _duckstation_search(
             )
         )
     if not kept:
+        if unreadable:
+            # The listing failed, so "this directory holds nothing of the right
+            # size" is a statement about contents nobody saw. The incomplete
+            # scan above is the whole of what was established here.
+            return [], caveats, []
         state = (
             "holds no file of a size this emulator accepts"
             if machine.path_kind(bios_dir) == KIND_DIRECTORY
@@ -3303,11 +3378,20 @@ def _duckstation_search(
             )
         )
         return [], caveats, []
-    pick = table.pick(_duckstation_candidates(machine, table, kept), _DUCKSTATION_ANY_REGION)
+    candidates = _duckstation_candidates(machine, table, kept)
+    pick = table.pick(candidates, _DUCKSTATION_ANY_REGION)
     assert pick is not None  # kept is non-empty
     caveats.extend(
-        _duckstation_search_caveats(entry, card, bios_dir=bios_dir, pick=pick, table=table)
+        _duckstation_search_caveats(
+            entry, card, bios_dir=bios_dir, pick=pick, candidates=candidates, table=table
+        )
     )
+    if pick.chosen.unreadable:
+        # Nothing was established about the file that would boot, so there is
+        # no requirement to state — the same shape this route takes when no
+        # content check was asked for at all. Stating one would carry
+        # ``satisfied: true`` about bytes nobody read.
+        return [], caveats, []
     found, checked, observed = _observe(machine, pick.chosen.path, None, verify=False)
     requirement = FirmwareRequirement(
         core_so=None,

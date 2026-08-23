@@ -199,6 +199,7 @@ from atlas.placement import (
     HOLE_SAVE_ID,
     PATCH_FORMATS,
     ROLE_BATTERY,
+    ROLE_MEMORY_CARD,
     ROLE_SETTINGS,
     ROOT_CONTENT_DIRECTORY,
     ROOT_EMULATOR_DIRECTORY,
@@ -6801,7 +6802,11 @@ def _duckstation_savefile_placement(
                 {"core": card.token, "mode": mode},
             )
         )
-    physical, link_caveats = _link_view(machine, memcards_dir)
+    # The answer's own directory, which is the memory-card one only while no
+    # slot points elsewhere: a slot with an absolute CardXPath moves `dir`, and
+    # `physical_dir` is a statement about `dir` (a dead link on the directory
+    # the answer names is what makes writes fail).
+    physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     return SavefilePlacement(
         dir=directory,
@@ -7051,7 +7056,9 @@ def _pcsx2_savefile_placement(
                 {"core": card.token, "mode": mode},
             )
         )
-    physical, link_caveats = _link_view(machine, memcards_dir)
+    # The answer's own directory — a slot whose filename is an absolute path
+    # moves `dir` off the memory-card one, and `physical_dir` speaks for `dir`.
+    physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     return SavefilePlacement(
         dir=directory,
@@ -7439,6 +7446,12 @@ class _PerUserSaves:
     first_user: str
     names_citation: str
     user_sentence: str
+    # What to say when the tree holds no user directory at all. The other
+    # sentence claims every user found here is stated, which reads as a survey
+    # when none was found and the answer is standing on the compiled default
+    # alone — a directory the emulator would create, not one seen on this
+    # machine.
+    no_user_sentence: str
     user_reason: str
     mode: str
     readings: tuple[OptionReading, ...]
@@ -7453,12 +7466,16 @@ def _per_user_savedata_placement(
     card: StandaloneSaveCard,
     shape: _PerUserSaves,
     extra_caveats: tuple[Caveat, ...],
+    extra_groups: tuple[FileGroup, ...] = (),
     trailing_caveats: tuple[Caveat, ...] = (),
 ) -> SavefilePlacement:
     """One group per user account, each a per-game-directory tree.
 
     ``extra_caveats`` lead and ``trailing_caveats`` follow the two this shape
     always states, which is the order each emulator's answer already had.
+    ``extra_groups`` are places beside the per-user trees that belong to the
+    same save — RPCS3's virtual memory cards — and they follow the user groups
+    so the headline stays the first user's tree.
     """
     listing = machine.glob(os.path.join(shape.user_root, "*"))
     users = tuple(sorted(os.path.basename(path) for path in listing.matches))
@@ -7469,8 +7486,11 @@ def _per_user_savedata_placement(
             granularity=GRANULARITY_PER_GAME_DIRECTORY,
             role=ROLE_BATTERY,
         )
+        # Where nothing was found the compiled default stands in — as the tree
+        # the emulator starts with, never as a user seen on this machine, which
+        # is what the caveat below has to say in so many words.
         for user in (users or (shape.first_user,))
-    )
+    ) + extra_groups
     directory = groups[0].dir
     caveats: list[Caveat] = [
         *extra_caveats,
@@ -7487,15 +7507,10 @@ def _per_user_savedata_placement(
         ),
         Caveat(
             CAVEAT_CORE_MODE_UNESTABLISHED,
-            shape.user_sentence
-            + (
-                ""
-                if listing.status == GLOB_COMPLETE
-                else "; the tree could not be listed in full"
-            ),
+            shape.user_sentence if users else shape.no_user_sentence,
             {
                 "core": card.token,
-                "reason": shape.user_reason,
+                "reason": shape.user_reason if users else "no user directory was found",
                 "users": ",".join(users) if users else shape.first_user,
                 **(
                     {"configured_user": shape.configured_user}
@@ -7506,6 +7521,19 @@ def _per_user_savedata_placement(
         ),
         *trailing_caveats,
     ]
+    if listing.status != GLOB_COMPLETE:
+        # Structured, not an appended clause: "which users exist here is
+        # unknown" is a degradation a client branches on, and prose is not
+        # something a client can branch on.
+        caveats.append(
+            Caveat(
+                CAVEAT_SAVE_DIR_UNLISTABLE,
+                f"{shape.user_root} could not be listed, so which user directories are under "
+                "it is unknown — the tree below is what the compiled default names, not what "
+                "was found",
+                {"core": card.token, "dir": shape.user_root},
+            )
+        )
     physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     return SavefilePlacement(
@@ -7632,6 +7660,12 @@ def _rpcs3_savefile_placement(
                 "changes it — and no file records the current one, so every user home found "
                 "here is stated"
             ),
+            no_user_sentence=(
+                f"no user home exists below {os.path.join(hdd0, 'home')} — nothing has saved "
+                f"here yet. The tree named is the one the emulator starts with, user "
+                f"{_RPCS3_FIRST_USER} (Emulator::m_usr, System.h:164), which it would create "
+                "on the first save; it is not a home found on this machine"
+            ),
             user_reason="the active user account is not recorded on disk",
             mode="hdd0",
             readings=(OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),),
@@ -7642,17 +7676,33 @@ def _rpcs3_savefile_placement(
             ),
         ),
         extra_caveats=extra_caveats,
+        # The virtual memory cards are a directory beside the per-user tree,
+        # not an image the answer names as a file — so they ride as a group of
+        # their own with their names left unestablished, and the caveat that
+        # goes with that shape is the one for a part of the save beyond this
+        # answer's root. ``save-inside-image`` said the opposite of what is
+        # true here: that nothing inside is addressable.
+        extra_groups=(
+            FileGroup(
+                dir=vmc,
+                files=None,
+                granularity=GRANULARITY_PER_GAME_FILE,
+                role=ROLE_MEMORY_CARD,
+            ),
+        ),
         trailing_caveats=(
             Caveat(
-                CAVEAT_SAVE_INSIDE_IMAGE,
+                CAVEAT_FILE_SET_SPANS_ROOTS,
                 "PS1 and PS2 classics save onto virtual memory cards outside the per-user "
                 f"tree, at {vmc} — a sync that walks only the per-user savedata tree misses "
-                "them. What lands there and under which names has not been read, so the "
-                "place is stated and its contents are not",
+                "them. It is a directory, and what lands in it under which names has not "
+                "been read, so the place is stated and its contents are not; it is in "
+                "file_set.groups with its names left open",
                 {
-                    "emulator": card.token,
-                    "image": vmc,
-                    "layout": os.path.join("savedata", "vmc"),
+                    "core": card.token,
+                    "mode": "hdd0",
+                    "dir": vmc,
+                    "files": "",
                 },
             ),
         ),
@@ -7852,6 +7902,12 @@ def _vita3k_savefile_placement(
             first_user=_VITA3K_FIRST_USER,
             names_citation="init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
             user_sentence=user.sentence,
+            no_user_sentence=(
+                f"no user directory exists below {os.path.join(host.path, _VITA3K_USER_TREE)} "
+                "— nothing has saved here yet. The tree named is the one the emulator's own "
+                f"redirect spells, user {_VITA3K_FIRST_USER} (io.cpp:203), which it would "
+                "create; it is not a directory found on this machine"
+            ),
             user_reason=user.reason,
             mode="pref-path",
             readings=(

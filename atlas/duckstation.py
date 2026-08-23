@@ -181,10 +181,17 @@ class BiosCandidate:
     ``image`` is ``None`` for bytes the table does not know — a state
     DuckStation boots anyway, with a warning, so it belongs among the
     candidates rather than outside them.
+
+    ``unreadable`` keeps that state apart from the one it used to be collapsed
+    into: bytes atlas could not read are not bytes the table does not know.
+    The first is a read failure and settles nothing; the second is a verdict
+    about content that was actually seen. Both leave ``image`` at ``None``,
+    which is why the flag is here rather than being inferred from it.
     """
 
     path: str
     image: BiosImage | None
+    unreadable: bool = False
 
 
 @dataclass(frozen=True, slots=True)

@@ -2114,6 +2114,63 @@ class TestMoreStandaloneSaves:
             ("/mnt/sd/elsewhere", ("second.mcd",)),
         ]
 
+    def test_duckstation_a_dead_link_on_the_answers_own_directory_is_stated(self):
+        # The link caveats used to be computed on the memory-card directory,
+        # which is not where the answer points once a slot names an absolute
+        # path of its own — a dead link there produced no caveat at all.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = None\n"
+                    "Card1Path = /mnt/sd/cards/everyone.mcd\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards"],
+            symlinks={"/mnt/sd/cards": "/mnt/sd/gone"},
+        )
+        p = rd.emulators_for("psx").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+
+    def test_pcsx2_a_dead_link_on_the_answers_own_directory_is_stated(self):
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: (
+                    "[MemoryCards]\nSlot1_Enable = true\n"
+                    "Slot1_Filename = /mnt/sd/cards/Mcd001.ps2\n"
+                    "Slot2_Enable = false\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+            symlinks={"/mnt/sd/cards": "/mnt/sd/gone"},
+        )
+        p = rd.emulators_for("ps2").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+
+    def test_duckstation_a_linked_answer_directory_states_its_physical_one(self):
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = None\n"
+                    "Card1Path = /mnt/sd/cards/everyone.mcd\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards", "/mnt/sd/real-cards"],
+            symlinks={"/mnt/sd/cards": "/mnt/sd/real-cards"},
+        )
+        p = rd.emulators_for("psx").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert p.physical_dir == "/mnt/sd/real-cards"
+
     def test_duckstation_two_per_game_slots_state_both_holes_once(self):
         p = self._answer(
             "psx",
@@ -2350,7 +2407,11 @@ class TestTheUserAPerUserTreeWouldOpen:
         ]
 
     def test_vita3k_without_a_user_id_preselects_nobody(self):
-        p = self._answer("psvita", files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n"})
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
         assert "configured_user" not in caveat.data
@@ -2363,6 +2424,7 @@ class TestTheUserAPerUserTreeWouldOpen:
             files={
                 VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-auto-connect: true\n"
             },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
         )
         assert not isinstance(p, atlas.Unresolved)
         assert self._readings(p)["user-auto-connect"] == "true"
@@ -2374,11 +2436,55 @@ class TestTheUserAPerUserTreeWouldOpen:
         p = self._answer(
             "psvita",
             files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: [01]\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00"],
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
         assert "configured_user" not in caveat.data
         assert "does not read" in caveat.data["reason"]
+
+    def test_an_empty_user_tree_does_not_claim_a_user_was_found(self):
+        # The compiled default is what the emulator would create, not a home
+        # anyone saw. The answer used to say every user home found here is
+        # stated while naming one that was not found at all.
+        p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"})
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "no user directory was found"
+        assert "no user home exists" in caveat.message
+        assert "would create" in caveat.message
+
+    def test_an_unlistable_user_tree_is_a_structured_caveat(self):
+        # "the tree could not be listed in full" used to be a clause glued onto
+        # another caveat's prose, which no client can branch on.
+        rd = _retrodeck(
+            {**self.BASE, RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"},
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/hdd/home"],
+            unlistable=["/mnt/sd/hdd/home"],
+        )
+        p = rd.emulators_for("ps3").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_UNLISTABLE]
+        assert stated
+        assert stated[0].data["dir"] == "/mnt/sd/hdd/home"
+
+    def test_rpcs3_virtual_memory_cards_are_a_directory_group_not_an_image(self):
+        # `save-inside-image` means the answer names a FILE and nothing inside
+        # it is addressable. The vmc path is a directory, so a client following
+        # that code would have copied a directory "as a file".
+        p = self._answer(
+            "ps3",
+            files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"},
+            dirs=["/mnt/sd/hdd/home/00000001"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert atlas.CAVEAT_SAVE_INSIDE_IMAGE not in [c.code for c in p.caveats]
+        vmc = [g for g in p.file_set.groups if g.dir.endswith("/savedata/vmc")]
+        assert len(vmc) == 1
+        assert vmc[0].files is None
+        assert vmc[0].role == atlas.ROLE_MEMORY_CARD
+        spans = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS]
+        assert spans and spans[0].data["dir"] == vmc[0].dir
 
     def test_vita3k_an_unread_pref_path_refuses_for_the_right_reason(self):
         p = self._answer("psvita", files={VITA3K_CONFIG_YML: "pref-path:\n  - /mnt/sd/vita\n"})
@@ -2397,7 +2503,11 @@ class TestTheUserAPerUserTreeWouldOpen:
 
     def test_rpcs3_still_says_nothing_records_its_user(self):
         # The fix is Vita3K's alone: RPCS3 really does record no user.
-        p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"})
+        p = self._answer(
+            "ps3",
+            files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"},
+            dirs=["/mnt/sd/hdd/home/00000001"],
+        )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
         assert caveat.data["reason"] == "the active user account is not recorded on disk"
