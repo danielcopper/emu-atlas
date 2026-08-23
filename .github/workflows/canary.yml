@@ -6,7 +6,10 @@ name: Canary
 # es_systems.xml, and none of that exists on a bare runner. This workflow
 # deploys the *latest* RetroDECK from Flathub and runs the whole suite against
 # it, so the machine-bound tier un-skips by the same path-existence checks that
-# silence it elsewhere.
+# silence it elsewhere. Since #264 that tier also reads the arrangement's own
+# component scripts back — every wired tree at its cited line and every settings
+# address the component pins — so a release that moves a dir_prep or renames a
+# variable is caught here rather than by hand.
 #
 # Deliberately latest, deliberately not PR-blocking: the pinned evidence
 # describes the release it was read from, so a red canary is the expected
@@ -79,7 +82,7 @@ jobs:
         run: |
           title="canary: the deployed RetroDECK moved past the pinned evidence"
           version=$(flatpak info net.retrodeck.retrodeck 2>/dev/null | awk -F': *' '/^ *Version/{print $2; exit}')
-          body="The weekly canary deployed RetroDECK ${version:-unknown} from Flathub and the suite no longer passes against it. The pinned evidence — anchor bytes, card audits, catalogue guards — needs re-verification against this release. Run: $RUN_URL"
+          body="The weekly canary deployed RetroDECK ${version:-unknown} from Flathub and the suite no longer passes against it. The pinned evidence — anchor bytes, card audits, catalogue guards, and the component-script citations the data names — needs re-verification against this release. Run: $RUN_URL"
           existing=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
