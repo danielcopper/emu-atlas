@@ -151,6 +151,20 @@ class TestScalarsAsWritten:
     def test_a_quoted_scalar_keeps_what_the_quotes_wrap(self):
         assert read_scalars("path: '/tmp/x # y'\n").get("path") == "/tmp/x # y"
 
+    def test_a_comment_after_a_quoted_scalar_comes_off(self):
+        # The quotes close before the '#', so the comment is a comment — the
+        # value used to come back as '"/tmp/x" # note', quotes and all.
+        assert read_scalars('path: "/tmp/x" # note\n').get("path") == "/tmp/x"
+        assert read_scalars("path: '/tmp/x' # note\n").get("path") == "/tmp/x"
+
+    def test_a_hash_without_whitespace_after_a_quoted_scalar_stays_verbatim(self):
+        # YAML opens a comment only after whitespace, so this is not one, and
+        # the reader states what it cannot read exactly rather than cutting.
+        assert read_scalars('path: "/tmp/x"# note\n').get("path") == '"/tmp/x"# note'
+
+    def test_text_after_a_quoted_scalar_stays_verbatim(self):
+        assert read_scalars("path: '/tmp/x' and more\n").get("path") == "'/tmp/x' and more"
+
     def test_an_unterminated_quote_stays_verbatim(self):
         # Visibly odd rather than invented — the same stance the marker and
         # melonDS readers take.

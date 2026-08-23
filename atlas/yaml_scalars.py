@@ -115,11 +115,33 @@ def _strip_comment(value: str) -> str:
     return value if index == -1 else value[:index]
 
 
+def _comment_after_quote(value: str) -> str:
+    """A quoted scalar's trailing comment, cut only where the quote closed first.
+
+    ``path: "/tmp/x" # note`` is a quoted path with a comment after it, and the
+    quote-wrapping test alone does not see that: the value neither opens and
+    closes with the same character nor is unterminated, so it came back with
+    its quotes and the comment still attached — a path no emulator would ever
+    write. The comment comes off only when a closing quote precedes it and
+    whitespace precedes the ``#``, which is the same rule bare scalars follow;
+    anything else between the closing quote and the end of the line is left
+    verbatim rather than guessed at.
+    """
+    quote = value[0]
+    end = value.find(quote, 1)
+    if end == -1 or end == len(value) - 1:
+        return value
+    rest = value[end + 1 :]
+    if rest[:1].isspace() and rest.lstrip().startswith("#"):
+        return value[: end + 1]
+    return value
+
+
 def _scalar(raw: str) -> str:
     """One value as written — quoted scalars keep their content, bare ones lose comments."""
     stripped = raw.strip()
     if stripped[:1] in ("\"", "'"):
-        return _unquote(stripped)
+        return _unquote(_comment_after_quote(stripped))
     return _strip_comment(stripped).strip()
 
 
