@@ -5043,7 +5043,7 @@ def _pcsx2_rejected_switch(
     raw: str | None,
     parsed: bool | None,
     governing: bool,
-) -> tuple[Caveat, ...]:
+) -> list[Caveat]:
     """A switch value the emulator cannot read as a boolean, stated rather than swallowed.
 
     ``GetBoolValue`` returns false without writing the caller's variable when
@@ -5054,8 +5054,8 @@ def _pcsx2_rejected_switch(
     something into that key sees an answer that looks like the key is unset.
     """
     if raw is None or parsed is not None:
-        return ()
-    return (
+        return []
+    return [
         Caveat(
             CAVEAT_CFG_VALUE_REJECTED,
             f'{switch.section}/{switch.key} = "{raw}" is not a value this emulator reads as a '
@@ -5065,8 +5065,8 @@ def _pcsx2_rejected_switch(
             f"compiled default {str(governing).lower()} governs; the setting does not become "
             "false because the value was unreadable",
             {"core": token, "key": f"{switch.section}/{switch.key}", "value": raw},
-        ),
-    )
+        )
+    ]
 
 
 def _pcsx2_game_settings_caveat(
@@ -5075,7 +5075,7 @@ def _pcsx2_game_settings_caveat(
     data_root: str,
     token: str,
     switch_key: str,
-) -> tuple[Caveat, ...]:
+) -> list[Caveat]:
     """The per-game ini layer, where this machine has one — PCSX2's second settings source.
 
     A running game installs ``<DataRoot>/gamesettings/<serial>_<crc>.ini`` as a
@@ -5107,7 +5107,7 @@ def _pcsx2_game_settings_caveat(
         directory = raw
     listing = machine.glob(os.path.join(directory, "*.ini"))
     if listing.status != GLOB_COMPLETE:
-        return (
+        return [
             Caveat(
                 CAVEAT_PER_GAME_LAYER_UNREAD,
                 f"{directory} could not be listed, so whether any game on this machine carries "
@@ -5116,11 +5116,11 @@ def _pcsx2_game_settings_caveat(
                 "it may be answered differently for a game this answer cannot name "
                 "(UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
                 {"core": token, "dir": directory, "key": switch_key},
-            ),
-        )
+            )
+        ]
     if not listing.matches:
-        return ()
-    return (
+        return []
+    return [
         Caveat(
             CAVEAT_PER_GAME_OVERRIDES_PRESENT,
             f"{len(listing.matches)} game(s) on this machine carry a per-game settings file "
@@ -5134,8 +5134,8 @@ def _pcsx2_game_settings_caveat(
                 "dir": directory,
                 "key": switch_key,
             },
-        ),
-    )
+        )
+    ]
 
 
 def _duckstation_dataroot_caveat(token: str) -> Caveat:
@@ -7943,33 +7943,42 @@ def _vita3k_user(read: YamlScalars) -> _Vita3kUser:
         OptionReading(
             _VITA3K_USER_ID_KEY,
             None if unread else read.get(_VITA3K_USER_ID_KEY),
-            (
-                f"{_VITA3K_USER_ID_KEY} is stated as a construct atlas does not read — its "
-                "value is unread, not absent"
-                if unread
-                else f'config.yml: {_VITA3K_USER_ID_KEY}: "{configured}"'
-                if configured is not None
-                else f"{_VITA3K_USER_ID_KEY} is unset — no user is preselected "
-                "(config.h:189)"
+            _vita3k_key_provenance(
+                _VITA3K_USER_ID_KEY,
+                configured,
+                unread=unread,
+                unset="no user is preselected (config.h:189)",
             ),
             None,
         ),
         OptionReading(
             _VITA3K_AUTO_CONNECT_KEY,
             auto,
-            (
-                f"{_VITA3K_AUTO_CONNECT_KEY} is stated as a construct atlas does not read — "
-                "its value is unread, not absent"
-                if _VITA3K_AUTO_CONNECT_KEY in read.skipped
-                else f'config.yml: {_VITA3K_AUTO_CONNECT_KEY}: "{auto}"'
-                if auto
-                else f"{_VITA3K_AUTO_CONNECT_KEY} is unset — the default false governs "
-                "(config.h:190)"
+            _vita3k_key_provenance(
+                _VITA3K_AUTO_CONNECT_KEY,
+                auto,
+                unread=_VITA3K_AUTO_CONNECT_KEY in read.skipped,
+                unset="the default false governs (config.h:190)",
             ),
             None,
         ),
     )
     return _Vita3kUser(configured, readings, sentence, reason)
+
+
+def _vita3k_key_provenance(key: str, value: str | None, *, unread: bool, unset: str) -> str:
+    """Where one config.yml key's value came from — the same three states twice.
+
+    A key is stated as a construct the scalar reader passed over, stated as a
+    value, or not stated at all, and the two keys this answer reads differ only
+    in what governs when nothing is stated. Saying that once keeps the two
+    readings from drifting into two accounts of one grammar.
+    """
+    if unread:
+        return f"{key} is stated as a construct atlas does not read — its value is unread, not absent"
+    if value:
+        return f'config.yml: {key}: "{value}"'
+    return f"{key} is unset — {unset}"
 
 
 def _vita3k_savefile_placement(

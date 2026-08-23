@@ -2709,7 +2709,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert vmc[0].files is None
         assert vmc[0].role == atlas.ROLE_MEMORY_CARD
         spans = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS]
-        assert spans and spans[0].data["dir"] == vmc[0].dir
+        assert spans
+        assert spans[0].data["dir"] == vmc[0].dir
 
     def test_vita3k_an_unread_pref_path_refuses_for_the_right_reason(self):
         p = self._answer("psvita", files={VITA3K_CONFIG_YML: "pref-path:\n  - /mnt/sd/vita\n"})
