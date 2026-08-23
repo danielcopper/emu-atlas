@@ -25,6 +25,7 @@ from typing import Any
 
 from atlas import emulator_settings, qt_ini
 from atlas.machine import READ_MISSING, READ_OK, Machine
+from atlas.placement import CAVEAT_CORE_MODE_UNESTABLISHED, Caveat
 
 # The emulator's own directory name below whichever XDG base the launch picked,
 # and the settings file inside it.
@@ -141,6 +142,31 @@ def read_settings(
         stated_path=None,
         unreadable=None,
         ambiguous=len(candidates) > 1,
+    )
+
+
+def dataroot_caveat(token: str, below: str) -> Caveat:
+    """The one statement every DuckStation answer makes about an unrecorded launch.
+
+    Two directories can be this emulator's DataRoot and an environment
+    variable decides which — a fact no file on the machine holds. Four routes
+    say it, and they have to say it in the same words with the same data, or a
+    caller comparing the save, BIOS, texture and mod answers of one entry
+    finds four tellings of one fact and no way to see they are the same. It
+    lives here, in the module both ``installations`` and ``firmware`` already
+    read this emulator through, because it was written out three times and the
+    three had already begun to drift in their tails.
+
+    *below* names what hangs off the chosen side — the differing half, and the
+    only one a route supplies.
+    """
+    return Caveat(
+        CAVEAT_CORE_MODE_UNESTABLISHED,
+        "no settings.ini exists on either DataRoot candidate — DuckStation picks its root "
+        "from the launch environment (XDG_CONFIG_HOME set routes it to the config side, "
+        f"qthost.cpp:562-582), which no file records; {below} hangs off the "
+        "environment-unset side",
+        {"core": token, "reason": "the DataRoot is decided by the launch environment"},
     )
 
 

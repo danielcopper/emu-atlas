@@ -3231,17 +3231,7 @@ def _duckstation_standalone_core(
     caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
     if read.ambiguous:
         caveats.append(
-            Caveat(
-                CAVEAT_CORE_MODE_UNESTABLISHED,
-                "no settings.ini exists on either DataRoot candidate — DuckStation picks its "
-                "root from the launch environment (XDG_CONFIG_HOME set routes it to the config "
-                "side, qthost.cpp:562-582), which no file records; the search directory below "
-                "hangs off the environment-unset side",
-                {
-                    "core": card.token,
-                    "reason": "the DataRoot is decided by the launch environment",
-                },
-            )
+            duckstation.dataroot_caveat(card.token, "the search directory below")
         )
     section, name = search.directory_key.split("/", 1)
     composed = duckstation.load_path(

@@ -5085,22 +5085,8 @@ def _pcsx2_game_settings_caveat(
 
 
 def _duckstation_dataroot_caveat(token: str) -> Caveat:
-    """The one statement every DuckStation answer makes about an unrecorded launch.
-
-    Two directories can be this emulator's DataRoot and an environment
-    variable decides which — a fact no file on the machine holds. Every route
-    that reads this emulator says it in these words, so a caller comparing the
-    save, BIOS, texture and mod answers of one entry finds one fact, not four
-    tellings of it.
-    """
-    return Caveat(
-        CAVEAT_CORE_MODE_UNESTABLISHED,
-        "no settings.ini exists on either DataRoot candidate — DuckStation picks its "
-        "root from the launch environment (XDG_CONFIG_HOME set routes it to the config "
-        "side, qthost.cpp:562-582), which no file records; the directory below hangs "
-        "off the environment-unset side",
-        {"core": token, "reason": "the DataRoot is decided by the launch environment"},
-    )
+    """The texture and mod routes' wording of :func:`atlas.duckstation.dataroot_caveat`."""
+    return duckstation.dataroot_caveat(token, "the directory below")
 
 
 def _duckstation_texture_placement(
@@ -6565,14 +6551,7 @@ def _duckstation_settings(
         return read.root, {}, None, (), refusal
     if not read.ambiguous:
         return read.root, dict(read.values), read.stated_path, (), None
-    ambiguity = Caveat(
-        CAVEAT_CORE_MODE_UNESTABLISHED,
-        "no settings.ini exists on either DataRoot candidate — DuckStation picks its root "
-        "from the launch environment (XDG_CONFIG_HOME set routes it to the config side, "
-        "qthost.cpp:562-582), which no file records; the compiled defaults below hang off "
-        "the environment-unset side",
-        {"core": card.token, "reason": "the DataRoot is decided by the launch environment"},
-    )
+    ambiguity = duckstation.dataroot_caveat(card.token, "the compiled defaults below")
     return read.root, {}, None, (ambiguity,), None
 
 
@@ -7559,7 +7538,16 @@ def _per_user_savedata_placement(
     so the headline stays the first user's tree.
     """
     listing = machine.glob(os.path.join(shape.user_root, "*"))
-    users = tuple(sorted(os.path.basename(path) for path in listing.matches))
+    # A user is a directory. Anything else the glob hands back — a stray file
+    # beside the user homes, a dead link — would otherwise become a group
+    # naming `<that file>/savedata`, a path nothing writes to.
+    users = tuple(
+        sorted(
+            os.path.basename(path)
+            for path in listing.matches
+            if machine.path_kind(path) == KIND_DIRECTORY
+        )
+    )
     groups = tuple(
         FileGroup(
             dir=os.path.join(shape.user_root, user, "savedata"),

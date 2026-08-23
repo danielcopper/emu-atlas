@@ -70,11 +70,15 @@ def _directory_spellings():
                 if stated.flatpak is not None
                 else COMPONENTS / stated.binary
             )
+            # The encoding travels with the sibling too. Encoding it as bare
+            # UTF-8 below would look for the wrong bytes of any name recorded
+            # in another encoding, and a flip guard that cannot see the other
+            # spelling passes for the wrong reason.
             siblings = tuple(
-                literal
+                (literal, encoding)
                 for other_id, other in spellings
                 if other_id != app_id
-                for _, literal, _ in other.literals
+                for _, literal, encoding in other.literals
             )
             yield token, app_id, stated, binary, siblings
 
@@ -330,8 +334,8 @@ class TestTheStatedDirectoryIsTheOneTheBuildSpells:
         data = _blob(binary)
         if data is None:
             pytest.skip(f"{binary} is not deployed")
-        for literal in siblings:
-            assert literal.encode() not in data, (
+        for literal, encoding in siblings:
+            assert literal.encode(encoding) not in data, (
                 f"the settings table states {token}'s own directory as {stated.name!r} for "
                 f"{app_id or 'the arrangement own build'}, and the shipped {binary.name} carries "
                 f"{literal!r} — the other installation's spelling — so this build is no longer "

@@ -2447,6 +2447,26 @@ class TestMoreStandaloneSaves:
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT]
         assert stated
 
+    @pytest.mark.parametrize(
+        "name,expected",
+        [
+            ("Some Game.nds", "Some Game.sav"),
+            ("Some.Game.v1.nds", "Some.Game.v1.sav"),
+            ("noextension", "noextension.sav"),
+            # All extension and no base: getAssetPath writes "firmware" where
+            # the stem would go (EmuInstance.cpp:473-476), which this mirrors
+            # rather than repairs.
+            (".nds", "firmware.sav"),
+        ],
+    )
+    def test_melonds_names_the_save_after_the_loaded_files_stem(self, name, expected):
+        p = self._melonds(
+            {MELONDS_TOML_PATH: '[Instance0]\nSaveFilePath = "/mnt/sd/saves"\n'},
+            content_path=f"/mnt/sd/retrodeck/roms/nds/{name}",
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == (expected,)
+
     def test_melonds_with_an_unreadable_toml_refuses(self):
         p = self._melonds({MELONDS_TOML_PATH: {"status": "unreadable"}})
         assert isinstance(p, atlas.Unresolved)
@@ -2686,6 +2706,35 @@ class TestEmuDeckStandaloneLaunchers:
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
         assert p.data["variant"] == "flatpak"
+
+    def _entry(self, system, files=None, **kwargs):
+        machine = FixtureMachine({**self.BASE, **(files or {})}, **kwargs)
+        return atlas.EmuDeck(HOME, machine).emulators_for(system).entries[0]
+
+    @pytest.mark.parametrize("question", ["texture_pack_location", "mod_location"])
+    def test_the_other_questions_refuse_at_the_same_gate_the_save_route_does(self, question):
+        # The gate is shared by all four questions since #255; only the save
+        # route's refusals had a test, so the texture and mod ones could have
+        # answered from a tree their binary never reads and nothing would say.
+        entry = self._entry(
+            "wiiu",
+            dirs=[
+                f"{HOME}/Applications",
+                f"{HOME}/.local/share/flatpak/app/info.cemu.Cemu",
+            ],
+        )
+        outcome = getattr(entry, question)()
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert outcome.data["variant"] == "flatpak"
+
+    @pytest.mark.parametrize("question", ["texture_pack_location", "mod_location"])
+    def test_the_other_questions_refuse_a_proton_launch_too(self, question):
+        entry = self._entry("wiiu", dirs=[f"{HOME}/Applications"])
+        outcome = getattr(entry, question)()
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert outcome.data["variant"] == "proton"
 
     def test_an_unlistable_applications_directory_is_not_a_no(self):
         # The launcher would still look there — an unreadable directory makes
