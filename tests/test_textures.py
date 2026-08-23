@@ -612,15 +612,17 @@ class TestTheEntryRouteAsymmetryIsDeliberate:
     the other's shape unnoticed.
     """
 
-    def test_the_same_entry_answers_textures_and_refuses_its_save(self):
-        # PrimeHack has a texture card and no standalone save card — the
-        # split inside one entry is evidence, not kind. (Azahar and then
-        # DuckStation were this example, until their save cards landed.)
+    def test_a_fork_answers_both_questions_the_emulator_it_forks_answers(self):
+        # PrimeHack was the standing proof of the split inside one entry — it
+        # answered the texture question and refused the save one (Azahar and
+        # then DuckStation were the example before it). Its save card landed
+        # with #246, and with it the last texture-carded emulator that refused
+        # its save, so what this entry proves now is the inheritance: a fork
+        # answers what the emulator it forks answers. The split itself is
+        # asserted below, on the pair that still shows it.
         entry = _entry("wii")
         assert isinstance(entry.texture_pack_location(), TexturePlacement)
-        refusal = entry.savefile_location()
-        assert isinstance(refusal, Unresolved)
-        assert refusal.code == atlas.UNRESOLVED_STANDALONE
+        assert isinstance(entry.savefile_location(), atlas.SavefilePlacement)
 
     def test_an_emulator_with_a_save_card_answers_the_save_question_too(self):
         # Dolphin carries a standalone save card since #181, so the same entry

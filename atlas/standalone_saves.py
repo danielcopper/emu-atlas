@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import importlib.resources
 import json
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
 SAVES_SCHEMA = 1
@@ -50,6 +51,21 @@ class StandaloneSaveCard:
     (EmuDeck's melonDS) — the id whose per-app XDG trees the flatpak variant
     reads. ``None`` for an emulator no established launch runs that way: an
     id nothing launches would resolve nothing, so the variant keeps refusing.
+
+    ``citations`` are the emulator's own source references the **resolver**
+    speaks — the line ranges that go into an answer's caveats and readings —
+    keyed by the slot the code asks for. They live on the card because a
+    resolver can be shared by two emulators that are not the same source:
+    PrimeHack is a Dolphin fork with Dolphin's save shape, read by Dolphin's
+    resolver, and every file it inherits sits at different lines than in the
+    Dolphin release beside it. A shared reading with one hard-coded citation
+    would state one build's evidence for the other's answer.
+
+    A citation belongs to the **build** rather than to the emulator, which is
+    why the reserved ``installations`` key states one set per flatpak app id,
+    exactly as the directory name does: the PrimeHack revision RetroDECK
+    builds and the one Flathub ships are three years apart, and five of the
+    seven lines a save answer names differ between them.
     """
 
     token: str
@@ -57,6 +73,27 @@ class StandaloneSaveCard:
     systems: tuple[str, ...]
     flatpak: str | None
     provenance: str
+    citations: Mapping[str, str] = field(default_factory=dict)
+    citation_installations: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
+
+    def cite(self, slot: str, *, flatpak: str | None) -> str:
+        """The card's citation for one slot, in the build this launch runs.
+
+        *flatpak* has no default for the same reason ``user_directory``'s has
+        none: a reading that forgot it would name the arrangement's own
+        build's lines for an answer about somebody else's, and look exactly
+        like a verified one. Raises for a slot the card does not state — the
+        card and the code shipped out of step.
+        """
+        stated = self.citation_installations.get(flatpak or "", self.citations)
+        citation = stated.get(slot)
+        if citation is None:
+            raise ValueError(
+                f"standalone save card {self.token!r} states no {slot!r} citation for "
+                f"{flatpak or 'the arrangement own build'} — the resolver reading it names "
+                "that source in its answer, and the card and the code shipped out of step"
+            )
+        return citation
 
 
 def _expect_str(value: Any, where: str) -> str:
@@ -85,12 +122,43 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
     provenance = entry.get("provenance", {})
     if not isinstance(provenance, dict):
         raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
+    citations = saves.get("citations", {})
+    if not isinstance(citations, dict):
+        raise ValueError(f"{where}: expected a 'saves.citations' object, got {citations!r}")
+    installations = citations.pop("installations", {})
+    if not isinstance(installations, dict):
+        raise ValueError(
+            f"{where}: expected a 'saves.citations.installations' object, got {installations!r}"
+        )
+    for app_id, stated in installations.items():
+        _expect_str(app_id, f"{where}: saves.citations.installations key")
+        if not isinstance(stated, dict) or set(stated) != set(citations):
+            raise ValueError(
+                f"{where}: saves.citations.installations[{app_id!r}] must state the same slots "
+                f"as the default set {sorted(citations)} — a partial override reads as one "
+                "build's evidence and answers with another's"
+            )
     return StandaloneSaveCard(
         token=token,
         settings=settings,
         systems=tuple(_expect_str(s, f"{where}: saves.systems[]") for s in systems),
         flatpak=flatpak,
         provenance=_expect_str(provenance.get("source"), f"{where}: provenance.source"),
+        citations={
+            _expect_str(slot, f"{where}: saves.citations key"): _expect_str(
+                citation, f"{where}: saves.citations[{slot!r}]"
+            )
+            for slot, citation in citations.items()
+        },
+        citation_installations={
+            app_id: {
+                slot: _expect_str(
+                    citation, f"{where}: saves.citations.installations[{app_id!r}][{slot!r}]"
+                )
+                for slot, citation in stated.items()
+            }
+            for app_id, stated in installations.items()
+        },
     )
 
 

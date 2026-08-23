@@ -5196,10 +5196,37 @@ def _standalone_texture_unresolved(spec: EmulatorSpec) -> Unresolved:
 # off the machine is a config read or a symlink walk, never a guess.
 # ---------------------------------------------------------------------------
 
-# Dolphin 2603a. Region directory names and card file stems are compile-time
-# literals (CommonPaths.h:40-44, :141-142); the slot devices are EXI ids
-# (EXI_Device.h:25-45), registered with GCI-folder as slot A's default and
-# nothing in slot B (MainSettings.cpp:133-136).
+# One card's citations, already narrowed to the installation this launch
+# runs — what the readings below call to name a source. Binding it once at the
+# entry point is what keeps a helper from having to know which build it is
+# describing, and from being able to get it wrong.
+_Cite = Callable[[str], str]
+
+
+def _cites(card: StandaloneSaveCard, homes: _XdgHomes) -> _Cite:
+    def cite(slot: str) -> str:
+        return card.cite(slot, flatpak=homes.flatpak)
+
+    return cite
+
+
+# Dolphin 2603a, and its fork PrimeHack: one reading serves both, because the
+# fork inherits the shape whole — the same EXI ids, the same registered slot
+# defaults, the same compile-time region directories and card file stems, the
+# same NAND tree. What it does not inherit is the line numbers, so every
+# source this reading names in an answer comes from the card that is being
+# read (``card.cite``) rather than from here.
+_DOLPHIN_CITATION_SLOTS = frozenset(
+    {
+        "build",  # the release label an answer says its evidence is "at"
+        "slot_devices",  # the EXI device ids a slot key spells
+        "slot_defaults",  # what an unset SlotA/SlotB falls back to
+        "session_overrides",  # the GCIFolder*PathOverride keys a session sets
+        "gci_names",  # how a .gci file inside a folder card is named
+        "nand_tree",  # the Wii NAND's title/<hi>/<lo>/data shape
+        "wii_dir",  # the NAND's default directory below the user directory
+    }
+)
 _DOLPHIN_REGIONS = ("USA", "EUR", "JAP")
 _DOLPHIN_REGION_SPELLINGS = ("USA", "EUR", "JAP", "JPN", "DEV")
 _DOLPHIN_DEVICE_RAW = 1
@@ -5252,7 +5279,13 @@ def _dolphin_region_split(value: str, *, separator: str) -> tuple[str, str]:
     return value, ""
 
 
-def _dolphin_raw_slot(letter: str, configured: str | None, sandbox: _Sandbox, gc_root: str) -> _DolphinSlot:
+def _dolphin_raw_slot(
+    letter: str,
+    configured: str | None,
+    sandbox: _Sandbox,
+    gc_root: str,
+    cite: "_Cite",
+) -> _DolphinSlot:
     """A raw memory card in one slot: one file per region, named.
 
     An empty path defaults to ``<GC user>/MemoryCard<slot>.<region>.raw``
@@ -5273,7 +5306,7 @@ def _dolphin_raw_slot(letter: str, configured: str | None, sandbox: _Sandbox, gc
                         {"key": f"Memcard{letter}Path", "path": configured},
                     ),
                 ),
-                readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None),),
+                readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None, cite),),
             )
         directory, filename = os.path.split(resolved.path)
         stem, ext = os.path.splitext(filename)
@@ -5288,11 +5321,17 @@ def _dolphin_raw_slot(letter: str, configured: str | None, sandbox: _Sandbox, gc
             FileGroup(dir=directory, files=(name,), granularity="shared-file", role="memory-card")
             for name in names
         ),
-        readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None),),
+        readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None, cite),),
     )
 
 
-def _dolphin_folder_slot(letter: str, configured: str | None, sandbox: _Sandbox, gc_root: str) -> _DolphinSlot:
+def _dolphin_folder_slot(
+    letter: str,
+    configured: str | None,
+    sandbox: _Sandbox,
+    gc_root: str,
+    cite: "_Cite",
+) -> _DolphinSlot:
     """A GCI folder in one slot: one directory per region, files unnamed.
 
     An empty path defaults to ``<GC user>/<region>/Card <slot>``
@@ -5314,7 +5353,7 @@ def _dolphin_folder_slot(letter: str, configured: str | None, sandbox: _Sandbox,
                         {"key": f"GCIFolder{letter}Path", "path": configured},
                     ),
                 ),
-                readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None),),
+                readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite),),
             )
         base, _ = _dolphin_region_split(resolved.path.rstrip("/"), separator="/")
         dirs = tuple(os.path.join(base, region) for region in _DOLPHIN_REGIONS)
@@ -5328,39 +5367,50 @@ def _dolphin_folder_slot(letter: str, configured: str | None, sandbox: _Sandbox,
             FileGroup(dir=d, files=None, granularity="per-game-files", role="memory-card")
             for d in dirs
         ),
-        readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None),),
+        readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite),),
         template_dir=template,
     )
 
 
-def _dolphin_reading(key: str, value: str | None, provenance: str | None) -> OptionReading:
+def _dolphin_reading(
+    key: str, value: str | None, provenance: str | None, cite: "_Cite | None" = None
+) -> OptionReading:
+    default_provenance = f"[Core] {key} is unset — the compiled-in default governs"
+    if cite is not None:
+        default_provenance += f" ({cite('slot_defaults')} at {cite('build')})"
     return OptionReading(
         key,
         value,
         provenance
-        or (
-            f'Dolphin.ini: [Core] {key} = "{value}"'
-            if value is not None
-            else f"[Core] {key} is unset — the compiled-in default governs (MainSettings.cpp at 2603a)"
-        ),
+        or (f'Dolphin.ini: [Core] {key} = "{value}"' if value is not None else default_provenance),
         None,
     )
 
 
-def _dolphin_slot(letter: str, core: Mapping[str, str], sandbox: _Sandbox, gc_root: str) -> _DolphinSlot:
+def _dolphin_slot(
+    letter: str,
+    core: Mapping[str, str],
+    sandbox: _Sandbox,
+    gc_root: str,
+    cite: "_Cite",
+) -> _DolphinSlot:
     """One slot read the way the emulator reads it: device id first, then the path."""
     raw_value = core.get(f"Slot{letter}")
     try:
         device = int(raw_value) if raw_value is not None else _DOLPHIN_SLOT_DEFAULTS[letter]
     except ValueError:
         device = None
-    slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None)
+    slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None, cite)
     if device == _DOLPHIN_DEVICE_NONE:
         return _DolphinSlot(mode="none", readings=(slot_reading,))
     if device == _DOLPHIN_DEVICE_FOLDER:
-        slot = _dolphin_folder_slot(letter, core.get(f"GCIFolder{letter}Path"), sandbox, gc_root)
+        slot = _dolphin_folder_slot(
+            letter, core.get(f"GCIFolder{letter}Path"), sandbox, gc_root, cite
+        )
     elif device == _DOLPHIN_DEVICE_RAW:
-        slot = _dolphin_raw_slot(letter, core.get(f"Memcard{letter}Path"), sandbox, gc_root)
+        slot = _dolphin_raw_slot(
+            letter, core.get(f"Memcard{letter}Path"), sandbox, gc_root, cite
+        )
     elif device == _DOLPHIN_DEVICE_AGP:
         return _DolphinSlot(
             mode="agp",
@@ -5403,6 +5453,7 @@ def _dolphin_gc_answer(
     machine: Machine,
     ini_path: str | None,
     card: StandaloneSaveCard,
+    cite: _Cite,
     extra_caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement:
     """The GameCube answer assembled from both slots' contributions."""
@@ -5432,7 +5483,7 @@ def _dolphin_gc_answer(
                         "core": card.token,
                         "dir": g.dir,
                         "role": g.role,
-                        "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a",
+                        "citation": f"{cite('gci_names')} at {cite('build')}",
                     },
                 )
                 for g in groups
@@ -5480,7 +5531,7 @@ def _dolphin_gc_answer(
             alternatives=_dolphin_alternatives(slots),
             provenance=(
                 f"standalone save card '{card.token}': mode {mode!r} from Dolphin.ini's slot "
-                "devices (EXI_Device.h:25-45 at 2603a)"
+                f"devices ({cite('slot_devices')} at {cite('build')})"
             ),
         ),
     )
@@ -5579,6 +5630,7 @@ def _dolphin_wii_answer(
     ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at 2603a), the title
     id a fact of the disc that no read of the content path recovers.
     """
+    cite = _cites(card, homes)
     configured = general.get("NANDRootPath")
     caveats = [*extra_caveats]
     if configured:
@@ -5601,7 +5653,7 @@ def _dolphin_wii_answer(
             "NANDRootPath",
             None,
             "[General] NANDRootPath is unset — the NAND defaults to the Wii tree below the "
-            "user directory (CommonPaths.h:49 at 2603a)",
+            f"user directory ({cite('wii_dir')} at {cite('build')})",
         )
     directory = os.path.join(nand_root, "title")
     # The link walk stops at the NAND root: the ``title`` tree below it is
@@ -5619,7 +5671,7 @@ def _dolphin_wii_answer(
                 "core": card.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
-                "citation": "NandPaths.cpp:63-71 at dolphin 2603a",
+                "citation": f"{cite('nand_tree')} at {cite('build')}",
             },
         )
     )
@@ -5630,7 +5682,10 @@ def _dolphin_wii_answer(
         readings=(_reading_with_file(reading, ini_path),),
         caveats=tuple(caveats),
         physical=physical,
-        provenance=f"standalone save card '{card.token}': the Wii NAND tree (NandPaths.cpp:63-71 at 2603a)",
+        provenance=(
+            f"standalone save card '{card.token}': the Wii NAND tree "
+            f"({cite('nand_tree')} at {cite('build')})"
+        ),
     )
 
 
@@ -5645,7 +5700,14 @@ def _dolphin_savefile_placement(
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
-    """Dolphin's save answer, read from Dolphin.ini the way the emulator reads it."""
+    """Dolphin's save answer, read from Dolphin.ini the way the emulator reads it.
+
+    Shared with PrimeHack, which is Dolphin with a different name for its own
+    directory: the shape is inherited whole, and everything this reading says
+    about its source comes from the card being read, in the build this launch
+    runs (:func:`_cites`).
+    """
+    cite = _cites(card, homes)
     ini_path = _standalone_settings_path(card, homes)
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
@@ -5673,22 +5735,23 @@ def _dolphin_savefile_placement(
         Caveat(
             CAVEAT_CORE_MODE_UNESTABLISHED,
             f"Dolphin.ini carries {key}, a per-session override a movie or netplay session "
-            "sets (MainSettings.cpp:117-119) — while one runs, the cards live at its path, "
-            "not at the answer's",
+            f"sets ({cite('session_overrides')}) — while one runs, the cards live at its "
+            "path, not at the answer's",
             {"core": card.token, "reason": f"{key} is set"},
         )
         for key in ("GCIFolderAPathOverride", "GCIFolderBPathOverride")
         if core.get(key)
     )
     slots = (
-        _dolphin_slot("A", core, sandbox, gc_root),
-        _dolphin_slot("B", core, sandbox, gc_root),
+        _dolphin_slot("A", core, sandbox, gc_root, cite),
+        _dolphin_slot("B", core, sandbox, gc_root, cite),
     )
     return _dolphin_gc_answer(
         slots,
         machine=machine,
         ini_path=stated_ini,
         card=card,
+        cite=cite,
         extra_caveats=(*extra_caveats, *override_caveats),
     )
 
@@ -7634,6 +7697,7 @@ def _vita3k_savefile_placement(
 
 _STANDALONE_SAVE_RESOLVERS = {
     "DOLPHIN": _dolphin_savefile_placement,
+    "PRIMEHACK": _dolphin_savefile_placement,
     "PPSSPP": _ppsspp_savefile_placement,
     "XEMU": _xemu_savefile_placement,
     "CEMU": _cemu_savefile_placement,
@@ -7643,6 +7707,15 @@ _STANDALONE_SAVE_RESOLVERS = {
     "MELONDS": _melonds_savefile_placement,
     "RPCS3": _rpcs3_savefile_placement,
     "VITA3K": _vita3k_savefile_placement,
+}
+
+# Which citation slots each reading speaks, so a card can be crossed with the
+# code that reads it: a slot the reading names and the card omits fails the
+# answer, and a slot the card states and no reading names is evidence written
+# for nothing.
+STANDALONE_SAVE_CITATION_SLOTS = {
+    "DOLPHIN": _DOLPHIN_CITATION_SLOTS,
+    "PRIMEHACK": _DOLPHIN_CITATION_SLOTS,
 }
 
 
