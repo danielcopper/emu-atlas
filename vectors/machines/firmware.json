@@ -7625,6 +7625,180 @@
       }
     },
     {
+      "name": "retrodeck-pcsx2-a-sandbox-bios-directory-is-read-where-the-host-keeps-it",
+      "rationale": "A flatpak emulator writes its configuration from inside its own sandbox, so the directory it names is a sandbox path: /var/config/PCSX2/bios is what the app sees, and the host reads the very same directory under ~/.var/app/net.retrodeck.retrodeck/config. The firmware route used to take such a value as a host path and report the BIOS missing while it was sitting there — the save route of this same emulator had always translated. Both now go through one map, so the two routes cannot disagree about where a configured directory lands.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nBios = /var/config/PCSX2/bios\n[Filenames]\nBIOS = scph39001.bin\n",
+          "/mnt/sd/retrodeck/bios/scph39001.bin": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/bios/scph39001.bin": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "PCSX2 (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "ps2",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "scph39001.bin",
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/bios/scph39001.bin",
+                  "declared": "scph39001.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "PCSX2 (Standalone)",
+                    "token": "PCSX2"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-pcsx2-a-bios-directory-only-the-sandbox-can-reach-is-said-not-guessed",
+      "rationale": "The other half of the same map: /run/user/1000 is the sandbox's own private runtime directory, which names something else inside the app than it does out here, so no host path exists for it at all. That is not a missing BIOS — nothing was looked at — and the answer says exactly that with sandbox-path-untranslated rather than reporting a fault that may not be there.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nBios = /run/user/1000/bios\n[Filenames]\nBIOS = scph39001.bin\n",
+          "/mnt/sd/retrodeck/bios/scph39001.bin": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "PCSX2 (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "PCSX2 (Standalone)",
+                    "token": "PCSX2"
+                  }
+                },
+                {
+                  "code": "sandbox-path-untranslated",
+                  "data": {
+                    "label": "PCSX2 (Standalone)",
+                    "token": "PCSX2",
+                    "key": "Folders/Bios",
+                    "path": "/run/user/1000/bios"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "ps2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "pcsx2-a-chosen-bios-that-is-not-there-is-a-missing-required-file",
       "rationale": "The discriminating half of the pair: the configuration picked an image and nothing is at that path. That is a required file reported missing — a different fact from no image being chosen at all, and a client acting on the two would do different things.",
       "input": {

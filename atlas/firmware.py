@@ -69,7 +69,7 @@ import tomllib
 import re
 from dataclasses import dataclass
 from glob import escape as _glob_escape
-from typing import Any, Literal, Mapping, cast
+from typing import Any, Literal, Mapping, Protocol, cast
 
 from atlas.core_info import (
     UNREAD_EMPTY,
@@ -105,6 +105,7 @@ from atlas.standalone_firmware import (
 )
 from atlas.placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
+    CAVEAT_SANDBOX_PATH_UNTRANSLATED,
     ROOT_SYSTEM_DIRECTORY,
     UNRESOLVED_CORE_NOT_INSTALLED,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -112,6 +113,26 @@ from atlas.placement import (
     Caveat,
 )
 from atlas.retroarch_cfg import cfg_uint
+
+class SandboxTranslation(Protocol):
+    """How an emulator's own absolute config value reads from this host.
+
+    A Flatpak emulator writes its configuration from inside its sandbox, so a
+    ``/var/config/PCSX2/bios`` in it is a path only the app can open — the
+    host reads the same directory under ``~/.var/app/<id>/config``. The save
+    route has always translated; the firmware route read such values as host
+    paths and reported the BIOS missing.
+
+    Declared here as the one method this route needs, and satisfied by the
+    installation handles' own sandbox: the translation is arrangement
+    knowledge, which lives a layer above this module and must not be
+    reimplemented in it.
+    """
+
+    def translate(self, path: str) -> str | None:
+        """*path* as this host reads it, or ``None`` where no host path exists."""
+        ...
+
 
 FirmwareNeed = Literal["required", "optional"]
 
@@ -1457,6 +1478,14 @@ class FirmwareContext:
     # The flatpak app id those bases belong to, where the emulator runs as one
     # — it decides how the emulator spells its own directory (#246).
     standalone_flatpak: str | None = None
+    # How an absolute path in a standalone emulator's own configuration reads
+    # from this host (:class:`SandboxTranslation`). ``None`` on an arrangement
+    # that resolves no standalone card, where nothing would ask.
+    standalone_sandbox: SandboxTranslation | None = None
+    # Whether those bases are a flatpak's pinned XDG variables. It settles the
+    # root of an emulator that picks one by whether XDG_CONFIG_HOME is set —
+    # inside a sandbox it always is, so there is nothing left to probe.
+    standalone_xdg_pinned: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -2449,6 +2478,35 @@ class _ConfigProbe:
     answer_caveats: tuple[Caveat, ...] = ()
 
 
+def _sandbox_host_path(
+    sandbox: SandboxTranslation | None,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    key: str,
+    value: str,
+) -> tuple[str | None, Caveat | None]:
+    """An absolute configuration value as this host reads it, or why it cannot.
+
+    Only absolute values go through the sandbox map: a relative one is
+    composed against a root this route already resolved on the host side. A
+    value the map cannot land anywhere is not a missing file — it is a path
+    only the emulator's own sandbox can open, and saying "missing" about it
+    would report a fault that is not there.
+    """
+    if sandbox is None or not os.path.isabs(value):
+        return value, None
+    host = sandbox.translate(value)
+    if host is not None:
+        return host, None
+    return None, Caveat(
+        CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+        f"{entry.label}'s {key} is {value!r}, a path only the emulator's sandbox can read — "
+        "where it lands on this host is not established, so nothing below says whether the "
+        "file is there",
+        {"label": entry.label, "token": card.token, "key": key, "path": value},
+    )
+
+
 def _melonds_probe(
     machine: Machine,
     entry: CatalogueEntry,
@@ -2458,6 +2516,7 @@ def _melonds_probe(
     system: str,
     *,
     config_home: str,
+    sandbox: SandboxTranslation | None,
     verify: bool,
 ) -> _ConfigProbe:
     """One key read the way the emulator reads it, then observed live.
@@ -2467,7 +2526,8 @@ def _melonds_probe(
     (Platform.cpp:157-178) — and a value that names no file at all (unset, or
     ending in a directory step) is refused with the vocabulary the core route
     refuses such a declaration with, rather than answered with a directory
-    dressed as a file.
+    dressed as a file. An absolute one is the emulator's own spelling, so it
+    goes through the sandbox map before it becomes a host read.
     """
     value = melonds.get_string(config, declared.key)
     if os.path.basename(value) in ("", ".", ".."):
@@ -2489,7 +2549,11 @@ def _melonds_probe(
                 ),
             )
         )
-    composed = melonds.local_file_path(config_home, value)
+    host, untranslated = _sandbox_host_path(sandbox, entry, card, declared.key, value)
+    if host is None:
+        assert untranslated is not None
+        return _ConfigProbe(entry_caveats=(untranslated,))
+    composed = melonds.local_file_path(config_home, host)
     path = resolve_links(machine, composed) or composed
     found, checked, observed = _observe(machine, path, None, verify=verify)
     return _ConfigProbe(
@@ -2522,6 +2586,8 @@ def _melonds_standalone_core(
     data_home: str,
     config_home: str,
     flatpak: str | None,
+    sandbox: SandboxTranslation | None,
+    xdg_pinned: bool,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """melonDS's expectations: ``verifySetup`` performed as reads.
@@ -2534,6 +2600,7 @@ def _melonds_standalone_core(
     requirement list is the true answer, stated with the switch named.
     """
     del data_home  # melonDS keeps its settings under the config home
+    del xdg_pinned  # and states that one base, so no launch has a root to pick
     read = melonds.read_config(machine, config_home, flatpak)
     if read.unreadable is not None:
         return _melonds_config_unreadable_core(entry, read.unreadable), []
@@ -2560,6 +2627,7 @@ def _melonds_standalone_core(
             config,
             system,
             config_home=config_home,
+            sandbox=sandbox,
             verify=verify,
         )
         if probe.requirement is not None:
@@ -2621,6 +2689,8 @@ def _pcsx2_standalone_core(
     data_home: str,
     config_home: str,
     flatpak: str | None,
+    sandbox: SandboxTranslation | None,
+    xdg_pinned: bool,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """PCSX2's expectation: the image named inside the directory named.
@@ -2633,6 +2703,7 @@ def _pcsx2_standalone_core(
     BIOS root and leaves the choice to the user. The answer says so, because
     "no BIOS chosen" is why a game would not boot.
     """
+    del xdg_pinned  # PCSX2 states one base, so no launch has a root to pick
     # Which home the file sits under is the settings table's to say, so both
     # go to the lookup and neither is assumed here.
     ini_path = emulator_settings.settings_file(card.token, "PCSX2.ini").only(
@@ -2661,12 +2732,6 @@ def _pcsx2_standalone_core(
     values = qt_ini.values(result.text or "") if result.status == READ_OK else {}
     data_root = os.path.join(config_home, _PCSX2_DATA_ROOT)
     stated_dir = values.get(_PCSX2_BIOS_DIR_KEY, "")
-    if not stated_dir:
-        bios_dir = os.path.join(data_root, _PCSX2_BIOS_DIR_DEFAULT)
-    elif not os.path.isabs(stated_dir):
-        bios_dir = os.path.join(data_root, stated_dir)
-    else:
-        bios_dir = stated_dir
     by_key = {declared.key: declared for declared in card.config_files}
     declared = by_key.get("Filenames/BIOS")
     if declared is None:
@@ -2675,6 +2740,27 @@ def _pcsx2_standalone_core(
             "the card and the code shipped out of step"
         )
     caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
+    if not stated_dir:
+        bios_dir = os.path.join(data_root, _PCSX2_BIOS_DIR_DEFAULT)
+    elif not os.path.isabs(stated_dir):
+        bios_dir = os.path.join(data_root, stated_dir)
+    else:
+        host, untranslated = _sandbox_host_path(
+            sandbox, entry, card, "Folders/Bios", stated_dir
+        )
+        if host is None:
+            assert untranslated is not None
+            return (
+                CoreFirmware(
+                    core_so=None,
+                    label=entry.label,
+                    declaration=DECLARATION_PACKAGED,
+                    requirements=(),
+                    caveats=(*caveats, untranslated),
+                ),
+                [],
+            )
+        bios_dir = host
     name = values.get(_PCSX2_BIOS_NAME_KEY, "")
     if not name:
         caveats.append(
@@ -2776,6 +2862,8 @@ def _xemu_standalone_core(
     data_home: str,
     config_home: str,
     flatpak: str | None,
+    sandbox: SandboxTranslation | None,
+    xdg_pinned: bool,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """xemu's expectations: the three files in ``[sys.files]`` that refuse the start.
@@ -2788,6 +2876,7 @@ def _xemu_standalone_core(
     on purpose: a console does not start without one, and every save lives
     inside it.
     """
+    del xdg_pinned  # xemu states one base, so no launch has a root to pick
     # Which home the file sits under is the settings table's to say — xemu's
     # is the data one, and this resolver no longer has to know that.
     toml_path = emulator_settings.settings_file(card.token, "xemu.toml").only(
@@ -2830,7 +2919,12 @@ def _xemu_standalone_core(
                 )
             )
             continue
-        path = resolve_links(machine, value) or value
+        host, untranslated = _sandbox_host_path(sandbox, entry, card, key, value)
+        if host is None:
+            assert untranslated is not None
+            caveats.append(untranslated)
+            continue
+        path = resolve_links(machine, host) or host
         found, checked, observed = _observe(machine, path, None, verify=verify)
         if observed is not None:
             answer_caveats.append(observed)
@@ -3025,6 +3119,8 @@ def _duckstation_standalone_core(
     data_home: str,
     config_home: str,
     flatpak: str | None,
+    sandbox: SandboxTranslation | None,
+    xdg_pinned: bool,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """DuckStation's expectation: a directory, and whatever in it is a BIOS.
@@ -3039,7 +3135,11 @@ def _duckstation_standalone_core(
     search = card.search
     assert search is not None  # the dispatch only routes search cards here
     read = duckstation.read_settings(
-        machine, config_home=config_home, data_home=data_home, flatpak=flatpak
+        machine,
+        config_home=config_home,
+        data_home=data_home,
+        flatpak=flatpak,
+        xdg_pinned=xdg_pinned,
     )
     if read.unreadable is not None:
         return _duckstation_unreadable_core(entry, read.unreadable), []
@@ -3062,7 +3162,26 @@ def _duckstation_standalone_core(
     composed = duckstation.load_path(
         read.values, read.root, section, name, search.directory_default
     )
-    bios_dir = resolve_links(machine, composed) or composed
+    # The composed path, not the stated value: a relative value was already
+    # joined onto the DataRoot, which is a host path the map leaves alone, so
+    # the only spelling that translates here is an absolute one the emulator
+    # wrote itself.
+    host, untranslated = _sandbox_host_path(
+        sandbox, entry, card, search.directory_key, composed
+    )
+    if host is None:
+        assert untranslated is not None
+        return (
+            CoreFirmware(
+                core_so=None,
+                label=entry.label,
+                declaration=DECLARATION_PACKAGED,
+                requirements=(),
+                caveats=(*caveats, untranslated),
+            ),
+            [],
+        )
+    bios_dir = resolve_links(machine, host) or host
     requirements: list[FirmwareRequirement] = []
     answer_caveats: list[Caveat] = []
     searched: list[str] = []
@@ -3223,6 +3342,8 @@ def _carded_standalone_core(
     data_home: str,
     config_home: str,
     flatpak: str | None,
+    sandbox: SandboxTranslation | None,
+    xdg_pinned: bool,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """A carded standalone entry, routed by the shape its card states.
@@ -3261,6 +3382,8 @@ def _carded_standalone_core(
         data_home=data_home,
         config_home=config_home,
         flatpak=flatpak,
+        sandbox=sandbox,
+        xdg_pinned=xdg_pinned,
         verify=verify,
     )
 
@@ -3297,6 +3420,8 @@ def _standalone_entry_core(
             data_home=data_home,
             config_home=config_home,
             flatpak=flatpak,
+            sandbox=context.standalone_sandbox,
+            xdg_pinned=context.standalone_xdg_pinned,
             verify=verify,
         )
     return (

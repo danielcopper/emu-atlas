@@ -46,6 +46,11 @@ class SettingsRead:
     ``ambiguous`` marks the state where neither candidate holds a file, so
     which root the launch would use is decided by an environment variable that
     no file records.
+
+    ``ambiguous`` needs *two* candidates to be true. A flatpak launch has its
+    ``XDG_CONFIG_HOME`` force-pinned, so only the config side is reachable and
+    an empty tree there is a DataRoot with no settings file yet — not a
+    question about the environment.
     """
 
     root: str
@@ -56,7 +61,11 @@ class SettingsRead:
 
 
 def settings_candidates(
-    *, config_home: str, data_home: str, flatpak: str | None = None
+    *,
+    config_home: str,
+    data_home: str,
+    flatpak: str | None = None,
+    xdg_pinned: bool = False,
 ) -> tuple[str, ...]:
     """Where this launch may open ``settings.ini``, in the order the probe reads.
 
@@ -64,31 +73,51 @@ def settings_candidates(
     module's: ``$XDG_CONFIG_HOME/duckstation`` where that variable is set and
     absolute, else ``~/.local/share/duckstation`` (qthost.cpp:562-582).
     Nothing on the machine records which branch a launch took, so both are
-    candidates and the file that exists speaks for itself.
+    candidates and the file that exists speaks for itself — unless the launch
+    runs inside a flatpak, where the variable is pinned set and only the
+    config side is reachable (*xdg_pinned*).
     """
     return emulator_settings.settings_file(TOKEN, CONFIG_FILENAME).locations(
-        config_home=config_home, data_home=data_home, flatpak=flatpak
+        config_home=config_home,
+        data_home=data_home,
+        flatpak=flatpak,
+        xdg_pinned=xdg_pinned,
     )
 
 
 def data_root_candidates(
-    *, config_home: str, data_home: str, flatpak: str | None = None
+    *,
+    config_home: str,
+    data_home: str,
+    flatpak: str | None = None,
+    xdg_pinned: bool = False,
 ) -> tuple[str, ...]:
     """The DataRoots those candidates hang off — each settings file's own directory."""
     return tuple(
         os.path.dirname(path)
         for path in settings_candidates(
-            config_home=config_home, data_home=data_home, flatpak=flatpak
+            config_home=config_home,
+            data_home=data_home,
+            flatpak=flatpak,
+            xdg_pinned=xdg_pinned,
         )
     )
 
 
 def read_settings(
-    machine: Machine, *, config_home: str, data_home: str, flatpak: str | None = None
+    machine: Machine,
+    *,
+    config_home: str,
+    data_home: str,
+    flatpak: str | None = None,
+    xdg_pinned: bool = False,
 ) -> SettingsRead:
     """Read ``settings.ini`` from whichever DataRoot holds one."""
     candidates = settings_candidates(
-        config_home=config_home, data_home=data_home, flatpak=flatpak
+        config_home=config_home,
+        data_home=data_home,
+        flatpak=flatpak,
+        xdg_pinned=xdg_pinned,
     )
     for path in candidates:
         root = os.path.dirname(path)
@@ -111,7 +140,7 @@ def read_settings(
         values={},
         stated_path=None,
         unreadable=None,
-        ambiguous=True,
+        ambiguous=len(candidates) > 1,
     )
 
 

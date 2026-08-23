@@ -603,6 +603,16 @@ class _Sandbox:
         No config key is involved, so no provenance travels with it: the caller
         knows which file it asked for and reports a miss in its own terms.
         """
+        return self.translate(path)
+
+    def translate(self, path: str) -> str | None:
+        """*path* as this host reads it, or ``None`` where no host path exists.
+
+        The bare translation under :meth:`host` and :meth:`bundled`, for a
+        caller that says where the path came from in its own words — the
+        firmware route names the configuration key in its own caveat, and
+        satisfies :class:`atlas.firmware.SandboxTranslation` by having this.
+        """
         return self._translate(path)[0]
 
     def _translate(self, path: str) -> tuple[str | None, bool]:
@@ -4882,6 +4892,12 @@ class _XdgHomes:
     # and for a host install. It travels with the bases because it answers the
     # same question they do: which installation of this emulator is being read.
     flatpak: str | None = None
+    # Whether the launch happens inside *some* flatpak sandbox, which is not
+    # the same question as which app id it runs under: an arrangement's own
+    # bundled build has no id of its own and is sandboxed all the same. It
+    # matters for the emulators that pick a root by whether XDG_CONFIG_HOME is
+    # set, because inside a sandbox it always is (see the class docstring).
+    xdg_pinned: bool = False
 
     def base(self, which: str) -> str:
         return self.data if which == XDG_DATA else self.config
@@ -5043,7 +5059,11 @@ def _duckstation_texture_placement(
     setting = card.directory
     assert setting is not None  # the router sends only config-stated cards here
     read = duckstation.read_settings(
-        machine, config_home=homes.base("config"), data_home=homes.base("data")
+        machine,
+        config_home=homes.base("config"),
+        data_home=homes.base("data"),
+        flatpak=homes.flatpak,
+        xdg_pinned=homes.xdg_pinned,
     )
     if read.unreadable is not None:
         return Unresolved(
@@ -6452,7 +6472,11 @@ def _duckstation_settings(
     hang off the environment-unset side.
     """
     read = duckstation.read_settings(
-        machine, config_home=homes.base("config"), data_home=homes.base("data")
+        machine,
+        config_home=homes.base("config"),
+        data_home=homes.base("data"),
+        flatpak=homes.flatpak,
+        xdg_pinned=homes.xdg_pinned,
     )
     if read.unreadable is not None:
         refusal = Unresolved(
@@ -8302,7 +8326,11 @@ def _duckstation_mod_placement(
     setting = spec.directory
     assert setting is not None  # the router sends only configured cards here
     read = duckstation.read_settings(
-        machine, config_home=homes.base("config"), data_home=homes.base("data")
+        machine,
+        config_home=homes.base("config"),
+        data_home=homes.base("data"),
+        flatpak=homes.flatpak,
+        xdg_pinned=homes.xdg_pinned,
     )
     if read.unreadable is not None:
         return Unresolved(
@@ -8713,6 +8741,7 @@ def _retroarch_firmware_context(
     arrangement_version: str | None,
     extra_sources: tuple[str, ...] = (),
     standalone_homes: _XdgHomes | None = None,
+    standalone_sandbox: _Sandbox | None = None,
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
 
@@ -8730,6 +8759,13 @@ def _retroarch_firmware_context(
     read — the RetroDECK handle names the override file whose HOME decides
     the ``~`` expansion here — and they lead the sources the reads below
     append.
+
+    *standalone_sandbox* is how a standalone emulator's own absolute config
+    values read from this host — the same map its save route translates
+    through, so the two routes cannot disagree about where a configured
+    directory lands. It rides beside *standalone_homes* because the two are
+    one fact about the same launch, and an arrangement that establishes no
+    homes resolves no card that would ask.
     """
     machine = sandbox.machine
     # The dropped lines are read here, not only the values: once an absent key
@@ -8843,6 +8879,8 @@ def _retroarch_firmware_context(
         standalone_data_home=standalone_homes.data if standalone_homes is not None else None,
         standalone_config_home=standalone_homes.config if standalone_homes is not None else None,
         standalone_flatpak=standalone_homes.flatpak if standalone_homes is not None else None,
+        standalone_sandbox=standalone_sandbox,
+        standalone_xdg_pinned=standalone_homes is not None and standalone_homes.xdg_pinned,
     )
 
 
@@ -12243,6 +12281,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             arrangement_version=_marker_version(config),
             extra_sources=environment_sources,
             standalone_homes=self._xdg_homes(),
+            standalone_sandbox=self._sandbox(),
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
@@ -12426,7 +12465,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         join rather than a config read.
         """
         app_dir = os.path.join(self._home, ".var", "app", self._APP_ID)
-        return _XdgHomes(data=os.path.join(app_dir, "data"), config=os.path.join(app_dir, "config"))
+        return _XdgHomes(
+            data=os.path.join(app_dir, "data"),
+            config=os.path.join(app_dir, "config"),
+            # RetroDECK's emulators are its own bundled builds — no app id of
+            # their own — and every one of them runs inside this flatpak, so
+            # the XDG variables they read are the pinned ones.
+            xdg_pinned=True,
+        )
 
     def entry_texture_pack_location(
         self,
@@ -13872,6 +13918,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             data=os.path.join(app_dir, "data"),
             config=os.path.join(app_dir, "config"),
             flatpak=card.flatpak,
+            xdg_pinned=True,
         )
 
     def _variant_reason(self, launch: _StandaloneLaunch, variant: str) -> str:
@@ -14318,6 +14365,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             # checkout's HEAD is the version this machine states about itself.
             arrangement_version=self._observed_backend_head(),
             standalone_homes=self._standalone_xdg_homes(),
+            standalone_sandbox=self._standalone_sandbox(),
             extra_sources=environment_sources,
         )
 

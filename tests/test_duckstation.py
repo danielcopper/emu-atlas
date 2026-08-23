@@ -61,6 +61,39 @@ class TestWhichRootSpeaks:
         assert read.stated_path is None
         assert read.root == f"{DATA_HOME}/duckstation"
 
+    def test_a_pinned_launch_reads_only_the_config_side(self):
+        # Inside a flatpak, XDG_CONFIG_HOME is force-pinned set, so the
+        # environment-unset branch is unreachable: a settings.ini on the data
+        # side is a file this launch would never open.
+        assert _read({DATA_INI: "[BIOS]\nSearchDirectory = /from/data\n"}).stated_path == DATA_INI
+        pinned = duckstation.read_settings(
+            FixtureMachine({DATA_INI: "[BIOS]\nSearchDirectory = /from/data\n"}),
+            config_home=CONFIG_HOME,
+            data_home=DATA_HOME,
+            xdg_pinned=True,
+        )
+        assert pinned.stated_path is None
+        assert pinned.root == f"{CONFIG_HOME}/duckstation"
+
+    def test_a_pinned_launch_with_no_file_is_not_ambiguous(self):
+        # One candidate is not a choice: the DataRoot is settled and the tree
+        # below it is simply empty, which is not a degradation.
+        pinned = duckstation.read_settings(
+            FixtureMachine({}), config_home=CONFIG_HOME, data_home=DATA_HOME, xdg_pinned=True
+        )
+        assert not pinned.ambiguous
+        assert pinned.root == f"{CONFIG_HOME}/duckstation"
+
+    def test_a_pinned_launch_still_reads_the_config_side_file(self):
+        pinned = duckstation.read_settings(
+            FixtureMachine({CONFIG_INI: "[BIOS]\nSearchDirectory = /from/config\n"}),
+            config_home=CONFIG_HOME,
+            data_home=DATA_HOME,
+            xdg_pinned=True,
+        )
+        assert pinned.stated_path == CONFIG_INI
+        assert pinned.values[("BIOS", "SearchDirectory")] == "/from/config"
+
 
 class TestOneSettingBecomesADirectory:
     ROOT = "/root"

@@ -811,8 +811,8 @@
       }
     },
     {
-      "name": "duckstation-with-no-settings-file-the-root-the-tree-hangs-off-is-unestablished",
-      "rationale": "Neither DataRoot candidate holds a settings.ini, so which root this launch would use is decided by an environment variable no file records. The answer names the environment-unset side and says so — the same word the save route uses for the same fact, so the two routes never disagree about what is unknown here.",
+      "name": "retrodeck-duckstation-mods-hang-off-the-dataroot-its-sandbox-pins",
+      "rationale": "Nothing on this machine holds a DuckStation settings.ini, and that used to leave the DataRoot an open question: the emulator picks it from whether XDG_CONFIG_HOME is set (qthost.cpp:562-582), so the answer named the environment-unset side — the data one — and said the environment decides. It does not decide here. Every emulator RetroDECK ships runs inside RetroDECK's own flatpak, and flatpak force-pins XDG_CONFIG_HOME to the per-app config directory after applying every override (flatpak-context.c:3158-3187 at 1.16.6), so the set branch is the only branch such a launch can take. The mod tree is the one below that DataRoot, stated plainly — the same word the save route uses for the same fact, so the routes never disagree about it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -843,7 +843,7 @@
           "trees": [
             {
               "role": null,
-              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/cheats",
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/cheats",
               "physical_dir": null,
               "keying": "title"
             }
@@ -852,17 +852,10 @@
           "enabled": null,
           "caveats": [
             {
-              "code": "core-mode-unestablished",
-              "data": {
-                "core": "DUCKSTATION",
-                "reason": "the DataRoot is decided by the launch environment"
-              }
-            },
-            {
               "code": "emulator-config-unread",
               "data": {
                 "emulator": "DUCKSTATION",
-                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/settings.ini"
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
               }
             }
           ]

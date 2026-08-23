@@ -1582,8 +1582,8 @@
       }
     },
     {
-      "name": "duckstation-without-a-settings-ini-the-dataroot-stays-ambiguous",
-      "rationale": "No settings.ini exists on either DataRoot candidate, and the root is picked by the launch environment (XDG_CONFIG_HOME set routes it to the config side, qthost.cpp:562-582) — a fact no file records. The answer states the ambiguity and hangs the compiled defaults off the environment-unset side rather than guessing: slot pair PerGameTitle/None (settings.h:510-511), memcards below the DataRoot.",
+      "name": "retrodeck-duckstations-dataroot-is-the-config-side-its-sandbox-pins",
+      "rationale": "Nothing on this machine holds a DuckStation settings.ini, and that used to leave the DataRoot an open question: the emulator picks it from whether XDG_CONFIG_HOME is set (qthost.cpp:562-582), so the answer named the environment-unset side — the data one — and said the environment decides. It does not decide here. Every emulator RetroDECK ships runs inside RetroDECK's own flatpak, and flatpak force-pins XDG_CONFIG_HOME to the per-app config directory after applying every override (flatpak-context.c:3158-3187 at 1.16.6), so the set branch is the only branch such a launch can take. The compiled defaults now hang off the config side, where this launch really composes them: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot — and no degradation, because nothing is degraded.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1610,7 +1610,7 @@
           }
         ],
         "entry_savefile_location": {
-          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/memcards",
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/memcards",
           "root_kind": "emulator_directory",
           "needs": [
             "save_id"
@@ -1625,7 +1625,7 @@
             "complete": false,
             "groups": [
               {
-                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/memcards",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/memcards",
                 "files": [
                   "<save_id>_1.mcd"
                 ],
@@ -1635,13 +1635,6 @@
             ]
           },
           "caveats": [
-            {
-              "code": "core-mode-unestablished",
-              "data": {
-                "core": "DUCKSTATION",
-                "reason": "the DataRoot is decided by the launch environment"
-              }
-            },
             {
               "code": "filenames-content-conditional",
               "data": {
@@ -1778,6 +1771,113 @@
                 "key": "Card2Type",
                 "value": "None",
                 "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-duckstation-without-a-settings-ini-leaves-the-dataroot-to-the-environment",
+      "rationale": "The half of the DataRoot probe a sandbox does not settle. EmuDeck runs this emulator as an AppImage in the host session, where XDG_CONFIG_HOME may be set or not — nothing on disk records which — and with no settings.ini on either candidate there is no file to break the tie either. So the answer states the ambiguity and hangs the compiled defaults off the environment-unset side rather than guessing: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot. Inside a flatpak the same emulator has nothing to be ambiguous about, which is what the RetroDECK vector of this pair pins.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/duckstation/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.local/share/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.local/share/duckstation/memcards",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "DUCKSTATION",
+                "reason": "the DataRoot is decided by the launch environment"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameTitle",
+                "files": "<save_id>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameTitle+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "Card1Type",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "UsePlaylistTitle",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "Card2Type",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": []
