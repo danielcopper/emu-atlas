@@ -6671,6 +6671,22 @@ def _duckstation_slot(
     )
 
 
+def _first_directory_files(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
+    """Every established name in the first group's directory — the FileSet invariant.
+
+    A multi-slot emulator can put two cards side by side in one directory, and
+    :class:`~atlas.placement.FileSet` requires ``files`` to be all of them, in
+    order. Taking only the first group's names is what raises instead of
+    answering, so both slot-pair resolvers compose the flat list here.
+    """
+    if not groups or groups[0].files is None:
+        return ()
+    directory = groups[0].dir
+    return tuple(
+        name for group in groups if group.dir == directory and group.files for name in group.files
+    )
+
+
 def _duckstation_needs(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
     """The holes the slot templates still carry, in first-appearance order."""
     holes: list[str] = []
@@ -6746,7 +6762,7 @@ def _duckstation_savefile_placement(
     mode = "+".join(slot.mode for slot in slots)
     if groups:
         directory = groups[0].dir
-        files = tuple(groups[0].files or ())
+        files = _first_directory_files(groups)
         needs = _duckstation_needs(groups)
     else:
         directory = memcards_dir
@@ -6940,16 +6956,6 @@ def _pcsx2_memcards_dir(
     return host.path, reading, None
 
 
-def _pcsx2_first_directory_files(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
-    """Every established name in the first group's directory — the FileSet invariant."""
-    if groups[0].files is None:
-        return ()
-    directory = groups[0].dir
-    return tuple(
-        name for group in groups if group.dir == directory and group.files for name in group.files
-    )
-
-
 def _pcsx2_savefile_placement(
     machine: Machine,
     *,
@@ -7008,7 +7014,7 @@ def _pcsx2_savefile_placement(
     mode = "+".join(modes)
     if groups:
         directory = groups[0].dir
-        files = _pcsx2_first_directory_files(tuple(groups))
+        files = _first_directory_files(tuple(groups))
     else:
         directory = memcards_dir
         files = ()

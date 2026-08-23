@@ -2063,6 +2063,70 @@ class TestMoreStandaloneSaves:
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
+    @pytest.mark.parametrize(
+        "card1,card2,files",
+        [
+            ("PerGameTitle", "PerGameTitle", ("<save_id>_1.mcd", "<save_id>_2.mcd")),
+            ("Shared", "Shared", ("shared_card_1.mcd", "shared_card_2.mcd")),
+            ("PerGameTitle", "Shared", ("<save_id>_1.mcd", "shared_card_2.mcd")),
+            ("Shared", "PerGameTitle", ("shared_card_1.mcd", "<save_id>_2.mcd")),
+            ("PerGame", "PerGameFileTitle", ("<save_id>_1.mcd", "<rom_stem>_2.mcd")),
+        ],
+    )
+    def test_duckstation_both_slots_occupied_name_both_cards(self, card1, card2, files):
+        # Two cards in one directory is the console's own shape, and the
+        # answer's flat `files` is every name lying in `dir` — the FileSet
+        # invariant. Naming only slot 1 raised instead of answering.
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    f"[MemoryCards]\nCard1Type = {card1}\nCard2Type = {card2}\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/memcards"
+        assert p.file_set.files == files
+        assert tuple(g.files for g in p.file_set.groups) == tuple((f,) for f in files)
+        assert p.granularity is not None
+        assert p.granularity.mode == f"{card1}+{card2}"
+
+    def test_duckstation_a_second_card_elsewhere_stays_out_of_the_flat_list(self):
+        # `files` is the names in the answer's own directory; the slot whose
+        # configured path leads somewhere else is reachable through `groups`.
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = Shared\n"
+                    "Card2Path = /mnt/sd/elsewhere/second.mcd\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/memcards"
+        assert p.file_set.files == ("shared_card_1.mcd",)
+        assert [(g.dir, g.files) for g in p.file_set.groups] == [
+            ("/mnt/sd/memcards", ("shared_card_1.mcd",)),
+            ("/mnt/sd/elsewhere", ("second.mcd",)),
+        ]
+
+    def test_duckstation_two_per_game_slots_state_both_holes_once(self):
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = PerGameTitle\n"
+                    "Card2Type = PerGameFileTitle\nDirectory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.needs == ("save_id", "rom_stem")
+
     def test_pcsx2_defaults_without_an_ini_answer_the_dataroot_memcards(self):
         # One DataRoot spelling on Linux — the config side either way
         # (Pcsx2Config.cpp:2197-2217) — so no ini still answers one tree.
