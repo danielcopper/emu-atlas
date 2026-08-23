@@ -767,9 +767,16 @@ carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id
 image up whole or leaves it, a tool that parses FATX has the layout stated instead of rediscovered, and per-game sync is
 honestly not on offer from outside.
 
-Vita3K is the shortest of the config-read cards: one key, `pref-path`, and the whole `ux0/…` tree hangs off it, with
-saves at `ux0/user/<user>/savedata` — the same per-user shape as RPCS3, answered the same way. An empty `pref-path` is a
-refusal rather than a guess: the emulator falls back to a default it derives at run time and writes nowhere.
+Vita3K's tree hangs off one key, `pref-path`, with saves at `ux0/user/<user>/savedata` — the same per-user shape as
+RPCS3, and an empty `pref-path` is a refusal rather than a guess, because the emulator falls back to a default it
+derives at run time and writes nowhere. The user segment reaches the same answer as RPCS3's for a different reason,
+which the readings spell out. Vita3K _does_ record the user it opened, as `user-id` in that same `config.yml`, and
+whether a launch reopens it depends on the launch: the emulator honours the record when the id names a user directory
+that exists and either the command line names an app to run — which is how both frontends start a game — or
+`user-auto-connect` is on. A plain launch of the emulator with that switch off opens the user manager and the player
+picks. Nothing on disk settles which of those happened, so **every user directory that exists is a group of its own**,
+and the recorded id rides beside them: as a `user-id` reading, and as `configured_user` in the `core-mode-unestablished`
+caveat. A client that wants one tree rather than all of them reads that field.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the

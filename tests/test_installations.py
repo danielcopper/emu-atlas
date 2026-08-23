@@ -2288,6 +2288,122 @@ class TestMoreStandaloneSaves:
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
 
+PER_USER_ESDE = (
+    '<?xml version="1.0"?><systemList>'
+    "<system><name>psvita</name><path>%ROMPATH%/psvita</path><extension>.psvita</extension>"
+    '<command label="Vita3K (Standalone)">%EMULATOR_VITA3K% -r %INJECT%=%BASENAME%.psvita'
+    "</command></system>"
+    "<system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.ps3</extension>"
+    '<command label="RPCS3 (Standalone)">%EMULATOR_RPCS3% %ROM%</command></system>'
+    "</systemList>"
+)
+VITA3K_CONFIG_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+RPCS3_VFS_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+
+
+class TestTheUserAPerUserTreeWouldOpen:
+    """Which user account answers, and what each configuration actually says.
+
+    The two emulators reach the same shape — every user directory is a group —
+    from opposite facts. RPCS3 records the running user nowhere; Vita3K records
+    it as ``user-id`` and leaves only *whether a launch honours it* to the
+    launch. The answer used to tell RPCS3's story for both.
+    """
+
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: PER_USER_ESDE,
+    }
+
+    def _answer(self, system, files=None, dirs=()):
+        rd = _retrodeck(
+            {**self.BASE, **(files or {})},
+            dirs=["/mnt/sd/retrodeck/saves", *dirs],
+        )
+        return rd.emulators_for(system).entries[0].savefile_location()
+
+    def _user_caveat(self, placement):
+        stated = [c for c in placement.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        return stated[0]
+
+    def _readings(self, placement):
+        assert placement.granularity is not None
+        return {r.key: r.value for r in placement.granularity.readings}
+
+    def test_vita3k_states_the_user_its_config_records(self):
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert self._readings(p)["user-id"] == "01"
+        assert self._user_caveat(p).data["configured_user"] == "01"
+        # Every tree still answers: which user a launch opens is the launch's
+        # business, and the caveat names the recorded one beside them.
+        assert [g.dir for g in p.file_set.groups] == [
+            "/mnt/sd/vita/ux0/user/00/savedata",
+            "/mnt/sd/vita/ux0/user/01/savedata",
+        ]
+
+    def test_vita3k_without_a_user_id_preselects_nobody(self):
+        p = self._answer("psvita", files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n"})
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert "configured_user" not in caveat.data
+        assert caveat.data["reason"] == "the configuration preselects no user"
+        assert self._readings(p)["user-id"] is None
+
+    def test_vita3k_reads_the_auto_connect_switch_beside_it(self):
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-auto-connect: true\n"
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert self._readings(p)["user-auto-connect"] == "true"
+
+    def test_vita3k_an_unread_user_id_is_not_an_absent_one(self):
+        # A list under the key is a construct the scalar reader passes over.
+        # Reading that as "no user is preselected" states something the file
+        # contradicts.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: [01]\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert "configured_user" not in caveat.data
+        assert "does not read" in caveat.data["reason"]
+
+    def test_vita3k_an_unread_pref_path_refuses_for_the_right_reason(self):
+        p = self._answer("psvita", files={VITA3K_CONFIG_YML: "pref-path:\n  - /mnt/sd/vita\n"})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert p.data["reason"] == "pref-path is unread"
+
+    def test_rpcs3_an_unread_drive_refuses_instead_of_the_compiled_default(self):
+        # The key IS set; atlas did not read it. Answering the compiled default
+        # and calling it "the compiled default governs" was a claim about a key
+        # the file states.
+        p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/:\n  - /mnt/sd/hdd\n"})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert p.data["reason"] == "/dev_hdd0/ is unread"
+
+    def test_rpcs3_still_says_nothing_records_its_user(self):
+        # The fix is Vita3K's alone: RPCS3 really does record no user.
+        p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"})
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the active user account is not recorded on disk"
+        assert "configured_user" not in caveat.data
+
+
 class TestEmuDeckStandaloneLaunchers:
     """The launcher route's refusal corners the vector family does not carry."""
 

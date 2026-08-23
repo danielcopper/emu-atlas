@@ -2820,7 +2820,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user account is not recorded on disk",
+                "reason": "the configuration preselects no user",
                 "users": "00"
               }
             }
@@ -2833,6 +2833,16 @@
                 "key": "pref-path",
                 "value": "/mnt/sd/retrodeck/storage/psvita/Vita3K/",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               }
             ],
             "alternatives": []
@@ -2842,7 +2852,7 @@
     },
     {
       "name": "vita3k-every-user-directory-that-exists-is-a-tree-of-its-own",
-      "rationale": "Which user the emulator runs as is a runtime property — its own redirect names user 00 (io.cpp:203) — and no file records the current one, so a machine with two user directories gets two groups rather than a guess at which is in force. The same stance the RPCS3 card takes, and the Dolphin card before it.",
+      "rationale": "config.yml records no user-id here, so nothing preselects a user: the user manager opens and the player picks (init_home, gui.cpp:688-696 at cb1f592c). A machine with two user directories therefore gets two groups rather than a guess at which is in force, and both keys that could have preselected one are stated as readings at the value the file gives them — unset.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2909,7 +2919,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user account is not recorded on disk",
+                "reason": "the configuration preselects no user",
                 "users": "00,01"
               }
             }
@@ -2921,6 +2931,116 @@
               {
                 "key": "pref-path",
                 "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-the-user-id-config-yml-records-is-stated-beside-every-tree",
+      "rationale": "The emulator does write down which user it opened: select_and_open_user stores it as user-id (user_management.cpp:329-331 at cb1f592c), and init_home opens that user again when the id names a directory that exists and either the launch names an app on the command line or user-auto-connect is on (gui.cpp:688-696). What no file settles is the launch, so the answer states every user directory as before and names the recorded id beside them — as a reading a client can read, and in the caveat's configured_user. The earlier telling, that no file records the current user at all, was simply false.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "reason": "the configuration preselects a user, and whether a launch opens it depends on how the launch was made",
+                "users": "00,01",
+                "configured_user": "01"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "01",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": "true",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               }
             ],
@@ -3034,7 +3154,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user account is not recorded on disk",
+                "reason": "the configuration preselects no user",
                 "users": "00"
               }
             }
@@ -3046,6 +3166,16 @@
               {
                 "key": "pref-path",
                 "value": "/home/deck/Emulation/storage/Vita3K/",
+                "options_file": "/home/deck/.config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
                 "options_file": "/home/deck/.config/Vita3K/config.yml"
               }
             ],

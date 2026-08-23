@@ -252,7 +252,7 @@ from atlas.placement import (
     needs_with_file_set,
 )
 from atlas import duckstation, emulator_settings, melonds, qt_ini
-from atlas.yaml_scalars import read_scalars
+from atlas.yaml_scalars import YamlScalars, read_scalars
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
@@ -7401,16 +7401,26 @@ class _PerUserSaves:
     ``user_root`` is the directory holding the user directories,
     ``first_user`` the one the emulator starts with — used only where nothing
     could be listed, never as a claim that it is the one running.
+
+    ``user_reason`` is the machine-readable half of ``user_sentence``: *why*
+    the running user is not settled here. The two emulators do not share it,
+    because they do not share the fact — RPCS3 writes the selection down
+    nowhere, while Vita3K's configuration records a user id whose effect
+    depends on how the launch was made. ``configured_user`` carries that
+    recorded id where one exists, so a client reads the emulator's own
+    preselection instead of only the directory listing.
     """
 
     user_root: str
     first_user: str
     names_citation: str
     user_sentence: str
+    user_reason: str
     mode: str
-    reading: OptionReading
+    readings: tuple[OptionReading, ...]
     reading_file: str | None
     provenance: str
+    configured_user: str | None = None
 
 
 def _per_user_savedata_placement(
@@ -7461,8 +7471,13 @@ def _per_user_savedata_placement(
             ),
             {
                 "core": card.token,
-                "reason": "the active user account is not recorded on disk",
+                "reason": shape.user_reason,
                 "users": ",".join(users) if users else shape.first_user,
+                **(
+                    {"configured_user": shape.configured_user}
+                    if shape.configured_user is not None
+                    else {}
+                ),
             },
         ),
         *trailing_caveats,
@@ -7487,7 +7502,9 @@ def _per_user_savedata_placement(
         granularity=Granularity(
             value=GRANULARITY_PER_GAME_DIRECTORY,
             mode=shape.mode,
-            readings=(_reading_with_file(shape.reading, shape.reading_file),),
+            readings=tuple(
+                _reading_with_file(reading, shape.reading_file) for reading in shape.readings
+            ),
             alternatives=(),
             provenance=shape.provenance,
         ),
@@ -7540,7 +7557,23 @@ def _rpcs3_savefile_placement(
             f"({read.refusal}) — which drive its saves live on is unknowable here",
             {"emulator": card.token, "config": vfs_path, "reason": read.refusal},
         )
-    stated = read.get(_RPCS3_HDD0_KEY) if _RPCS3_HDD0_KEY not in read.skipped else None
+    if _RPCS3_HDD0_KEY in read.skipped:
+        # Stated as a nested block, a list or a multi-line scalar: RPCS3 reads a
+        # drive here and atlas did not. Treating that as an unset key answered
+        # the compiled default and said "the compiled default governs" — a
+        # provenance line about a key the file does set.
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"RPCS3's VFS configuration ({vfs_path}) states {_RPCS3_HDD0_KEY} as a construct "
+            "atlas does not read — its value is unread, not absent, so which drive its saves "
+            "live on is unknowable here",
+            {
+                "emulator": card.token,
+                "config": vfs_path,
+                "reason": f"{_RPCS3_HDD0_KEY} is unread",
+            },
+        )
+    stated = read.get(_RPCS3_HDD0_KEY)
     if stated:
         provenance = f'vfs.yml: {_RPCS3_HDD0_KEY} = "{stated}"'
     else:
@@ -7575,8 +7608,9 @@ def _rpcs3_savefile_placement(
                 "changes it — and no file records the current one, so every user home found "
                 "here is stated"
             ),
+            user_reason="the active user account is not recorded on disk",
             mode="hdd0",
-            reading=OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),
+            readings=(OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),),
             reading_file=vfs_path if result.status == READ_OK else None,
             provenance=(
                 f"standalone save card '{card.token}': the drive from vfs.yml "
@@ -7610,10 +7644,105 @@ def _rpcs3_savefile_placement(
 # ---------------------------------------------------------------------------
 
 _VITA3K_PREF_PATH_KEY = "pref-path"
+# The two keys that record a user preselection. ``user-id`` is the id the GUI
+# writes when a user is opened (select_and_open_user, user_management.cpp:329-331)
+# and ``user-auto-connect`` is the switch that opens it without asking. Both
+# only matter through init_home (gui.cpp:688-696) — see the caveat sentence.
+_VITA3K_USER_ID_KEY = "user-id"
+_VITA3K_AUTO_CONNECT_KEY = "user-auto-connect"
 _VITA3K_USER_TREE = os.path.join("ux0", "user")
 # The user the emulator's own redirect comment names (io.cpp:203), used where
 # no user directory can be listed — never as a claim that it is the one in use.
 _VITA3K_FIRST_USER = "00"
+
+
+@dataclass(frozen=True, slots=True)
+class _Vita3kUser:
+    """What config.yml records about which user a launch would open."""
+
+    configured: str | None
+    readings: tuple[OptionReading, ...]
+    sentence: str
+    reason: str
+
+
+def _vita3k_user(read: YamlScalars) -> _Vita3kUser:
+    """The user preselection config.yml records, and what it is worth at run time.
+
+    Vita3K writes the opened user's id into ``user-id`` (select_and_open_user,
+    user_management.cpp:329-331 at cb1f592c) — so the current user *is*
+    recorded, contrary to what this answer used to say. What the record is
+    worth is the conditional part: ``init_home`` opens it only when the id
+    names a user directory that exists **and** either the launch names an app
+    on the command line or ``user-auto-connect`` is on; otherwise the user
+    manager opens and the player picks (gui.cpp:688-696). Both frontends
+    launch a game that way — ES-DE's Vita3K command passes ``-r``, which is
+    ``--installed-path`` (config.cpp:260) — so the recorded id usually governs
+    a launch from the frontend, and a launch of the emulator on its own
+    usually does not.
+
+    Which is why the placement still states every user directory and names
+    this one beside them, rather than choosing.
+    """
+    unread = _VITA3K_USER_ID_KEY in read.skipped
+    configured = None if unread else (read.get(_VITA3K_USER_ID_KEY) or None)
+    auto = None if _VITA3K_AUTO_CONNECT_KEY in read.skipped else read.get(_VITA3K_AUTO_CONNECT_KEY)
+    condition = (
+        "Vita3K opens it when the launch names an app on the command line, and on a plain "
+        "launch when user-auto-connect is on (init_home, gui.cpp:688-696); otherwise the "
+        "user manager opens and the player picks"
+    )
+    if unread:
+        sentence = (
+            f"config.yml states {_VITA3K_USER_ID_KEY} as a construct atlas does not read, so "
+            "which user it preselects is unread here — every user directory found is stated"
+        )
+        reason = "the configured user id is stated in a construct atlas does not read"
+    elif configured is None:
+        sentence = (
+            f"config.yml records no {_VITA3K_USER_ID_KEY}, so nothing preselects a user and "
+            "the user manager opens for the player to pick (init_home, gui.cpp:688-696) — "
+            "every user directory found here is stated"
+        )
+        reason = "the configuration preselects no user"
+    else:
+        sentence = (
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} — {condition}, so every "
+            "user directory found here is stated"
+        )
+        reason = "the configuration preselects a user, and whether a launch opens it depends "
+        reason += "on how the launch was made"
+    readings = (
+        OptionReading(
+            _VITA3K_USER_ID_KEY,
+            None if unread else read.get(_VITA3K_USER_ID_KEY),
+            (
+                f"{_VITA3K_USER_ID_KEY} is stated as a construct atlas does not read — its "
+                "value is unread, not absent"
+                if unread
+                else f'config.yml: {_VITA3K_USER_ID_KEY}: "{configured}"'
+                if configured is not None
+                else f"{_VITA3K_USER_ID_KEY} is unset — no user is preselected "
+                "(config.h:189)"
+            ),
+            None,
+        ),
+        OptionReading(
+            _VITA3K_AUTO_CONNECT_KEY,
+            auto,
+            (
+                f"{_VITA3K_AUTO_CONNECT_KEY} is stated as a construct atlas does not read — "
+                "its value is unread, not absent"
+                if _VITA3K_AUTO_CONNECT_KEY in read.skipped
+                else f'config.yml: {_VITA3K_AUTO_CONNECT_KEY}: "{auto}"'
+                if auto
+                else f"{_VITA3K_AUTO_CONNECT_KEY} is unset — the default false governs "
+                "(config.h:190)"
+            ),
+            None,
+        ),
+    )
+    return _Vita3kUser(configured, readings, sentence, reason)
 
 
 def _vita3k_savefile_placement(
@@ -7635,8 +7764,11 @@ def _vita3k_savefile_placement(
     is a refusal here rather than an invented directory.
 
     Below it the unit is ``ux0/user/<user>/savedata``, one directory per title
-    id (io.cpp:136-143). Which user is current is a runtime property no file
-    records, so every user directory found becomes a group of its own.
+    id (io.cpp:136-143). Which user that is at run time is decided by
+    ``init_home`` from the id config.yml records — see :func:`_vita3k_user` —
+    and because the deciding half of that is the launch rather than a file,
+    every user directory found becomes a group of its own, with the recorded
+    id stated beside them.
     """
     config_path = _standalone_settings_path(card, homes)
     result = machine.read_text(config_path)
@@ -7655,7 +7787,22 @@ def _vita3k_savefile_placement(
             f"({read.refusal}) — where its ux0 tree lives is unknowable here",
             {"emulator": card.token, "config": config_path, "reason": read.refusal},
         )
-    stated = read.get(_VITA3K_PREF_PATH_KEY) if _VITA3K_PREF_PATH_KEY not in read.skipped else None
+    if _VITA3K_PREF_PATH_KEY in read.skipped:
+        # Stated as a nested block, a list or a multi-line scalar: the emulator
+        # reads a value here and atlas did not. That is not an unset key, and
+        # answering the unset key's refusal would name the wrong reason.
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) states {_VITA3K_PREF_PATH_KEY} as a "
+            "construct atlas does not read — its value is unread, not absent, so where its "
+            "ux0 tree lives is unknowable here",
+            {
+                "emulator": card.token,
+                "config": config_path,
+                "reason": f"{_VITA3K_PREF_PATH_KEY} is unread",
+            },
+        )
+    stated = read.get(_VITA3K_PREF_PATH_KEY)
     if not stated:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -7672,6 +7819,7 @@ def _vita3k_savefile_placement(
             f"here ({config_path}) — nothing this answer could anchor at",
             {"emulator": card.token, "config": config_path},
         )
+    user = _vita3k_user(read)
     return _per_user_savedata_placement(
         machine,
         card=card,
@@ -7679,23 +7827,24 @@ def _vita3k_savefile_placement(
             user_root=os.path.join(host.path, _VITA3K_USER_TREE),
             first_user=_VITA3K_FIRST_USER,
             names_citation="init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
-            user_sentence=(
-                "which user the emulator runs as is a runtime property — its own redirect "
-                f"names user {_VITA3K_FIRST_USER} (io.cpp:203) — and no file records the "
-                "current one, so every user directory found here is stated"
-            ),
+            user_sentence=user.sentence,
+            user_reason=user.reason,
             mode="pref-path",
-            reading=OptionReading(
-                _VITA3K_PREF_PATH_KEY,
-                stated,
-                f'config.yml: {_VITA3K_PREF_PATH_KEY}: "{stated}"',
-                None,
+            readings=(
+                OptionReading(
+                    _VITA3K_PREF_PATH_KEY,
+                    stated,
+                    f'config.yml: {_VITA3K_PREF_PATH_KEY}: "{stated}"',
+                    None,
+                ),
+                *user.readings,
             ),
             reading_file=config_path if result.status == READ_OK else None,
             provenance=(
                 f"standalone save card '{card.token}': the preference path from config.yml "
                 "(config.cpp:189-190 at commit cb1f592c)"
             ),
+            configured_user=user.configured,
         ),
         extra_caveats=extra_caveats,
     )
