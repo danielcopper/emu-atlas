@@ -15,7 +15,7 @@ INI = f"{CONFIG_HOME}/melonDS/melonDS.ini"
 
 
 def _read(files=None, **kwargs):
-    return melonds.read_config(FixtureMachine(files or {}, **kwargs), CONFIG_HOME)
+    return melonds.read_config(FixtureMachine(files or {}, **kwargs), CONFIG_HOME, None)
 
 
 class TestWhichFileSpeaks:
@@ -114,16 +114,19 @@ class TestTheAccessors:
 
 class TestLocalFilePath:
     def test_an_absolute_value_stays(self):
-        assert melonds.local_file_path(CONFIG_HOME, "/bios/bios9.bin") == "/bios/bios9.bin"
+        assert (
+            melonds.local_file_path(CONFIG_HOME, "/bios/bios9.bin", None)
+            == "/bios/bios9.bin"
+        )
 
     def test_a_relative_value_joins_the_config_directory(self):
         assert (
-            melonds.local_file_path(CONFIG_HOME, "bios9.bin")
+            melonds.local_file_path(CONFIG_HOME, "bios9.bin", None)
             == f"{CONFIG_HOME}/melonDS/bios9.bin"
         )
 
     def test_an_empty_value_is_the_config_directory_itself(self):
-        assert melonds.local_file_path(CONFIG_HOME, "") == f"{CONFIG_HOME}/melonDS"
+        assert melonds.local_file_path(CONFIG_HOME, "", None) == f"{CONFIG_HOME}/melonDS"
 
 
 class TestTheProbeSet:

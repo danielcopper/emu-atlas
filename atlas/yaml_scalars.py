@@ -109,10 +109,14 @@ def _strip_comment(value: str) -> str:
     """A bare scalar's trailing comment, cut the way YAML cuts it.
 
     ``#`` begins a comment only where whitespace precedes it, so a ``#`` inside
-    a word — a path segment, a colour — stays part of the value.
+    a word — a path segment, a colour — stays part of the value. *Whitespace*
+    is the whole of it, not a space: a tab before the ``#`` opens a comment
+    just as well, and looking only for ``" #"`` left the comment in the value.
     """
-    index = value.find(" #")
-    return value if index == -1 else value[:index]
+    for index in range(1, len(value)):
+        if value[index] == "#" and value[index - 1].isspace():
+            return value[:index]
+    return value
 
 
 def _comment_after_quote(value: str) -> str:
@@ -246,7 +250,10 @@ def _classify(line: str) -> _KeyLine:
         return _KeyLine(refusal=REFUSAL_NOT_A_FLAT_MAPPING)
     key, raw_value = split
     value = raw_value.strip()
-    refusal = _refusal_in(value)
+    # The key side too: an anchor or a tag changes meaning beyond the line it
+    # sits on wherever it sits, and checking only the value let `&anc key: v`
+    # through as a key literally spelled "&anc key".
+    refusal = _refusal_in(key) or _refusal_in(value)
     if refusal is not None:
         return _KeyLine(refusal=refusal)
     if _is_skipping_value(value):
@@ -267,12 +274,20 @@ def _first_document(text: str) -> tuple[tuple[str, ...], str | None]:
     above it, and ``...`` ends the one being read.
     """
     lines: list[str] = []
+    opened = False
     for raw_line in text.splitlines():
         if not raw_line.strip() or raw_line.lstrip().startswith("#"):
             continue
         if raw_line.startswith("---"):
-            if lines:
+            # A marker ends the document being read whenever one was being
+            # read at all — because content has been seen (an implicit first
+            # document), or because a marker already opened one. `---\n---\n`
+            # is an empty first document and a second, and reading the
+            # second's lines as the first's would answer from a document this
+            # reader never established is the one in force.
+            if lines or opened:
                 return (), REFUSAL_SECOND_DOCUMENT
+            opened = True
             continue
         if raw_line.startswith("..."):
             break

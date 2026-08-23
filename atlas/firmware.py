@@ -2516,6 +2516,7 @@ def _melonds_probe(
     system: str,
     *,
     config_home: str,
+    flatpak: str | None,
     sandbox: SandboxTranslation | None,
     verify: bool,
 ) -> _ConfigProbe:
@@ -2553,7 +2554,7 @@ def _melonds_probe(
     if host is None:
         assert untranslated is not None
         return _ConfigProbe(entry_caveats=(untranslated,))
-    composed = melonds.local_file_path(config_home, host)
+    composed = melonds.local_file_path(config_home, host, flatpak)
     path = resolve_links(machine, composed) or composed
     found, checked, observed = _observe(machine, path, None, verify=verify)
     return _ConfigProbe(
@@ -2627,6 +2628,7 @@ def _melonds_standalone_core(
             config,
             system,
             config_home=config_home,
+            flatpak=flatpak,
             sandbox=sandbox,
             verify=verify,
         )
@@ -2828,12 +2830,21 @@ _XEMU_FILE_KEYS = (
 )
 
 
-def _xemu_file_value(document: Mapping[str, Any], key: str) -> str:
-    """One ``[sys.files]`` value as written, or the empty string."""
+def xemu_file_value(document: Mapping[str, Any], key: str) -> str | None:
+    """One ``[sys.files]`` value as written, or ``None`` where it names nothing.
+
+    *key* may be the bare setting (``hdd_path``) or a card's own address for it
+    (``sys.files/hdd_path``); the last segment is the name inside the table.
+
+    Public in this module because the save route reads the same four settings
+    out of the same file and had its own copy of these four lines — two
+    readings of one table that could drift apart while both looked right.
+    ``installations`` imports ``firmware``, so the shared one lives here.
+    """
     files = document.get("sys", {})
     files = files.get("files", {}) if isinstance(files, Mapping) else {}
     value = files.get(key.rsplit("/", 1)[-1]) if isinstance(files, Mapping) else None
-    return value if isinstance(value, str) else ""
+    return value if isinstance(value, str) and value else None
 
 
 def _xemu_unreadable_core(entry: CatalogueEntry, path: str, why: str) -> CoreFirmware:
@@ -2902,7 +2913,7 @@ def _xemu_standalone_core(
                 f"standalone firmware card {card.token!r} names no entry for {key!r} — the "
                 "card and the code shipped out of step"
             )
-        value = _xemu_file_value(document, key)
+        value = xemu_file_value(document, key) or ""
         if not value:
             caveats.append(
                 Caveat(
@@ -3203,7 +3214,11 @@ def _duckstation_standalone_core(
     answer.
     """
     search = card.search
-    assert search is not None  # the dispatch only routes search cards here
+    if search is None:
+        raise ValueError(
+            f"standalone firmware card {card.token!r} states no search and this "
+            "resolver performs one — the card and the code shipped out of step"
+        )
     read = duckstation.read_settings(
         machine,
         config_home=config_home,

@@ -151,6 +151,24 @@ class TestScalarsAsWritten:
     def test_a_quoted_scalar_keeps_what_the_quotes_wrap(self):
         assert read_scalars("path: '/tmp/x # y'\n").get("path") == "/tmp/x # y"
 
+    def test_a_tab_before_the_hash_opens_a_comment_too(self):
+        # YAML asks for whitespace before the '#', not for a space.
+        assert read_scalars("path: /tmp/x\t# note\n").get("path") == "/tmp/x"
+
+    def test_two_markers_with_nothing_between_are_still_two_documents(self):
+        # An empty first document and a second one: reading the second's lines
+        # as the first's answers from a document nobody established is in force.
+        read = read_scalars("---\n---\nkey: value\n")
+        assert read.refusal == "second-document"
+        assert read.values == {}
+
+    def test_an_anchor_in_key_position_refuses_the_file(self):
+        # Checking only the value let this through as a key spelled "&anc key".
+        assert read_scalars("&anc key: value\n").refusal == "anchor-or-alias"
+
+    def test_a_tag_in_key_position_refuses_the_file(self):
+        assert read_scalars("!!str key: value\n").refusal == "tag"
+
     def test_a_comment_after_a_quoted_scalar_comes_off(self):
         # The quotes close before the '#', so the comment is a comment — the
         # value used to come back as '"/tmp/x" # note', quotes and all.

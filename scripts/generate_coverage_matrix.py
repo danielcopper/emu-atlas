@@ -170,6 +170,12 @@ def question_cell(cards: dict[str, set[str] | None], key: str, systems: set[str]
     if stated is None or not systems:
         return "✔"
     covered = systems & stated
+    if not covered:
+        # A card that names only systems this row does not serve answers none
+        # of it. "✔ 0/3" is a tick on nothing — the row is uncovered here, and
+        # the mark has to say so. No shipped card is in this state; the branch
+        # exists so the first one that is cannot read as coverage.
+        return "✖"
     return "✔" if covered == systems else f"✔ {len(covered)}/{len(systems)}"
 
 

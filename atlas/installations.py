@@ -89,6 +89,7 @@ from atlas.firmware import (
     SYSTEMS_WITHOUT_CATALOGUE_ID,
     load_hashes,
     read_core_declarations,
+    xemu_file_value,
 )
 from atlas.launch_formats import lookup_install_first, lookup_standalone_launch
 from atlas.firmware import firmware_for_core as _resolve_for_core
@@ -4941,7 +4942,11 @@ def _pcsx2_texture_placement(
     serial is the running disc's, which atlas does not read out of content, so
     it stays a hole for the caller who knows it.
     """
-    assert card.directory is not None  # the router sends only config-stated cards here
+    if card.directory is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no directory and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
     settings = emulator_settings.settings_file(card.token, card.settings)
     data_root = homes.emulator_root(settings.bases[0], card.token)
     ini_path = settings.only(
@@ -4966,7 +4971,11 @@ def _pcsx2_texture_placement(
         root = raw_dir
     directory = os.path.join(root, TEMPLATE_SAVE_ID, _PCSX2_TEXTURE_LOAD_STAGE)
     switch = card.switch
-    assert switch is not None  # the packaged card states one; the loader kept it
+    if switch is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no switch and this resolver reads one "
+            "— the card and the code shipped out of step"
+        )
     raw_switch = values.get((switch.section, switch.key))
     parsed_switch = qt_ini.from_chars_bool(raw_switch)
     # The card's own default is atlas's word, not an ini value, so it keeps
@@ -5111,7 +5120,11 @@ def _duckstation_texture_placement(
     switch, so nothing is read for one.
     """
     setting = card.directory
-    assert setting is not None  # the router sends only config-stated cards here
+    if setting is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no directory and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
     read = duckstation.read_settings(
         machine,
         config_home=homes.base("config"),
@@ -5205,7 +5218,11 @@ def _standalone_texture_placement(
                 "no resolver registered — the card and the code shipped out of step"
             )
         return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
-    assert card.base is not None and card.subdir is not None  # the loader enforces the pair
+    if card.base is None or card.subdir is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no base/subdir pair and this resolver "
+            "opens one — the card and the code shipped out of step"
+        )
     directory = os.path.join(homes.emulator_root(card.base, card.token), card.subdir)
     config_path = emulator_settings.settings_file(card.token, card.settings).only(
         config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
@@ -5886,7 +5903,11 @@ def _ppsspp_savefile_placement(
 
 def _standalone_settings(card: StandaloneSaveCard) -> emulator_settings.SettingsFile:
     """The settings file this save card names, from the one table that addresses it."""
-    assert card.settings is not None  # callers gate on a card that names one
+    if card.settings is None:
+        raise ValueError(
+            f"save card {card.token!r} names no settings file and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
     return emulator_settings.settings_file(card.token, card.settings)
 
 
@@ -5908,12 +5929,6 @@ def _standalone_settings_path(card: StandaloneSaveCard, homes: _XdgHomes) -> str
 # emulator opens it (SDL_GetPrefPath); an arrangement that keeps the real
 # directory elsewhere and links it there is walked like any other symlink.
 # ---------------------------------------------------------------------------
-
-
-def _xemu_file_value(doc: Mapping[str, Any], key: str) -> str | None:
-    files = doc.get("sys", {}).get("files", {}) if isinstance(doc.get("sys"), dict) else {}
-    value = files.get(key) if isinstance(files, dict) else None
-    return value if isinstance(value, str) and value else None
 
 
 def _xemu_group(
@@ -6036,8 +6051,8 @@ def _xemu_savefile_placement(
     if isinstance(parsed, Unresolved):
         return parsed
     doc, stated_toml = parsed
-    hdd = _xemu_file_value(doc, "hdd_path")
-    eeprom = _xemu_file_value(doc, "eeprom_path")
+    hdd = xemu_file_value(doc, "hdd_path")
+    eeprom = xemu_file_value(doc, "eeprom_path")
     readings = _xemu_readings(hdd, eeprom, stated_toml)
     disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd)
     eeprom_group, eeprom_caveats = (
@@ -8446,7 +8461,11 @@ def _duckstation_mod_placement(
     """
     spec = card.trees[0]
     setting = spec.directory
-    assert setting is not None  # the router sends only configured cards here
+    if setting is None:
+        raise ValueError(
+            f"mod card {card.token!r} states no directory and this resolver reads one "
+            "— the card and the code shipped out of step"
+        )
     read = duckstation.read_settings(
         machine,
         config_home=homes.base("config"),
@@ -8530,7 +8549,11 @@ def _standalone_mod_placement(
                 "resolver registered — the card and the code shipped out of step"
             )
         return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
-    assert card.base is not None  # the loader pairs a base with every subdir tree
+    if card.base is None:
+        raise ValueError(
+            f"mod card {card.token!r} states no base and this resolver opens one below "
+            "it — the card and the code shipped out of step"
+        )
     trees: list[ModTree] = []
     sources: list[str] = []
     caveats: list[Caveat] = [*extra_caveats]

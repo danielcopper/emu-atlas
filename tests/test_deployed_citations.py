@@ -45,9 +45,13 @@ COMPONENTS = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
 )
 
-CITATION = re.compile(r"components/([a-z0-9_-]+)/(component_[a-z_]+\.sh):(\d+)")
+# The trailing `(?:-(\d+))?` is what makes a range a range here: a citation to
+# `component_functions.sh:3-12` used to match only `:3`, so nine of the ten
+# lines it claims as evidence were never looked at and could go blank or
+# disappear under it unnoticed.
+CITATION = re.compile(r"components/([a-z0-9_-]+)/(component_[a-z_]+\.sh):(\d+)(?:-(\d+))?")
 # The same reference with the component left to the sentence around it.
-BARE_CITATION = re.compile(r"(?<!/)\b(component_[a-z_]+\.sh):(\d+)")
+BARE_CITATION = re.compile(r"(?<!/)\b(component_[a-z_]+\.sh):(\d+)(?:-(\d+))?")
 # Only the plain `name="value"` form, which is every assignment these scripts
 # make. Anything else is left alone rather than half-understood.
 ASSIGNMENT = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"\s*$')
@@ -154,36 +158,64 @@ def _component_in_scope(path: tuple[str, ...], text: str) -> str | None:
     return None
 
 
-def _citations() -> list[tuple[str, str, int, str]]:
-    """Every component-script citation the packaged data names, with its file."""
+def _span(first: str, last: str) -> range:
+    """Every line a citation claims — one, or the whole range it names.
+
+    A range that counts backwards is left as its first line rather than
+    silently reading as empty: the citation is malformed, and pass three says
+    so about a line that does exist.
+    """
+    start = int(first)
+    end = int(last) if last else start
+    return range(start, max(end, start) + 1)
+
+
+def _citations() -> tuple[list[tuple[str, str, int, str]], set[tuple[str, str, str, int]]]:
+    """Every component-script citation the packaged data names, and the ones nothing scopes.
+
+    Collection-time work stays collection-time work: the *check* on the second
+    half is a test of its own below, because an assertion here fails the
+    module's import and takes all hundred and fifty tests in this file with it
+    — one unscoped citation would read as "the citation canary is gone"
+    instead of "one citation needs a component name".
+    """
     found: list[tuple[str, str, int, str]] = []
     unresolved: set[tuple[str, str, str, int]] = set()
     for path in sorted(DATA.glob("*.json")):
         document = json.loads(path.read_text(encoding="utf-8"))
         for keys, text in _strings(document):
-            for component, script, line in CITATION.findall(text):
-                found.append((component, script, int(line), path.name))
+            for component, script, first, last in CITATION.findall(text):
+                for line in _span(first, last):
+                    found.append((component, script, line, path.name))
             scope = _component_in_scope(keys, text)
-            for script, line in BARE_CITATION.findall(text):
+            for script, first, last in BARE_CITATION.findall(text):
                 if scope is None:
-                    unresolved.add((path.name, ".".join(keys), script, int(line)))
+                    unresolved.add((path.name, ".".join(keys), script, int(first)))
                     continue
-                found.append((scope, script, int(line), path.name))
-    assert unresolved == UNRESOLVED_CITATIONS, (
+                for line in _span(first, last):
+                    found.append((scope, script, line, path.name))
+    return found, unresolved
+
+
+CITATIONS, UNSCOPED_CITATIONS = _citations()
+
+
+def test_every_citation_names_a_component_or_an_emulator():
+    assert UNSCOPED_CITATIONS == UNRESOLVED_CITATIONS, (
         "the set of citations naming neither a component nor an emulator has changed: "
-        f"{sorted(unresolved ^ UNRESOLVED_CITATIONS)} — a citation nothing can resolve is one "
-        "nothing re-reads, so name the component or record it here with the others"
+        f"{sorted(UNSCOPED_CITATIONS ^ UNRESOLVED_CITATIONS)} — a citation nothing can resolve "
+        "is one nothing re-reads, so name the component or record it here with the others"
     )
-    return found
-
-
-CITATIONS = _citations()
 WIRING = json.loads((DATA / "content_tree_wiring.json").read_text(encoding="utf-8"))
 WIRING_ROWS = [
-    (arrangement, row, component, script, int(line))
+    # The first line of the citation, and only it: this pass looks for the
+    # `dir_prep` that wires the pair, which sits on one line. A row citing a
+    # range would have the rest of it read by pass three, where "these lines
+    # still say something" is the claim being made.
+    (arrangement, row, component, script, int(first))
     for arrangement, block in WIRING["arrangements"].items()
     for row in block["rows"]
-    for component, script, line in CITATION.findall(row["source"])
+    for component, script, first, _last in CITATION.findall(row["source"])
 ]
 SETTINGS_FILES = [
     (token, name, file)
@@ -310,4 +342,25 @@ def test_the_citations_are_really_read_where_retrodeck_is_deployed():
     assert read, (
         f"RetroDECK is deployed at {COMPONENTS} and not one cited script was read from it — "
         "either the components moved or this whole file is silently checking nothing"
+    )
+
+
+def test_the_settings_pass_really_compares_some_address():
+    # The same guard for pass two, which had none: every one of its cases can
+    # skip on its own (no component_functions.sh, or a component that pins
+    # nothing for the file), so the whole pass could go green having compared
+    # nothing at all.
+    if not _deployed():
+        pytest.skip(f"nothing is deployed at {COMPONENTS}")
+    compared = []
+    for token, name, _file in SETTINGS_FILES:
+        table = _variables(COMPONENT_OF[token])
+        if any(
+            _expand(value, table).rstrip("/").endswith("/" + name) for value in table.values()
+        ):
+            compared.append((token, name))
+    assert compared, (
+        f"RetroDECK is deployed at {COMPONENTS} and not one settings address was compared "
+        "against a component's own pin — either the components stopped pinning these files or "
+        "the expansion no longer produces the paths this pass matches on"
     )

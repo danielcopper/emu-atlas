@@ -165,6 +165,24 @@ def test_the_standalone_half_counts_every_question(tmp_path, monkeypatch):
     assert "save 1/2" in output and "texture 1/2" in output
 
 
+class TestTheQuestionCell:
+    def test_a_card_covering_the_whole_row_is_a_plain_tick(self):
+        assert matrix.question_cell({"demo": {"gc", "wii"}}, "demo", {"gc", "wii"}) == "✔"
+
+    def test_a_card_naming_no_systems_covers_the_row(self):
+        assert matrix.question_cell({"demo": None}, "demo", {"gc"}) == "✔"
+
+    def test_a_card_covering_part_of_the_row_shows_the_fraction(self):
+        assert matrix.question_cell({"demo": {"gc"}}, "demo", {"gc", "wii"}) == "✔ 1/2"
+
+    def test_no_card_is_a_gap(self):
+        assert matrix.question_cell({}, "demo", {"gc"}) == "✖"
+
+    def test_a_card_covering_none_of_the_row_is_a_gap_not_a_tick_on_zero(self):
+        # "✔ 0/2" would be a tick on nothing — this row is uncovered here.
+        assert matrix.question_cell({"demo": {"psx"}}, "demo", {"gc", "wii"}) == "✖"
+
+
 def test_a_question_nothing_answers_yet_reads_as_a_column_of_gaps(tmp_path, monkeypatch):
     monkeypatch.setattr(matrix, "DATA_DIR", tmp_path)
     assert matrix.load_cards("standalone_savestates.json", ("savestates", "systems")) == {}
