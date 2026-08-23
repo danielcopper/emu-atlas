@@ -5,7 +5,7 @@
     "DOLPHIN": {
       "textures": {
         "base": "data",
-        "subdir": "dolphin-emu/Load/Textures",
+        "subdir": "Load/Textures",
         "keying": {
           "value": "game-id",
           "citation": "[V-binary] the shipped dolphin-emu (RetroDECK 0.10.9b components/dolphin/bin/dolphin-emu) carries the setting description \"Loads custom textures from User/Load/Textures/<game_id>/ …\" as a NUL-delimited literal — the emulator states the keying itself. ('User/' is the portable-build spelling of the user directory; on Linux that directory IS $XDG_DATA_HOME/dolphin-emu.)"
@@ -26,9 +26,6 @@
           },
           "Textures": {
             "literal": "Textures"
-          },
-          "dolphin-emu": {
-            "literal": "dolphin-emu"
           }
         }
       }
@@ -36,7 +33,7 @@
     "PRIMEHACK": {
       "textures": {
         "base": "data",
-        "subdir": "primehack/Load/Textures",
+        "subdir": "Load/Textures",
         "keying": {
           "value": "game-id",
           "citation": "[V-binary] the shipped primehack (RetroDECK 0.10.9b components/primehack/bin/primehack) carries the same Dolphin-line description literal \"Loads custom textures from User/Load/Textures/<game_id>/ …\" — the fork inherits the keying with the code that reads it."
@@ -57,9 +54,6 @@
           },
           "Textures": {
             "literal": "Textures"
-          },
-          "primehack": {
-            "literal": "primehack"
           }
         }
       }
@@ -67,7 +61,7 @@
     "PPSSPP": {
       "textures": {
         "base": "config",
-        "subdir": "ppsspp/PSP/TEXTURES",
+        "subdir": "PSP/TEXTURES",
         "settings": "ppsspp.ini"
       },
       "provenance": {
@@ -81,9 +75,6 @@
           },
           "TEXTURES": {
             "literal": "TEXTURES"
-          },
-          "ppsspp": {
-            "literal": "ppsspp"
           },
           "ppsspp.ini": {
             "literal": "ppsspp.ini"
@@ -125,7 +116,7 @@
     "CEMU": {
       "textures": {
         "base": "data",
-        "subdir": "Cemu/graphicPacks",
+        "subdir": "graphicPacks",
         "keying": {
           "value": "pack",
           "citation": "[V-binary] the shipped Cemu_relwithdebinfo carries \"graphicPacks\", \"graphicPacks/downloadedGraphicPacks/{}\" and \"rules.txt\" as NUL-delimited literals: the level below the root is a pack directory holding a rules.txt, not a per-game directory — which is why this row is 'pack' where every other row is keyed by the content."
@@ -138,9 +129,6 @@
       "anchors": {
         "binary": "cemu/bin/Cemu_relwithdebinfo",
         "names": {
-          "Cemu": {
-            "literal": "Cemu"
-          },
           "graphicPacks": {
             "literal": "graphicPacks"
           },
@@ -153,7 +141,7 @@
     "AZAHAR": {
       "textures": {
         "base": "data",
-        "subdir": "azahar-emu/load/textures",
+        "subdir": "load/textures",
         "keying": {
           "value": "title-id",
           "citation": "[V-binary] the shipped azahar (RetroDECK 0.10.9b components/azahar/bin/azahar) carries the custom-texture loader's path template \"{}textures/{:016X}/\" as a NUL-delimited literal — a 16-hex-digit component is a 3DS title id."
@@ -166,9 +154,6 @@
       "anchors": {
         "binary": "azahar/bin/azahar",
         "names": {
-          "azahar-emu": {
-            "literal": "azahar-emu"
-          },
           "load": {
             "literal": "load"
           },

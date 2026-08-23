@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from atlas.emulator_settings import DirectoryName, load_emulator_settings
 from atlas.mods import load_mod_cards, load_standalone_mod_cards, recorded_mod_words
 from atlas.textures import (
     load_standalone_texture_packs,
@@ -33,6 +34,52 @@ DEPLOYED_CORES = Path(
 COMPONENTS = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
 )
+FLATPAK_ROOTS = (
+    Path.home() / ".local" / "share" / "flatpak" / "app",
+    Path("/var/lib/flatpak/app"),
+)
+
+
+def _flatpak_binary(app_id: str, path: str) -> Path:
+    """Where a build living in an app of its own sits — user install before system.
+
+    The order flatpak itself resolves in, so a user-installed app wins over a
+    system one of the same id.
+    """
+    for root in FLATPAK_ROOTS:
+        candidate = root / app_id / "current" / "active" / "files" / path
+        if candidate.is_file():
+            return candidate
+    return FLATPAK_ROOTS[0] / app_id / "current" / "active" / "files" / path
+
+
+def _directory_spellings():
+    """Every directory name the settings table states, with the build that spells it.
+
+    One row per (emulator, installation): the default the arrangement's own
+    build uses, plus one for each app whose build spells it differently.
+    ``siblings`` carries the other spellings' literals — a build carrying one
+    of those is the rename this tripwire exists to catch.
+    """
+    for token, entry in load_emulator_settings().items():
+        spellings: list[tuple[str | None, DirectoryName]] = [(None, entry.directory.default)]
+        spellings.extend(entry.directory.installations.items())
+        for app_id, stated in spellings:
+            binary = (
+                _flatpak_binary(stated.flatpak, stated.binary)
+                if stated.flatpak is not None
+                else COMPONENTS / stated.binary
+            )
+            siblings = tuple(
+                literal
+                for other_id, other in spellings
+                if other_id != app_id
+                for _, literal, _ in other.literals
+            )
+            yield token, app_id, stated, binary, siblings
+
+
+DIRECTORY_SPELLINGS = list(_directory_spellings())
 
 TEXTURES_RAW = json.loads((DATA / "texture_packs.json").read_text(encoding="utf-8"))
 MODS_RAW = json.loads((DATA / "mods.json").read_text(encoding="utf-8"))
@@ -202,3 +249,68 @@ class TestTheAnchorBlockShape:
         )
         with pytest.raises(ValueError, match="literal"):
             load_texture_packs(table)
+
+
+class TestTheStatedDirectoryIsTheOneTheBuildSpells:
+    """The settings table's half: an emulator's own directory, re-read as bytes.
+
+    The name is a compiled-in constant rather than anything on disk, so the
+    binary that carries it is the only honest check. It matters most where the
+    name belongs to the build rather than to the emulator: PrimeHack renamed
+    its user directory and later renamed it back, so the revision RetroDECK
+    ships and the one Flathub ships spell it differently (#246), and a name
+    that outlived its build would send every path below it somewhere nothing
+    writes to.
+    """
+
+    @pytest.mark.parametrize(
+        ("token", "app_id", "stated", "binary", "siblings"),
+        DIRECTORY_SPELLINGS,
+        ids=[f"{t}:{a or 'default'}" for t, a, _, _, _ in DIRECTORY_SPELLINGS],
+    )
+    def test_the_build_carries_the_name_the_table_states(
+        self, token, app_id, stated, binary, siblings
+    ):
+        data = _blob(binary)
+        if data is None:
+            pytest.skip(f"{binary} is not deployed")
+        for segment, literal, encoding in stated.literals:
+            assert literal.encode(encoding) in data, (
+                f"the settings table states {token}'s own directory as {stated.name!r} "
+                f"({segment!r} anchored to {literal!r}) and the shipped {binary.name} carries no "
+                "such bytes — the build renamed it, so every path below it now points at a "
+                "directory nothing writes to; re-audit the name before trusting any answer"
+            )
+
+    @pytest.mark.parametrize(
+        ("token", "app_id", "stated", "binary", "siblings"),
+        [row for row in DIRECTORY_SPELLINGS if row[4]],
+        ids=[f"{t}:{a or 'default'}" for t, a, _, _, s in DIRECTORY_SPELLINGS if s],
+    )
+    def test_a_build_does_not_carry_another_installations_name(
+        self, token, app_id, stated, binary, siblings
+    ):
+        # The flip guard, and what makes a pair of names trustworthy: each
+        # build carries exactly one of them. RetroDECK's build repository has
+        # already moved to a PrimeHack revision that spells the directory the
+        # other way; the day that ships, this is what says so.
+        data = _blob(binary)
+        if data is None:
+            pytest.skip(f"{binary} is not deployed")
+        for literal in siblings:
+            assert literal.encode() not in data, (
+                f"the settings table states {token}'s own directory as {stated.name!r} for "
+                f"{app_id or 'the arrangement own build'}, and the shipped {binary.name} carries "
+                f"{literal!r} — the other installation's spelling — so this build is no longer "
+                "the one that name was read from"
+            )
+
+    def test_the_directory_anchors_are_really_read_somewhere(self):
+        # The all-skip guard, as on the card anchors above.
+        if not COMPONENTS.is_dir():
+            pytest.skip(f"nothing is deployed at {COMPONENTS}")
+        checked = [row for row in DIRECTORY_SPELLINGS if _blob(row[3]) is not None]
+        assert checked, (
+            f"binaries are deployed below {COMPONENTS} and not one directory name was read from "
+            "one — either the binaries moved or the tripwire is silently checking nothing"
+        )

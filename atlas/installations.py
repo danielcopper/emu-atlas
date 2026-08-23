@@ -137,6 +137,7 @@ from atlas.oddities import (
 )
 from atlas.save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
 from atlas.textures import (
+    XDG_CONFIG,
     XDG_DATA,
     StandaloneTextureCard,
     TextureCard,
@@ -4876,9 +4877,26 @@ class _XdgHomes:
 
     data: str
     config: str
+    # The flatpak app id the launch runs the emulator under, where it runs one
+    # at all — ``None`` for an arrangement's own bundled build, for an AppImage
+    # and for a host install. It travels with the bases because it answers the
+    # same question they do: which installation of this emulator is being read.
+    flatpak: str | None = None
 
     def base(self, which: str) -> str:
         return self.data if which == XDG_DATA else self.config
+
+    def emulator_root(self, which: str, token: str | None) -> str:
+        """The emulator's own directory below one of the two bases.
+
+        The name is the settings table's to state — once per emulator, and
+        per installation where the name belongs to the build rather than to
+        the emulator (#246) — so no resolver spells it out.
+        """
+        return os.path.join(
+            self.base(which),
+            emulator_settings.user_directory(token, flatpak=self.flatpak),
+        )
 
 
 def _pcsx2_texture_placement(
@@ -4908,8 +4926,10 @@ def _pcsx2_texture_placement(
     """
     assert card.directory is not None  # the router sends only config-stated cards here
     settings = emulator_settings.settings_file(card.token, card.settings)
-    data_root = os.path.join(homes.base(settings.bases[0]), "PCSX2")
-    ini_path = settings.only(config_home=homes.base("config"), data_home=homes.base("data"))
+    data_root = homes.emulator_root(settings.bases[0], card.token)
+    ini_path = settings.only(
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
+    )
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -5112,9 +5132,9 @@ def _standalone_texture_placement(
             )
         return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
     assert card.base is not None and card.subdir is not None  # the loader enforces the pair
-    directory = os.path.join(homes.base(card.base), card.subdir)
+    directory = os.path.join(homes.emulator_root(card.base, card.token), card.subdir)
     config_path = emulator_settings.settings_file(card.token, card.settings).only(
-        config_home=homes.base("config"), data_home=homes.base("data")
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
     )
     physical_dir, link_caveats = _link_view(machine, directory)
     return TexturePlacement(
@@ -5123,8 +5143,9 @@ def _standalone_texture_placement(
         enabled=None,
         keying=card.keying,
         sources=(
-            f"texture card '{card.token}': the emulator reads packs from {card.subdir!r} below its "
-            f"XDG {card.base} home — {card.provenance}",
+            f"texture card '{card.token}': the emulator reads packs from {card.subdir!r} below "
+            f"its own {emulator_settings.user_directory(card.token, flatpak=homes.flatpak)!r} "
+            f"directory in the XDG {card.base} home — {card.provenance}",
             *(
                 (f"texture card '{card.token}': keyed by {card.keying} — {card.keying_citation}",)
                 if card.keying is not None
@@ -5573,9 +5594,9 @@ def _dolphin_wii_answer(
                     {"key": "NANDRootPath", "path": configured},
                 )
             )
-            nand_root = os.path.join(homes.base("data"), "dolphin-emu", "Wii")
+            nand_root = os.path.join(homes.emulator_root(XDG_DATA, card.token), "Wii")
     else:
-        nand_root = os.path.join(homes.base("data"), "dolphin-emu", "Wii")
+        nand_root = os.path.join(homes.emulator_root(XDG_DATA, card.token), "Wii")
         reading = _dolphin_reading(
             "NANDRootPath",
             None,
@@ -5647,7 +5668,7 @@ def _dolphin_savefile_placement(
             card=card,
             extra_caveats=extra_caveats,
         )
-    gc_root = os.path.join(homes.base("data"), "dolphin-emu", "GC")
+    gc_root = os.path.join(homes.emulator_root(XDG_DATA, card.token), "GC")
     override_caveats = tuple(
         Caveat(
             CAVEAT_CORE_MODE_UNESTABLISHED,
@@ -5693,7 +5714,7 @@ def _ppsspp_savefile_placement(
     content_path: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """PPSSPP's save answer — a compiled-in XDG join, then the links."""
-    directory = os.path.join(homes.base("config"), "ppsspp", "PSP", "SAVEDATA")
+    directory = os.path.join(homes.emulator_root(XDG_CONFIG, card.token), "PSP", "SAVEDATA")
     physical, link_caveats = _link_view(machine, directory)
     caveats = [
         *extra_caveats,
@@ -5735,7 +5756,7 @@ def _standalone_settings(card: StandaloneSaveCard) -> emulator_settings.Settings
 def _standalone_settings_path(card: StandaloneSaveCard, homes: _XdgHomes) -> str:
     """Where this launch opens the file the card names."""
     return _standalone_settings(card).only(
-        config_home=homes.base("config"), data_home=homes.base("data")
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
     )
 
 
@@ -5939,7 +5960,7 @@ def _xemu_savefile_placement(
 
 
 def _cemu_mlc_root(
-    doc: "_ET.Element | None", homes: _XdgHomes, sandbox: _Sandbox
+    doc: "_ET.Element | None", homes: _XdgHomes, sandbox: _Sandbox, token: str
 ) -> tuple[str | None, OptionReading, tuple[Caveat, ...]]:
     """The MLC root the way Cemu resolves it — configured, or the default."""
     configured = None
@@ -5949,7 +5970,7 @@ def _cemu_mlc_root(
             configured = element.text.strip()
     if configured is None:
         return (
-            os.path.join(homes.base("data"), "Cemu", "mlc01"),
+            os.path.join(homes.emulator_root(XDG_DATA, token), "mlc01"),
             _dolphin_reading(
                 "mlc_path",
                 None,
@@ -6019,7 +6040,7 @@ def _cemu_savefile_placement(
                 {"core": card.token, "reason": "an --mlc launch flag outranks the config"},
             )
         )
-    mlc_root, reading, root_caveats = _cemu_mlc_root(doc, homes, sandbox)
+    mlc_root, reading, root_caveats = _cemu_mlc_root(doc, homes, sandbox, card.token)
     caveats.extend(root_caveats)
     if mlc_root is None:
         return Unresolved(
@@ -6244,7 +6265,7 @@ def _azahar_savefile_placement(
     if refusal is not None:
         return refusal
     if sdmc_root is None:
-        sdmc_root = os.path.join(homes.base("data"), "azahar-emu", "sdmc")
+        sdmc_root = os.path.join(homes.emulator_root(XDG_DATA, card.token), "sdmc")
     container = os.path.join(sdmc_root, _AZAHAR_CONTAINER)
     title_tree = os.path.join(container, "title")
     physical_tree, link_caveats = _link_view(machine, title_tree)
@@ -6886,8 +6907,10 @@ def _pcsx2_savefile_placement(
     the per-game tree it is and a file card as the shared image it is.
     """
     settings = _standalone_settings(card)
-    data_root = os.path.join(homes.base(settings.bases[0]), "PCSX2")
-    ini_path = settings.only(config_home=homes.base("config"), data_home=homes.base("data"))
+    data_root = homes.emulator_root(settings.bases[0], card.token)
+    ini_path = settings.only(
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
+    )
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -7079,7 +7102,7 @@ def _melonds_config(
     exist reaches the legacy INI beside it, and where neither exists the
     compiled defaults govern (Config.cpp:785-803 at 1.1).
     """
-    read = melonds.read_config(machine, homes.base("config"))
+    read = melonds.read_config(machine, homes.base("config"), homes.flatpak)
     if read.unreadable is not None:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -7427,8 +7450,10 @@ def _rpcs3_savefile_placement(
     the running emulator uses one of them.
     """
     settings = _standalone_settings(card)
-    config_dir = os.path.join(homes.base(settings.bases[0]), "rpcs3")
-    vfs_path = settings.only(config_home=homes.base("config"), data_home=homes.base("data"))
+    config_dir = homes.emulator_root(settings.bases[0], card.token)
+    vfs_path = settings.only(
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
+    )
     result = machine.read_text(vfs_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -8133,15 +8158,16 @@ def _standalone_mod_placement(
     caveats: list[Caveat] = [*extra_caveats]
     for spec in card.trees:
         assert spec.subdir is not None  # no configured tree reaches this branch
-        directory = os.path.join(homes.base(card.base), spec.subdir)
+        directory = os.path.join(homes.emulator_root(card.base, card.token), spec.subdir)
         physical, link_caveats = _link_view(machine, directory)
         caveats.extend(link_caveats)
         trees.append(
             ModTree(dir=directory, keying=spec.keying, role=spec.role, physical_dir=physical)
         )
         sources.append(
-            f"mod card '{card.token}': the emulator reads mods from {spec.subdir!r} below its "
-            f"XDG {card.base} home — {card.provenance}"
+            f"mod card '{card.token}': the emulator reads mods from {spec.subdir!r} below "
+            f"its own {emulator_settings.user_directory(card.token, flatpak=homes.flatpak)!r} "
+            f"directory in the XDG {card.base} home — {card.provenance}"
         )
         if spec.keying is not None:
             sources.append(
@@ -8149,7 +8175,7 @@ def _standalone_mod_placement(
             )
     if card.settings is not None:
         config_path = emulator_settings.settings_file(card.token, card.settings).only(
-            config_home=homes.base("config"), data_home=homes.base("data")
+            config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
         )
         caveats.append(
             Caveat(
@@ -8588,6 +8614,7 @@ def _retroarch_firmware_context(
         arrangement_version=arrangement_version,
         standalone_data_home=standalone_homes.data if standalone_homes is not None else None,
         standalone_config_home=standalone_homes.config if standalone_homes is not None else None,
+        standalone_flatpak=standalone_homes.flatpak if standalone_homes is not None else None,
     )
 
 
@@ -9855,6 +9882,7 @@ def _firmware_catalogue_entries(
                 standalone_token=token,
                 standalone_data_home=homes.data if homes is not None else None,
                 standalone_config_home=homes.config if homes is not None else None,
+                standalone_flatpak=homes.flatpak if homes is not None else None,
             )
         )
     return tuple(shaped)
@@ -13615,6 +13643,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return _XdgHomes(
             data=os.path.join(app_dir, "data"),
             config=os.path.join(app_dir, "config"),
+            flatpak=card.flatpak,
         )
 
     def _variant_reason(self, launch: _StandaloneLaunch, variant: str) -> str:

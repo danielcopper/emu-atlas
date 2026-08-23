@@ -1454,6 +1454,9 @@ class FirmwareContext:
     # stays unanswered rather than guessed at.
     standalone_data_home: str | None = None
     standalone_config_home: str | None = None
+    # The flatpak app id those bases belong to, where the emulator runs as one
+    # — it decides how the emulator spells its own directory (#246).
+    standalone_flatpak: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1479,6 +1482,7 @@ class CatalogueEntry:
     standalone_token: str | None = None
     standalone_data_home: str | None = None
     standalone_config_home: str | None = None
+    standalone_flatpak: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -2517,6 +2521,7 @@ def _melonds_standalone_core(
     *,
     data_home: str,
     config_home: str,
+    flatpak: str | None,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """melonDS's expectations: ``verifySetup`` performed as reads.
@@ -2529,7 +2534,7 @@ def _melonds_standalone_core(
     requirement list is the true answer, stated with the switch named.
     """
     del data_home  # melonDS keeps its settings under the config home
-    read = melonds.read_config(machine, config_home)
+    read = melonds.read_config(machine, config_home, flatpak)
     if read.unreadable is not None:
         return _melonds_config_unreadable_core(entry, read.unreadable), []
     config = read.config
@@ -2615,6 +2620,7 @@ def _pcsx2_standalone_core(
     *,
     data_home: str,
     config_home: str,
+    flatpak: str | None,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """PCSX2's expectation: the image named inside the directory named.
@@ -2630,7 +2636,7 @@ def _pcsx2_standalone_core(
     # Which home the file sits under is the settings table's to say, so both
     # go to the lookup and neither is assumed here.
     ini_path = emulator_settings.settings_file(card.token, "PCSX2.ini").only(
-        config_home=config_home, data_home=data_home
+        config_home=config_home, data_home=data_home, flatpak=flatpak
     )
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
@@ -2769,6 +2775,7 @@ def _xemu_standalone_core(
     *,
     data_home: str,
     config_home: str,
+    flatpak: str | None,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """xemu's expectations: the three files in ``[sys.files]`` that refuse the start.
@@ -2784,7 +2791,7 @@ def _xemu_standalone_core(
     # Which home the file sits under is the settings table's to say — xemu's
     # is the data one, and this resolver no longer has to know that.
     toml_path = emulator_settings.settings_file(card.token, "xemu.toml").only(
-        config_home=config_home, data_home=data_home
+        config_home=config_home, data_home=data_home, flatpak=flatpak
     )
     result = machine.read_text(toml_path)
     if result.status not in (READ_OK, READ_MISSING):
@@ -3017,6 +3024,7 @@ def _duckstation_standalone_core(
     *,
     data_home: str,
     config_home: str,
+    flatpak: str | None,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """DuckStation's expectation: a directory, and whatever in it is a BIOS.
@@ -3030,7 +3038,9 @@ def _duckstation_standalone_core(
     """
     search = card.search
     assert search is not None  # the dispatch only routes search cards here
-    read = duckstation.read_settings(machine, config_home=config_home, data_home=data_home)
+    read = duckstation.read_settings(
+        machine, config_home=config_home, data_home=data_home, flatpak=flatpak
+    )
     if read.unreadable is not None:
         return _duckstation_unreadable_core(entry, read.unreadable), []
     caveats: list[Caveat] = [_packaged_provenance_caveat(entry, card)]
@@ -3212,6 +3222,7 @@ def _carded_standalone_core(
     *,
     data_home: str,
     config_home: str,
+    flatpak: str | None,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """A carded standalone entry, routed by the shape its card states.
@@ -3249,6 +3260,7 @@ def _carded_standalone_core(
         system,
         data_home=data_home,
         config_home=config_home,
+        flatpak=flatpak,
         verify=verify,
     )
 
@@ -3270,6 +3282,7 @@ def _standalone_entry_core(
     card = lookup_standalone_firmware_card(entry.standalone_token)
     data_home = entry.standalone_data_home or context.standalone_data_home
     config_home = entry.standalone_config_home or context.standalone_config_home
+    flatpak = entry.standalone_flatpak or context.standalone_flatpak
     if (
         card is not None
         and system in card.systems
@@ -3283,6 +3296,7 @@ def _standalone_entry_core(
             system,
             data_home=data_home,
             config_home=config_home,
+            flatpak=flatpak,
             verify=verify,
         )
     return (

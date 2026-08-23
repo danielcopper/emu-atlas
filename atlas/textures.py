@@ -301,17 +301,26 @@ def _expect_one_anchor(anchor: object, *, here: str) -> None:
 
 
 def expect_table_anchors(
-    value: object, *, where: str, vocabulary: frozenset[str], binary_required: bool
+    value: object,
+    *,
+    where: str,
+    vocabulary: frozenset[str],
+    binary_required: bool,
+    extra_keys: frozenset[str] = frozenset(),
 ) -> None:
     """Validate one row's ``anchors`` block — shape here, bytes in the tests.
 
     A standalone row names the component binary its literals were read from
     (``binary``, relative to the components tree), because nothing derives
     it; a core row's binary is derived from its key, so a restated one could
-    only ever disagree and is refused.
+    only ever disagree and is refused. *extra_keys* are the keys a caller's
+    own block may carry beside those two — the settings table's directory
+    anchors name a ``flatpak``, because the build that spells the name lives
+    inside that app rather than below the components tree (#246).
     """
     at = f"{where}: anchors"
-    if not isinstance(value, dict) or set(value) - {"binary", "names"} or "names" not in value:
+    allowed = {"binary", "names"} | set(extra_keys)
+    if not isinstance(value, dict) or set(value) - allowed or "names" not in value:
         raise ValueError(f"{at}: expected {{'binary'?: …, 'names': …}}, got {value!r}")
     _expect_anchor_binary(value.get("binary"), at=at, binary_required=binary_required)
     names = value["names"]
