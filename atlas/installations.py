@@ -4968,11 +4968,11 @@ def _pcsx2_texture_placement(
     switch = card.switch
     assert switch is not None  # the packaged card states one; the loader kept it
     raw_switch = values.get((switch.section, switch.key))
-    enabled = (
-        raw_switch.strip().casefold() == "true"
-        if raw_switch is not None
-        else switch.default == "true"
-    )
+    parsed_switch = qt_ini.from_chars_bool(raw_switch)
+    # The card's own default is atlas's word, not an ini value, so it keeps
+    # its plain comparison; the live value goes through the emulator's reading.
+    enabled = parsed_switch if parsed_switch is not None else switch.default == "true"
+    per_game = _pcsx2_game_settings_caveat(machine, values, data_root, card.token, switch.key)
     physical_dir, link_caveats = _link_view(machine, root)
     return TexturePlacement(
         dir=directory,
@@ -4994,6 +4994,7 @@ def _pcsx2_texture_placement(
         caveats=(
             *extra_caveats,
             *link_caveats,
+            *per_game,
             Caveat(
                 CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
                 "the directory is staged per game below the texture root: replacements are "
@@ -5018,6 +5019,58 @@ def _pcsx2_texture_placement(
             os.path.join(physical_dir, TEMPLATE_SAVE_ID, _PCSX2_TEXTURE_LOAD_STAGE)
             if physical_dir is not None
             else None
+        ),
+    )
+
+
+def _pcsx2_game_settings_caveat(
+    machine: Machine,
+    values: Mapping[tuple[str, str], str],
+    data_root: str,
+    token: str,
+    switch_key: str,
+) -> tuple[Caveat, ...]:
+    """The per-game ini layer, where this machine has one — PCSX2's second settings source.
+
+    A running game installs ``inis/gamesettings/<serial>_<crc>.ini`` as a
+    *layer* under the settings interface every core setting is read through
+    (``UpdateGameSettingsLayer``, VMManager.cpp:932-969 at v2.6.3; the path is
+    ``GetGameSettingsPath``, :774-781), so any key of any section — the
+    texture switch included — can be answered differently for one game than
+    the global ``PCSX2.ini`` answers it. The directory is the usual
+    ``LoadPathFromSettings`` shape, ``[Folders] GameSettings`` defaulting to
+    ``gamesettings`` below the DataRoot (Pcsx2Config.cpp:2290).
+
+    Which game runs is not a fact atlas holds, so the layer cannot be read
+    *for* an answer — but whether one exists at all is a directory listing,
+    and a caller told "replacement is off" deserves to know that some games on
+    this machine carry their own answer. Silent where the directory holds
+    none, which is the shipped state.
+    """
+    raw = values.get(("Folders", "GameSettings"), "")
+    if not raw:
+        directory = os.path.join(data_root, "gamesettings")
+    elif not os.path.isabs(raw):
+        directory = os.path.join(data_root, raw)
+    else:
+        directory = raw
+    listing = machine.glob(os.path.join(directory, "*.ini"))
+    if not listing.matches:
+        return ()
+    return (
+        Caveat(
+            CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+            f"{len(listing.matches)} game(s) on this machine carry a per-game settings file "
+            f"in {directory}, which PCSX2 installs as a layer over the global configuration "
+            f"while that game runs — {switch_key} and the directory below it are read through "
+            "that layer, so this answer is the one that holds for every game without such a "
+            "file (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
+            {
+                "core": token,
+                "count": str(len(listing.matches)),
+                "dir": directory,
+                "key": switch_key,
+            },
         ),
     )
 
@@ -6451,12 +6504,20 @@ _DUCKSTATION_TYPE_DEFAULTS = ("PerGameTitle", "None")  # settings.h:510-511
 
 
 def _duckstation_sanitized(name: str) -> str:
-    """``Path::SanitizeFileName``'s Linux branch: ``/``, ``*`` and control bytes → ``_``.
+    """``Path::SanitizeFileName``'s Linux branch: ``/`` and ``*`` become ``_``.
 
-    file_system.cpp:69-90 and :142-163 at the pin — the Windows list is
-    longer, but the shipped Linux build replaces exactly these.
+    ``FileSystemCharacterIsSane`` splits on the platform
+    (file_system.cpp:69-97 at 64655818e). The ``#else`` arm the shipped Linux
+    build compiles rejects exactly two characters: ``/`` when slashes are
+    being stripped (:82-83, and ``SanitizeFileName`` defaults ``strip_slashes``
+    to true) and ``*`` (:86-87, "drop asterisks too, they make globbing
+    annoying"). ``:`` is inside a further ``#ifdef __APPLE__`` (:90-92) and
+    the control bytes, the angle brackets and the rest belong to the
+    ``_WIN32`` arm above them (:71-80) — this mirror used to replace control
+    bytes too, which is Windows behaviour on a Linux build. The replacement
+    character is ``_`` (:152).
     """
-    return "".join("_" if ch in "/*" or ord(ch) <= 31 else ch for ch in name)
+    return "".join("_" if ch in "/*" else ch for ch in name)
 
 
 def _duckstation_settings(
@@ -6586,7 +6647,7 @@ def _duckstation_per_game_slot(
         name = f"{stem}_{n}.mcd" if stem is not None else f"{TEMPLATE_ROM_STEM}_{n}.mcd"
         fill = (
             "the content file's own name without its extension, sanitized the way "
-            "Path::SanitizeFileName sanitizes ('/', '*' and control bytes become '_')"
+            "Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')"
         )
         citation = "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e"
     elif mode == "PerGame":
@@ -6876,12 +6937,17 @@ def _pcsx2_slot_group(
     """
     enable_key, filename_key, default_name, enabled_default = slot
     raw_enable = values.get(("MemoryCards", enable_key))
-    enabled = (
-        raw_enable.strip().casefold() == "true" if raw_enable is not None else enabled_default
-    )
+    parsed_enable = qt_ini.from_chars_bool(raw_enable)
+    enabled = parsed_enable if parsed_enable is not None else enabled_default
     default_word = "true" if enabled_default else "false"
-    if raw_enable is not None:
+    if parsed_enable is not None:
         enable_provenance = f'PCSX2.ini: [MemoryCards] {enable_key} = "{raw_enable}"'
+    elif raw_enable is not None:
+        enable_provenance = (
+            f'PCSX2.ini sets {enable_key} to "{raw_enable}", which FromChars<bool> reads as '
+            f"neither true nor false — the default {default_word} governs "
+            "(INISettingsInterface.cpp:198-210 at v2.6.3)"
+        )
     else:
         enable_provenance = f"{enable_key} is unset — the default {default_word} governs"
     readings = [OptionReading(enable_key, raw_enable, enable_provenance, None)]

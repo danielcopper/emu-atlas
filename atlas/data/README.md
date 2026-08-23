@@ -386,7 +386,11 @@ compiled default and a citation), because that is where its directory really com
 resolver registered beside it in `atlas/installations.py` and fails the load without one, the same way a save card does:
 reading a configuration is code, never a card DSL. PCSX2's answer also states the **load stage** rather than the root —
 replacements are read from `<Textures>/<serial>/replacements` — because an answer naming only the root would send a
-caller placing a pack one level above everything that reads it.
+caller placing a pack one level above everything that reads it. Both readings are the _global_ ones: PCSX2 layers
+`inis/gamesettings/<serial>_<crc>.ini` over the whole configuration while that game runs, and every core key is read
+through the layer, so the switch and the directory can each answer differently for one game. Which game runs is not a
+fact atlas holds, so the answer keeps the global reading and carries `per-game-overrides-present` — with their count and
+directory — where such files exist on the machine.
 
 DuckStation names the same key (`[Folders] Textures`, default `textures`) for a different reason, and it is the one
 worth learning from: its directory hangs off a **DataRoot the launch environment picks** — the config home where

@@ -2171,6 +2171,114 @@ class TestMoreStandaloneSaves:
         assert p.dir == "/mnt/sd/cards"
         assert p.physical_dir == "/mnt/sd/real-cards"
 
+    @pytest.mark.parametrize("word", ["1", "yes", "on", "enabled", "TRUE", "t"])
+    def test_pcsx2_reads_every_spelling_of_on_the_emulator_reads(self, word):
+        # A hand-edited `Slot2_Enable = 1` is on for PCSX2, and atlas used to
+        # answer that the slot was empty.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: (
+                    f"[MemoryCards]\nSlot1_Enable = false\nSlot2_Enable = {word}\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        p = rd.emulators_for("ps2").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("Mcd002.ps2",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "off+file"
+
+    def test_pcsx2_a_value_neither_true_nor_false_leaves_the_default(self):
+        # GetBoolValue returns false without writing the caller's variable, so
+        # the compiled default governs — and the reading says which and why.
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[MemoryCards]\nSlot1_Enable = maybe\n"},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        p = rd.emulators_for("ps2").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert "Mcd001.ps2" in p.file_set.files  # the slot's default is on
+        assert p.granularity is not None
+        stated = next(r for r in p.granularity.readings if r.key == "Slot1_Enable")
+        assert "neither true nor false" in stated.provenance
+
+    def test_pcsx2_the_texture_switch_reads_the_same_spellings(self):
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[EmuCore/GS]\nLoadTextureReplacements = 1\n"},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert answer.enabled is True
+
+    def test_pcsx2_a_per_game_settings_file_is_stated_beside_the_switch(self):
+        # PCSX2 installs inis/gamesettings/<serial>_<crc>.ini as a layer over
+        # the global configuration while that game runs, and every core key is
+        # read through it — so "replacement is off" is the answer for games
+        # that have no such file, and the answer has to say so.
+        gamesettings = (
+            f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        )
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: "[EmuCore/GS]\nLoadTextureReplacements = false\n",
+                f"{gamesettings}/SLES-12345_A1B2C3D4.ini": (
+                    "[EmuCore/GS]\nLoadTextureReplacements = true\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", gamesettings],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert answer.enabled is False
+        stated = [
+            c for c in answer.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        ]
+        assert stated
+        assert stated[0].data["count"] == "1"
+        assert stated[0].data["dir"] == gamesettings
+
+    def test_pcsx2_says_nothing_about_a_per_game_layer_that_is_not_there(self):
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[EmuCore/GS]\nLoadTextureReplacements = false\n"},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in [
+            c.code for c in answer.caveats
+        ]
+
+    @pytest.mark.parametrize(
+        "stem,expected",
+        [
+            ("Rock*Star", "Rock_Star_1.mcd"),
+            ("Vol: Two", "Vol: Two_1.mcd"),
+            ("A<B>C", "A<B>C_1.mcd"),
+        ],
+    )
+    def test_duckstation_sanitizes_a_file_title_the_linux_way(self, stem, expected):
+        # The Linux arm of FileSystemCharacterIsSane rejects '/' and '*' only;
+        # ':' is macOS and the angle brackets are Windows.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = PerGameFileTitle\nCard2Type = None\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards"],
+        )
+        p = rd.emulators_for("psx").entries[0].savefile_location(
+            content_path=f"/mnt/sd/roms/psx/{stem}.chd"
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == (expected,)
+
     def test_duckstation_two_per_game_slots_state_both_holes_once(self):
         p = self._answer(
             "psx",

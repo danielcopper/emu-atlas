@@ -10,7 +10,13 @@ importing the other, the way :mod:`atlas.melonds` and
 Pure text in, mapping out. What a value *means* is the emulator's, and stays
 with the caller: an empty string is a real value in one emulator and "unset"
 in another, and a ``\\default`` companion key changes which of two values wins
-(Azahar's ``ReadSetting``). Nothing here interprets.
+(Azahar's ``ReadSetting``). :func:`values` interprets nothing.
+
+What does live here beside it is one *named* reading — :func:`from_chars_bool`
+— because two of the four emulators share it byte for byte and neither owns a
+module the other could import. It is named after the upstream function it
+mirrors and carries its citation, so it reads as one emulator family's own
+value grammar rather than as this format's.
 """
 
 from __future__ import annotations
@@ -38,6 +44,45 @@ def unescape_section(name: str) -> str:
         out.append(encoded[index])
         index += 1
     return out.decode("utf-8", errors="replace")
+
+
+_FROM_CHARS_TRUE = ("true", "yes", "on", "1", "enabled")
+_FROM_CHARS_FALSE = ("false", "no", "off", "0", "disabled")
+
+
+def from_chars_bool(value: str | None) -> bool | None:
+    """``StringUtil::FromChars<bool>`` as PCSX2 and DuckStation apply it to an ini value.
+
+    Both emulators read a boolean setting the same way and through the same
+    code shape: ``INISettingsInterface::GetBoolValue`` takes the raw string
+    SimpleIni hands back and passes it to ``StringUtil::FromChars<bool>``,
+    keeping the caller's default where that returns nothing
+    (INISettingsInterface.cpp:198-210 and StringUtil.h:178-197 at PCSX2 v2.6.3;
+    ini_settings_interface.cpp:155-167 and string_util.h:180-197 at
+    stenzek/duckstation`64655818e). ``None`` here is that nothing: the key
+    said something the emulator could not read as a boolean, so its compiled
+    default governs — which is not the same fact as an absent key, and the
+    caller keeps them apart.
+
+    The comparison is the surprising part and it is upstream's, not an
+    approximation of it: ``Strncasecmp(literal, str.data(), str.length())``
+    compares only as many characters as the *value* has, so the test is a
+    case-insensitive **prefix** match against those literals. ``t``, ``tr``
+    and ``TRUE`` all read as true; ``o`` reads as true rather than as a prefix
+    of ``off``, because the true list is tested first; and an empty value
+    compares zero characters, which matches, so it reads as true as well.
+    Mirroring that exactly is the difference between saying what the emulator
+    does and saying what a reasonable ini reader would do.
+    """
+    if value is None:
+        return None
+    for literal in _FROM_CHARS_TRUE:
+        if literal.startswith(value.casefold()):
+            return True
+    for literal in _FROM_CHARS_FALSE:
+        if literal.startswith(value.casefold()):
+            return False
+    return None
 
 
 def values(text: str) -> dict[tuple[str, str], str]:
