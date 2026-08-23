@@ -383,8 +383,9 @@ A card states its directory one of two ways, and exactly one. Most name a fixed 
 the emulator opens. PCSX2 names a **configuration key** instead (`textures.directory`: `[Folders] Textures`, with the
 compiled default and a citation), because that is where its directory really comes from, and a `switch` beside it
 (`[EmuCore/GS] LoadTextureReplacements`) makes `enabled` a live reading rather than `None`. The second shape needs a
-resolver registered beside it in `atlas/installations.py` and fails the load without one, the same way a save card does:
-reading a configuration is code, never a card DSL. PCSX2's answer also states the **load stage** rather than the root —
+resolver registered beside it in `atlas/installations.py`, and raises when the question reaches it without one, the same
+way a save card does — the card loads, and the answer is where the two shipping out of step becomes visible: reading a
+configuration is code, never a card DSL. PCSX2's answer also states the **load stage** rather than the root —
 replacements are read from `<Textures>/<serial>/replacements` — because an answer naming only the root would send a
 caller placing a pack one level above everything that reads it. Both readings are the _global_ ones: PCSX2 layers
 `inis/gamesettings/<serial>_<crc>.ini` over the whole configuration while that game runs, and every core key is read
@@ -586,13 +587,13 @@ A card states its probes one of three ways, and exactly one of them: `files` nam
 `keys.txt`), `config_files` names the **configuration keys whose values are the paths** — melonDS (1.1), whose seven
 BIOS, firmware and NAND keys point wherever the user pointed them — or `search` names a **directory to look in**, for
 the emulator that names no file at all (DuckStation, below). Either of the latter two needs a resolver registered beside
-it in `atlas/firmware.py` and fails the load loudly without one, the same way a save card does: which keys a launch
-probes at all is the emulator's own live decision, not something a card can spell. melonDS's `verifySetup`
-(EmuInstance.cpp:633-667) asks two switches — `Emu.ExternalBIOSEnable`, whose compiled default is **off** because the
-emulator carries a built-in replacement, and `Emu.ConsoleType`, where DSi mode requires its BIOS pair and NAND either
-way. With the switch off the answer is an empty requirement list plus `firmware-builtin-replacement` naming the switch;
-the two arrangements sit on opposite sides of it, RetroDECK switching it on and EmuDeck shipping `ExternalBIOSEnable=0`
-beside all seven configured paths.
+it in `atlas/firmware.py`, and raises loudly when the question reaches it without one, the same way a save card does —
+at query time, not at load: which keys a launch probes at all is the emulator's own live decision, not something a card
+can spell. melonDS's `verifySetup` (EmuInstance.cpp:633-667) asks two switches — `Emu.ExternalBIOSEnable`, whose
+compiled default is **off** because the emulator carries a built-in replacement, and `Emu.ConsoleType`, where DSi mode
+requires its BIOS pair and NAND either way. With the switch off the answer is an empty requirement list plus
+`firmware-builtin-replacement` naming the switch; the two arrangements sit on opposite sides of it, RetroDECK switching
+it on and EmuDeck shipping `ExternalBIOSEnable=0` beside all seven configured paths.
 
 PCSX2 (v2.6.3) is the second `config_files` card, and its expectation takes **two** settings rather than one:
 `[Folders] Bios` names the directory — the same `LoadPathFromSettings` shape the memory-card and texture directories use
