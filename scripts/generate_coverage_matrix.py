@@ -6,9 +6,18 @@ systems it serves, its audit verdict, whether per-game saves are a proven
 capability, and per arrangement (RetroDECK / EmuDeck / bare RetroArch) which
 version the knowledge was verified against.
 
-Facts come from ``atlas/data/core_audit.json`` (maintained, test-enforced); the
-row set comes from ``es_systems.xml`` so unaudited emulators appear
-automatically as the work list — nothing here is hand-maintained.
+Facts come from ``atlas/data/core_audit.json`` for the libretro half and from
+the packaged cards for the standalone one; the row set comes from
+``es_systems.xml`` so uncovered emulators appear automatically as the work
+list — nothing here is hand-maintained.
+
+The two halves are counted differently because they are different records.
+``core_audit.json`` is the libretro **save audit** and holds no standalone
+entry, so reading a standalone verdict out of it could only ever say
+"unaudited" — which is what it said for every row, including the emulators
+whose answers are live-verified on two arrangements (#228). The standalone
+half now shows one column per question, filled from the card file that answers
+it, so a gap is generated rather than surveyed by hand.
 
 Usage: ``python scripts/generate_coverage_matrix.py [path-to-es_systems.xml]``
 (default: the RetroDECK Flatpak deployment's bundled file). Stdlib only —
@@ -29,7 +38,8 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-AUDIT_PATH = REPO_ROOT / "atlas" / "data" / "core_audit.json"
+DATA_DIR = REPO_ROOT / "atlas" / "data"
+AUDIT_PATH = DATA_DIR / "core_audit.json"
 OUTPUT_PATH = REPO_ROOT / "docs" / "research" / "coverage-matrix.md"
 DEFAULT_ES_SYSTEMS = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/"
@@ -43,6 +53,21 @@ _RUNNER_RE = re.compile(r"%EMULATOR_([A-Z0-9_\-]+)%")
 ARRANGEMENTS = ("retrodeck", "emudeck", "bare")
 ARRANGEMENT_HEADERS = {"retrodeck": "RetroDECK", "emudeck": "EmuDeck", "bare": "RetroArch (bare)"}
 AUDIT_SCHEMA = 3
+
+# One column per question a standalone entry can be asked, and the card file
+# that answers it. ``systems`` is the path to the list a card states where it
+# answers only for some of them — a save card covers Dolphin's gc and wii and
+# not the triforce row beside them — and ``None`` where the card is about the
+# emulator rather than about a system. A file that does not exist yet answers
+# nothing and reads as a column of gaps, which is the honest state of
+# savestates (#225): the day the card file lands, the column fills itself.
+QUESTIONS: tuple[tuple[str, str, tuple[str, ...] | None], ...] = (
+    ("save", "standalone_saves.json", ("saves", "systems")),
+    ("savestate", "standalone_savestates.json", ("savestates", "systems")),
+    ("texture", "texture_packs.json", None),
+    ("mod", "mods.json", None),
+    ("firmware", "standalone_firmware.json", ("systems",)),
+)
 
 
 def core_short_name(command: str) -> str | None:
@@ -99,6 +124,53 @@ def load_audit_data(path: Path) -> tuple[int, dict[str, dict[str, object]]]:
             raise ValueError("core_audit: every core key must be a string and every entry an object")
         cores[key] = entry
     return AUDIT_SCHEMA, cores
+
+
+def load_cards(filename: str, systems_at: tuple[str, ...] | None) -> dict[str, set[str] | None]:
+    """``{row key: the systems that card answers for}`` for one question.
+
+    ``None`` as a value means the card answers for the emulator rather than
+    for a list of systems. A missing file is a question nothing answers yet,
+    not an error: the row set is the work list and an empty column is what an
+    unanswered question looks like.
+    """
+    path = DATA_DIR / filename
+    if not path.is_file():
+        return {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    emulators = raw.get("emulators")
+    if not isinstance(emulators, dict):
+        raise ValueError(f"{filename}: 'emulators' must be an object")
+    cards: dict[str, set[str] | None] = {}
+    for token, entry in emulators.items():
+        systems: set[str] | None = None
+        if systems_at is not None:
+            node: object = entry
+            for step in systems_at:
+                node = node.get(step) if isinstance(node, dict) else None
+            if node is not None:
+                if not isinstance(node, list):
+                    raise ValueError(f"{filename}: {token} states a non-list {'.'.join(systems_at)}")
+                systems = {str(s) for s in node}
+        cards[token.lower()] = systems
+    return cards
+
+
+def question_cell(cards: dict[str, set[str] | None], key: str, systems: set[str]) -> str:
+    """Whether a card answers this question here, and for how much of the row.
+
+    A card that names systems answers only those: Dolphin's save card covers
+    gc and wii and the row also serves triforce, so the cell says 2/3 rather
+    than claiming the row. That fraction is the part of the work list nothing
+    else records.
+    """
+    if key not in cards:
+        return "✖"
+    stated = cards[key]
+    if stated is None or not systems:
+        return "✔"
+    covered = systems & stated
+    return "✔" if covered == systems else f"✔ {len(covered)}/{len(systems)}"
 
 
 def cell(audit_entry: dict[str, object] | None, arrangement: str, kind: str) -> str:
@@ -194,14 +266,16 @@ def main() -> None:
     lines.append("# Coverage matrix — GENERATED, do not edit")
     lines.append("")
     lines.append("Regenerate with `python scripts/generate_coverage_matrix.py` (then `deno fmt`). Facts come from")
-    lines.append("`atlas/data/core_audit.json`; the row set comes from RetroDECK's bundled `es_systems.xml`, so")
-    lines.append("unaudited emulators appear automatically as the work list. Cells: ✔ verified (with the arrangement")
+    lines.append("`atlas/data/core_audit.json` for the libretro half and from the packaged cards for the standalone")
+    lines.append("one; the row set comes from RetroDECK's bundled `es_systems.xml`, so an emulator nothing covers yet")
+    lines.append("appears automatically as the work list. Cells: ✔ verified (with the arrangement")
     lines.append("version the knowledge was proven against), ✖ present but not verified, ? availability unknown there")
     lines.append("(EmuDeck ships its own emulator set — unresearched; bare-RetroArch cores are user-installed), — not")
     lines.append("applicable. Per-game capable: yes = at least one mode is proven by source, binary, or observation; no =")
     lines.append("absence is proven; ? = not established. This is capability, not the active mode on one machine. The row")
     lines.append("set is RetroDECK's shipped matrix. Verdicts and evidence levels are defined in")
-    lines.append("`docs/research/core-audit.md`.")
+    lines.append("`docs/research/core-audit.md`. Those columns describe the libretro half; the")
+    lines.append("standalone half is one column per question, filled from the packaged cards.")
     lines.append("")
     lines.append(
         f"Source identity: `es_systems.xml` sha256 `{es_sha}` · `core_audit.json` "
@@ -217,32 +291,54 @@ def main() -> None:
             return None
         return entry
 
+    cards = {name: load_cards(filename, at) for name, filename, at in QUESTIONS}
+    answered = {
+        name: sum(1 for key in standalone if key in cards[name]) for name, _, _ in QUESTIONS
+    }
     audited_lib = sum(1 for k in libretro if entry_for(k, "libretro"))
-    audited_sa = sum(1 for k in standalone if entry_for(k, "standalone"))
     lines.append(
-        f"**Status:** libretro {audited_lib}/{len(libretro)} audited · standalone {audited_sa}/{len(standalone)} audited"
+        f"**Status:** libretro {audited_lib}/{len(libretro)} audited · standalone "
+        + " · ".join(f"{name} {answered[name]}/{len(standalone)}" for name, _, _ in QUESTIONS)
     )
     lines.append("")
 
-    for title, rows, kind in (
-        ("libretro cores", libretro, "libretro"),
-        ("standalone emulators", standalone, "standalone"),
-    ):
-        lines.append(f"## {title}")
-        lines.append("")
+    lines.append("## libretro cores")
+    lines.append("")
+    lines.append(
+        "| emulator | systems | verdict | per-game capable | RetroDECK | EmuDeck | RetroArch (bare) | note |"
+    )
+    lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
+    for key in sorted(libretro, key=lambda k: (entry_for(k, "libretro") is None, k)):
+        entry = entry_for(key, "libretro")
+        verdict = entry.get("verdict", "?") if entry else "unaudited"
+        cells = " | ".join(cell(entry, a, "libretro") for a in ARRANGEMENTS)
         lines.append(
-            "| emulator | systems | verdict | per-game capable | RetroDECK | EmuDeck | RetroArch (bare) | note |"
+            f"| `{key}` | {systems_summary(libretro[key])} | {verdict} | {per_game_cell(entry)} | "
+            f"{cells} | {note_cell(entry)} |"
         )
-        lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
-        for key in sorted(rows, key=lambda k: (entry_for(k, kind) is None, k)):
-            entry = entry_for(key, kind)
-            verdict = entry.get("verdict", "?") if entry else "unaudited"
-            cells = " | ".join(cell(entry, a, kind) for a in ARRANGEMENTS)
-            lines.append(
-                f"| `{key}` | {systems_summary(rows[key])} | {verdict} | {per_game_cell(entry)} | "
-                f"{cells} | {note_cell(entry)} |"
-            )
-        lines.append("")
+    lines.append("")
+
+    lines.append("## standalone emulators")
+    lines.append("")
+    lines.append(
+        "One column per question. ✔ a packaged card answers it; ✔ n/m the card answers for n of "
+        "the m systems this row serves; ✖ nothing answers it yet. There is no verdict column "
+        "here: `core_audit.json` is the libretro save audit and holds no standalone entry, so "
+        "the answer to \"is this covered\" is the cards themselves."
+    )
+    lines.append("")
+    header = " | ".join(name for name, _, _ in QUESTIONS)
+    lines.append(f"| emulator | systems | {header} |")
+    lines.append("| --- | --- | " + " | ".join("---" for _ in QUESTIONS) + " |")
+    covered = {
+        key: sum(1 for name, _, _ in QUESTIONS if key in cards[name]) for key in standalone
+    }
+    for key in sorted(standalone, key=lambda k: (covered[k] == 0, k)):
+        answers = " | ".join(
+            question_cell(cards[name], key, standalone[key]) for name, _, _ in QUESTIONS
+        )
+        lines.append(f"| `{key}` | {systems_summary(standalone[key])} | {answers} |")
+    lines.append("")
 
     OUTPUT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"written: {OUTPUT_PATH.relative_to(REPO_ROOT)} ({len(libretro)} libretro, {len(standalone)} standalone)")
