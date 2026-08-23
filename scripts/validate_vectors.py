@@ -277,6 +277,7 @@ KNOWN_CAVEAT_CODES = {
     "system-directory-cleared",
     "per-game-overrides-present",
     "per-game-override",
+    "per-game-layer-unread",
     "unverified-version",
     "invalid-save-directory",
     "invalid-screenshot-directory",

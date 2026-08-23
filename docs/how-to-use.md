@@ -661,6 +661,8 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes            |
 | `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"         |
 | `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                              |
+| `per-game-layer-unread`                     | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does" |
+| `cfg-value-rejected`                        | the file sets a value the emulator cannot read, so the default it had keeps governing               |
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified           |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)       |
 | `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope              |

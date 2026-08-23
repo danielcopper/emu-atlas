@@ -114,6 +114,7 @@ from atlas.placement import (
 )
 from atlas.retroarch_cfg import cfg_uint
 
+
 class SandboxTranslation(Protocol):
     """How an emulator's own absolute config value reads from this host.
 

@@ -206,6 +206,8 @@ def test_every_citation_names_a_component_or_an_emulator():
         f"{sorted(UNSCOPED_CITATIONS ^ UNRESOLVED_CITATIONS)} — a citation nothing can resolve "
         "is one nothing re-reads, so name the component or record it here with the others"
     )
+
+
 WIRING = json.loads((DATA / "content_tree_wiring.json").read_text(encoding="utf-8"))
 WIRING_ROWS = [
     # The first line of the citation, and only it: this pass looks for the

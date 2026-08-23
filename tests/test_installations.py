@@ -2251,6 +2251,75 @@ class TestMoreStandaloneSaves:
         assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in [
             c.code for c in answer.caveats
         ]
+        assert atlas.CAVEAT_PER_GAME_LAYER_UNREAD not in [c.code for c in answer.caveats]
+
+    def test_pcsx2_a_per_game_layer_that_cannot_be_read_is_not_an_absent_one(self):
+        # Silence here means "this answer holds for every game", so answering
+        # an unreadable directory the way an empty one is answered claims
+        # exactly what the failed listing never established.
+        gamesettings = (
+            f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        )
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[EmuCore/GS]\nLoadTextureReplacements = false\n"},
+            dirs=["/mnt/sd/retrodeck/saves", gamesettings],
+            unlistable=[gamesettings],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        stated = [c for c in answer.caveats if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD]
+        assert stated
+        assert stated[0].data["dir"] == gamesettings
+        assert stated[0].data["key"] == "LoadTextureReplacements"
+        # Not the sibling that asserts they exist, and not silence.
+        assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in [
+            c.code for c in answer.caveats
+        ]
+
+    @pytest.mark.parametrize("value", ["maybe", "truthy", "2", "sure"])
+    def test_pcsx2_a_switch_value_the_emulator_rejects_is_stated(self, value):
+        # GetBoolValue leaves the caller's variable untouched, so the compiled
+        # default keeps governing — the setting does not become false, and the
+        # save route says so in a reading this answer has no room for.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: f"[EmuCore/GS]\nLoadTextureReplacements = {value}\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        stated = [c for c in answer.caveats if c.code == atlas.CAVEAT_CFG_VALUE_REJECTED]
+        assert stated
+        assert stated[0].data["value"] == value
+        assert stated[0].data["key"] == "EmuCore/GS/LoadTextureReplacements"
+        # The compiled default is false, and that is what governs — the caveat
+        # is what keeps it from reading as a key nobody wrote.
+        assert answer.enabled is False
+
+    @pytest.mark.parametrize("value", ["1", "true", "off", "disabled"])
+    def test_pcsx2_a_switch_value_the_emulator_reads_is_not_stated_as_rejected(self, value):
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: f"[EmuCore/GS]\nLoadTextureReplacements = {value}\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert atlas.CAVEAT_CFG_VALUE_REJECTED not in [c.code for c in answer.caveats]
+
+    def test_pcsx2_an_unset_switch_is_not_stated_as_rejected(self):
+        # An absent key is not a rejected value: nothing was written there.
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[Folders]\nTextures = /mnt/sd/tex\n"},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert atlas.CAVEAT_CFG_VALUE_REJECTED not in [c.code for c in answer.caveats]
 
     @pytest.mark.parametrize(
         "stem,expected",

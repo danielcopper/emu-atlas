@@ -143,6 +143,7 @@ from atlas.textures import (
     XDG_DATA,
     StandaloneTextureCard,
     TextureCard,
+    TextureSetting,
     lookup_standalone_texture_card,
     lookup_texture_card,
 )
@@ -174,6 +175,7 @@ from atlas.placement import (
     CAVEAT_INVALID_SAVE_DIRECTORY,
     CAVEAT_INVALID_SCREENSHOT_DIRECTORY,
     CAVEAT_UNVERIFIED_VERSION,
+    CAVEAT_PER_GAME_LAYER_UNREAD,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
     CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
@@ -4982,6 +4984,7 @@ def _pcsx2_texture_placement(
     # The card's own default is atlas's word, not an ini value, so it keeps
     # its plain comparison; the live value goes through the emulator's reading.
     enabled = parsed_switch if parsed_switch is not None else switch.default == "true"
+    rejected = _pcsx2_rejected_switch(card.token, switch, raw_switch, parsed_switch, enabled)
     per_game = _pcsx2_game_settings_caveat(machine, values, data_root, card.token, switch.key)
     physical_dir, link_caveats = _link_view(machine, root)
     return TexturePlacement(
@@ -5004,6 +5007,7 @@ def _pcsx2_texture_placement(
         caveats=(
             *extra_caveats,
             *link_caveats,
+            *rejected,
             *per_game,
             Caveat(
                 CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
@@ -5033,6 +5037,38 @@ def _pcsx2_texture_placement(
     )
 
 
+def _pcsx2_rejected_switch(
+    token: str,
+    switch: TextureSetting,
+    raw: str | None,
+    parsed: bool | None,
+    governing: bool,
+) -> tuple[Caveat, ...]:
+    """A switch value the emulator cannot read as a boolean, stated rather than swallowed.
+
+    ``GetBoolValue`` returns false without writing the caller's variable when
+    ``FromChars<bool>`` yields nothing, so the compiled default keeps governing
+    — the setting does *not* become false. The save route says this in an
+    ``OptionReading`` provenance; a texture answer carries no readings, so the
+    same fact needs a caveat or it is not said at all, and a user who wrote
+    something into that key sees an answer that looks like the key is unset.
+    """
+    if raw is None or parsed is not None:
+        return ()
+    return (
+        Caveat(
+            CAVEAT_CFG_VALUE_REJECTED,
+            f'{switch.section}/{switch.key} = "{raw}" is not a value this emulator reads as a '
+            "boolean — FromChars<bool> takes true/yes/on/1/enabled and false/no/off/0/disabled "
+            "(StringUtil.h:178-197 at v2.6.3), and GetBoolValue leaves the caller's variable "
+            "untouched when it yields nothing (INISettingsInterface.cpp:198-210), so the "
+            f"compiled default {str(governing).lower()} governs; the setting does not become "
+            "false because the value was unreadable",
+            {"core": token, "key": f"{switch.section}/{switch.key}", "value": raw},
+        ),
+    )
+
+
 def _pcsx2_game_settings_caveat(
     machine: Machine,
     values: Mapping[tuple[str, str], str],
@@ -5056,6 +5092,11 @@ def _pcsx2_game_settings_caveat(
     and a caller told "replacement is off" deserves to know that some games on
     this machine carry their own answer. Silent where the directory holds
     none, which is the shipped state.
+
+    A listing that *failed* is not that silence. The absence of a caveat here
+    is what tells a caller this answer holds for every game, so answering an
+    unreadable directory the way an empty one is answered claims exactly what
+    was not established — which is why the failure has a code of its own.
     """
     raw = values.get(("Folders", "GameSettings"), "")
     if not raw:
@@ -5065,6 +5106,18 @@ def _pcsx2_game_settings_caveat(
     else:
         directory = raw
     listing = machine.glob(os.path.join(directory, "*.ini"))
+    if listing.status != GLOB_COMPLETE:
+        return (
+            Caveat(
+                CAVEAT_PER_GAME_LAYER_UNREAD,
+                f"{directory} could not be listed, so whether any game on this machine carries "
+                "a per-game settings file is unknown — PCSX2 layers such a file over the whole "
+                f"configuration while that game runs, so {switch_key} and the directory below "
+                "it may be answered differently for a game this answer cannot name "
+                "(UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
+                {"core": token, "dir": directory, "key": switch_key},
+            ),
+        )
     if not listing.matches:
         return ()
     return (

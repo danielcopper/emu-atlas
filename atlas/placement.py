@@ -293,6 +293,17 @@ CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
 CAVEAT_SYSTEM_DIRECTORY_CLEARED = "system-directory-cleared"
 CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
 CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
+# The third state those two leave out: an emulator that layers per-game files
+# over its whole configuration (PCSX2 installs
+# ``inis/gamesettings/<serial>_<crc>.ini`` while a game runs) and a directory
+# holding them that could not be read. Neither sibling can say it — "present"
+# asserts they exist and their absence is what tells a caller the answer holds
+# for every game, so silence here claims more than was established. A code of
+# its own rather than one of theirs with the real condition hidden in ``data``:
+# the two facts a client acts on differently are "some games override this" and
+# "whether any does was not checked". ``data`` carries the directory and the
+# key the layer could have changed.
+CAVEAT_PER_GAME_LAYER_UNREAD = "per-game-layer-unread"
 CAVEAT_UNVERIFIED_VERSION = "unverified-version"
 # The frontend writes this core no save file — established from its source, not
 # guessed — and what the core writes on its own is a different question nobody
