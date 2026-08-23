@@ -128,8 +128,9 @@ Where this knowledge plugs in — kinds of consumers, not commitments:
 ## Status
 
 The resolver core is built and verified live against real installations — RetroDECK 0.10.9b and an EmuDeck at a pinned
-backend revision — and a weekly canary deploys the newest RetroDECK from Flathub and runs the full suite against it, so
-drift announces itself instead of waiting to be found. What exists now:
+backend revision — and a weekly canary deploys the newest RetroDECK from Flathub and runs the full suite against it,
+re-reading the evidence off that deploy: the shipped binaries' own literals, and every component script the packaged
+data cites, at the line it cites. Drift announces itself instead of waiting to be found. What exists now:
 
 - `atlas.detect(home, machine=...)` finds RetroDECK, EmuDeck, the bare `org.libretro.RetroArch` Flatpak, and a native
   install — handles implementing one `Installation` protocol, with structured health (a list of finding caveats with
