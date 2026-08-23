@@ -184,9 +184,13 @@ class TestTheCardsAndTheTableAgree:
         # by a card: it is the file the emulator migrates from, not one a card
         # points a caller at.
         named.add(("MELONDS", "melonDS.ini"))
+        # Every token the *table* carries, not every token a card names: taking
+        # the token set from the cards made an emulator with a table row and no
+        # card invisible here — its addresses could never be the ones nobody
+        # asks for, because it was never looked at.
         stated = {
             (token, name)
-            for token in {t for t, _ in named} | {"MELONDS"}
+            for token in load_emulator_settings()
             for name in settings_files(token)
         }
         assert stated - named == set()

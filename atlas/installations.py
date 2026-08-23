@@ -13827,47 +13827,22 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     ) -> SavefilePlacement | Unresolved:
         """A standalone entry's save answer, resolved the way the launch resolves.
 
-        EmuDeck identifies a standalone emulator two ways — the ES-DE
-        ``%EMULATOR_…%`` token, or a ``tools/launchers/<name>.sh`` script —
-        and either way the binary is picked at run time (ES-DE's find rules
-        for the token; the script's own probe, where ``-w`` forces the
-        Windows build under Proton and otherwise an AppImage under
-        ``~/Applications`` outranks an installed flatpak outranks the Proton
-        fallback, cemu.sh:79-93 — except the scripts that pin their binary
-        outright, melonds.sh:4). This route performs the same probe, because
-        which binary runs decides which configuration tree speaks. Two
-        variants are established: the AppImage reads the host's own XDG tree
-        (emuDeckCemu.sh:13, emuDeckAzahar.sh:7), and a flatpak whose app id
-        the card names reads its own homes below ``~/.var/app``. The rest
-        refuse with the variant named rather than answering from a tree
-        their binary never reads.
+        Which binary a launch runs decides which configuration tree speaks,
+        and that probe is :meth:`_standalone_launch_gate` — one gate for all
+        four questions, so the save answer and the texture, mod and firmware
+        answers about the same entry cannot come to different conclusions or
+        word the same refusal two ways. What is left here is the part that is
+        the save route's own: the card has to cover this entry's system.
         """
         launch = self._standalone_launch_identity(spec.command)
         card = lookup_standalone_save_card(launch.token)
         if launch.probe_name is None or card is None or spec.system not in card.systems:
             return _standalone_savefile_unresolved(spec)
-        if "-w" in launch.args:
-            return _emudeck_variant_unresolved(
-                spec,
-                card.token,
-                _EMUDECK_VARIANT_PROTON,
-                f"{launch.probe_name}.sh -w runs the Windows build under Proton, whose "
-                "configuration lives inside the Proton prefix and is not read (a later slice)",
-            )
-        variant = self._launch_variant(launch)
-        if variant == _EMUDECK_VARIANT_UNKNOWN:
-            return _emudeck_variant_unresolved(
-                spec,
-                card.token,
-                variant,
-                "the launch's own binary probe could not be performed — the directories it "
-                "searches were not readable, so which binary would run is not established",
-            )
-        homes = self._standalone_homes_for(variant, card)
-        if homes is None:
-            return _emudeck_variant_unresolved(
-                spec, card.token, variant, self._variant_reason(launch, variant)
-            )
+        gate = self._standalone_launch_gate(spec)
+        if gate.homes is None:
+            assert gate.variant is not None  # a card was found, so the launch identified one
+            return _emudeck_variant_unresolved(spec, card.token, gate.variant, gate.why or "")
+        homes = gate.homes
         _, marker_issues = self._read_marker()
         extra = (
             self._entry_caveats_for(spec, content_path) if content_path is not None else ()

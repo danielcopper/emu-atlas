@@ -96,6 +96,24 @@ def _standalone_table(text: str) -> dict[str, list[str]]:
     return rows
 
 
+def _systems_of(cell: str) -> tuple[set[str], int]:
+    """A systems cell as ``(the names it lists, how many the row really serves)``.
+
+    ``systems_summary`` shortens a long list to four names and a count, so the
+    two are not the same number and a reader that takes the names for the whole
+    set is off by fifty.
+    """
+    names: set[str] = set()
+    total: int | None = None
+    for part in cell.split(","):
+        word = part.strip()
+        if word.startswith("…"):
+            total = int(word.removeprefix("…").strip().strip("()"))
+            continue
+        names.add(word)
+    return names, total if total is not None else len(names)
+
+
 def test_the_standalone_half_counts_every_question(tmp_path, monkeypatch):
     es_systems = tmp_path / "es_systems.xml"
     es_systems.write_text(
@@ -167,15 +185,43 @@ class TestTheCommittedMatrixIsRegenerated:
             name: matrix.load_cards(filename, at) for name, filename, at in matrix.QUESTIONS
         }
         for key, cells in rows.items():
-            systems = {s.strip() for s in cells[0].split(",") if not s.strip().startswith("…")}
-            fresh = [
-                matrix.question_cell(cards[name], key, systems) for name, _, _ in matrix.QUESTIONS
-            ]
-            assert cells[1:] == fresh, (
-                f"the committed matrix shows {cells[1:]} for {key!r} and the cards answer "
-                f"{fresh} — regenerate with `python scripts/generate_coverage_matrix.py` "
-                "(then `deno fmt`)"
-            )
+            named, total = _systems_of(cells[0])
+            if len(named) == total:
+                fresh = [
+                    matrix.question_cell(cards[name], key, named)
+                    for name, _, _ in matrix.QUESTIONS
+                ]
+                assert cells[1:] == fresh, (
+                    f"the committed matrix shows {cells[1:]} for {key!r} and the cards answer "
+                    f"{fresh} — regenerate with `python scripts/generate_coverage_matrix.py` "
+                    "(then `deno fmt`)"
+                )
+                continue
+            # A truncated systems cell does not carry the row's whole set, so
+            # recomputing the cell from it would compare the generator's `1/54`
+            # against this test's `1/4` and call a correctly regenerated matrix
+            # stale. What the cell does carry is checked instead.
+            for (name, _, _), shown in zip(matrix.QUESTIONS, cells[1:]):
+                answered = key in cards[name]
+                assert answered == shown.startswith("✔"), (
+                    f"the committed matrix shows {shown!r} for {key!r}'s {name} question and "
+                    f"a card {'exists' if answered else 'does not exist'} — regenerate"
+                )
+                if "/" in shown:
+                    assert shown.endswith(f"/{total}"), (
+                        f"the committed matrix shows {shown!r} for {key!r}'s {name} question "
+                        f"and the row serves {total} systems — regenerate"
+                    )
+
+    def test_a_truncated_systems_cell_still_states_the_whole_count(self):
+        # What the check above leans on: the row's real size survives the
+        # shortening, so a fraction's denominator can be read back off the
+        # matrix even where the names cannot.
+        assert _systems_of("adam, amstradcpc, apple2, apple2gs, … (54)") == (
+            {"adam", "amstradcpc", "apple2", "apple2gs"},
+            54,
+        )
+        assert _systems_of("gc, triforce, wii") == ({"gc", "triforce", "wii"}, 3)
 
     def test_the_status_line_counts_what_the_cards_answer(self):
         text = matrix.OUTPUT_PATH.read_text(encoding="utf-8")
