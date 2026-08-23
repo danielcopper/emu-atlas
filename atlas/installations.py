@@ -5078,7 +5078,7 @@ def _pcsx2_game_settings_caveat(
 ) -> tuple[Caveat, ...]:
     """The per-game ini layer, where this machine has one — PCSX2's second settings source.
 
-    A running game installs ``inis/gamesettings/<serial>_<crc>.ini`` as a
+    A running game installs ``<DataRoot>/gamesettings/<serial>_<crc>.ini`` as a
     *layer* under the settings interface every core setting is read through
     (``UpdateGameSettingsLayer``, VMManager.cpp:932-969 at v2.6.3; the path is
     ``GetGameSettingsPath``, :774-781), so any key of any section — the

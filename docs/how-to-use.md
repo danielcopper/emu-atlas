@@ -662,7 +662,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"         |
 | `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                              |
 | `per-game-layer-unread`                     | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does" |
-| `cfg-value-rejected`                        | the file sets a value the emulator cannot read, so the default it had keeps governing               |
+| `cfg-value-rejected`                        | the file sets a value the emulator cannot read, so the value it had keeps governing                 |
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified           |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)       |
 | `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope              |
@@ -935,19 +935,19 @@ with `[Folders] Textures`, and reads `[EmuCore/GS] LoadTextureReplacements` from
 reading there rather than `None`. **PCSX2's** `dir` is the load stage, `<Textures>/<serial>/replacements`, with
 `save_id` in `needs`: replacements are read one level below the per-game directory, and naming only the root would send
 a caller placing a pack where nothing reads it. That reading is the _global_ one, and PCSX2 has a second settings source
-— a running game installs `inis/gamesettings/<serial>_<crc>.ini` as a layer over the whole configuration, so any key can
-answer differently for one game. Which game runs is not a fact atlas holds, so the answer stays the global reading and
-carries `per-game-overrides-present` where such files exist here, with their count and directory. DuckStation states the
-directory key for a different reason: the root it resolves against is the config home or the data home depending on how
-the launch was started, so a fixed base would answer correctly on one arrangement and wrongly on the other — and its
-texture answer would disagree with its own cheat answer about where the emulator keeps things. It reads no per-serial
-`replacements` tree of its own. Where nobody has read an emulator's configuration the entry still refuses with
-`standalone-unsupported`, so the split runs on evidence, not on the kind of entry. **On EmuDeck the same cards answer**,
-below the bases the launch's own binary reads: an AppImage under `~/Applications` (or the executable EmuDeck unpacks
-from one) reads the host's XDG tree, and a flatpak whose app id the save card names reads the app's own homes. A launch
-whose binary establishes neither — the Windows build under Proton, a flatpak no card names an id for — refuses with
-`standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this emulator is
-not covered".
+— a running game installs `<DataRoot>/gamesettings/<serial>_<crc>.ini` as a layer over the whole configuration, so any
+key can answer differently for one game. Which game runs is not a fact atlas holds, so the answer stays the global
+reading and carries `per-game-overrides-present` where such files exist here, with their count and directory.
+DuckStation states the directory key for a different reason: the root it resolves against is the config home or the data
+home depending on how the launch was started, so a fixed base would answer correctly on one arrangement and wrongly on
+the other — and its texture answer would disagree with its own cheat answer about where the emulator keeps things. It
+reads no per-serial `replacements` tree of its own. Where nobody has read an emulator's configuration the entry still
+refuses with `standalone-unsupported`, so the split runs on evidence, not on the kind of entry. **On EmuDeck the same
+cards answer**, below the bases the launch's own binary reads: an AppImage under `~/Applications` (or the executable
+EmuDeck unpacks from one) reads the host's XDG tree, and a flatpak whose app id the save card names reads the app's own
+homes. A launch whose binary establishes neither — the Windows build under Proton, a flatpak no card names an id for —
+refuses with `standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this
+emulator is not covered".
 
 Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction:
 

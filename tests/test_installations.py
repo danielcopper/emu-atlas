@@ -2214,7 +2214,7 @@ class TestMoreStandaloneSaves:
         assert answer.enabled is True
 
     def test_pcsx2_a_per_game_settings_file_is_stated_beside_the_switch(self):
-        # PCSX2 installs inis/gamesettings/<serial>_<crc>.ini as a layer over
+        # PCSX2 installs <DataRoot>/gamesettings/<serial>_<crc>.ini as a layer over
         # the global configuration while that game runs, and every core key is
         # read through it — so "replacement is off" is the answer for games
         # that have no such file, and the answer has to say so.

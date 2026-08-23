@@ -1217,7 +1217,7 @@
     },
     {
       "name": "pcsx2-a-per-game-settings-file-layers-over-the-global-switch",
-      "rationale": "PCSX2 reads every core setting through a layered settings interface, and a running game installs inis/gamesettings/<serial>_<crc>.ini as the top layer of it (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3; the path is GetGameSettingsPath, :774-781, and the directory is [Folders] GameSettings defaulting to gamesettings below the DataRoot, Pcsx2Config.cpp:2290). So LoadTextureReplacements has two possible answers on a machine that carries such a file, and which one holds depends on the game — a fact atlas does not have. The answer therefore stays the global reading and says that some games here carry their own, rather than presenting one reading as the whole truth.",
+      "rationale": "PCSX2 reads every core setting through a layered settings interface, and a running game installs <DataRoot>/gamesettings/<serial>_<crc>.ini as the top layer of it (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3; the path is GetGameSettingsPath, :774-781, and the directory is [Folders] GameSettings defaulting to gamesettings below the DataRoot, Pcsx2Config.cpp:2290). So LoadTextureReplacements has two possible answers on a machine that carries such a file, and which one holds depends on the game — a fact atlas does not have. The answer therefore stays the global reading and says that some games here carry their own, rather than presenting one reading as the whole truth.",
       "input": {
         "home": "/home/deck",
         "files": {
