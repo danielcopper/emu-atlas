@@ -2603,6 +2603,79 @@ class TestTheUserAPerUserTreeWouldOpen:
             "/mnt/sd/vita/ux0/user/01/savedata",
         ]
 
+    def test_vita3k_headline_follows_the_recorded_users_tree(self):
+        # A frontend launch names an app on the command line, and init_home
+        # then reopens exactly the recorded user — so where its directory is
+        # among those found, the headline is its tree, not the alphabetically
+        # first one. No user-auto-connect required: the follow rides on the
+        # launch, which is how both frontends launch.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/01/savedata"
+        assert p.physical_dir is None
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the configured user's tree is the one named"
+        assert caveat.data["configured_user"] == "01"
+        # The groups stay every tree found, in order — the headline moved, the
+        # survey did not.
+        assert [g.dir for g in p.file_set.groups] == [
+            "/mnt/sd/vita/ux0/user/00/savedata",
+            "/mnt/sd/vita/ux0/user/01/savedata",
+        ]
+        # The names caveat talks about the headline tree.
+        names = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED]
+        assert names[0].data["dir"] == "/mnt/sd/vita/ux0/user/01/savedata"
+
+    def test_vita3k_a_recorded_user_without_a_tree_keeps_the_first_found(self):
+        # The recorded id names no directory here, so a launch has nothing to
+        # reopen and the player picks: the launch's user is genuinely
+        # unknowable, the headline stays the first tree found, and the caveat
+        # says why in data a client can branch on.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 02\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the configured user has no tree here"
+        assert caveat.data["configured_user"] == "02"
+        assert caveat.data["users"] == "00,01"
+        assert "no directory of that name" in caveat.message
+
+    def test_vita3k_a_recorded_user_over_an_empty_tree_stays_the_default(self):
+        # An empty tree answers as an empty tree — the compiled default stands
+        # in, never as a directory found — and the recorded user is simply one
+        # more tree that is not there, which the emptiness sentence now says.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"},
+            dirs=["/mnt/sd/vita/ux0/user"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "no user directory was found"
+        assert caveat.data["configured_user"] == "01"
+        assert "the recorded user 01 included" in caveat.message
+
+    def test_vita3k_an_unlistable_tree_does_not_follow_the_recorded_user(self):
+        # Whether the recorded user's tree exists is itself not established
+        # when the tree could not be listed — the headline makes no new claim.
+        p = self._unlistable_tree(
+            "psvita", {VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"}
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "which users exist here was not established"
+        assert caveat.data["configured_user"] == "01"
+
     def test_vita3k_without_a_user_id_preselects_nobody(self):
         p = self._answer(
             "psvita",

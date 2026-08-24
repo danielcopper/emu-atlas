@@ -7548,12 +7548,20 @@ class _PerUserSaves:
     could be listed, never as a claim that it is the one running.
 
     ``user_reason`` is the machine-readable half of ``user_sentence``: *why*
-    the running user is not settled here. The two emulators do not share it,
-    because they do not share the fact — RPCS3 writes the selection down
+    the running user is or is not settled here. The two emulators do not share
+    it, because they do not share the fact — RPCS3 writes the selection down
     nowhere, while Vita3K's configuration records a user id whose effect
     depends on how the launch was made. ``configured_user`` carries that
     recorded id where one exists, so a client reads the emulator's own
     preselection instead of only the directory listing.
+
+    ``headline_user`` names the user whose tree the answer's ``dir`` points
+    at, where the caller established one: Vita3K sets it to the recorded user
+    exactly when the listing found that user's directory, because a frontend
+    launch reopens exactly that user then — and the caller resolves it
+    together with the sentence that explains it, so the two cannot drift.
+    RPCS3 never sets it: no file records its user, so its headline stays the
+    first tree found.
     """
 
     user_root: str
@@ -7572,6 +7580,7 @@ class _PerUserSaves:
     reading_file: str | None
     provenance: str
     configured_user: str | None = None
+    headline_user: str | None = None
 
 
 def _per_user_state(
@@ -7615,27 +7624,17 @@ def _per_user_state(
     return sentence, data
 
 
-def _per_user_savedata_placement(
-    machine: Machine,
-    *,
-    card: StandaloneSaveCard,
-    shape: _PerUserSaves,
-    extra_caveats: tuple[Caveat, ...],
-    extra_groups: tuple[FileGroup, ...] = (),
-    trailing_caveats: tuple[Caveat, ...] = (),
-) -> SavefilePlacement:
-    """One group per user account, each a per-game-directory tree.
+def _per_user_listing(machine: Machine, user_root: str) -> tuple[GlobResult, tuple[str, ...]]:
+    """The user directories below ``user_root``, and the listing that found them.
 
-    ``extra_caveats`` lead and ``trailing_caveats`` follow the two this shape
-    always states, which is the order each emulator's answer already had.
-    ``extra_groups`` are places beside the per-user trees that belong to the
-    same save — RPCS3's virtual memory cards — and they follow the user groups
-    so the headline stays the first user's tree.
+    Hoisted out of the placement so an emulator whose words depend on what the
+    listing found — Vita3K's recorded user — resolves them before building its
+    shape, on the same observation the placement then states. A user is a
+    directory: anything else the glob hands back — a stray file beside the
+    user homes, a dead link — would otherwise become a group naming
+    ``<that file>/savedata``, a path nothing writes to.
     """
-    listing = machine.glob(os.path.join(shape.user_root, "*"))
-    # A user is a directory. Anything else the glob hands back — a stray file
-    # beside the user homes, a dead link — would otherwise become a group
-    # naming `<that file>/savedata`, a path nothing writes to.
+    listing = machine.glob(os.path.join(user_root, "*"))
     users = tuple(
         sorted(
             os.path.basename(path)
@@ -7643,6 +7642,32 @@ def _per_user_savedata_placement(
             if machine.path_kind(path) == KIND_DIRECTORY
         )
     )
+    return listing, users
+
+
+def _per_user_savedata_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    shape: _PerUserSaves,
+    listing: GlobResult,
+    users: tuple[str, ...],
+    extra_caveats: tuple[Caveat, ...],
+    extra_groups: tuple[FileGroup, ...] = (),
+    trailing_caveats: tuple[Caveat, ...] = (),
+) -> SavefilePlacement:
+    """One group per user account, each a per-game-directory tree.
+
+    ``listing`` and ``users`` come from :func:`_per_user_listing` on
+    ``shape.user_root`` — passed in rather than taken here so the caller and
+    this assembly state the same observation.
+
+    ``extra_caveats`` lead and ``trailing_caveats`` follow the two this shape
+    always states, which is the order each emulator's answer already had.
+    ``extra_groups`` are places beside the per-user trees that belong to the
+    same save — RPCS3's virtual memory cards — and they follow the user groups
+    so the headline never lands on them.
+    """
     groups = tuple(
         FileGroup(
             dir=os.path.join(shape.user_root, user, "savedata"),
@@ -7655,7 +7680,12 @@ def _per_user_savedata_placement(
         # is what the caveat below has to say in so many words.
         for user in (users or (shape.first_user,))
     ) + extra_groups
-    directory = groups[0].dir
+    if shape.headline_user is not None:
+        # The caller resolved this user against the same listing the groups
+        # state, so the join below names one of the groups' own trees.
+        directory = os.path.join(shape.user_root, shape.headline_user, "savedata")
+    else:
+        directory = groups[0].dir
     caveats: list[Caveat] = [
         *extra_caveats,
         Caveat(
@@ -7797,11 +7827,15 @@ def _rpcs3_savefile_placement(
         )
     hdd0 = host.path
     vmc = os.path.join(hdd0, _RPCS3_VMC_SUBDIR)
+    user_root = os.path.join(hdd0, "home")
+    listing, users = _per_user_listing(machine, user_root)
     return _per_user_savedata_placement(
         machine,
         card=card,
+        listing=listing,
+        users=users,
         shape=_PerUserSaves(
-            user_root=os.path.join(hdd0, "home"),
+            user_root=user_root,
             first_user=_RPCS3_FIRST_USER,
             names_citation=(
                 "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary "
@@ -7814,7 +7848,7 @@ def _rpcs3_savefile_placement(
                 "here is stated"
             ),
             no_user_sentence=(
-                f"no user home exists below {os.path.join(hdd0, 'home')} — nothing has saved "
+                f"no user home exists below {user_root} — nothing has saved "
                 f"here yet. The tree named is the one the emulator starts with, user "
                 f"{_RPCS3_FIRST_USER} (Emulator::m_usr, System.h:164), which it would create "
                 "on the first save; it is not a home found on this machine"
@@ -7885,40 +7919,53 @@ _VITA3K_FIRST_USER = "00"
 
 @dataclass(frozen=True, slots=True)
 class _Vita3kUser:
-    """What config.yml records about which user a launch would open."""
+    """What config.yml records about which user a launch would open.
+
+    ``headline`` is the recorded user where the listing found its directory —
+    the one user a frontend launch reopens, and so the tree the answer names —
+    and ``None`` everywhere the launch's user is not settled by what was read.
+    """
 
     configured: str | None
+    headline: str | None
     readings: tuple[OptionReading, ...]
     sentence: str
     reason: str
 
 
-def _vita3k_user(read: YamlScalars) -> _Vita3kUser:
-    """The user preselection config.yml records, and what it is worth at run time.
+def _vita3k_user(
+    read: YamlScalars,
+    *,
+    listing: GlobResult,
+    users: tuple[str, ...],
+    user_root: str,
+) -> _Vita3kUser:
+    """The user preselection config.yml records, resolved against the tree.
 
     Vita3K writes the opened user's id into ``user-id`` (select_and_open_user,
     user_management.cpp:329-331 at cb1f592c) — so the current user *is*
     recorded, contrary to what this answer used to say. What the record is
-    worth is the conditional part: ``init_home`` opens it only when the id
-    names a user directory that exists **and** either the launch names an app
-    on the command line or ``user-auto-connect`` is on; otherwise the user
-    manager opens and the player picks (gui.cpp:688-696). Both frontends
-    launch a game that way — ES-DE's Vita3K command passes ``-r``, which is
-    ``--installed-path`` (config.cpp:260) — so the recorded id usually governs
-    a launch from the frontend, and a launch of the emulator on its own
-    usually does not.
-
-    Which is why the placement still states every user directory and names
-    this one beside them, rather than choosing.
+    worth is the conditional part: ``init_home`` reopens it only when the id
+    is among the users the emulator itself listed **and** either the launch
+    names an app on the command line or ``user-auto-connect`` is on; otherwise
+    the user manager opens and the player picks (gui.cpp:688-696). That list
+    is built before ``init_home`` runs (init, gui.cpp:914 then :922) from the
+    directories under ``ux0/user`` whose ``user.xml`` loads, each keyed by the
+    file's ``id`` attribute or, lacking one, the directory's own name
+    (get_users_list, user_management.cpp:83-97) — and the emulator's own
+    writes keep that key equal to the directory name (save_user,
+    user_management.cpp:145-158), so the directory listing is the readable
+    face of the same fact. Both frontends launch by naming an app on the
+    command line — ES-DE's Vita3K command passes ``-r``, which is
+    ``--installed-path`` (config.cpp:260) — so where the recorded id names a
+    directory the listing found, a frontend launch reopens exactly that user,
+    and the headline follows it. Everywhere else nothing read here settles
+    the launch's user, and the sentence says what stands in the way.
     """
     unread = _VITA3K_USER_ID_KEY in read.skipped
     configured = None if unread else (read.get(_VITA3K_USER_ID_KEY) or None)
     auto = None if _VITA3K_AUTO_CONNECT_KEY in read.skipped else read.get(_VITA3K_AUTO_CONNECT_KEY)
-    condition = (
-        "Vita3K opens it when the launch names an app on the command line, and on a plain "
-        "launch when user-auto-connect is on (init_home, gui.cpp:688-696); otherwise the "
-        "user manager opens and the player picks"
-    )
+    headline = None
     if unread:
         sentence = (
             f"config.yml states {_VITA3K_USER_ID_KEY} as a construct atlas does not read, so "
@@ -7932,10 +7979,38 @@ def _vita3k_user(read: YamlScalars) -> _Vita3kUser:
             "every user directory found here is stated"
         )
         reason = "the configuration preselects no user"
-    else:
+    elif listing.status == GLOB_COMPLETE and configured in users:
+        headline = configured
         sentence = (
-            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} — {condition}, so every "
-            "user directory found here is stated"
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and its directory is "
+            "among those found here, so the tree named is that user's — a frontend launch "
+            "names an app on the command line and init_home then reopens the recorded user "
+            "(gui.cpp:688-696), checking the id against the users it read from this tree's "
+            "own user.xml files (get_users_list, user_management.cpp:83-97), files this "
+            "answer does not read; a plain launch without user-auto-connect opens the user "
+            "manager instead — every user directory found is still stated"
+        )
+        reason = "the configured user's tree is the one named"
+    elif listing.status == GLOB_COMPLETE and users:
+        sentence = (
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and no directory of "
+            f"that name exists below {user_root} — nothing found here for a launch to "
+            "reopen, so the user manager would open for the player to pick (init_home, "
+            "gui.cpp:688-696, over users Vita3K reads from this tree's user.xml files: "
+            "get_users_list, user_management.cpp:83-97) — the tree named is the first "
+            "found, and every user directory found is stated"
+        )
+        reason = "the configured user has no tree here"
+    else:
+        # An empty or unlistable tree: _per_user_state answers those states
+        # with its own sentences, so what stands here is the config-side fact
+        # alone, never read in either state today.
+        sentence = (
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} — Vita3K opens it when "
+            "the launch names an app on the command line, and on a plain launch when "
+            "user-auto-connect is on (init_home, gui.cpp:688-696); otherwise the user "
+            "manager opens and the player picks — so every user directory found here is "
+            "stated"
         )
         reason = "the configuration preselects a user, and whether a launch opens it depends "
         reason += "on how the launch was made"
@@ -7963,7 +8038,7 @@ def _vita3k_user(read: YamlScalars) -> _Vita3kUser:
             None,
         ),
     )
-    return _Vita3kUser(configured, readings, sentence, reason)
+    return _Vita3kUser(configured, headline, readings, sentence, reason)
 
 
 def _vita3k_key_provenance(key: str, value: str | None, *, unread: bool, unset: str) -> str:
@@ -8001,10 +8076,12 @@ def _vita3k_savefile_placement(
 
     Below it the unit is ``ux0/user/<user>/savedata``, one directory per title
     id (io.cpp:136-143). Which user that is at run time is decided by
-    ``init_home`` from the id config.yml records — see :func:`_vita3k_user` —
-    and because the deciding half of that is the launch rather than a file,
-    every user directory found becomes a group of its own, with the recorded
-    id stated beside them.
+    ``init_home`` from the id config.yml records — see :func:`_vita3k_user`.
+    Every user directory found becomes a group of its own with the recorded id
+    stated beside them, and where the recorded user's directory is among them
+    the headline names its tree, because a frontend launch reopens exactly
+    that user; everywhere else the headline stays the first tree found and
+    the caveat says what is not settled.
     """
     config_path = _standalone_settings_path(card, homes)
     result = machine.read_text(config_path)
@@ -8055,20 +8132,29 @@ def _vita3k_savefile_placement(
             f"here ({config_path}) — nothing this answer could anchor at",
             {"emulator": card.token, "config": config_path},
         )
-    user = _vita3k_user(read)
+    user_root = os.path.join(host.path, _VITA3K_USER_TREE)
+    listing, users = _per_user_listing(machine, user_root)
+    user = _vita3k_user(read, listing=listing, users=users, user_root=user_root)
+    # An empty tree with a recorded user is still an empty tree — the headline
+    # stays the compiled default — but the emptiness now says one thing more:
+    # the recorded user's tree is among the ones missing.
+    recorded_aside = "" if user.configured is None else f", the recorded user {user.configured} included"
     return _per_user_savedata_placement(
         machine,
         card=card,
+        listing=listing,
+        users=users,
         shape=_PerUserSaves(
-            user_root=os.path.join(host.path, _VITA3K_USER_TREE),
+            user_root=user_root,
             first_user=_VITA3K_FIRST_USER,
             names_citation="init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
             user_sentence=user.sentence,
             no_user_sentence=(
-                f"no user directory exists below {os.path.join(host.path, _VITA3K_USER_TREE)} "
-                "— nothing has saved here yet. The tree named is the one the emulator's own "
-                f"redirect spells, user {_VITA3K_FIRST_USER} (io.cpp:203), which it would "
-                "create; it is not a directory found on this machine"
+                f"no user directory exists below {user_root} "
+                f"— nothing has saved here yet{recorded_aside}. The tree named is the one "
+                f"the emulator's own redirect spells, user {_VITA3K_FIRST_USER} "
+                "(io.cpp:203), which it would create; it is not a directory found on this "
+                "machine"
             ),
             user_reason=user.reason,
             mode="pref-path",
@@ -8087,6 +8173,7 @@ def _vita3k_savefile_placement(
                 "(config.cpp:189-190 at commit cb1f592c)"
             ),
             configured_user=user.configured,
+            headline_user=user.headline,
         ),
         extra_caveats=extra_caveats,
     )
