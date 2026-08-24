@@ -44,6 +44,7 @@ SOURCE_DEFAULTS = "defaults"
 # The TOML paths this module reads, named once each so the legacy key table
 # and the probe sets below cannot spell one of them differently.
 KEY_SAVE_FILE_PATH = "Instance0.SaveFilePath"
+KEY_SAVESTATE_PATH = "Instance0.SavestatePath"
 KEY_EXTERNAL_BIOS = "Emu.ExternalBIOSEnable"
 KEY_CONSOLE_TYPE = "Emu.ConsoleType"
 KEY_DS_BIOS9 = "DS.BIOS9Path"
@@ -57,10 +58,12 @@ KEY_DSI_NAND = "DSi.NANDPath"
 # The slice of melonDS's legacy-key table this module reads (``LegacyFile``,
 # Config.cpp at 1.1): legacy name -> (TOML path, type), the type as the table
 # spells it (0 int, 1 bool, 2 string; LoadLegacyFile :747-767 converts with
-# strtol). ``SaveFilePath`` is instance-unique and lands in ``Instance0``
-# when read from the base file (:301, :688-700); the rest are global.
+# strtol). ``SaveFilePath`` and its sibling ``SavestatePath`` are
+# instance-unique and land in ``Instance0`` when read from the base file
+# (:301-302, :688-700); the rest are global.
 _LEGACY_KEYS: Mapping[str, tuple[str, int]] = {
     "SaveFilePath": (KEY_SAVE_FILE_PATH, 2),  # :301
+    "SavestatePath": (KEY_SAVESTATE_PATH, 2),  # :302
     "ExternalBIOSEnable": (KEY_EXTERNAL_BIOS, 1),  # :237
     "ConsoleType": (KEY_CONSOLE_TYPE, 0),  # :226
     "BIOS9Path": (KEY_DS_BIOS9, 2),  # :239
