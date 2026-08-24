@@ -134,7 +134,9 @@ def savestate_placement_contract(placement: SavestatePlacement) -> dict[str, Any
     ``root_kind`` speaks its own closed vocabulary
     (:data:`~atlas.placement.STATE_ROOT_KINDS`) for the same reason: a savestate
     is never anchored at ``savefile_directory`` and never at a core's system
-    directory.
+    directory. ``emulator_directory`` joined it with the standalone savestate
+    cards (#225) — the same word, and the same fact, as on a standalone entry's
+    save answer.
     """
     return _placement_core(placement)
 

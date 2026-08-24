@@ -12,7 +12,7 @@ half; the standalone half is one column per question, filled from the packaged c
 
 Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 3) sha256 `89ad46fbb616`.
 
-**Status:** libretro 59/159 audited · standalone save 11/22 · savestate 0/22 · texture 7/22 · mod 7/22 · firmware 5/22
+**Status:** libretro 59/159 audited · standalone save 11/22 · savestate 8/22 · texture 7/22 · mod 7/22 · firmware 5/22
 
 ## libretro cores
 
@@ -186,15 +186,15 @@ standalone entry, so the answer to "is this covered" is the cards themselves.
 
 | emulator      | systems                                    | save  | savestate | texture | mod | firmware |
 | ------------- | ------------------------------------------ | ----- | --------- | ------- | --- | -------- |
-| `azahar`      | n3ds                                       | ✔     | ✖         | ✔       | ✔   | ✖        |
+| `azahar`      | n3ds                                       | ✔     | ✔         | ✔       | ✔   | ✖        |
 | `cemu`        | wiiu                                       | ✔     | ✖         | ✔       | ✔   | ✔        |
-| `dolphin`     | gc, triforce, wii                          | ✔ 2/3 | ✖         | ✔       | ✔   | ✖        |
-| `duckstation` | psx                                        | ✔     | ✖         | ✔       | ✔   | ✔        |
-| `melonds`     | nds                                        | ✔     | ✖         | ✖       | ✖   | ✔        |
-| `pcsx2`       | ps2                                        | ✔     | ✖         | ✔       | ✔   | ✔        |
-| `ppsspp`      | psp                                        | ✔     | ✖         | ✔       | ✔   | ✖        |
-| `primehack`   | gc, primehack, wii                         | ✔ 2/3 | ✖         | ✔       | ✔   | ✖        |
-| `rpcs3`       | consolearcade, ps3                         | ✔ 1/2 | ✖         | ✖       | ✖   | ✖        |
+| `dolphin`     | gc, triforce, wii                          | ✔ 2/3 | ✔ 2/3     | ✔       | ✔   | ✖        |
+| `duckstation` | psx                                        | ✔     | ✔         | ✔       | ✔   | ✔        |
+| `melonds`     | nds                                        | ✔     | ✔         | ✖       | ✖   | ✔        |
+| `pcsx2`       | ps2                                        | ✔     | ✔         | ✔       | ✔   | ✔        |
+| `ppsspp`      | psp                                        | ✔     | ✔         | ✔       | ✔   | ✖        |
+| `primehack`   | gc, primehack, wii                         | ✔ 2/3 | ✔ 2/3     | ✔       | ✔   | ✖        |
+| `rpcs3`       | consolearcade, ps3                         | ✔ 1/2 | ✔ 1/2     | ✖       | ✖   | ✖        |
 | `vita3k`      | psvita                                     | ✔     | ✖         | ✖       | ✖   | ✖        |
 | `xemu`        | consolearcade, xbox                        | ✔ 1/2 | ✖         | ✖       | ✖   | ✔ 1/2    |
 | `gzdoom`      | doom                                       | ✖     | ✖         | ✖       | ✖   | ✖        |

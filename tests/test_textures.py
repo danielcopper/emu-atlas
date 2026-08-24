@@ -632,12 +632,16 @@ class TestTheEntryRouteAsymmetryIsDeliberate:
         assert isinstance(entry.texture_pack_location(), TexturePlacement)
         assert isinstance(entry.savefile_location(), atlas.SavefilePlacement)
 
-    def test_the_savestate_question_still_refuses_where_the_save_answers(self):
-        # States are their own wiring (Dolphin's StateSaves tree) and stay
-        # outside the save card deliberately — refusal, not silence.
-        refusal = _entry("gc").savestate_location()
-        assert isinstance(refusal, Unresolved)
-        assert refusal.code == atlas.UNRESOLVED_STANDALONE
+    def test_the_savestate_question_answers_beside_the_save(self):
+        # States were the last question this entry refused: their wiring
+        # (Dolphin's StateSaves tree) stayed outside the save card
+        # deliberately, until the savestate card family landed (#225). What
+        # the entry proves now is the same thing the save proof does — the
+        # asymmetry was never about the standalone kind, only about what
+        # atlas has established.
+        placement = _entry("gc").savestate_location()
+        assert isinstance(placement, atlas.SavestatePlacement)
+        assert placement.dir.endswith("/StateSaves")
 
     def test_an_emulator_whose_directory_lives_in_an_unread_config_refuses(self):
         # The split inside the standalone kind: Vita3K's texture tree hangs off

@@ -1790,13 +1790,22 @@ class TestDolphinStandaloneSaves:
         assert stated
         assert "GCIFolderAPathOverride" in stated[0].data["reason"]
 
-    def test_the_savestate_question_still_refuses(self):
+    def test_the_savestate_question_answers_the_compiled_tree(self):
+        # The refusal this asserted outlived its reason (#225): the states
+        # tree is a compiled join below the emulator's own data tree
+        # (FileUtil.cpp:852 at 2603a), so the card answers it with the naming
+        # pattern in the caveat that says why no file can be listed.
         files = dict(self.BASE)
         rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
         entry = rd.emulators_for("gc").entries[0]
-        refusal = entry.savestate_location()
-        assert isinstance(refusal, atlas.Unresolved)
-        assert refusal.code == atlas.UNRESOLVED_STANDALONE
+        p = entry.savestate_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/StateSaves"
+        assert p.root_kind == "emulator_directory"
+        assert p.file_set.state == "unknown"
+        named = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert named.data["pattern"] == "<game_id>.s<slot>"
+        assert named.data["citation"] == "State.cpp:304-308"
 
 
 TRIO_ESDE = (

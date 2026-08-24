@@ -78,7 +78,9 @@ RootKind = Literal[
     "working_directory",
     "emulator_directory",
 ]
-StateRootKind = Literal["savestate_directory", "content_directory"]
+StateRootKind = Literal[
+    "savestate_directory", "content_directory", "emulator_directory", "working_directory"
+]
 FileSetState = Literal["observed", "declared", "unknown"]
 
 # The three states a file set can be in, as values. Every other closed
@@ -122,6 +124,16 @@ ROOT_SAVESTATE_DIRECTORY: StateRootKind = "savestate_directory"
 # fact on both: the ROM's own directory, reached either by the family's
 # in-content-dir flag or by a root that resolved to nothing.
 STATE_ROOT_CONTENT_DIRECTORY: StateRootKind = "content_directory"
+# The savefile family's words, joined here when the standalone savestate cards
+# landed (#225), and they are the same facts on both questions: the tree a
+# standalone emulator owns below the XDG base the arrangement pins, and the
+# working directory of the launching process, which is where melonDS anchors a
+# relative SavestatePath exactly as it anchors a relative SaveFilePath.
+# RetroArch's four cfg keys never anchor at either — only a standalone entry's
+# answer does — so the vocabulary stays closed around the question: a savestate
+# is still never anchored at a save root or a core's system directory.
+STATE_ROOT_EMULATOR_DIRECTORY: StateRootKind = "emulator_directory"
+STATE_ROOT_WORKING_DIRECTORY: StateRootKind = "working_directory"
 
 ROOT_KINDS = (
     "savefile_directory",
@@ -130,7 +142,12 @@ ROOT_KINDS = (
     "working_directory",
     "emulator_directory",
 )
-STATE_ROOT_KINDS = ("savestate_directory", "content_directory")
+STATE_ROOT_KINDS = (
+    "savestate_directory",
+    "content_directory",
+    "emulator_directory",
+    "working_directory",
+)
 _FILE_SET_STATES = ("observed", "declared", "unknown")
 
 # How a texture pack tree is keyed below its root — the values
@@ -951,7 +968,10 @@ class SavestatePlacement:
     module docstring for why that one cannot exist here. ``dir`` is concrete
     when the caller supplied the content path; otherwise it is a template whose
     remaining holes are listed in ``needs``. ``root_kind`` names the anchor
-    (:data:`ROOT_SAVESTATE_DIRECTORY`, :data:`STATE_ROOT_CONTENT_DIRECTORY`).
+    (:data:`ROOT_SAVESTATE_DIRECTORY`, :data:`STATE_ROOT_CONTENT_DIRECTORY`,
+    or — for a standalone entry's answer, never for RetroArch's —
+    :data:`STATE_ROOT_EMULATOR_DIRECTORY` and
+    :data:`STATE_ROOT_WORKING_DIRECTORY`).
 
     ``file_set`` is where the two questions differ in substance rather than in
     fields. A savefile's set is per-core behaviour with no metadata source; a
