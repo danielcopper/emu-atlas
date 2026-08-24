@@ -7946,53 +7946,53 @@ class _Vita3kListedUser:
     fate: str
 
 
+def _vita3k_stem(name: str) -> str:
+    """``std::filesystem::path::stem`` of a name, spelled the way libstdc++ cuts.
+
+    The extension begins at the rightmost period unless it leads the name or
+    the name is ``.`` or ``..`` (``_M_find_extension``) — so ``01.bak`` stems
+    to ``01`` and ``..bak`` to ``.``. Neither stdlib spelling is that mirror:
+    ``os.path.splitext`` skips a leading run of periods and ``PurePath.stem``
+    keeps a trailing one.
+    """
+    if name in (".", ".."):
+        return name
+    i = name.rfind(".")
+    return name[:i] if i > 0 else name
+
+
+def _vita3k_listed_user(machine: Machine, user_root: str, user: str) -> _Vita3kListedUser:
+    """One user directory's fate — the classification get_users_list performs.
+
+    The directory joins ``gui.users`` only when its ``user.xml`` loads
+    (get_users_list, user_management.cpp:89 at cb1f592c), keyed by the file's
+    ``id`` attribute or, lacking one, the directory name's stem —
+    ``path.stem()`` (:94-97). A missing user.xml and one that does not parse
+    are one fact to the emulator — ``load_file`` fails and the directory is
+    skipped — and that is mirrored here. A user.xml atlas could not read is
+    neither: the emulator may load it, so the fate says so and the caller
+    refuses to decide. The file is local trusted configuration, parsed with
+    stdlib etree the way ``atlas/esde.py`` documents.
+    """
+    result = machine.read_text(os.path.join(user_root, user, "user.xml"))
+    if result.status == READ_MISSING:
+        return _Vita3kListedUser(user, None, _VITA3K_USER_NO_XML)
+    if result.status != READ_OK:
+        return _Vita3kListedUser(user, None, _VITA3K_USER_XML_UNREADABLE)
+    try:
+        root = _ET.fromstring(result.text or "")
+    except _ET.ParseError:
+        return _Vita3kListedUser(user, None, _VITA3K_USER_XML_INVALID)
+    id_attr = root.get("id") if root.tag == "user" else None
+    identity = _vita3k_stem(user) if id_attr is None else id_attr
+    return _Vita3kListedUser(user, identity, _VITA3K_USER_LISTED)
+
+
 def _vita3k_listed_users(
     machine: Machine, user_root: str, users: tuple[str, ...]
 ) -> tuple[_Vita3kListedUser, ...]:
-    """The users Vita3K itself would list — get_users_list read the way it runs.
-
-    A directory joins ``gui.users`` only when its ``user.xml`` loads
-    (get_users_list, user_management.cpp:89 at cb1f592c), keyed by the file's
-    ``id`` attribute or, lacking one, the directory name's stem —
-    ``path.stem()``, the name shorn of its last extension (:94-97). A
-    missing user.xml and one that does not parse are one fact to the emulator
-    — ``load_file`` fails and the directory is skipped — and that is mirrored
-    here. A user.xml atlas could not read is neither: the emulator may load
-    it, so the fate says so and the caller refuses to decide. The file is
-    local trusted configuration, parsed with stdlib etree the way
-    ``atlas/esde.py`` documents.
-    """
-    listed = []
-    for user in users:
-        result = machine.read_text(os.path.join(user_root, user, "user.xml"))
-        if result.status == READ_MISSING:
-            listed.append(_Vita3kListedUser(user, None, _VITA3K_USER_NO_XML))
-            continue
-        if result.status != READ_OK:
-            listed.append(_Vita3kListedUser(user, None, _VITA3K_USER_XML_UNREADABLE))
-            continue
-        try:
-            root = _ET.fromstring(result.text or "")
-        except _ET.ParseError:
-            listed.append(_Vita3kListedUser(user, None, _VITA3K_USER_XML_INVALID))
-            continue
-        id_attr = root.get("id") if root.tag == "user" else None
-        # The fallback is the stem, not the whole name: upstream takes
-        # path.stem() (user_management.cpp:97), so a directory 01.bak with an
-        # id-less user.xml answers to 01. std::filesystem cuts at the
-        # rightmost period unless it leads the name or the name is "." or
-        # ".." (libstdc++ _M_find_extension) — so "..bak" answers to "." —
-        # which is what the expression below spells; os.path.splitext skips a
-        # leading run of periods and PurePath.stem keeps a trailing one, so
-        # neither is that mirror.
-        if id_attr is not None:
-            identity = id_attr
-        elif user in (".", ".."):
-            identity = user
-        else:
-            identity = user[:i] if (i := user.rfind(".")) > 0 else user
-        listed.append(_Vita3kListedUser(user, identity, _VITA3K_USER_LISTED))
-    return tuple(listed)
+    """The users Vita3K itself would list — get_users_list read the way it runs."""
+    return tuple(_vita3k_listed_user(machine, user_root, user) for user in users)
 
 
 @dataclass(frozen=True, slots=True)
@@ -8010,6 +8010,72 @@ class _Vita3kUser:
     readings: tuple[OptionReading, ...]
     sentence: str
     reason: str
+
+
+def _vita3k_recorded_user_state(
+    configured: str, listed: tuple[_Vita3kListedUser, ...], user_root: str
+) -> tuple[str | None, str, str]:
+    """The recorded user held against the emulator's own listing — four states.
+
+    Returns ``(headline, sentence, reason)``. The listing holds the recorded
+    id — the headline follows it; some user.xml could not be read — whether
+    the emulator would list the recorded user is not established, and nothing
+    is decided; the recorded directory exists but nothing lists it as that
+    user — not set up; or nothing here answers to the id at all — no tree.
+    """
+    identities = tuple(u.identity for u in listed if u.identity is not None)
+    unreadable = tuple(u.directory for u in listed if u.fate == _VITA3K_USER_XML_UNREADABLE)
+    own = next((u for u in listed if u.directory == configured), None)
+    if configured in identities:
+        sentence = (
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is "
+            "among the ones Vita3K itself would list — the directories under ux0/user "
+            "whose user.xml loads, keyed by the file's id or the directory name's stem "
+            "(get_users_list, user_management.cpp:83-97), read here the same way — so "
+            "a frontend launch, naming an app on the command line, reopens exactly "
+            "that user (init_home, gui.cpp:688-696) and the tree named is its, created "
+            "on the first save where no directory of that name exists yet; a plain "
+            "launch without user-auto-connect opens the user manager instead — every "
+            "user directory found is still stated"
+        )
+        return configured, sentence, "the configured user's tree is the one named"
+    if unreadable:
+        sentence = (
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured}, and whether "
+            "Vita3K would list that user is not established — the user.xml under "
+            f"{', '.join(unreadable)} could not be read, and the listing is keyed by "
+            "what those files state (get_users_list, user_management.cpp:83-97) — so "
+            "the tree named stays the first found, and every user directory found is "
+            "stated"
+        )
+        return None, sentence, "whether the configured user is set up here was not established"
+    if own is not None:
+        if own.fate == _VITA3K_USER_NO_XML:
+            detail = "the directory has no user.xml"
+        elif own.fate == _VITA3K_USER_XML_INVALID:
+            detail = "its user.xml does not parse"
+        else:
+            # "it" is the directory: the id may come from the user.xml's
+            # own attribute or from the directory name's stem, and the
+            # sentence must not claim the file states what the stem does.
+            detail = f'it answers to id "{own.identity}" instead'
+        sentence = (
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and its directory "
+            f"exists, but no user.xml here lists it as that user — {detail} — so "
+            "Vita3K would skip it and open the user manager for the player to pick "
+            "(get_users_list, user_management.cpp:83-97; init_home, gui.cpp:688-696); "
+            "the tree named stays the first found, and every user directory found is "
+            "stated"
+        )
+        return None, sentence, "the configured user is not set up here"
+    sentence = (
+        f"config.yml records {_VITA3K_USER_ID_KEY} {configured}, no directory of "
+        f"that name exists below {user_root}, and no user.xml here names that id — "
+        "nothing for a launch to reopen, so the user manager opens and the player "
+        "picks (init_home, gui.cpp:688-696) — the tree named is the first found, "
+        "and every user directory found is stated"
+    )
+    return None, sentence, "the configured user has no tree here"
 
 
 def _vita3k_user(
@@ -8061,63 +8127,7 @@ def _vita3k_user(
         reason = "the configuration preselects no user"
     elif listing.status == GLOB_COMPLETE and users:
         listed = _vita3k_listed_users(machine, user_root, users)
-        identities = tuple(u.identity for u in listed if u.identity is not None)
-        unreadable = tuple(
-            u.directory for u in listed if u.fate == _VITA3K_USER_XML_UNREADABLE
-        )
-        own = next((u for u in listed if u.directory == configured), None)
-        if configured in identities:
-            headline = configured
-            sentence = (
-                f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is "
-                "among the ones Vita3K itself would list — the directories under ux0/user "
-                "whose user.xml loads, keyed by the file's id or the directory name's stem "
-                "(get_users_list, user_management.cpp:83-97), read here the same way — so "
-                "a frontend launch, naming an app on the command line, reopens exactly "
-                "that user (init_home, gui.cpp:688-696) and the tree named is its, created "
-                "on the first save where no directory of that name exists yet; a plain "
-                "launch without user-auto-connect opens the user manager instead — every "
-                "user directory found is still stated"
-            )
-            reason = "the configured user's tree is the one named"
-        elif unreadable:
-            sentence = (
-                f"config.yml records {_VITA3K_USER_ID_KEY} {configured}, and whether "
-                "Vita3K would list that user is not established — the user.xml under "
-                f"{', '.join(unreadable)} could not be read, and the listing is keyed by "
-                "what those files state (get_users_list, user_management.cpp:83-97) — so "
-                "the tree named stays the first found, and every user directory found is "
-                "stated"
-            )
-            reason = "whether the configured user is set up here was not established"
-        elif own is not None:
-            if own.fate == _VITA3K_USER_NO_XML:
-                detail = "the directory has no user.xml"
-            elif own.fate == _VITA3K_USER_XML_INVALID:
-                detail = "its user.xml does not parse"
-            else:
-                # "it" is the directory: the id may come from the user.xml's
-                # own attribute or from the directory name's stem, and the
-                # sentence must not claim the file states what the stem does.
-                detail = f'it answers to id "{own.identity}" instead'
-            sentence = (
-                f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and its directory "
-                f"exists, but no user.xml here lists it as that user — {detail} — so "
-                "Vita3K would skip it and open the user manager for the player to pick "
-                "(get_users_list, user_management.cpp:83-97; init_home, gui.cpp:688-696); "
-                "the tree named stays the first found, and every user directory found is "
-                "stated"
-            )
-            reason = "the configured user is not set up here"
-        else:
-            sentence = (
-                f"config.yml records {_VITA3K_USER_ID_KEY} {configured}, no directory of "
-                f"that name exists below {user_root}, and no user.xml here names that id — "
-                "nothing for a launch to reopen, so the user manager opens and the player "
-                "picks (init_home, gui.cpp:688-696) — the tree named is the first found, "
-                "and every user directory found is stated"
-            )
-            reason = "the configured user has no tree here"
+        headline, sentence, reason = _vita3k_recorded_user_state(configured, listed, user_root)
     else:
         # An empty or unlistable tree: _per_user_state answers those states
         # with its own sentences, so what stands here is the config-side fact
