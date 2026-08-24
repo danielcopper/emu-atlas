@@ -4927,6 +4927,52 @@ class _XdgHomes:
         )
 
 
+def _pcsx2_folder_below_dataroot(
+    raw: str | None,
+    *,
+    key: str,
+    default: str,
+    default_citation: str,
+    data_root: str,
+    spelled: str | None = None,
+) -> tuple[str | None, str]:
+    """``LoadPathFromSettings``' non-absolute outcomes, told apart the way the emulator tells them.
+
+    Three questions read a ``[Folders]`` directory of PCSX2's (textures,
+    memory cards, savestates), and all three used to fold a present-but-empty
+    line into "key absent". The emulator does not: ``GetStringValue`` falls to
+    the compiled default only when the lookup FAILS (SettingsInterface.h:83-89
+    at v2.6.3) — SimpleIni stores the empty value a ``Key =`` line carries and
+    hands it back — and ``Path::Combine(DataRoot, "")`` is the **DataRoot
+    itself**, because the combine strips trailing separators after appending
+    the empty component (FileSystem.cpp:847-862). A relative value joins the
+    DataRoot (LoadPathFromSettings, Pcsx2Config.cpp:2272-2278). An absolute
+    value is the caller's to translate through the launch's sandbox, which
+    this helper cannot know: it returns ``(None, sentence)`` for that case.
+    *spelled* is the case-variant spelling actually found in the file, where
+    the caller read the key the way SimpleIni matches it (#225).
+    """
+    shown = spelled if spelled is not None else key
+    if raw is None:
+        return os.path.join(data_root, default), (
+            f"{key} is unset — the default {default} below the DataRoot governs "
+            f"({default_citation})"
+        )
+    if raw == "":
+        return data_root, (
+            f'PCSX2.ini: [Folders] {shown} = "" — a present-but-empty key keeps its empty '
+            "value (GetStringValue defaults only when the lookup fails, "
+            'SettingsInterface.h:83-89 at v2.6.3) and Path::Combine(DataRoot, "") is the '
+            "DataRoot itself (FileSystem.cpp:847-862), not the compiled default"
+        )
+    if not os.path.isabs(raw):
+        return os.path.join(data_root, raw), (
+            f'PCSX2.ini: [Folders] {shown} = "{raw}" — a relative value joins the DataRoot '
+            "(LoadPathFromSettings, Pcsx2Config.cpp:2272-2278)"
+        )
+    return None, f'PCSX2.ini: [Folders] {shown} = "{raw}"'
+
+
 def _pcsx2_texture_placement(
     machine: Machine,
     *,
@@ -4972,13 +5018,16 @@ def _pcsx2_texture_placement(
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     setting = card.directory
-    raw_dir = values.get((setting.section, setting.key), "")
-    if not raw_dir:
-        root = os.path.join(data_root, setting.default)
-    elif not os.path.isabs(raw_dir):
-        root = os.path.join(data_root, raw_dir)
-    else:
-        root = raw_dir
+    raw_dir = values.get((setting.section, setting.key))
+    resolved, _ = _pcsx2_folder_below_dataroot(
+        raw_dir,
+        key=setting.key,
+        default=setting.default,
+        default_citation=setting.citation,
+        data_root=data_root,
+    )
+    root = resolved if resolved is not None else raw_dir
+    assert root is not None  # only an absolute value leaves the helper unresolved
     directory = os.path.join(root, TEMPLATE_SAVE_ID, _PCSX2_TEXTURE_LOAD_STAGE)
     switch = card.switch
     if switch is None:
@@ -7086,19 +7135,18 @@ def _pcsx2_memcards_dir(
     ini_path: str,
 ) -> tuple[str | None, OptionReading, Unresolved | None]:
     """(memory-card directory, its reading, the refusal if any) — one shape per return."""
-    raw_dir = values.get(("Folders", "MemoryCards"), "")
-    if raw_dir:
-        provenance = f'PCSX2.ini: [Folders] MemoryCards = "{raw_dir}"'
-    else:
-        provenance = (
-            "MemoryCards is unset — the default memcards below the DataRoot governs "
-            "(Pcsx2Config.cpp:2259)"
-        )
-    reading = OptionReading("MemoryCards", raw_dir or None, provenance, None)
-    if not raw_dir:
-        return os.path.join(data_root, "memcards"), reading, None
-    if not os.path.isabs(raw_dir):
-        return os.path.join(data_root, raw_dir), reading, None
+    raw_dir = values.get(("Folders", "MemoryCards"))
+    resolved, provenance = _pcsx2_folder_below_dataroot(
+        raw_dir,
+        key="MemoryCards",
+        default="memcards",
+        default_citation="Pcsx2Config.cpp:2259",
+        data_root=data_root,
+    )
+    reading = OptionReading("MemoryCards", raw_dir, provenance, None)
+    if resolved is not None:
+        return resolved, reading, None
+    assert raw_dir is not None  # only an absolute value leaves the helper unresolved
     host = sandbox.host("MemoryCards", raw_dir)
     if host.path is None:
         refusal = Unresolved(
@@ -7382,7 +7430,6 @@ def _melonds_root(
     *,
     key: str = "SaveFilePath",
     what: str = "save",
-    configured_mode: str = "save-file-path",
 ) -> _MelonRoot:
     """The three places a melonDS asset can anchor: the configured directory, the ROM's own, the cwd.
 
@@ -7437,8 +7484,10 @@ def _melonds_root(
         return _MelonRoot(
             directory="", root_kind=ROOT_EMULATOR_DIRECTORY, mode="", refusal=refusal
         )
+    # ``mode`` is the savefile granularity's word alone — the savestate answer
+    # carries no granularity, so its caller never reads it.
     return _MelonRoot(
-        directory=host.path, root_kind=ROOT_EMULATOR_DIRECTORY, mode=configured_mode
+        directory=host.path, root_kind=ROOT_EMULATOR_DIRECTORY, mode="save-file-path"
     )
 
 
@@ -8556,10 +8605,11 @@ def _pcsx2_savestate_placement(
     governs because SimpleIni matches keys ASCII case-insensitively
     (:func:`_simpleini_value` carries the chain) — so this reading matches
     the key the way the emulator does instead of quoting the compiled
-    ``sstates`` over it. An unset or empty key means the default below the
-    DataRoot, a relative value joins the DataRoot, an absolute one stands
-    (LoadPathFromSettings, Pcsx2Config.cpp:2276-2282) and is translated
-    through the launch's sandbox rather than trusted as a host path.
+    ``sstates`` over it. The value resolves below the DataRoot the way
+    ``LoadPathFromSettings`` resolves it (:func:`_pcsx2_folder_below_dataroot`
+    — an empty line moves the directory to the DataRoot itself, it does not
+    restore the default), and an absolute value is translated through the
+    launch's sandbox rather than trusted as a host path.
     """
     setting = card.directory
     assert setting is not None  # the loader pairs the key with the settings file
@@ -8578,19 +8628,16 @@ def _pcsx2_savestate_placement(
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     raw, spelled = _simpleini_value(values, setting.section, setting.key)
-    if not raw:
-        directory = os.path.join(data_root, setting.default)
-        reading = (
-            f"{setting.key} is unset — the default {setting.default} below the DataRoot "
-            f"governs ({setting.citation})"
-        )
-    elif not os.path.isabs(raw):
-        directory = os.path.join(data_root, raw)
-        reading = (
-            f'PCSX2.ini: [{setting.section}] {spelled} = "{raw}" — a relative value joins '
-            "the DataRoot (LoadPathFromSettings, Pcsx2Config.cpp:2276-2282)"
-        )
-    else:
+    resolved, reading = _pcsx2_folder_below_dataroot(
+        raw,
+        key=setting.key,
+        default=setting.default,
+        default_citation=setting.citation,
+        data_root=data_root,
+        spelled=spelled,
+    )
+    if resolved is None:
+        assert raw is not None  # only an absolute value leaves the helper unresolved
         host = sandbox.host(setting.key, raw)
         if host.path is None:
             return Unresolved(
@@ -8600,7 +8647,8 @@ def _pcsx2_savestate_placement(
                 {"emulator": card.token, "config": ini_path},
             )
         directory = host.path
-        reading = f'PCSX2.ini: [{setting.section}] {spelled} = "{raw}"'
+    else:
+        directory = resolved
     if raw and spelled != setting.key:
         reading += (
             f" — spelled {spelled!r} and read as the {setting.key!r} key, because SimpleIni "
@@ -8654,8 +8702,13 @@ def _duckstation_savestate_placement(
         return refusal
     raw, spelled = _simpleini_value(values, setting.section, setting.key)
     if not raw:
-        # An empty value falls to the compiled default upstream
-        # (settings.cpp:1955-1957), so unset and empty answer alike.
+        # Unset and empty answer alike HERE and only here: DuckStation's own
+        # LoadPathFromSettings folds an empty value back to the compiled
+        # default (`if (value.empty()) value = def;`, settings.cpp:1955-1957
+        # at 64655818e). PCSX2's does not — its empty value survives and
+        # Path::Combine lands the directory on the DataRoot itself
+        # (:func:`_pcsx2_folder_below_dataroot`) — so this branch must not be
+        # "fixed" to match the sibling resolver.
         directory = os.path.join(data_root, setting.default)
         reading = (
             f"{setting.key} is unset or empty — the default {setting.default} below the "
@@ -8773,10 +8826,7 @@ def _melonds_savestate_placement(
     )
     if isinstance(config, Unresolved):
         return config
-    root = _melonds_root(
-        config, card, sandbox, content_path,
-        key="SavestatePath", what="states", configured_mode="savestate-path",
-    )
+    root = _melonds_root(config, card, sandbox, content_path, key="SavestatePath", what="states")
     if root.refusal is not None:
         return root.refusal
     files, name_needs, name_caveats = _melonds_state_files(card, content_path)
