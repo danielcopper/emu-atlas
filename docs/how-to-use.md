@@ -777,14 +777,16 @@ derives at run time and writes nowhere. The user segment reaches a stronger answ
 out why. Vita3K _does_ record the user it opened, as `user-id` in that same `config.yml`, and the emulator honours the
 record when the id is among the users it listed itself and either the command line names an app to run — which is how
 both frontends start a game — or `user-auto-connect` is on; that list comes from the directories under `ux0/user` whose
-`user.xml` loads, and the emulator's own writes keep its keys equal to the directory names. So where the recorded id
-names a directory the listing found, a frontend launch reopens exactly that user, and **the answer's `dir` names its
-tree**. **Every user directory that exists stays a group of its own**, with the recorded id beside them as a `user-id`
-reading and as `configured_user` in the `core-mode-unestablished` caveat, whose `reason` says which case this machine
-is: the recorded user's tree is the one named; the recorded user has no tree here, so the headline stays the first tree
-found and the player picks; or the tree could not be listed and the answer claims nothing new. A plain launch of the
-emulator without `user-auto-connect` opens the user manager whatever is recorded — the headline follows the launch a
-frontend makes.
+`user.xml` loads, keyed by the file's `id` attribute or the directory's own name, and atlas reads each `user.xml` the
+same way, so the check is the emulator's own rather than a guess from directory names. So where that listing holds the
+recorded id, a frontend launch reopens exactly that user, and **the answer's `dir` names its tree** — composed from the
+identity, which the first save creates where no directory of that name exists yet. **Every user directory that exists
+stays a group of its own**, with the recorded id beside them as a `user-id` reading and as `configured_user` in the
+`core-mode-unestablished` caveat, whose `reason` says which case this machine is: the recorded user's tree is the one
+named; the recorded user is not set up here (its directory exists, but no `user.xml` lists it as that user — the player
+picks); the recorded user has no tree here at all; whether it is set up could not be read (a `user.xml` atlas could not
+read); or the tree could not be listed and the answer claims nothing new. A plain launch of the emulator without
+`user-auto-connect` opens the user manager whatever is recorded — the headline follows the launch a frontend makes.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the
