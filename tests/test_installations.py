@@ -2744,6 +2744,27 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert caveat.data["reason"] == "the configured user's tree is the one named"
         assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/01.bak/savedata"]
 
+    def test_vita3k_the_stem_cuts_at_the_rightmost_period_like_the_filesystem(self):
+        # std::filesystem::path::stem cuts at the rightmost period unless it
+        # leads the name or the name is "." or ".." (libstdc++
+        # _M_find_extension), so a directory ..bak answers to "." — a reader
+        # that skips the whole leading run of periods would say ..bak. Pinned
+        # at the helper because the resolver cannot meet such a name: the
+        # user listing comes from a glob whose "*" never matches a leading
+        # period (the emulator's directory_iterator would see it), and the
+        # mirror stays exact rather than narrowed to what the glob passes.
+        from atlas.installations import (
+            _VITA3K_USER_LISTED,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+            _vita3k_listed_users,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        machine = FixtureMachine(
+            {"/mnt/sd/vita/ux0/user/..bak/user.xml": '<?xml version="1.0"?>\n<user/>\n'}
+        )
+        (listed,) = _vita3k_listed_users(machine, "/mnt/sd/vita/ux0/user", ("..bak",))
+        assert listed.identity == "."
+        assert listed.fate == _VITA3K_USER_LISTED
+
     def test_vita3k_a_user_xml_that_does_not_parse_is_the_emulators_own_skip(self):
         # load_file fails on a malformed user.xml exactly as on a missing one
         # (get_users_list, user_management.cpp:89) — the directory is not a

@@ -7979,10 +7979,18 @@ def _vita3k_listed_users(
         id_attr = root.get("id") if root.tag == "user" else None
         # The fallback is the stem, not the whole name: upstream takes
         # path.stem() (user_management.cpp:97), so a directory 01.bak with an
-        # id-less user.xml answers to 01. os.path.splitext matches
-        # std::filesystem::path::stem on dotted, leading-dot and trailing-dot
-        # names alike.
-        identity = os.path.splitext(user)[0] if id_attr is None else id_attr
+        # id-less user.xml answers to 01. std::filesystem cuts at the
+        # rightmost period unless it leads the name or the name is "." or
+        # ".." (libstdc++ _M_find_extension) — so "..bak" answers to "." —
+        # which is what the expression below spells; os.path.splitext skips a
+        # leading run of periods and PurePath.stem keeps a trailing one, so
+        # neither is that mirror.
+        if id_attr is not None:
+            identity = id_attr
+        elif user in (".", ".."):
+            identity = user
+        else:
+            identity = user[:i] if (i := user.rfind(".")) > 0 else user
         listed.append(_Vita3kListedUser(user, identity, _VITA3K_USER_LISTED))
     return tuple(listed)
 
@@ -8063,7 +8071,7 @@ def _vita3k_user(
             sentence = (
                 f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is "
                 "among the ones Vita3K itself would list — the directories under ux0/user "
-                "whose user.xml loads, keyed by the file's id or the directory's name "
+                "whose user.xml loads, keyed by the file's id or the directory name's stem "
                 "(get_users_list, user_management.cpp:83-97), read here the same way — so "
                 "a frontend launch, naming an app on the command line, reopens exactly "
                 "that user (init_home, gui.cpp:688-696) and the tree named is its, created "
@@ -8088,7 +8096,10 @@ def _vita3k_user(
             elif own.fate == _VITA3K_USER_XML_INVALID:
                 detail = "its user.xml does not parse"
             else:
-                detail = f'its user.xml answers to id "{own.identity}" instead'
+                # "it" is the directory: the id may come from the user.xml's
+                # own attribute or from the directory name's stem, and the
+                # sentence must not claim the file states what the stem does.
+                detail = f'it answers to id "{own.identity}" instead'
             sentence = (
                 f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and its directory "
                 f"exists, but no user.xml here lists it as that user — {detail} — so "
