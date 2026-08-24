@@ -552,22 +552,29 @@ the virtual memory cards for PS1 and PS2 classics, which a sync walking only the
 `save-inside-image`, which means the answer named a file and nothing inside it is addressable, the opposite of what is
 true here. Vita3K (build 3996, commit `cb1f592c`): one key carries the whole tree — `pref-path` in `config.yml`, with
 everything the emulator keeps hanging off it as `ux0/…`, and saves at `ux0/user/<user>/savedata`, one directory per
-title id (io.cpp:136-143). Its user segment ends up where RPCS3's does — every user directory that exists is its own
-group — but for a different reason, and the card says which: this emulator **does** write down the user it opened, as
-`user-id` in the same `config.yml` (select_and_open_user, user_management.cpp:329-331). What that record is worth is
-decided by the launch, not by a file: `init_home` reopens the recorded user only when it names a directory that exists
-and either the launch names an app on the command line or `user-auto-connect` is on, and otherwise the user manager
-opens for the player to pick (gui.cpp:688-696). So the recorded id is stated — as a reading, and as `configured_user` in
-the caveat — beside every tree rather than instead of them. An empty `pref-path` is a refusal rather than a guess: the
-emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). The answers root at
-`emulator_directory` — no frontend hands a standalone emulator a save directory — except where the emulator's own
-default walks into the content's. On EmuDeck a standalone emulator is identified by `%EMULATOR_…%` token or by an
-allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`, `pcsx2-qt.sh`, `melonds.sh` and `vita3k.sh`
-today), and either way the launch's binary variant gates the answer. Three variants are established: an **AppImage**
-under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app id the card names (`flatpak` on the card —
-melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its own homes below
-`~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which EmuDeck unpacks some emulators into
-(Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads the host's tree like an
+title id (io.cpp:136-143). Its user segment states every user directory that exists as its own group, the way RPCS3's
+does — but this emulator **does** write down the user it opened, as `user-id` in the same `config.yml`
+(select_and_open_user, user_management.cpp:329-331), and the record reaches further: `init_home` reopens the recorded
+user when the id is among the users the emulator itself listed and either the launch names an app on the command line —
+which is how a frontend launches — or `user-auto-connect` is on, and otherwise the user manager opens for the player to
+pick (gui.cpp:688-696); the list is built from the directories under `ux0/user` whose `user.xml` loads, keyed by the
+file's `id` attribute or, lacking one, the directory name's stem (get_users_list, user_management.cpp:83-97), and the
+emulator's own writes keep that key equal to the directory name (save_user, user_management.cpp:145-158) — atlas reads
+each `user.xml` the same way, so the users it checks the record against are the emulator's own list. So the answer's
+headline `dir` names the recorded user's tree where that listing holds it — composed from the identity the user.xml
+states, created on the first save where no directory of that name exists yet — with the recorded id stated beside every
+tree as a reading and as `configured_user` in the caveat; a recorded user the listing does not hold moves nothing, the
+caveat's reason saying why (no tree of that name, a directory that is not set up as that user, or a `user.xml` that
+could not be read), and a tree that could not be listed keeps claiming nothing. An empty `pref-path` is a refusal rather
+than a guess: the emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). The
+answers root at `emulator_directory` — no frontend hands a standalone emulator a save directory — except where the
+emulator's own default walks into the content's. On EmuDeck a standalone emulator is identified by `%EMULATOR_…%` token
+or by an allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`, `pcsx2-qt.sh`, `melonds.sh` and
+`vita3k.sh` today), and either way the launch's binary variant gates the answer. Three variants are established: an
+**AppImage** under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app id the card names (`flatpak`
+on the card — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its own homes
+below `~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which EmuDeck unpacks some emulators
+into (Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads the host's tree like an
 AppImage does. The rest refuse with `standalone-variant-unestablished`.
 
 ## `standalone_firmware.json` — what a standalone emulator expects beside its content
