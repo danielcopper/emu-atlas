@@ -661,6 +661,8 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes            |
 | `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"         |
 | `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                              |
+| `per-game-layer-unread`                     | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does" |
+| `cfg-value-rejected`                        | the file sets a value the emulator cannot read, so the value it had keeps governing                 |
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified           |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)       |
 | `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope              |
@@ -723,19 +725,21 @@ A standalone catalogue entry answers `savefile_location` where a **standalone sa
 command names — Dolphin, PPSSPP, xemu, Cemu, Azahar, DuckStation, PCSX2, melonDS, RPCS3 and Vita3K today, keyed by the
 `%EMULATOR_…%` token the way the texture cards are. An EmuDeck catalogue may name the token or run a per-emulator
 launcher script — an allowlisted launcher (`tools/launchers/cemu.sh`, `melonds.sh`, …) reaches the same card — and
-either way the launch's binary variant gates the answer. Two variants are established: an AppImage under
-`~/Applications` reads the host's own XDG tree, and a flatpak whose app id the card names reads the app's own homes
-below `~/.var/app` — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright and probes nothing for, plus
-xemu, Dolphin and PPSSPP, which EmuDeck installs as flatpaks and the probe finds among the installed ones. A variant
-whose config is not established (the Windows build under Proton via `-w`, a flatpak no card names an id for) refuses
-with `standalone-variant-unestablished` and the variant named in `data`. No frontend hands these emulators a save
-directory, so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the
-emulator's own configuration the way the emulator reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's
-`settings.xml` — each at the shipped release; PPSSPP's Linux memstick is fixed by the build, so its card names no config
-at all). Each is looked for under the XDG base the **emulator** opens it from, which is not always where an arrangement
-keeps it — xemu's `xemu.toml` lives under the data home while RetroDECK keeps the real directory in its config tree and
-links it into place — and rerouted with symlinks the answer walks. The one exception is the emulator whose own default
-walks into the content's directory — melonDS below.
+either way the launch's binary variant gates the answer. Three variants are established: an AppImage under
+`~/Applications` reads the host's own XDG tree; an **extracted binary** at `~/Applications/<Name>/<Name>`, which EmuDeck
+unpacks some emulators into (Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads
+that same host tree; and a flatpak whose app id the card names reads the app's own homes below `~/.var/app` — melonDS's
+`net.kuribo64.melonDS`, which `melonds.sh` runs outright and probes nothing for, plus xemu, Dolphin and PPSSPP, which
+EmuDeck installs as flatpaks and the probe finds among the installed ones. A variant whose config is not established
+(the Windows build under Proton via `-w`, a flatpak no card names an id for) refuses with
+`standalone-variant-unestablished` and the variant named in `data`. No frontend hands these emulators a save directory,
+so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the emulator's own
+configuration the way the emulator reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's `settings.xml` — each
+at the shipped release; PPSSPP's Linux memstick is fixed by the build, so its card names no config at all). Each is
+looked for under the XDG base the **emulator** opens it from, which is not always where an arrangement keeps it — xemu's
+`xemu.toml` lives under the data home while RetroDECK keeps the real directory in its config tree and links it into
+place — and rerouted with symlinks the answer walks. The one exception is the emulator whose own default walks into the
+content's directory — melonDS below.
 
 ```python
 entry = inst.emulators_for("gc").entries[0]   # 'Dolphin (Standalone)'
@@ -767,19 +771,30 @@ carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id
 image up whole or leaves it, a tool that parses FATX has the layout stated instead of rediscovered, and per-game sync is
 honestly not on offer from outside.
 
-Vita3K is the shortest of the config-read cards: one key, `pref-path`, and the whole `ux0/…` tree hangs off it, with
-saves at `ux0/user/<user>/savedata` — the same per-user shape as RPCS3, answered the same way. An empty `pref-path` is a
-refusal rather than a guess: the emulator falls back to a default it derives at run time and writes nowhere.
+Vita3K's tree hangs off one key, `pref-path`, with saves at `ux0/user/<user>/savedata` — the same per-user shape as
+RPCS3, and an empty `pref-path` is a refusal rather than a guess, because the emulator falls back to a default it
+derives at run time and writes nowhere. The user segment reaches the same answer as RPCS3's for a different reason,
+which the readings spell out. Vita3K _does_ record the user it opened, as `user-id` in that same `config.yml`, and
+whether a launch reopens it depends on the launch: the emulator honours the record when the id names a user directory
+that exists and either the command line names an app to run — which is how both frontends start a game — or
+`user-auto-connect` is on. A plain launch of the emulator with that switch off opens the user manager and the player
+picks. Nothing on disk settles which of those happened, so **every user directory that exists is a group of its own**,
+and the recorded id rides beside them: as a `user-id` reading, and as `configured_user` in the `core-mode-unestablished`
+caveat. A client that wants one tree rather than all of them reads that field.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the
 emulator's own config directory. Below the drive, saves are one directory per title id under `home/<user>/savedata`.
 Which user the emulator runs as is a runtime selection nothing on disk records, so **every user home that exists is a
 group of its own** and a caveat lists them: a machine with two accounts gets two trees rather than a guess at which is
-in force. Two more things ride along — the per-title directories keep their names refused (they are the games' own), and
-`save-inside-image` states a _second_ place saves live, `savedata/vmc`, the virtual memory cards for PS1 and PS2
-classics, which sit outside the per-user tree entirely. That card is also the first to read YAML, through a reader that
-names the keys it does not read rather than guessing (`atlas.yaml_scalars`).
+in force. Where the tree holds no user home at all, the caveat says exactly that — the directory named is the one the
+emulator would create on the first save, not one found here — and a tree that could not be listed carries
+`save-dir-unlistable` of its own, so "which users exist is unknown" is something a client can branch on. Two more things
+ride along: the per-title directories keep their names refused (they are the games' own), and a _second_ place saves
+live rides as its own group — `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, outside the per-user
+tree entirely, with `files: null` because what lands there has not been read, and `file-set-spans-roots` saying a sync
+that walks only the per-user tree misses it. That card is also the first to read YAML, through a reader that names the
+keys it does not read rather than guessing (`atlas.yaml_scalars`).
 
 melonDS is the simplest card and the one whose default leaves the emulator's tree: one `<rom stem>.sav` per game where
 `[Instance0] SaveFilePath` points, and an empty or absent value lands the save **beside the ROM itself** — the answer's
@@ -917,18 +932,22 @@ core, and a standalone emulator has none.
 Not every standalone emulator answers, and two of them answer differently. Where the texture directory is a value in the
 emulator's own settings, a card may state the **key** instead of a subpath and its resolver reads it — PCSX2 does that
 with `[Folders] Textures`, and reads `[EmuCore/GS] LoadTextureReplacements` from the same file, so `enabled` is a
-reading there rather than `None`. DuckStation states the same key for a second reason: the root it resolves against is
-the config home or the data home depending on how the launch was started, so a fixed base would answer correctly on one
-arrangement and wrongly on the other — and its texture answer would disagree with its own cheat answer about where the
-emulator keeps things. Its `dir` is the load stage, `<Textures>/<serial>/replacements`, with `save_id` in `needs`:
-replacements are read one level below the per-game directory, and naming only the root would send a caller placing a
-pack where nothing reads it. Where nobody has read that configuration the entry still refuses with
-`standalone-unsupported` — Vita3K's `pref-path` lives in a `config.yml`, and atlas has no YAML reader — so the split
-runs on evidence, not on the kind of entry. **On EmuDeck the same cards answer**, below the bases the launch's own
-binary reads: an AppImage under `~/Applications` (or the executable EmuDeck unpacks from one) reads the host's XDG tree,
-and a flatpak whose app id the save card names reads the app's own homes. A launch whose binary establishes neither —
-the Windows build under Proton, a flatpak no card names an id for — refuses with `standalone-variant-unestablished` and
-the variant in `data`, which is a different instruction from "this emulator is not covered".
+reading there rather than `None`. **PCSX2's** `dir` is the load stage, `<Textures>/<serial>/replacements`, with
+`save_id` in `needs`: replacements are read one level below the per-game directory, and naming only the root would send
+a caller placing a pack where nothing reads it. That reading is the _global_ one, and PCSX2 has a second settings source
+— a running game installs `<DataRoot>/gamesettings/<serial>_<crc>.ini` as a layer over the whole configuration, so any
+key can answer differently for one game. Which game runs is not a fact atlas holds, so the answer stays the global
+reading and carries `per-game-overrides-present` where such files exist here, with their count and directory.
+DuckStation states the directory key for a different reason: the root it resolves against is the config home or the data
+home depending on how the launch was started, so a fixed base would answer correctly on one arrangement and wrongly on
+the other — and its texture answer would disagree with its own cheat answer about where the emulator keeps things. It
+reads no per-serial `replacements` tree of its own. Where nobody has read an emulator's configuration the entry still
+refuses with `standalone-unsupported`, so the split runs on evidence, not on the kind of entry. **On EmuDeck the same
+cards answer**, below the bases the launch's own binary reads: an AppImage under `~/Applications` (or the executable
+EmuDeck unpacks from one) reads the host's XDG tree, and a flatpak whose app id the save card names reads the app's own
+homes. A launch whose binary establishes neither — the Windows build under Proton, a flatpak no card names an id for —
+refuses with `standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this
+emulator is not covered".
 
 Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction:
 

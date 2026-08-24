@@ -383,10 +383,15 @@ A card states its directory one of two ways, and exactly one. Most name a fixed 
 the emulator opens. PCSX2 names a **configuration key** instead (`textures.directory`: `[Folders] Textures`, with the
 compiled default and a citation), because that is where its directory really comes from, and a `switch` beside it
 (`[EmuCore/GS] LoadTextureReplacements`) makes `enabled` a live reading rather than `None`. The second shape needs a
-resolver registered beside it in `atlas/installations.py` and fails the load without one, the same way a save card does:
-reading a configuration is code, never a card DSL. PCSX2's answer also states the **load stage** rather than the root —
+resolver registered beside it in `atlas/installations.py`, and raises when the question reaches it without one, the same
+way a save card does — the card loads, and the answer is where the two shipping out of step becomes visible: reading a
+configuration is code, never a card DSL. PCSX2's answer also states the **load stage** rather than the root —
 replacements are read from `<Textures>/<serial>/replacements` — because an answer naming only the root would send a
-caller placing a pack one level above everything that reads it.
+caller placing a pack one level above everything that reads it. Both readings are the _global_ ones: PCSX2 layers
+`<DataRoot>/gamesettings/<serial>_<crc>.ini` over the whole configuration while that game runs, and every core key is
+read through the layer, so the switch and the directory can each answer differently for one game. Which game runs is not
+a fact atlas holds, so the answer keeps the global reading and carries `per-game-overrides-present` — with their count
+and directory — where such files exist on the machine.
 
 DuckStation names the same key (`[Folders] Textures`, default `textures`) for a different reason, and it is the one
 worth learning from: its directory hangs off a **DataRoot the launch environment picks** — the config home where
@@ -539,11 +544,21 @@ emulator's config directory when empty (vfs_config.cpp:14-62). It is the first c
 (`atlas.yaml_scalars`), which names the one key of that file it does not read rather than guessing at it. Below the
 drive the unit is `home/<user>/savedata`, one directory per title id; the active user is a runtime selection no file
 records, so **every user home that exists becomes its own group** and a caveat says which ones were found — the same
-stance the Dolphin card takes with its region trees. A second save location is stated and not walked: `savedata/vmc`,
-the virtual memory cards for PS1 and PS2 classics, which a sync walking only the per-user tree would miss. Vita3K (build
-3996, commit `cb1f592c`): one key carries the whole tree — `pref-path` in `config.yml`, with everything the emulator
-keeps hanging off it as `ux0/…`, and saves at `ux0/user/<user>/savedata`, one directory per title id (io.cpp:136-143).
-Its user segment gets the same treatment as RPCS3's, and an empty `pref-path` is a refusal rather than a guess: the
+stance the Dolphin card takes with its region trees. Where none exists the answer says so outright rather than
+presenting the compiled default as a home somebody found, and a tree that cannot be listed carries `save-dir-unlistable`
+rather than a clause glued onto another caveat's prose. A second save location is named and not walked: `savedata/vmc`,
+the virtual memory cards for PS1 and PS2 classics, which a sync walking only the per-user tree would miss. It is a
+**directory**, so it is a group of its own with its names left open (`files: null`) beside `file-set-spans-roots` — not
+`save-inside-image`, which means the answer named a file and nothing inside it is addressable, the opposite of what is
+true here. Vita3K (build 3996, commit `cb1f592c`): one key carries the whole tree — `pref-path` in `config.yml`, with
+everything the emulator keeps hanging off it as `ux0/…`, and saves at `ux0/user/<user>/savedata`, one directory per
+title id (io.cpp:136-143). Its user segment ends up where RPCS3's does — every user directory that exists is its own
+group — but for a different reason, and the card says which: this emulator **does** write down the user it opened, as
+`user-id` in the same `config.yml` (select_and_open_user, user_management.cpp:329-331). What that record is worth is
+decided by the launch, not by a file: `init_home` reopens the recorded user only when it names a directory that exists
+and either the launch names an app on the command line or `user-auto-connect` is on, and otherwise the user manager
+opens for the player to pick (gui.cpp:688-696). So the recorded id is stated — as a reading, and as `configured_user` in
+the caveat — beside every tree rather than instead of them. An empty `pref-path` is a refusal rather than a guess: the
 emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). The answers root at
 `emulator_directory` — no frontend hands a standalone emulator a save directory — except where the emulator's own
 default walks into the content's. On EmuDeck a standalone emulator is identified by `%EMULATOR_…%` token or by an
@@ -572,13 +587,13 @@ A card states its probes one of three ways, and exactly one of them: `files` nam
 `keys.txt`), `config_files` names the **configuration keys whose values are the paths** — melonDS (1.1), whose seven
 BIOS, firmware and NAND keys point wherever the user pointed them — or `search` names a **directory to look in**, for
 the emulator that names no file at all (DuckStation, below). Either of the latter two needs a resolver registered beside
-it in `atlas/firmware.py` and fails the load loudly without one, the same way a save card does: which keys a launch
-probes at all is the emulator's own live decision, not something a card can spell. melonDS's `verifySetup`
-(EmuInstance.cpp:633-667) asks two switches — `Emu.ExternalBIOSEnable`, whose compiled default is **off** because the
-emulator carries a built-in replacement, and `Emu.ConsoleType`, where DSi mode requires its BIOS pair and NAND either
-way. With the switch off the answer is an empty requirement list plus `firmware-builtin-replacement` naming the switch;
-the two arrangements sit on opposite sides of it, RetroDECK switching it on and EmuDeck shipping `ExternalBIOSEnable=0`
-beside all seven configured paths.
+it in `atlas/firmware.py`, and raises loudly when the question reaches it without one, the same way a save card does —
+at query time, not at load: which keys a launch probes at all is the emulator's own live decision, not something a card
+can spell. melonDS's `verifySetup` (EmuInstance.cpp:633-667) asks two switches — `Emu.ExternalBIOSEnable`, whose
+compiled default is **off** because the emulator carries a built-in replacement, and `Emu.ConsoleType`, where DSi mode
+requires its BIOS pair and NAND either way. With the switch off the answer is an empty requirement list plus
+`firmware-builtin-replacement` naming the switch; the two arrangements sit on opposite sides of it, RetroDECK switching
+it on and EmuDeck shipping `ExternalBIOSEnable=0` beside all seven configured paths.
 
 PCSX2 (v2.6.3) is the second `config_files` card, and its expectation takes **two** settings rather than one:
 `[Folders] Bios` names the directory — the same `LoadPathFromSettings` shape the memory-card and texture directories use

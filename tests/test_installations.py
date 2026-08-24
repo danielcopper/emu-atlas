@@ -2063,6 +2063,304 @@ class TestMoreStandaloneSaves:
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
+    @pytest.mark.parametrize(
+        "card1,card2,files",
+        [
+            ("PerGameTitle", "PerGameTitle", ("<save_id>_1.mcd", "<save_id>_2.mcd")),
+            ("Shared", "Shared", ("shared_card_1.mcd", "shared_card_2.mcd")),
+            ("PerGameTitle", "Shared", ("<save_id>_1.mcd", "shared_card_2.mcd")),
+            ("Shared", "PerGameTitle", ("shared_card_1.mcd", "<save_id>_2.mcd")),
+            ("PerGame", "PerGameFileTitle", ("<save_id>_1.mcd", "<rom_stem>_2.mcd")),
+        ],
+    )
+    def test_duckstation_both_slots_occupied_name_both_cards(self, card1, card2, files):
+        # Two cards in one directory is the console's own shape, and the
+        # answer's flat `files` is every name lying in `dir` — the FileSet
+        # invariant. Naming only slot 1 raised instead of answering.
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    f"[MemoryCards]\nCard1Type = {card1}\nCard2Type = {card2}\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/memcards"
+        assert p.file_set.files == files
+        assert tuple(g.files for g in p.file_set.groups) == tuple((f,) for f in files)
+        assert p.granularity is not None
+        assert p.granularity.mode == f"{card1}+{card2}"
+
+    def test_duckstation_a_second_card_elsewhere_stays_out_of_the_flat_list(self):
+        # `files` is the names in the answer's own directory; the slot whose
+        # configured path leads somewhere else is reachable through `groups`.
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = Shared\n"
+                    "Card2Path = /mnt/sd/elsewhere/second.mcd\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/memcards"
+        assert p.file_set.files == ("shared_card_1.mcd",)
+        assert [(g.dir, g.files) for g in p.file_set.groups] == [
+            ("/mnt/sd/memcards", ("shared_card_1.mcd",)),
+            ("/mnt/sd/elsewhere", ("second.mcd",)),
+        ]
+
+    def test_duckstation_a_dead_link_on_the_answers_own_directory_is_stated(self):
+        # The link caveats used to be computed on the memory-card directory,
+        # which is not where the answer points once a slot names an absolute
+        # path of its own — a dead link there produced no caveat at all.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = None\n"
+                    "Card1Path = /mnt/sd/cards/everyone.mcd\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards"],
+            symlinks={"/mnt/sd/cards": "/mnt/sd/gone"},
+        )
+        p = rd.emulators_for("psx").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+
+    def test_pcsx2_a_dead_link_on_the_answers_own_directory_is_stated(self):
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: (
+                    "[MemoryCards]\nSlot1_Enable = true\n"
+                    "Slot1_Filename = /mnt/sd/cards/Mcd001.ps2\n"
+                    "Slot2_Enable = false\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+            symlinks={"/mnt/sd/cards": "/mnt/sd/gone"},
+        )
+        p = rd.emulators_for("ps2").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+
+    def test_duckstation_a_linked_answer_directory_states_its_physical_one(self):
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = Shared\nCard2Type = None\n"
+                    "Card1Path = /mnt/sd/cards/everyone.mcd\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards", "/mnt/sd/real-cards"],
+            symlinks={"/mnt/sd/cards": "/mnt/sd/real-cards"},
+        )
+        p = rd.emulators_for("psx").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert p.physical_dir == "/mnt/sd/real-cards"
+
+    @pytest.mark.parametrize("word", ["1", "yes", "on", "enabled", "TRUE", "t"])
+    def test_pcsx2_reads_every_spelling_of_on_the_emulator_reads(self, word):
+        # A hand-edited `Slot2_Enable = 1` is on for PCSX2, and atlas used to
+        # answer that the slot was empty.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: (
+                    f"[MemoryCards]\nSlot1_Enable = false\nSlot2_Enable = {word}\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        p = rd.emulators_for("ps2").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("Mcd002.ps2",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "off+file"
+
+    def test_pcsx2_a_value_neither_true_nor_false_leaves_the_default(self):
+        # GetBoolValue returns false without writing the caller's variable, so
+        # the compiled default governs — and the reading says which and why.
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[MemoryCards]\nSlot1_Enable = maybe\n"},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        p = rd.emulators_for("ps2").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert "Mcd001.ps2" in p.file_set.files  # the slot's default is on
+        assert p.granularity is not None
+        stated = next(r for r in p.granularity.readings if r.key == "Slot1_Enable")
+        assert "neither true nor false" in stated.provenance
+
+    def test_pcsx2_the_texture_switch_reads_the_same_spellings(self):
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[EmuCore/GS]\nLoadTextureReplacements = 1\n"},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert answer.enabled is True
+
+    def test_pcsx2_a_per_game_settings_file_is_stated_beside_the_switch(self):
+        # PCSX2 installs <DataRoot>/gamesettings/<serial>_<crc>.ini as a layer over
+        # the global configuration while that game runs, and every core key is
+        # read through it — so "replacement is off" is the answer for games
+        # that have no such file, and the answer has to say so.
+        gamesettings = (
+            f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        )
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: "[EmuCore/GS]\nLoadTextureReplacements = false\n",
+                f"{gamesettings}/SLES-12345_A1B2C3D4.ini": (
+                    "[EmuCore/GS]\nLoadTextureReplacements = true\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", gamesettings],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert answer.enabled is False
+        stated = [
+            c for c in answer.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        ]
+        assert stated
+        assert stated[0].data["count"] == "1"
+        assert stated[0].data["dir"] == gamesettings
+
+    def test_pcsx2_says_nothing_about_a_per_game_layer_that_is_not_there(self):
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[EmuCore/GS]\nLoadTextureReplacements = false\n"},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in [
+            c.code for c in answer.caveats
+        ]
+        assert atlas.CAVEAT_PER_GAME_LAYER_UNREAD not in [c.code for c in answer.caveats]
+
+    def test_pcsx2_a_per_game_layer_that_cannot_be_read_is_not_an_absent_one(self):
+        # Silence here means "this answer holds for every game", so answering
+        # an unreadable directory the way an empty one is answered claims
+        # exactly what the failed listing never established.
+        gamesettings = (
+            f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        )
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[EmuCore/GS]\nLoadTextureReplacements = false\n"},
+            dirs=["/mnt/sd/retrodeck/saves", gamesettings],
+            unlistable=[gamesettings],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        stated = [c for c in answer.caveats if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD]
+        assert stated
+        assert stated[0].data["dir"] == gamesettings
+        assert stated[0].data["key"] == "LoadTextureReplacements"
+        # Not the sibling that asserts they exist, and not silence.
+        assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in [
+            c.code for c in answer.caveats
+        ]
+
+    @pytest.mark.parametrize("value", ["maybe", "truthy", "2", "sure"])
+    def test_pcsx2_a_switch_value_the_emulator_rejects_is_stated(self, value):
+        # GetBoolValue leaves the caller's variable untouched, so the compiled
+        # default keeps governing — the setting does not become false, and the
+        # save route says so in a reading this answer has no room for.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: f"[EmuCore/GS]\nLoadTextureReplacements = {value}\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        stated = [c for c in answer.caveats if c.code == atlas.CAVEAT_CFG_VALUE_REJECTED]
+        assert stated
+        assert stated[0].data["value"] == value
+        assert stated[0].data["key"] == "EmuCore/GS/LoadTextureReplacements"
+        # The compiled default is false, and that is what governs — the caveat
+        # is what keeps it from reading as a key nobody wrote.
+        assert answer.enabled is False
+
+    @pytest.mark.parametrize("value", ["1", "true", "off", "disabled"])
+    def test_pcsx2_a_switch_value_the_emulator_reads_is_not_stated_as_rejected(self, value):
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: f"[EmuCore/GS]\nLoadTextureReplacements = {value}\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert atlas.CAVEAT_CFG_VALUE_REJECTED not in [c.code for c in answer.caveats]
+
+    def test_pcsx2_an_unset_switch_is_not_stated_as_rejected(self):
+        # An absent key is not a rejected value: nothing was written there.
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: "[Folders]\nTextures = /mnt/sd/tex\n"},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert atlas.CAVEAT_CFG_VALUE_REJECTED not in [c.code for c in answer.caveats]
+
+    @pytest.mark.parametrize(
+        "stem,expected",
+        [
+            ("Rock*Star", "Rock_Star_1.mcd"),
+            ("Vol: Two", "Vol: Two_1.mcd"),
+            ("A<B>C", "A<B>C_1.mcd"),
+        ],
+    )
+    def test_duckstation_sanitizes_a_file_title_the_linux_way(self, stem, expected):
+        # The Linux arm of FileSystemCharacterIsSane rejects '/' and '*' only;
+        # ':' is macOS and the angle brackets are Windows.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = PerGameFileTitle\nCard2Type = None\n"
+                    "Directory = /mnt/sd/memcards\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards"],
+        )
+        p = rd.emulators_for("psx").entries[0].savefile_location(
+            content_path=f"/mnt/sd/roms/psx/{stem}.chd"
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == (expected,)
+
+    def test_duckstation_two_per_game_slots_state_both_holes_once(self):
+        p = self._answer(
+            "psx",
+            files={
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = PerGameTitle\n"
+                    "Card2Type = PerGameFileTitle\nDirectory = /mnt/sd/memcards\n"
+                ),
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.needs == ("save_id", "rom_stem")
+
     def test_pcsx2_defaults_without_an_ini_answer_the_dataroot_memcards(self):
         # One DataRoot spelling on Linux — the config side either way
         # (Pcsx2Config.cpp:2197-2217) — so no ini still answers one tree.
@@ -2218,10 +2516,228 @@ class TestMoreStandaloneSaves:
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT]
         assert stated
 
+    @pytest.mark.parametrize(
+        "name,expected",
+        [
+            ("Some Game.nds", "Some Game.sav"),
+            ("Some.Game.v1.nds", "Some.Game.v1.sav"),
+            ("noextension", "noextension.sav"),
+            # All extension and no base: getAssetPath writes "firmware" where
+            # the stem would go (EmuInstance.cpp:473-476), which this mirrors
+            # rather than repairs.
+            (".nds", "firmware.sav"),
+        ],
+    )
+    def test_melonds_names_the_save_after_the_loaded_files_stem(self, name, expected):
+        p = self._melonds(
+            {MELONDS_TOML_PATH: '[Instance0]\nSaveFilePath = "/mnt/sd/saves"\n'},
+            content_path=f"/mnt/sd/retrodeck/roms/nds/{name}",
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == (expected,)
+
     def test_melonds_with_an_unreadable_toml_refuses(self):
         p = self._melonds({MELONDS_TOML_PATH: {"status": "unreadable"}})
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+
+PER_USER_ESDE = (
+    '<?xml version="1.0"?><systemList>'
+    "<system><name>psvita</name><path>%ROMPATH%/psvita</path><extension>.psvita</extension>"
+    '<command label="Vita3K (Standalone)">%EMULATOR_VITA3K% -r %INJECT%=%BASENAME%.psvita'
+    "</command></system>"
+    "<system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.ps3</extension>"
+    '<command label="RPCS3 (Standalone)">%EMULATOR_RPCS3% %ROM%</command></system>'
+    "</systemList>"
+)
+VITA3K_CONFIG_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+RPCS3_VFS_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+
+
+class TestTheUserAPerUserTreeWouldOpen:
+    """Which user account answers, and what each configuration actually says.
+
+    The two emulators reach the same shape — every user directory is a group —
+    from opposite facts. RPCS3 records the running user nowhere; Vita3K records
+    it as ``user-id`` and leaves only *whether a launch honours it* to the
+    launch. The answer used to tell RPCS3's story for both.
+    """
+
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: PER_USER_ESDE,
+    }
+
+    def _answer(self, system, files=None, dirs=()):
+        rd = _retrodeck(
+            {**self.BASE, **(files or {})},
+            dirs=["/mnt/sd/retrodeck/saves", *dirs],
+        )
+        return rd.emulators_for(system).entries[0].savefile_location()
+
+    def _user_caveat(self, placement):
+        stated = [c for c in placement.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        return stated[0]
+
+    def _readings(self, placement):
+        assert placement.granularity is not None
+        return {r.key: r.value for r in placement.granularity.readings}
+
+    def test_vita3k_states_the_user_its_config_records(self):
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert self._readings(p)["user-id"] == "01"
+        assert self._user_caveat(p).data["configured_user"] == "01"
+        # Every tree still answers: which user a launch opens is the launch's
+        # business, and the caveat names the recorded one beside them.
+        assert [g.dir for g in p.file_set.groups] == [
+            "/mnt/sd/vita/ux0/user/00/savedata",
+            "/mnt/sd/vita/ux0/user/01/savedata",
+        ]
+
+    def test_vita3k_without_a_user_id_preselects_nobody(self):
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert "configured_user" not in caveat.data
+        assert caveat.data["reason"] == "the configuration preselects no user"
+        assert self._readings(p)["user-id"] is None
+
+    def test_vita3k_reads_the_auto_connect_switch_beside_it(self):
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-auto-connect: true\n"
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert self._readings(p)["user-auto-connect"] == "true"
+
+    def test_vita3k_an_unread_user_id_is_not_an_absent_one(self):
+        # A list under the key is a construct the scalar reader passes over.
+        # Reading that as "no user is preselected" states something the file
+        # contradicts.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: [01]\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert "configured_user" not in caveat.data
+        assert "does not read" in caveat.data["reason"]
+
+    def test_an_empty_user_tree_does_not_claim_a_user_was_found(self):
+        # The compiled default is what the emulator would create, not a home
+        # anyone saw. The answer used to say every user home found here is
+        # stated while naming one that was not found at all.
+        p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"})
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "no user directory was found"
+        assert "no user home exists" in caveat.message
+        assert "would create" in caveat.message
+
+    def _unlistable_tree(self, system, files):
+        rd = _retrodeck(
+            {**self.BASE, **files},
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/hdd/home", "/mnt/sd/vita/ux0/user"],
+            unlistable=["/mnt/sd/hdd/home", "/mnt/sd/vita/ux0/user"],
+        )
+        return rd.emulators_for(system).entries[0].savefile_location()
+
+    def test_an_unlistable_user_tree_is_a_structured_caveat(self):
+        # "the tree could not be listed in full" used to be a clause glued onto
+        # another caveat's prose, which no client can branch on.
+        p = self._unlistable_tree("ps3", {RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"})
+        assert not isinstance(p, atlas.Unresolved)
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_UNLISTABLE]
+        assert stated
+        # `path` is the key the code's other emitter uses and the guide
+        # documents; a second shape for one code is a client reading nothing.
+        assert stated[0].data["path"] == "/mnt/sd/hdd/home"
+        assert stated[0].data["core"] == "RPCS3"
+
+    @pytest.mark.parametrize(
+        "system,files",
+        [
+            ("ps3", {RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"}),
+            ("psvita", {VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n"}),
+        ],
+    )
+    def test_a_tree_that_could_not_be_listed_does_not_say_it_is_empty(self, system, files):
+        # A failed listing establishes neither "these users exist" nor "none
+        # does". Answering it with the empty tree's sentence — "nothing has
+        # saved here yet" — is a claim about contents the listing never
+        # reached, beside a second caveat saying it was never read.
+        p = self._unlistable_tree(system, files)
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "which users exist here was not established"
+        assert "nothing has saved here yet" not in caveat.message
+        assert "could not be listed" in caveat.message
+        # And the two states it is not: neither existence sentence.
+        assert "every user" not in caveat.message
+        assert [c.code for c in p.caveats].count(atlas.CAVEAT_SAVE_DIR_UNLISTABLE) == 1
+
+    def test_rpcs3_virtual_memory_cards_are_a_directory_group_not_an_image(self):
+        # `save-inside-image` means the answer names a FILE and nothing inside
+        # it is addressable. The vmc path is a directory, so a client following
+        # that code would have copied a directory "as a file".
+        p = self._answer(
+            "ps3",
+            files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"},
+            dirs=["/mnt/sd/hdd/home/00000001"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert atlas.CAVEAT_SAVE_INSIDE_IMAGE not in [c.code for c in p.caveats]
+        vmc = [g for g in p.file_set.groups if g.dir.endswith("/savedata/vmc")]
+        assert len(vmc) == 1
+        assert vmc[0].files is None
+        assert vmc[0].role == atlas.ROLE_MEMORY_CARD
+        spans = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS]
+        assert spans
+        assert spans[0].data["dir"] == vmc[0].dir
+
+    def test_vita3k_an_unread_pref_path_refuses_for_the_right_reason(self):
+        p = self._answer("psvita", files={VITA3K_CONFIG_YML: "pref-path:\n  - /mnt/sd/vita\n"})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert p.data["reason"] == "pref-path is unread"
+
+    def test_rpcs3_an_unread_drive_refuses_instead_of_the_compiled_default(self):
+        # The key IS set; atlas did not read it. Answering the compiled default
+        # and calling it "the compiled default governs" was a claim about a key
+        # the file states.
+        p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/:\n  - /mnt/sd/hdd\n"})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert p.data["reason"] == "/dev_hdd0/ is unread"
+
+    def test_rpcs3_still_says_nothing_records_its_user(self):
+        # The fix is Vita3K's alone: RPCS3 really does record no user.
+        p = self._answer(
+            "ps3",
+            files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"},
+            dirs=["/mnt/sd/hdd/home/00000001"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the active user account is not recorded on disk"
+        assert "configured_user" not in caveat.data
 
 
 class TestEmuDeckStandaloneLaunchers:
@@ -2288,6 +2804,35 @@ class TestEmuDeckStandaloneLaunchers:
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
         assert p.data["variant"] == "flatpak"
+
+    def _entry(self, system, files=None, **kwargs):
+        machine = FixtureMachine({**self.BASE, **(files or {})}, **kwargs)
+        return atlas.EmuDeck(HOME, machine).emulators_for(system).entries[0]
+
+    @pytest.mark.parametrize("question", ["texture_pack_location", "mod_location"])
+    def test_the_other_questions_refuse_at_the_same_gate_the_save_route_does(self, question):
+        # The gate is shared by all four questions since #255; only the save
+        # route's refusals had a test, so the texture and mod ones could have
+        # answered from a tree their binary never reads and nothing would say.
+        entry = self._entry(
+            "wiiu",
+            dirs=[
+                f"{HOME}/Applications",
+                f"{HOME}/.local/share/flatpak/app/info.cemu.Cemu",
+            ],
+        )
+        outcome = getattr(entry, question)()
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert outcome.data["variant"] == "flatpak"
+
+    @pytest.mark.parametrize("question", ["texture_pack_location", "mod_location"])
+    def test_the_other_questions_refuse_a_proton_launch_too(self, question):
+        entry = self._entry("wiiu", dirs=[f"{HOME}/Applications"])
+        outcome = getattr(entry, question)()
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED
+        assert outcome.data["variant"] == "proton"
 
     def test_an_unlistable_applications_directory_is_not_a_no(self):
         # The launcher would still look there — an unreadable directory makes

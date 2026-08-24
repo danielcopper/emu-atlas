@@ -132,6 +132,32 @@ class TestWhatItRefusesWholesale:
         read = read_scalars("$(A): $(B)\n$(B): $(A)\n")
         assert read.refusal == REFUSAL_SUBSTITUTION_CYCLE
 
+    def test_many_tokens_on_one_line_are_one_link_not_many(self):
+        # Twelve different keys named once each is depth *one* and no cycle at
+        # all. The bound used to count replacements, so this refused as one.
+        text = "$(v): x\np: " + "$(v)" * 12 + "\n"
+        read = read_scalars(text)
+        assert read.refusal is None
+        assert read.get("p") == "x" * 12
+
+    def test_a_chain_longer_than_the_bound_still_refuses(self):
+        # What the bound is actually for: each key refers to the next, so the
+        # links are what has to stay countable.
+        depth = 9
+        lines = [f"$(k{i}): $(k{i + 1})" for i in range(depth)]
+        lines += [f"$(k{depth}): end", "p: $(k0)"]
+        assert read_scalars("\n".join(lines) + "\n").refusal == REFUSAL_SUBSTITUTION_CYCLE
+
+    def test_a_chain_inside_the_bound_resolves(self):
+        lines = [f"$(k{i}): $(k{i + 1})" for i in range(3)]
+        lines += ["$(k3): end", "p: $(k0)"]
+        assert read_scalars("\n".join(lines) + "\n").get("p") == "end"
+
+    def test_an_unterminated_token_ends_the_chain_rather_than_refusing(self):
+        # `$(` with no `)` is not a token; the text stays as written, the way
+        # an unterminated quote does.
+        assert read_scalars("p: /tmp/$(oops\n").get("p") == "/tmp/$(oops"
+
     def test_content_after_a_document_end_marker_is_not_read(self):
         read = read_scalars("a: 1\n...\nb: 2\n")
         assert read.refusal is None
@@ -150,6 +176,38 @@ class TestScalarsAsWritten:
 
     def test_a_quoted_scalar_keeps_what_the_quotes_wrap(self):
         assert read_scalars("path: '/tmp/x # y'\n").get("path") == "/tmp/x # y"
+
+    def test_a_tab_before_the_hash_opens_a_comment_too(self):
+        # YAML asks for whitespace before the '#', not for a space.
+        assert read_scalars("path: /tmp/x\t# note\n").get("path") == "/tmp/x"
+
+    def test_two_markers_with_nothing_between_are_still_two_documents(self):
+        # An empty first document and a second one: reading the second's lines
+        # as the first's answers from a document nobody established is in force.
+        read = read_scalars("---\n---\nkey: value\n")
+        assert read.refusal == "second-document"
+        assert read.values == {}
+
+    def test_an_anchor_in_key_position_refuses_the_file(self):
+        # Checking only the value let this through as a key spelled "&anc key".
+        assert read_scalars("&anc key: value\n").refusal == "anchor-or-alias"
+
+    def test_a_tag_in_key_position_refuses_the_file(self):
+        assert read_scalars("!!str key: value\n").refusal == "tag"
+
+    def test_a_comment_after_a_quoted_scalar_comes_off(self):
+        # The quotes close before the '#', so the comment is a comment — the
+        # value used to come back as '"/tmp/x" # note', quotes and all.
+        assert read_scalars('path: "/tmp/x" # note\n').get("path") == "/tmp/x"
+        assert read_scalars("path: '/tmp/x' # note\n").get("path") == "/tmp/x"
+
+    def test_a_hash_without_whitespace_after_a_quoted_scalar_stays_verbatim(self):
+        # YAML opens a comment only after whitespace, so this is not one, and
+        # the reader states what it cannot read exactly rather than cutting.
+        assert read_scalars('path: "/tmp/x"# note\n').get("path") == '"/tmp/x"# note'
+
+    def test_text_after_a_quoted_scalar_stays_verbatim(self):
+        assert read_scalars("path: '/tmp/x' and more\n").get("path") == "'/tmp/x' and more"
 
     def test_an_unterminated_quote_stays_verbatim(self):
         # Visibly odd rather than invented — the same stance the marker and

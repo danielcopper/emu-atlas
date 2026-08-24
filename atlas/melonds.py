@@ -107,14 +107,31 @@ def _settings_path(name: str, config_home: str, flatpak: str | None) -> str:
     The address is the settings table's, not this module's: the save answer,
     the BIOS answer and this reader all open the same file, and a copy per
     reader is how two of them came to disagree about another emulator's.
+
+    Every caller of this module holds one home, the config one, because that
+    is where melonDS keeps both its files. Passing it as the data home too
+    would answer the config tree for a file the table moved to the data one —
+    silently, and only for melonDS — so the base the table states is checked
+    rather than assumed.
     """
-    return emulator_settings.settings_file(TOKEN, name).only(
-        config_home=config_home, data_home=config_home, flatpak=flatpak
-    )
+    settings = emulator_settings.settings_file(TOKEN, name)
+    if settings.bases != ("config",):
+        raise ValueError(
+            f"the settings table states bases {settings.bases} for melonDS's {name!r} and this "
+            "reader is given only the config home — the table and the code shipped out of step"
+        )
+    return settings.only(config_home=config_home, data_home=config_home, flatpak=flatpak)
 
 
-def config_dir(config_home: str, flatpak: str | None = None) -> str:
-    """``emuDirectory`` for a non-portable launch — the directory the TOML sits in."""
+def config_dir(config_home: str, flatpak: str | None) -> str:
+    """``emuDirectory`` for a non-portable launch — the directory the TOML sits in.
+
+    *flatpak* has no default, for the reason
+    :func:`atlas.emulator_settings.user_directory` has none: a route that
+    simply forgot it would answer the host tree's address and look right on
+    every emulator whose directory does not vary by installation, which is
+    every one of them until the first that does.
+    """
     return os.path.dirname(_settings_path(CONFIG_FILENAME, config_home, flatpak))
 
 
@@ -170,7 +187,7 @@ def _legacy_document(text: str) -> dict[str, Any]:
     return document
 
 
-def read_config(machine: Machine, config_home: str, flatpak: str | None = None) -> MelonConfigRead:
+def read_config(machine: Machine, config_home: str, flatpak: str | None) -> MelonConfigRead:
     """``Config::Load``, performed as reads — the TOML, the legacy INI, or defaults."""
     toml_path = _settings_path(CONFIG_FILENAME, config_home, flatpak)
     result = machine.read_text(toml_path)
@@ -262,7 +279,7 @@ def probed_firmware_keys(extbios: bool, console: int) -> tuple[str, ...]:
     return keys
 
 
-def local_file_path(config_home: str, value: str, flatpak: str | None = None) -> str:
+def local_file_path(config_home: str, value: str, flatpak: str | None) -> str:
     """``Platform::GetLocalFilePath`` — absolute stays, anything else joins the config dir.
 
     Platform.cpp:157-172 at 1.1: a relative spelling (the empty string

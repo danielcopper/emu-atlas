@@ -122,10 +122,14 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
     provenance = entry.get("provenance", {})
     if not isinstance(provenance, dict):
         raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
-    citations = saves.get("citations", {})
-    if not isinstance(citations, dict):
-        raise ValueError(f"{where}: expected a 'saves.citations' object, got {citations!r}")
-    installations = citations.pop("installations", {})
+    stated_citations = saves.get("citations", {})
+    if not isinstance(stated_citations, dict):
+        raise ValueError(f"{where}: expected a 'saves.citations' object, got {stated_citations!r}")
+    # Copied rather than popped: the caller's parsed document is theirs, and a
+    # loader that empties a key out of it makes a second load of the same
+    # object see a card without its overrides.
+    installations = stated_citations.get("installations", {})
+    citations = {k: v for k, v in stated_citations.items() if k != "installations"}
     if not isinstance(installations, dict):
         raise ValueError(
             f"{where}: expected a 'saves.citations.installations' object, got {installations!r}"

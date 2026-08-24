@@ -1216,6 +1216,200 @@
       }
     },
     {
+      "name": "pcsx2-a-per-game-settings-file-layers-over-the-global-switch",
+      "rationale": "PCSX2 reads every core setting through a layered settings interface, and a running game installs <DataRoot>/gamesettings/<serial>_<crc>.ini as the top layer of it (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3; the path is GetGameSettingsPath, :774-781, and the directory is [Folders] GameSettings defaulting to gamesettings below the DataRoot, Pcsx2Config.cpp:2290). So LoadTextureReplacements has two possible answers on a machine that carries such a file, and which one holds depends on the game — a fact atlas does not have. The answer therefore stays the global reading and says that some games here carry their own, rather than presenting one reading as the whole truth.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = /mnt/sd/retrodeck/texture_packs/PCSX2/textures\n[EmuCore/GS]\nLoadTextureReplacements = true\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings/SLES-12345_A1B2C3D4.ini": "[EmuCore/GS]\nLoadTextureReplacements = true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        ],
+        "entry_texture_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures/<save_id>/replacements",
+          "needs": [
+            "save_id"
+          ],
+          "physical_dir": null,
+          "enabled": true,
+          "keying": "serial",
+          "caveats": [
+            {
+              "code": "per-game-overrides-present",
+              "data": {
+                "core": "PCSX2",
+                "count": "1",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
+                "key": "LoadTextureReplacements"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "PCSX2",
+                "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+                "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "load_stage": "replacements",
+                "dump_stage": "dumps",
+                "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-per-game-layer-that-cannot-be-read-is-not-an-absent-one",
+      "rationale": "The absence of per-game-overrides-present is what tells a caller this answer holds for every game, so an unreadable gamesettings directory answered the way an empty one is answered claimed exactly what was not established. The directory is there and its contents cannot be read: whether any game on this machine overrides the switch is unknown, and per-game-layer-unread says so. Neither sibling could — 'present' asserts they exist, and silence asserts they do not.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = /mnt/sd/retrodeck/texture_packs/PCSX2/textures\n[EmuCore/GS]\nLoadTextureReplacements = true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        ],
+        "entry_texture_query": {
+          "system": "ps2"
+        },
+        "unlistable": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures/<save_id>/replacements",
+          "needs": [
+            "save_id"
+          ],
+          "physical_dir": null,
+          "enabled": true,
+          "keying": "serial",
+          "caveats": [
+            {
+              "code": "per-game-layer-unread",
+              "data": {
+                "core": "PCSX2",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
+                "key": "LoadTextureReplacements"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "PCSX2",
+                "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+                "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "load_stage": "replacements",
+                "dump_stage": "dumps",
+                "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-switch-value-the-emulator-cannot-read-keeps-the-compiled-default",
+      "rationale": "LoadTextureReplacements = maybe is not a value FromChars<bool> accepts (StringUtil.h:178-197 at v2.6.3), and GetBoolValue leaves the caller's variable untouched when it yields nothing (INISettingsInterface.cpp:198-210) — so the compiled default keeps governing and the setting does *not* become false. The save route states that in an OptionReading provenance; a texture answer carries no readings, so without cfg-value-rejected the answer looked exactly like one for a key nobody had written, and a user who wrote something there would never learn it was ignored.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[EmuCore/GS]\nLoadTextureReplacements = maybe\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        ],
+        "entry_texture_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/textures/<save_id>/replacements",
+          "needs": [
+            "save_id"
+          ],
+          "physical_dir": null,
+          "enabled": false,
+          "keying": "serial",
+          "caveats": [
+            {
+              "code": "cfg-value-rejected",
+              "data": {
+                "core": "PCSX2",
+                "key": "EmuCore/GS/LoadTextureReplacements",
+                "value": "maybe"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "PCSX2",
+                "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/textures",
+                "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "load_stage": "replacements",
+                "dump_stage": "dumps",
+                "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "pcsx2-an-unset-textures-key-is-the-compiled-default-below-the-dataroot",
       "rationale": "An unset key is not an unknown directory: LoadPathFromSettings falls back to the compiled default 'textures' and resolves it against the DataRoot, which on Linux is the config side either way (Pcsx2Config.cpp:2197-2217, :2293). The switch is unset too, and its compiled default is off — so this answer states where packs would be read from and that nothing is reading them, which are two different facts and both worth having.",
       "input": {
@@ -1574,8 +1768,8 @@
       }
     },
     {
-      "name": "duckstation-with-no-settings-file-the-texture-root-is-unestablished",
-      "rationale": "Neither DataRoot candidate holds a settings.ini, so which root this launch would use is decided by an environment variable no file records. The answer names the environment-unset side and says so in the same words the save, BIOS and mod answers of this emulator use — one fact, one telling.",
+      "name": "retrodeck-duckstation-textures-hang-off-the-dataroot-its-sandbox-pins",
+      "rationale": "Nothing on this machine holds a DuckStation settings.ini, and that used to leave the DataRoot an open question: the emulator picks it from whether XDG_CONFIG_HOME is set (qthost.cpp:562-582), so the answer named the environment-unset side — the data one — and said the environment decides. It does not decide here. Every emulator RetroDECK ships runs inside RetroDECK's own flatpak, and flatpak force-pins XDG_CONFIG_HOME to the per-app config directory after applying every override (flatpak-context.c:3158-3187 at 1.16.6), so the set branch is the only branch such a launch can take. The texture root is the one below that DataRoot, stated plainly — the same telling the save, BIOS and mod answers of this emulator give, because it is one fact.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1603,24 +1797,17 @@
           }
         ],
         "entry_texture_pack_location": {
-          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/textures",
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/textures",
           "needs": [],
           "physical_dir": null,
           "enabled": null,
           "keying": null,
           "caveats": [
             {
-              "code": "core-mode-unestablished",
-              "data": {
-                "core": "DUCKSTATION",
-                "reason": "the DataRoot is decided by the launch environment"
-              }
-            },
-            {
               "code": "emulator-config-unread",
               "data": {
                 "emulator": "DUCKSTATION",
-                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/settings.ini"
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
               }
             }
           ]

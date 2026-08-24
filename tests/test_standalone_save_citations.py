@@ -70,6 +70,35 @@ class TestTheCardStatesWhatTheReadingNames:
             )
 
 
+# The citation slots whose span the card's own prose states too, because the
+# prose walks the path shape those slots cite and a reader compares the two.
+# `nand_tree` is here because the two disagreed in a shipped release — the slot
+# said NandPaths.cpp:49-58 and the prose :49-52, which stops before the half
+# that appends `/data` — and nothing noticed, since prose is not contractual
+# and no test read it.
+#
+# The other two slots are absent on purpose: the prose discusses neither
+# `session_overrides` nor `wii_dir`, so requiring their spans in it would ask
+# for sentences nobody needs. It does cite the same *files* for other facts,
+# which is why this is a list of slots rather than a rule about files.
+SLOTS_THE_PROSE_REPEATS = ("gci_names", "nand_tree", "slot_defaults", "slot_devices")
+
+
+class TestTheProseAndTheSlotsAgree:
+    """One card, two tellings of one citation — they have to be the same one."""
+
+    @pytest.mark.parametrize("token", sorted(STANDALONE_SAVE_CITATION_SLOTS))
+    @pytest.mark.parametrize("slot", SLOTS_THE_PROSE_REPEATS)
+    def test_the_prose_states_the_slots_own_span(self, token, slot):
+        card = lookup_standalone_save_card(token)
+        assert card is not None
+        cited = card.cite(slot, flatpak=None)
+        assert cited in card.provenance, (
+            f"{token} cites {slot} as {cited!r} and its own provenance prose does not say so — "
+            "one of the two is the number somebody re-read, and a reader cannot tell which"
+        )
+
+
 class TestACitationBelongsToABuild:
     def test_the_two_forks_builds_are_cited_apart(self):
         card = lookup_standalone_save_card("PRIMEHACK")

@@ -70,11 +70,15 @@ def _directory_spellings():
                 if stated.flatpak is not None
                 else COMPONENTS / stated.binary
             )
+            # The encoding travels with the sibling too. Encoding it as bare
+            # UTF-8 below would look for the wrong bytes of any name recorded
+            # in another encoding, and a flip guard that cannot see the other
+            # spelling passes for the wrong reason.
             siblings = tuple(
-                literal
+                (literal, encoding)
                 for other_id, other in spellings
                 if other_id != app_id
-                for _, literal, _ in other.literals
+                for _, literal, encoding in other.literals
             )
             yield token, app_id, stated, binary, siblings
 
@@ -251,6 +255,29 @@ class TestTheAnchorBlockShape:
             load_texture_packs(table)
 
 
+# The directory rows whose literal is *not* a lone constant in the binary that
+# spells it, so a rename would leave the other occurrences behind and this wire
+# could not say a word. Every one of them is a literal that is also the
+# program's own name, which a binary carries for a hundred unrelated reasons —
+# log tags, window titles, its own paths. Listed rather than quietly tolerated,
+# because "the tripwire covers the settings table" was read off the class below
+# and was true of four rows out of twelve.
+#
+# Moving a row out of this list means its build started spelling the directory
+# somewhere it does not spell itself, which is worth the read it takes to
+# confirm. Moving one in means a name that was watched no longer is.
+DIRECTORY_ANCHORS_THE_WIRE_CANNOT_WATCH = {
+    ("XEMU", None),
+    ("CEMU", None),
+    ("AZAHAR", None),
+    ("DUCKSTATION", None),
+    ("PCSX2", None),
+    ("MELONDS", None),
+    ("RPCS3", None),
+    ("VITA3K", None),
+}
+
+
 class TestTheStatedDirectoryIsTheOneTheBuildSpells:
     """The settings table's half: an emulator's own directory, re-read as bytes.
 
@@ -261,6 +288,20 @@ class TestTheStatedDirectoryIsTheOneTheBuildSpells:
     ships and the one Flathub ships spell it differently (#246), and a name
     that outlived its build would send every path below it somewhere nothing
     writes to.
+
+    **What it does not cover.** Containment only catches a rename where the
+    literal was the *only* reason the binary carried those bytes. Four rows
+    are like that, and each occurs exactly once in its build: Dolphin's
+    ``.dolphin-emu/``, PrimeHack's ``.primehack/``, PPSSPP's ``.ppsspp/``, and
+    ``.dolphin-emu/`` again for the PrimeHack build Flathub ships, which spells
+    the directory the way the emulator it forked does. Eight rows are not, and
+    they are the ones :data:`DIRECTORY_ANCHORS_THE_WIRE_CANNOT_WATCH` lists —
+    ``azahar-emu`` occurs 20 times, ``duckstation`` 29, ``Cemu`` 110,
+    ``PCSX2`` 135, ``melonDS`` 183, ``xemu`` 197, ``Vita3K`` 763 and ``rpcs3``
+    1322, because the binary says its own name for a hundred unrelated
+    reasons. For those the wire is a presence check and nothing more, and the
+    constant says so out loud rather than letting this docstring imply
+    otherwise.
     """
 
     @pytest.mark.parametrize(
@@ -297,8 +338,8 @@ class TestTheStatedDirectoryIsTheOneTheBuildSpells:
         data = _blob(binary)
         if data is None:
             pytest.skip(f"{binary} is not deployed")
-        for literal in siblings:
-            assert literal.encode() not in data, (
+        for literal, encoding in siblings:
+            assert literal.encode(encoding) not in data, (
                 f"the settings table states {token}'s own directory as {stated.name!r} for "
                 f"{app_id or 'the arrangement own build'}, and the shipped {binary.name} carries "
                 f"{literal!r} — the other installation's spelling — so this build is no longer "
@@ -313,4 +354,42 @@ class TestTheStatedDirectoryIsTheOneTheBuildSpells:
         assert checked, (
             f"binaries are deployed below {COMPONENTS} and not one directory name was read from "
             "one — either the binaries moved or the tripwire is silently checking nothing"
+        )
+
+    def test_every_segment_of_a_stated_directory_is_anchored(self):
+        # The coverage guard the card tables have and this table did not: an
+        # empty `names` block loads, and then the wire above iterates zero
+        # times and passes. A row protected by nothing must not read as a row
+        # that passed.
+        for token, app_id, stated, _binary, _siblings in DIRECTORY_SPELLINGS:
+            segments = {segment for segment in stated.name.split("/") if segment}
+            anchored = set(stated.anchors["names"])
+            assert anchored == segments, (
+                f"the settings table states {token}'s directory ({app_id or 'default'}) as "
+                f"{stated.name!r} and anchors {sorted(anchored)} — every segment is pinned to "
+                "the bytes it was read from, or this wire watches a name nobody checked"
+            )
+
+    def test_the_rows_this_wire_cannot_watch_are_exactly_the_listed_ones(self):
+        # Derived from the binaries, not asserted about them: a literal that
+        # occurs once is the constant itself, so removing it is a rename this
+        # wire sees. One that occurs many times is the program's own name, and
+        # a rename would leave every other occurrence in place.
+        if not COMPONENTS.is_dir():
+            pytest.skip(f"nothing is deployed at {COMPONENTS}")
+        unwatchable = set()
+        read_any = False
+        for token, app_id, stated, binary, _siblings in DIRECTORY_SPELLINGS:
+            data = _blob(binary)
+            if data is None:
+                continue
+            read_any = True
+            for _segment, literal, encoding in stated.literals:
+                if data.count(literal.encode(encoding)) > 1:
+                    unwatchable.add((token, app_id))
+        assert read_any, "no directory anchor was read, so this proves nothing"
+        assert unwatchable == DIRECTORY_ANCHORS_THE_WIRE_CANNOT_WATCH, (
+            "which directory names this tripwire can actually watch has changed — a row that "
+            "left the list now spells its directory somewhere it does not spell its own name, "
+            "and a row that joined it stopped being watched at all"
         )

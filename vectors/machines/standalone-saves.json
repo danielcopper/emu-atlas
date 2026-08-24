@@ -1439,7 +1439,7 @@
                 "mode": "PerGameFileTitle",
                 "files": "Example Game (Europe)_1.mcd",
                 "files_without_save_id": "shared_card_1.mcd",
-                "save_id": "the content file's own name without its extension, sanitized the way Path::SanitizeFileName sanitizes ('/', '*' and control bytes become '_')",
+                "save_id": "the content file's own name without its extension, sanitized the way Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')",
                 "citation": "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e"
               }
             }
@@ -1470,8 +1470,212 @@
       }
     },
     {
-      "name": "duckstation-without-a-settings-ini-the-dataroot-stays-ambiguous",
-      "rationale": "No settings.ini exists on either DataRoot candidate, and the root is picked by the launch environment (XDG_CONFIG_HOME set routes it to the config side, qthost.cpp:562-582) — a fact no file records. The answer states the ambiguity and hangs the compiled defaults off the environment-unset side rather than guessing: slot pair PerGameTitle/None (settings.h:510-511), memcards below the DataRoot.",
+      "name": "duckstation-a-file-title-card-is-sanitized-the-way-this-build-sanitizes",
+      "rationale": "FileSystemCharacterIsSane splits on the platform (file_system.cpp:69-97 at 64655818e), and the arm a Linux build compiles rejects two characters: '/' while slashes are being stripped, and '*' because they make globbing annoying. Everything else this stem carries survives — ':' is inside a further #ifdef __APPLE__, and the angle brackets and the control bytes belong to the _WIN32 arm above. atlas used to replace control bytes too, which is Windows behaviour claimed of a Linux build; the characters that do get replaced become '_'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameFileTitle\nCard2Type = None\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "psx",
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Rock*Star: Vol.2 <Best>.chd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Rock_Star: Vol.2 <Best>_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "files": [
+                  "Rock_Star: Vol.2 <Best>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameFileTitle",
+                "files": "Rock_Star: Vol.2 <Best>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the content file's own name without its extension, sanitized the way Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')",
+                "citation": "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameFileTitle+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "PerGameFileTitle",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-both-slots-hold-a-card-and-the-answer-names-both",
+      "rationale": "A second controller port gets a second card, and the console's two slots then lie side by side in one directory. The answer's flat file list is every name in the directory it points at, in slot order — the FileSet invariant — so slot 2's card is in it and in its own group, whatever type each slot holds. Naming only slot 1 was not a smaller answer but no answer at all: it contradicted the invariant, and the question raised instead of answering. The headline stays slot 1's: dir and granularity.value come from the first group, while granularity.mode names the pair.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\nCard2Type = Shared\nUsePlaylistTitle = true\nCard1Path = /mnt/sd/retrodeck/saves/psx/duckstation/memcards/shared_card_1.mcd\nCard2Path = /mnt/sd/retrodeck/saves/psx/duckstation/memcards/shared_card_2.mcd\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd",
+              "shared_card_2.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "files": [
+                  "shared_card_2.mcd"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameTitle",
+                "files": "<save_id>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameTitle+Shared",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "PerGameTitle",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "UsePlaylistTitle",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Path",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards/shared_card_2.mcd",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-duckstations-dataroot-is-the-config-side-its-sandbox-pins",
+      "rationale": "Nothing on this machine holds a DuckStation settings.ini, and that used to leave the DataRoot an open question: the emulator picks it from whether XDG_CONFIG_HOME is set (qthost.cpp:562-582), so the answer named the environment-unset side — the data one — and said the environment decides. It does not decide here. Every emulator RetroDECK ships runs inside RetroDECK's own flatpak, and flatpak force-pins XDG_CONFIG_HOME to the per-app config directory after applying every override (flatpak-context.c:3158-3187 at 1.16.6), so the set branch is the only branch such a launch can take. The compiled defaults now hang off the config side, where this launch really composes them: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot — and no degradation, because nothing is degraded.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1498,7 +1702,7 @@
           }
         ],
         "entry_savefile_location": {
-          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/memcards",
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/memcards",
           "root_kind": "emulator_directory",
           "needs": [
             "save_id"
@@ -1513,7 +1717,7 @@
             "complete": false,
             "groups": [
               {
-                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/memcards",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/memcards",
                 "files": [
                   "<save_id>_1.mcd"
                 ],
@@ -1523,13 +1727,6 @@
             ]
           },
           "caveats": [
-            {
-              "code": "core-mode-unestablished",
-              "data": {
-                "core": "DUCKSTATION",
-                "reason": "the DataRoot is decided by the launch environment"
-              }
-            },
             {
               "code": "filenames-content-conditional",
               "data": {
@@ -1666,6 +1863,113 @@
                 "key": "Card2Type",
                 "value": "None",
                 "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-duckstation-without-a-settings-ini-leaves-the-dataroot-to-the-environment",
+      "rationale": "The half of the DataRoot probe a sandbox does not settle. EmuDeck runs this emulator as an AppImage in the host session, where XDG_CONFIG_HOME may be set or not — nothing on disk records which — and with no settings.ini on either candidate there is no file to break the tie either. So the answer states the ambiguity and hangs the compiled defaults off the environment-unset side rather than guessing: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot. Inside a flatpak the same emulator has nothing to be ambiguous about, which is what the RetroDECK vector of this pair pins.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/duckstation/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.local/share/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.local/share/duckstation/memcards",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "DUCKSTATION",
+                "reason": "the DataRoot is decided by the launch environment"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameTitle",
+                "files": "<save_id>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameTitle+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "Card1Type",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "UsePlaylistTitle",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "Card2Type",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": []
@@ -2279,7 +2583,7 @@
     },
     {
       "name": "retrodeck-rpcs3-saves-under-the-drive-its-vfs-names",
-      "rationale": "RPCS3's saves hang off the emulated PS3's internal drive, and vfs.yml states where that drive lives: /dev_hdd0/ composed off $(EmulatorDir), which cfg_vfs::get replaces everywhere it appears (vfs_config.cpp:14-62 at build 7c6b3dcd) — the shape RetroDECK writes when it points the drive at its storage tree. Below it the tree is home/<user>/savedata, one directory per title id; the user is a runtime selection nothing on disk records, so every user home found becomes its own group and the caveat says so. The virtual memory cards for PS1 and PS2 classics sit outside that tree and are stated as a place, not walked.",
+      "rationale": "RPCS3's saves hang off the emulated PS3's internal drive, and vfs.yml states where that drive lives: /dev_hdd0/ composed off $(EmulatorDir), which cfg_vfs::get replaces everywhere it appears (vfs_config.cpp:14-62 at build 7c6b3dcd) — the shape RetroDECK writes when it points the drive at its storage tree. Below it the tree is home/<user>/savedata, one directory per title id; the user is a runtime selection nothing on disk records, so every user home found becomes its own group and the caveat says so. The virtual memory cards for PS1 and PS2 classics sit outside that tree and are a group of their own with their names left open — a directory, which is why the answer no longer calls them an image the caller would copy as one file.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2322,6 +2626,12 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
               }
             ]
           },
@@ -2344,11 +2654,12 @@
               }
             },
             {
-              "code": "save-inside-image",
+              "code": "file-set-spans-roots",
               "data": {
-                "emulator": "RPCS3",
-                "image": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
-                "layout": "savedata/vmc"
+                "core": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "files": ""
               }
             }
           ],
@@ -2369,7 +2680,7 @@
     },
     {
       "name": "rpcs3-every-user-home-that-exists-is-a-tree-of-its-own",
-      "rationale": "Which user account the emulator runs as is a runtime selection — it starts at 00000001 (Emulator::m_usr, System.h:164) and the user manager changes it — and no file records the current one. A machine with two accounts therefore gets two groups rather than a guess at which is in force, the way the Dolphin card states every region tree.",
+      "rationale": "Which user account the emulator runs as is a runtime selection — it starts at 00000001 (Emulator::m_usr, System.h:164) and the user manager changes it — and no file records the current one. A machine with two accounts therefore gets two groups rather than a guess at which is in force, the way the Dolphin card states every region tree. Both were found here, which is what lets the caveat say every home found is stated; where none is found it says the opposite in so many words.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2419,6 +2730,12 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
               }
             ]
           },
@@ -2441,11 +2758,216 @@
               }
             },
             {
-              "code": "save-inside-image",
+              "code": "file-set-spans-roots",
               "data": {
-                "emulator": "RPCS3",
-                "image": "/mnt/sd/hdd0/savedata/vmc",
-                "layout": "savedata/vmc"
+                "core": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": ""
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "/mnt/sd/hdd0/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-a-user-tree-that-cannot-be-listed-says-so-in-its-own-caveat",
+      "rationale": "The drive is where vfs.yml says, and the tree of user homes under it cannot be read. Two things follow, and the answer has to keep them apart. Which users exist is unknown, which is a degradation a client branches on — save-dir-unlistable, carrying the directory under the same 'path' key the other emitter of that code uses. And the answer's own account of the users must say neither of the two things a listing establishes: not 'these were found' and not 'none exists, nothing has saved here yet'. The empty-tree sentence beside a caveat saying the tree was never read is a claim about contents nobody reached — the same shape this round removed from DuckStation's BIOS search, and it is not allowed to survive here. The directory named below is the compiled default's, stated as such.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/hdd0/home"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        },
+        "unlistable": [
+          "/mnt/sd/hdd0/home"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "reason": "which users exist here was not established",
+                "users": "00000001"
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "core": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": ""
+              }
+            },
+            {
+              "code": "save-dir-unlistable",
+              "data": {
+                "path": "/mnt/sd/hdd0/home",
+                "core": "RPCS3"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "/mnt/sd/hdd0/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-a-drive-with-no-user-home-yet-names-the-one-it-would-create",
+      "rationale": "A fresh drive: the tree is there and holds no user home at all, because nothing has saved yet. The answer still names a directory — the one the emulator starts with, user 00000001 (Emulator::m_usr, System.h:164) — and the caveat has to say that is what it is. It used to claim every user home found here is stated while naming one that was not found, which reads as a survey of an empty tree.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/hdd0/home"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "reason": "no user directory was found",
+                "users": "00000001"
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "core": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": ""
               }
             }
           ],
@@ -2466,7 +2988,7 @@
     },
     {
       "name": "rpcs3-an-unset-drive-is-the-compiled-default-below-the-config-directory",
-      "rationale": "An unset /dev_hdd0/ is not an unknown drive: the compiled default is $(EmulatorDir)dev_hdd0/ (vfs_config.h:13), and an empty $(EmulatorDir) means the emulator's own config directory (vfs_config.cpp:32-39). With no vfs.yml at all the answer is therefore still a real directory — the one a fresh install would use.",
+      "rationale": "An unset /dev_hdd0/ is not an unknown drive: the compiled default is $(EmulatorDir)dev_hdd0/ (vfs_config.h:13), and an empty $(EmulatorDir) means the emulator's own config directory (vfs_config.cpp:32-39). With no vfs.yml at all the answer is therefore still a real directory — the one a fresh install would use. Nothing has saved into it yet, and the caveat says so rather than presenting the compiled default user as a home found on this machine: it is the tree the emulator would create.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2507,6 +3029,12 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
               }
             ]
           },
@@ -2524,16 +3052,17 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
+                "reason": "no user directory was found",
                 "users": "00000001"
               }
             },
             {
-              "code": "save-inside-image",
+              "code": "file-set-spans-roots",
               "data": {
-                "emulator": "RPCS3",
-                "image": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/savedata/vmc",
-                "layout": "savedata/vmc"
+                "core": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/savedata/vmc",
+                "files": ""
               }
             }
           ],
@@ -2601,6 +3130,12 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery"
+              },
+              {
+                "dir": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
               }
             ]
           },
@@ -2623,11 +3158,12 @@
               }
             },
             {
-              "code": "save-inside-image",
+              "code": "file-set-spans-roots",
               "data": {
-                "emulator": "RPCS3",
-                "image": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/savedata/vmc",
-                "layout": "savedata/vmc"
+                "core": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "files": ""
               }
             }
           ],
@@ -2708,7 +3244,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user account is not recorded on disk",
+                "reason": "the configuration preselects no user",
                 "users": "00"
               }
             }
@@ -2721,6 +3257,16 @@
                 "key": "pref-path",
                 "value": "/mnt/sd/retrodeck/storage/psvita/Vita3K/",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               }
             ],
             "alternatives": []
@@ -2730,7 +3276,7 @@
     },
     {
       "name": "vita3k-every-user-directory-that-exists-is-a-tree-of-its-own",
-      "rationale": "Which user the emulator runs as is a runtime property — its own redirect names user 00 (io.cpp:203) — and no file records the current one, so a machine with two user directories gets two groups rather than a guess at which is in force. The same stance the RPCS3 card takes, and the Dolphin card before it.",
+      "rationale": "config.yml records no user-id here, so nothing preselects a user: the user manager opens and the player picks (init_home, gui.cpp:688-696 at cb1f592c). A machine with two user directories therefore gets two groups rather than a guess at which is in force, and both keys that could have preselected one are stated as readings at the value the file gives them — unset.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2797,7 +3343,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user account is not recorded on disk",
+                "reason": "the configuration preselects no user",
                 "users": "00,01"
               }
             }
@@ -2809,6 +3355,116 @@
               {
                 "key": "pref-path",
                 "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-the-user-id-config-yml-records-is-stated-beside-every-tree",
+      "rationale": "The emulator does write down which user it opened: select_and_open_user stores it as user-id (user_management.cpp:329-331 at cb1f592c), and init_home opens that user again when the id names a directory that exists and either the launch names an app on the command line or user-auto-connect is on (gui.cpp:688-696). What no file settles is the launch, so the answer states every user directory as before and names the recorded id beside them — as a reading a client can read, and in the caveat's configured_user. The earlier telling, that no file records the current user at all, was simply false.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "reason": "the configuration preselects a user, and whether a launch opens it depends on how the launch was made",
+                "users": "00,01",
+                "configured_user": "01"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "01",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": "true",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               }
             ],
@@ -2922,7 +3578,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the active user account is not recorded on disk",
+                "reason": "the configuration preselects no user",
                 "users": "00"
               }
             }
@@ -2934,6 +3590,16 @@
               {
                 "key": "pref-path",
                 "value": "/home/deck/Emulation/storage/Vita3K/",
+                "options_file": "/home/deck/.config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
                 "options_file": "/home/deck/.config/Vita3K/config.yml"
               }
             ],

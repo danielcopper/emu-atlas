@@ -89,6 +89,7 @@ from atlas.firmware import (
     SYSTEMS_WITHOUT_CATALOGUE_ID,
     load_hashes,
     read_core_declarations,
+    xemu_file_value,
 )
 from atlas.launch_formats import lookup_install_first, lookup_standalone_launch
 from atlas.firmware import firmware_for_core as _resolve_for_core
@@ -106,6 +107,7 @@ from atlas.machine import (
     SYMLINK_HOPS,
     CoreInfo,
     CoreOption,
+    GlobResult,
     Machine,
     ReadResult,
     ReadStatus,
@@ -141,6 +143,7 @@ from atlas.textures import (
     XDG_DATA,
     StandaloneTextureCard,
     TextureCard,
+    TextureSetting,
     lookup_standalone_texture_card,
     lookup_texture_card,
 )
@@ -172,6 +175,7 @@ from atlas.placement import (
     CAVEAT_INVALID_SAVE_DIRECTORY,
     CAVEAT_INVALID_SCREENSHOT_DIRECTORY,
     CAVEAT_UNVERIFIED_VERSION,
+    CAVEAT_PER_GAME_LAYER_UNREAD,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
     CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
@@ -199,6 +203,7 @@ from atlas.placement import (
     HOLE_SAVE_ID,
     PATCH_FORMATS,
     ROLE_BATTERY,
+    ROLE_MEMORY_CARD,
     ROLE_SETTINGS,
     ROOT_CONTENT_DIRECTORY,
     ROOT_EMULATOR_DIRECTORY,
@@ -252,7 +257,7 @@ from atlas.placement import (
     needs_with_file_set,
 )
 from atlas import duckstation, emulator_settings, melonds, qt_ini
-from atlas.yaml_scalars import read_scalars
+from atlas.yaml_scalars import YamlScalars, read_scalars
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
@@ -602,6 +607,16 @@ class _Sandbox:
 
         No config key is involved, so no provenance travels with it: the caller
         knows which file it asked for and reports a miss in its own terms.
+        """
+        return self.translate(path)
+
+    def translate(self, path: str) -> str | None:
+        """*path* as this host reads it, or ``None`` where no host path exists.
+
+        The bare translation under :meth:`host` and :meth:`bundled`, for a
+        caller that says where the path came from in its own words — the
+        firmware route names the configuration key in its own caveat, and
+        satisfies :class:`atlas.firmware.SandboxTranslation` by having this.
         """
         return self._translate(path)[0]
 
@@ -4882,6 +4897,12 @@ class _XdgHomes:
     # and for a host install. It travels with the bases because it answers the
     # same question they do: which installation of this emulator is being read.
     flatpak: str | None = None
+    # Whether the launch happens inside *some* flatpak sandbox, which is not
+    # the same question as which app id it runs under: an arrangement's own
+    # bundled build has no id of its own and is sandboxed all the same. It
+    # matters for the emulators that pick a root by whether XDG_CONFIG_HOME is
+    # set, because inside a sandbox it always is (see the class docstring).
+    xdg_pinned: bool = False
 
     def base(self, which: str) -> str:
         return self.data if which == XDG_DATA else self.config
@@ -4924,7 +4945,11 @@ def _pcsx2_texture_placement(
     serial is the running disc's, which atlas does not read out of content, so
     it stays a hole for the caller who knows it.
     """
-    assert card.directory is not None  # the router sends only config-stated cards here
+    if card.directory is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no directory and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
     settings = emulator_settings.settings_file(card.token, card.settings)
     data_root = homes.emulator_root(settings.bases[0], card.token)
     ini_path = settings.only(
@@ -4949,13 +4974,18 @@ def _pcsx2_texture_placement(
         root = raw_dir
     directory = os.path.join(root, TEMPLATE_SAVE_ID, _PCSX2_TEXTURE_LOAD_STAGE)
     switch = card.switch
-    assert switch is not None  # the packaged card states one; the loader kept it
+    if switch is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no switch and this resolver reads one "
+            "— the card and the code shipped out of step"
+        )
     raw_switch = values.get((switch.section, switch.key))
-    enabled = (
-        raw_switch.strip().casefold() == "true"
-        if raw_switch is not None
-        else switch.default == "true"
-    )
+    parsed_switch = qt_ini.from_chars_bool(raw_switch)
+    # The card's own default is atlas's word, not an ini value, so it keeps
+    # its plain comparison; the live value goes through the emulator's reading.
+    enabled = parsed_switch if parsed_switch is not None else switch.default == "true"
+    rejected = _pcsx2_rejected_switch(card.token, switch, raw_switch, parsed_switch, enabled)
+    per_game = _pcsx2_game_settings_caveat(machine, values, data_root, card.token, switch.key)
     physical_dir, link_caveats = _link_view(machine, root)
     return TexturePlacement(
         dir=directory,
@@ -4977,6 +5007,8 @@ def _pcsx2_texture_placement(
         caveats=(
             *extra_caveats,
             *link_caveats,
+            *rejected,
+            *per_game,
             Caveat(
                 CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
                 "the directory is staged per game below the texture root: replacements are "
@@ -5005,23 +5037,110 @@ def _pcsx2_texture_placement(
     )
 
 
-def _duckstation_dataroot_caveat(token: str) -> Caveat:
-    """The one statement every DuckStation answer makes about an unrecorded launch.
+def _pcsx2_rejected_switch(
+    token: str,
+    switch: TextureSetting,
+    raw: str | None,
+    parsed: bool | None,
+    governing: bool,
+) -> list[Caveat]:
+    """A switch value the emulator cannot read as a boolean, stated rather than swallowed.
 
-    Two directories can be this emulator's DataRoot and an environment
-    variable decides which — a fact no file on the machine holds. Every route
-    that reads this emulator says it in these words, so a caller comparing the
-    save, BIOS, texture and mod answers of one entry finds one fact, not four
-    tellings of it.
+    ``GetBoolValue`` returns false without writing the caller's variable when
+    ``FromChars<bool>`` yields nothing, so the compiled default keeps governing
+    — the setting does *not* become false. The save route says this in an
+    ``OptionReading`` provenance; a texture answer carries no readings, so the
+    same fact needs a caveat or it is not said at all, and a user who wrote
+    something into that key sees an answer that looks like the key is unset.
     """
-    return Caveat(
-        CAVEAT_CORE_MODE_UNESTABLISHED,
-        "no settings.ini exists on either DataRoot candidate — DuckStation picks its "
-        "root from the launch environment (XDG_CONFIG_HOME set routes it to the config "
-        "side, qthost.cpp:562-582), which no file records; the directory below hangs "
-        "off the environment-unset side",
-        {"core": token, "reason": "the DataRoot is decided by the launch environment"},
-    )
+    if raw is None or parsed is not None:
+        return []
+    return [
+        Caveat(
+            CAVEAT_CFG_VALUE_REJECTED,
+            f'{switch.section}/{switch.key} = "{raw}" is not a value this emulator reads as a '
+            "boolean — FromChars<bool> takes true/yes/on/1/enabled and false/no/off/0/disabled "
+            "(StringUtil.h:178-197 at v2.6.3), and GetBoolValue leaves the caller's variable "
+            "untouched when it yields nothing (INISettingsInterface.cpp:198-210), so the "
+            f"compiled default {str(governing).lower()} governs; the setting does not become "
+            "false because the value was unreadable",
+            {"core": token, "key": f"{switch.section}/{switch.key}", "value": raw},
+        )
+    ]
+
+
+def _pcsx2_game_settings_caveat(
+    machine: Machine,
+    values: Mapping[tuple[str, str], str],
+    data_root: str,
+    token: str,
+    switch_key: str,
+) -> list[Caveat]:
+    """The per-game ini layer, where this machine has one — PCSX2's second settings source.
+
+    A running game installs ``<DataRoot>/gamesettings/<serial>_<crc>.ini`` as a
+    *layer* under the settings interface every core setting is read through
+    (``UpdateGameSettingsLayer``, VMManager.cpp:932-969 at v2.6.3; the path is
+    ``GetGameSettingsPath``, :774-781), so any key of any section — the
+    texture switch included — can be answered differently for one game than
+    the global ``PCSX2.ini`` answers it. The directory is the usual
+    ``LoadPathFromSettings`` shape, ``[Folders] GameSettings`` defaulting to
+    ``gamesettings`` below the DataRoot (Pcsx2Config.cpp:2290).
+
+    Which game runs is not a fact atlas holds, so the layer cannot be read
+    *for* an answer — but whether one exists at all is a directory listing,
+    and a caller told "replacement is off" deserves to know that some games on
+    this machine carry their own answer. Silent where the directory holds
+    none, which is the shipped state.
+
+    A listing that *failed* is not that silence. The absence of a caveat here
+    is what tells a caller this answer holds for every game, so answering an
+    unreadable directory the way an empty one is answered claims exactly what
+    was not established — which is why the failure has a code of its own.
+    """
+    raw = values.get(("Folders", "GameSettings"), "")
+    if not raw:
+        directory = os.path.join(data_root, "gamesettings")
+    elif not os.path.isabs(raw):
+        directory = os.path.join(data_root, raw)
+    else:
+        directory = raw
+    listing = machine.glob(os.path.join(directory, "*.ini"))
+    if listing.status != GLOB_COMPLETE:
+        return [
+            Caveat(
+                CAVEAT_PER_GAME_LAYER_UNREAD,
+                f"{directory} could not be listed, so whether any game on this machine carries "
+                "a per-game settings file is unknown — PCSX2 layers such a file over the whole "
+                f"configuration while that game runs, so {switch_key} and the directory below "
+                "it may be answered differently for a game this answer cannot name "
+                "(UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
+                {"core": token, "dir": directory, "key": switch_key},
+            )
+        ]
+    if not listing.matches:
+        return []
+    return [
+        Caveat(
+            CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+            f"{len(listing.matches)} game(s) on this machine carry a per-game settings file "
+            f"in {directory}, which PCSX2 installs as a layer over the global configuration "
+            f"while that game runs — {switch_key} and the directory below it are read through "
+            "that layer, so this answer is the one that holds for every game without such a "
+            "file (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
+            {
+                "core": token,
+                "count": str(len(listing.matches)),
+                "dir": directory,
+                "key": switch_key,
+            },
+        )
+    ]
+
+
+def _duckstation_dataroot_caveat(token: str) -> Caveat:
+    """The texture and mod routes' wording of :func:`atlas.duckstation.dataroot_caveat`."""
+    return duckstation.dataroot_caveat(token, "the directory below")
 
 
 def _duckstation_texture_placement(
@@ -5041,9 +5160,17 @@ def _duckstation_texture_placement(
     switch, so nothing is read for one.
     """
     setting = card.directory
-    assert setting is not None  # the router sends only config-stated cards here
+    if setting is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no directory and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
     read = duckstation.read_settings(
-        machine, config_home=homes.base("config"), data_home=homes.base("data")
+        machine,
+        config_home=homes.base("config"),
+        data_home=homes.base("data"),
+        flatpak=homes.flatpak,
+        xdg_pinned=homes.xdg_pinned,
     )
     if read.unreadable is not None:
         return Unresolved(
@@ -5131,7 +5258,11 @@ def _standalone_texture_placement(
                 "no resolver registered — the card and the code shipped out of step"
             )
         return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
-    assert card.base is not None and card.subdir is not None  # the loader enforces the pair
+    if card.base is None or card.subdir is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no base/subdir pair and this resolver "
+            "opens one — the card and the code shipped out of step"
+        )
     directory = os.path.join(homes.emulator_root(card.base, card.token), card.subdir)
     config_path = emulator_settings.settings_file(card.token, card.settings).only(
         config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
@@ -5812,7 +5943,11 @@ def _ppsspp_savefile_placement(
 
 def _standalone_settings(card: StandaloneSaveCard) -> emulator_settings.SettingsFile:
     """The settings file this save card names, from the one table that addresses it."""
-    assert card.settings is not None  # callers gate on a card that names one
+    if card.settings is None:
+        raise ValueError(
+            f"save card {card.token!r} names no settings file and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
     return emulator_settings.settings_file(card.token, card.settings)
 
 
@@ -5834,12 +5969,6 @@ def _standalone_settings_path(card: StandaloneSaveCard, homes: _XdgHomes) -> str
 # emulator opens it (SDL_GetPrefPath); an arrangement that keeps the real
 # directory elsewhere and links it there is walked like any other symlink.
 # ---------------------------------------------------------------------------
-
-
-def _xemu_file_value(doc: Mapping[str, Any], key: str) -> str | None:
-    files = doc.get("sys", {}).get("files", {}) if isinstance(doc.get("sys"), dict) else {}
-    value = files.get(key) if isinstance(files, dict) else None
-    return value if isinstance(value, str) and value else None
 
 
 def _xemu_group(
@@ -5962,8 +6091,8 @@ def _xemu_savefile_placement(
     if isinstance(parsed, Unresolved):
         return parsed
     doc, stated_toml = parsed
-    hdd = _xemu_file_value(doc, "hdd_path")
-    eeprom = _xemu_file_value(doc, "eeprom_path")
+    hdd = xemu_file_value(doc, "hdd_path")
+    eeprom = xemu_file_value(doc, "eeprom_path")
     readings = _xemu_readings(hdd, eeprom, stated_toml)
     disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd)
     eeprom_group, eeprom_caveats = (
@@ -6430,12 +6559,20 @@ _DUCKSTATION_TYPE_DEFAULTS = ("PerGameTitle", "None")  # settings.h:510-511
 
 
 def _duckstation_sanitized(name: str) -> str:
-    """``Path::SanitizeFileName``'s Linux branch: ``/``, ``*`` and control bytes → ``_``.
+    """``Path::SanitizeFileName``'s Linux branch: ``/`` and ``*`` become ``_``.
 
-    file_system.cpp:69-90 and :142-163 at the pin — the Windows list is
-    longer, but the shipped Linux build replaces exactly these.
+    ``FileSystemCharacterIsSane`` splits on the platform
+    (file_system.cpp:69-97 at 64655818e). The ``#else`` arm the shipped Linux
+    build compiles rejects exactly two characters: ``/`` when slashes are
+    being stripped (:82-83, and ``SanitizeFileName`` defaults ``strip_slashes``
+    to true) and ``*`` (:86-87, "drop asterisks too, they make globbing
+    annoying"). ``:`` is inside a further ``#ifdef __APPLE__`` (:90-92) and
+    the control bytes, the angle brackets and the rest belong to the
+    ``_WIN32`` arm above them (:71-80) — this mirror used to replace control
+    bytes too, which is Windows behaviour on a Linux build. The replacement
+    character is ``_`` (:152).
     """
-    return "".join("_" if ch in "/*" or ord(ch) <= 31 else ch for ch in name)
+    return "".join("_" if ch in "/*" else ch for ch in name)
 
 
 def _duckstation_settings(
@@ -6452,7 +6589,11 @@ def _duckstation_settings(
     hang off the environment-unset side.
     """
     read = duckstation.read_settings(
-        machine, config_home=homes.base("config"), data_home=homes.base("data")
+        machine,
+        config_home=homes.base("config"),
+        data_home=homes.base("data"),
+        flatpak=homes.flatpak,
+        xdg_pinned=homes.xdg_pinned,
     )
     if read.unreadable is not None:
         refusal = Unresolved(
@@ -6464,14 +6605,7 @@ def _duckstation_settings(
         return read.root, {}, None, (), refusal
     if not read.ambiguous:
         return read.root, dict(read.values), read.stated_path, (), None
-    ambiguity = Caveat(
-        CAVEAT_CORE_MODE_UNESTABLISHED,
-        "no settings.ini exists on either DataRoot candidate — DuckStation picks its root "
-        "from the launch environment (XDG_CONFIG_HOME set routes it to the config side, "
-        "qthost.cpp:562-582), which no file records; the compiled defaults below hang off "
-        "the environment-unset side",
-        {"core": card.token, "reason": "the DataRoot is decided by the launch environment"},
-    )
+    ambiguity = duckstation.dataroot_caveat(card.token, "the compiled defaults below")
     return read.root, {}, None, (ambiguity,), None
 
 
@@ -6561,7 +6695,7 @@ def _duckstation_per_game_slot(
         name = f"{stem}_{n}.mcd" if stem is not None else f"{TEMPLATE_ROM_STEM}_{n}.mcd"
         fill = (
             "the content file's own name without its extension, sanitized the way "
-            "Path::SanitizeFileName sanitizes ('/', '*' and control bytes become '_')"
+            "Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')"
         )
         citation = "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e"
     elif mode == "PerGame":
@@ -6671,6 +6805,22 @@ def _duckstation_slot(
     )
 
 
+def _first_directory_files(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
+    """Every established name in the first group's directory — the FileSet invariant.
+
+    A multi-slot emulator can put two cards side by side in one directory, and
+    :class:`~atlas.placement.FileSet` requires ``files`` to be all of them, in
+    order. Taking only the first group's names is what raises instead of
+    answering, so both slot-pair resolvers compose the flat list here.
+    """
+    if not groups or groups[0].files is None:
+        return ()
+    directory = groups[0].dir
+    return tuple(
+        name for group in groups if group.dir == directory and group.files for name in group.files
+    )
+
+
 def _duckstation_needs(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
     """The holes the slot templates still carry, in first-appearance order."""
     holes: list[str] = []
@@ -6746,7 +6896,7 @@ def _duckstation_savefile_placement(
     mode = "+".join(slot.mode for slot in slots)
     if groups:
         directory = groups[0].dir
-        files = tuple(groups[0].files or ())
+        files = _first_directory_files(groups)
         needs = _duckstation_needs(groups)
     else:
         directory = memcards_dir
@@ -6761,7 +6911,11 @@ def _duckstation_savefile_placement(
                 {"core": card.token, "mode": mode},
             )
         )
-    physical, link_caveats = _link_view(machine, memcards_dir)
+    # The answer's own directory, which is the memory-card one only while no
+    # slot points elsewhere: a slot with an absolute CardXPath moves `dir`, and
+    # `physical_dir` is a statement about `dir` (a dead link on the directory
+    # the answer names is what makes writes fail).
+    physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     return SavefilePlacement(
         dir=directory,
@@ -6831,12 +6985,17 @@ def _pcsx2_slot_group(
     """
     enable_key, filename_key, default_name, enabled_default = slot
     raw_enable = values.get(("MemoryCards", enable_key))
-    enabled = (
-        raw_enable.strip().casefold() == "true" if raw_enable is not None else enabled_default
-    )
+    parsed_enable = qt_ini.from_chars_bool(raw_enable)
+    enabled = parsed_enable if parsed_enable is not None else enabled_default
     default_word = "true" if enabled_default else "false"
-    if raw_enable is not None:
+    if parsed_enable is not None:
         enable_provenance = f'PCSX2.ini: [MemoryCards] {enable_key} = "{raw_enable}"'
+    elif raw_enable is not None:
+        enable_provenance = (
+            f'PCSX2.ini sets {enable_key} to "{raw_enable}", which FromChars<bool> reads as '
+            f"neither true nor false — the default {default_word} governs "
+            "(INISettingsInterface.cpp:198-210 at v2.6.3)"
+        )
     else:
         enable_provenance = f"{enable_key} is unset — the default {default_word} governs"
     readings = [OptionReading(enable_key, raw_enable, enable_provenance, None)]
@@ -6940,16 +7099,6 @@ def _pcsx2_memcards_dir(
     return host.path, reading, None
 
 
-def _pcsx2_first_directory_files(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
-    """Every established name in the first group's directory — the FileSet invariant."""
-    if groups[0].files is None:
-        return ()
-    directory = groups[0].dir
-    return tuple(
-        name for group in groups if group.dir == directory and group.files for name in group.files
-    )
-
-
 def _pcsx2_savefile_placement(
     machine: Machine,
     *,
@@ -7008,7 +7157,7 @@ def _pcsx2_savefile_placement(
     mode = "+".join(modes)
     if groups:
         directory = groups[0].dir
-        files = _pcsx2_first_directory_files(tuple(groups))
+        files = _first_directory_files(tuple(groups))
     else:
         directory = memcards_dir
         files = ()
@@ -7021,7 +7170,9 @@ def _pcsx2_savefile_placement(
                 {"core": card.token, "mode": mode},
             )
         )
-    physical, link_caveats = _link_view(machine, memcards_dir)
+    # The answer's own directory — a slot whose filename is an absolute path
+    # moves `dir` off the memory-card one, and `physical_dir` speaks for `dir`.
+    physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     return SavefilePlacement(
         dir=directory,
@@ -7395,16 +7546,73 @@ class _PerUserSaves:
     ``user_root`` is the directory holding the user directories,
     ``first_user`` the one the emulator starts with — used only where nothing
     could be listed, never as a claim that it is the one running.
+
+    ``user_reason`` is the machine-readable half of ``user_sentence``: *why*
+    the running user is not settled here. The two emulators do not share it,
+    because they do not share the fact — RPCS3 writes the selection down
+    nowhere, while Vita3K's configuration records a user id whose effect
+    depends on how the launch was made. ``configured_user`` carries that
+    recorded id where one exists, so a client reads the emulator's own
+    preselection instead of only the directory listing.
     """
 
     user_root: str
     first_user: str
     names_citation: str
     user_sentence: str
+    # What to say when the tree holds no user directory at all. The other
+    # sentence claims every user found here is stated, which reads as a survey
+    # when none was found and the answer is standing on the compiled default
+    # alone — a directory the emulator would create, not one seen on this
+    # machine.
+    no_user_sentence: str
+    user_reason: str
     mode: str
-    reading: OptionReading
+    readings: tuple[OptionReading, ...]
     reading_file: str | None
     provenance: str
+    configured_user: str | None = None
+
+
+def _per_user_state(
+    shape: _PerUserSaves,
+    card: StandaloneSaveCard,
+    users: tuple[str, ...],
+    listing: GlobResult,
+) -> tuple[str, dict[str, str]]:
+    """What the listing established about the users — three states, not two.
+
+    "Users were found" and "no user exists here" are the two an emptied result
+    reads as, and a listing that *failed* is neither: it establishes nothing at
+    all, and answering it with the empty tree's sentence claims contents the
+    failed listing never reached. That is the defect this round fixed for
+    DuckStation's BIOS directory, so it does not get to live on here.
+
+    ``users`` names the trees this answer points at, which is what it has
+    always named — where none were found, the compiled default stands in and
+    the sentence says so in as many words.
+    """
+    if listing.status != GLOB_COMPLETE:
+        sentence = (
+            f"{shape.user_root} could not be listed, so which users exist below it is not "
+            "established — the tree named is the one the emulator starts with, and whether "
+            "this machine has that user, others, or none is unknown here"
+        )
+        reason = "which users exist here was not established"
+    elif not users:
+        sentence, reason = shape.no_user_sentence, "no user directory was found"
+    else:
+        sentence, reason = shape.user_sentence, shape.user_reason
+    data = {
+        "core": card.token,
+        "reason": reason,
+        "users": ",".join(users) if users else shape.first_user,
+    }
+    # The recorded user is a reading of the configuration, not of the tree, so
+    # it holds whatever the listing did or did not establish.
+    if shape.configured_user is not None:
+        data["configured_user"] = shape.configured_user
+    return sentence, data
 
 
 def _per_user_savedata_placement(
@@ -7413,15 +7621,28 @@ def _per_user_savedata_placement(
     card: StandaloneSaveCard,
     shape: _PerUserSaves,
     extra_caveats: tuple[Caveat, ...],
+    extra_groups: tuple[FileGroup, ...] = (),
     trailing_caveats: tuple[Caveat, ...] = (),
 ) -> SavefilePlacement:
     """One group per user account, each a per-game-directory tree.
 
     ``extra_caveats`` lead and ``trailing_caveats`` follow the two this shape
     always states, which is the order each emulator's answer already had.
+    ``extra_groups`` are places beside the per-user trees that belong to the
+    same save — RPCS3's virtual memory cards — and they follow the user groups
+    so the headline stays the first user's tree.
     """
     listing = machine.glob(os.path.join(shape.user_root, "*"))
-    users = tuple(sorted(os.path.basename(path) for path in listing.matches))
+    # A user is a directory. Anything else the glob hands back — a stray file
+    # beside the user homes, a dead link — would otherwise become a group
+    # naming `<that file>/savedata`, a path nothing writes to.
+    users = tuple(
+        sorted(
+            os.path.basename(path)
+            for path in listing.matches
+            if machine.path_kind(path) == KIND_DIRECTORY
+        )
+    )
     groups = tuple(
         FileGroup(
             dir=os.path.join(shape.user_root, user, "savedata"),
@@ -7429,8 +7650,11 @@ def _per_user_savedata_placement(
             granularity=GRANULARITY_PER_GAME_DIRECTORY,
             role=ROLE_BATTERY,
         )
+        # Where nothing was found the compiled default stands in — as the tree
+        # the emulator starts with, never as a user seen on this machine, which
+        # is what the caveat below has to say in so many words.
         for user in (users or (shape.first_user,))
-    )
+    ) + extra_groups
     directory = groups[0].dir
     caveats: list[Caveat] = [
         *extra_caveats,
@@ -7445,22 +7669,24 @@ def _per_user_savedata_placement(
                 "citation": shape.names_citation,
             },
         ),
-        Caveat(
-            CAVEAT_CORE_MODE_UNESTABLISHED,
-            shape.user_sentence
-            + (
-                ""
-                if listing.status == GLOB_COMPLETE
-                else "; the tree could not be listed in full"
-            ),
-            {
-                "core": card.token,
-                "reason": "the active user account is not recorded on disk",
-                "users": ",".join(users) if users else shape.first_user,
-            },
-        ),
+        Caveat(CAVEAT_CORE_MODE_UNESTABLISHED, *_per_user_state(shape, card, users, listing)),
         *trailing_caveats,
     ]
+    if listing.status != GLOB_COMPLETE:
+        # Structured, not an appended clause: "which users exist here is
+        # unknown" is a degradation a client branches on, and prose is not
+        # something a client can branch on. ``path`` is the key the code's
+        # other emitter uses and the guide documents, so a client that
+        # branches on the code and reads it finds the directory here too.
+        caveats.append(
+            Caveat(
+                CAVEAT_SAVE_DIR_UNLISTABLE,
+                f"{shape.user_root} could not be listed, so which user directories are under "
+                "it is unknown — the tree below is what the compiled default names, not what "
+                "was found",
+                {"path": shape.user_root, "core": card.token},
+            )
+        )
     physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     return SavefilePlacement(
@@ -7481,7 +7707,9 @@ def _per_user_savedata_placement(
         granularity=Granularity(
             value=GRANULARITY_PER_GAME_DIRECTORY,
             mode=shape.mode,
-            readings=(_reading_with_file(shape.reading, shape.reading_file),),
+            readings=tuple(
+                _reading_with_file(reading, shape.reading_file) for reading in shape.readings
+            ),
             alternatives=(),
             provenance=shape.provenance,
         ),
@@ -7534,7 +7762,23 @@ def _rpcs3_savefile_placement(
             f"({read.refusal}) — which drive its saves live on is unknowable here",
             {"emulator": card.token, "config": vfs_path, "reason": read.refusal},
         )
-    stated = read.get(_RPCS3_HDD0_KEY) if _RPCS3_HDD0_KEY not in read.skipped else None
+    if _RPCS3_HDD0_KEY in read.skipped:
+        # Stated as a nested block, a list or a multi-line scalar: RPCS3 reads a
+        # drive here and atlas did not. Treating that as an unset key answered
+        # the compiled default and said "the compiled default governs" — a
+        # provenance line about a key the file does set.
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"RPCS3's VFS configuration ({vfs_path}) states {_RPCS3_HDD0_KEY} as a construct "
+            "atlas does not read — its value is unread, not absent, so which drive its saves "
+            "live on is unknowable here",
+            {
+                "emulator": card.token,
+                "config": vfs_path,
+                "reason": f"{_RPCS3_HDD0_KEY} is unread",
+            },
+        )
+    stated = read.get(_RPCS3_HDD0_KEY)
     if stated:
         provenance = f'vfs.yml: {_RPCS3_HDD0_KEY} = "{stated}"'
     else:
@@ -7569,8 +7813,15 @@ def _rpcs3_savefile_placement(
                 "changes it — and no file records the current one, so every user home found "
                 "here is stated"
             ),
+            no_user_sentence=(
+                f"no user home exists below {os.path.join(hdd0, 'home')} — nothing has saved "
+                f"here yet. The tree named is the one the emulator starts with, user "
+                f"{_RPCS3_FIRST_USER} (Emulator::m_usr, System.h:164), which it would create "
+                "on the first save; it is not a home found on this machine"
+            ),
+            user_reason="the active user account is not recorded on disk",
             mode="hdd0",
-            reading=OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),
+            readings=(OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),),
             reading_file=vfs_path if result.status == READ_OK else None,
             provenance=(
                 f"standalone save card '{card.token}': the drive from vfs.yml "
@@ -7578,17 +7829,33 @@ def _rpcs3_savefile_placement(
             ),
         ),
         extra_caveats=extra_caveats,
+        # The virtual memory cards are a directory beside the per-user tree,
+        # not an image the answer names as a file — so they ride as a group of
+        # their own with their names left unestablished, and the caveat that
+        # goes with that shape is the one for a part of the save beyond this
+        # answer's root. ``save-inside-image`` said the opposite of what is
+        # true here: that nothing inside is addressable.
+        extra_groups=(
+            FileGroup(
+                dir=vmc,
+                files=None,
+                granularity=GRANULARITY_PER_GAME_FILE,
+                role=ROLE_MEMORY_CARD,
+            ),
+        ),
         trailing_caveats=(
             Caveat(
-                CAVEAT_SAVE_INSIDE_IMAGE,
+                CAVEAT_FILE_SET_SPANS_ROOTS,
                 "PS1 and PS2 classics save onto virtual memory cards outside the per-user "
                 f"tree, at {vmc} — a sync that walks only the per-user savedata tree misses "
-                "them. What lands there and under which names has not been read, so the "
-                "place is stated and its contents are not",
+                "them. It is a directory, and what lands in it under which names has not "
+                "been read, so the place is stated and its contents are not; it is in "
+                "file_set.groups with its names left open",
                 {
-                    "emulator": card.token,
-                    "image": vmc,
-                    "layout": os.path.join("savedata", "vmc"),
+                    "core": card.token,
+                    "mode": "hdd0",
+                    "dir": vmc,
+                    "files": "",
                 },
             ),
         ),
@@ -7604,10 +7871,114 @@ def _rpcs3_savefile_placement(
 # ---------------------------------------------------------------------------
 
 _VITA3K_PREF_PATH_KEY = "pref-path"
+# The two keys that record a user preselection. ``user-id`` is the id the GUI
+# writes when a user is opened (select_and_open_user, user_management.cpp:329-331)
+# and ``user-auto-connect`` is the switch that opens it without asking. Both
+# only matter through init_home (gui.cpp:688-696) — see the caveat sentence.
+_VITA3K_USER_ID_KEY = "user-id"
+_VITA3K_AUTO_CONNECT_KEY = "user-auto-connect"
 _VITA3K_USER_TREE = os.path.join("ux0", "user")
 # The user the emulator's own redirect comment names (io.cpp:203), used where
 # no user directory can be listed — never as a claim that it is the one in use.
 _VITA3K_FIRST_USER = "00"
+
+
+@dataclass(frozen=True, slots=True)
+class _Vita3kUser:
+    """What config.yml records about which user a launch would open."""
+
+    configured: str | None
+    readings: tuple[OptionReading, ...]
+    sentence: str
+    reason: str
+
+
+def _vita3k_user(read: YamlScalars) -> _Vita3kUser:
+    """The user preselection config.yml records, and what it is worth at run time.
+
+    Vita3K writes the opened user's id into ``user-id`` (select_and_open_user,
+    user_management.cpp:329-331 at cb1f592c) — so the current user *is*
+    recorded, contrary to what this answer used to say. What the record is
+    worth is the conditional part: ``init_home`` opens it only when the id
+    names a user directory that exists **and** either the launch names an app
+    on the command line or ``user-auto-connect`` is on; otherwise the user
+    manager opens and the player picks (gui.cpp:688-696). Both frontends
+    launch a game that way — ES-DE's Vita3K command passes ``-r``, which is
+    ``--installed-path`` (config.cpp:260) — so the recorded id usually governs
+    a launch from the frontend, and a launch of the emulator on its own
+    usually does not.
+
+    Which is why the placement still states every user directory and names
+    this one beside them, rather than choosing.
+    """
+    unread = _VITA3K_USER_ID_KEY in read.skipped
+    configured = None if unread else (read.get(_VITA3K_USER_ID_KEY) or None)
+    auto = None if _VITA3K_AUTO_CONNECT_KEY in read.skipped else read.get(_VITA3K_AUTO_CONNECT_KEY)
+    condition = (
+        "Vita3K opens it when the launch names an app on the command line, and on a plain "
+        "launch when user-auto-connect is on (init_home, gui.cpp:688-696); otherwise the "
+        "user manager opens and the player picks"
+    )
+    if unread:
+        sentence = (
+            f"config.yml states {_VITA3K_USER_ID_KEY} as a construct atlas does not read, so "
+            "which user it preselects is unread here — every user directory found is stated"
+        )
+        reason = "the configured user id is stated in a construct atlas does not read"
+    elif configured is None:
+        sentence = (
+            f"config.yml records no {_VITA3K_USER_ID_KEY}, so nothing preselects a user and "
+            "the user manager opens for the player to pick (init_home, gui.cpp:688-696) — "
+            "every user directory found here is stated"
+        )
+        reason = "the configuration preselects no user"
+    else:
+        sentence = (
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} — {condition}, so every "
+            "user directory found here is stated"
+        )
+        reason = "the configuration preselects a user, and whether a launch opens it depends "
+        reason += "on how the launch was made"
+    readings = (
+        OptionReading(
+            _VITA3K_USER_ID_KEY,
+            None if unread else read.get(_VITA3K_USER_ID_KEY),
+            _vita3k_key_provenance(
+                _VITA3K_USER_ID_KEY,
+                configured,
+                unread=unread,
+                unset="no user is preselected (config.h:189)",
+            ),
+            None,
+        ),
+        OptionReading(
+            _VITA3K_AUTO_CONNECT_KEY,
+            auto,
+            _vita3k_key_provenance(
+                _VITA3K_AUTO_CONNECT_KEY,
+                auto,
+                unread=_VITA3K_AUTO_CONNECT_KEY in read.skipped,
+                unset="the default false governs (config.h:190)",
+            ),
+            None,
+        ),
+    )
+    return _Vita3kUser(configured, readings, sentence, reason)
+
+
+def _vita3k_key_provenance(key: str, value: str | None, *, unread: bool, unset: str) -> str:
+    """Where one config.yml key's value came from — the same three states twice.
+
+    A key is stated as a construct the scalar reader passed over, stated as a
+    value, or not stated at all, and the two keys this answer reads differ only
+    in what governs when nothing is stated. Saying that once keeps the two
+    readings from drifting into two accounts of one grammar.
+    """
+    if unread:
+        return f"{key} is stated as a construct atlas does not read — its value is unread, not absent"
+    if value:
+        return f'config.yml: {key}: "{value}"'
+    return f"{key} is unset — {unset}"
 
 
 def _vita3k_savefile_placement(
@@ -7629,8 +8000,11 @@ def _vita3k_savefile_placement(
     is a refusal here rather than an invented directory.
 
     Below it the unit is ``ux0/user/<user>/savedata``, one directory per title
-    id (io.cpp:136-143). Which user is current is a runtime property no file
-    records, so every user directory found becomes a group of its own.
+    id (io.cpp:136-143). Which user that is at run time is decided by
+    ``init_home`` from the id config.yml records — see :func:`_vita3k_user` —
+    and because the deciding half of that is the launch rather than a file,
+    every user directory found becomes a group of its own, with the recorded
+    id stated beside them.
     """
     config_path = _standalone_settings_path(card, homes)
     result = machine.read_text(config_path)
@@ -7649,7 +8023,22 @@ def _vita3k_savefile_placement(
             f"({read.refusal}) — where its ux0 tree lives is unknowable here",
             {"emulator": card.token, "config": config_path, "reason": read.refusal},
         )
-    stated = read.get(_VITA3K_PREF_PATH_KEY) if _VITA3K_PREF_PATH_KEY not in read.skipped else None
+    if _VITA3K_PREF_PATH_KEY in read.skipped:
+        # Stated as a nested block, a list or a multi-line scalar: the emulator
+        # reads a value here and atlas did not. That is not an unset key, and
+        # answering the unset key's refusal would name the wrong reason.
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) states {_VITA3K_PREF_PATH_KEY} as a "
+            "construct atlas does not read — its value is unread, not absent, so where its "
+            "ux0 tree lives is unknowable here",
+            {
+                "emulator": card.token,
+                "config": config_path,
+                "reason": f"{_VITA3K_PREF_PATH_KEY} is unread",
+            },
+        )
+    stated = read.get(_VITA3K_PREF_PATH_KEY)
     if not stated:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -7666,6 +8055,7 @@ def _vita3k_savefile_placement(
             f"here ({config_path}) — nothing this answer could anchor at",
             {"emulator": card.token, "config": config_path},
         )
+    user = _vita3k_user(read)
     return _per_user_savedata_placement(
         machine,
         card=card,
@@ -7673,23 +8063,30 @@ def _vita3k_savefile_placement(
             user_root=os.path.join(host.path, _VITA3K_USER_TREE),
             first_user=_VITA3K_FIRST_USER,
             names_citation="init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
-            user_sentence=(
-                "which user the emulator runs as is a runtime property — its own redirect "
-                f"names user {_VITA3K_FIRST_USER} (io.cpp:203) — and no file records the "
-                "current one, so every user directory found here is stated"
+            user_sentence=user.sentence,
+            no_user_sentence=(
+                f"no user directory exists below {os.path.join(host.path, _VITA3K_USER_TREE)} "
+                "— nothing has saved here yet. The tree named is the one the emulator's own "
+                f"redirect spells, user {_VITA3K_FIRST_USER} (io.cpp:203), which it would "
+                "create; it is not a directory found on this machine"
             ),
+            user_reason=user.reason,
             mode="pref-path",
-            reading=OptionReading(
-                _VITA3K_PREF_PATH_KEY,
-                stated,
-                f'config.yml: {_VITA3K_PREF_PATH_KEY}: "{stated}"',
-                None,
+            readings=(
+                OptionReading(
+                    _VITA3K_PREF_PATH_KEY,
+                    stated,
+                    f'config.yml: {_VITA3K_PREF_PATH_KEY}: "{stated}"',
+                    None,
+                ),
+                *user.readings,
             ),
             reading_file=config_path if result.status == READ_OK else None,
             provenance=(
                 f"standalone save card '{card.token}': the preference path from config.yml "
                 "(config.cpp:189-190 at commit cb1f592c)"
             ),
+            configured_user=user.configured,
         ),
         extra_caveats=extra_caveats,
     )
@@ -8145,9 +8542,17 @@ def _duckstation_mod_placement(
     """
     spec = card.trees[0]
     setting = spec.directory
-    assert setting is not None  # the router sends only configured cards here
+    if setting is None:
+        raise ValueError(
+            f"mod card {card.token!r} states no directory and this resolver reads one "
+            "— the card and the code shipped out of step"
+        )
     read = duckstation.read_settings(
-        machine, config_home=homes.base("config"), data_home=homes.base("data")
+        machine,
+        config_home=homes.base("config"),
+        data_home=homes.base("data"),
+        flatpak=homes.flatpak,
+        xdg_pinned=homes.xdg_pinned,
     )
     if read.unreadable is not None:
         return Unresolved(
@@ -8225,7 +8630,11 @@ def _standalone_mod_placement(
                 "resolver registered — the card and the code shipped out of step"
             )
         return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
-    assert card.base is not None  # the loader pairs a base with every subdir tree
+    if card.base is None:
+        raise ValueError(
+            f"mod card {card.token!r} states no base and this resolver opens one below "
+            "it — the card and the code shipped out of step"
+        )
     trees: list[ModTree] = []
     sources: list[str] = []
     caveats: list[Caveat] = [*extra_caveats]
@@ -8558,6 +8967,7 @@ def _retroarch_firmware_context(
     arrangement_version: str | None,
     extra_sources: tuple[str, ...] = (),
     standalone_homes: _XdgHomes | None = None,
+    standalone_sandbox: _Sandbox | None = None,
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
 
@@ -8575,6 +8985,13 @@ def _retroarch_firmware_context(
     read — the RetroDECK handle names the override file whose HOME decides
     the ``~`` expansion here — and they lead the sources the reads below
     append.
+
+    *standalone_sandbox* is how a standalone emulator's own absolute config
+    values read from this host — the same map its save route translates
+    through, so the two routes cannot disagree about where a configured
+    directory lands. It rides beside *standalone_homes* because the two are
+    one fact about the same launch, and an arrangement that establishes no
+    homes resolves no card that would ask.
     """
     machine = sandbox.machine
     # The dropped lines are read here, not only the values: once an absent key
@@ -8688,6 +9105,8 @@ def _retroarch_firmware_context(
         standalone_data_home=standalone_homes.data if standalone_homes is not None else None,
         standalone_config_home=standalone_homes.config if standalone_homes is not None else None,
         standalone_flatpak=standalone_homes.flatpak if standalone_homes is not None else None,
+        standalone_sandbox=standalone_sandbox,
+        standalone_xdg_pinned=standalone_homes is not None and standalone_homes.xdg_pinned,
     )
 
 
@@ -12088,6 +12507,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             arrangement_version=_marker_version(config),
             extra_sources=environment_sources,
             standalone_homes=self._xdg_homes(),
+            standalone_sandbox=self._sandbox(),
         )
 
     def _read_firmware_context(self) -> FirmwareContext:
@@ -12271,7 +12691,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         join rather than a config read.
         """
         app_dir = os.path.join(self._home, ".var", "app", self._APP_ID)
-        return _XdgHomes(data=os.path.join(app_dir, "data"), config=os.path.join(app_dir, "config"))
+        return _XdgHomes(
+            data=os.path.join(app_dir, "data"),
+            config=os.path.join(app_dir, "config"),
+            # RetroDECK's emulators are its own bundled builds — no app id of
+            # their own — and every one of them runs inside this flatpak, so
+            # the XDG variables they read are the pinned ones.
+            xdg_pinned=True,
+        )
 
     def entry_texture_pack_location(
         self,
@@ -13504,47 +13931,22 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     ) -> SavefilePlacement | Unresolved:
         """A standalone entry's save answer, resolved the way the launch resolves.
 
-        EmuDeck identifies a standalone emulator two ways — the ES-DE
-        ``%EMULATOR_…%`` token, or a ``tools/launchers/<name>.sh`` script —
-        and either way the binary is picked at run time (ES-DE's find rules
-        for the token; the script's own probe, where ``-w`` forces the
-        Windows build under Proton and otherwise an AppImage under
-        ``~/Applications`` outranks an installed flatpak outranks the Proton
-        fallback, cemu.sh:79-93 — except the scripts that pin their binary
-        outright, melonds.sh:4). This route performs the same probe, because
-        which binary runs decides which configuration tree speaks. Two
-        variants are established: the AppImage reads the host's own XDG tree
-        (emuDeckCemu.sh:13, emuDeckAzahar.sh:7), and a flatpak whose app id
-        the card names reads its own homes below ``~/.var/app``. The rest
-        refuse with the variant named rather than answering from a tree
-        their binary never reads.
+        Which binary a launch runs decides which configuration tree speaks,
+        and that probe is :meth:`_standalone_launch_gate` — one gate for all
+        four questions, so the save answer and the texture, mod and firmware
+        answers about the same entry cannot come to different conclusions or
+        word the same refusal two ways. What is left here is the part that is
+        the save route's own: the card has to cover this entry's system.
         """
         launch = self._standalone_launch_identity(spec.command)
         card = lookup_standalone_save_card(launch.token)
         if launch.probe_name is None or card is None or spec.system not in card.systems:
             return _standalone_savefile_unresolved(spec)
-        if "-w" in launch.args:
-            return _emudeck_variant_unresolved(
-                spec,
-                card.token,
-                _EMUDECK_VARIANT_PROTON,
-                f"{launch.probe_name}.sh -w runs the Windows build under Proton, whose "
-                "configuration lives inside the Proton prefix and is not read (a later slice)",
-            )
-        variant = self._launch_variant(launch)
-        if variant == _EMUDECK_VARIANT_UNKNOWN:
-            return _emudeck_variant_unresolved(
-                spec,
-                card.token,
-                variant,
-                "the launch's own binary probe could not be performed — the directories it "
-                "searches were not readable, so which binary would run is not established",
-            )
-        homes = self._standalone_homes_for(variant, card)
-        if homes is None:
-            return _emudeck_variant_unresolved(
-                spec, card.token, variant, self._variant_reason(launch, variant)
-            )
+        gate = self._standalone_launch_gate(spec)
+        if gate.homes is None:
+            assert gate.variant is not None  # a card was found, so the launch identified one
+            return _emudeck_variant_unresolved(spec, card.token, gate.variant, gate.why or "")
+        homes = gate.homes
         _, marker_issues = self._read_marker()
         extra = (
             self._entry_caveats_for(spec, content_path) if content_path is not None else ()
@@ -13717,6 +14119,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             data=os.path.join(app_dir, "data"),
             config=os.path.join(app_dir, "config"),
             flatpak=card.flatpak,
+            xdg_pinned=True,
         )
 
     def _variant_reason(self, launch: _StandaloneLaunch, variant: str) -> str:
@@ -14163,6 +14566,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             # checkout's HEAD is the version this machine states about itself.
             arrangement_version=self._observed_backend_head(),
             standalone_homes=self._standalone_xdg_homes(),
+            standalone_sandbox=self._standalone_sandbox(),
             extra_sources=environment_sources,
         )
 

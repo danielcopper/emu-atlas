@@ -25,6 +25,7 @@ from typing import Any
 
 from atlas import emulator_settings, qt_ini
 from atlas.machine import READ_MISSING, READ_OK, Machine
+from atlas.placement import CAVEAT_CORE_MODE_UNESTABLISHED, Caveat
 
 # The emulator's own directory name below whichever XDG base the launch picked,
 # and the settings file inside it.
@@ -46,6 +47,11 @@ class SettingsRead:
     ``ambiguous`` marks the state where neither candidate holds a file, so
     which root the launch would use is decided by an environment variable that
     no file records.
+
+    ``ambiguous`` needs *two* candidates to be true. A flatpak launch has its
+    ``XDG_CONFIG_HOME`` force-pinned, so only the config side is reachable and
+    an empty tree there is a DataRoot with no settings file yet — not a
+    question about the environment.
     """
 
     root: str
@@ -56,7 +62,11 @@ class SettingsRead:
 
 
 def settings_candidates(
-    *, config_home: str, data_home: str, flatpak: str | None = None
+    *,
+    config_home: str,
+    data_home: str,
+    flatpak: str | None = None,
+    xdg_pinned: bool = False,
 ) -> tuple[str, ...]:
     """Where this launch may open ``settings.ini``, in the order the probe reads.
 
@@ -64,31 +74,51 @@ def settings_candidates(
     module's: ``$XDG_CONFIG_HOME/duckstation`` where that variable is set and
     absolute, else ``~/.local/share/duckstation`` (qthost.cpp:562-582).
     Nothing on the machine records which branch a launch took, so both are
-    candidates and the file that exists speaks for itself.
+    candidates and the file that exists speaks for itself — unless the launch
+    runs inside a flatpak, where the variable is pinned set and only the
+    config side is reachable (*xdg_pinned*).
     """
     return emulator_settings.settings_file(TOKEN, CONFIG_FILENAME).locations(
-        config_home=config_home, data_home=data_home, flatpak=flatpak
+        config_home=config_home,
+        data_home=data_home,
+        flatpak=flatpak,
+        xdg_pinned=xdg_pinned,
     )
 
 
 def data_root_candidates(
-    *, config_home: str, data_home: str, flatpak: str | None = None
+    *,
+    config_home: str,
+    data_home: str,
+    flatpak: str | None = None,
+    xdg_pinned: bool = False,
 ) -> tuple[str, ...]:
     """The DataRoots those candidates hang off — each settings file's own directory."""
     return tuple(
         os.path.dirname(path)
         for path in settings_candidates(
-            config_home=config_home, data_home=data_home, flatpak=flatpak
+            config_home=config_home,
+            data_home=data_home,
+            flatpak=flatpak,
+            xdg_pinned=xdg_pinned,
         )
     )
 
 
 def read_settings(
-    machine: Machine, *, config_home: str, data_home: str, flatpak: str | None = None
+    machine: Machine,
+    *,
+    config_home: str,
+    data_home: str,
+    flatpak: str | None = None,
+    xdg_pinned: bool = False,
 ) -> SettingsRead:
     """Read ``settings.ini`` from whichever DataRoot holds one."""
     candidates = settings_candidates(
-        config_home=config_home, data_home=data_home, flatpak=flatpak
+        config_home=config_home,
+        data_home=data_home,
+        flatpak=flatpak,
+        xdg_pinned=xdg_pinned,
     )
     for path in candidates:
         root = os.path.dirname(path)
@@ -111,7 +141,32 @@ def read_settings(
         values={},
         stated_path=None,
         unreadable=None,
-        ambiguous=True,
+        ambiguous=len(candidates) > 1,
+    )
+
+
+def dataroot_caveat(token: str, below: str) -> Caveat:
+    """The one statement every DuckStation answer makes about an unrecorded launch.
+
+    Two directories can be this emulator's DataRoot and an environment
+    variable decides which — a fact no file on the machine holds. Four routes
+    say it, and they have to say it in the same words with the same data, or a
+    caller comparing the save, BIOS, texture and mod answers of one entry
+    finds four tellings of one fact and no way to see they are the same. It
+    lives here, in the module both ``installations`` and ``firmware`` already
+    read this emulator through, because it was written out three times and the
+    three had already begun to drift in their tails.
+
+    *below* names what hangs off the chosen side — the differing half, and the
+    only one a route supplies.
+    """
+    return Caveat(
+        CAVEAT_CORE_MODE_UNESTABLISHED,
+        "no settings.ini exists on either DataRoot candidate — DuckStation picks its root "
+        "from the launch environment (XDG_CONFIG_HOME set routes it to the config side, "
+        f"qthost.cpp:562-582), which no file records; {below} hangs off the "
+        "environment-unset side",
+        {"core": token, "reason": "the DataRoot is decided by the launch environment"},
     )
 
 
@@ -152,10 +207,17 @@ class BiosCandidate:
     ``image`` is ``None`` for bytes the table does not know — a state
     DuckStation boots anyway, with a warning, so it belongs among the
     candidates rather than outside them.
+
+    ``unreadable`` keeps that state apart from the one it used to be collapsed
+    into: bytes atlas could not read are not bytes the table does not know.
+    The first is a read failure and settles nothing; the second is a verdict
+    about content that was actually seen. Both leave ``image`` at ``None``,
+    which is why the flag is here rather than being inferred from it.
     """
 
     path: str
     image: BiosImage | None
+    unreadable: bool = False
 
 
 @dataclass(frozen=True, slots=True)

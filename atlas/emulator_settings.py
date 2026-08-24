@@ -125,7 +125,12 @@ class SettingsFile:
     directory: EmulatorDirectory
 
     def locations(
-        self, *, config_home: str, data_home: str, flatpak: str | None
+        self,
+        *,
+        config_home: str,
+        data_home: str,
+        flatpak: str | None,
+        xdg_pinned: bool = False,
     ) -> tuple[str, ...]:
         """The absolute candidates, in probe order, against one launch's XDG pair.
 
@@ -133,10 +138,27 @@ class SettingsFile:
         is why this takes two homes rather than reading an arrangement's — and
         so is *flatpak*, the app id the launch runs under where it runs one at
         all, because that is what decides the directory's spelling.
+
+        *xdg_pinned* says the launch happens inside a flatpak sandbox, whose
+        ``XDG_*_HOME`` variables flatpak force-pins to the per-app directories
+        after applying every override (flatpak-context.c:3158-3187 at 1.16.6;
+        the env composition section of
+        docs/research/retrodeck-save-placement.md). A file has several bases
+        precisely because the emulator picks its root from whether
+        ``XDG_CONFIG_HOME`` is set, and inside a sandbox it always is — so the
+        candidates collapse to the config side. There is no second place such
+        a launch could open the file, and probing one would read a path this
+        emulator never opens.
+
+        It is its own word rather than ``flatpak is not None`` because the two
+        are different facts: an arrangement's bundled build runs inside the
+        arrangement's sandbox under no app id of its own, and that launch is
+        pinned all the same.
         """
         homes = {"config": config_home, "data": data_home}
         below = os.path.join(self.directory.name(flatpak), self.path)
-        return tuple(os.path.join(homes[base], below) for base in self.bases)
+        bases = ("config",) if xdg_pinned and "config" in self.bases else self.bases
+        return tuple(os.path.join(homes[base], below) for base in bases)
 
     def only(self, *, config_home: str, data_home: str, flatpak: str | None) -> str:
         """The single location, for a file whose root does not vary.

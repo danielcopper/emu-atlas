@@ -109,17 +109,43 @@ def _strip_comment(value: str) -> str:
     """A bare scalar's trailing comment, cut the way YAML cuts it.
 
     ``#`` begins a comment only where whitespace precedes it, so a ``#`` inside
-    a word — a path segment, a colour — stays part of the value.
+    a word — a path segment, a colour — stays part of the value. *Whitespace*
+    is the whole of it, not a space: a tab before the ``#`` opens a comment
+    just as well, and looking only for ``" #"`` left the comment in the value.
     """
-    index = value.find(" #")
-    return value if index == -1 else value[:index]
+    for index in range(1, len(value)):
+        if value[index] == "#" and value[index - 1].isspace():
+            return value[:index]
+    return value
+
+
+def _comment_after_quote(value: str) -> str:
+    """A quoted scalar's trailing comment, cut only where the quote closed first.
+
+    ``path: "/tmp/x" # note`` is a quoted path with a comment after it, and the
+    quote-wrapping test alone does not see that: the value neither opens and
+    closes with the same character nor is unterminated, so it came back with
+    its quotes and the comment still attached — a path no emulator would ever
+    write. The comment comes off only when a closing quote precedes it and
+    whitespace precedes the ``#``, which is the same rule bare scalars follow;
+    anything else between the closing quote and the end of the line is left
+    verbatim rather than guessed at.
+    """
+    quote = value[0]
+    end = value.find(quote, 1)
+    if end == -1 or end == len(value) - 1:
+        return value
+    rest = value[end + 1 :]
+    if rest[:1].isspace() and rest.lstrip().startswith("#"):
+        return value[: end + 1]
+    return value
 
 
 def _scalar(raw: str) -> str:
     """One value as written — quoted scalars keep their content, bare ones lose comments."""
     stripped = raw.strip()
     if stripped[:1] in ("\"", "'"):
-        return _unquote(stripped)
+        return _unquote(_comment_after_quote(stripped))
     return _strip_comment(stripped).strip()
 
 
@@ -180,21 +206,55 @@ def _substitute(
     for key, value in values.items():
         current = value
         for _ in range(_MAX_SUBSTITUTION_DEPTH):
-            start = current.find("$(")
-            if start == -1:
+            expanded, refusal, found = _substitute_once(current, values, fallbacks)
+            if refusal is not None:
+                return {}, refusal
+            if not found:
                 break
-            end = current.find(")", start)
-            if end == -1:
-                break
-            token = current[start : end + 1]
-            replacement = values.get(token) or fallbacks.get(token)
-            if replacement is None:
-                return {}, REFUSAL_SUBSTITUTION_UNKNOWN
-            current = current[:start] + replacement + current[end + 1 :]
+            current = expanded
         else:
             return {}, REFUSAL_SUBSTITUTION_CYCLE
         resolved[key] = current
     return resolved, None
+
+
+def _substitute_once(
+    value: str, values: Mapping[str, str], fallbacks: Mapping[str, str]
+) -> tuple[str, str | None, bool]:
+    """Replace every token in *value* once — one link of the chain, not one token.
+
+    The bound above counts links, and this is what makes a link a link: a value
+    naming eight different keys is eight replacements at **depth one**, and
+    nothing about it is a cycle. Substituting one token per bounded step
+    counted the replacements instead, so such a value was refused as
+    ``substitution-cycle`` — a refusal that named the wrong thing about a file
+    that was perfectly resolvable.
+
+    Returns ``(text, refusal, found)``; ``found`` is ``False`` when the value
+    holds no complete ``$(…)`` token, which is what ends the chain. An
+    unterminated ``$(`` is not a token and ends it too, leaving the text as
+    written the way an unterminated quote is left as written.
+    """
+    out: list[str] = []
+    index = 0
+    found = False
+    while True:
+        start = value.find("$(", index)
+        if start == -1:
+            break
+        end = value.find(")", start)
+        if end == -1:
+            break
+        token = value[start : end + 1]
+        replacement = values.get(token) or fallbacks.get(token)
+        if replacement is None:
+            return "", REFUSAL_SUBSTITUTION_UNKNOWN, False
+        out.append(value[index:start])
+        out.append(replacement)
+        index = end + 1
+        found = True
+    out.append(value[index:])
+    return "".join(out), None, found
 
 
 @dataclass(frozen=True, slots=True)
@@ -224,7 +284,10 @@ def _classify(line: str) -> _KeyLine:
         return _KeyLine(refusal=REFUSAL_NOT_A_FLAT_MAPPING)
     key, raw_value = split
     value = raw_value.strip()
-    refusal = _refusal_in(value)
+    # The key side too: an anchor or a tag changes meaning beyond the line it
+    # sits on wherever it sits, and checking only the value let `&anc key: v`
+    # through as a key literally spelled "&anc key".
+    refusal = _refusal_in(key) or _refusal_in(value)
     if refusal is not None:
         return _KeyLine(refusal=refusal)
     if _is_skipping_value(value):
@@ -245,12 +308,20 @@ def _first_document(text: str) -> tuple[tuple[str, ...], str | None]:
     above it, and ``...`` ends the one being read.
     """
     lines: list[str] = []
+    opened = False
     for raw_line in text.splitlines():
         if not raw_line.strip() or raw_line.lstrip().startswith("#"):
             continue
         if raw_line.startswith("---"):
-            if lines:
+            # A marker ends the document being read whenever one was being
+            # read at all — because content has been seen (an implicit first
+            # document), or because a marker already opened one. `---\n---\n`
+            # is an empty first document and a second, and reading the
+            # second's lines as the first's would answer from a document this
+            # reader never established is the one in force.
+            if lines or opened:
                 return (), REFUSAL_SECOND_DOCUMENT
+            opened = True
             continue
         if raw_line.startswith("..."):
             break

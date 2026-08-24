@@ -33,10 +33,12 @@ Pinned in `docs/research/core-audit.md`: (1) **unfiltered** options/strings scan
 source for anything the scan implies, (3) live observation where data exists, (4) verdict in
 `atlas/data/core_audit.json` + card in `atlas/data/core_oddities.json` if deviant. Card keys are the `.so` short name
 (`pcsx2`, not a nickname); a test fails if a card lacks an audit entry. After changing audit data **or adding a
-standalone card**, regenerate the matrix:
-`python scripts/generate_coverage_matrix.py && deno fmt
-docs/research/coverage-matrix.md` — its standalone half is one
-column per question, derived from the card files, and a test fails when the committed file no longer matches them.
+standalone card**, regenerate the matrix — its standalone half is one column per question, derived from the card files,
+and a test fails when the committed file no longer matches them:
+
+```bash
+python scripts/generate_coverage_matrix.py && deno fmt docs/research/coverage-matrix.md
+```
 
 ## Commands
 
