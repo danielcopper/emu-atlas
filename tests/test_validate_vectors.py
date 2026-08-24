@@ -1308,6 +1308,12 @@ class TestTheVocabularyIsOneVocabulary:
     def test_the_root_kind_vocabularies_match(self):
         assert validate_vectors.KNOWN_ROOT_KINDS == set(atlas.ROOT_KINDS)
 
+    def test_the_state_root_kind_vocabularies_match(self):
+        # The savestate question's own vocabulary doubled with the standalone
+        # cards (#225), so the validator's copy gets the same drift guard the
+        # savefile one has.
+        assert validate_vectors.KNOWN_STATE_ROOT_KINDS == set(atlas.STATE_ROOT_KINDS)
+
     def test_the_vocabularies_a_client_branches_on_are_all_tier_one(self):
         # The sets above are read off `atlas` on purpose: a client branches on
         # `needs`, `granularity.value` and `root_kind`, so their vocabularies
