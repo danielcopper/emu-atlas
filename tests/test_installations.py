@@ -5840,3 +5840,27 @@ class TestPcsx2EmptyFolderKeys:
         answer = self._entry("[Folders]\nTextures =\n").texture_pack_location()
         assert not isinstance(answer, atlas.Unresolved)
         assert answer.dir == f"{self.DATA_ROOT}/<save_id>/replacements"
+
+    def test_an_empty_gamesettings_line_globs_the_dataroot_for_the_layer(self):
+        # The fourth [Folders] reader: the per-game settings layer's directory
+        # is read through the same LoadPathFromSettings (Pcsx2Config.cpp:2290),
+        # so an empty line puts the layer at the DataRoot — the caveat's
+        # contractual dir must say so, not the compiled gamesettings.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: (
+                    "[Folders]\nGameSettings =\n"
+                    "[EmuCore/GS]\nLoadTextureReplacements = false\n"
+                ),
+                f"{self.DATA_ROOT}/Game.ini": "",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        stated = next(
+            c for c in answer.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["dir"] == self.DATA_ROOT
+        assert stated.data["count"] == "1"

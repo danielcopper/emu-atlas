@@ -4938,9 +4938,10 @@ def _pcsx2_folder_below_dataroot(
 ) -> tuple[str | None, str]:
     """``LoadPathFromSettings``' non-absolute outcomes, told apart the way the emulator tells them.
 
-    Three questions read a ``[Folders]`` directory of PCSX2's (textures,
-    memory cards, savestates), and all three used to fold a present-but-empty
-    line into "key absent". The emulator does not: ``GetStringValue`` falls to
+    Four readers open a ``[Folders]`` directory of PCSX2's — the texture
+    root, the memory-card directory, the savestates directory, and the
+    per-game settings layer's — and every one used to fold a
+    present-but-empty line into "key absent". The emulator does not: ``GetStringValue`` falls to
     the compiled default only when the lookup FAILS (SettingsInterface.h:83-89
     at v2.6.3) — SimpleIni stores the empty value a ``Key =`` line carries and
     hands it back — and ``Path::Combine(DataRoot, "")`` is the **DataRoot
@@ -5154,13 +5155,16 @@ def _pcsx2_game_settings_caveat(
     unreadable directory the way an empty one is answered claims exactly what
     was not established — which is why the failure has a code of its own.
     """
-    raw = values.get(("Folders", "GameSettings"), "")
-    if not raw:
-        directory = os.path.join(data_root, "gamesettings")
-    elif not os.path.isabs(raw):
-        directory = os.path.join(data_root, raw)
-    else:
-        directory = raw
+    raw = values.get(("Folders", "GameSettings"))
+    resolved, _ = _pcsx2_folder_below_dataroot(
+        raw,
+        key="GameSettings",
+        default="gamesettings",
+        default_citation="Pcsx2Config.cpp:2290",
+        data_root=data_root,
+    )
+    directory = resolved if resolved is not None else raw
+    assert directory is not None  # only an absolute value leaves the helper unresolved
     listing = machine.glob(os.path.join(directory, "*.ini"))
     if listing.status != GLOB_COMPLETE:
         return [
