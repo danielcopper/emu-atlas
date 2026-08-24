@@ -577,6 +577,44 @@ below `~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>
 into (Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads the host's tree like an
 AppImage does. The rest refuse with `standalone-variant-unestablished`.
 
+## `standalone_savestates.json` — which standalone emulators the savestate question answers for
+
+Read by `atlas.standalone_savestates`, keyed like the save cards beside it, and dispatched the same way: the savestate
+question answers a standalone catalogue entry exactly where a card here covers its emulator and the entry's system, and
+refuses with `standalone-unsupported` everywhere else — byte-identically to the blanket refusal that preceded the family
+(#225), because an absent card is the same absence it always was. On EmuDeck the answer runs through the same launch
+identity and binary-variant gate as the save answer, so the two questions about one entry can never disagree about which
+binary runs; which flatpak app id that gate reads trees under stays the **save** card's record — this file deliberately
+has no `flatpak` field, because a second copy could only drift from the first.
+
+A card states where the states tree hangs, one of two ways and exactly one (the standalone texture cards' rule): `base`
+plus `subdir` for a compiled join below the emulator's own directory — Dolphin's and PrimeHack's `StateSaves` under the
+data tree, PPSSPP's `PSP/PPSSPP_STATE` and RPCS3's `savestates` under the config tree, Azahar's `states` under data — or
+a `directory` setting (section, key, compiled default) for an emulator whose configuration names it: PCSX2's
+`[Folders] Savestates` (default `sstates` below the DataRoot), melonDS's `[Instance0] SavestatePath` (default empty —
+the state lands beside the ROM), DuckStation's `[Folders] SaveStates` (default `savestates` below the probed DataRoot).
+The two ini-kept keys are matched the way SimpleIni matches them — ASCII case-insensitively, last occurrence winning —
+which is the fact the family's first question turned on: RetroDECK writes PCSX2's key spelled `SaveStates` while the
+source reads `"Savestates"` (Pcsx2Config.cpp:2284 at v2.6.3), and the written line governs.
+
+`names` is the field the save cards never needed: every one of these emulators names its states itself, from an identity
+of the running game — PCSX2's `<serial> (<crc>).<slot>.p2s`, Dolphin's `<game_id>.s<slot>`, PPSSPP's
+`<disc_id>_<disc_version>_<slot>.ppst`, RPCS3's per-title `<title>/<title>_<prefix>_<id>.SAVESTAT` directories, Azahar's
+`<program_id>.<slot>.cst` — that no content path derives, so the card states the pattern with its citation and the
+resolver hands both over in the `file-names-unestablished` caveat (`data["pattern"]`, `data["citation"]`) instead of
+listing files nobody can name. melonDS is the one exception and the one derived set: `<rom stem>.ml1`–`.ml8`, concrete
+where content is named, the `<rom_stem>` hole held open for archives — its `.sav` answer's shapes exactly, read through
+the same `Config::Load` chain (TOML, the pre-1.0 INI migration line EmuDeck still writes, factory defaults for an
+unparseable TOML).
+
+`citations` follow the save cards' rule (#246): the shared fixed-tree resolver speaks the card's `build`/`tree`/`names`
+slots rather than its own line numbers, per build where the builds differ — PrimeHack's `installations` block cites
+shiiion/dolphin 81bfb96 for RetroDECK's component and 53f53e0 for the Flathub flatpak EmuDeck installs. The bespoke
+readings (PCSX2, melonDS, DuckStation) serve one emulator each and carry their citations inline, like their savefile
+twins. Anchors ride the byte tripwire the texture and mod tables ride (#105): every recorded word — `StateSaves`,
+`PPSSPP_STATE`, `Savestates`, `sstates`, `SavestatePath`, the settings file names — is re-read raw from the shipped
+binary it was verified in.
+
 ## `standalone_firmware.json` — what a standalone emulator expects beside its content
 
 Read by `atlas.standalone_firmware`, keyed like the save cards beside it, and consumed by the firmware questions: a
