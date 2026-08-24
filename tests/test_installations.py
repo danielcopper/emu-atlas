@@ -2587,10 +2587,18 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert placement.granularity is not None
         return {r.key: r.value for r in placement.granularity.readings}
 
+    @staticmethod
+    def _user_xml(user):
+        return f'<?xml version="1.0" encoding="utf-8"?>\n<user id="{user}" name="deck"/>\n'
+
     def test_vita3k_states_the_user_its_config_records(self):
         p = self._answer(
             "psvita",
-            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"},
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+                "/mnt/sd/vita/ux0/user/00/user.xml": self._user_xml("00"),
+                "/mnt/sd/vita/ux0/user/01/user.xml": self._user_xml("01"),
+            },
             dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
         )
         assert not isinstance(p, atlas.Unresolved)
@@ -2605,13 +2613,18 @@ class TestTheUserAPerUserTreeWouldOpen:
 
     def test_vita3k_headline_follows_the_recorded_users_tree(self):
         # A frontend launch names an app on the command line, and init_home
-        # then reopens exactly the recorded user — so where its directory is
-        # among those found, the headline is its tree, not the alphabetically
-        # first one. No user-auto-connect required: the follow rides on the
-        # launch, which is how both frontends launch.
+        # then reopens exactly the recorded user — so where the emulator's own
+        # listing holds it (a directory whose user.xml answers to that id),
+        # the headline is its tree, not the alphabetically first one. No
+        # user-auto-connect required: the follow rides on the launch, which is
+        # how both frontends launch.
         p = self._answer(
             "psvita",
-            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"},
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+                "/mnt/sd/vita/ux0/user/00/user.xml": self._user_xml("00"),
+                "/mnt/sd/vita/ux0/user/01/user.xml": self._user_xml("01"),
+            },
             dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
         )
         assert not isinstance(p, atlas.Unresolved)
@@ -2629,6 +2642,69 @@ class TestTheUserAPerUserTreeWouldOpen:
         # The names caveat talks about the headline tree.
         names = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED]
         assert names[0].data["dir"] == "/mnt/sd/vita/ux0/user/01/savedata"
+
+    def test_vita3k_the_identity_outranks_the_directory_name(self):
+        # get_users_list keys a user by its user.xml's id attribute, the
+        # directory name only standing in where the file carries none — and
+        # io.user_id becomes that key, so the savedata path composes from the
+        # identity. A directory 00 answering to id 01 means the launch opens
+        # 01 and writes ux0/user/01/savedata, a tree the first save creates.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+                "/mnt/sd/vita/ux0/user/00/user.xml": self._user_xml("01"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/01/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the configured user's tree is the one named"
+        # The survey still states what is on disk: 00's tree, nothing else.
+        assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/00/savedata"]
+
+    def test_vita3k_a_directory_without_user_xml_is_not_a_set_up_user(self):
+        # The directory exists and holds saves, but get_users_list skips a
+        # directory whose user.xml does not load — the launch would open the
+        # user manager, so the headline stays put and the caveat says the
+        # recorded user is not set up. The tree still answers as a group: what
+        # is on disk is stated regardless of what Vita3K would list.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00/savedata"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the configured user is not set up here"
+        assert caveat.data["configured_user"] == "00"
+        assert "has no user.xml" in caveat.message
+        assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/00/savedata"]
+
+    def test_vita3k_an_unreadable_user_xml_leaves_the_listing_unestablished(self):
+        # Vita3K skips a user.xml that fails to load, but a file atlas cannot
+        # read is not known to fail for the emulator — whether the recorded
+        # user is listed is unknowable, and the answer says so instead of
+        # deciding either way.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+                "/mnt/sd/vita/ux0/user/00/user.xml": {"status": "unreadable"},
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert (
+            caveat.data["reason"]
+            == "whether the configured user is set up here was not established"
+        )
+        assert caveat.data["configured_user"] == "01"
+        assert "could not be read" in caveat.message
 
     def test_vita3k_a_recorded_user_without_a_tree_keeps_the_first_found(self):
         # The recorded id names no directory here, so a launch has nothing to

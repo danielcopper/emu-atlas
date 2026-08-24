@@ -3375,13 +3375,15 @@
     },
     {
       "name": "vita3k-the-user-id-config-yml-records-is-stated-beside-every-tree",
-      "rationale": "The emulator does write down which user it opened: select_and_open_user stores it as user-id (user_management.cpp:329-331 at cb1f592c), and init_home reopens that user when the id is among the users the emulator listed from this tree — the directories under ux0/user whose user.xml loads (get_users_list, user_management.cpp:83-97) — and either the launch names an app on the command line or user-auto-connect is on (gui.cpp:688-696). A frontend launch is a command-line launch (-r is --installed-path, config.cpp:260), so with 00 and 01 on disk and user-id 01 recorded a launch opens 01, and the headline names its tree rather than the alphabetically first. Every user directory stays a group of its own, and the recorded id stays stated as a reading and as the caveat's configured_user.",
+      "rationale": "The emulator does write down which user it opened: select_and_open_user stores it as user-id (user_management.cpp:329-331 at cb1f592c), and init_home reopens that user when the id is among the users the emulator listed — the directories under ux0/user whose user.xml loads, keyed by the file's id attribute or the directory's name (get_users_list, user_management.cpp:83-97), which atlas reads the same way — and either the launch names an app on the command line or user-auto-connect is on (gui.cpp:688-696). A frontend launch is a command-line launch (-r is --installed-path, config.cpp:260), so with 00 and 01 set up on disk and user-id 01 recorded a launch opens 01, and the headline names its tree rather than the alphabetically first. Every user directory stays a group of its own, and the recorded id stays stated as a reading and as the caveat's configured_user.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -3475,13 +3477,15 @@
     },
     {
       "name": "vita3k-the-headline-follows-the-recorded-user-without-auto-connect",
-      "rationale": "user-auto-connect gates only a plain launch of the emulator: a frontend launch names an app on the command line (-r is --installed-path, config.cpp:260 at cb1f592c) and init_home reopens the recorded user on that alone, when the id is among the users the emulator listed from this tree (gui.cpp:688-696; get_users_list, user_management.cpp:83-97). So with user-id 01 recorded and its directory found, the headline names 01's tree with the switch unset — the switch decides a plain launch, not a frontend's — and every user directory stays a group of its own.",
+      "rationale": "user-auto-connect gates only a plain launch of the emulator: a frontend launch names an app on the command line (-r is --installed-path, config.cpp:260 at cb1f592c) and init_home reopens the recorded user on that alone, when the id is among the users the emulator listed — directories under ux0/user whose user.xml loads (gui.cpp:688-696; get_users_list, user_management.cpp:83-97), read here the same way. So with user-id 01 recorded and a directory answering to that id, the headline names 01's tree with the switch unset — the switch decides a plain launch, not a frontend's — and every user directory stays a group of its own.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -3575,7 +3579,7 @@
     },
     {
       "name": "vita3k-a-recorded-user-without-a-tree-does-not-move-the-headline",
-      "rationale": "config.yml records user-id 02 and no directory of that name exists below the tree: nothing found here for a launch to reopen, so the user manager opens and the player picks (init_home, gui.cpp:688-696, over the users get_users_list built from this tree, user_management.cpp:83-97 at cb1f592c). The launch's user is genuinely unknowable, so the headline keeps the first tree found and the caveat names the missing recorded user structurally — configured_user beside a reason that says its tree is not here.",
+      "rationale": "config.yml records user-id 02, no directory of that name exists below the tree, and no user.xml here names that id — atlas reads each one the way get_users_list does (user_management.cpp:83-97 at cb1f592c) — so nothing is there for a launch to reopen: the user manager opens and the player picks (init_home, gui.cpp:688-696). The launch's user is genuinely unknowable, so the headline keeps the first tree found and the caveat names the missing recorded user structurally — configured_user beside a reason that says its tree is not here.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3660,6 +3664,99 @@
               {
                 "key": "user-id",
                 "value": "02",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-a-user-directory-without-user-xml-is-not-a-set-up-user",
+      "rationale": "The directory the recorded id names exists and holds savedata, but no user.xml is in it — and get_users_list lists a user only when its user.xml loads (user_management.cpp:89 at cb1f592c), so Vita3K would skip this directory and open the user manager for the player to pick (init_home, gui.cpp:688-696). The shape EmuDeck's installer leaves behind. The headline stays the first tree found and the caveat says the recorded user is not set up here; the tree still answers as a group, because what is on disk is stated regardless of what the emulator would list.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "reason": "the configured user is not set up here",
+                "users": "00",
+                "configured_user": "00"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "00",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               },
               {
