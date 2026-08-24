@@ -12,7 +12,7 @@ import json
 import pytest
 
 from atlas.installations import (
-    _STANDALONE_SAVESTATE_RESOLVERS,
+    _STANDALONE_SAVESTATE_RESOLVERS,  # pyright: ignore[reportPrivateUsage] - the pairing is the unit under test
     STANDALONE_SAVESTATE_CITATION_SLOTS,
 )
 from atlas.standalone_savestates import (
