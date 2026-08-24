@@ -19,6 +19,10 @@ import pytest
 
 from atlas.emulator_settings import DirectoryName, load_emulator_settings
 from atlas.mods import load_mod_cards, load_standalone_mod_cards, recorded_mod_words
+from atlas.standalone_savestates import (
+    load_standalone_savestates,
+    recorded_savestate_emulator_words,
+)
 from atlas.textures import (
     load_standalone_texture_packs,
     load_texture_packs,
@@ -87,17 +91,23 @@ DIRECTORY_SPELLINGS = list(_directory_spellings())
 
 TEXTURES_RAW = json.loads((DATA / "texture_packs.json").read_text(encoding="utf-8"))
 MODS_RAW = json.loads((DATA / "mods.json").read_text(encoding="utf-8"))
+SAVESTATES_RAW = json.loads((DATA / "standalone_savestates.json").read_text(encoding="utf-8"))
 
 _WORDS = {
     ("textures", "cores"): recorded_texture_core_words,
     ("textures", "emulators"): recorded_texture_emulator_words,
     ("mods", "cores"): recorded_mod_words,
     ("mods", "emulators"): recorded_mod_words,
+    ("savestates", "emulators"): recorded_savestate_emulator_words,
 }
 
 
 def _rows():
-    for table_name, raw in (("textures", TEXTURES_RAW), ("mods", MODS_RAW)):
+    for table_name, raw in (
+        ("textures", TEXTURES_RAW),
+        ("mods", MODS_RAW),
+        ("savestates", SAVESTATES_RAW),
+    ):
         for half in ("cores", "emulators"):
             for key, entry in raw.get(half, {}).items():
                 yield table_name, half, key, entry
@@ -135,6 +145,7 @@ class TestEveryRecordedNameIsAnchored:
         assert load_standalone_texture_packs()
         assert load_mod_cards()
         assert load_standalone_mod_cards()
+        assert load_standalone_savestates()
 
     @pytest.mark.parametrize(
         ("table", "half", "key", "entry"),
