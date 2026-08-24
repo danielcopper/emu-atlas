@@ -2706,6 +2706,83 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert caveat.data["configured_user"] == "01"
         assert "could not be read" in caveat.message
 
+    def test_vita3k_an_unprovisioned_directory_of_the_recorded_name_does_not_attract_the_headline(
+        self,
+    ):
+        # The witness the single-user fixtures cannot be: with two directories
+        # and the recorded one not set up, follow-vs-stay is observable — a
+        # resolver that follows the directory name alone names 01's tree here,
+        # and only the user.xml check keeps the headline at the first found.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"},
+            dirs=["/mnt/sd/vita/ux0/user/00/savedata", "/mnt/sd/vita/ux0/user/01/savedata"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the configured user is not set up here"
+        assert caveat.data["configured_user"] == "01"
+        assert caveat.data["users"] == "00,01"
+
+    def test_vita3k_the_identity_fallback_is_the_directory_stem(self):
+        # An id-less user.xml keys the user by the directory's stem, not its
+        # whole name — upstream takes path.stem() (get_users_list,
+        # user_management.cpp:97), so a directory 01.bak answers to 01 and the
+        # recorded 01 is listed, its tree composed from the identity.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+                "/mnt/sd/vita/ux0/user/01.bak/user.xml": '<?xml version="1.0"?>\n<user/>\n',
+            },
+            dirs=["/mnt/sd/vita/ux0/user/01.bak"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/01/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the configured user's tree is the one named"
+        assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/01.bak/savedata"]
+
+    def test_vita3k_a_user_xml_that_does_not_parse_is_the_emulators_own_skip(self):
+        # load_file fails on a malformed user.xml exactly as on a missing one
+        # (get_users_list, user_management.cpp:89) — the directory is not a
+        # user Vita3K lists, and the sentence names the parse failure rather
+        # than a generic absence.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\n",
+                "/mnt/sd/vita/ux0/user/00/user.xml": '<user id="00">',
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the configured user is not set up here"
+        assert "does not parse" in caveat.message
+
+    def test_vita3k_a_directory_answering_to_another_id_is_not_the_recorded_user(self):
+        # The recorded directory exists and its user.xml loads — but it
+        # answers to a different id, and nothing else answers to the recorded
+        # one, so the launch has no user 01 to reopen and the sentence names
+        # the id the directory does answer to.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+                "/mnt/sd/vita/ux0/user/00/user.xml": self._user_xml("00"),
+                "/mnt/sd/vita/ux0/user/01/user.xml": self._user_xml("07"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == "the configured user is not set up here"
+        assert 'answers to id "07" instead' in caveat.message
+
     def test_vita3k_a_recorded_user_without_a_tree_keeps_the_first_found(self):
         # The recorded id names no directory here, so a launch has nothing to
         # reopen and the player picks: the launch's user is genuinely

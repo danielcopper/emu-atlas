@@ -777,7 +777,7 @@ derives at run time and writes nowhere. The user segment reaches a stronger answ
 out why. Vita3K _does_ record the user it opened, as `user-id` in that same `config.yml`, and the emulator honours the
 record when the id is among the users it listed itself and either the command line names an app to run — which is how
 both frontends start a game — or `user-auto-connect` is on; that list comes from the directories under `ux0/user` whose
-`user.xml` loads, keyed by the file's `id` attribute or the directory's own name, and atlas reads each `user.xml` the
+`user.xml` loads, keyed by the file's `id` attribute or the directory name's stem, and atlas reads each `user.xml` the
 same way, so the check is the emulator's own rather than a guess from directory names. So where that listing holds the
 recorded id, a frontend launch reopens exactly that user, and **the answer's `dir` names its tree** — composed from the
 identity, which the first save creates where no directory of that name exists yet. **Every user directory that exists

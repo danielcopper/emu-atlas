@@ -558,7 +558,7 @@ does — but this emulator **does** write down the user it opened, as `user-id` 
 user when the id is among the users the emulator itself listed and either the launch names an app on the command line —
 which is how a frontend launches — or `user-auto-connect` is on, and otherwise the user manager opens for the player to
 pick (gui.cpp:688-696); the list is built from the directories under `ux0/user` whose `user.xml` loads, keyed by the
-file's `id` attribute or, lacking one, the directory's own name (get_users_list, user_management.cpp:83-97), and the
+file's `id` attribute or, lacking one, the directory name's stem (get_users_list, user_management.cpp:83-97), and the
 emulator's own writes keep that key equal to the directory name (save_user, user_management.cpp:145-158) — atlas reads
 each `user.xml` the same way, so the users it checks the record against are the emulator's own list. So the answer's
 headline `dir` names the recorded user's tree where that listing holds it — composed from the identity the user.xml

@@ -7937,8 +7937,8 @@ class _Vita3kListedUser:
     ``identity`` is the gui.users key the directory yields — the user.xml's
     ``id`` attribute where its root ``<user>`` element carries one (present
     but empty counts as present, matching pugixml's attribute test), and the
-    directory's own name otherwise — or ``None`` when the directory yields no
-    user at all, or when whether it does could not be read.
+    directory name's stem otherwise — or ``None`` when the directory yields
+    no user at all, or when whether it does could not be read.
     """
 
     directory: str
@@ -7953,7 +7953,8 @@ def _vita3k_listed_users(
 
     A directory joins ``gui.users`` only when its ``user.xml`` loads
     (get_users_list, user_management.cpp:89 at cb1f592c), keyed by the file's
-    ``id`` attribute or, lacking one, the directory's own name (:94-97). A
+    ``id`` attribute or, lacking one, the directory name's stem —
+    ``path.stem()``, the name shorn of its last extension (:94-97). A
     missing user.xml and one that does not parse are one fact to the emulator
     — ``load_file`` fails and the directory is skipped — and that is mirrored
     here. A user.xml atlas could not read is neither: the emulator may load
@@ -7976,7 +7977,12 @@ def _vita3k_listed_users(
             listed.append(_Vita3kListedUser(user, None, _VITA3K_USER_XML_INVALID))
             continue
         id_attr = root.get("id") if root.tag == "user" else None
-        identity = user if id_attr is None else id_attr
+        # The fallback is the stem, not the whole name: upstream takes
+        # path.stem() (user_management.cpp:97), so a directory 01.bak with an
+        # id-less user.xml answers to 01. os.path.splitext matches
+        # std::filesystem::path::stem on dotted, leading-dot and trailing-dot
+        # names alike.
+        identity = os.path.splitext(user)[0] if id_attr is None else id_attr
         listed.append(_Vita3kListedUser(user, identity, _VITA3K_USER_LISTED))
     return tuple(listed)
 

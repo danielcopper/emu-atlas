@@ -3771,6 +3771,106 @@
       }
     },
     {
+      "name": "vita3k-a-recorded-user-whose-directory-is-not-set-up-does-not-move-the-headline",
+      "rationale": "The witness the single-user machines cannot be: two user directories, no user.xml anywhere, and user-id 01 recorded. The directory the record names exists — but get_users_list lists a user only when its user.xml loads (user_management.cpp:89 at cb1f592c), so Vita3K would skip both directories and open the user manager (init_home, gui.cpp:688-696): a resolver that followed the directory name alone would headline 01's tree here, and only the emulator's own check keeps the headline at the first tree found. This machine is the pre-user.xml fixture of the state-1 vector, kept verbatim with the answer it truly earns.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "reason": "the configured user is not set up here",
+                "users": "00,01",
+                "configured_user": "01"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "01",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "vita3k-a-recorded-user-over-an-empty-tree-answers-as-an-empty-tree",
       "rationale": "An empty tree answers as an empty tree: the compiled default 00 stands in as the tree the emulator would create (io.cpp:203 at cb1f592c), never as a directory found, and the recorded user 01 is one more tree that is not there — the emptiness sentence says so, and configured_user beside the reason carries it structurally. The headline makes no move, because there is nothing to follow.",
       "input": {
