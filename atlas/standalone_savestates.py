@@ -222,61 +222,87 @@ def _citations(
     return citations, overrides
 
 
-def _card(token: str, entry: Any) -> StandaloneSavestateCard:
-    """One emulator's card — validated, never coerced."""
-    where = f"standalone savestate card {token!r}"
-    if not isinstance(entry, dict):
-        raise ValueError(f"{where}: expected an object, got {entry!r}")
-    savestates = entry.get("savestates")
-    if not isinstance(savestates, dict):
-        raise ValueError(f"{where}: expected a 'savestates' object, got {savestates!r}")
+def _settings_name(savestates: Mapping[str, Any], where: str) -> str | None:
+    """The governing file's name, or ``None`` for a tree fixed by the build."""
     settings = savestates.get("settings")
-    if settings is not None:
-        settings = _expect_str(settings, f"{where}: savestates.settings")
+    if settings is None:
+        return None
+    return _expect_str(settings, f"{where}: savestates.settings")
+
+
+def _systems(savestates: Mapping[str, Any], where: str) -> tuple[str, ...]:
+    """The closed list of catalogue systems this card answers for."""
     systems = savestates.get("systems")
     if not isinstance(systems, list) or not systems:
         raise ValueError(f"{where}: savestates.systems must be a non-empty list, got {systems!r}")
+    return tuple(_expect_str(s, f"{where}: savestates.systems[]") for s in systems)
+
+
+def _tree_shape(
+    savestates: Mapping[str, Any], where: str, *, settings: str | None
+) -> tuple[str | None, str | None, SavestateSetting | None]:
+    """The card's one way of stating its directory: base+subdir XOR a settings key."""
     stated_directory = savestates.get("directory")
     fixed = savestates.get("base") is not None or savestates.get("subdir") is not None
     if fixed == (stated_directory is not None):
         raise ValueError(
             f"{where}: state either base+subdir or a 'directory' setting, never both or neither"
         )
-    base: str | None = None
-    subdir: str | None = None
-    if fixed:
-        base = _expect_str(savestates.get("base"), f"{where}: savestates.base")
-        if base not in XDG_BASES:
+    if stated_directory is not None:
+        if settings is None:
             raise ValueError(
-                f"{where}: savestates.base must be one of {sorted(XDG_BASES)}, got {base!r}"
+                f"{where}: a directory setting is read out of a settings file, and the card "
+                "names none — nothing could ever read the key it states"
             )
-        subdir = _subdir(savestates.get("subdir"), f"{where}: savestates.subdir")
+        return None, None, _directory_setting(stated_directory, f"{where}: savestates.directory")
+    base = _expect_str(savestates.get("base"), f"{where}: savestates.base")
+    if base not in XDG_BASES:
+        raise ValueError(
+            f"{where}: savestates.base must be one of {sorted(XDG_BASES)}, got {base!r}"
+        )
+    return base, _subdir(savestates.get("subdir"), f"{where}: savestates.subdir"), None
+
+
+def _names_statement(savestates: Mapping[str, Any], where: str) -> tuple[str, str]:
+    """How this emulator names a state — the cited (pattern, citation) pair."""
     names = savestates.get("names")
     if not isinstance(names, dict) or set(names) != {"pattern", "citation"}:
         raise ValueError(
             f"{where}: savestates.names must be {{'pattern': …, 'citation': …}} — how this "
             f"emulator names a state is the card's to state, cited; got {names!r}"
         )
-    directory = (
-        _directory_setting(stated_directory, f"{where}: savestates.directory")
-        if stated_directory is not None
-        else None
+    return (
+        _expect_str(names.get("pattern"), f"{where}: savestates.names.pattern"),
+        _expect_str(names.get("citation"), f"{where}: savestates.names.citation"),
     )
-    if directory is not None and settings is None:
-        raise ValueError(
-            f"{where}: a directory setting is read out of a settings file, and the card "
-            "names none — nothing could ever read the key it states"
-        )
+
+
+def _provenance_source(entry: Mapping[str, Any], where: str) -> str:
+    """The card's own evidence prose — required, like every packaged loader's."""
+    provenance = entry.get("provenance", {})
+    if not isinstance(provenance, dict):
+        raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
+    return _expect_str(provenance.get("source"), f"{where}: provenance.source")
+
+
+def _card(token: str, entry: Any) -> StandaloneSavestateCard:
+    """One emulator's card — validated, never coerced, one helper per grammar rule."""
+    where = f"standalone savestate card {token!r}"
+    if not isinstance(entry, dict):
+        raise ValueError(f"{where}: expected an object, got {entry!r}")
+    savestates = entry.get("savestates")
+    if not isinstance(savestates, dict):
+        raise ValueError(f"{where}: expected a 'savestates' object, got {savestates!r}")
     if "flatpak" in entry:
         raise ValueError(
             f"{where}: which app id an arrangement runs this emulator under is the save "
             "card's record — a second copy here could only ever drift from it"
         )
-    provenance = entry.get("provenance", {})
-    if not isinstance(provenance, dict):
-        raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
+    settings = _settings_name(savestates, where)
+    base, subdir, directory = _tree_shape(savestates, where, settings=settings)
+    pattern, names_citation = _names_statement(savestates, where)
     citations, overrides = _citations(savestates, where)
-    if "names" in citations and citations["names"] != names.get("citation"):
+    if "names" in citations and citations["names"] != names_citation:
         raise ValueError(
             f"{where}: the 'names' citation slot and savestates.names.citation state the "
             "same fact for the default build and disagree — one of the two is the span "
@@ -292,13 +318,13 @@ def _card(token: str, entry: Any) -> StandaloneSavestateCard:
     return StandaloneSavestateCard(
         token=token,
         settings=settings,
-        systems=tuple(_expect_str(s, f"{where}: savestates.systems[]") for s in systems),
+        systems=_systems(savestates, where),
         base=base,
         subdir=subdir,
         directory=directory,
-        names=_expect_str(names.get("pattern"), f"{where}: savestates.names.pattern"),
-        names_citation=_expect_str(names.get("citation"), f"{where}: savestates.names.citation"),
-        provenance=_expect_str(provenance.get("source"), f"{where}: provenance.source"),
+        names=pattern,
+        names_citation=names_citation,
+        provenance=_provenance_source(entry, where),
         citations=citations,
         citation_installations=overrides,
     )
