@@ -391,7 +391,7 @@
     },
     {
       "name": "pcsx2-an-unset-key-answers-the-compiled-sstates-below-the-dataroot",
-      "rationale": "No Savestates key in any spelling, so the compiled default governs: sstates, a relative value joining the DataRoot (SetDefaults writes it, Pcsx2Config.cpp:2258; LoadPathFromSettings joins it, :2276-2282).",
+      "rationale": "No Savestates key in any spelling, so the compiled default governs: sstates, a relative value joining the DataRoot (SetDefaults writes it, Pcsx2Config.cpp:2258; LoadPathFromSettings joins it, :2272-2278).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -669,6 +669,71 @@
       }
     },
     {
+      "name": "melonds-a-relative-state-path-hangs-off-the-launching-processs-cwd",
+      "rationale": "A relative SavestatePath is opened relative to the working directory of the launching process — getAssetPath composes it verbatim (EmuInstance.cpp:445-484 at 1.1) — which is a property of the launch, not of the machine. The answer keeps the <cwd> hole, roots at working_directory (the savefile family's word, joined by this question with #225), and save-dir-launch-dependent says whose value fills it. The content is named and a plain file, so the eight slot names are still concrete.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Instance0]\nSavestatePath = \"states\"\n",
+          "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Some Game.nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "<cwd>/states",
+          "root_kind": "working_directory",
+          "needs": [
+            "cwd"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Some Game.ml1",
+              "Some Game.ml2",
+              "Some Game.ml3",
+              "Some Game.ml4",
+              "Some Game.ml5",
+              "Some Game.ml6",
+              "Some Game.ml7",
+              "Some Game.ml8"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "core": "MELONDS"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "retrodeck-duckstations-states-default-below-the-probed-dataroot",
       "rationale": "DuckStation's [Folders] SaveStates key exists — RetroDECK's script calls the location hard-coded and the source disproves it (settings.cpp:1975 at 64655818e) — but RetroDECK leaves it unwritten and links the default location instead, so the compiled savestates below the probed DataRoot governs. The settings.ini on the config side pins which DataRoot spelling answered.",
       "input": {
@@ -748,6 +813,47 @@
               "retrodeck"
             ],
             "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "unresolved": {
+            "code": "standalone-unsupported",
+            "data": {
+              "label": "xemu (Standalone)",
+              "system": "xbox"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-an-uncarded-token-refuses-on-this-route-too",
+      "rationale": "EmuDeck's entry route runs its own dispatch (launch identity, then the card), and each of its refusal branches is new code — this pins the no-card one: xemu's %EMULATOR_XEMU% token identifies a launch and no savestate card covers the emulator, so the refusal is the same standalone-unsupported, byte-identical to the blanket refusal that preceded the family.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
             "health": []
           }
         ],
