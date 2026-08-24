@@ -1790,13 +1790,22 @@ class TestDolphinStandaloneSaves:
         assert stated
         assert "GCIFolderAPathOverride" in stated[0].data["reason"]
 
-    def test_the_savestate_question_still_refuses(self):
+    def test_the_savestate_question_answers_the_compiled_tree(self):
+        # The refusal this asserted outlived its reason (#225): the states
+        # tree is a compiled join below the emulator's own data tree
+        # (FileUtil.cpp:852 at 2603a), so the card answers it with the naming
+        # pattern in the caveat that says why no file can be listed.
         files = dict(self.BASE)
         rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
         entry = rd.emulators_for("gc").entries[0]
-        refusal = entry.savestate_location()
-        assert isinstance(refusal, atlas.Unresolved)
-        assert refusal.code == atlas.UNRESOLVED_STANDALONE
+        p = entry.savestate_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/StateSaves"
+        assert p.root_kind == "emulator_directory"
+        assert p.file_set.state == "unknown"
+        named = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert named.data["pattern"] == "<game_id>.s<slot>"
+        assert named.data["citation"] == "State.cpp:304-308"
 
 
 TRIO_ESDE = (
@@ -5730,3 +5739,128 @@ class TestFirmwareResolvesTheSystemDirectoryLikeTheCardRoute:
             f'savefile_directory "/saves"\n{self.DIRS}', dirs=[f"{self.CONFIG_TREE}/system"]
         )
         assert atlas.CAVEAT_CFG_LINE_DROPPED not in [c.code for c in answer.caveats]
+
+
+class TestSimpleIniKeyMatching:
+    """The mirror of SimpleIni's comparator is the unit under test (#225)."""
+
+    def test_a_section_spelled_in_another_case_still_matches(self):
+        from atlas.installations import (
+            _simpleini_value,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        assert _simpleini_value({("folders", "savestates"): "/x"}, "Folders", "Savestates") == (
+            "/x",
+            "savestates",
+        )
+
+    def test_duplicate_case_spellings_collapse_with_the_last_occurrence_winning(self):
+        # AddEntry assigns into the found (case-equal) key, so the last line in
+        # file order speaks (SimpleIni.h:2042-2150 at PCSX2 v2.6.3).
+        from atlas.installations import (
+            _simpleini_value,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        values = {("Folders", "Savestates"): "/a", ("Folders", "SaveStates"): "/b"}
+        assert _simpleini_value(values, "Folders", "Savestates") == ("/b", "SaveStates")
+
+    def test_a_present_but_empty_value_is_not_an_absent_key(self):
+        from atlas.installations import (
+            _simpleini_value,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        assert _simpleini_value({("Folders", "Savestates"): ""}, "Folders", "Savestates") == (
+            "",
+            "Savestates",
+        )
+        assert _simpleini_value({}, "Folders", "Savestates") == (None, "Savestates")
+
+    def test_the_folding_is_ascii_only_never_pythons(self):
+        # SI_GenericNoCase lowers A-Z and nothing else (SimpleIni.h:2916-2931).
+        # str.lower() and str.casefold() both fold 'İ' to 'i̇' and casefold
+        # folds 'ß' to 'ss' — a mirror built on either would match keys the
+        # emulator keeps apart.
+        from atlas.installations import (
+            _ascii_locase,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+            _simpleini_value,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        assert _ascii_locase("SaveStates") == "savestates"
+        assert _ascii_locase("İß") == "İß"
+        assert _simpleini_value({("S", "İd"): "/x"}, "S", "i̇d") == (None, "i̇d")
+        assert _simpleini_value({("S", "Straße"): "/x"}, "S", "STRASSE") == (None, "STRASSE")
+
+
+class TestPcsx2EmptyFolderKeys:
+    """A present-but-empty [Folders] line moves the directory to the DataRoot.
+
+    GetStringValue falls to the compiled default only when the lookup fails
+    (SettingsInterface.h:83-89 at v2.6.3); the empty value survives, and
+    Path::Combine(DataRoot, "") is the DataRoot itself (FileSystem.cpp:847-862)
+    — one fact, pinned once per question that reads a [Folders] directory.
+    """
+
+    DATA_ROOT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2"
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: TRIO_ESDE,
+    }
+
+    def _entry(self, ini):
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: ini}, dirs=["/mnt/sd/retrodeck/saves"]
+        )
+        return rd.emulators_for("ps2").entries[0]
+
+    def test_an_empty_savestates_line_lands_the_states_on_the_dataroot(self):
+        p = self._entry("[Folders]\nSaveStates =\n").savestate_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == self.DATA_ROOT
+
+    def test_an_absent_savestates_key_keeps_the_compiled_default(self):
+        p = self._entry("[Folders]\nMemoryCards = /mnt/sd/cards\n").savestate_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{self.DATA_ROOT}/sstates"
+
+    def test_an_empty_memorycards_line_lands_the_cards_on_the_dataroot(self):
+        p = self._entry(
+            "[Folders]\nMemoryCards =\n[MemoryCards]\nSlot1_Enable = true\nSlot2_Enable = false\n"
+        ).savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.groups[0].dir == self.DATA_ROOT
+        assert p.granularity is not None
+        reading = next(r for r in p.granularity.readings if r.key == "MemoryCards")
+        # The reading's value is the empty string the file carries — not the
+        # None of an absent key.
+        assert reading.value == ""
+
+    def test_an_empty_textures_line_roots_the_packs_on_the_dataroot(self):
+        answer = self._entry("[Folders]\nTextures =\n").texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        assert answer.dir == f"{self.DATA_ROOT}/<save_id>/replacements"
+
+    def test_an_empty_gamesettings_line_globs_the_dataroot_for_the_layer(self):
+        # The fourth [Folders] reader: the per-game settings layer's directory
+        # is read through the same LoadPathFromSettings (Pcsx2Config.cpp:2290),
+        # so an empty line puts the layer at the DataRoot — the caveat's
+        # contractual dir must say so, not the compiled gamesettings.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: (
+                    "[Folders]\nGameSettings =\n"
+                    "[EmuCore/GS]\nLoadTextureReplacements = false\n"
+                ),
+                f"{self.DATA_ROOT}/Game.ini": "",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        assert not isinstance(answer, atlas.Unresolved)
+        stated = next(
+            c for c in answer.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["dir"] == self.DATA_ROOT
+        assert stated.data["count"] == "1"

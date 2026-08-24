@@ -24,6 +24,7 @@ from atlas.emulator_settings import (
 )
 from atlas.mods import load_standalone_mod_cards
 from atlas.standalone_saves import load_standalone_saves
+from atlas.standalone_savestates import load_standalone_savestates
 from atlas.textures import load_standalone_texture_packs
 
 HOMES = {"config_home": "/home/deck/.config", "data_home": "/home/deck/.local/share"}
@@ -166,6 +167,11 @@ class TestTheCardsAndTheTableAgree:
             if card.settings is not None:
                 assert settings_file(card.token, card.settings)
 
+    def test_every_savestate_card_names_a_file_the_table_carries(self):
+        for card in load_standalone_savestates():
+            if card.settings is not None:
+                assert settings_file(card.token, card.settings)
+
     def test_the_table_carries_no_file_no_card_asks_for(self):
         # An address nobody reads outlives the question it was written for and
         # goes stale unnoticed — the same reason an anchor for nothing is
@@ -176,6 +182,7 @@ class TestTheCardsAndTheTableAgree:
                 load_standalone_saves(),
                 load_standalone_texture_packs(),
                 load_standalone_mod_cards(),
+                load_standalone_savestates(),
             )
             for card in cards
             if card.settings is not None

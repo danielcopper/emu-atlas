@@ -244,7 +244,15 @@ KNOWN_ROOT_KINDS = {
 }
 # Closed around its own question: a savestate is never anchored at the saves
 # root, and never at a core's system directory — no card can move it there.
-KNOWN_STATE_ROOT_KINDS = {"savestate_directory", "content_directory"}
+# emulator_directory and working_directory joined with the standalone savestate
+# cards (#225): the tree a standalone emulator owns, and the launch's cwd a
+# relative melonDS SavestatePath anchors at — the savefile family's own words.
+KNOWN_STATE_ROOT_KINDS = {
+    "savestate_directory",
+    "content_directory",
+    "emulator_directory",
+    "working_directory",
+}
 # The holes a placement may hand back — each one a value the CALLER fills from
 # the content at hand. Closed like every other vocabulary here, and for the
 # sharpest reason of them all: a hole nobody can fill is worse than a stated

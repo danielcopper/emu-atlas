@@ -757,8 +757,9 @@ card, where every game of a region shares one `MemoryCardA.<region>.raw` and the
 (`system="wii"`) is the NAND's `title/` tree: one unnamed directory per title, `file-names-unestablished` carrying the
 citation, and `physical_dir` pointing at the real tree behind the arrangement's symlink. A config that exists and cannot
 be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside to.
-Savestates stay refused (`standalone-unsupported`): the states tree is its own wiring, deliberately outside the save
-card.
+Savestates are their own wiring and their own card family (`standalone_savestates.json`, #225): the same entry answers
+`savestate_location` through it, and an emulator without a savestate card keeps the `standalone-unsupported` refusal
+there even where its save answers.
 
 Three more cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
 `PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the
@@ -856,8 +857,10 @@ Three differences are worth knowing, and all three are things the answer states 
 - **No `granularity`.** The field is absent, not `None`. It says how a _core_ groups the save data it writes, and no
   core writes a savestate — RetroArch serializes it and never tells the core where it goes — so there is nothing for a
   rule card to state, now or later.
-- **`root_kind` has two values, not three.** A savestate is never anchored at the saves root and never at a core's
-  system directory.
+- **`root_kind` speaks the question's own vocabulary.** A savestate is never anchored at the saves root and never at a
+  core's system directory. On RetroArch's routes it is `savestate_directory` or `content_directory`; a standalone
+  entry's answer (below) adds the savefile family's `emulator_directory` — the tree the emulator owns — and
+  `working_directory` for melonDS's relative value.
 - **The file set is narrower and sharper.** A savefile's extensions are the core's own, so the observation has to match
   everything under the ROM's stem; a savestate's names are RetroArch's own, so the observation matches `<stem>.state*`
   and nothing else. Two consequences: `content-dir-observation` does not appear on a state placement even when the
@@ -874,6 +877,26 @@ Take it as a warning, not a refusal. Two things override the declaration and atl
 `core_info_savestate_bypass`, and a running core reporting a nonzero `retro_serialize_size()`, which nothing on disk can
 answer. Where the `.info` could not be read at all you get `core-info-unreadable` or `info-path-unresolved` instead —
 "atlas could not look" is never spelled as "states work here".
+
+### Standalone entries answer through their own card family
+
+A standalone catalogue entry answers `savestate_location` through `standalone_savestates.json` (#225), the savefile
+family's twin: Dolphin, PrimeHack, PPSSPP, RPCS3 and Azahar keep a compiled states tree below their own directory —
+`root_kind` is `emulator_directory`, `physical_dir` walks the arrangement's symlink — while PCSX2, melonDS and
+DuckStation read the directory out of their own configuration (`[Folders] Savestates`, `[Instance0] SavestatePath`,
+`[Folders] SaveStates`), through the same variant gate EmuDeck's save answers run. The ini keys are matched the way
+SimpleIni matches them — ASCII case-insensitively — which is what makes RetroDECK's `SaveStates` spelling govern over
+PCSX2's compiled `sstates`.
+
+What no standalone card can give you is the file list: these emulators name their states from the running game's own
+identity (PCSX2's `<serial> (<crc>).<slot>.p2s`, Dolphin's `<game_id>.s<slot>`, PPSSPP's
+`<disc_id>_<disc_version>_<slot>.ppst`, RPCS3's per-title `<title>/<title>_…SAVESTAT` directories, Azahar's
+`<program_id>.<slot>.cst`), which no content path derives — so the `file-names-unestablished` caveat carries the cited
+pattern in `data["pattern"]` and the file set stays `unknown`. melonDS is the one exception: its states are the
+content's own stem plus `.ml1`–`.ml8`, so with content named the declared set is concrete, an empty `SavestatePath`
+lands them beside the ROM, and an archive keeps the `<rom_stem>` hole open — exactly the shapes its `.sav` answer takes.
+An emulator without a savestate card refuses `standalone-unsupported`, byte-identically to the blanket refusal that
+preceded the family.
 
 ## Where do texture packs go?
 

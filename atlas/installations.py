@@ -211,6 +211,9 @@ from atlas.placement import (
     ROOT_SYSTEM_DIRECTORY,
     ROOT_WORKING_DIRECTORY,
     STATE_ROOT_CONTENT_DIRECTORY,
+    STATE_ROOT_EMULATOR_DIRECTORY,
+    STATE_ROOT_KINDS,
+    StateRootKind,
     SUBDIR_TEMPLATE_HOLES,
     TEMPLATE_CONTENT_DIR,
     TEMPLATE_CONTENT_DIR_NAME,
@@ -259,6 +262,10 @@ from atlas.placement import (
 from atlas import duckstation, emulator_settings, melonds, qt_ini
 from atlas.yaml_scalars import YamlScalars, read_scalars
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
+from atlas.standalone_savestates import (
+    StandaloneSavestateCard,
+    lookup_standalone_savestate_card,
+)
 from atlas.retroarch_cfg import (
     IGNORED_LINE_DROPPED,
     chain_value,
@@ -4920,6 +4927,53 @@ class _XdgHomes:
         )
 
 
+def _pcsx2_folder_below_dataroot(
+    raw: str | None,
+    *,
+    key: str,
+    default: str,
+    default_citation: str,
+    data_root: str,
+    spelled: str | None = None,
+) -> tuple[str | None, str]:
+    """``LoadPathFromSettings``' non-absolute outcomes, told apart the way the emulator tells them.
+
+    Four readers open a ``[Folders]`` directory of PCSX2's — the texture
+    root, the memory-card directory, the savestates directory, and the
+    per-game settings layer's — and every one used to fold a
+    present-but-empty line into "key absent". The emulator does not: ``GetStringValue`` falls to
+    the compiled default only when the lookup FAILS (SettingsInterface.h:83-89
+    at v2.6.3) — SimpleIni stores the empty value a ``Key =`` line carries and
+    hands it back — and ``Path::Combine(DataRoot, "")`` is the **DataRoot
+    itself**, because the combine strips trailing separators after appending
+    the empty component (FileSystem.cpp:847-862). A relative value joins the
+    DataRoot (LoadPathFromSettings, Pcsx2Config.cpp:2272-2278). An absolute
+    value is the caller's to translate through the launch's sandbox, which
+    this helper cannot know: it returns ``(None, sentence)`` for that case.
+    *spelled* is the case-variant spelling actually found in the file, where
+    the caller read the key the way SimpleIni matches it (#225).
+    """
+    shown = spelled if spelled is not None else key
+    if raw is None:
+        return os.path.join(data_root, default), (
+            f"{key} is unset — the default {default} below the DataRoot governs "
+            f"({default_citation})"
+        )
+    if raw == "":
+        return data_root, (
+            f'PCSX2.ini: [Folders] {shown} = "" — a present-but-empty key keeps its empty '
+            "value (GetStringValue defaults only when the lookup fails, "
+            'SettingsInterface.h:83-89 at v2.6.3) and Path::Combine(DataRoot, "") is the '
+            "DataRoot itself (FileSystem.cpp:847-862), not the compiled default"
+        )
+    if not os.path.isabs(raw):
+        return os.path.join(data_root, raw), (
+            f'PCSX2.ini: [Folders] {shown} = "{raw}" — a relative value joins the DataRoot '
+            "(LoadPathFromSettings, Pcsx2Config.cpp:2272-2278)"
+        )
+    return None, f'PCSX2.ini: [Folders] {shown} = "{raw}"'
+
+
 def _pcsx2_texture_placement(
     machine: Machine,
     *,
@@ -4965,13 +5019,16 @@ def _pcsx2_texture_placement(
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     setting = card.directory
-    raw_dir = values.get((setting.section, setting.key), "")
-    if not raw_dir:
-        root = os.path.join(data_root, setting.default)
-    elif not os.path.isabs(raw_dir):
-        root = os.path.join(data_root, raw_dir)
-    else:
-        root = raw_dir
+    raw_dir = values.get((setting.section, setting.key))
+    resolved, _ = _pcsx2_folder_below_dataroot(
+        raw_dir,
+        key=setting.key,
+        default=setting.default,
+        default_citation=setting.citation,
+        data_root=data_root,
+    )
+    root = resolved if resolved is not None else raw_dir
+    assert root is not None  # only an absolute value leaves the helper unresolved
     directory = os.path.join(root, TEMPLATE_SAVE_ID, _PCSX2_TEXTURE_LOAD_STAGE)
     switch = card.switch
     if switch is None:
@@ -5098,13 +5155,16 @@ def _pcsx2_game_settings_caveat(
     unreadable directory the way an empty one is answered claims exactly what
     was not established — which is why the failure has a code of its own.
     """
-    raw = values.get(("Folders", "GameSettings"), "")
-    if not raw:
-        directory = os.path.join(data_root, "gamesettings")
-    elif not os.path.isabs(raw):
-        directory = os.path.join(data_root, raw)
-    else:
-        directory = raw
+    raw = values.get(("Folders", "GameSettings"))
+    resolved, _ = _pcsx2_folder_below_dataroot(
+        raw,
+        key="GameSettings",
+        default="gamesettings",
+        default_citation="Pcsx2Config.cpp:2290",
+        data_root=data_root,
+    )
+    directory = resolved if resolved is not None else raw
+    assert directory is not None  # only an absolute value leaves the helper unresolved
     listing = machine.glob(os.path.join(directory, "*.ini"))
     if listing.status != GLOB_COMPLETE:
         return [
@@ -6576,7 +6636,11 @@ def _duckstation_sanitized(name: str) -> str:
 
 
 def _duckstation_settings(
-    machine: Machine, homes: _XdgHomes, card: StandaloneSaveCard
+    machine: Machine,
+    homes: _XdgHomes,
+    card: "StandaloneSaveCard | StandaloneSavestateCard",
+    *,
+    lost: str = "which cards its slots hold and where they live is unknowable here",
 ) -> tuple[str, dict[tuple[str, str], str], str | None, tuple[Caveat, ...], Unresolved | None]:
     """The DataRoot probe: (root, settings values, stated ini, caveats, refusal).
 
@@ -6586,7 +6650,9 @@ def _duckstation_settings(
     ``settings.ini`` lives inside it. No file records the environment, so the
     probe reads both spellings in that order and the file that exists speaks;
     where neither does, the ambiguity is stated and the compiled defaults
-    hang off the environment-unset side.
+    hang off the environment-unset side. The savestate question probes the
+    same pair for its own key, which is why the sentence a refusal carries is
+    a parameter.
     """
     read = duckstation.read_settings(
         machine,
@@ -6598,8 +6664,7 @@ def _duckstation_settings(
     if read.unreadable is not None:
         refusal = Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
-            "which cards its slots hold and where they live is unknowable here",
+            f"DuckStation's configuration ({read.unreadable}) exists and could not be read — {lost}",
             {"emulator": card.token, "config": read.unreadable},
         )
         return read.root, {}, None, (), refusal
@@ -7074,19 +7139,18 @@ def _pcsx2_memcards_dir(
     ini_path: str,
 ) -> tuple[str | None, OptionReading, Unresolved | None]:
     """(memory-card directory, its reading, the refusal if any) — one shape per return."""
-    raw_dir = values.get(("Folders", "MemoryCards"), "")
-    if raw_dir:
-        provenance = f'PCSX2.ini: [Folders] MemoryCards = "{raw_dir}"'
-    else:
-        provenance = (
-            "MemoryCards is unset — the default memcards below the DataRoot governs "
-            "(Pcsx2Config.cpp:2259)"
-        )
-    reading = OptionReading("MemoryCards", raw_dir or None, provenance, None)
-    if not raw_dir:
-        return os.path.join(data_root, "memcards"), reading, None
-    if not os.path.isabs(raw_dir):
-        return os.path.join(data_root, raw_dir), reading, None
+    raw_dir = values.get(("Folders", "MemoryCards"))
+    resolved, provenance = _pcsx2_folder_below_dataroot(
+        raw_dir,
+        key="MemoryCards",
+        default="memcards",
+        default_citation="Pcsx2Config.cpp:2259",
+        data_root=data_root,
+    )
+    reading = OptionReading("MemoryCards", raw_dir, provenance, None)
+    if resolved is not None:
+        return resolved, reading, None
+    assert raw_dir is not None  # only an absolute value leaves the helper unresolved
     host = sandbox.host("MemoryCards", raw_dir)
     if host.path is None:
         refusal = Unresolved(
@@ -7269,68 +7333,83 @@ class _MelonConfig:
     stated_file: str | None
 
 
-def _melonds_save_path_provenance(config: melonds.MelonConfig, raw: str | None) -> str:
-    """The sentence the SaveFilePath reading carries, per Load()'s branch."""
+def _melonds_save_path_provenance(
+    config: melonds.MelonConfig, raw: str | None, *, key: str = "SaveFilePath", what: str = "save"
+) -> str:
+    """The sentence the path reading carries, per Load()'s branch.
+
+    *key* and *what* let the savestate question speak the same chain about its
+    own row — ``SavestatePath`` is ``SaveFilePath``'s sibling in the legacy
+    table (Config.cpp:302 beside :301) and every cited line here is the shared
+    machinery both keys go through.
+    """
     if config.source == melonds.SOURCE_TOML_INVALID:
         return (
             "melonDS.toml exists and is not parseable TOML — melonDS catches the syntax "
             "error and runs on factory defaults (Config.cpp:796-803), so the empty default "
-            "governs and the save lands beside the ROM"
+            f"governs and the {what} lands beside the ROM"
         )
     if config.source == melonds.SOURCE_TOML:
         if raw:
-            return f'melonDS.toml: [Instance0] SaveFilePath = "{raw}"'
-        if isinstance(melonds.raw_value(config, "Instance0.SaveFilePath"), str):
+            return f'melonDS.toml: [Instance0] {key} = "{raw}"'
+        if isinstance(melonds.raw_value(config, f"Instance0.{key}"), str):
             return (
-                'melonDS.toml: [Instance0] SaveFilePath = "" — the empty value routes the '
-                "save beside the ROM (getAssetPath, EmuInstance.cpp:448-449)"
+                f'melonDS.toml: [Instance0] {key} = "" — the empty value routes the '
+                f"{what} beside the ROM (getAssetPath, EmuInstance.cpp:448-449)"
             )
         return (
-            "melonDS.toml states no [Instance0] SaveFilePath (unset, or not a string, reads "
-            "as the empty default — Config.cpp:596) — the save lands beside the ROM"
+            f"melonDS.toml states no [Instance0] {key} (unset, or not a string, reads "
+            f"as the empty default — Config.cpp:596) — the {what} lands beside the ROM"
         )
     if config.source == melonds.SOURCE_LEGACY:
         if raw:
             return (
                 "melonDS.toml is absent, so the pre-1.0 melonDS.ini speaks until the first "
-                f"launch migrates it (Config.cpp:785-795): SaveFilePath={raw}"
+                f"launch migrates it (Config.cpp:785-795): {key}={raw}"
             )
         return (
             "melonDS.toml is absent and the pre-1.0 melonDS.ini it falls back to states no "
-            "SaveFilePath — the empty default governs and the save lands beside the ROM"
+            f"{key} — the empty default governs and the {what} lands beside the ROM"
         )
     return (
         "neither melonDS.toml nor the pre-1.0 melonDS.ini exists — the compiled "
-        "defaults govern and the save lands beside the ROM (getAssetPath, "
+        f"defaults govern and the {what} lands beside the ROM (getAssetPath, "
         "EmuInstance.cpp:445-484)"
     )
 
 
 def _melonds_config(
-    machine: Machine, homes: _XdgHomes, card: StandaloneSaveCard
+    machine: Machine,
+    homes: _XdgHomes,
+    card: "StandaloneSaveCard | StandaloneSavestateCard",
+    *,
+    key: str = "SaveFilePath",
+    what: str = "save",
+    lost: str = "where every game's .sav lands is unknowable here",
 ) -> _MelonConfig | Unresolved:
-    """``[Instance0] SaveFilePath``, read the way Config::Load reads it.
+    """``[Instance0] <key>``, read the way Config::Load reads it.
 
     The read chain lives in :mod:`atlas.melonds`, shared with the firmware
     route — the TOML speaks wherever it exists, only a TOML that does not
     exist reaches the legacy INI beside it, and where neither exists the
-    compiled defaults govern (Config.cpp:785-803 at 1.1).
+    compiled defaults govern (Config.cpp:785-803 at 1.1). The save and
+    savestate questions ask it about sibling rows of one table, which is why
+    the key is a parameter rather than a second copy of the chain.
     """
     read = melonds.read_config(machine, homes.base("config"), homes.flatpak)
     if read.unreadable is not None:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"melonDS's configuration ({read.unreadable}) exists and could not be read — "
-            "where every game's .sav lands is unknowable here",
+            f"melonDS's configuration ({read.unreadable}) exists and could not be read — {lost}",
             {"emulator": card.token, "config": read.unreadable},
         )
     config = read.config
     assert config is not None  # a read is either a document or an unreadable path
-    value = melonds.get_string(config, "Instance0.SaveFilePath")
+    value = melonds.get_string(config, f"Instance0.{key}")
     raw = value or None
     return _MelonConfig(
         raw=raw,
-        provenance=_melonds_save_path_provenance(config, raw),
+        provenance=_melonds_save_path_provenance(config, raw, key=key, what=what),
         stated_file=config.stated_file,
     )
 
@@ -7349,16 +7428,22 @@ class _MelonRoot:
 
 def _melonds_root(
     config: _MelonConfig,
-    card: StandaloneSaveCard,
+    card: "StandaloneSaveCard | StandaloneSavestateCard",
     sandbox: _Sandbox,
     content_path: str | None,
+    *,
+    key: str = "SaveFilePath",
+    what: str = "save",
 ) -> _MelonRoot:
-    """The three places a .sav can anchor: the configured directory, the ROM's own, the cwd.
+    """The three places a melonDS asset can anchor: the configured directory, the ROM's own, the cwd.
 
     getAssetPath uses the configured value only after trimming its trailing
     separators (EmuInstance.cpp:459-467), so a value of only separators falls
     to the working directory the way any relative value does — the composed
-    path is opened verbatim by the process, a property of the launch.
+    path is opened verbatim by the process, a property of the launch. The
+    savestate question walks the identical composition for its own key
+    (getSavestateName hands SavestatePath to the same function,
+    EmuInstance.cpp:696-701), which is why the key is a parameter.
     """
     if not config.raw:
         if content_path is not None:
@@ -7383,7 +7468,7 @@ def _melonds_root(
             caveats=(
                 Caveat(
                     CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
-                    f"SaveFilePath is the relative value {config.raw!r}, which melonDS opens "
+                    f"{key} is the relative value {config.raw!r}, which melonDS opens "
                     "relative to the working directory of the launching process (getAssetPath "
                     "composes it verbatim, EmuInstance.cpp:445-484) — a property of the "
                     "launch, not of the machine; fill 'cwd' with the launcher's working "
@@ -7392,17 +7477,19 @@ def _melonds_root(
                 ),
             ),
         )
-    host = sandbox.host("SaveFilePath", trimmed)
+    host = sandbox.host(key, trimmed)
     if host.path is None:
         refusal = Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"the save directory melonDS's configuration names could not be located from "
+            f"the {what} directory melonDS's configuration names could not be located from "
             f"here ({config.stated_file}) — nothing this answer could anchor at",
             {"emulator": card.token, "config": config.stated_file or ""},
         )
         return _MelonRoot(
             directory="", root_kind=ROOT_EMULATOR_DIRECTORY, mode="", refusal=refusal
         )
+    # ``mode`` is the savefile granularity's word alone — the savestate answer
+    # carries no granularity, so its caller never reads it.
     return _MelonRoot(
         directory=host.path, root_kind=ROOT_EMULATOR_DIRECTORY, mode="save-file-path"
     )
@@ -8374,6 +8461,478 @@ def _standalone_savefile_unresolved(spec: EmulatorSpec) -> Unresolved:
         f"standalone emulator {spec.label!r} ({spec.system}) is not resolvable yet — its save "
         "tree is shaped by a configuration of its own, and only emulators with a packaged "
         "standalone save card are read (issue #3 tracks the rest)",
+        {"label": spec.label, "system": spec.system},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Standalone savestates (#225) — the savefile dispatch's twin, one question
+# over. A standalone emulator's states are its own the way its saves are: a
+# compiled join below one of its XDG trees, or a directory its configuration
+# names. What every card shares is the naming problem the save side never had:
+# the emulator names its states from the running game's own identity (a disc
+# serial, a game id, a title id), which no content path derives — melonDS
+# alone derives its from the loaded file's name — so the card states the
+# cited pattern and the answer hands it over in a caveat instead of listing
+# files nobody can name.
+# ---------------------------------------------------------------------------
+
+
+def _standalone_savestate_settings(card: StandaloneSavestateCard) -> emulator_settings.SettingsFile:
+    """The settings file this savestate card names, from the one table that addresses it."""
+    if card.settings is None:
+        raise ValueError(
+            f"savestate card {card.token!r} names no settings file and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
+    return emulator_settings.settings_file(card.token, card.settings)
+
+
+def _ascii_locase(text: str) -> str:
+    """SI_GenericNoCase's lowering: ``A-Z`` only, nothing else folds.
+
+    Python's ``casefold`` folds more than ASCII; the emulator's comparator
+    does not (SimpleIni.h:2916-2931 at PCSX2 v2.6.3, the same generic class at
+    DuckStation's pin), and mirroring it exactly is the difference between
+    reading the file the way the emulator does and the way a reasonable ini
+    reader would.
+    """
+    return "".join(chr(ord(ch) + 32) if "A" <= ch <= "Z" else ch for ch in text)
+
+
+def _simpleini_value(
+    values: Mapping[tuple[str, str], str], section: str, key: str
+) -> tuple[str | None, str]:
+    """The value ``CSimpleIniA`` hands back for (section, key), and the spelling that carried it.
+
+    Both emulators that keep their folders in an ini read it through
+    ``CSimpleIniA``, whose comparator is ASCII case-insensitive on Linux
+    (PCSX2 v2.6.3: INISettingsInterface.h:66, SimpleIni.h:2882-2887 define
+    SI_NO_CONVERSION, :3629-3634 pick SI_GenericNoCase, :3642-3643 the
+    typedef; the same chain at stenzek/duckstation@64655818e,
+    ini_settings_interface.h:65 and its vendored SimpleIni.h:3593-3607). A
+    file carrying two case-spellings of one key collapses them into one entry
+    with the last occurrence winning (AddEntry assigns into the found key,
+    SimpleIni.h:2042-2150) — mirrored here by taking the last matching entry
+    in file order, exact for any file that spells each variant at most once.
+    The spelling rides back for the reading's own sentence, because the
+    shipped RetroDECK ini spells PCSX2's key another way than the source
+    reads it, which is the trap issue #225 turned on.
+    """
+    found: str | None = None
+    spelled = key
+    lowered = (_ascii_locase(section), _ascii_locase(key))
+    for (stated_section, stated_key), value in values.items():
+        if (_ascii_locase(stated_section), _ascii_locase(stated_key)) == lowered:
+            found = value
+            spelled = stated_key
+    return found, spelled
+
+
+def _savestate_names_caveat(card: StandaloneSavestateCard, directory: str, citation: str) -> Caveat:
+    """The statement every non-derivable naming shares: pattern stated, names refused.
+
+    The pattern is the card's word, cited to the build that composes it, and
+    it rides in ``data`` because it is what a client acts on — the shape of
+    the files a backup of this tree will contain.
+    """
+    return Caveat(
+        CAVEAT_FILE_NAMES_UNESTABLISHED,
+        f"a state below {directory} is named {card.names} — from the running game's own "
+        f"identity, which follows from nothing atlas reads ({citation}) — so the tree is "
+        "stated and its entries refused; back it up whole",
+        {"core": card.token, "dir": directory, "pattern": card.names, "citation": citation},
+    )
+
+
+def _fixed_savestate_tree_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSavestateCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavestatePlacement | Unresolved:
+    """A compiled states tree below the emulator's own directory — five cards' shape.
+
+    Dolphin's ``StateSaves``, PrimeHack's inherited copy of it, PPSSPP's
+    ``PSP/PPSSPP_STATE``, RPCS3's ``savestates`` and Azahar's ``states`` are
+    the same claim: the build joins the tree itself and no configuration
+    moves it, so no file is read — the answer is a path join below the XDG
+    base this launch pins, the symlink walk an arrangement reroutes it with,
+    and the cited naming pattern in the caveat that says why the files below
+    cannot be listed. One resolver serves five cards, so every line number it
+    speaks is the card's (:meth:`StandaloneSavestateCard.cite`), per build
+    where the builds differ (PrimeHack, #246).
+    """
+    assert card.base is not None and card.subdir is not None  # the loader pairs them
+    directory = os.path.join(homes.emulator_root(card.base, card.token), card.subdir)
+    physical, link_caveats = _link_view(machine, directory)
+    return SavestatePlacement(
+        dir=directory,
+        root_kind=STATE_ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        file_set=UNKNOWN_FILE_SET,
+        sources=(
+            f"standalone savestate card '{card.token}': {card.provenance}",
+            f"the tree is the build's own join — {card.cite('build', flatpak=homes.flatpak)}, "
+            f"{card.cite('tree', flatpak=homes.flatpak)}",
+        ),
+        caveats=(
+            *extra_caveats,
+            *link_caveats,
+            _savestate_names_caveat(card, directory, card.cite("names", flatpak=homes.flatpak)),
+        ),
+        physical_dir=physical,
+    )
+
+
+def _pcsx2_savestate_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSavestateCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavestatePlacement | Unresolved:
+    """PCSX2's states answer: the directory ``[Folders] Savestates`` names.
+
+    The issue's own trap, settled: RetroDECK writes the key spelled
+    ``SaveStates`` (component_prepare.sh:25) while the source reads
+    ``"Savestates"`` (Pcsx2Config.cpp:2284 at v2.6.3), and the written line
+    governs because SimpleIni matches keys ASCII case-insensitively
+    (:func:`_simpleini_value` carries the chain) — so this reading matches
+    the key the way the emulator does instead of quoting the compiled
+    ``sstates`` over it. The value resolves below the DataRoot the way
+    ``LoadPathFromSettings`` resolves it (:func:`_pcsx2_folder_below_dataroot`
+    — an empty line moves the directory to the DataRoot itself, it does not
+    restore the default), and an absolute value is translated through the
+    launch's sandbox rather than trusted as a host path.
+    """
+    setting = card.directory
+    assert setting is not None  # the loader pairs the key with the settings file
+    settings = _standalone_savestate_settings(card)
+    data_root = homes.emulator_root(settings.bases[0], card.token)
+    ini_path = settings.only(
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
+    )
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"PCSX2's configuration ({ini_path}) exists and could not be read — where a "
+            "state lands is unknowable here",
+            {"emulator": card.token, "config": ini_path},
+        )
+    values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
+    raw, spelled = _simpleini_value(values, setting.section, setting.key)
+    resolved, reading = _pcsx2_folder_below_dataroot(
+        raw,
+        key=setting.key,
+        default=setting.default,
+        default_citation=setting.citation,
+        data_root=data_root,
+        spelled=spelled,
+    )
+    if resolved is None:
+        assert raw is not None  # only an absolute value leaves the helper unresolved
+        host = sandbox.host(setting.key, raw)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"the states directory PCSX2's configuration names could not be located "
+                f"from here ({ini_path}) — nothing this answer could anchor at",
+                {"emulator": card.token, "config": ini_path},
+            )
+        directory = host.path
+    else:
+        directory = resolved
+    if raw and spelled != setting.key:
+        reading += (
+            f" — spelled {spelled!r} and read as the {setting.key!r} key, because SimpleIni "
+            "matches ASCII case-insensitively (SimpleIni.h:3642-3643, :2916-2931 at v2.6.3)"
+        )
+    physical, link_caveats = _link_view(machine, directory)
+    return SavestatePlacement(
+        dir=directory,
+        root_kind=STATE_ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        file_set=UNKNOWN_FILE_SET,
+        sources=(f"standalone savestate card '{card.token}': {card.provenance}", reading),
+        caveats=(
+            *extra_caveats,
+            *link_caveats,
+            _savestate_names_caveat(card, directory, card.names_citation),
+        ),
+        physical_dir=physical,
+    )
+
+
+def _duckstation_savestate_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSavestateCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavestatePlacement | Unresolved:
+    """DuckStation's states answer: ``[Folders] SaveStates`` below the probed DataRoot.
+
+    The same two-base DataRoot probe the save answer performs, then the one
+    key: default ``savestates`` below the DataRoot, an empty value falling to
+    the default and a relative one joining the root (settings.cpp:1944,
+    :1955-1962, :1975 at 64655818e — upstream then resolves the path with
+    ``Path::RealPath``, which is what makes RetroDECK's symlink at the
+    default location work; this answer states the link as ``physical_dir``
+    instead of silently resolving it). The ini goes through the same
+    ``CSimpleIniA`` as PCSX2's, so the key is matched case-insensitively
+    here too.
+    """
+    setting = card.directory
+    assert setting is not None  # the loader pairs the key with the settings file
+    data_root, values, stated_ini, root_caveats, refusal = _duckstation_settings(
+        machine, homes, card, lost="where a state lands is unknowable here"
+    )
+    if refusal is not None:
+        return refusal
+    raw, spelled = _simpleini_value(values, setting.section, setting.key)
+    if not raw:
+        # Unset and empty answer alike HERE and only here: DuckStation's own
+        # LoadPathFromSettings folds an empty value back to the compiled
+        # default (`if (value.empty()) value = def;`, settings.cpp:1955-1957
+        # at 64655818e). PCSX2's does not — its empty value survives and
+        # Path::Combine lands the directory on the DataRoot itself
+        # (:func:`_pcsx2_folder_below_dataroot`) — so this branch must not be
+        # "fixed" to match the sibling resolver.
+        directory = os.path.join(data_root, setting.default)
+        reading = (
+            f"{setting.key} is unset or empty — the default {setting.default} below the "
+            f"DataRoot governs ({setting.citation})"
+        )
+    elif not os.path.isabs(raw):
+        directory = os.path.join(data_root, raw)
+        reading = (
+            f'settings.ini: [{setting.section}] {spelled} = "{raw}" — a relative value '
+            "joins the DataRoot (LoadPathFromSettings, settings.cpp:1955-1962)"
+        )
+    else:
+        host = sandbox.host(setting.key, raw)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"the states directory DuckStation's configuration names could not be "
+                f"located from here ({stated_ini}) — nothing this answer could anchor at",
+                {"emulator": card.token, "config": stated_ini or ""},
+            )
+        directory = host.path
+        reading = f'settings.ini: [{setting.section}] {spelled} = "{raw}"'
+    physical, link_caveats = _link_view(machine, directory)
+    return SavestatePlacement(
+        dir=directory,
+        root_kind=STATE_ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        file_set=UNKNOWN_FILE_SET,
+        sources=(f"standalone savestate card '{card.token}': {card.provenance}", reading),
+        caveats=(
+            *extra_caveats,
+            *root_caveats,
+            *link_caveats,
+            _savestate_names_caveat(card, directory, card.names_citation),
+        ),
+        physical_dir=physical,
+    )
+
+
+_MELONDS_STATE_SLOTS = tuple(range(1, 9))
+
+
+def _melonds_state_files(
+    card: StandaloneSavestateCard, content_path: str | None
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[Caveat, ...]]:
+    """The eight slot names: the content's stem where it derives, the open hole where not.
+
+    melonDS is the one standalone emulator whose state names derive from the
+    content path — ``<rom stem>.ml1`` through ``.ml8`` (getSavestateName,
+    EmuInstance.cpp:696-701; slots 1-8, Window.cpp:356-361 at 1.1) — so the
+    declared set is concrete exactly where the save answer's is, and holds
+    the ``<rom_stem>`` hole open for an archive or an unnamed content the
+    same way (slot 0 is the free-file picker and names nothing).
+    """
+    if content_path is not None and not _melonds_is_archive(content_path):
+        stem = _melonds_stem(os.path.basename(content_path))
+        return tuple(f"{stem}.ml{slot}" for slot in _MELONDS_STATE_SLOTS), (), ()
+    if content_path is not None:
+        sentence = (
+            "the content is an archive — melonDS names the state after the file inside it "
+            "(EmuInstance.cpp:1846-1848), which the archive's own path does not derive; "
+            "fill <rom_stem> with the archived file's name without its last extension"
+        )
+    else:
+        sentence = (
+            "a state is named after the loaded file — its name without the last extension, "
+            "and for a ROM inside an archive the name of the file inside it "
+            "(EmuInstance.cpp:1884, :1846-1848); fill <rom_stem> with that name"
+        )
+    caveat = Caveat(
+        CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+        sentence,
+        {
+            "core": card.token,
+            "files": card.names,
+            "rom_stem": "the loaded file's name without its last extension — for an "
+            "archive, the archived file's",
+            "citation": card.names_citation,
+        },
+    )
+    return (
+        tuple(f"{TEMPLATE_ROM_STEM}.ml{slot}" for slot in _MELONDS_STATE_SLOTS),
+        (HOLE_ROM_STEM,),
+        (caveat,),
+    )
+
+
+def _melonds_savestate_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSavestateCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavestatePlacement | Unresolved:
+    """melonDS's states answer: ``<rom stem>.ml1``–``.ml8`` where SavestatePath points.
+
+    The save answer's twin down to the branch structure, because upstream is
+    the same function: getSavestateName hands ``[Instance0] SavestatePath``
+    to the getAssetPath the save path goes through (EmuInstance.cpp:696-701
+    at 1.1), so the configured directory, the beside-the-ROM default of an
+    empty value and the cwd-relative case all fall exactly as they do for
+    the ``.sav``.
+    """
+    config = _melonds_config(
+        machine,
+        homes,
+        card,
+        key="SavestatePath",
+        what="state",
+        lost="where every game's states land is unknowable here",
+    )
+    if isinstance(config, Unresolved):
+        return config
+    root = _melonds_root(config, card, sandbox, content_path, key="SavestatePath", what="states")
+    if root.refusal is not None:
+        return root.refusal
+    files, name_needs, name_caveats = _melonds_state_files(card, content_path)
+    caveats: list[Caveat] = [*extra_caveats, *root.caveats, *name_caveats]
+    if root.directory.startswith("<"):
+        physical = None
+    else:
+        physical, link_caveats = _link_view(machine, root.directory)
+        caveats.extend(link_caveats)
+    assert root.root_kind in STATE_ROOT_KINDS  # _melonds_root anchors nowhere else
+    return SavestatePlacement(
+        dir=root.directory,
+        root_kind=cast("StateRootKind", root.root_kind),
+        needs=(*root.needs, *name_needs),
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            files,
+            f"declared by standalone savestate card '{card.token}'",
+            complete=False,
+        ),
+        sources=(
+            f"standalone savestate card '{card.token}': {card.provenance}",
+            config.provenance,
+        ),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+    )
+
+
+_STANDALONE_SAVESTATE_RESOLVERS = {
+    "DOLPHIN": _fixed_savestate_tree_placement,
+    "PRIMEHACK": _fixed_savestate_tree_placement,
+    "PPSSPP": _fixed_savestate_tree_placement,
+    "RPCS3": _fixed_savestate_tree_placement,
+    "AZAHAR": _fixed_savestate_tree_placement,
+    "PCSX2": _pcsx2_savestate_placement,
+    "MELONDS": _melonds_savestate_placement,
+    "DUCKSTATION": _duckstation_savestate_placement,
+}
+
+# Which citation slots each savestate reading speaks, so a card can be crossed
+# with the code that reads it — the save family's rule, one family over. Only
+# the shared fixed-tree resolver speaks card slots: the bespoke readings
+# (PCSX2, melonDS, DuckStation) serve one emulator each and carry their lines
+# inline, the way their savefile twins do.
+_FIXED_SAVESTATE_SLOTS = frozenset({"build", "tree", "names"})
+STANDALONE_SAVESTATE_CITATION_SLOTS = {
+    "DOLPHIN": _FIXED_SAVESTATE_SLOTS,
+    "PRIMEHACK": _FIXED_SAVESTATE_SLOTS,
+    "PPSSPP": _FIXED_SAVESTATE_SLOTS,
+    "RPCS3": _FIXED_SAVESTATE_SLOTS,
+    "AZAHAR": _FIXED_SAVESTATE_SLOTS,
+}
+
+
+def _standalone_savestate_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSavestateCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavestatePlacement | Unresolved:
+    """Dispatch to the emulator's own states resolver — a card without one fails loudly.
+
+    The launch command and content path ride for the same reasons they ride
+    the save dispatch: a launch's own flags could outrank configuration, and
+    melonDS fills its state names from the content's own stem.
+    """
+    resolver = _STANDALONE_SAVESTATE_RESOLVERS.get(card.token)
+    if resolver is None:
+        raise ValueError(
+            f"standalone savestate card {card.token!r} has no resolver registered — the card "
+            "and the code shipped out of step"
+        )
+    return resolver(
+        machine,
+        card=card,
+        homes=homes,
+        sandbox=sandbox,
+        system=system,
+        command=command,
+        extra_caveats=extra_caveats,
+        content_path=content_path,
+    )
+
+
+def _standalone_savestate_unresolved(spec: EmulatorSpec) -> Unresolved:
+    """The refusal for a standalone entry no packaged savestate card covers.
+
+    Code and data are the savefile refusal's exactly — and exactly what the
+    pre-#225 blanket refusal serialized — so an un-carded emulator's answer
+    stays contract-identical to what it always was.
+    """
+    return Unresolved(
+        UNRESOLVED_STANDALONE,
+        f"standalone emulator {spec.label!r} ({spec.system}) is not resolvable yet — where "
+        "its states land is the emulator's own affair, and only emulators with a packaged "
+        "standalone savestate card are read (#225 landed the family)",
         {"label": spec.label, "system": spec.system},
     )
 
@@ -10758,13 +11317,15 @@ class EmulatorEntry:
     def savestate_location(self, *, content_path: str | None = None) -> SavestatePlacement | Unresolved:
         """Where this emulator keeps the savestates — core filled in from the catalogue.
 
-        The savefile route's twin, and it refuses on the same entries: a
-        standalone emulator's states are outside the resolver's coverage for
-        exactly the reason its saves are — nothing here reads that emulator's
-        own config.
+        The savefile route's twin, and since #225 it answers on the same
+        entries too: a standalone entry answers where a packaged standalone
+        savestate card covers the emulator the command names, and refuses
+        with a domain outcome where none does — never a guess and never an
+        exception. Which of the two it is stays the installation's decision,
+        exactly as on the savefile route: the catalogue names an emulator,
+        and whether atlas has its wiring is a question about packaged
+        knowledge.
         """
-        if self._spec.kind != KIND_LIBRETRO:
-            return self._standalone()
         return self._installation.entry_savestate_location(
             self._spec, self._caveats, content_path=content_path
         )
@@ -10800,15 +11361,6 @@ class EmulatorEntry:
         """
         return self._installation.entry_mod_location(
             self._spec, self._caveats, content_path=content_path
-        )
-
-    def _standalone(self) -> Unresolved:
-        """The outcome both placement questions give for a non-libretro entry."""
-        return Unresolved(
-            UNRESOLVED_STANDALONE,
-            f"standalone emulator {self._spec.label!r} ({self._spec.system}) is not resolvable yet — "
-            "standalone emulators are the next big roadmap block (ROADMAP.md)",
-            {"label": self._spec.label, "system": self._spec.system},
         )
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
@@ -12879,7 +13431,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         The savefile route's twin, down to the per-game override check: which
         emulator ES-DE would actually launch decides both answers, so the one
-        that would not launch says so on both.
+        that would not launch says so on both. A standalone entry goes through
+        the savestate card the same way a save goes through its own card, and
+        refuses identically where none covers it (#225).
         """
         config, marker_issues = self._read_marker()
         extra = (
@@ -12887,6 +13441,26 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             if content_path is not None
             else ()
         )
+        if spec.kind != KIND_LIBRETRO:
+            card = lookup_standalone_savestate_card(emulator_token(spec.command))
+            if card is None or spec.system not in card.systems:
+                return _standalone_savestate_unresolved(spec)
+            health = self._health_from(config, marker_issues)
+            return _standalone_savestate_placement(
+                self._machine,
+                card=card,
+                homes=self._xdg_homes(),
+                sandbox=self._sandbox(),
+                system=spec.system,
+                command=spec.command,
+                extra_caveats=(
+                    *entry_caveats,
+                    *extra,
+                    *health.issues,
+                    *arrangement_caveats(self.kind, observed_version=_marker_version(config)),
+                ),
+                content_path=content_path,
+            )
         placement = self._savestate_location_from(
             config,
             marker_issues,
@@ -14457,7 +15031,14 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
     ) -> SavestatePlacement | Unresolved:
-        """The savefile entry route's twin — same sources, the savestate keys."""
+        """The savefile entry route's twin — same sources, the savestate keys.
+
+        A standalone entry goes through the launcher route the save answer
+        goes through: the same variant gate, the savestate card the token
+        leads to, and the same refusals where nothing is established (#225).
+        """
+        if spec.kind != KIND_LIBRETRO:
+            return self._standalone_entry_savestate(spec, entry_caveats, content_path=content_path)
         placement = _retroarch_savestate_location(
             self._machine,
             self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
@@ -14466,6 +15047,49 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return placement
         extra = self._entry_caveats_for(spec, content_path)
         return _entry_savestate_with_caveats(placement, extra)
+
+    def _standalone_entry_savestate(
+        self,
+        spec: EmulatorSpec,
+        entry_caveats: tuple[Caveat, ...],
+        *,
+        content_path: str | None,
+    ) -> SavestatePlacement | Unresolved:
+        """A standalone entry's states answer, resolved the way the launch resolves.
+
+        :meth:`_standalone_entry_savefile`'s twin: the same launch identity,
+        the same variant gate, and the savestate card where the save route
+        holds the save card — so the two questions about one entry can never
+        come to different conclusions about which binary runs.
+        """
+        launch = self._standalone_launch_identity(spec.command)
+        card = lookup_standalone_savestate_card(launch.token)
+        if launch.probe_name is None or card is None or spec.system not in card.systems:
+            return _standalone_savestate_unresolved(spec)
+        gate = self._standalone_launch_gate(spec)
+        if gate.homes is None:
+            assert gate.variant is not None  # a card was found, so the launch identified one
+            return _emudeck_variant_unresolved(spec, card.token, gate.variant, gate.why or "")
+        homes = gate.homes
+        _, marker_issues = self._read_marker()
+        extra = (
+            self._entry_caveats_for(spec, content_path) if content_path is not None else ()
+        )
+        return _standalone_savestate_placement(
+            self._machine,
+            card=card,
+            homes=homes,
+            sandbox=self._standalone_sandbox(),
+            system=spec.system,
+            command=spec.command,
+            extra_caveats=(
+                *entry_caveats,
+                *extra,
+                *marker_issues,
+                *arrangement_caveats(self.kind, observed_version=self._observed_backend_head()),
+            ),
+            content_path=content_path,
+        )
 
     def entry_texture_pack_location(
         self,
@@ -15273,7 +15897,13 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
     ) -> SavestatePlacement | Unresolved:
-        """The savefile entry route's twin — same sources, the savestate keys."""
+        """The savefile entry route's twin — same sources, the savestate keys.
+
+        The guard stands for the day a spec arrives from somewhere else, as on
+        the savefile route: a derived entry is always a libretro core.
+        """
+        if spec.kind != KIND_LIBRETRO:
+            return _standalone_savestate_unresolved(spec)
         return _retroarch_savestate_location(
             self._machine,
             self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
