@@ -328,9 +328,11 @@ def main() -> None:
     lines.append("")
     lines.append(
         "One column per question. ✔ a packaged card answers it; ✔ n/m the card answers for n of "
-        "the m systems this row serves; ✖ nothing answers it yet. There is no verdict column "
-        "here: `core_audit.json` is the libretro save audit and holds no standalone entry, so "
-        "the answer to \"is this covered\" is the cards themselves."
+        "the m systems this row serves; ✖ nothing answers it yet. A ✔ includes cards whose "
+        "answer is a stated, cited no — the savestate family can state \"this emulator has no "
+        "savestates\" (`no_savestates`, #284), and that is an answer, not a gap. There is no "
+        "verdict column here: `core_audit.json` is the libretro save audit and holds no "
+        "standalone entry, so the answer to \"is this covered\" is the cards themselves."
     )
     lines.append("")
     header = " | ".join(name for name, _, _ in QUESTIONS)

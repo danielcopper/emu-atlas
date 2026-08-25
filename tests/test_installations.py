@@ -1808,6 +1808,56 @@ class TestDolphinStandaloneSaves:
         assert named.data["citation"] == "State.cpp:304-308"
 
 
+class TestTheStatedNoIsAnAnswer:
+    """#284: an absence card answers the states question — not a refusal.
+
+    The vector family pins the contract blocks; what lives here is the one
+    property a vector cannot show as sharply: no machine-derived caveat ever
+    rides the stated no, because the statement is about the emulator and not
+    about this machine or this launch.
+    """
+
+    CEMU_ESDE = (
+        '<?xml version="1.0"?><systemList>'
+        "<system><name>wiiu</name><path>%ROMPATH%/wiiu</path><extension>.wua</extension>"
+        '<command label="Cemu (Standalone)">%EMULATOR_CEMU% -g %ROM%</command></system>'
+        "</systemList>"
+    )
+
+    def _entry(self, marker=RD_JSON):
+        files = {
+            RETRODECK_JSON: marker,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: self.CEMU_ESDE,
+        }
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for("wiiu").entries[0]
+
+    def test_the_absence_answers_with_its_citation(self):
+        outcome = self._entry().savestate_location()
+        assert isinstance(outcome, atlas.SavestateAbsence)
+        assert outcome.emulator == "CEMU"
+        assert "feature_report.yaml:18" in outcome.citation
+        assert outcome.caveats == ()
+
+    def test_no_machine_caveat_rides_a_statement_about_the_emulator(self):
+        # A broken marker degrades every placement this installation
+        # resolves; the stated no is not a resolution of this machine, so it
+        # stays clean — identical on a healthy and a broken arrangement.
+        broken = self._entry(marker="{not json").savestate_location()
+        healthy = self._entry().savestate_location()
+        assert broken == healthy
+
+    def test_the_save_question_still_walks_its_own_route(self):
+        # The two questions about one entry stay independent: the save answer
+        # resolves Cemu's MLC tree while the states answer is the stated no.
+        entry = self._entry()
+        save = entry.savefile_location()
+        assert isinstance(save, atlas.SavefilePlacement)
+        assert isinstance(entry.savestate_location(), atlas.SavestateAbsence)
+
+
 TRIO_ESDE = (
     '<?xml version="1.0"?><systemList>'
     "<system><name>psp</name><path>%ROMPATH%/psp</path><extension>.iso</extension>"

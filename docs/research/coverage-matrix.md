@@ -12,7 +12,7 @@ half; the standalone half is one column per question, filled from the packaged c
 
 Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 3) sha256 `89ad46fbb616`.
 
-**Status:** libretro 59/159 audited · standalone save 11/22 · savestate 8/22 · texture 7/22 · mod 7/22 · firmware 5/22
+**Status:** libretro 59/159 audited · standalone save 11/22 · savestate 17/22 · texture 7/22 · mod 7/22 · firmware 5/22
 
 ## libretro cores
 
@@ -181,30 +181,32 @@ Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (sc
 ## standalone emulators
 
 One column per question. ✔ a packaged card answers it; ✔ n/m the card answers for n of the m systems this row serves; ✖
-nothing answers it yet. There is no verdict column here: `core_audit.json` is the libretro save audit and holds no
-standalone entry, so the answer to "is this covered" is the cards themselves.
+nothing answers it yet. A ✔ includes cards whose answer is a stated, cited no — the savestate family can state "this
+emulator has no savestates" (`no_savestates`, #284), and that is an answer, not a gap. There is no verdict column here:
+`core_audit.json` is the libretro save audit and holds no standalone entry, so the answer to "is this covered" is the
+cards themselves.
 
 | emulator      | systems                                    | save  | savestate | texture | mod | firmware |
 | ------------- | ------------------------------------------ | ----- | --------- | ------- | --- | -------- |
 | `azahar`      | n3ds                                       | ✔     | ✔         | ✔       | ✔   | ✖        |
-| `cemu`        | wiiu                                       | ✔     | ✖         | ✔       | ✔   | ✔        |
+| `cemu`        | wiiu                                       | ✔     | ✔         | ✔       | ✔   | ✔        |
 | `dolphin`     | gc, triforce, wii                          | ✔ 2/3 | ✔ 2/3     | ✔       | ✔   | ✖        |
 | `duckstation` | psx                                        | ✔     | ✔         | ✔       | ✔   | ✔        |
+| `gzdoom`      | doom                                       | ✖     | ✔         | ✖       | ✖   | ✖        |
+| `ironwail`    | quake                                      | ✖     | ✔         | ✖       | ✖   | ✖        |
 | `melonds`     | nds                                        | ✔     | ✔         | ✖       | ✖   | ✔        |
+| `openbor`     | openbor                                    | ✖     | ✔         | ✖       | ✖   | ✖        |
 | `pcsx2`       | ps2                                        | ✔     | ✔         | ✔       | ✔   | ✔        |
+| `pico-8`      | pico8                                      | ✖     | ✔         | ✖       | ✖   | ✖        |
 | `ppsspp`      | psp                                        | ✔     | ✔         | ✔       | ✔   | ✖        |
 | `primehack`   | gc, primehack, wii                         | ✔ 2/3 | ✔ 2/3     | ✔       | ✔   | ✖        |
 | `rpcs3`       | consolearcade, ps3                         | ✔ 1/2 | ✔ 1/2     | ✖       | ✖   | ✖        |
-| `vita3k`      | psvita                                     | ✔     | ✖         | ✖       | ✖   | ✖        |
+| `ruffle`      | flash                                      | ✖     | ✔         | ✖       | ✖   | ✖        |
+| `ryubing`     | switch                                     | ✖     | ✔         | ✖       | ✖   | ✖        |
+| `solarus`     | solarus                                    | ✖     | ✔         | ✖       | ✖   | ✖        |
+| `vita3k`      | psvita                                     | ✔     | ✔         | ✖       | ✖   | ✖        |
 | `xemu`        | consolearcade, xbox                        | ✔ 1/2 | ✖         | ✖       | ✖   | ✔ 1/2    |
-| `gzdoom`      | doom                                       | ✖     | ✖         | ✖       | ✖   | ✖        |
-| `ironwail`    | quake                                      | ✖     | ✖         | ✖       | ✖   | ✖        |
 | `mame`        | adam, amstradcpc, apple2, apple2gs, … (54) | ✖     | ✖         | ✖       | ✖   | ✖        |
-| `openbor`     | openbor                                    | ✖     | ✖         | ✖       | ✖   | ✖        |
 | `os-shell`    | consolearcade, desktop, mugen, ps3         | ✖     | ✖         | ✖       | ✖   | ✖        |
-| `pico-8`      | pico8                                      | ✖     | ✖         | ✖       | ✖   | ✖        |
 | `portmaster`  | portmaster                                 | ✖     | ✖         | ✖       | ✖   | ✖        |
-| `ruffle`      | flash                                      | ✖     | ✖         | ✖       | ✖   | ✖        |
-| `ryubing`     | switch                                     | ✖     | ✖         | ✖       | ✖   | ✖        |
-| `solarus`     | solarus                                    | ✖     | ✖         | ✖       | ✖   | ✖        |
 | `xroar`       | coco, dragon32, tanodragon                 | ✖     | ✖         | ✖       | ✖   | ✖        |

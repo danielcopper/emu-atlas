@@ -790,19 +790,19 @@
     },
     {
       "name": "an-uncarded-standalone-entry-refuses-exactly-as-before",
-      "rationale": "xemu carries no savestate card — its snapshots live inside the qcow2 disk image, an answer shape of its own — so the refusal is byte-identical to what every standalone entry answered before the family landed: standalone-unsupported with the label and system. An absent card must never read as a smaller absence.",
+      "rationale": "XRoar carries no savestate card — its snapshot feature is real, but a snapshot lands wherever the save dialog's user points it (xroar.c:2320-2325 at 1.10), a statement no shape of this family makes yet — so the refusal is byte-identical to what every standalone entry answered before the family landed: standalone-unsupported with the label and system. An absent card must never read as a smaller absence. (This pin sat on xemu until #284 carded it.)",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>coco</name>\n    <path>%ROMPATH%/coco</path>\n    <extension>.ccc .CCC</extension>\n    <command label=\"XRoar CoCo 2 NTSC (Standalone)\">%EMULATOR_XROAR% -fs -default-machine coco2bus %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves"
         ],
         "entry_savestate_query": {
-          "system": "xbox"
+          "system": "coco"
         }
       },
       "expected": {
@@ -820,8 +820,8 @@
           "unresolved": {
             "code": "standalone-unsupported",
             "data": {
-              "label": "xemu (Standalone)",
-              "system": "xbox"
+              "label": "XRoar CoCo 2 NTSC (Standalone)",
+              "system": "coco"
             }
           }
         }
@@ -829,20 +829,20 @@
     },
     {
       "name": "emudeck-an-uncarded-token-refuses-on-this-route-too",
-      "rationale": "EmuDeck's entry route runs its own dispatch (launch identity, then the card), and each of its refusal branches is new code — this pins the no-card one: xemu's %EMULATOR_XEMU% token identifies a launch and no savestate card covers the emulator, so the refusal is the same standalone-unsupported, byte-identical to the blanket refusal that preceded the family.",
+      "rationale": "EmuDeck's entry route runs its own dispatch (launch identity, then the card), and this pins its no-card branch: XRoar's %EMULATOR_XROAR% token identifies a launch and no savestate card covers the emulator, so the refusal is the same standalone-unsupported, byte-identical to the pre-family answer. (This pin sat on xemu until #284 carded it.)",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
           "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
-          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>coco</name>\n    <path>%ROMPATH%/coco</path>\n    <extension>.ccc .CCC</extension>\n    <command label=\"XRoar CoCo 2 NTSC (Standalone)\">%EMULATOR_XROAR% -fs -default-machine coco2bus %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves"
         ],
         "entry_savestate_query": {
-          "system": "xbox"
+          "system": "coco"
         }
       },
       "expected": {
@@ -861,8 +861,8 @@
           "unresolved": {
             "code": "standalone-unsupported",
             "data": {
-              "label": "xemu (Standalone)",
-              "system": "xbox"
+              "label": "XRoar CoCo 2 NTSC (Standalone)",
+              "system": "coco"
             }
           }
         }
@@ -1040,6 +1040,127 @@
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-carded-no-answers-the-states-question-for-cemu",
+      "rationale": "Cemu 2.6 has no savestates — no state serializer anywhere in the v2.6 tree, none in the shipped binary's unfiltered scan, and the project's own issue template lists 'Add savestates' among features yet to be implemented — and #284 makes that an ANSWER: no_savestates with the card's citation, not the generic standalone-unsupported refusal. No machine-derived caveats ride it; the statement is about the emulator, not about this machine.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.wua .WUA</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% -g %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "wiiu"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "CEMU",
+            "citation": "Cemu 2.6: unfiltered strings scan of the shipped components/cemu/bin/Cemu_relwithdebinfo carries no savestate or snapshot vocabulary, and the v2.6 tree's only 'savestate' spellings are the graphic-packs window persisting its own UI state (src/gui/GraphicPacksWindow2.cpp:326) and the issue template listing 'Add savestates' among features yet to be implemented (.github/ISSUE_TEMPLATE/feature_report.yaml:18)",
+            "caveats": []
+          }
+        }
+      }
+    },
+    {
+      "name": "an-unpinned-build-rides-the-stated-no-as-unverified-version",
+      "rationale": "Ryubing's no is established from the source (release 1.3.3, repo-wide: zero savestate vocabulary), but nothing ships the emulator — the find rule probes the user's own install — so the card marks the running build unestablished and the answer carries that as the one caveat a stated no can have: unverified-version with verification=build-unestablished.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>switch</name>\n    <path>%ROMPATH%/switch</path>\n    <extension>.nsp .NSP</extension>\n    <command label=\"Ryubing (Standalone)\">%EMULATOR_RYUBING% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "switch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "RYUBING",
+            "citation": "projects/Ryubing (git.ryujinx.app) release 1.3.3: repo-wide across its 3938 C# sources, zero savestate vocabulary — the Ryujinx lineage has never had a guest-state serializer; docs.ryujinx.app documents save-file management only",
+            "caveats": [
+              {
+                "code": "unverified-version",
+                "data": {
+                  "emulator": "RYUBING",
+                  "verification": "build-unestablished"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-the-stated-no-answers-before-the-variant-gate",
+      "rationale": "On EmuDeck the savestate dispatch normally gates on which binary the launch would run — and this machine establishes none for Cemu (no AppImage, no flatpak), which the save question refuses with the variant named. The stated no answers anyway, before the gate: the absence is a fact about the emulator generation, not about which of its builds a launch would pick, so refusing it over an unestablished variant would withhold an answer the question has.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.wua .WUA</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% -g %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "wiiu"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "CEMU",
+            "citation": "Cemu 2.6: unfiltered strings scan of the shipped components/cemu/bin/Cemu_relwithdebinfo carries no savestate or snapshot vocabulary, and the v2.6 tree's only 'savestate' spellings are the graphic-packs window persisting its own UI state (src/gui/GraphicPacksWindow2.cpp:326) and the issue template listing 'Add savestates' among features yet to be implemented (.github/ISSUE_TEMPLATE/feature_report.yaml:18)",
+            "caveats": []
+          }
         }
       }
     }

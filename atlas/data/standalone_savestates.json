@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "spec": "Standalone savestate cards: which emulators the savestate question can answer for a non-libretro catalogue entry, keyed by the %EMULATOR_…% token the launch command names. World knowledge under DESIGN.md's boundary rule — each card states where the emulator's states tree hangs (a compiled join below one of its XDG trees, or the configuration key whose value moves it), how the emulator names a state file, the catalogue systems the card answers for, and the citations behind all of it at the revision the arrangement ships; the reading itself is code beside the card (atlas/installations.py), which reads that configuration the way the emulator does and states every degradation as a structured caveat. The 'names' pattern is the field the save cards never needed: every one of these emulators names its states itself, from an identity of the running game (a disc serial, a game id, a title id) that no content path derives — melonDS alone derives its from the loaded file's name — so the pattern is stated, cited, and handed to the caller in the caveat that says why the files below cannot be listed by name. An emulator absent from this file is not one without savestates: it is one whose savestate wiring atlas has not established, and the resolver refuses exactly as it did before this file existed.",
+  "spec": "Standalone savestate cards: which emulators the savestate question can answer for a non-libretro catalogue entry, keyed by the %EMULATOR_…% token the launch command names. World knowledge under DESIGN.md's boundary rule — each card states where the emulator's states tree hangs (a compiled join below one of its XDG trees, or the configuration key whose value moves it), how the emulator names a state file, the catalogue systems the card answers for, and the citations behind all of it at the revision the arrangement ships; the reading itself is code beside the card (atlas/installations.py), which reads that configuration the way the emulator does and states every degradation as a structured caveat. The 'names' pattern is the field the save cards never needed: every one of these emulators names its states itself, from an identity of the running game (a disc serial, a game id, a title id) that no content path derives — melonDS alone derives its from the loaded file's name — so the pattern is stated, cited, and handed to the caller in the caveat that says why the files below cannot be listed by name. A card can also state, as a cited fact, that the emulator has no savestates at all ('absent', #284) — an answer, not a refusal, serialized as no_savestates with its citation; such a card states no names, no settings and no anchors, because there is no tree to describe and no word to pin. An emulator absent from this file is still not one without savestates: it is one whose savestate wiring atlas has not established, and the resolver refuses exactly as it did before this file existed.",
   "emulators": {
     "DOLPHIN": {
       "savestates": {
@@ -273,6 +273,126 @@
       },
       "provenance": {
         "source": "The DuckStation build RetroDECK ships as 'DuckStation (Legacy)' — the save card's pin, stenzek/duckstation@64655818e. The states directory is [Folders] SaveStates, default 'savestates' below the DataRoot (settings.cpp:1944, :1975; an empty value falls to the default, a relative one joins the DataRoot, then Path::RealPath resolves it, :1955-1962). RetroDECK's script calls the location hard-coded (components/duckstation/component_prepare.sh:20) — the key disproves that comment, but the script only links the default location (dir_prep \"$states_path/psx/duckstation\" \"$XDG_CONFIG_HOME/duckstation/savestates\", :20, :38), a symlink the answer walks, while EmuDeck writes the key itself (SaveStates = …, emuDeckDuckStation.sh:67-75). A per-game state is <serial>_<slot>.sav with <serial>_resume.sav beside it, and the global slots are savestate_<slot>.sav and resume.sav in the same directory (System::GetGameSaveStateFileName / GetGlobalSaveStateFileName, system.cpp:5288-5302), slots 1-10 each (system.h:83-84); the serial is the disc's own, not derivable from the content path. settings.ini lives in the DataRoot the launch environment picks — the same two-base probe the save card states (qthost.cpp:562-582)."
+      }
+    },
+    "CEMU": {
+      "savestates": {
+        "systems": [
+          "wiiu"
+        ],
+        "absent": {
+          "citation": "Cemu 2.6: unfiltered strings scan of the shipped components/cemu/bin/Cemu_relwithdebinfo carries no savestate or snapshot vocabulary, and the v2.6 tree's only 'savestate' spellings are the graphic-packs window persisting its own UI state (src/gui/GraphicPacksWindow2.cpp:326) and the issue template listing 'Add savestates' among features yet to be implemented (.github/ISSUE_TEMPLATE/feature_report.yaml:18)"
+        }
+      },
+      "provenance": {
+        "source": "Cemu 2.6, the release the shipped binary carries as a whole version string (components/cemu/bin/Cemu_relwithdebinfo) and the generation the save card pins. The feature does not exist at this generation: the unfiltered strings scan of the shipped binary carries no savestate or snapshot vocabulary, a full-tree read of cemu-project/Cemu at v2.6 finds no guest-state serializer anywhere, the only 'savestate' spellings being GraphicPacksWindow2::SaveStateToConfig — the graphic-packs WINDOW persisting its own UI state to config (src/gui/GraphicPacksWindow2.cpp:326, .h:70) — and the project's own issue template names 'Add savestates' among large-scale features yet to be implemented (.github/ISSUE_TEMPLATE/feature_report.yaml:18). Neither arrangement wires any state path for it (components/cemu/component_prepare.sh, emuDeckCemu.sh). The stated no answers before the EmuDeck variant gate: it is a statement about the emulator generation, not about which binary the launch would pick."
+      }
+    },
+    "VITA3K": {
+      "savestates": {
+        "systems": [
+          "psvita"
+        ],
+        "absent": {
+          "citation": "Vita3K build 3996 (commit cb1f592c): repo-wide, no savestate vocabulary — the only 'snapshot' is a comment on NID-export iteration (vita3k/modules/taiHEN/taiHEN.cpp:1331-1335) — and the shipped binary's only '_Save_state' strings are MSVC-STL thread-support symbols, not a feature"
+        }
+      },
+      "provenance": {
+        "source": "Vita3K build 3996, whose corresponding commit is cb1f592c — the same pin the save card carries for the same shipped binary (components/vita3k/bin/Vita3K). The feature does not exist at this build: the unfiltered strings scan of the shipped binary carries no savestate vocabulary (its only '_Save_state'/'_Restore_state' strings are MSVC-STL thread-support symbols beside _Cnd_/_Mtx_/_Thrd_), and a full-tree read at cb1f592c finds no state serializer — the one 'snapshot' in the tree is a comment about NID-export iteration (vita3k/modules/taiHEN/taiHEN.cpp:1331-1335). Neither arrangement wires any state path for it (components/vita3k/component_prepare.sh wires pref-path, saves, textures and shaders only; emuDeckVita3K.sh likewise)."
+      }
+    },
+    "RYUBING": {
+      "savestates": {
+        "systems": [
+          "switch"
+        ],
+        "absent": {
+          "citation": "projects/Ryubing (git.ryujinx.app) release 1.3.3: repo-wide across its 3938 C# sources, zero savestate vocabulary — the Ryujinx lineage has never had a guest-state serializer; docs.ryujinx.app documents save-file management only",
+          "build_unestablished": "nothing ships Ryubing — RetroDECK's find rule probes the user's own install (Ryujinx.sh, a ryubing binary, or the io.github.ryubing.Ryujinx flatpak; es_find_rules.xml) — so which build a launch runs is not established; the record reads release 1.3.3, the newest at examination"
+        }
+      },
+      "provenance": {
+        "source": "Ryubing (the Ryujinx continuation at git.ryujinx.app/projects/Ryubing), read at release 1.3.3, the newest at examination (2026-08-25). The feature does not exist in the lineage: a full-tarball read of the 1.3.3 source — 3938 C# files — finds zero occurrences of savestate vocabulary, the Forgejo's own repo-wide code search answers 'No results' for both spellings, and the project documentation (docs.ryujinx.app) covers save-file management only. RetroDECK ships no Ryubing build — its es_find_rules.xml probes the user's own Ryujinx.sh, ryubing binary or io.github.ryubing.Ryujinx flatpak, and the staticpath entries name an external-components launcher this build does not carry — which is why the card marks the running build unestablished rather than citing one."
+      }
+    },
+    "RUFFLE": {
+      "savestates": {
+        "systems": [
+          "flash"
+        ],
+        "absent": {
+          "citation": "ruffle-rs/ruffle@b001ac43, the commit the shipped binary names in its version string: repo-wide, no savestate vocabulary — the player's persistence is the SharedObjects tree behind --save-directory, the save question's business (#247) — and the unfiltered scan of components/ruffle/bin/ruffle agrees"
+        }
+      },
+      "provenance": {
+        "source": "Ruffle at ruffle-rs/ruffle@b001ac439e9cf1a860116f3cfe1b85d2881228c3, the commit the shipped binary carries in its own version string (components/ruffle/bin/ruffle). The feature does not exist: the unfiltered strings scan of the shipped binary carries no savestate machinery — its 'snapshot' spellings are Rust tokio internals and the Flash flash.text.TextSnapshot API, and its save vocabulary is the desktop player's --save-directory argument, the SharedObjects tree — and the repository carries no savestate vocabulary either. RetroDECK wires only that saves tree (dir_prep \"$saves_path/flash/ruffle\" \"$ruffle_saves_path\", components/ruffle/component_prepare.sh:14, the variable $XDG_DATA_HOME/ruffle/SharedObjects at component_functions.sh:5), which is the save question's own open row (#247); no state path exists to wire."
+      }
+    },
+    "GZDOOM": {
+      "savestates": {
+        "systems": [
+          "doom"
+        ],
+        "absent": {
+          "citation": "GZDoom g4.14.2: the engine's whole serialization surface is its savegame system — UNSAFE_CCMD(save) goes through G_BuildSaveName into G_SaveGame (src/console/c_cmds.cpp:702-731), quicksave rotation writes quick%02d (src/g_game.cpp:2293-2310) and autosaves auto%02d (:2271), all landing in G_GetSavegamesFolder (src/common/menu/savegamemanager.cpp:559-604) — the save question's business; no snapshot feature outside the game's own saves exists"
+        }
+      },
+      "provenance": {
+        "source": "GZDoom g4.14.2, the version the shipped components/gzdoom/bin/gzdoom carries as a whole string. A source port's saving IS the game's own save system, and at this generation that is the only serialization there is: the save console command (UNSAFE_CCMD(save), src/console/c_cmds.cpp:702-731), the quicksave rotation (quick%02d, src/g_game.cpp:2293-2310), and the autosaves (auto%02d, :2271) all compose their file through G_BuildSaveName (src/common/menu/savegamemanager.cpp:597-604) into G_GetSavegamesFolder (:559-592: the -savedir flag, else the save_dir cvar, else the platform savegames path). RetroDECK wires exactly that cvar — save_dir=RETRODECKHOMEDIR/saves/doom/gzdoom (shipped rd_config/gzdoom.ini:372, substituted by components/gzdoom/component_prepare.sh:26-30) — under saves/, the SAVE question's tree, not states/. The unfiltered scan of the shipped binary carries no savestate vocabulary; quicksave is a savegame slot, not a machine snapshot, and this card does not blur the two questions."
+      }
+    },
+    "IRONWAIL": {
+      "savestates": {
+        "systems": [
+          "quake"
+        ],
+        "absent": {
+          "citation": "ironwail v0.8.2: the save command is Quake's own savegame system — Host_Savegame_f writes <gamedir>/<name>.sav (Quake/host_cmd.c:2373-2434, the extension at :2433, registered at :3784), autosaves under <gamedir>/autosave (:1420) — and the repository carries no savestate vocabulary at all",
+          "build_unestablished": "neither arrangement ships ironwail — RetroDECK's find rule probes the user's own 'ironwail' binary (es_find_rules.xml), and its staticpath entry names a component this build does not carry — so which build a launch runs is not established; the record reads release v0.8.2, the newest at examination"
+        }
+      },
+      "provenance": {
+        "source": "ironwail (the QuakeSpasm-derived Quake port), read at release v0.8.2, the newest at examination (2026-08-25). A source port's saving is the game's own save system, and ironwail has nothing beside it: the save command writes Quake savegames — Host_Savegame_f composes <com_gamedir>/<name>.sav (Quake/host_cmd.c:2373-2434) and the autosave tree sits at <com_gamedir>/autosave (:1420) — which is the save question's business, and the repository carries no savestate vocabulary anywhere. RetroDECK ships no ironwail build (no component; the es_find_rules.xml IRONWAIL rule probes the user's own binary), which is why the card marks the running build unestablished rather than citing one."
+      }
+    },
+    "OPENBOR": {
+      "savestates": {
+        "systems": [
+          "openbor"
+        ],
+        "absent": {
+          "citation": "OpenBOR v4.0 build 7533 (DCurrent/openbor v7533, the shipped AppImage): saveGameFile() writes module progress into <base>/Saves (engine/openbor.c:2764-2771; declared engine/openbor.h:4208) — the save question's business — and neither the repository nor the unfiltered scan of components/openbor/bin/OpenBOR carries any savestate vocabulary"
+        }
+      },
+      "provenance": {
+        "source": "OpenBOR v4.0 build 7533 — components/openbor/component_version names the v7533 release tag, and the component recipe pulls that release's Linux AppImage from DCurrent/openbor. The engine persists module progress through its own save files: saveGameFile() lands them in <base>/Saves (engine/openbor.c:2764-2771, the function declared at engine/openbor.h:4208), the save question's business. No savestate feature exists: the unfiltered strings scan of the shipped binary carries no savestate or snapshot vocabulary (its persistence vocabulary is '.sav' and 'saves/'), and the repository carries none either. RetroDECK's component wires nothing at all (components/openbor/component_prepare.sh is an empty reset block)."
+      }
+    },
+    "PICO-8": {
+      "savestates": {
+        "systems": [
+          "pico8"
+        ],
+        "absent": {
+          "citation": "PICO-8 manual v0.2.7 (lexaloffle.com/dl/docs/pico-8_manual.html, the vendor's complete documented surface, read 2026-08-25): no savestate feature exists or ever has — cartridge persistence is CARTDATA, written under cdata/, the save question's business",
+          "build_unestablished": "PICO-8 is closed source and the binary is the user's own copy, stored beside its config (dir_prep \"$bios_path/pico-8\" \"$HOME/.lexaloffle/pico-8\", components/pico-8/component_prepare.sh:15) — no shipped build pins the claim; the record reads the v0.2.7 manual"
+        }
+      },
+      "provenance": {
+        "source": "PICO-8, a closed-source fantasy console whose binary RetroDECK does not ship — the component stores the user's own copy and its config together (components/pico-8/component_prepare.sh:15) and routes the cartridge save data out (dir_prep \"$saves_path/pico-8\" \"$bios_path/pico-8/cdata\", :16). The vendor's complete documented surface is the manual, and at v0.2.7 it documents no savestate feature and never has: cartridge persistence is the CARTDATA API writing 256 bytes per cart under cdata/ — the save question's business — beside GIF capture and screenshots. A closed binary cannot be scanned into a stronger statement than its documentation makes, which is why the evidence level is the manual's and the running build is marked unestablished."
+      }
+    },
+    "SOLARUS": {
+      "savestates": {
+        "systems": [
+          "solarus"
+        ],
+        "absent": {
+          "citation": "Solarus 2.0.4 (libsolarus.so.2.0.4, the soname the shipped launcher links): the engine's persistence is the quest-scripted savegame — Savegame::save() writes the file the quest names below the quest write directory (src/core/Savegame.cpp:353-373, the write-dir requirement at :114) — the save question's business; repo-wide the only 'saveState' is the launcher's Qt splitter call (launcher/sources/widgets/MainWindow.cpp:163) and the unfiltered engine scan carries no savestate vocabulary"
+        }
+      },
+      "provenance": {
+        "source": "Solarus 2.0.4 — components/solarus/bin/solarus-launcher links libsolarus.so.2.0.4 out of components/shared-libs, and the soname is the pin. Solarus is a quest engine: a game saves through the Lua savegame API, and Savegame::save() writes the file the quest itself names below the quest write directory (src/core/Savegame.cpp:353-373; a quest that sets none cannot save at all, :114) — per-quest game saves, the save question's business. No state serializer exists: the unfiltered strings scans of both the launcher and the engine library carry no savestate vocabulary (the launcher's 'saveState' is Qt's QSplitter window layout, launcher/sources/widgets/MainWindow.cpp:163), and the full v2.0.4 tree agrees. RetroDECK wires no state path (components/solarus/component_prepare.sh creates the config directory and nothing else)."
       }
     }
   }
