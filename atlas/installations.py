@@ -6197,7 +6197,8 @@ def _xemu_savefile_placement(
         if untranslated:
             # ``path`` stays the primary — the hard-disk image, where the
             # saves live — and ``paths`` lists every untranslatable value in
-            # the config's order whenever more than one file is named.
+            # this emitter's stated order (the disk image first, then the
+            # EEPROM) whenever more than one file is named.
             data: dict[str, str | tuple[str, ...]] = {
                 "emulator": card.token,
                 "config": toml_path,

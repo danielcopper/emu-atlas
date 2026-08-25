@@ -572,16 +572,16 @@ reads fine but states an absolute path only the emulator's sandbox can spell ref
 `emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
 `sandbox-path-untranslated` said as an outcome, for the routes where the whole answer hangs on that one path
 (`data.path` is the primary; an aggregate refusal naming more than one file — xemu's save answer — also carries
-`data.paths`, every untranslatable value in order). The answers root at `emulator_directory` — no frontend hands a
-standalone emulator a save directory — except where the emulator's own default walks into the content's. On EmuDeck a
-standalone emulator is identified by `%EMULATOR_…%` token or by an allowlisted launcher script (`cemu.sh`, `azahar.sh`,
-`duckstation.sh`, `pcsx2-qt.sh`, `melonds.sh` and `vita3k.sh` today), and either way the launch's binary variant gates
-the answer. Three variants are established: an **AppImage** under `~/Applications` reads the host's own XDG tree; a
-**flatpak** whose app id the card names (`flatpak` on the card — melonDS's `net.kuribo64.melonDS`, which `melonds.sh`
-runs outright, probing nothing) reads its own homes below `~/.var/app`; and an **extracted binary** at
-`~/Applications/<Name>/<Name>`, which EmuDeck unpacks some emulators into (Vita3K) and which ES-DE's own find rule looks
-for right after the AppImage patterns, reads the host's tree like an AppImage does. The rest refuse with
-`standalone-variant-unestablished`.
+`data.paths`, every untranslatable value, the disk image first and then the EEPROM). The answers root at
+`emulator_directory` — no frontend hands a standalone emulator a save directory — except where the emulator's own
+default walks into the content's. On EmuDeck a standalone emulator is identified by `%EMULATOR_…%` token or by an
+allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`, `pcsx2-qt.sh`, `melonds.sh` and `vita3k.sh`
+today), and either way the launch's binary variant gates the answer. Three variants are established: an **AppImage**
+under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app id the card names (`flatpak` on the card —
+melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its own homes below
+`~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which EmuDeck unpacks some emulators into
+(Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads the host's tree like an
+AppImage does. The rest refuse with `standalone-variant-unestablished`.
 
 ## `standalone_savestates.json` — which standalone emulators the savestate question answers for
 

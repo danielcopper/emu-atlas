@@ -6368,7 +6368,8 @@ class TestAnUntranslatableConfigPathIsItsOwnRefusal:
     def test_xemu_every_untranslated_path_reaches_the_data(self):
         # Both named files are sandbox-only: `path` stays the primary (the
         # hard-disk image, where the saves live) and `paths` lists every
-        # stated value in the config's order — none survives only in prose.
+        # stated value, the disk image first and then the EEPROM — none
+        # survives only in prose.
         hdd = f"{self.SANDBOX_ONLY}/hdd.qcow2"
         eeprom = f"{self.SANDBOX_ONLY}/eeprom.bin"
         entry = self._entry(

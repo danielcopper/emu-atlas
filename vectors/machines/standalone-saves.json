@@ -4763,6 +4763,51 @@
           }
         }
       }
+    },
+    {
+      "name": "xemu-two-sandbox-only-files-refuse-with-every-path-listed",
+      "rationale": "xemu.toml reads fine and names both its files under a prefix only the emulator's sandbox can spell, so nothing anchors and the aggregate refuses with emulator-config-path-untranslatable. data.path is the primary — the hard-disk image, where the saves live — and data.paths lists every untranslatable value, the disk image first and then the EEPROM: the second file is machine-readable data, not a casualty of the prose.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <fullname>Microsoft Xbox</fullname>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n    <platform>xbox</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml": "[sys.files]\nhdd_path = '/var/tmp/xbox_hdd.qcow2'\neeprom_path = '/var/tmp/eeprom.bin'\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-path-untranslatable",
+            "data": {
+              "emulator": "XEMU",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml",
+              "path": "/var/tmp/xbox_hdd.qcow2",
+              "paths": [
+                "/var/tmp/xbox_hdd.qcow2",
+                "/var/tmp/eeprom.bin"
+              ]
+            }
+          }
+        }
+      }
     }
   ]
 }

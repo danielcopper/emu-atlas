@@ -973,8 +973,9 @@ UNRESOLVED_EMULATOR_CONFIG_UNREADABLE = "emulator-config-unreadable"
 # reached. ``data["path"]`` is always the primary stated value; an aggregate
 # refusal covering several stated files (xemu's save answer, where the disk
 # image and the EEPROM ride one question) additionally carries
-# ``data["paths"]`` — every untranslatable value, in the config's order —
-# whenever it names more than one.
+# ``data["paths"]`` — every untranslatable value, in the emitter's stated
+# order (for xemu: the disk image first, then the EEPROM) — whenever it
+# names more than one.
 UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE = "emulator-config-path-untranslatable"
 
 
