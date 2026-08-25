@@ -6195,12 +6195,22 @@ def _xemu_savefile_placement(
             if c.code == CAVEAT_SANDBOX_PATH_UNTRANSLATED
         )
         if untranslated:
+            # ``path`` stays the primary — the hard-disk image, where the
+            # saves live — and ``paths`` lists every untranslatable value in
+            # the config's order whenever more than one file is named.
+            data: dict[str, str | tuple[str, ...]] = {
+                "emulator": card.token,
+                "config": toml_path,
+                "path": untranslated[0],
+            }
+            if len(untranslated) > 1:
+                data["paths"] = untranslated
             return Unresolved(
                 UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
                 f"the files xemu's configuration names ({', '.join(untranslated)}) have "
                 f"no spelling on this host — {toml_path} read fine, and nothing this "
                 "answer could anchor at",
-                {"emulator": card.token, "config": toml_path, "path": untranslated[0]},
+                data,
             )
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,

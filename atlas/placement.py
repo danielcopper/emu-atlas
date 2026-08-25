@@ -59,7 +59,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Iterable, Literal, Mapping
+from typing import Iterable, Literal, Mapping, TypeVar
 
 from atlas.retroarch_cfg import RetroArchCfg
 
@@ -270,7 +270,10 @@ ROLES = (
 )
 
 
-def _freeze(mapping: Mapping[str, str]) -> Mapping[str, str]:
+_FrozenValue = TypeVar("_FrozenValue")
+
+
+def _freeze(mapping: Mapping[str, _FrozenValue]) -> Mapping[str, _FrozenValue]:
     """A read-only copy — frozen dataclasses stay deeply immutable."""
     return MappingProxyType(dict(mapping))
 
@@ -967,7 +970,11 @@ UNRESOLVED_EMULATOR_CONFIG_UNREADABLE = "emulator-config-unreadable"
 # value in ``data["path"]`` beside the file that states it. Distinct from
 # ``emulator-config-unreadable``: there the machine would not let the file be
 # read, here the read succeeded and the stated value is what cannot be
-# reached.
+# reached. ``data["path"]`` is always the primary stated value; an aggregate
+# refusal covering several stated files (xemu's save answer, where the disk
+# image and the EEPROM ride one question) additionally carries
+# ``data["paths"]`` — every untranslatable value, in the config's order —
+# whenever it names more than one.
 UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE = "emulator-config-path-untranslatable"
 
 
@@ -984,7 +991,10 @@ class Unresolved:
 
     code: str
     message: str
-    data: Mapping[str, str] = field(default_factory=dict)
+    # Values are strings, except the list-valued keys an aggregate refusal
+    # documents beside its code (``paths`` on the untranslatable-path code) —
+    # tuples here, lists in the serialized contract.
+    data: Mapping[str, "str | tuple[str, ...]"] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.code:

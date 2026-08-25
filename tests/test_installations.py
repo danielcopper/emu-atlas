@@ -6361,7 +6361,26 @@ class TestAnUntranslatableConfigPathIsItsOwnRefusal:
             "xbox",
             {XEMU_TOML_PATH: f"[sys.files]\nhdd_path = '{self.SANDBOX_ONLY}'\n"},
         )
-        self._refused(entry.savefile_location())
+        outcome = self._refused(entry.savefile_location())
+        # One named file needs no list — the scalar shape is the whole story.
+        assert "paths" not in outcome.data
+
+    def test_xemu_every_untranslated_path_reaches_the_data(self):
+        # Both named files are sandbox-only: `path` stays the primary (the
+        # hard-disk image, where the saves live) and `paths` lists every
+        # stated value in the config's order — none survives only in prose.
+        hdd = f"{self.SANDBOX_ONLY}/hdd.qcow2"
+        eeprom = f"{self.SANDBOX_ONLY}/eeprom.bin"
+        entry = self._entry(
+            "xbox",
+            {
+                XEMU_TOML_PATH: (
+                    f"[sys.files]\nhdd_path = '{hdd}'\neeprom_path = '{eeprom}'\n"
+                )
+            },
+        )
+        outcome = self._refused(entry.savefile_location(), path=hdd)
+        assert outcome.data["paths"] == (hdd, eeprom)
 
     def test_xemu_snapshot_disk_image(self):
         entry = self._entry(
