@@ -401,6 +401,17 @@ CAVEAT_SAVE_INSIDE_CONTENT = "save-inside-content"
 # image up whole or leaves it, and a tool that parses the image's filesystem
 # has the layout stated machine-readably instead of rediscovering it.
 CAVEAT_SAVE_INSIDE_IMAGE = "save-inside-image"
+# The save-inside-image statement, one question over: the savestates live
+# inside a disk image the answer names as a file. xemu's snapshots are QEMU
+# internal snapshots — the VM state is written into the qcow2 hard-disk image
+# and the snapshot record spans every snapshot-capable device, of which that
+# image is the only one, and xemu's own snapshot browser reads them back out
+# of the file hdd_path names. Nothing outside the image is addressable per
+# snapshot — there is no file per state — so a file-level client backs the
+# image up whole, and ``data`` carries the image and the cited naming of the
+# entries inside it so a qcow2-aware tool has the layout stated
+# machine-readably instead of rediscovering it.
+CAVEAT_SAVESTATE_INSIDE_IMAGE = "savestate-inside-image"
 # The inside-content statement's harder sibling: this configuration keeps no
 # save at all — the writes are discarded (hatari with write protection on
 # throws the modified image away at eject). The declared emptiness is the

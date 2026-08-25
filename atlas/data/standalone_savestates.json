@@ -394,6 +394,36 @@
       "provenance": {
         "source": "Solarus 2.0.4 — components/solarus/bin/solarus-launcher links libsolarus.so.2.0.4 out of components/shared-libs, and the soname is the pin. Solarus is a quest engine: a game saves through the Lua savegame API, and Savegame::save() writes the file the quest itself names below the quest write directory (src/core/Savegame.cpp:353-373; a quest that sets none cannot save at all, :114) — per-quest game saves, the save question's business. No state serializer exists: the unfiltered strings scans of both the launcher and the engine library carry no savestate vocabulary (the launcher's 'saveState' is Qt's QSplitter window layout, launcher/sources/widgets/MainWindow.cpp:163), and the full v2.0.4 tree agrees. RetroDECK wires no state path (components/solarus/component_prepare.sh creates the config directory and nothing else)."
       }
+    },
+    "XEMU": {
+      "savestates": {
+        "settings": "xemu.toml",
+        "systems": [
+          "xbox"
+        ],
+        "inside_image": {
+          "key": "hdd_path",
+          "citation": "ui/xemu-snapshots.c:156-158 (the snapshot browser opens the file g_config.sys.files.hdd_path names), :193-198 (bdrv_all_find_vmstate_bs + bdrv_snapshot_list); migration/savevm.c:3285-3301 (save_snapshot writes the VM state into the vmstate device and the record across every snapshot-capable one); block/snapshot.c:736-777 (the vmstate device is the first snapshot-capable one — the qcow2 hard disk) at v0.8.135"
+        },
+        "names": {
+          "pattern": "<snapshot name, else vm-YYYYMMDDhhmmss>",
+          "citation": "migration/savevm.c:3277-3282 at v0.8.135"
+        }
+      },
+      "anchors": {
+        "binary": "xemu/bin/xemu",
+        "names": {
+          "hdd_path": {
+            "literal": "hdd_path"
+          },
+          "xemu.toml": {
+            "literal": "xemu.toml"
+          }
+        }
+      },
+      "provenance": {
+        "source": "xemu v0.8.135, the release the shipped binary carries as a whole version string (components/xemu/bin/xemu) and the save card's pin. A snapshot is not a file: xemu's savestates are QEMU internal snapshots, written INTO the qcow2 hard-disk image xemu.toml names in [sys.files] hdd_path — save_snapshot writes the VM state into the vmstate block device (qemu_fopen_bdrv + qemu_savevm_state, migration/savevm.c:3285-3290) and creates the snapshot record across every snapshot-capable device (bdrv_all_create_snapshot, :3301; the iteration block/snapshot.c:695-733), and the vmstate device is the first snapshot-capable one (bdrv_all_find_vmstate_bs with no vmstate argument, block/snapshot.c:736-777) — in xemu's machine the qcow2 hard disk, the DVD being read-only and the EEPROM raw. The emulator's own snapshot browser states the same fact in code: it opens exactly the file hdd_path names to list the snapshots and their embedded metadata (ui/xemu-snapshots.c:156-158, the list via bdrv_snapshot_list :193-198). Entries are named by the user (the snapshot UI's create field, the F5-F8 shortcut bindings, xemu-snapshots.c:46-51) or default to vm-YYYYMMDDhhmmss (savevm.c:3277-3282). A machine with no disk configured cannot snapshot at all ('no block device can store vmstate for snapshot', block/snapshot.c:779-781), which is the resolver's refusal branch. xemu.toml lives under the DATA home the way the save card establishes (SDL_GetPrefPath; RetroDECK links its config-tree copy there, components/xemu/component_prepare.sh:16-17), and on EmuDeck the emulator is the app.xemu.xemu flatpak the save card records, its trees below ~/.var/app. The card answers the xbox rows it shares with the save card; the consolearcade xemu entry stays outside both for the same reason — that launch's content story is unexamined. Neither arrangement wires any state path for xemu — nothing outside the image exists to wire."
+      }
     }
   }
 }

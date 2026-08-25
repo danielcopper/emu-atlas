@@ -191,6 +191,7 @@ from atlas.placement import (
     CAVEAT_SAVE_INSIDE_IMAGE,
     CAVEAT_SAVE_ROOT_REVOKED,
     CAVEAT_SAVE_WRITES_DISCARDED,
+    CAVEAT_SAVESTATE_INSIDE_IMAGE,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
@@ -6050,9 +6051,13 @@ def _xemu_group(
 
 
 def _xemu_document(
-    machine: Machine, card: StandaloneSaveCard, toml_path: str
+    machine: Machine, card: "StandaloneSaveCard | StandaloneSavestateCard", toml_path: str
 ) -> "tuple[Mapping[str, Any], str | None] | Unresolved":
-    """xemu.toml parsed, or the refusal — no frame exists to step aside to."""
+    """xemu.toml parsed, or the refusal — no frame exists to step aside to.
+
+    Shared by the save and the savestate readings (#284): both open the same
+    file the same way, and only the token rides into the refusal.
+    """
     result = machine.read_text(toml_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
@@ -8868,6 +8873,93 @@ def _melonds_savestate_placement(
     )
 
 
+def _xemu_savestate_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSavestateCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavestatePlacement | Unresolved:
+    """xemu's states answer: QEMU internal snapshots inside the qcow2 hard disk.
+
+    The save answer's inside-image statement, one question over (#284). A
+    snapshot is not a file: ``save_snapshot`` writes the VM state into the
+    vmstate block device and creates the snapshot record across every
+    snapshot-capable device (migration/savevm.c:3285-3301 at v0.8.135) — of
+    which the qcow2 at ``[sys.files] hdd_path`` is the only one — and xemu's
+    own snapshot browser reads them back by opening exactly that file
+    (ui/xemu-snapshots.c:156-158, the list via ``bdrv_snapshot_list``
+    :193-198). So the answer names the image the way the save answer does,
+    and the ``savestate-inside-image`` caveat is what keeps "here is the
+    file" from reading as "and states lie beside it". A machine with no disk
+    configured cannot snapshot at all ("no block device can store vmstate",
+    block/snapshot.c:779-781), which is the refusal branch.
+    """
+    stated = card.inside_image
+    assert stated is not None  # the loader pairs the shape with this resolver
+    settings = _standalone_savestate_settings(card)
+    toml_path = settings.only(
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
+    )
+    parsed = _xemu_document(machine, card, toml_path)
+    if isinstance(parsed, Unresolved):
+        return parsed
+    doc, _ = parsed
+    hdd = xemu_file_value(doc, stated.key)
+    if not hdd:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"xemu.toml names no hard-disk image ([sys.files] {stated.key}) — the machine "
+            "has no disk to keep a snapshot in, and where one would be attached is "
+            "unknowable here",
+            {"emulator": card.token, "config": toml_path},
+        )
+    host = sandbox.host(stated.key, hdd)
+    if host.path is None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"the hard-disk image xemu's configuration names could not be located from "
+            f"here ({toml_path}) — nothing this answer could anchor at",
+            {"emulator": card.token, "config": toml_path},
+        )
+    directory, image = os.path.split(host.path)
+    physical, link_caveats = _link_view(machine, directory)
+    reading = f'xemu.toml: [sys.files] {stated.key} = "{hdd}"{host.note}'
+    return SavestatePlacement(
+        dir=directory,
+        root_kind=STATE_ROOT_EMULATOR_DIRECTORY,
+        needs=(),
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (image,),
+            f"declared by standalone savestate card '{card.token}'",
+            complete=False,
+        ),
+        sources=(f"standalone savestate card '{card.token}': {card.provenance}", reading),
+        caveats=(
+            *extra_caveats,
+            *link_caveats,
+            Caveat(
+                CAVEAT_SAVESTATE_INSIDE_IMAGE,
+                f"every snapshot lives inside {image} — a QEMU internal snapshot written "
+                "into the qcow2 itself, with no file per state — so back the image up "
+                f"whole; entries inside it are named {card.names} ({stated.citation})",
+                {
+                    "emulator": card.token,
+                    "image": host.path,
+                    "names": card.names or "",
+                    "citation": stated.citation,
+                },
+            ),
+        ),
+        physical_dir=physical,
+    )
+
+
 _STANDALONE_SAVESTATE_RESOLVERS = {
     "DOLPHIN": _fixed_savestate_tree_placement,
     "PRIMEHACK": _fixed_savestate_tree_placement,
@@ -8877,6 +8969,7 @@ _STANDALONE_SAVESTATE_RESOLVERS = {
     "PCSX2": _pcsx2_savestate_placement,
     "MELONDS": _melonds_savestate_placement,
     "DUCKSTATION": _duckstation_savestate_placement,
+    "XEMU": _xemu_savestate_placement,
 }
 
 # Which citation slots each savestate reading speaks, so a card can be crossed

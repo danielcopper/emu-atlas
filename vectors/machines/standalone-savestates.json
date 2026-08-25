@@ -1163,6 +1163,175 @@
           }
         }
       }
+    },
+    {
+      "name": "retrodeck-xemus-snapshots-live-inside-the-hard-disk-image",
+      "rationale": "xemu's savestates are QEMU internal snapshots written into the qcow2 that [sys.files] hdd_path names — the vmstate into the image, the record across every snapshot-capable device, of which that image is the only one (savevm.c:3285-3301, block/snapshot.c:736-777 at v0.8.135), and xemu's own snapshot browser opens exactly that file to list them (xemu-snapshots.c:156-158). So the answer names the image the way the save answer does, and savestate-inside-image is what keeps 'here is the file' from reading as 'and states lie beside it'. The config-home toml is reached through RetroDECK's own symlink, walked like any other.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%INJECT%=%BASENAME%.esprefix %EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\neeprom_path = '/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin'\nhdd_path = '/mnt/sd/retrodeck/bios/xbox_hdd.qcow2'\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu"
+        ],
+        "entry_savestate_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/retrodeck/bios",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-inside-image",
+              "data": {
+                "emulator": "XEMU",
+                "image": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                "names": "<snapshot name, else vm-YYYYMMDDhhmmss>",
+                "citation": "ui/xemu-snapshots.c:156-158 (the snapshot browser opens the file g_config.sys.files.hdd_path names), :193-198 (bdrv_all_find_vmstate_bs + bdrv_snapshot_list); migration/savevm.c:3285-3301 (save_snapshot writes the VM state into the vmstate device and the record across every snapshot-capable one); block/snapshot.c:736-777 (the vmstate device is the first snapshot-capable one — the qcow2 hard disk) at v0.8.135"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "xemu-no-disk-image-means-no-snapshot-store",
+      "rationale": "A machine with no hard-disk image configured cannot snapshot at all — QEMU refuses with 'no block device can store vmstate for snapshot' (block/snapshot.c:779-781 at v0.8.135) — so the answer refuses with the fact named instead of inventing a directory: emulator-config-unreadable, the same code the save answer uses where nothing its configuration names can anchor an answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%INJECT%=%BASENAME%.esprefix %EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savestate_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "unresolved": {
+            "code": "emulator-config-unreadable",
+            "data": {
+              "emulator": "XEMU",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-xemus-snapshots-answer-from-the-flatpaks-own-toml",
+      "rationale": "On EmuDeck the launch runs the app.xemu.xemu flatpak the save card records, so the savestate answer reads the app's own xemu.toml below ~/.var/app and names the image it points at — the same inside-the-image statement as on RetroDECK, reached through the variant gate the save answer shares.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/app.xemu.xemu/data/xemu/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/home/deck/Emulation/bios/mcpx_1.0.bin'\neeprom_path = '/home/deck/Emulation/saves/xemu/xbox-eeprom.bin'\nhdd_path = '/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2'\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/xemu",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Emulation/storage/xemu",
+          "/var/lib/flatpak/app/app.xemu.xemu"
+        ],
+        "entry_savestate_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/Emulation/storage/xemu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-inside-image",
+              "data": {
+                "emulator": "XEMU",
+                "image": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
+                "names": "<snapshot name, else vm-YYYYMMDDhhmmss>",
+                "citation": "ui/xemu-snapshots.c:156-158 (the snapshot browser opens the file g_config.sys.files.hdd_path names), :193-198 (bdrv_all_find_vmstate_bs + bdrv_snapshot_list); migration/savevm.c:3285-3301 (save_snapshot writes the VM state into the vmstate device and the record across every snapshot-capable one); block/snapshot.c:736-777 (the vmstate device is the first snapshot-capable one — the qcow2 hard disk) at v0.8.135"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

@@ -355,6 +355,7 @@ KNOWN_CAVEAT_CODES = {
     "save-dir-launch-dependent",
     "save-inside-content",
     "save-inside-image",
+    "savestate-inside-image",
     "save-writes-discarded",
     "core-mode-unestablished",
     "save-root-redirected",
