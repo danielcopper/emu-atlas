@@ -904,12 +904,14 @@ Two heavyweights answer through shapes of their own (#284). xemu's savestates ar
 as its one declared file and `savestate-inside-image` carries the image path and the entry naming (user-chosen, else
 `vm-YYYYMMDDhhmmss`); a machine with no disk configured cannot snapshot at all and the question refuses with that fact
 named. MAME's states root is `state_directory` out of whichever `mame.ini` the launch's `-inipath` names (else the
-compiled `$HOME/.mame;.;ini` search path — read, not assumed: the RetroDECK commands that pass no `-inipath` land their
-states under `~/.mame/sta`, not under the arrangement's tree), with one subdirectory per machine below it — the
-command's positional system word, or the ROM's own stem on the `%BASENAME%` arcade rows — and the declared slots
-`auto`/`quick`/`0-9`/`a-z`, each `<slot>.sta`. Every MAME answer carries `savestate-support-machine-dependent`: whether
-the launched system's driver is flagged `MACHINE_SUPPORTS_SAVE` is compiled into the binary, and an unflagged one still
-writes the file with a warning.
+compiled `$HOME/.mame;/app/share/mame/ini` search path (the Flathub build define, byte-proven in the shipped binary —
+not upstream's `#ifndef` fallback; the `/app` element resolves against the running deploy, and RetroDECK's carries no
+`share/mame` at all) — read, not assumed: the RetroDECK commands that pass no `-inipath` land their states under
+`~/.mame/sta`, not under the arrangement's tree), with one subdirectory per machine below it — the command's positional
+system word, or the ROM's own stem on the `%BASENAME%` arcade rows — and the declared slots `auto`/`quick`/`0-9`/`a-z`,
+each `<slot>.sta`. Every MAME answer carries `savestate-support-machine-dependent`: whether the launched system's driver
+is flagged `MACHINE_SUPPORTS_SAVE` is compiled into the binary, and an unflagged one still writes the file with a
+warning.
 
 ### A card can state the emulator has no savestates — and that is an answer
 

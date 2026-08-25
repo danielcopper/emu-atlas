@@ -1618,7 +1618,7 @@
     },
     {
       "name": "mame-no-inipath-means-the-compiled-search-path-below-the-startdir",
-      "rationale": "Several catalogue commands pass no -inipath and set %STARTDIR%=~/.mame instead. The compiled SDL search path is $HOME/.mame;.;ini (sdl3/sdlopts.cpp:27-35); on a machine where no mame.ini exists anywhere on it, the compiled state_directory default 'sta' governs — a relative path, resolved against the working directory the command pins — so the states land below ~/.mame/sta, NOT below the arrangement's states tree. Read, not assumed: the wiring RetroDECK writes into its own mame.ini never reaches these launches.",
+      "rationale": "Several catalogue commands pass no -inipath and set %STARTDIR%=~/.mame instead. The SHIPPED builds' compiled search path is $HOME/.mame;/app/share/mame/ini — the Flathub build define, byte-proven in the shipped binary; upstream's #ifndef fallback $HOME/.mame;.;ini is unreachable here — and on this machine both elements come up empty: no ~/.mame/mame.ini exists, and RetroDECK's deploy carries no /app/share/mame at all (the component relocates the Flathub tree where the compiled address never looks). So the compiled state_directory default 'sta' governs — a relative path, resolved against the working directory the command pins — and the states land below ~/.mame/sta, NOT below the arrangement's states tree. Read, not assumed: the wiring RetroDECK writes into its own mame.ini never reaches these launches.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1709,7 +1709,7 @@
     },
     {
       "name": "mame-without-a-startdir-the-relative-root-hangs-off-the-cwd",
-      "rationale": "No -inipath, no %STARTDIR%: the cwd-relative ini candidates cannot be probed and the compiled relative 'sta' cannot be anchored — the answer stays a <cwd> template with the launch-dependent caveat, the same statement the melonDS relative path makes.",
+      "rationale": "No -inipath, no %STARTDIR%: both elements of the compiled search path are probed and hold no mame.ini, so the compiled relative 'sta' governs — and with no working directory stated, it cannot be anchored: the answer stays a <cwd> template with the launch-dependent caveat, the same statement the melonDS relative path makes.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2181,6 +2181,98 @@
             "citation": "Solarus 2.0.4 (libsolarus.so.2.0.4, the soname the shipped launcher links): the engine's persistence is the quest-scripted savegame — Savegame::save() writes the file the quest names below the quest write directory (src/core/Savegame.cpp:353-373, the write-dir requirement at :114) — the save question's business; repo-wide the only 'saveState' is the launcher's Qt splitter call (launcher/sources/widgets/MainWindow.cpp:163) and the unfiltered engine scan carries no savestate vocabulary",
             "caveats": []
           }
+        }
+      }
+    },
+    {
+      "name": "mame-the-flathub-ini-governs-through-the-compiled-app-element",
+      "rationale": "The compiled search path's second element is /app/share/mame/ini — the Flathub manifest installs a real mame.ini there (org.mamedev.MAME.yaml:68) with inipath $HOME/.mame;/app/share/mame/ini and state_directory $HOME/.mame/sta — and it resolves through the sandbox against the RUNNING deploy. On a deploy that carries the tree, a launch with no -inipath and no ~/.mame/mame.ini reads exactly that file: state_directory expands against the pinned $HOME and the states land below ~/.mame/sta, one subdirectory per machine. The file's own inipath line moves nothing (the second parse re-probes and reaches the same file). RetroDECK's real deploy carries no share/mame, which is what the sibling vector pins; this one pins the element working where the deploy provides it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>apple2gs</name>\n    <path>%ROMPATH%/apple2gs</path>\n    <extension>.2mg .2MG</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/apple2gs apple2gs -gameio joy -flop3 %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/share/mame/ini/mame.ini": "homepath                  $HOME/.mame\ninipath                   $HOME/.mame;/app/share/mame/ini\nstate_directory           $HOME/.mame/sta\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "apple2gs"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/.mame/sta/apple2gs",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
         }
       }
     }

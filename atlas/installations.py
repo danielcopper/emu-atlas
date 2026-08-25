@@ -9132,13 +9132,27 @@ def _mame_env(homes: _XdgHomes, sandbox: _Sandbox) -> dict[str, str]:
     return env
 
 
+# What the SHIPPED builds compile as the ini search path when no -inipath is
+# given. Upstream's #ifndef default is "$HOME/.APP_NAME;.;ini"
+# (sdl3/sdlopts.cpp:27-35 at mame0287), but a build define replaces it, and
+# both builds atlas describes are Flathub-manifest builds that define exactly
+# this: the manifest passes SDL_INI_PATH='$$$$HOME/.APP_NAME;/app/share/
+# APP_NAME/ini' (org.mamedev.MAME.yaml:33) and installs a real mame.ini at
+# /app/share/mame/ini (:68). The shipped RetroDECK component binary carries
+# the literal as bytes — "OME/.APP_NAME;/app/share/APP_NAME/ini" at offset
+# 366643824, the "$H" head an instruction immediate the tripwire cannot reach
+# — and the APP_NAME halves become "mame" at startup (the ctor strreplace,
+# sdl3/sdlopts.cpp:112-115). The upstream ".;ini" tail is UNREACHABLE in
+# these builds and must never be stated for them.
+_MAME_COMPILED_INI_PATH = ("$HOME/.mame", "/app/share/mame/ini")
+
+
 @dataclass(frozen=True, slots=True)
 class _MameIniElement:
     """One inipath element as this host can probe it — or why it cannot."""
 
     stated: str
     resolved: str | None
-    launch_relative: bool = False
 
 
 def _mame_ini_elements(
@@ -9150,12 +9164,17 @@ def _mame_ini_elements(
     """The ini search path, element by element, the way the launch resolves it.
 
     The command's ``-inipath`` outranks everything (a CLI value cannot be
-    overridden from an ini, options.cpp:270); without one the SDL build's
-    compiled default is ``$HOME/.mame;.;ini`` (sdl3/sdlopts.cpp:27-35, the
-    entry at :44 — the same define in the SDL2 tree), whose second and third
-    elements are relative to the working directory only the launch knows.
+    overridden from an ini, options.cpp:270); without one the shipped builds'
+    compiled default is ``$HOME/.mame;/app/share/mame/ini``
+    (:data:`_MAME_COMPILED_INI_PATH` — the Flathub build define, byte-proven
+    in the shipped binary, not upstream's ``#ifndef`` fallback). The
+    ``/app/...`` element resolves through the sandbox against the running
+    deploy — a deploy that does not carry the tree answers no host path,
+    which is exactly what the emulator would find inside its sandbox. A
+    relative element (possible only in a hand-written ``-inipath``) resolves
+    against the working directory only the launch knows.
     """
-    stated = launch.inipath.split(";") if launch.inipath else ["$HOME/.mame", ".", "ini"]
+    stated = launch.inipath.split(";") if launch.inipath else list(_MAME_COMPILED_INI_PATH)
     elements: list[_MameIniElement] = []
     for element in stated:
         substituted, _ = _mame_subst_env(element, env)
@@ -9164,7 +9183,7 @@ def _mame_ini_elements(
             continue
         if not os.path.isabs(substituted):
             if cwd is None:
-                elements.append(_MameIniElement(element, None, launch_relative=True))
+                elements.append(_MameIniElement(element, None))
                 continue
             substituted = os.path.normpath(os.path.join(cwd, substituted))
             elements.append(_MameIniElement(element, substituted))
@@ -9232,8 +9251,11 @@ def _mame_savestate_placement(
     The launch_ini shape's one resolver (#284). The governing mame.ini is
     wherever the command's ``-inipath`` points — RetroDECK passes
     ``/var/config/mame/ini``, a sandbox spelling this reading translates —
-    falling back to the SDL build's compiled ``$HOME/.mame;.;ini`` search
-    path, and the file is read with MAME's own grammar and priority rules
+    falling back to the shipped builds' compiled
+    ``$HOME/.mame;/app/share/mame/ini`` search path
+    (:data:`_MAME_COMPILED_INI_PATH` — the Flathub build define, byte-proven;
+    NOT upstream's ``#ifndef`` fallback), and the file is read with MAME's
+    own grammar and priority rules
     (:func:`_mame_ini_values`). A relative ``state_directory`` — the compiled
     ``sta`` default when no ini exists — resolves against the working
     directory, which is the command's ``%STARTDIR%`` where it states one and
@@ -9362,8 +9384,7 @@ def _mame_savestate_placement(
                 CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
                 f"a relative {key} resolves against the launching process's working "
                 "directory (emu_file over the searchpath, machine.cpp:899-903), which no "
-                "read of this machine can establish — the same unknown covers the "
-                "cwd-relative ini candidates the compiled search path names",
+                "read of this machine can establish",
                 {"core": card.token, "path": substituted},
             )
         )
@@ -9453,12 +9474,20 @@ def _mame_savestate_placement(
             f"declared by standalone savestate card '{card.token}'",
             complete=False,
         )
-    ini_provenance = (
-        f"read from {stated_ini}"
-        if stated_ini is not None
-        else f"no {shape.file} exists on the launch's search path "
-        f"({'; '.join(e.stated for e in elements)})"
-    )
+    unprobed = [e.stated for e in elements if e.resolved is None]
+    if stated_ini is not None:
+        ini_provenance = f"read from {stated_ini}"
+    else:
+        ini_provenance = (
+            f"no {shape.file} exists on the launch's search path "
+            f"({'; '.join(e.stated for e in elements)})"
+        )
+    if unprobed:
+        ini_provenance += (
+            f" — the element(s) {'; '.join(unprobed)} could not be probed from here "
+            "(nothing at that path in the running deploy, or a location only the "
+            "launching process resolves)"
+        )
     return SavestatePlacement(
         dir=directory,
         root_kind=root_kind,

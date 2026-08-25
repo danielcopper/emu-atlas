@@ -600,14 +600,16 @@ source reads `"Savestates"` (Pcsx2Config.cpp:2284 at v2.6.3), and the written li
 The three #284 shapes state what no directory statement can spell. `inside_image` (xemu): the states are QEMU internal
 snapshots written INTO the qcow2 that `[sys.files] hdd_path` names — no file per state exists — so the answer names the
 image and the `savestate-inside-image` caveat carries it with the entry naming (user-chosen, else `vm-YYYYMMDDhhmmss`).
-`launch_ini` (MAME): the governing `mame.ini` is addressed by the launch command's `-inipath` (else the compiled
-`$HOME/.mame;.;ini` search path), the one case `emulator_settings.json` deliberately cannot state, so the card names the
-file and the keys (`state_directory` default `sta`, `statename` default `%g`) and the resolver reads them with MAME's
-own grammar; every MAME answer carries `savestate-support-machine-dependent`, because `MACHINE_SUPPORTS_SAVE` is
-compiled per driver and an unflagged machine still writes the file with a warning. `absent` (Cemu, Vita3K, Ryubing,
-Ruffle, GZDoom, ironwail, OpenBOR, PICO-8, Solarus): the emulator has **no savestates**, stated as a cited fact — the
-answer serializes as `no_savestates` with the citation, an answer and never a refusal; an absence card states no names,
-no settings and no anchors, registers no resolver, and answers before the EmuDeck variant gate, because the fact is the
+`launch_ini` (MAME): the governing `mame.ini` is addressed by the launch command's `-inipath` (else the shipped builds'
+compiled `$HOME/.mame;/app/share/mame/ini` search path — the Flathub build define, byte-proven in the shipped binary,
+not upstream's `#ifndef` fallback; the `/app` element resolves against the running deploy, which for RetroDECK carries
+no `share/mame` at all), the one case `emulator_settings.json` deliberately cannot state, so the card names the file and
+the keys (`state_directory` default `sta`, `statename` default `%g`) and the resolver reads them with MAME's own
+grammar; every MAME answer carries `savestate-support-machine-dependent`, because `MACHINE_SUPPORTS_SAVE` is compiled
+per driver and an unflagged machine still writes the file with a warning. `absent` (Cemu, Vita3K, Ryubing, Ruffle,
+GZDoom, ironwail, OpenBOR, PICO-8, Solarus): the emulator has **no savestates**, stated as a cited fact — the answer
+serializes as `no_savestates` with the citation, an answer and never a refusal; an absence card states no names, no
+settings and no anchors, registers no resolver, and answers before the EmuDeck variant gate, because the fact is the
 emulator's and not the launch's. Where no shipped build pins the claim (nothing ships Ryubing or ironwail; PICO-8's
 binary is the user's own), the card's `build_unestablished` sentence rides the answer as the `unverified-version`
 caveat. The source ports' savegame and quicksave trees are the **save** question's business and their cards say so — a
