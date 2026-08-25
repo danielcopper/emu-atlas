@@ -1908,6 +1908,281 @@
           ]
         }
       }
+    },
+    {
+      "name": "retrodeck-vita3k-answers-the-stated-no",
+      "rationale": "Vita3K build 3996 (cb1f592c) ships no state serializer — repo-wide zero savestate vocabulary, the binary's only '_Save_state' strings MSVC-STL thread symbols — so the answer is the stated no with the card's citation, clean of caveats: the shipped build itself was read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.vpk</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% -r %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "VITA3K",
+            "citation": "Vita3K build 3996 (commit cb1f592c): repo-wide, no savestate vocabulary — the only 'snapshot' is a comment on NID-export iteration (vita3k/modules/taiHEN/taiHEN.cpp:1331-1335) — and the shipped binary's only '_Save_state' strings are MSVC-STL thread-support symbols, not a feature",
+            "caveats": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-ruffle-answers-the-stated-no",
+      "rationale": "Ruffle at b001ac43 (the commit the shipped binary names) has no savestate machinery; its persistence is the SharedObjects tree, the save question's own open row (#247). The stated no carries the citation and nothing else.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path>\n    <extension>.swf</extension>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% --fullscreen %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "flash"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "RUFFLE",
+            "citation": "ruffle-rs/ruffle@b001ac43, the commit the shipped binary names in its version string: repo-wide, no savestate vocabulary — the player's persistence is the SharedObjects tree behind --save-directory, the save question's business (#247) — and the unfiltered scan of components/ruffle/bin/ruffle agrees",
+            "caveats": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-gzdoom-answers-the-stated-no",
+      "rationale": "GZDoom g4.14.2's whole serialization surface is its savegame system — save, quicksave rotation, autosaves, all through G_BuildSaveName into the savegames folder RetroDECK wires under saves/ — the SAVE question's business. A quicksave is not a machine snapshot, and the stated no says so with its citations.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>doom</name>\n    <path>%ROMPATH%/doom</path>\n    <extension>.wad</extension>\n    <command label=\"GZDoom (Standalone)\">%EMULATOR_GZDOOM% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "doom"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "GZDOOM",
+            "citation": "GZDoom g4.14.2: the engine's whole serialization surface is its savegame system — UNSAFE_CCMD(save) goes through G_BuildSaveName into G_SaveGame (src/console/c_cmds.cpp:702-731), quicksave rotation writes quick%02d (src/g_game.cpp:2293-2310) and autosaves auto%02d (:2271), all landing in G_GetSavegamesFolder (src/common/menu/savegamemanager.cpp:559-604) — the save question's business; no snapshot feature outside the game's own saves exists",
+            "caveats": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-ironwail-answers-the-stated-no",
+      "rationale": "ironwail v0.8.2's save command is Quake's own savegame system and the repo carries no savestate vocabulary — but neither arrangement ships a build, so the stated no carries unverified-version with verification=build-unestablished beside its citation.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>quake</name>\n    <path>%ROMPATH%/quake</path>\n    <extension>.pak</extension>\n    <command label=\"Ironwail (Standalone)\">%EMULATOR_IRONWAIL%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "quake"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "IRONWAIL",
+            "citation": "ironwail v0.8.2: the save command is Quake's own savegame system — Host_Savegame_f writes <gamedir>/<name>.sav (Quake/host_cmd.c:2373-2434, the extension at :2433, registered at :3784), autosaves under <gamedir>/autosave (:1420) — and the repository carries no savestate vocabulary at all",
+            "caveats": [
+              {
+                "code": "unverified-version",
+                "data": {
+                  "emulator": "IRONWAIL",
+                  "verification": "build-unestablished"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-openbor-answers-the-stated-no",
+      "rationale": "OpenBOR v7533 persists module progress through its own Saves tree and has no savestate feature — zero savestate vocabulary in the shipped AppImage's unfiltered scan and in the repository. The stated no, clean of caveats.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>openbor</name>\n    <path>%ROMPATH%/openbor</path>\n    <extension>.pak</extension>\n    <command label=\"OpenBOR (Standalone)\">%STARTDIR%=%GAMEDIR% %EMULATOR_OPENBOR% -c \"%ROM%\"</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "openbor"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "OPENBOR",
+            "citation": "OpenBOR v4.0 build 7533 (DCurrent/openbor v7533, the shipped AppImage): saveGameFile() writes module progress into <base>/Saves (engine/openbor.c:2764-2771; declared engine/openbor.h:4208) — the save question's business — and neither the repository nor the unfiltered scan of components/openbor/bin/OpenBOR carries any savestate vocabulary",
+            "caveats": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-pico-8-answers-the-stated-no",
+      "rationale": "PICO-8's documented surface (the v0.2.7 manual) has never had a savestate feature; persistence is CARTDATA under cdata/. The binary is the user's own copy, so the stated no carries build-unestablished beside the manual citation.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>pico8</name>\n    <path>%ROMPATH%/pico8</path>\n    <extension>.png</extension>\n    <command label=\"PICO-8 (Standalone)\">%EMULATOR_PICO-8% -root_path %GAMEDIR% -run %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "pico8"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "PICO-8",
+            "citation": "PICO-8 manual v0.2.7 (lexaloffle.com/dl/docs/pico-8_manual.html, the vendor's complete documented surface, read 2026-08-25): no savestate feature exists or ever has — cartridge persistence is CARTDATA, written under cdata/, the save question's business",
+            "caveats": [
+              {
+                "code": "unverified-version",
+                "data": {
+                  "emulator": "PICO-8",
+                  "verification": "build-unestablished"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-solarus-answers-the-stated-no",
+      "rationale": "Solarus 2.0.4 is a quest engine whose persistence is the quest-scripted savegame; no state serializer exists in the engine or its tree. The stated no, clean of caveats: the shipped library itself was scanned.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>solarus</name>\n    <path>%ROMPATH%/solarus</path>\n    <extension>.solarus</extension>\n    <command label=\"Solarus (Standalone)\">%EMULATOR_SOLARUS% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "solarus"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "no_savestates": {
+            "emulator": "SOLARUS",
+            "citation": "Solarus 2.0.4 (libsolarus.so.2.0.4, the soname the shipped launcher links): the engine's persistence is the quest-scripted savegame — Savegame::save() writes the file the quest names below the quest write directory (src/core/Savegame.cpp:353-373, the write-dir requirement at :114) — the save question's business; repo-wide the only 'saveState' is the launcher's Qt splitter call (launcher/sources/widgets/MainWindow.cpp:163) and the unfiltered engine scan carries no savestate vocabulary",
+            "caveats": []
+          }
+        }
+      }
     }
   ]
 }
