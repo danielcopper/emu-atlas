@@ -756,11 +756,17 @@ The granularity block is the same machinery the rule cards use: the readings nam
 card, where every game of a region shares one `MemoryCardA.<region>.raw` and the granularity says so. The Wii answer
 (`system="wii"`) is the NAND's `title/` tree: one unnamed directory per title, `file-names-unestablished` carrying the
 citation, and `physical_dir` pointing at the real tree behind the arrangement's symlink. A config that exists and cannot
-be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside to.
-Savestates are their own wiring and their own card family (`standalone_savestates.json`, #225): the same entry answers
-`savestate_location` through it, and an emulator without a savestate card keeps the `standalone-unsupported` refusal
-there even where its save answers (since #284 every save-carded emulator carries a savestate card too — for Cemu and
-Vita3K it is the stated no — so today that refusal marks the rows neither family has examined).
+be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside to. A
+config that reads fine but states an absolute directory only the emulator's sandbox can spell refuses with
+`emulator-config-path-untranslatable` instead — the same fact the `sandbox-path-untranslated` caveat states where an
+answer still stands around it, said as the outcome where nothing else anchors, with the stated value in `data.path`.
+`data.path` is always the primary value; where one refusal covers several stated files (xemu's save answer, naming a
+disk image and an EEPROM), `data.paths` additionally lists every untranslatable value — the disk image first, then the
+EEPROM — whenever more than one is named. Savestates are their own wiring and their own card family
+(`standalone_savestates.json`, #225): the same entry answers `savestate_location` through it, and an emulator without a
+savestate card keeps the `standalone-unsupported` refusal there even where its save answers (since #284 every
+save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today that refusal
+marks the rows neither family has examined).
 
 Three more cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
 `PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the

@@ -6257,3 +6257,175 @@ class TestPcsx2EmptyFolderKeys:
         )
         assert stated.data["dir"] == self.DATA_ROOT
         assert stated.data["count"] == "1"
+
+
+class TestAnUntranslatableConfigPathIsItsOwnRefusal:
+    """A config that reads fine but states a sandbox-only absolute path (#274).
+
+    The refusal is ``emulator-config-path-untranslatable`` with the stated
+    value in ``data["path"]`` — never ``emulator-config-unreadable``, which
+    claims a read the machine refused. One witness per emitter that translates
+    a configured absolute path through the launch's sandbox.
+    """
+
+    SANDBOX_ONLY = "/var/tmp/inside-sandbox"
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: TRIO_ESDE,
+    }
+
+    def _entry(self, system, files, esde=TRIO_ESDE):
+        rd = _retrodeck(
+            {**self.BASE, DOLPHIN_ESDE: esde, **files}, dirs=["/mnt/sd/retrodeck/saves"]
+        )
+        return rd.emulators_for(system).entries[0]
+
+    def _refused(self, outcome, path=SANDBOX_ONLY):
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE
+        assert outcome.data["path"] == path
+        assert outcome.data["emulator"]
+        assert "config" in outcome.data
+        return outcome
+
+    def test_duckstation_memory_card_directory(self):
+        entry = self._entry(
+            "psx",
+            {
+                DUCKSTATION_CONFIG_INI: (
+                    "[MemoryCards]\nCard1Type = PerGameTitle\nCard2Type = None\n"
+                    f"Directory = {self.SANDBOX_ONLY}\n"
+                )
+            },
+        )
+        self._refused(entry.savefile_location())
+
+    def test_duckstation_states_directory(self):
+        entry = self._entry(
+            "psx",
+            {DUCKSTATION_CONFIG_INI: f"[Folders]\nSaveStates = {self.SANDBOX_ONLY}\n"},
+        )
+        self._refused(entry.savestate_location())
+
+    def test_pcsx2_memory_card_directory(self):
+        entry = self._entry(
+            "ps2",
+            {
+                PCSX2_INI_PATH: (
+                    f"[Folders]\nMemoryCards = {self.SANDBOX_ONLY}\n"
+                    "[MemoryCards]\nSlot1_Enable = true\nSlot2_Enable = false\n"
+                )
+            },
+        )
+        self._refused(entry.savefile_location())
+
+    def test_pcsx2_states_directory(self):
+        entry = self._entry(
+            "ps2", {PCSX2_INI_PATH: f"[Folders]\nSavestates = {self.SANDBOX_ONLY}\n"}
+        )
+        self._refused(entry.savestate_location())
+
+    def test_azahar_sdmc_directory(self):
+        entry = self._entry(
+            "n3ds",
+            {
+                AZAHAR_INI_PATH: (
+                    "[Data%20Storage]\nuse_custom_storage=true\n"
+                    "use_custom_storage\\default=false\n"
+                    f"sdmc_directory={self.SANDBOX_ONLY}\nsdmc_directory\\default=false\n"
+                )
+            },
+        )
+        self._refused(entry.savefile_location())
+
+    def test_melonds_save_file_path(self):
+        entry = self._entry(
+            "nds",
+            {MELONDS_TOML_PATH: f'[Instance0]\nSaveFilePath = "{self.SANDBOX_ONLY}"\n'},
+        )
+        self._refused(entry.savefile_location())
+
+    def test_cemu_mlc_path(self):
+        entry = self._entry(
+            "wiiu",
+            {CEMU_XML_PATH: f"<content><mlc_path>{self.SANDBOX_ONLY}</mlc_path></content>"},
+        )
+        self._refused(entry.savefile_location())
+
+    def test_xemu_save_files(self):
+        # The aggregate branch: everything the toml names is sandbox-only, so
+        # the refusal carries the first stated path rather than dropping it.
+        entry = self._entry(
+            "xbox",
+            {XEMU_TOML_PATH: f"[sys.files]\nhdd_path = '{self.SANDBOX_ONLY}'\n"},
+        )
+        outcome = self._refused(entry.savefile_location())
+        # One named file needs no list — the scalar shape is the whole story.
+        assert "paths" not in outcome.data
+
+    def test_xemu_every_untranslated_path_reaches_the_data(self):
+        # Both named files are sandbox-only: `path` stays the primary (the
+        # hard-disk image, where the saves live) and `paths` lists every
+        # stated value, the disk image first and then the EEPROM — none
+        # survives only in prose.
+        hdd = f"{self.SANDBOX_ONLY}/hdd.qcow2"
+        eeprom = f"{self.SANDBOX_ONLY}/eeprom.bin"
+        entry = self._entry(
+            "xbox",
+            {
+                XEMU_TOML_PATH: (
+                    f"[sys.files]\nhdd_path = '{hdd}'\neeprom_path = '{eeprom}'\n"
+                )
+            },
+        )
+        outcome = self._refused(entry.savefile_location(), path=hdd)
+        assert outcome.data["paths"] == (hdd, eeprom)
+
+    def test_xemu_snapshot_disk_image(self):
+        entry = self._entry(
+            "xbox",
+            {XEMU_TOML_PATH: f"[sys.files]\nhdd_path = '{self.SANDBOX_ONLY}'\n"},
+        )
+        self._refused(entry.savestate_location())
+
+    def test_xemu_nothing_named_keeps_the_config_refusal(self):
+        # The other empty: a toml naming no file at all still refuses with the
+        # established code — no path exists for the new one to carry.
+        entry = self._entry("xbox", {XEMU_TOML_PATH: "[general]\n"})
+        outcome = entry.savefile_location()
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_vita3k_pref_path(self):
+        entry = self._entry(
+            "psvita",
+            {VITA3K_CONFIG_YML: f"pref-path: {self.SANDBOX_ONLY}\nuser-id: 00\n"},
+            esde=PER_USER_ESDE,
+        )
+        self._refused(entry.savefile_location())
+
+    def test_rpcs3_hdd0_drive(self):
+        entry = self._entry(
+            "ps3",
+            {RPCS3_VFS_YML: f"/dev_hdd0/: {self.SANDBOX_ONLY}/\n"},
+            esde=PER_USER_ESDE,
+        )
+        self._refused(entry.savefile_location(), path=f"{self.SANDBOX_ONLY}/")
+
+    def test_mame_state_directory(self):
+        esde = (
+            '<?xml version="1.0"?><systemList>'
+            "<system><name>vectrex</name><path>%ROMPATH%/vectrex</path><extension>.vec</extension>"
+            '<command label="MAME (Standalone)">%STARTDIR%=~/.mame %EMULATOR_MAME% '
+            "-inipath /var/config/mame/ini vectrex -cart %ROM%</command></system>"
+            "</systemList>"
+        )
+        ini = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini"
+        entry = self._entry(
+            "vectrex",
+            {ini: f"state_directory {self.SANDBOX_ONLY}\n"},
+            esde=esde,
+        )
+        self._refused(entry.savestate_location())

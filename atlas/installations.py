@@ -230,6 +230,7 @@ from atlas.placement import (
     FILE_SET_UNKNOWN,
     GRANULARITY_NONE,
     UNKNOWN_FILE_SET,
+    UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_MOD_WIRING_UNESTABLISHED,
     UNRESOLVED_STANDALONE,
@@ -6185,6 +6186,33 @@ def _xemu_savefile_placement(
     groups = [*disk_groups, *([eeprom_group] if eeprom_group is not None else [])]
     caveats = [*extra_caveats, *disk_caveats, *eeprom_caveats]
     if not groups:
+        # Two different empties: the config named files and none has a spelling
+        # on this host (the untranslatable-path refusal, first stated path
+        # named), or it named nothing at all for this question to anchor at.
+        untranslated = tuple(
+            str(c.data["path"])
+            for c in (*disk_caveats, *eeprom_caveats)
+            if c.code == CAVEAT_SANDBOX_PATH_UNTRANSLATED
+        )
+        if untranslated:
+            # ``path`` stays the primary — the hard-disk image, where the
+            # saves live — and ``paths`` lists every untranslatable value in
+            # this emitter's stated order (the disk image first, then the
+            # EEPROM) whenever more than one file is named.
+            data: dict[str, str | tuple[str, ...]] = {
+                "emulator": card.token,
+                "config": toml_path,
+                "path": untranslated[0],
+            }
+            if len(untranslated) > 1:
+                data["paths"] = untranslated
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the files xemu's configuration names ({', '.join(untranslated)}) have "
+                f"no spelling on this host — {toml_path} read fine, and nothing this "
+                "answer could anchor at",
+                data,
+            )
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"none of the files xemu's configuration names could be located from here "
@@ -6236,8 +6264,8 @@ def _xemu_savefile_placement(
 
 
 def _cemu_mlc_root(
-    doc: "_ET.Element | None", homes: _XdgHomes, sandbox: _Sandbox, token: str
-) -> tuple[str | None, OptionReading, tuple[Caveat, ...]]:
+    doc: "_ET.Element | None", homes: _XdgHomes, sandbox: _Sandbox, token: str, xml_path: str
+) -> tuple[str | None, OptionReading, Unresolved | None]:
     """The MLC root the way Cemu resolves it — configured, or the default."""
     configured = None
     if doc is not None:
@@ -6253,24 +6281,20 @@ def _cemu_mlc_root(
                 "settings.xml names no mlc_path — the MLC defaults to mlc01 below Cemu's "
                 "user data (ActiveSettings.cpp:265-268 at 2.6)",
             ),
-            (),
+            None,
         )
     reading = _dolphin_reading("mlc_path", configured, f'settings.xml: mlc_path = "{configured}"')
     resolved = sandbox.host("mlc_path", configured)
     if resolved.path is None:
-        return (
-            None,
-            reading,
-            (
-                Caveat(
-                    CAVEAT_SANDBOX_PATH_UNTRANSLATED,
-                    f"settings.xml sets mlc_path to {configured!r}, a path only the emulator's "
-                    "sandbox can read — the MLC could not be located from here",
-                    {"key": "mlc_path", "path": configured},
-                ),
-            ),
+        refusal = Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+            f"the MLC path Cemu's configuration names ({configured!r}) has no spelling "
+            f"on this host — {xml_path} read fine, and nothing this answer could "
+            "anchor at",
+            {"emulator": token, "config": xml_path, "path": configured},
         )
-    return resolved.path, reading, ()
+        return None, reading, refusal
+    return resolved.path, reading, None
 
 
 def _cemu_savefile_placement(
@@ -6316,15 +6340,10 @@ def _cemu_savefile_placement(
                 {"core": card.token, "reason": "an --mlc launch flag outranks the config"},
             )
         )
-    mlc_root, reading, root_caveats = _cemu_mlc_root(doc, homes, sandbox, card.token)
-    caveats.extend(root_caveats)
-    if mlc_root is None:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"the MLC path Cemu's configuration names could not be located from here "
-            f"({xml_path}) — nothing this answer could anchor at",
-            {"emulator": card.token, "config": xml_path},
-        )
+    mlc_root, reading, root_refusal = _cemu_mlc_root(doc, homes, sandbox, card.token, xml_path)
+    if root_refusal is not None:
+        return root_refusal
+    assert mlc_root is not None  # the helper resolves a root wherever it does not refuse
     tree = os.path.join(mlc_root, "usr", "save")
     physical_tree, link_caveats = _link_view(machine, tree)
     caveats.extend(link_caveats)
@@ -6490,10 +6509,11 @@ def _azahar_sdmc_root(
     resolved = sandbox.host("sdmc_directory", configured_dir)
     if resolved.path is None:
         refusal = Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"the SD path Azahar's configuration names could not be located from here "
-            f"({ini_path}) — nothing this answer could anchor at",
-            {"emulator": card.token, "config": ini_path},
+            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+            f"the SD path Azahar's configuration names ({configured_dir!r}) has no "
+            f"spelling on this host — {ini_path} read fine, and nothing this answer "
+            "could anchor at",
+            {"emulator": card.token, "config": ini_path, "path": configured_dir},
         )
         return None, tuple(readings), refusal
     return resolved.path, tuple(readings), None
@@ -6967,10 +6987,11 @@ def _duckstation_savefile_placement(
         host = sandbox.host("Directory", raw_dir)
         if host.path is None:
             return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"the memory-card directory DuckStation's configuration names could not be "
-                f"located from here ({stated_ini}) — nothing this answer could anchor at",
-                {"emulator": card.token, "config": stated_ini or ""},
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the memory-card directory DuckStation's configuration names ({raw_dir!r}) "
+                f"has no spelling on this host — {stated_ini} read fine, and nothing this "
+                "answer could anchor at",
+                {"emulator": card.token, "config": stated_ini or "", "path": raw_dir},
             )
         memcards_dir = host.path
     slots = tuple(
@@ -7178,10 +7199,11 @@ def _pcsx2_memcards_dir(
     host = sandbox.host("MemoryCards", raw_dir)
     if host.path is None:
         refusal = Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"the memory-card directory PCSX2's configuration names could not be located "
-            f"from here ({ini_path}) — nothing this answer could anchor at",
-            {"emulator": card.token, "config": ini_path},
+            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+            f"the memory-card directory PCSX2's configuration names ({raw_dir!r}) has no "
+            f"spelling on this host — {ini_path} read fine, and nothing this answer "
+            "could anchor at",
+            {"emulator": card.token, "config": ini_path, "path": raw_dir},
         )
         return None, reading, refusal
     return host.path, reading, None
@@ -7504,10 +7526,11 @@ def _melonds_root(
     host = sandbox.host(key, trimmed)
     if host.path is None:
         refusal = Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"the {what} directory melonDS's configuration names could not be located from "
-            f"here ({config.stated_file}) — nothing this answer could anchor at",
-            {"emulator": card.token, "config": config.stated_file or ""},
+            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+            f"the {what} directory melonDS's configuration names ({trimmed!r}) has no "
+            f"spelling on this host — {config.stated_file} read fine, and nothing this "
+            "answer could anchor at",
+            {"emulator": card.token, "config": config.stated_file or "", "path": trimmed},
         )
         return _MelonRoot(
             directory="", root_kind=ROOT_EMULATOR_DIRECTORY, mode="", refusal=refusal
@@ -7933,10 +7956,10 @@ def _rpcs3_savefile_placement(
     host = sandbox.host(_RPCS3_HDD0_KEY, raw)
     if host.path is None:
         return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"the drive RPCS3's VFS configuration names could not be located from here "
-            f"({vfs_path}) — nothing this answer could anchor at",
-            {"emulator": card.token, "config": vfs_path},
+            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+            f"the drive RPCS3's VFS configuration names ({raw!r}) has no spelling on "
+            f"this host — {vfs_path} read fine, and nothing this answer could anchor at",
+            {"emulator": card.token, "config": vfs_path, "path": raw},
         )
     hdd0 = host.path
     vmc = os.path.join(hdd0, _RPCS3_VMC_SUBDIR)
@@ -8365,10 +8388,11 @@ def _vita3k_savefile_placement(
     host = sandbox.host(_VITA3K_PREF_PATH_KEY, stated)
     if host.path is None:
         return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"the preference path Vita3K's configuration names could not be located from "
-            f"here ({config_path}) — nothing this answer could anchor at",
-            {"emulator": card.token, "config": config_path},
+            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+            f"the preference path Vita3K's configuration names ({stated!r}) has no "
+            f"spelling on this host — {config_path} read fine, and nothing this answer "
+            "could anchor at",
+            {"emulator": card.token, "config": config_path, "path": stated},
         )
     user_root = os.path.join(host.path, _VITA3K_USER_TREE)
     listing, users = _per_user_listing(machine, user_root)
@@ -8682,10 +8706,11 @@ def _pcsx2_savestate_placement(
         host = sandbox.host(setting.key, raw)
         if host.path is None:
             return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"the states directory PCSX2's configuration names could not be located "
-                f"from here ({ini_path}) — nothing this answer could anchor at",
-                {"emulator": card.token, "config": ini_path},
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the states directory PCSX2's configuration names ({raw!r}) has no "
+                f"spelling on this host — {ini_path} read fine, and nothing this answer "
+                "could anchor at",
+                {"emulator": card.token, "config": ini_path, "path": raw},
             )
         directory = host.path
     else:
@@ -8765,10 +8790,11 @@ def _duckstation_savestate_placement(
         host = sandbox.host(setting.key, raw)
         if host.path is None:
             return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"the states directory DuckStation's configuration names could not be "
-                f"located from here ({stated_ini}) — nothing this answer could anchor at",
-                {"emulator": card.token, "config": stated_ini or ""},
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the states directory DuckStation's configuration names ({raw!r}) has "
+                f"no spelling on this host — {stated_ini} read fine, and nothing this "
+                "answer could anchor at",
+                {"emulator": card.token, "config": stated_ini or "", "path": raw},
             )
         directory = host.path
         reading = f'settings.ini: [{setting.section}] {spelled} = "{raw}"'
@@ -8953,10 +8979,11 @@ def _xemu_savestate_placement(
     host = sandbox.host(stated.key, hdd)
     if host.path is None:
         return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"the hard-disk image xemu's configuration names could not be located from "
-            f"here ({toml_path}) — nothing this answer could anchor at",
-            {"emulator": card.token, "config": toml_path},
+            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+            f"the hard-disk image xemu's configuration names ({hdd!r}) has no spelling "
+            f"on this host — {toml_path} read fine, and nothing this answer could "
+            "anchor at",
+            {"emulator": card.token, "config": toml_path, "path": hdd},
         )
     directory, image = os.path.split(host.path)
     physical, link_caveats = _link_view(machine, directory)
@@ -9611,11 +9638,15 @@ def _mame_root_anchor(
         host = sandbox.host(key, substituted)
         if host.path is None:
             return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"the states directory MAME's configuration names could not be located "
-                f"from here ({stated_ini or shape.file}) — nothing this answer could "
-                "anchor at",
-                {"emulator": card.token, "config": stated_ini or shape.file},
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the states directory MAME's configuration names ({substituted!r}) has "
+                f"no spelling on this host — {stated_ini or shape.file} read fine, and "
+                "nothing this answer could anchor at",
+                {
+                    "emulator": card.token,
+                    "config": stated_ini or shape.file,
+                    "path": substituted,
+                },
             )
         return _MameStateRoot(host.path, STATE_ROOT_EMULATOR_DIRECTORY, reading + host.note)
     if cwd is not None:

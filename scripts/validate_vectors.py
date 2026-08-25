@@ -411,6 +411,7 @@ KNOWN_UNRESOLVED_CODES = {
     "texture-wiring-unestablished",
     "mod-wiring-unestablished",
     "emulator-config-unreadable",
+    "emulator-config-path-untranslatable",
 }
 
 

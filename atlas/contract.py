@@ -261,8 +261,20 @@ def soft_patch_contract(answer: SoftPatchAnswer) -> dict[str, Any]:
 
 
 def unresolved_contract(unresolved: Unresolved) -> dict[str, Any]:
-    """The stable form of an :class:`~atlas.placement.Unresolved` outcome."""
-    return {"unresolved": {"code": unresolved.code, "data": dict(unresolved.data)}}
+    """The stable form of an :class:`~atlas.placement.Unresolved` outcome.
+
+    Tuple-valued data (an aggregate refusal's ``paths``) serializes as the
+    JSON list it is in the written contract.
+    """
+    return {
+        "unresolved": {
+            "code": unresolved.code,
+            "data": {
+                key: list(value) if isinstance(value, tuple) else value
+                for key, value in unresolved.data.items()
+            },
+        }
+    }
 
 
 def _findings_contract(health: Health) -> list[dict[str, Any]]:
