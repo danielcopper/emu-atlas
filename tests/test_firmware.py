@@ -2508,13 +2508,10 @@ class TestAlternativesAreOneOfSeveralNotSeveralNeeds:
     def test_two_options_one_region_could_pick_between_are_refused(self):
         # Overlapping scopes would leave the pick unstated — the exact defect
         # the shape exists to remove.
+        first = _region_option("scph5501.bin", ("ntsc-u",))
+        overlapping = _region_option("scph5500.bin", ("ntsc-u", "ntsc-j"))
         with pytest.raises(ValueError):
-            FirmwareAlternatives(
-                options=(
-                    _region_option("scph5501.bin", ("ntsc-u",)),
-                    _region_option("scph5500.bin", ("ntsc-u", "ntsc-j")),
-                )
-            )
+            FirmwareAlternatives(options=(first, overlapping))
 
     def test_a_group_met_for_every_region_is_satisfied(self):
         group = FirmwareAlternatives(
@@ -2546,11 +2543,12 @@ class TestAlternativesAreOneOfSeveralNotSeveralNeeds:
         assert group.satisfied is None
 
     def test_a_region_scoped_requirement_outside_a_group_is_refused(self):
+        scoped = _region_option("scph5501.bin", ("ntsc-u",))
+        provenance = Caveat("firmware-packaged-declaration", "", {})
         with pytest.raises(ValueError):
             CoreFirmware(
                 core_so=None, label="DuckStation", declaration="packaged",
-                requirements=(_region_option("scph5501.bin", ("ntsc-u",)),),
-                caveats=(Caveat("firmware-packaged-declaration", "", {}),),
+                requirements=(scoped,), caveats=(provenance,),
             )
 
 
