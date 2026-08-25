@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import atlas
 from atlas.machine import FixtureMachine
 from atlas.contract import health_contract, installation_contract
@@ -113,3 +115,49 @@ class TestTheSavestateFormOmitsGranularity:
     def test_the_form_is_json(self):
         _, state = self._placements()
         assert json.loads(json.dumps(state)) == state
+
+
+class TestTheStatedNoIsItsOwnShape:
+    """#284: ``no_savestates`` is an answer — not a placement, not a refusal."""
+
+    def _absence(self, **overrides):
+        stated = {
+            "emulator": "DEMO",
+            "citation": "the whole tree at v1: no state serializer",
+            "sources": ("standalone savestate card 'DEMO': prose",),
+        }
+        stated.update(overrides)
+        return atlas.SavestateAbsence(**stated)
+
+    def test_the_answer_serializer_branches_to_it(self):
+        block = atlas.savestate_answer_contract(self._absence())
+        assert set(block) == {"no_savestates"}
+        assert block["no_savestates"]["emulator"] == "DEMO"
+        assert block["no_savestates"]["citation"].startswith("the whole tree")
+        assert block["no_savestates"]["caveats"] == []
+
+    def test_the_cards_own_caveat_rides_contractually(self):
+        caveat = atlas.Caveat(
+            atlas.CAVEAT_UNVERIFIED_VERSION,
+            "nothing ships this emulator",
+            {"emulator": "DEMO", "verification": "build-unestablished"},
+        )
+        block = atlas.savestate_absence_contract(self._absence(caveats=(caveat,)))
+        assert block["no_savestates"]["caveats"] == [
+            {
+                "code": "unverified-version",
+                "data": {"emulator": "DEMO", "verification": "build-unestablished"},
+            }
+        ]
+
+    def test_sources_stay_out_like_every_provenance(self):
+        block = atlas.savestate_absence_contract(self._absence())
+        assert "sources" not in block["no_savestates"]
+
+    def test_a_citation_free_no_cannot_exist(self):
+        with pytest.raises(ValueError, match="citation"):
+            self._absence(citation="")
+
+    def test_the_form_is_json(self):
+        block = atlas.savestate_absence_contract(self._absence())
+        assert json.loads(json.dumps(block)) == block

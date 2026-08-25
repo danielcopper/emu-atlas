@@ -1799,13 +1799,406 @@ class TestDolphinStandaloneSaves:
         rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
         entry = rd.emulators_for("gc").entries[0]
         p = entry.savestate_location()
-        assert not isinstance(p, atlas.Unresolved)
+        assert isinstance(p, atlas.SavestatePlacement)
         assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/StateSaves"
         assert p.root_kind == "emulator_directory"
         assert p.file_set.state == "unknown"
         named = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
         assert named.data["pattern"] == "<game_id>.s<slot>"
         assert named.data["citation"] == "State.cpp:304-308"
+
+
+class TestTheStatedNoIsAnAnswer:
+    """#284: an absence card answers the states question — not a refusal.
+
+    The vector family pins the contract blocks; what lives here is the split
+    a vector cannot show as sharply: no path-derived caveat ever rides the
+    stated no (the absence names no path to qualify), while everything that
+    qualifies the CLAIM does ride — the card's own build statement, and the
+    arrangement's evidence caveats, because the no is world knowledge pinned
+    to a verified arrangement's build.
+    """
+
+    CEMU_ESDE = (
+        '<?xml version="1.0"?><systemList>'
+        "<system><name>wiiu</name><path>%ROMPATH%/wiiu</path><extension>.wua</extension>"
+        '<command label="Cemu (Standalone)">%EMULATOR_CEMU% -g %ROM%</command></system>'
+        "</systemList>"
+    )
+
+    def _entry(self, marker=RD_JSON):
+        files = {
+            RETRODECK_JSON: marker,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: self.CEMU_ESDE,
+        }
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for("wiiu").entries[0]
+
+    def test_the_absence_answers_with_its_citation(self):
+        outcome = self._entry().savestate_location()
+        assert isinstance(outcome, atlas.SavestateAbsence)
+        assert outcome.emulator == "CEMU"
+        assert "feature_report.yaml:18" in outcome.citation
+        assert outcome.caveats == ()
+
+    def test_no_path_caveat_rides_a_statement_about_the_emulator(self):
+        # A broken marker degrades every placement this installation
+        # resolves; the stated no names no path those findings could qualify,
+        # so it reads identically on a healthy and a broken arrangement.
+        broken = self._entry(marker="{not json").savestate_location()
+        healthy = self._entry().savestate_location()
+        assert broken == healthy
+
+    def test_a_drifted_arrangement_version_qualifies_the_claim(self):
+        # The no is pinned to the build the verified arrangement ships; a
+        # machine stating another version carries the same evidence caveat
+        # every placement carries (arrangement_caveats, atlas/evidence.py).
+        marker = (
+            '{"version": "9.9.9", "paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+            '"saves_path": "/mnt/sd/retrodeck/saves"}}'
+        )
+        outcome = self._entry(marker=marker).savestate_location()
+        assert isinstance(outcome, atlas.SavestateAbsence)
+        drifted = [c for c in outcome.caveats if c.code == "arrangement-version-drifted"]
+        assert drifted
+        assert drifted[0].data["observed"] == "9.9.9"
+
+    def test_the_verified_arrangement_version_rides_nothing(self):
+        marker = (
+            '{"version": "0.10.9b", "paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+            '"saves_path": "/mnt/sd/retrodeck/saves"}}'
+        )
+        outcome = self._entry(marker=marker).savestate_location()
+        assert isinstance(outcome, atlas.SavestateAbsence)
+        assert outcome.caveats == ()
+
+    GAMELIST = "/mnt/sd/retrodeck/ES-DE/gamelists/wiiu/gamelist.xml"
+    CONTENT = "/mnt/sd/retrodeck/roms/wiiu/Game.wua"
+
+    def _entry_with_gamelist(self, gamelist):
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: self.CEMU_ESDE,
+            ESDE_SETTINGS: (
+                '<?xml version="1.0"?>\n'
+                '<string name="ROMDirectory" value="/mnt/sd/retrodeck/roms" />\n'
+            ),
+            self.CONTENT: "",
+        }
+        if gamelist is not None:
+            files[self.GAMELIST] = gamelist
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for("wiiu").entries[0]
+
+    def test_a_per_game_override_rides_the_stated_no(self):
+        # A gamelist that would launch a different emulator for this game is
+        # a statement about emulator IDENTITY, not about a path: "Cemu has no
+        # savestates" needs the rider that Cemu may not be what runs — the
+        # exact caveat the save twin carries for the same entry and game.
+        gamelist = (
+            '<?xml version="1.0"?>\n<gameList>\n\t<game>\n\t\t<path>./Game.wua</path>\n'
+            "\t\t<altemulator>Cemu (Proton)</altemulator>\n\t</game>\n</gameList>\n"
+        )
+        entry = self._entry_with_gamelist(gamelist)
+        states = entry.savestate_location(content_path=self.CONTENT)
+        assert isinstance(states, atlas.SavestateAbsence)
+        codes = [c.code for c in states.caveats]
+        assert atlas.CAVEAT_PER_GAME_OVERRIDE in codes
+
+    def test_without_an_override_the_stated_no_stays_clean(self):
+        gamelist = (
+            '<?xml version="1.0"?>\n<gameList>\n\t<game>\n\t\t<path>./Game.wua</path>\n'
+            "\t</game>\n</gameList>\n"
+        )
+        states = self._entry_with_gamelist(gamelist).savestate_location(
+            content_path=self.CONTENT
+        )
+        assert isinstance(states, atlas.SavestateAbsence)
+        assert atlas.CAVEAT_PER_GAME_OVERRIDE not in [c.code for c in states.caveats]
+
+    def test_the_save_question_still_walks_its_own_route(self):
+        # The two questions about one entry stay independent: the save answer
+        # resolves Cemu's MLC tree while the states answer is the stated no.
+        entry = self._entry()
+        save = entry.savefile_location()
+        assert isinstance(save, atlas.SavefilePlacement)
+        assert isinstance(entry.savestate_location(), atlas.SavestateAbsence)
+
+
+class TestMameReadingPrimitives:
+    """The MAME grammar mirrors, tested against the upstream rules they cite."""
+
+    def test_ini_values_follow_mames_grammar(self):
+        from atlas.installations import _mame_ini_values  # pyright: ignore[reportPrivateUsage]
+
+        text = (
+            "#\n# COMMENT\n#\n"
+            "state_directory           /mnt/states   # trailing comment\n"
+            'snapname                  "%g/%i"\n'
+            "invalidlinewithoutvalue\n"
+            'quoted_hash               "a#b"\n'
+            "state_directory           /mnt/wins\n"
+        )
+        values = _mame_ini_values(text)
+        # spaces trimmed, comment cut outside quotes, quotes trimmed once,
+        # a '#' inside quotes kept, the LAST duplicate winning (options.cpp:270)
+        assert values["state_directory"] == "/mnt/wins"
+        assert values["snapname"] == "%g/%i"
+        assert values["quoted_hash"] == "a#b"
+        assert "invalidlinewithoutvalue" not in values
+
+    def test_env_substitution_mirrors_osd_subst_env(self):
+        from atlas.installations import _mame_subst_env  # pyright: ignore[reportPrivateUsage]
+
+        env = {"HOME": "/home/deck", "XDG_CONFIG_HOME": "/home/deck/.var/app/x/config"}
+        assert _mame_subst_env("~/.mame", env) == ("/home/deck/.mame", None)
+        assert _mame_subst_env("$XDG_CONFIG_HOME/mame", env) == (
+            "/home/deck/.var/app/x/config/mame",
+            None,
+        )
+        assert _mame_subst_env("${HOME}/.mame", env) == ("/home/deck/.mame", None)
+        # a ~ not followed by a separator stays literal (posixdir.cpp:248-252)
+        assert _mame_subst_env("~backup", env) == ("~backup", None)
+        # a variable outside the pinned set refuses instead of guessing
+        assert _mame_subst_env("$rd_home_states_path/mame-sa", env) == (
+            None,
+            "rd_home_states_path",
+        )
+
+    def test_the_command_yields_inipath_startdir_and_machine(self):
+        from atlas.installations import _mame_launch_reading  # pyright: ignore[reportPrivateUsage]
+
+        launch = _mame_launch_reading(
+            "%STARTDIR%=~/.mame %EMULATOR_MAME% -inipath /var/config/mame/ini "
+            "-rompath %GAMEDIR%\\;%ROMPATH%/adam adam -flop1 %ROM%"
+        )
+        assert launch.inipath == "/var/config/mame/ini"
+        assert launch.startdir == "~/.mame"
+        assert launch.machine_name == "adam"
+        assert not launch.machine_is_content
+
+    def test_the_arcade_machine_is_the_roms_own_basename(self):
+        from atlas.installations import _mame_launch_reading  # pyright: ignore[reportPrivateUsage]
+
+        launch = _mame_launch_reading(
+            "%EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %ROMPATH%/arcade %BASENAME%"
+        )
+        assert launch.machine_is_content
+        assert launch.machine_name is None
+
+    def test_a_flag_value_is_never_mistaken_for_the_machine(self):
+        from atlas.installations import _mame_launch_reading  # pyright: ignore[reportPrivateUsage]
+
+        # astrocde: the machine comes before -cart %BASENAME%, whose value a
+        # pairwise scan must consume rather than surface.
+        launch = _mame_launch_reading(
+            "%EMULATOR_MAME% -rompath %ROMPATH%/astrocde astrocde -cart %BASENAME%"
+        )
+        assert launch.machine_name == "astrocde"
+        assert not launch.machine_is_content
+
+    def test_an_untokenizable_command_states_nothing(self):
+        from atlas.installations import _mame_launch_reading  # pyright: ignore[reportPrivateUsage]
+
+        launch = _mame_launch_reading('%EMULATOR_MAME% -autoboot_command "unclosed')
+        assert launch == type(launch)(None, None, None, False)
+
+
+class TestMameTemplatedDirIsNeverLinkWalked:
+    """A <rom_stem> hole is a shape, not a path — walking it invents dead links."""
+
+    ARCADE = (
+        '<?xml version="1.0"?><systemList>'
+        "<system><name>arcade</name><path>%ROMPATH%/arcade</path><extension>.zip</extension>"
+        '<command label="MAME (Standalone)">%EMULATOR_MAME% -inipath /var/config/mame/ini '
+        "-rompath %ROMPATH%/arcade %BASENAME%</command></system>"
+        "</systemList>"
+    )
+    INI = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini"
+
+    def _entry(self):
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: self.ARCADE,
+            self.INI: "state_directory           /mnt/sd/retrodeck/states/mame-sa\n",
+        }
+        rd = _retrodeck(
+            files,
+            dirs=[
+                "/mnt/sd/retrodeck/saves",
+                "/mnt/sd/backing/mame-states",
+                "/mnt/sd/backing/mame-states/sfiii3",
+            ],
+            symlinks={"/mnt/sd/retrodeck/states/mame-sa": "/mnt/sd/backing/mame-states"},
+        )
+        return rd.emulators_for("arcade").entries[0]
+
+    def test_the_templated_dir_carries_no_link_caveats(self):
+        p = self._entry().savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir.endswith("/mame-sa/<rom_stem>")
+        assert p.physical_dir is None
+        assert atlas.CAVEAT_DEAD_SYMLINK not in [c.code for c in p.caveats]
+
+    def test_a_concrete_dir_still_walks_the_arrangements_link(self):
+        p = self._entry().savestate_location(content_path="/mnt/sd/roms/arcade/sfiii3.zip")
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir.endswith("/mame-sa/sfiii3")
+        assert p.physical_dir == "/mnt/sd/backing/mame-states/sfiii3"
+
+
+class TestMameEdgeBranches:
+    """Witnesses for the reading's corner branches — every caveat site pinned."""
+
+    INI = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini"
+
+    def _entry(self, ini, command_tail="vectrex -cart %ROM%", startdir="%STARTDIR%=~/.mame "):
+        esde = (
+            '<?xml version="1.0"?><systemList>'
+            "<system><name>vectrex</name><path>%ROMPATH%/vectrex</path><extension>.vec</extension>"
+            f'<command label="MAME (Standalone)">{startdir}%EMULATOR_MAME% '
+            f"-inipath /var/config/mame/ini {command_tail}</command></system>"
+            "</systemList>"
+        )
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: esde,
+        }
+        if isinstance(ini, dict):
+            files.update(ini)
+        elif ini is not None:
+            files[self.INI] = ini
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for("vectrex").entries[0]
+
+    def test_an_explicitly_empty_value_is_kept_not_defaulted(self):
+        # MAME keeps a present-empty option (options.cpp:1041 via :262-278):
+        # the searchpath is "" and the states land at <cwd>/<machine>, with
+        # no 'sta' segment — the compiled default does NOT come back.
+        p = self._entry('state_directory ""\n').savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == f"{HOME}/.mame/vectrex"
+
+    def test_an_empty_statename_reverts_to_the_machine_default(self):
+        # get_statename assigns "%g" for a null OR empty option
+        # (machine.cpp:477-478) — a present-empty statename is not an empty
+        # literal subdirectory, and the machine word governs.
+        p = self._entry(
+            'state_directory           /mnt/sd/states\nstatename                 ""\n'
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states/vectrex"
+        assert p.file_set.state == "declared"
+
+    def test_a_statename_template_refuses_the_subdirectory(self):
+        p = self._entry(
+            "state_directory           /mnt/sd/states\nstatename                 %d_cart/%g\n"
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states"
+        assert p.file_set.state == "unknown"
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_UNKNOWN_OPTION_VALUE in codes
+        named = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert "template" in named.message
+
+    def test_a_literal_statename_strips_its_extension_like_the_emulator(self):
+        # get_statename strips after the last '.' (machine.cpp:482-485).
+        p = self._entry(
+            "state_directory           /mnt/sd/states\nstatename                 myruns.bak\n"
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states/myruns"
+
+    def test_a_launch_naming_no_system_leaves_the_subdirectory_open(self):
+        # Bare MAME opens its own system picker; which machine's subdirectory
+        # this run writes is that pick, so the root is stated and the names
+        # caveat says why the entries are refused.
+        p = self._entry(
+            "state_directory           /mnt/sd/states\n", command_tail=""
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states"
+        assert p.file_set.state == "unknown"
+        named = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert "names no system" in named.message
+
+    def test_a_populated_source_directory_is_flagged_not_skipped(self):
+        # parse_standard_inis also reads source/<sourcefile>.ini one
+        # directory down (mameopts.cpp:85-87) — a populated source/ tree is
+        # part of the unread layer and must be named, not silently missed.
+        p = self._entry(
+            {
+                self.INI: "state_directory           /mnt/sd/states\n",
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini/source/vectrex.ini": (
+                    "state_directory           /mnt/sd/elsewhere\n"
+                ),
+            }
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        layer = next(c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD)
+        assert "source/vectrex.ini" in layer.data["files"]
+
+
+class TestMameSecondIniParse:
+    """mame.ini is parsed twice so the first pass can move the ini path.
+
+    mameopts.cpp:39-42: without a CLI -inipath, an inipath line in the found
+    mame.ini relocates the search path and the SAME basename is parsed again
+    from there, its lines overriding at equal priority (options.cpp:270).
+    """
+
+    ESDE = (
+        '<?xml version="1.0"?><systemList>'
+        "<system><name>vectrex</name><path>%ROMPATH%/vectrex</path><extension>.vec</extension>"
+        '<command label="MAME (Standalone)">%STARTDIR%=~/.mame %EMULATOR_MAME% '
+        "-rompath %ROMPATH%/vectrex vectrex -cart %ROM%</command></system>"
+        "</systemList>"
+    )
+
+    def _entry(self, files):
+        base = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: self.ESDE,
+        }
+        base.update(files)
+        rd = _retrodeck(base, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for("vectrex").entries[0]
+
+    def test_a_moved_ini_path_reparses_the_same_basename(self):
+        p = self._entry(
+            {
+                f"{HOME}/.mame/mame.ini": (
+                    "inipath                   /mnt/sd/inis\n"
+                    "state_directory           /mnt/sd/first\n"
+                ),
+                "/mnt/sd/inis/mame.ini": "state_directory           /mnt/sd/second\n",
+            }
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/second/vectrex"
+
+    def test_a_move_to_nowhere_keeps_the_first_files_values(self):
+        p = self._entry(
+            {
+                f"{HOME}/.mame/mame.ini": (
+                    "inipath                   /mnt/sd/inis\n"
+                    "state_directory           /mnt/sd/first\n"
+                ),
+            }
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/first/vectrex"
 
 
 TRIO_ESDE = (
@@ -5816,12 +6209,12 @@ class TestPcsx2EmptyFolderKeys:
 
     def test_an_empty_savestates_line_lands_the_states_on_the_dataroot(self):
         p = self._entry("[Folders]\nSaveStates =\n").savestate_location()
-        assert not isinstance(p, atlas.Unresolved)
+        assert isinstance(p, atlas.SavestatePlacement)
         assert p.dir == self.DATA_ROOT
 
     def test_an_absent_savestates_key_keeps_the_compiled_default(self):
         p = self._entry("[Folders]\nMemoryCards = /mnt/sd/cards\n").savestate_location()
-        assert not isinstance(p, atlas.Unresolved)
+        assert isinstance(p, atlas.SavestatePlacement)
         assert p.dir == f"{self.DATA_ROOT}/sstates"
 
     def test_an_empty_memorycards_line_lands_the_cards_on_the_dataroot(self):

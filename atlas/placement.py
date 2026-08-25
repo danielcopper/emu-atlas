@@ -401,6 +401,17 @@ CAVEAT_SAVE_INSIDE_CONTENT = "save-inside-content"
 # image up whole or leaves it, and a tool that parses the image's filesystem
 # has the layout stated machine-readably instead of rediscovering it.
 CAVEAT_SAVE_INSIDE_IMAGE = "save-inside-image"
+# The save-inside-image statement, one question over: the savestates live
+# inside a disk image the answer names as a file. xemu's snapshots are QEMU
+# internal snapshots — the VM state is written into the qcow2 hard-disk image
+# and the snapshot record spans every snapshot-capable device, of which that
+# image is the only one, and xemu's own snapshot browser reads them back out
+# of the file hdd_path names. Nothing outside the image is addressable per
+# snapshot — there is no file per state — so a file-level client backs the
+# image up whole, and ``data`` carries the image and the cited naming of the
+# entries inside it so a qcow2-aware tool has the layout stated
+# machine-readably instead of rediscovering it.
+CAVEAT_SAVESTATE_INSIDE_IMAGE = "savestate-inside-image"
 # The inside-content statement's harder sibling: this configuration keeps no
 # save at all — the writes are discarded (hatari with write protection on
 # throws the modified image away at eject). The declared emptiness is the
@@ -446,6 +457,16 @@ CAVEAT_CONTENT_PATH_UNNAMED = "content-path-unnamed"
 # caveat is what keeps "here is the directory" from reading as "and states will
 # appear in it".
 CAVEAT_CORE_SAVESTATES_UNSUPPORTED = "core-savestates-unsupported"
+# The declaration caveat's standalone sibling, per machine instead of per
+# core: MAME flags save-state support driver by driver (MACHINE_SUPPORTS_SAVE,
+# gamedrv.h:76 at mame0287), the flags are compiled into the binary, and no
+# read of this machine can say which side the launched system falls on. An
+# unflagged system still WRITES the state file — MAME saves it and warns
+# "Save states are not officially supported for this system"
+# (machine.cpp:927-928) — so the placement stands, and this caveat is what
+# keeps "here is the directory" from reading as "and every machine's states
+# are reliable". ``data`` carries the emulator and the citation.
+CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT = "savestate-support-machine-dependent"
 # A directory is stated, and that this emulator reads it is not established.
 # The texture family's own degradation, and one level weaker than every other
 # code here: those qualify an answer atlas resolved, this one qualifies the
@@ -1003,6 +1024,48 @@ class SavestatePlacement:
         if self.root_kind not in STATE_ROOT_KINDS:
             raise ValueError(
                 f"SavestatePlacement: root_kind must be one of {STATE_ROOT_KINDS}, got {self.root_kind!r}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class SavestateAbsence:
+    """This emulator has no savestates — a stated, cited fact, and an answer.
+
+    The savestate question's third shape (#284), beside the placement and the
+    refusal, because "the feature does not exist" is neither: a refusal says
+    atlas cannot answer, a placement would have to invent a directory that is
+    not there, and this says the answer is *nowhere* — Cemu 2.6 ships no state
+    serializer, the Ryujinx lineage never had one. ``citation`` is the
+    evidence for the no (the spans and scans that establish it, contractual —
+    a client repeating the claim repeats its source); ``sources`` is the
+    card's provenance prose, non-contractual like every provenance.
+
+    ``caveats`` carries what qualifies the *claim*, never what qualifies a
+    tree: the card's own ``unverified-version`` where no shipped build pins
+    the claim (nothing ships Ryubing; the record reads a release); the
+    arrangement's evidence caveats — a stated no is world knowledge pinned to
+    the build an arrangement was verified with, so an arrangement atlas never
+    observed, or one observed on another version, says so here exactly as it
+    does on a placement; and the entry's catalogue-status and per-game
+    override caveats — a gamelist that would launch a DIFFERENT emulator for
+    this game is a statement about emulator identity, and "this emulator has
+    no savestates" needs the rider that this emulator may not be what runs.
+    Tree-derived caveats (health findings, link walks) do not ride: the
+    absence names no path for them to qualify.
+    """
+
+    emulator: str
+    citation: str
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.emulator:
+            raise ValueError("SavestateAbsence: emulator must be non-empty")
+        if not self.citation:
+            raise ValueError(
+                "SavestateAbsence: citation must be non-empty — a stated no without its "
+                "evidence is indistinguishable from a guess"
             )
 
 

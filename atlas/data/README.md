@@ -587,15 +587,37 @@ identity and binary-variant gate as the save answer, so the two questions about 
 binary runs; which flatpak app id that gate reads trees under stays the **save** card's record — this file deliberately
 has no `flatpak` field, because a second copy could only drift from the first.
 
-A card states where the states tree hangs, one of two ways and exactly one (the standalone texture cards' rule): `base`
-plus `subdir` for a compiled join below the emulator's own directory — Dolphin's and PrimeHack's `StateSaves` under the
-data tree, PPSSPP's `PSP/PPSSPP_STATE` and RPCS3's `savestates` under the config tree, Azahar's `states` under data — or
-a `directory` setting (section, key, compiled default) for an emulator whose configuration names it: PCSX2's
+A card makes its statement one of five ways and exactly one (#284 widened the standalone texture cards' two-way rule):
+`base` plus `subdir` for a compiled join below the emulator's own directory — Dolphin's and PrimeHack's `StateSaves`
+under the data tree, PPSSPP's `PSP/PPSSPP_STATE` and RPCS3's `savestates` under the config tree, Azahar's `states` under
+data — or a `directory` setting (section, key, compiled default) for an emulator whose configuration names it: PCSX2's
 `[Folders] Savestates` (default `sstates` below the DataRoot), melonDS's `[Instance0] SavestatePath` (default empty —
 the state lands beside the ROM), DuckStation's `[Folders] SaveStates` (default `savestates` below the probed DataRoot).
 The two ini-kept keys are matched the way SimpleIni matches them — ASCII case-insensitively, last occurrence winning —
 which is the fact the family's first question turned on: RetroDECK writes PCSX2's key spelled `SaveStates` while the
 source reads `"Savestates"` (Pcsx2Config.cpp:2284 at v2.6.3), and the written line governs.
+
+The three #284 shapes state what no directory statement can spell. `inside_image` (xemu): the states are QEMU internal
+snapshots written INTO the qcow2 that `[sys.files] hdd_path` names — no file per state exists — so the answer names the
+image and the `savestate-inside-image` caveat carries it with the entry naming (user-chosen, else `vm-YYYYMMDDhhmmss`).
+`launch_ini` (MAME): the governing `mame.ini` is addressed by the launch command's `-inipath` (else the shipped builds'
+compiled `$HOME/.mame;/app/share/mame/ini` search path — the Flathub build define, byte-proven in the shipped binary,
+not upstream's `#ifndef` fallback; the `/app` element resolves against the running deploy, which for RetroDECK carries
+no `share/mame` at all), the one case `emulator_settings.json` deliberately cannot state, so the card names the file and
+the keys (`state_directory` default `sta`, `statename` default `%g`) and the resolver reads them with MAME's own
+grammar; every MAME answer carries `savestate-support-machine-dependent`, because `MACHINE_SUPPORTS_SAVE` is compiled
+per driver and an unflagged machine still writes the file with a warning. `absent` (Cemu, Vita3K, Ryubing, Ruffle,
+GZDoom, ironwail, OpenBOR, PICO-8, Solarus): the emulator has **no savestates**, stated as a cited fact — the answer
+serializes as `no_savestates` with the citation, an answer and never a refusal; an absence card states no names, no
+settings and no anchors, registers no resolver, and answers before the EmuDeck variant gate, because the fact is the
+emulator's and not the launch's. Where no shipped build pins the claim (nothing ships Ryubing or ironwail; PICO-8's
+binary is the user's own), the card's `build_unestablished` sentence rides the answer as the `unverified-version`
+caveat, the arrangement's evidence caveats ride it like any placement's — a stated no is world knowledge pinned to a
+verified arrangement's build — and so do the entry's catalogue-status and per-game-override caveats, because a gamelist
+that would launch a different emulator for this game is a statement about emulator identity, not about a path.
+Tree-derived caveats (health findings, link walks) stay off, because the absence names no path for them to qualify. The
+source ports' savegame and quicksave trees are the **save** question's business and their cards say so — a Doom savegame
+is not a machine snapshot, and the two questions stay unblurred.
 
 `names` is the field the save cards never needed: every one of these emulators names its states itself, from an identity
 of the running game — PCSX2's `<serial> (<crc>).<slot>.p2s`, Dolphin's `<game_id>.s<slot>`, PPSSPP's
@@ -610,10 +632,11 @@ unparseable TOML).
 `citations` follow the save cards' rule (#246): the shared fixed-tree resolver speaks the card's `build`/`tree`/`names`
 slots rather than its own line numbers, per build where the builds differ — PrimeHack's `installations` block cites
 shiiion/dolphin 81bfb96 for RetroDECK's component and 53f53e0 for the Flathub flatpak EmuDeck installs. The bespoke
-readings (PCSX2, melonDS, DuckStation) serve one emulator each and carry their citations inline, like their savefile
-twins. Anchors ride the byte tripwire the texture and mod tables ride (#105): every recorded word — `StateSaves`,
-`PPSSPP_STATE`, `Savestates`, `sstates`, `SavestatePath`, the settings file names — is re-read raw from the shipped
-binary it was verified in.
+readings (PCSX2, melonDS, DuckStation, xemu, MAME) serve one emulator each and carry their citations inline, like their
+savefile twins. Anchors ride the byte tripwire the texture and mod tables ride (#105): every recorded word —
+`StateSaves`, `PPSSPP_STATE`, `Savestates`, `sstates`, `SavestatePath`, `hdd_path`, `state_directory`, `statename`, the
+settings file names — is re-read raw from the shipped binary it was verified in, with one curated opt-out: `mame.ini` is
+composed at run time from `get_configname() + ".ini"` and exists nowhere in the binary as bytes.
 
 ## `standalone_firmware.json` — what a standalone emulator expects beside its content
 

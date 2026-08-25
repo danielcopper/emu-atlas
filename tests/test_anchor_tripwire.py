@@ -168,7 +168,14 @@ class TestEveryRecordedNameIsAnchored:
             for name, anchor in entry.get("anchors", {}).get("names", {}).items()
             if "unprotected" in anchor
         )
-        assert unprotected == [], (
+        assert unprotected == [
+            # MAME never stores its config file's whole name: parse_one_ini
+            # composes it at run time from get_configname() + ".ini"
+            # (mameopts.cpp:125 at mame0287), so the literal is nowhere in the
+            # shipped binary (verified raw) and its fragments are too generic
+            # to pin.
+            ("savestates", "emulators", "MAME", "mame.ini"),
+        ], (
             "the set of recorded names no anchor watches has changed — every entry here is a "
             "name the byte tripwire cannot reach, so confirm the new one really cannot be "
             "pinned to a literal (whole or fragment, in any recorded encoding) before "

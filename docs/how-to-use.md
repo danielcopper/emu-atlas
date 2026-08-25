@@ -759,7 +759,8 @@ citation, and `physical_dir` pointing at the real tree behind the arrangement's 
 be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside to.
 Savestates are their own wiring and their own card family (`standalone_savestates.json`, #225): the same entry answers
 `savestate_location` through it, and an emulator without a savestate card keeps the `standalone-unsupported` refusal
-there even where its save answers.
+there even where its save answers (since #284 every save-carded emulator carries a savestate card too — for Cemu and
+Vita3K it is the stated no — so today that refusal marks the rows neither family has examined).
 
 Three more cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
 `PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the
@@ -897,6 +898,47 @@ content's own stem plus `.ml1`–`.ml8`, so with content named the declared set 
 lands them beside the ROM, and an archive keeps the `<rom_stem>` hole open — exactly the shapes its `.sav` answer takes.
 An emulator without a savestate card refuses `standalone-unsupported`, byte-identically to the blanket refusal that
 preceded the family.
+
+Two heavyweights answer through shapes of their own (#284). xemu's savestates are QEMU internal snapshots written
+**inside** the qcow2 hard disk `[sys.files] hdd_path` names — no file per state exists — so the answer names the image
+as its one declared file and `savestate-inside-image` carries the image path and the entry naming (user-chosen, else
+`vm-YYYYMMDDhhmmss`); a machine with no disk configured cannot snapshot at all and the question refuses with that fact
+named. MAME's states root is `state_directory` out of whichever `mame.ini` the launch's `-inipath` names (else the
+compiled `$HOME/.mame;/app/share/mame/ini` search path (the Flathub build define, byte-proven in the shipped binary —
+not upstream's `#ifndef` fallback; the `/app` element resolves against the running deploy, and RetroDECK's carries no
+`share/mame` at all) — read, not assumed: the RetroDECK commands that pass no `-inipath` land their states under
+`~/.mame/sta`, not under the arrangement's tree), with one subdirectory per machine below it — the command's positional
+system word, or the ROM's own stem on the `%BASENAME%` arcade rows — and the declared slots `auto`/`quick`/`0-9`/`a-z`,
+each `<slot>.sta`. Every MAME answer carries `savestate-support-machine-dependent`: whether the launched system's driver
+is flagged `MACHINE_SUPPORTS_SAVE` is compiled into the binary, and an unflagged one still writes the file with a
+warning.
+
+### A card can state the emulator has no savestates — and that is an answer
+
+For nine emulators the honest finding is that the feature does not exist, and #284 makes that a stated, cited fact
+instead of a generic refusal. The answer is the question's third shape:
+
+```python
+outcome = entry.savestate_location()
+
+outcome.emulator   # 'CEMU'
+outcome.citation   # the spans and scans that establish the no — contractual
+outcome.caveats    # () — or the one caveat a stated no can carry (below)
+```
+
+It serializes as `{"no_savestates": {"emulator": …, "citation": …, "caveats": […]}}` — its own top-level key, so the
+three shapes are never mistakable. Cemu 2.6 and Vita3K ship no state serializer; the Ryujinx lineage (Ryubing) never had
+one; Ruffle's persistence is the SharedObjects tree; GZDoom's, ironwail's, OpenBOR's, PICO-8's and Solarus's whole
+serialization is their savegame/cartdata system — the **save** question's business, and the cards say so rather than
+blurring a quicksave into a machine snapshot. No tree-derived caveat ever rides a stated no (health findings and link
+walks qualify paths, and the absence names none — it answers even where the EmuDeck variant gate would refuse the save
+question). What does ride is everything that qualifies the claim itself: `unverified-version` with
+`verification: "build-unestablished"` for the emulators no arrangement ships a build of (Ryubing, ironwail, PICO-8 — the
+citation then names the release or manual the record read); the arrangement evidence caveats (`arrangement-unverified` /
+`arrangement-version-drifted`) exactly as on a placement — a stated no is world knowledge pinned to the build a verified
+arrangement ships, and an arrangement atlas has not confirmed on this version says so; and the entry's catalogue-status
+and `per-game-override` caveats, because a gamelist that would launch a different emulator for this game is a statement
+about emulator identity — "Cemu has no savestates" needs the rider that Cemu may not be what runs.
 
 ## Where do texture packs go?
 

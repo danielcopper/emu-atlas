@@ -18,6 +18,7 @@ from __future__ import annotations
 from atlas.placement import (
     ModPlacement,
     SavefilePlacement,
+    SavestateAbsence,
     SavestatePlacement,
     ScreenshotPlacement,
     TexturePlacement,
@@ -31,8 +32,10 @@ def placed(outcome: SavefilePlacement | Unresolved) -> SavefilePlacement:
     return outcome
 
 
-def state_placed(outcome: SavestatePlacement | Unresolved) -> SavestatePlacement:
-    """The savestate placement this fixture guarantees — never the refusal."""
+def state_placed(
+    outcome: "SavestatePlacement | SavestateAbsence | Unresolved",
+) -> SavestatePlacement:
+    """The savestate placement this fixture guarantees — never the refusal, never the no."""
     assert isinstance(outcome, SavestatePlacement), f"expected a savestate placement, got {outcome}"
     return outcome
 

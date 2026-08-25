@@ -355,6 +355,8 @@ KNOWN_CAVEAT_CODES = {
     "save-dir-launch-dependent",
     "save-inside-content",
     "save-inside-image",
+    "savestate-inside-image",
+    "savestate-support-machine-dependent",
     "save-writes-discarded",
     "core-mode-unestablished",
     "save-root-redirected",
@@ -1113,10 +1115,31 @@ def _validate_screenshot_outcome(name: str, outcome: Any) -> None:
     _validate_screenshot_placement(name, outcome)
 
 
+def _validate_savestate_absence(name: str, outcome: Any, what: str) -> bool:
+    """Is this the stated no? Refuses a malformed one either way.
+
+    The savestate question's third shape (#284): ``no_savestates`` states,
+    with its citation, that the emulator has no such feature — an answer, not
+    a refusal — and the only caveats that may ride it are the card's own.
+    """
+    if not (isinstance(outcome, dict) and set(outcome) == {"no_savestates"}):
+        return False
+    absence = outcome["no_savestates"]
+    _require_exact(name, absence, {"emulator", "citation", "caveats"}, f"{what}.no_savestates")
+    for field in ("emulator", "citation"):
+        if not isinstance(absence[field], str) or not absence[field]:
+            fail(f"{name}: {what}.no_savestates.{field} must be a non-empty string")
+    _validate_caveats(name, absence["caveats"])
+    return True
+
+
 def _validate_savestate_outcome(name: str, outcome: Any, what: str = "savestate_location") -> None:
-    """A savestate answer in either shape — the savefile validator's twin."""
-    if not _validate_unresolved(name, outcome, what):
-        _validate_savestate_placement(name, outcome)
+    """A savestate answer in any of its three shapes — placement, stated no, refusal."""
+    if _validate_unresolved(name, outcome, what):
+        return
+    if _validate_savestate_absence(name, outcome, what):
+        return
+    _validate_savestate_placement(name, outcome)
 
 
 def _validate_texture_placement(name: str, placement: Any, what: str) -> None:
