@@ -268,6 +268,8 @@ from atlas import duckstation, emulator_settings, melonds, qt_ini
 from atlas.yaml_scalars import YamlScalars, read_scalars
 from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
 from atlas.standalone_savestates import (
+    SavestateIniKey,
+    SavestateLaunchIni,
     StandaloneSavestateCard,
     lookup_standalone_savestate_card,
 )
@@ -493,6 +495,10 @@ STANDALONE_FLATPAK_CFG_SUFFIX = os.path.join(
     ".var", "app", RETROARCH_FLATPAK_APP_ID, "config", "retroarch", RETROARCH_CFG
 )
 NATIVE_CFG_SUFFIX = os.path.join(_XDG_CONFIG_DIRNAME, "retroarch", RETROARCH_CFG)
+
+# Every ini file in one directory — the glob two per-game layer checks walk
+# (PCSX2's gamesettings directory, MAME's standard-ini search path).
+_ANY_INI_GLOB = "*.ini"
 
 
 # Flatpak binds the app's private XDG directories into the sandbox under /var, so
@@ -5170,7 +5176,7 @@ def _pcsx2_game_settings_caveat(
     )
     directory = resolved if resolved is not None else raw
     assert directory is not None  # only an absolute value leaves the helper unresolved
-    listing = machine.glob(os.path.join(directory, "*.ini"))
+    listing = machine.glob(os.path.join(directory, _ANY_INI_GLOB))
     if listing.status != GLOB_COMPLETE:
         return [
             Caveat(
@@ -9014,45 +9020,55 @@ class _MameLaunch:
     machine_is_content: bool
 
 
+def _mame_command_prefix(tokens: list[str]) -> tuple[str | None, int | None]:
+    """ES-DE's own prefix: the ``%STARTDIR%`` value and the emulator token's index."""
+    startdir = None
+    for i, token in enumerate(tokens):
+        if token.startswith("%STARTDIR%="):
+            startdir = token[len("%STARTDIR%=") :]
+        if token.startswith("%EMULATOR_"):
+            return startdir, i
+    return startdir, None
+
+
+def _mame_arguments(rest: list[str]) -> tuple[str | None, str | None]:
+    """MAME's argument grammar: ``(-inipath value, the positional system word)``.
+
+    Every ``-flag`` consumes the next token as its value (all the catalogue's
+    flags do: -inipath, -rompath, the media mounts, the autoboot pair, the
+    slot options), and the first token no flag consumed is the positional
+    system name.
+    """
+    inipath = None
+    i = 0
+    while i < len(rest):
+        token = rest[i]
+        if not token.startswith("-"):
+            return inipath, token
+        if token == "-inipath" and i + 1 < len(rest):
+            inipath = rest[i + 1]
+        i += 2
+    return inipath, None
+
+
 def _mame_launch_reading(command: str) -> _MameLaunch:
     """The command parsed the way ES-DE hands it to MAME.
 
     Everything before the ``%EMULATOR_…%`` token is ES-DE's own prefix — a
     ``%STARTDIR%=<dir>`` there is the working directory ES-DE changes into
-    before launching. After the token, MAME's grammar: every ``-flag``
-    consumes the next token as its value (all the catalogue's flags do:
-    -inipath, -rompath, the media mounts, the autoboot pair, the slot
-    options), and the first token no flag consumed is the positional system
-    name. A command that cannot be tokenized states nothing rather than
-    something half-read.
+    before launching (:func:`_mame_command_prefix`); after the token MAME's
+    own grammar yields the ini path and the positional system word
+    (:func:`_mame_arguments`). A command that cannot be tokenized states
+    nothing rather than something half-read.
     """
     try:
         tokens = shlex.split(command)
     except ValueError:
         return _MameLaunch(None, None, None, False)
-    startdir = None
-    emulator_at = None
-    for i, token in enumerate(tokens):
-        if token.startswith("%STARTDIR%="):
-            startdir = token[len("%STARTDIR%=") :]
-        if token.startswith("%EMULATOR_"):
-            emulator_at = i
-            break
+    startdir, emulator_at = _mame_command_prefix(tokens)
     if emulator_at is None:
         return _MameLaunch(None, startdir, None, False)
-    inipath = None
-    machine = None
-    rest = tokens[emulator_at + 1 :]
-    i = 0
-    while i < len(rest):
-        token = rest[i]
-        if token.startswith("-"):
-            if token == "-inipath" and i + 1 < len(rest):
-                inipath = rest[i + 1]
-            i += 2
-            continue
-        machine = token
-        break
+    inipath, machine = _mame_arguments(tokens[emulator_at + 1 :])
     if machine == "%BASENAME%":
         return _MameLaunch(inipath, startdir, None, True)
     if machine is not None and "%" in machine:
@@ -9060,6 +9076,34 @@ def _mame_launch_reading(command: str) -> _MameLaunch:
         # can turn into a directory name.
         machine = None
     return _MameLaunch(inipath, startdir, machine, False)
+
+
+def _mame_ini_data(data: str) -> str:
+    """One line's value: comment cut outside quotes, spaces and one quote pair trimmed."""
+    kept: list[str] = []
+    in_quotes = False
+    for ch in data:
+        if ch == '"':
+            in_quotes = not in_quotes
+        if ch == "#" and not in_quotes:
+            break
+        kept.append(ch)
+    value = "".join(kept).strip()
+    if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
+        value = value[1:-1]
+    return value
+
+
+def _mame_ini_line(line: str) -> tuple[str, str] | None:
+    """One line as ``(name, value)`` — or ``None`` for comments and invalid lines."""
+    stripped = line.lstrip()
+    if not stripped or stripped.startswith("#"):
+        return None
+    parts = stripped.split(None, 1)
+    if len(parts) != 2:
+        return None
+    name, data = parts
+    return name, _mame_ini_data(data)
 
 
 def _mame_ini_values(text: str) -> dict[str, str]:
@@ -9070,29 +9114,13 @@ def _mame_ini_values(text: str) -> dict[str, str]:
     one pair of surrounding quotes trimmed (trim_spaces_and_quotes,
     options.cpp:60-73), an invalid line warns and is skipped, and a duplicate
     key's LAST occurrence wins because an equal-priority set overrides
-    (entry::set_value, options.cpp:270).
+    (entry::set_value, options.cpp:270) — which the dict assignment mirrors.
     """
     values: dict[str, str] = {}
     for line in text.splitlines():
-        stripped = line.lstrip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        parts = stripped.split(None, 1)
-        if len(parts) != 2:
-            continue
-        name, data = parts
-        kept: list[str] = []
-        in_quotes = False
-        for ch in data:
-            if ch == '"':
-                in_quotes = not in_quotes
-            if ch == "#" and not in_quotes:
-                break
-            kept.append(ch)
-        value = "".join(kept).strip()
-        if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
-            value = value[1:-1]
-        values[name] = value
+        parsed = _mame_ini_line(line)
+        if parsed is not None:
+            values[parsed[0]] = parsed[1]
     return values
 
 
@@ -9108,38 +9136,57 @@ def _mame_subst_env(value: str, env: Mapping[str, str]) -> tuple[str | None, str
     caller refuses instead of guessing which way the process would expand it.
     """
     result: list[str] = []
-    i = 0
-    if value.startswith("~"):
-        home = env.get("HOME")
-        if home is None:
-            return None, "HOME"
-        if len(value) == 1 or value[1] == "/":
-            result.append(home)
-            i = 1
-        # a ~ followed by anything else stays literal (posixdir.cpp:248-252)
+    i = _mame_tilde_head(value, env, result)
+    if i is None:
+        return None, "HOME"
     while i < len(value):
         ch = value[i]
         if ch != "$":
             result.append(ch)
             i += 1
             continue
-        i += 1
-        if i < len(value) and value[i] == "{":
-            end = value.find("}", i)
-            if end == -1:
-                result.append("$" + value[i:])
-                break
-            name = value[i + 1 : end]
-            i = end + 1
-        else:
-            start = i
-            while i < len(value) and (value[i] == "_" or value[i].isalnum()):
-                i += 1
-            name = value[start:i]
+        name, literal, i = _mame_env_reference(value, i + 1)
+        if name is None:
+            result.append(literal)
+            break
         if name not in env:
             return None, name or "$"
         result.append(env[name])
     return "".join(result), None
+
+
+def _mame_tilde_head(value: str, env: Mapping[str, str], result: list[str]) -> int | None:
+    """The leading ``~``: $HOME where it expands, ``None`` where none is pinned.
+
+    A ``~`` followed by anything but a separator stays literal
+    (posixdir.cpp:248-252); the scan resumes at the returned index.
+    """
+    if not value.startswith("~"):
+        return 0
+    home = env.get("HOME")
+    if home is None:
+        return None
+    if len(value) == 1 or value[1] == "/":
+        result.append(home)
+        return 1
+    return 0
+
+
+def _mame_env_reference(value: str, i: int) -> tuple[str | None, str, int]:
+    """One ``$``-reference at *i*: ``(name, literal-tail, index after)``.
+
+    ``${VAR}`` and bare ``$VAR`` yield the name; an unclosed ``${`` is no
+    reference at all and comes back as the literal tail the caller appends.
+    """
+    if i < len(value) and value[i] == "{":
+        end = value.find("}", i)
+        if end == -1:
+            return None, "$" + value[i:], len(value)
+        return value[i + 1 : end], "", end + 1
+    start = i
+    while i < len(value) and (value[i] == "_" or value[i].isalnum()):
+        i += 1
+    return value[start:i], "", i
 
 
 def _mame_env(homes: _XdgHomes, sandbox: _Sandbox) -> dict[str, str]:
@@ -9216,9 +9263,28 @@ def _mame_ini_elements(
     return tuple(elements)
 
 
+def _mame_layer_suspects(
+    machine: Machine, directory: str, *, file: str
+) -> tuple[list[str], bool]:
+    """One search-path element's unread ini files, and whether its listing failed."""
+    suspects: list[str] = []
+    incomplete = False
+    for pattern in (_ANY_INI_GLOB, os.path.join("source", _ANY_INI_GLOB)):
+        listing = machine.glob(os.path.join(directory, pattern))
+        if listing.status != GLOB_COMPLETE:
+            incomplete = True
+        for path in listing.matches:
+            name = os.path.relpath(path, directory)
+            # ui.ini is the UI manager's own file; parse_standard_inis
+            # never opens it, and the governing file was already read.
+            if name not in (file, "ui.ini"):
+                suspects.append(os.path.join(directory, name))
+    return suspects, incomplete
+
+
 def _mame_standard_ini_layer(
     machine: Machine, elements: tuple[_MameIniElement, ...], *, file: str, key: str
-) -> tuple[Caveat, ...]:
+) -> list[Caveat]:
     """The per-machine ini layer, checked instead of assumed.
 
     After mame.ini, MAME parses debug/orientation/screen/source/parent/driver
@@ -9236,20 +9302,13 @@ def _mame_standard_ini_layer(
     for element in elements:
         if element.resolved is None:
             continue
-        for pattern in ("*.ini", os.path.join("source", "*.ini")):
-            listing = machine.glob(os.path.join(element.resolved, pattern))
-            if listing.status != GLOB_COMPLETE:
-                incomplete = True
-            for path in listing.matches:
-                name = os.path.relpath(path, element.resolved)
-                # ui.ini is the UI manager's own file; parse_standard_inis
-                # never opens it, and the governing file was already read.
-                if name not in (file, "ui.ini"):
-                    suspects.append(os.path.join(element.resolved, name))
+        found, failed = _mame_layer_suspects(machine, element.resolved, file=file)
+        suspects.extend(found)
+        incomplete = incomplete or failed
     if not suspects and not incomplete:
-        return ()
+        return []
     named = ", ".join(sorted(suspects)) if suspects else "the directory could not be listed"
-    return (
+    return [
         Caveat(
             CAVEAT_PER_GAME_LAYER_UNREAD,
             f"MAME layers per-machine and per-orientation ini files over {file} "
@@ -9258,7 +9317,7 @@ def _mame_standard_ini_layer(
             "would move the states for the machines it covers, and none was read",
             {"key": key, "files": named},
         ),
-    )
+    ]
 
 
 def _mame_savestate_placement(
@@ -9299,62 +9358,13 @@ def _mame_savestate_placement(
     assert shape is not None  # the loader pairs the shape with this resolver
     launch = _mame_launch_reading(command)
     env = _mame_env(homes, sandbox)
-    cwd = None
-    if launch.startdir is not None:
-        cwd, _ = _mame_subst_env(launch.startdir, env)
-        if cwd is not None and not os.path.isabs(cwd):
-            cwd = None
-    elements = _mame_ini_elements(launch, env, sandbox, cwd)
-    values: dict[str, str] = {}
-    stated_ini: str | None = None
-    for element in elements:
-        if element.resolved is None:
-            continue
-        candidate = os.path.join(element.resolved, shape.file)
-        result = machine.read_text(candidate)
-        if result.status == READ_MISSING:
-            continue
-        if result.status != READ_OK:
-            return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"MAME's configuration ({candidate}) exists and could not be read — where "
-                "a state lands is unknowable here",
-                {"emulator": card.token, "config": candidate},
-            )
-        values = _mame_ini_values(result.text or "")
-        stated_ini = candidate
-        break
-    # The second parse: mame.ini is read twice so the first pass can move the
-    # ini path itself (mameopts.cpp:39-42). A CLI -inipath cannot be
-    # overridden (options.cpp:270), so the re-probe happens only without one.
-    if stated_ini is not None and launch.inipath is None and values.get("inipath"):
-        moved = _MameLaunch(values["inipath"], launch.startdir, None, False)
-        for element in _mame_ini_elements(moved, env, sandbox, cwd):
-            if element.resolved is None:
-                continue
-            candidate = os.path.join(element.resolved, shape.file)
-            if candidate == stated_ini:
-                # The re-probe reached the same file the first pass read —
-                # nothing moved, and re-reading it would change nothing.
-                break
-            result = machine.read_text(candidate)
-            if result.status == READ_MISSING:
-                continue
-            if result.status != READ_OK:
-                return Unresolved(
-                    UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                    f"MAME's configuration ({candidate}) exists and could not be read — "
-                    "where a state lands is unknowable here",
-                    {"emulator": card.token, "config": candidate},
-                )
-            # The second parse of the same basename at the same priority: its
-            # lines override the first file's, keys only the first stated
-            # survive (options.cpp:270).
-            values = {**values, **_mame_ini_values(result.text or "")}
-            stated_ini = candidate
-            break
-    caveats: list[Caveat] = [*extra_caveats]
-    needs: list[str] = []
+    cwd = _mame_launch_cwd(launch, env)
+    ini = _mame_governing_ini(
+        machine, token=card.token, file=shape.file, launch=launch, env=env,
+        sandbox=sandbox, cwd=cwd,
+    )
+    if isinstance(ini, Unresolved):
+        return ini
     key = "state_directory"
     stated_key = shape.keys.get(key)
     if stated_key is None:
@@ -9362,119 +9372,27 @@ def _mame_savestate_placement(
             f"savestate card {card.token!r} states no {key!r} ini key and this resolver "
             "reads it — the card and the code shipped out of step"
         )
-    raw = values.get(key)
-    if raw:
-        substituted, missing = _mame_subst_env(raw, env)
-        if substituted is None:
-            return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"{shape.file} names the states directory through ${missing}, a value of "
-                "the launch's own environment this answer cannot establish — where a state "
-                "lands is unknowable here",
-                {"emulator": card.token, "config": stated_ini or shape.file},
-            )
-        reading = f'{shape.file}: {key} {raw}' + (
-            "" if substituted == raw else f" — the environment expands it to {substituted}"
-        )
-    elif raw == "":
-        # Present and empty is not unset: the parse hands "" to set_value and
-        # the option keeps it (options.cpp:1041 via :262-278), so the
-        # searchpath is empty and the states land relative to the working
-        # directory — the compiled default does NOT come back.
-        substituted = ""
-        reading = (
-            f"{shape.file}: {key} is set empty — MAME keeps the empty value "
-            "(options.cpp:1041, :262-278), so the states root is the working directory "
-            "itself"
-        )
-    else:
-        substituted = stated_key.default
-        reading = (
-            f"{key} is unset — the compiled default {stated_key.default!r} governs "
-            f"({stated_key.citation})"
-        )
-    root_kind: StateRootKind = STATE_ROOT_EMULATOR_DIRECTORY
-    if os.path.isabs(substituted):
-        host = sandbox.host(key, substituted)
-        if host.path is None:
-            return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"the states directory MAME's configuration names could not be located "
-                f"from here ({stated_ini or shape.file}) — nothing this answer could "
-                "anchor at",
-                {"emulator": card.token, "config": stated_ini or shape.file},
-            )
-        root = host.path
-        reading += host.note
-    elif cwd is not None:
-        root = os.path.normpath(os.path.join(cwd, substituted))
-        reading += (
-            f" — a relative value resolves against the working directory the launch "
-            f"states (%STARTDIR%={launch.startdir})"
-        )
-    else:
-        root = os.path.join(TEMPLATE_CWD, substituted) if substituted else TEMPLATE_CWD
-        root_kind = STATE_ROOT_WORKING_DIRECTORY
-        needs.append(HOLE_CWD)
-        caveats.append(
-            Caveat(
-                CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
-                f"a relative {key} resolves against the launching process's working "
-                "directory (emu_file over the searchpath, machine.cpp:899-903), which no "
-                "read of this machine can establish",
-                {"core": card.token, "path": substituted},
-            )
-        )
-    # The per-machine subdirectory: statename, default %g = the system's own
-    # short name (get_statename, machine.cpp:474-547, the %g substitution at
-    # :544; the join at :576).
-    sname = values.get("statename")
-    if sname == "":
-        # A present-empty statename is NOT an empty literal: get_statename
-        # reverts a null or empty option to "%g" (machine.cpp:477-478), the
-        # one option in this reading whose empty value restores the default.
-        sname = None
-    machine_word = launch.machine_name
-    subdir_open_reason: str | None = None
-    if sname is not None and sname != "%g" and "%" in sname:
-        caveats.append(
-            Caveat(
-                CAVEAT_UNKNOWN_OPTION_VALUE,
-                f'statename = "{sname}" templates the subdirectory on a mounted image '
-                "(get_statename, machine.cpp:487-540), which this reading does not model "
-                "— the per-machine subdirectory below the root is not established",
-                {"key": "statename", "value": sname},
-            )
-        )
-        subdir_open_reason = "the statename template is not modelled"
-        subdir = None
-    elif sname is not None and sname != "%g":
-        literal = sname
-        dot = literal.rfind(".")
-        if dot != -1:
-            literal = literal[:dot]
-        subdir = literal
-        reading += f'; statename = "{sname}" names the subdirectory'
-    elif launch.machine_is_content:
-        if content_path is not None:
-            stem = os.path.splitext(os.path.basename(content_path))[0]
-            subdir = stem
-        else:
-            subdir = TEMPLATE_ROM_STEM
-            needs.append(HOLE_ROM_STEM)
-    elif machine_word is not None:
-        subdir = machine_word
-    else:
-        subdir = None
-        subdir_open_reason = (
-            "the launch names no system, so which machine's subdirectory this run "
-            "writes is the user's pick in MAME's own system selection"
-        )
-    directory = os.path.join(root, subdir) if subdir is not None else root
-    caveats.extend(
-        _mame_standard_ini_layer(machine, elements, file=shape.file, key=key)
+    value = _mame_root_value(card, shape, ini, env, key=key, stated_key=stated_key)
+    if isinstance(value, Unresolved):
+        return value
+    anchored = _mame_root_anchor(
+        card, shape, value[0], value[1], key=key, sandbox=sandbox, cwd=cwd,
+        launch=launch, stated_ini=ini.stated_ini,
     )
-    caveats.append(
+    if isinstance(anchored, Unresolved):
+        return anchored
+    machine_dir = _mame_state_subdir(ini.values, launch, content_path)
+    directory = (
+        os.path.join(anchored.root, machine_dir.subdir)
+        if machine_dir.subdir is not None
+        else anchored.root
+    )
+    reading = anchored.reading + machine_dir.reading_suffix
+    caveats: list[Caveat] = [
+        *extra_caveats,
+        *anchored.caveats,
+        *machine_dir.caveats,
+        *_mame_standard_ini_layer(machine, ini.elements, file=shape.file, key=key),
         Caveat(
             CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT,
             "whether the launched system's driver is flagged MACHINE_SUPPORTS_SAVE is "
@@ -9485,8 +9403,8 @@ def _mame_savestate_placement(
                 "emulator": card.token,
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287",
             },
-        )
-    )
+        ),
+    ]
     # A templated directory is a shape, not a path: walking <cwd>/... or
     # .../mame-sa/<rom_stem> through the filesystem would read the template
     # text as real components and report their absence as a dead link (the
@@ -9497,11 +9415,11 @@ def _mame_savestate_placement(
         else (None, ())
     )
     caveats.extend(link_caveats)
-    if subdir is None:
+    if machine_dir.subdir is None:
         file_set = UNKNOWN_FILE_SET
         caveats.append(
             _savestate_names_caveat(
-                card, directory, card.names_citation, reason=subdir_open_reason
+                card, directory, card.names_citation, reason=machine_dir.open_reason
             )
         )
     else:
@@ -9511,32 +9429,298 @@ def _mame_savestate_placement(
             f"declared by standalone savestate card '{card.token}'",
             complete=False,
         )
-    unprobed = [e.stated for e in elements if e.resolved is None]
-    if stated_ini is not None:
-        ini_provenance = f"read from {stated_ini}"
-    else:
-        ini_provenance = (
-            f"no {shape.file} exists on the launch's search path "
-            f"({'; '.join(e.stated for e in elements)})"
-        )
-    if unprobed:
-        ini_provenance += (
-            f" — the element(s) {'; '.join(unprobed)} could not be probed from here "
-            "(nothing at that path in the running deploy, or a location only the "
-            "launching process resolves)"
-        )
     return SavestatePlacement(
         dir=directory,
-        root_kind=root_kind,
-        needs=tuple(dict.fromkeys(needs)),
+        root_kind=anchored.root_kind,
+        needs=tuple(dict.fromkeys((*anchored.needs, *machine_dir.needs))),
         file_set=file_set,
         sources=(
             f"standalone savestate card '{card.token}': {card.provenance}",
-            f"{reading} — {ini_provenance}",
+            f"{reading} — {_mame_ini_provenance(ini, shape.file)}",
         ),
         caveats=tuple(caveats),
         physical_dir=physical,
     )
+
+
+def _mame_launch_cwd(launch: _MameLaunch, env: Mapping[str, str]) -> str | None:
+    """The working directory the launch pins — ``%STARTDIR%``, resolved, or nothing."""
+    if launch.startdir is None:
+        return None
+    cwd, _ = _mame_subst_env(launch.startdir, env)
+    if cwd is not None and not os.path.isabs(cwd):
+        return None
+    return cwd
+
+
+@dataclass(frozen=True, slots=True)
+class _MameIniReading:
+    """One probe pass's outcome: the parsed values and the file that held them."""
+
+    values: Mapping[str, str]
+    stated_ini: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class _MameGoverningIni:
+    """The governing configuration as the launch resolves it, double parse done."""
+
+    values: Mapping[str, str]
+    stated_ini: str | None
+    elements: tuple[_MameIniElement, ...]
+
+
+def _mame_ini_probe(
+    machine: Machine,
+    token: str,
+    file: str,
+    elements: tuple[_MameIniElement, ...],
+    *,
+    stop_at: str | None = None,
+) -> _MameIniReading | Unresolved:
+    """The first *file* on *elements*, read whole — nothing found is an empty reading.
+
+    *stop_at* is the re-probe's early exit: reaching the file the first pass
+    already read means nothing moved, and re-reading it would change nothing.
+    """
+    for element in elements:
+        if element.resolved is None:
+            continue
+        candidate = os.path.join(element.resolved, file)
+        if candidate == stop_at:
+            break
+        result = machine.read_text(candidate)
+        if result.status == READ_MISSING:
+            continue
+        if result.status != READ_OK:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"MAME's configuration ({candidate}) exists and could not be read — where "
+                "a state lands is unknowable here",
+                {"emulator": token, "config": candidate},
+            )
+        return _MameIniReading(_mame_ini_values(result.text or ""), candidate)
+    return _MameIniReading({}, None)
+
+
+def _mame_governing_ini(
+    machine: Machine,
+    *,
+    token: str,
+    file: str,
+    launch: _MameLaunch,
+    env: Mapping[str, str],
+    sandbox: _Sandbox,
+    cwd: str | None,
+) -> _MameGoverningIni | Unresolved:
+    """The governing mame.ini: the search-path probe, then the double parse.
+
+    mame.ini is read twice so the first pass can move the ini path itself
+    (mameopts.cpp:39-42); a CLI ``-inipath`` cannot be overridden
+    (options.cpp:270), so the re-probe happens only without one, and the
+    second file's lines override the first's at equal priority.
+    """
+    elements = _mame_ini_elements(launch, env, sandbox, cwd)
+    first = _mame_ini_probe(machine, token, file, elements)
+    if isinstance(first, Unresolved):
+        return first
+    values = dict(first.values)
+    stated_ini = first.stated_ini
+    if stated_ini is not None and launch.inipath is None and values.get("inipath"):
+        moved = _MameLaunch(values["inipath"], launch.startdir, None, False)
+        second = _mame_ini_probe(
+            machine, token, file, _mame_ini_elements(moved, env, sandbox, cwd),
+            stop_at=stated_ini,
+        )
+        if isinstance(second, Unresolved):
+            return second
+        if second.stated_ini is not None:
+            values = {**values, **second.values}
+            stated_ini = second.stated_ini
+    return _MameGoverningIni(values, stated_ini, elements)
+
+
+def _mame_root_value(
+    card: StandaloneSavestateCard,
+    shape: SavestateLaunchIni,
+    ini: _MameGoverningIni,
+    env: Mapping[str, str],
+    *,
+    key: str,
+    stated_key: SavestateIniKey,
+) -> tuple[str, str] | Unresolved:
+    """The states-root option's value grammar: ``(substituted value, reading)``.
+
+    Set, set-empty and unset are three different claims: a set value gets the
+    environment substitution PATH options get, a present-empty one is KEPT —
+    the parse hands "" to set_value and the option holds it (options.cpp:1041
+    via :262-278), so the compiled default does not come back — and only an
+    unset key falls to that default.
+    """
+    raw = ini.values.get(key)
+    if raw:
+        substituted, missing = _mame_subst_env(raw, env)
+        if substituted is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"{shape.file} names the states directory through ${missing}, a value of "
+                "the launch's own environment this answer cannot establish — where a state "
+                "lands is unknowable here",
+                {"emulator": card.token, "config": ini.stated_ini or shape.file},
+            )
+        return substituted, f'{shape.file}: {key} {raw}' + (
+            "" if substituted == raw else f" — the environment expands it to {substituted}"
+        )
+    if raw == "":
+        return "", (
+            f"{shape.file}: {key} is set empty — MAME keeps the empty value "
+            "(options.cpp:1041, :262-278), so the states root is the working directory "
+            "itself"
+        )
+    return stated_key.default, (
+        f"{key} is unset — the compiled default {stated_key.default!r} governs "
+        f"({stated_key.citation})"
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _MameStateRoot:
+    """The anchored states root, its kind, and what anchoring it stated."""
+
+    root: str
+    root_kind: StateRootKind
+    reading: str
+    needs: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+def _mame_root_anchor(
+    card: StandaloneSavestateCard,
+    shape: SavestateLaunchIni,
+    substituted: str,
+    reading: str,
+    *,
+    key: str,
+    sandbox: _Sandbox,
+    cwd: str | None,
+    launch: _MameLaunch,
+    stated_ini: str | None,
+) -> _MameStateRoot | Unresolved:
+    """Where the value anchors: a host path, the stated cwd, or the open hole."""
+    if os.path.isabs(substituted):
+        host = sandbox.host(key, substituted)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"the states directory MAME's configuration names could not be located "
+                f"from here ({stated_ini or shape.file}) — nothing this answer could "
+                "anchor at",
+                {"emulator": card.token, "config": stated_ini or shape.file},
+            )
+        return _MameStateRoot(host.path, STATE_ROOT_EMULATOR_DIRECTORY, reading + host.note)
+    if cwd is not None:
+        return _MameStateRoot(
+            os.path.normpath(os.path.join(cwd, substituted)),
+            STATE_ROOT_EMULATOR_DIRECTORY,
+            reading
+            + f" — a relative value resolves against the working directory the launch "
+            f"states (%STARTDIR%={launch.startdir})",
+        )
+    return _MameStateRoot(
+        os.path.join(TEMPLATE_CWD, substituted) if substituted else TEMPLATE_CWD,
+        STATE_ROOT_WORKING_DIRECTORY,
+        reading,
+        needs=(HOLE_CWD,),
+        caveats=(
+            Caveat(
+                CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
+                f"a relative {key} resolves against the launching process's working "
+                "directory (emu_file over the searchpath, machine.cpp:899-903), which no "
+                "read of this machine can establish",
+                {"core": card.token, "path": substituted},
+            ),
+        ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _MameSubdir:
+    """The per-machine subdirectory — resolved, templated, or honestly open."""
+
+    subdir: str | None
+    open_reason: str | None = None
+    reading_suffix: str = ""
+    needs: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+
+
+def _mame_state_subdir(
+    values: Mapping[str, str], launch: _MameLaunch, content_path: str | None
+) -> _MameSubdir:
+    """The subdirectory grammar: statename, default ``%g`` = the machine's own name.
+
+    (get_statename, machine.cpp:474-547, the %g substitution at :544; the
+    join at :576.) A present-empty statename is NOT an empty literal:
+    get_statename reverts a null or empty option to "%g"
+    (machine.cpp:477-478), the one option in this reading whose empty value
+    restores the default.
+    """
+    sname = values.get("statename") or None
+    if sname is not None and sname != "%g" and "%" in sname:
+        return _MameSubdir(
+            None,
+            open_reason="the statename template is not modelled",
+            caveats=(
+                Caveat(
+                    CAVEAT_UNKNOWN_OPTION_VALUE,
+                    f'statename = "{sname}" templates the subdirectory on a mounted image '
+                    "(get_statename, machine.cpp:487-540), which this reading does not "
+                    "model — the per-machine subdirectory below the root is not "
+                    "established",
+                    {"key": "statename", "value": sname},
+                ),
+            ),
+        )
+    if sname is not None and sname != "%g":
+        literal = sname
+        dot = literal.rfind(".")
+        if dot != -1:
+            literal = literal[:dot]
+        return _MameSubdir(
+            literal, reading_suffix=f'; statename = "{sname}" names the subdirectory'
+        )
+    if launch.machine_is_content:
+        if content_path is not None:
+            return _MameSubdir(os.path.splitext(os.path.basename(content_path))[0])
+        return _MameSubdir(TEMPLATE_ROM_STEM, needs=(HOLE_ROM_STEM,))
+    if launch.machine_name is not None:
+        return _MameSubdir(launch.machine_name)
+    return _MameSubdir(
+        None,
+        open_reason=(
+            "the launch names no system, so which machine's subdirectory this run "
+            "writes is the user's pick in MAME's own system selection"
+        ),
+    )
+
+
+def _mame_ini_provenance(ini: _MameGoverningIni, file: str) -> str:
+    """Which file governed — or that none did, and which elements nobody could probe."""
+    unprobed = [e.stated for e in ini.elements if e.resolved is None]
+    if ini.stated_ini is not None:
+        provenance = f"read from {ini.stated_ini}"
+    else:
+        provenance = (
+            f"no {file} exists on the launch's search path "
+            f"({'; '.join(e.stated for e in ini.elements)})"
+        )
+    if unprobed:
+        provenance += (
+            f" — the element(s) {'; '.join(unprobed)} could not be probed from here "
+            "(nothing at that path in the running deploy, or a location only the "
+            "launching process resolves)"
+        )
+    return provenance
 
 
 _STANDALONE_SAVESTATE_RESOLVERS = {

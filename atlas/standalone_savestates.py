@@ -455,6 +455,97 @@ def _provenance_source(entry: Mapping[str, Any], where: str) -> str:
     return _expect_str(provenance.get("source"), f"{where}: provenance.source")
 
 
+@dataclass(frozen=True, slots=True)
+class _CardStatement:
+    """One card's parsed statement — whichever of the five it makes.
+
+    The intermediate the shape helpers hand back to :func:`_card`, so the
+    assembly reads as composition instead of five branches mutating one pile
+    of locals.
+    """
+
+    base: str | None = None
+    subdir: str | None = None
+    directory: SavestateSetting | None = None
+    inside_image: SavestateImage | None = None
+    launch_ini: SavestateLaunchIni | None = None
+    absent: SavestateAbsenceStatement | None = None
+    names: str | None = None
+    names_citation: str | None = None
+
+
+def _absence_card_statement(
+    savestates: Mapping[str, Any], entry: Mapping[str, Any], where: str
+) -> _CardStatement:
+    """The stated no, with the refusals of everything a no cannot have.
+
+    A stated no describes no tree: names, settings and anchors would each
+    pretend one exists, so each is refused rather than ignored.
+    """
+    absent = _absence_statement(savestates["absent"], f"{where}: savestates.absent")
+    for field_name in ("names", "settings"):
+        if savestates.get(field_name) is not None:
+            raise ValueError(
+                f"{where}: an absence card states no {field_name} — there is no state "
+                "to name and no file to read"
+            )
+    if entry.get("anchors") is not None:
+        raise ValueError(
+            f"{where}: an absence card records no emulator words, so there is nothing "
+            "an anchor could pin"
+        )
+    return _CardStatement(absent=absent)
+
+
+def _shaped_card_statement(
+    shape: str, savestates: Mapping[str, Any], where: str, *, settings: str | None
+) -> _CardStatement:
+    """A tree-describing statement — the four shapes that name something on disk."""
+    names, names_citation = _names_statement(savestates, where)
+    if shape == "inside_image":
+        if settings is None:
+            raise ValueError(
+                f"{where}: the image is a settings value, and the card names no settings "
+                "file — nothing could ever read the key it states"
+            )
+        inside = _inside_image_statement(
+            savestates["inside_image"], f"{where}: savestates.inside_image"
+        )
+        return _CardStatement(inside_image=inside, names=names, names_citation=names_citation)
+    if shape == "launch_ini":
+        if settings is not None:
+            raise ValueError(
+                f"{where}: a launch-ini card's file is addressed by the launch command, "
+                "never by the settings table — stating both is a contradiction"
+            )
+        stated = _launch_ini_statement(
+            savestates["launch_ini"], f"{where}: savestates.launch_ini"
+        )
+        return _CardStatement(launch_ini=stated, names=names, names_citation=names_citation)
+    base, subdir, directory = _tree_shape(savestates, where, shape=shape, settings=settings)
+    return _CardStatement(
+        base=base,
+        subdir=subdir,
+        directory=directory,
+        names=names,
+        names_citation=names_citation,
+    )
+
+
+def _crossed_citations(
+    savestates: Mapping[str, Any], where: str, *, names_citation: str | None
+) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+    """The citation sets, crossed against the names statement they must agree with."""
+    citations, overrides = _citations(savestates, where)
+    if "names" in citations and citations["names"] != names_citation:
+        raise ValueError(
+            f"{where}: the 'names' citation slot and savestates.names.citation state the "
+            "same fact for the default build and disagree — one of the two is the span "
+            "somebody re-read, and a reader cannot tell which"
+        )
+    return citations, overrides
+
+
 def _card(token: str, entry: Any) -> StandaloneSavestateCard:
     """One emulator's card — validated, never coerced, one helper per grammar rule."""
     where = f"standalone savestate card {token!r}"
@@ -470,56 +561,14 @@ def _card(token: str, entry: Any) -> StandaloneSavestateCard:
         )
     settings = _settings_name(savestates, where)
     shape = _stated_shape(savestates, where)
-    base = subdir = None
-    directory = inside_image = launch_ini = absent = None
-    pattern: str | None = None
-    names_citation: str | None = None
-    if shape == "absent":
-        # A stated no describes no tree: names, settings and anchors would
-        # each pretend one exists, so each is refused rather than ignored.
-        absent = _absence_statement(savestates["absent"], f"{where}: savestates.absent")
-        for field_name in ("names", "settings"):
-            if savestates.get(field_name) is not None:
-                raise ValueError(
-                    f"{where}: an absence card states no {field_name} — there is no state "
-                    "to name and no file to read"
-                )
-        if entry.get("anchors") is not None:
-            raise ValueError(
-                f"{where}: an absence card records no emulator words, so there is nothing "
-                "an anchor could pin"
-            )
-    else:
-        if shape == "inside_image":
-            if settings is None:
-                raise ValueError(
-                    f"{where}: the image is a settings value, and the card names no settings "
-                    "file — nothing could ever read the key it states"
-                )
-            inside_image = _inside_image_statement(
-                savestates["inside_image"], f"{where}: savestates.inside_image"
-            )
-        elif shape == "launch_ini":
-            if settings is not None:
-                raise ValueError(
-                    f"{where}: a launch-ini card's file is addressed by the launch command, "
-                    "never by the settings table — stating both is a contradiction"
-                )
-            launch_ini = _launch_ini_statement(
-                savestates["launch_ini"], f"{where}: savestates.launch_ini"
-            )
-        else:
-            base, subdir, directory = _tree_shape(
-                savestates, where, shape=shape, settings=settings
-            )
-        pattern, names_citation = _names_statement(savestates, where)
-    citations, overrides = _citations(savestates, where)
-    if "names" in citations and citations["names"] != names_citation:
-        raise ValueError(
-            f"{where}: the 'names' citation slot and savestates.names.citation state the "
-            "same fact for the default build and disagree — one of the two is the span "
-            "somebody re-read, and a reader cannot tell which"
-        )
+    statement = (
+        _absence_card_statement(savestates, entry, where)
+        if shape == "absent"
+        else _shaped_card_statement(shape, savestates, where, settings=settings)
+    )
+    citations, overrides = _crossed_citations(
+        savestates, where, names_citation=statement.names_citation
+    )
     if shape != "absent" and entry.get("anchors") is not None:
         expect_table_anchors(
             entry["anchors"],
@@ -531,14 +580,14 @@ def _card(token: str, entry: Any) -> StandaloneSavestateCard:
         token=token,
         settings=settings,
         systems=_systems(savestates, where),
-        base=base,
-        subdir=subdir,
-        directory=directory,
-        inside_image=inside_image,
-        launch_ini=launch_ini,
-        absent=absent,
-        names=pattern,
-        names_citation=names_citation,
+        base=statement.base,
+        subdir=statement.subdir,
+        directory=statement.directory,
+        inside_image=statement.inside_image,
+        launch_ini=statement.launch_ini,
+        absent=statement.absent,
+        names=statement.names,
+        names_citation=statement.names_citation,
         provenance=_provenance_source(entry, where),
         citations=citations,
         citation_installations=overrides,
