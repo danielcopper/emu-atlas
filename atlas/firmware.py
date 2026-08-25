@@ -106,7 +106,9 @@ from atlas.standalone_firmware import (
 from atlas.placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+    HOLE_CWD,
     ROOT_SYSTEM_DIRECTORY,
+    TEMPLATE_CWD,
     UNRESOLVED_CORE_NOT_INSTALLED,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_STANDALONE,
@@ -231,6 +233,21 @@ CAVEAT_CORE_ENUMERATION_INCOMPLETE = "core-enumeration-incomplete"
 CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT = "firmware-path-escapes-root"
 CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
 CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE = "firmware-path-names-no-file"
+# The configured value is relative and the emulator resolves it against the
+# working directory of its own process (xemu opens every ``[sys.files]`` value
+# verbatim with plain fopen/access, system/vl.c:2527-2535, :2918 with
+# osdep.h:645-653 at v0.8.135) — a property of the launch, not of the machine,
+# so no destination exists for atlas to observe. The placement families state
+# the same situation as a ``working_directory`` root with the ``<cwd>`` hole;
+# a firmware requirement's ``path`` is contractually the absolute observed
+# destination, so here the file stays out of the requirement list and this
+# caveat carries the anchor as data instead: the key, the declared value, and
+# the ``<cwd>``-templated path the launcher's working directory completes.
+# Distinct from ``firmware-root-unusable`` (a relative *root* refusing every
+# declaration resolved against it) and from ``firmware-path-names-no-file``
+# (a value naming no file at all): this value names its file perfectly well —
+# where it lands is what only the launch decides.
+CAVEAT_FIRMWARE_PATH_LAUNCH_DEPENDENT = "firmware-path-launch-dependent"
 # Distinct from CAVEAT_FIRMWARE_ROOT_MISSING, which says the root is not there:
 # this one says the configured value cannot name a place at all, so no
 # declaration can be resolved against it however well the file exists.
@@ -3083,6 +3100,36 @@ def _xemu_standalone_core(
                         "key": key,
                         "declared": "",
                         "need": NEED_REQUIRED,
+                    },
+                )
+            )
+            continue
+        if not os.path.isabs(value):
+            # xemu opens the value relative to its own process's working
+            # directory (verbatim into the QEMU options, system/vl.c:2983-3095;
+            # probed with plain fopen/access, vl.c:2527-2535 and :2918 with
+            # osdep.h:645-653; no launch step chdirs, ui/xemu.c:1278-1379, all
+            # at v0.8.135) — a fact of the launch no read of this machine can
+            # establish, so no destination is stated and the caveat carries the
+            # anchor as data instead of a requirement carrying an invented one.
+            caveats.append(
+                Caveat(
+                    CAVEAT_FIRMWARE_PATH_LAUNCH_DEPENDENT,
+                    f"{entry.label}'s {key} is the relative value {value!r}, which xemu "
+                    "opens relative to the working directory of the launching process "
+                    "(the configured string is passed verbatim into the QEMU options, "
+                    "system/vl.c:2983-3095, and opened with plain fopen/access, "
+                    "vl.c:2527-2535 and :2918 with osdep.h:645-653, at v0.8.135) — a "
+                    "property of the launch, not of the machine, so no destination is "
+                    f"stated for a file the launch does require; fill '{HOLE_CWD}' with "
+                    "the launcher's working directory to complete the path",
+                    {
+                        "label": entry.label,
+                        "token": card.token,
+                        "key": key,
+                        "declared": value,
+                        "need": NEED_REQUIRED,
+                        "path": os.path.join(TEMPLATE_CWD, value),
                     },
                 )
             )
