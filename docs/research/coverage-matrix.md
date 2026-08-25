@@ -12,7 +12,7 @@ half; the standalone half is one column per question, filled from the packaged c
 
 Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 3) sha256 `89ad46fbb616`.
 
-**Status:** libretro 59/159 audited · standalone save 11/22 · savestate 18/22 · texture 7/22 · mod 7/22 · firmware 5/22
+**Status:** libretro 59/159 audited · standalone save 11/22 · savestate 19/22 · texture 7/22 · mod 7/22 · firmware 5/22
 
 ## libretro cores
 
@@ -194,6 +194,7 @@ cards themselves.
 | `duckstation` | psx                                        | ✔     | ✔         | ✔       | ✔   | ✔        |
 | `gzdoom`      | doom                                       | ✖     | ✔         | ✖       | ✖   | ✖        |
 | `ironwail`    | quake                                      | ✖     | ✔         | ✖       | ✖   | ✖        |
+| `mame`        | adam, amstradcpc, apple2, apple2gs, … (54) | ✖     | ✔         | ✖       | ✖   | ✖        |
 | `melonds`     | nds                                        | ✔     | ✔         | ✖       | ✖   | ✔        |
 | `openbor`     | openbor                                    | ✖     | ✔         | ✖       | ✖   | ✖        |
 | `pcsx2`       | ps2                                        | ✔     | ✔         | ✔       | ✔   | ✔        |
@@ -206,7 +207,6 @@ cards themselves.
 | `solarus`     | solarus                                    | ✖     | ✔         | ✖       | ✖   | ✖        |
 | `vita3k`      | psvita                                     | ✔     | ✔         | ✖       | ✖   | ✖        |
 | `xemu`        | consolearcade, xbox                        | ✔ 1/2 | ✔ 1/2     | ✖       | ✖   | ✔ 1/2    |
-| `mame`        | adam, amstradcpc, apple2, apple2gs, … (54) | ✖     | ✖         | ✖       | ✖   | ✖        |
 | `os-shell`    | consolearcade, desktop, mugen, ps3         | ✖     | ✖         | ✖       | ✖   | ✖        |
 | `portmaster`  | portmaster                                 | ✖     | ✖         | ✖       | ✖   | ✖        |
 | `xroar`       | coco, dragon32, tanodragon                 | ✖     | ✖         | ✖       | ✖   | ✖        |

@@ -356,6 +356,7 @@ KNOWN_CAVEAT_CODES = {
     "save-inside-content",
     "save-inside-image",
     "savestate-inside-image",
+    "savestate-support-machine-dependent",
     "save-writes-discarded",
     "core-mode-unestablished",
     "save-root-redirected",

@@ -457,6 +457,16 @@ CAVEAT_CONTENT_PATH_UNNAMED = "content-path-unnamed"
 # caveat is what keeps "here is the directory" from reading as "and states will
 # appear in it".
 CAVEAT_CORE_SAVESTATES_UNSUPPORTED = "core-savestates-unsupported"
+# The declaration caveat's standalone sibling, per machine instead of per
+# core: MAME flags save-state support driver by driver (MACHINE_SUPPORTS_SAVE,
+# gamedrv.h:76 at mame0287), the flags are compiled into the binary, and no
+# read of this machine can say which side the launched system falls on. An
+# unflagged system still WRITES the state file — MAME saves it and warns
+# "Save states are not officially supported for this system"
+# (machine.cpp:927-928) — so the placement stands, and this caveat is what
+# keeps "here is the directory" from reading as "and every machine's states
+# are reliable". ``data`` carries the emulator and the citation.
+CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT = "savestate-support-machine-dependent"
 # A directory is stated, and that this emulator reads it is not established.
 # The texture family's own degradation, and one level weaker than every other
 # code here: those qualify an answer atlas resolved, this one qualifies the

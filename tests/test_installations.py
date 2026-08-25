@@ -1858,6 +1858,85 @@ class TestTheStatedNoIsAnAnswer:
         assert isinstance(entry.savestate_location(), atlas.SavestateAbsence)
 
 
+class TestMameReadingPrimitives:
+    """The MAME grammar mirrors, tested against the upstream rules they cite."""
+
+    def test_ini_values_follow_mames_grammar(self):
+        from atlas.installations import _mame_ini_values  # pyright: ignore[reportPrivateUsage]
+
+        text = (
+            "#\n# COMMENT\n#\n"
+            "state_directory           /mnt/states   # trailing comment\n"
+            'snapname                  "%g/%i"\n'
+            "invalidlinewithoutvalue\n"
+            'quoted_hash               "a#b"\n'
+            "state_directory           /mnt/wins\n"
+        )
+        values = _mame_ini_values(text)
+        # spaces trimmed, comment cut outside quotes, quotes trimmed once,
+        # a '#' inside quotes kept, the LAST duplicate winning (options.cpp:270)
+        assert values["state_directory"] == "/mnt/wins"
+        assert values["snapname"] == "%g/%i"
+        assert values["quoted_hash"] == "a#b"
+        assert "invalidlinewithoutvalue" not in values
+
+    def test_env_substitution_mirrors_osd_subst_env(self):
+        from atlas.installations import _mame_subst_env  # pyright: ignore[reportPrivateUsage]
+
+        env = {"HOME": "/home/deck", "XDG_CONFIG_HOME": "/home/deck/.var/app/x/config"}
+        assert _mame_subst_env("~/.mame", env) == ("/home/deck/.mame", None)
+        assert _mame_subst_env("$XDG_CONFIG_HOME/mame", env) == (
+            "/home/deck/.var/app/x/config/mame",
+            None,
+        )
+        assert _mame_subst_env("${HOME}/.mame", env) == ("/home/deck/.mame", None)
+        # a ~ not followed by a separator stays literal (posixdir.cpp:248-252)
+        assert _mame_subst_env("~backup", env) == ("~backup", None)
+        # a variable outside the pinned set refuses instead of guessing
+        assert _mame_subst_env("$rd_home_states_path/mame-sa", env) == (
+            None,
+            "rd_home_states_path",
+        )
+
+    def test_the_command_yields_inipath_startdir_and_machine(self):
+        from atlas.installations import _mame_launch_reading  # pyright: ignore[reportPrivateUsage]
+
+        launch = _mame_launch_reading(
+            "%STARTDIR%=~/.mame %EMULATOR_MAME% -inipath /var/config/mame/ini "
+            "-rompath %GAMEDIR%\\;%ROMPATH%/adam adam -flop1 %ROM%"
+        )
+        assert launch.inipath == "/var/config/mame/ini"
+        assert launch.startdir == "~/.mame"
+        assert launch.machine_name == "adam"
+        assert not launch.machine_is_content
+
+    def test_the_arcade_machine_is_the_roms_own_basename(self):
+        from atlas.installations import _mame_launch_reading  # pyright: ignore[reportPrivateUsage]
+
+        launch = _mame_launch_reading(
+            "%EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %ROMPATH%/arcade %BASENAME%"
+        )
+        assert launch.machine_is_content
+        assert launch.machine_name is None
+
+    def test_a_flag_value_is_never_mistaken_for_the_machine(self):
+        from atlas.installations import _mame_launch_reading  # pyright: ignore[reportPrivateUsage]
+
+        # astrocde: the machine comes before -cart %BASENAME%, whose value a
+        # pairwise scan must consume rather than surface.
+        launch = _mame_launch_reading(
+            "%EMULATOR_MAME% -rompath %ROMPATH%/astrocde astrocde -cart %BASENAME%"
+        )
+        assert launch.machine_name == "astrocde"
+        assert not launch.machine_is_content
+
+    def test_an_untokenizable_command_states_nothing(self):
+        from atlas.installations import _mame_launch_reading  # pyright: ignore[reportPrivateUsage]
+
+        launch = _mame_launch_reading('%EMULATOR_MAME% -autoboot_command "unclosed')
+        assert launch == type(launch)(None, None, None, False)
+
+
 TRIO_ESDE = (
     '<?xml version="1.0"?><systemList>'
     "<system><name>psp</name><path>%ROMPATH%/psp</path><extension>.iso</extension>"

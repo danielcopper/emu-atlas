@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import tomllib
 import xml.etree.ElementTree as _ET
 from glob import escape as _glob_escape
@@ -192,6 +193,7 @@ from atlas.placement import (
     CAVEAT_SAVE_ROOT_REVOKED,
     CAVEAT_SAVE_WRITES_DISCARDED,
     CAVEAT_SAVESTATE_INSIDE_IMAGE,
+    CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT,
     CAVEAT_SORTED_DIR_MISSING,
     CAVEAT_SYMLINK_LOOP,
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
@@ -214,6 +216,7 @@ from atlas.placement import (
     STATE_ROOT_CONTENT_DIRECTORY,
     STATE_ROOT_EMULATOR_DIRECTORY,
     STATE_ROOT_KINDS,
+    STATE_ROOT_WORKING_DIRECTORY,
     StateRootKind,
     SUBDIR_TEMPLATE_HOLES,
     TEMPLATE_CONTENT_DIR,
@@ -8960,6 +8963,503 @@ def _xemu_savestate_placement(
     )
 
 
+# MAME's state files: the menu slots are single keys a-z / 0-9
+# (keyboard_input_item_name, ui/state.cpp:34-42 at mame0287), the quick save is
+# the literal "quick" (ui/ui.cpp:1702-1705) and the autosave the literal "auto"
+# (machine.cpp:429-432, written only for machines whose drivers are flagged and
+# only under the off-by-default autosave option, emuopts.cpp:71) — each becomes
+# <name>.sta below the per-machine subdirectory (compose_saveload_filename,
+# machine.cpp:576). The set is declared, never complete: a -state load may name
+# anything, and plugins can save under names of their own.
+_MAME_SLOT_NAMES = tuple(
+    f"{slot}.sta" for slot in ("auto", "quick", *"0123456789", *"abcdefghijklmnopqrstuvwxyz")
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _MameLaunch:
+    """What a MAME catalogue command states: ini path, working dir, machine.
+
+    ``machine_is_content`` marks the arcade shape, where the positional MAME
+    system IS the ROM's basename (``%BASENAME%``) — the subdirectory then
+    derives from the content path or stays a ``<rom_stem>`` hole.
+    """
+
+    inipath: str | None
+    startdir: str | None
+    machine_name: str | None
+    machine_is_content: bool
+
+
+def _mame_launch_reading(command: str) -> _MameLaunch:
+    """The command parsed the way ES-DE hands it to MAME.
+
+    Everything before the ``%EMULATOR_…%`` token is ES-DE's own prefix — a
+    ``%STARTDIR%=<dir>`` there is the working directory ES-DE changes into
+    before launching. After the token, MAME's grammar: every ``-flag``
+    consumes the next token as its value (all the catalogue's flags do:
+    -inipath, -rompath, the media mounts, the autoboot pair, the slot
+    options), and the first token no flag consumed is the positional system
+    name. A command that cannot be tokenized states nothing rather than
+    something half-read.
+    """
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        return _MameLaunch(None, None, None, False)
+    startdir = None
+    emulator_at = None
+    for i, token in enumerate(tokens):
+        if token.startswith("%STARTDIR%="):
+            startdir = token[len("%STARTDIR%=") :]
+        if token.startswith("%EMULATOR_"):
+            emulator_at = i
+            break
+    if emulator_at is None:
+        return _MameLaunch(None, startdir, None, False)
+    inipath = None
+    machine = None
+    rest = tokens[emulator_at + 1 :]
+    i = 0
+    while i < len(rest):
+        token = rest[i]
+        if token.startswith("-"):
+            if token == "-inipath" and i + 1 < len(rest):
+                inipath = rest[i + 1]
+            i += 2
+            continue
+        machine = token
+        break
+    if machine == "%BASENAME%":
+        return _MameLaunch(inipath, startdir, None, True)
+    if machine is not None and "%" in machine:
+        # Some other template in the machine position — nothing this reading
+        # can turn into a directory name.
+        machine = None
+    return _MameLaunch(inipath, startdir, machine, False)
+
+
+def _mame_ini_values(text: str) -> dict[str, str]:
+    """A MAME ini read the way core_options reads it (options.cpp:980-1046).
+
+    Leading whitespace skipped, ``#`` opens a comment (outside quotes), the
+    name runs to the first whitespace, the value is the rest with spaces and
+    one pair of surrounding quotes trimmed (trim_spaces_and_quotes,
+    options.cpp:60-73), an invalid line warns and is skipped, and a duplicate
+    key's LAST occurrence wins because an equal-priority set overrides
+    (entry::set_value, options.cpp:270).
+    """
+    values: dict[str, str] = {}
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        parts = stripped.split(None, 1)
+        if len(parts) != 2:
+            continue
+        name, data = parts
+        kept: list[str] = []
+        in_quotes = False
+        for ch in data:
+            if ch == '"':
+                in_quotes = not in_quotes
+            if ch == "#" and not in_quotes:
+                break
+            kept.append(ch)
+        value = "".join(kept).strip()
+        if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+        values[name] = value
+    return values
+
+
+def _mame_subst_env(value: str, env: Mapping[str, str]) -> tuple[str | None, str | None]:
+    """``osd_subst_env`` over the variables this launch pins — or the one it cannot.
+
+    MAME expands a leading ``~`` as $HOME and ``$VAR``/``${VAR}`` from the
+    process environment, dropping a missing variable to nothing with a
+    warning (posixdir.cpp:236-300 at mame0287). Atlas cannot enumerate the
+    launch's environment, only the variables the sandbox pins (HOME, and the
+    XDG homes flatpak force-sets, flatpak-context.c:3174-3177 at 1.16.6) —
+    so a variable outside that set answers ``(None, its name)`` and the
+    caller refuses instead of guessing which way the process would expand it.
+    """
+    result: list[str] = []
+    i = 0
+    if value.startswith("~"):
+        home = env.get("HOME")
+        if home is None:
+            return None, "HOME"
+        if len(value) == 1 or value[1] == "/":
+            result.append(home)
+            i = 1
+        # a ~ followed by anything else stays literal (posixdir.cpp:248-252)
+    while i < len(value):
+        ch = value[i]
+        if ch != "$":
+            result.append(ch)
+            i += 1
+            continue
+        i += 1
+        if i < len(value) and value[i] == "{":
+            end = value.find("}", i)
+            if end == -1:
+                result.append("$" + value[i:])
+                break
+            name = value[i + 1 : end]
+            i = end + 1
+        else:
+            start = i
+            while i < len(value) and (value[i] == "_" or value[i].isalnum()):
+                i += 1
+            name = value[start:i]
+        if name not in env:
+            return None, name or "$"
+        result.append(env[name])
+    return "".join(result), None
+
+
+def _mame_env(homes: _XdgHomes, sandbox: _Sandbox) -> dict[str, str]:
+    """The environment variables this launch pins — never the whole environment."""
+    env: dict[str, str] = {}
+    if sandbox.expansion_home:
+        env["HOME"] = sandbox.expansion_home
+    if homes.xdg_pinned:
+        # flatpak force-sets the XDG homes to the app's own .var trees
+        # (flatpak-context.c:3174-3177 at 1.16.6), host-spelled.
+        env["XDG_CONFIG_HOME"] = homes.config
+        env["XDG_DATA_HOME"] = homes.data
+    return env
+
+
+@dataclass(frozen=True, slots=True)
+class _MameIniElement:
+    """One inipath element as this host can probe it — or why it cannot."""
+
+    stated: str
+    resolved: str | None
+    launch_relative: bool = False
+
+
+def _mame_ini_elements(
+    launch: _MameLaunch,
+    env: Mapping[str, str],
+    sandbox: _Sandbox,
+    cwd: str | None,
+) -> tuple[_MameIniElement, ...]:
+    """The ini search path, element by element, the way the launch resolves it.
+
+    The command's ``-inipath`` outranks everything (a CLI value cannot be
+    overridden from an ini, options.cpp:270); without one the SDL build's
+    compiled default is ``$HOME/.mame;.;ini`` (sdl3/sdlopts.cpp:27-35, the
+    entry at :44 — the same define in the SDL2 tree), whose second and third
+    elements are relative to the working directory only the launch knows.
+    """
+    stated = launch.inipath.split(";") if launch.inipath else ["$HOME/.mame", ".", "ini"]
+    elements: list[_MameIniElement] = []
+    for element in stated:
+        substituted, _ = _mame_subst_env(element, env)
+        if substituted is None:
+            elements.append(_MameIniElement(element, None))
+            continue
+        if not os.path.isabs(substituted):
+            if cwd is None:
+                elements.append(_MameIniElement(element, None, launch_relative=True))
+                continue
+            substituted = os.path.normpath(os.path.join(cwd, substituted))
+            elements.append(_MameIniElement(element, substituted))
+            continue
+        host = sandbox.host("inipath", substituted)
+        elements.append(_MameIniElement(element, host.path))
+    return tuple(elements)
+
+
+def _mame_standard_ini_layer(
+    machine: Machine, elements: tuple[_MameIniElement, ...], *, file: str, key: str
+) -> tuple[Caveat, ...]:
+    """The per-machine ini layer, checked instead of assumed.
+
+    After mame.ini, MAME parses debug/orientation/screen/source/parent/driver
+    inis out of the same search path (parse_standard_inis,
+    mameopts.cpp:37-96), and any of them can carry its own ``state_directory``
+    line. The layer is usually empty — RetroDECK ships mame.ini and ui.ini
+    and nothing else — so the honest move is to look: only where other ini
+    files actually sit (or where the directory cannot be listed) does the
+    answer say the layer was not read.
+    """
+    suspects: list[str] = []
+    incomplete = False
+    for element in elements:
+        if element.resolved is None:
+            continue
+        listing = machine.glob(os.path.join(element.resolved, "*.ini"))
+        if listing.status != GLOB_COMPLETE:
+            incomplete = True
+        for path in listing.matches:
+            name = os.path.basename(path)
+            # ui.ini is the UI manager's own file; parse_standard_inis never
+            # opens it, and the governing file was already read.
+            if name not in (file, "ui.ini"):
+                suspects.append(os.path.join(element.resolved, name))
+    if not suspects and not incomplete:
+        return ()
+    named = ", ".join(sorted(suspects)) if suspects else "the directory could not be listed"
+    return (
+        Caveat(
+            CAVEAT_PER_GAME_LAYER_UNREAD,
+            f"MAME layers per-machine and per-orientation ini files over {file} "
+            f"(parse_standard_inis, mameopts.cpp:37-96), and this search path holds more "
+            f"than the files this answer read ({named}) — a {key} line in one of them "
+            "would move the states for the machines it covers, and none was read",
+            {"key": key, "files": named},
+        ),
+    )
+
+
+def _mame_savestate_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSavestateCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+) -> SavestatePlacement | Unresolved:
+    """MAME's states answer: ``state_directory`` from the ini the launch names.
+
+    The launch_ini shape's one resolver (#284). The governing mame.ini is
+    wherever the command's ``-inipath`` points — RetroDECK passes
+    ``/var/config/mame/ini``, a sandbox spelling this reading translates —
+    falling back to the SDL build's compiled ``$HOME/.mame;.;ini`` search
+    path, and the file is read with MAME's own grammar and priority rules
+    (:func:`_mame_ini_values`). A relative ``state_directory`` — the compiled
+    ``sta`` default when no ini exists — resolves against the working
+    directory, which is the command's ``%STARTDIR%`` where it states one and
+    an open hole where it does not. Below the root sits one subdirectory per
+    machine (``statename``, default ``%g`` = the running system's short
+    name, machine.cpp:474-547, :576), which the command's positional system
+    word fills — or the content's own stem where the machine IS the ROM
+    (``%BASENAME%``). Two facts ride every answer as caveats: whether the
+    launched system's driver is flagged MACHINE_SUPPORTS_SAVE is compiled
+    into the binary and unreadable here (states are written and warned about
+    either way, machine.cpp:927-928), and any per-machine ini layer that was
+    seen but not read.
+    """
+    shape = card.launch_ini
+    assert shape is not None  # the loader pairs the shape with this resolver
+    launch = _mame_launch_reading(command)
+    env = _mame_env(homes, sandbox)
+    cwd = None
+    if launch.startdir is not None:
+        cwd, _ = _mame_subst_env(launch.startdir, env)
+        if cwd is not None and not os.path.isabs(cwd):
+            cwd = None
+    elements = _mame_ini_elements(launch, env, sandbox, cwd)
+    values: dict[str, str] = {}
+    stated_ini: str | None = None
+    for element in elements:
+        if element.resolved is None:
+            continue
+        candidate = os.path.join(element.resolved, shape.file)
+        result = machine.read_text(candidate)
+        if result.status == READ_MISSING:
+            continue
+        if result.status != READ_OK:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"MAME's configuration ({candidate}) exists and could not be read — where "
+                "a state lands is unknowable here",
+                {"emulator": card.token, "config": candidate},
+            )
+        values = _mame_ini_values(result.text or "")
+        stated_ini = candidate
+        break
+    # The second parse: mame.ini is read twice so the first pass can move the
+    # ini path itself (mameopts.cpp:39-42). A CLI -inipath cannot be
+    # overridden (options.cpp:270), so the re-probe happens only without one.
+    if stated_ini is not None and launch.inipath is None and values.get("inipath"):
+        moved = _MameLaunch(values["inipath"], launch.startdir, None, False)
+        for element in _mame_ini_elements(moved, env, sandbox, cwd):
+            if element.resolved is None:
+                continue
+            candidate = os.path.join(element.resolved, shape.file)
+            if candidate == stated_ini:
+                break
+            result = machine.read_text(candidate)
+            if result.status == READ_OK:
+                values = {**values, **_mame_ini_values(result.text or "")}
+                stated_ini = candidate
+            break
+    caveats: list[Caveat] = [*extra_caveats]
+    needs: list[str] = []
+    key = "state_directory"
+    stated_key = shape.keys.get(key)
+    if stated_key is None:
+        raise ValueError(
+            f"savestate card {card.token!r} states no {key!r} ini key and this resolver "
+            "reads it — the card and the code shipped out of step"
+        )
+    raw = values.get(key)
+    if raw:
+        substituted, missing = _mame_subst_env(raw, env)
+        if substituted is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"{shape.file} names the states directory through ${missing}, a value of "
+                "the launch's own environment this answer cannot establish — where a state "
+                "lands is unknowable here",
+                {"emulator": card.token, "config": stated_ini or shape.file},
+            )
+        reading = f'{shape.file}: {key} {raw}' + (
+            "" if substituted == raw else f" — the environment expands it to {substituted}"
+        )
+    else:
+        substituted = stated_key.default
+        reading = (
+            f"{key} is {'empty' if raw == '' else 'unset'} — the compiled default "
+            f"{stated_key.default!r} governs ({stated_key.citation})"
+        )
+    root_kind: StateRootKind = STATE_ROOT_EMULATOR_DIRECTORY
+    if os.path.isabs(substituted):
+        host = sandbox.host(key, substituted)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                f"the states directory MAME's configuration names could not be located "
+                f"from here ({stated_ini or shape.file}) — nothing this answer could "
+                "anchor at",
+                {"emulator": card.token, "config": stated_ini or shape.file},
+            )
+        root = host.path
+        reading += host.note
+    elif cwd is not None:
+        root = os.path.normpath(os.path.join(cwd, substituted))
+        reading += (
+            f" — a relative value resolves against the working directory the launch "
+            f"states (%STARTDIR%={launch.startdir})"
+        )
+    else:
+        root = os.path.join(TEMPLATE_CWD, substituted) if substituted else TEMPLATE_CWD
+        root_kind = STATE_ROOT_WORKING_DIRECTORY
+        needs.append(HOLE_CWD)
+        caveats.append(
+            Caveat(
+                CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
+                f"a relative {key} resolves against the launching process's working "
+                "directory (emu_file over the searchpath, machine.cpp:899-903), which no "
+                "read of this machine can establish — the same unknown covers the "
+                "cwd-relative ini candidates the compiled search path names",
+                {"core": card.token, "path": substituted},
+            )
+        )
+    # The per-machine subdirectory: statename, default %g = the system's own
+    # short name (get_statename, machine.cpp:474-547, the %g substitution at
+    # :544; the join at :576).
+    sname = values.get("statename")
+    machine_word = launch.machine_name
+    subdir_open_reason: str | None = None
+    if sname is not None and sname != "%g" and "%" in sname:
+        caveats.append(
+            Caveat(
+                CAVEAT_UNKNOWN_OPTION_VALUE,
+                f'statename = "{sname}" templates the subdirectory on a mounted image '
+                "(get_statename, machine.cpp:487-540), which this reading does not model "
+                "— the per-machine subdirectory below the root is not established",
+                {"key": "statename", "value": sname},
+            )
+        )
+        subdir_open_reason = "the statename template is not modelled"
+        subdir = None
+    elif sname is not None and sname != "%g":
+        literal = sname
+        dot = literal.rfind(".")
+        if dot != -1:
+            literal = literal[:dot]
+        subdir = literal
+        reading += f'; statename = "{sname}" names the subdirectory'
+    elif launch.machine_is_content:
+        if content_path is not None:
+            stem = os.path.splitext(os.path.basename(content_path))[0]
+            subdir = stem
+        else:
+            subdir = TEMPLATE_ROM_STEM
+            needs.append(HOLE_ROM_STEM)
+    elif machine_word is not None:
+        subdir = machine_word
+    else:
+        subdir = None
+        subdir_open_reason = (
+            "the launch names no system, so which machine's subdirectory this run "
+            "writes is the user's pick in MAME's own system selection"
+        )
+    directory = os.path.join(root, subdir) if subdir is not None else root
+    caveats.extend(
+        _mame_standard_ini_layer(machine, elements, file=shape.file, key=key)
+    )
+    caveats.append(
+        Caveat(
+            CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT,
+            "whether the launched system's driver is flagged MACHINE_SUPPORTS_SAVE is "
+            "compiled per machine (gamedrv.h:76) and not readable here — an unflagged "
+            "one still writes the file and warns that save states are not officially "
+            "supported for it (machine.cpp:927-928), so reliability is the driver's own",
+            {
+                "emulator": card.token,
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287",
+            },
+        )
+    )
+    if directory.startswith("<"):
+        physical = None
+    else:
+        physical, link_caveats = _link_view(machine, directory)
+        caveats.extend(link_caveats)
+    if subdir is None:
+        file_set = UNKNOWN_FILE_SET
+        assert card.names is not None and card.names_citation is not None
+        caveats.append(
+            Caveat(
+                CAVEAT_FILE_NAMES_UNESTABLISHED,
+                f"a state below {directory} is named {card.names} — {subdir_open_reason} "
+                f"({card.names_citation}) — so the tree is stated and its entries "
+                "refused; back it up whole",
+                {
+                    "core": card.token,
+                    "dir": directory,
+                    "pattern": card.names,
+                    "citation": card.names_citation,
+                },
+            )
+        )
+    else:
+        file_set = FileSet(
+            FILE_SET_DECLARED,
+            _MAME_SLOT_NAMES,
+            f"declared by standalone savestate card '{card.token}'",
+            complete=False,
+        )
+    ini_provenance = (
+        f"read from {stated_ini}"
+        if stated_ini is not None
+        else f"no {shape.file} exists on the launch's search path "
+        f"({'; '.join(e.stated for e in elements)})"
+    )
+    return SavestatePlacement(
+        dir=directory,
+        root_kind=root_kind,
+        needs=tuple(dict.fromkeys(needs)),
+        file_set=file_set,
+        sources=(
+            f"standalone savestate card '{card.token}': {card.provenance}",
+            f"{reading} — {ini_provenance}",
+        ),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+    )
+
+
 _STANDALONE_SAVESTATE_RESOLVERS = {
     "DOLPHIN": _fixed_savestate_tree_placement,
     "PRIMEHACK": _fixed_savestate_tree_placement,
@@ -8970,6 +9470,7 @@ _STANDALONE_SAVESTATE_RESOLVERS = {
     "MELONDS": _melonds_savestate_placement,
     "DUCKSTATION": _duckstation_savestate_placement,
     "XEMU": _xemu_savestate_placement,
+    "MAME": _mame_savestate_placement,
 }
 
 # Which citation slots each savestate reading speaks, so a card can be crossed

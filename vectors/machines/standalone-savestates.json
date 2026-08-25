@@ -1332,6 +1332,582 @@
           ]
         }
       }
+    },
+    {
+      "name": "retrodeck-mames-states-follow-the-inipath-the-command-names",
+      "rationale": "The command's -inipath names the governing mame.ini — a sandbox spelling (/var/config/mame/ini) this reading translates — and the state_directory line RetroDECK wrote there roots the tree, with one subdirectory per machine below it: the command's positional system word (adam), the statename default %g (machine.cpp:544, :576). The slot names are declared — auto, quick, 0-9, a-z, each <slot>.sta — never complete. Every MAME answer carries savestate-support-machine-dependent: whether adam's driver is flagged MACHINE_SUPPORTS_SAVE is compiled into the binary, and an unflagged machine still writes the file with a warning. ui.ini sits beside mame.ini and is NOT the standard-ini layer — parse_standard_inis never opens it — so no layer caveat rides.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>adam</name>\n    <path>%ROMPATH%/adam</path>\n    <extension>.dsk .DSK</extension>\n    <command label=\"MAME [Diskette] (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %GAMEDIR%\\;%ROMPATH%/adam adam -flop1 %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini": "#\n# CORE OUTPUT DIRECTORY OPTIONS\n#\nnvram_directory           /mnt/sd/retrodeck/saves/mame-sa/nvram\nstate_directory           /mnt/sd/retrodeck/states/mame-sa\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/ui.ini": "# ui\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/states/mame-sa"
+        ],
+        "entry_savestate_query": {
+          "system": "adam"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/retrodeck/states/mame-sa/adam",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "mame-the-machine-is-the-roms-own-name-on-the-arcade-rows",
+      "rationale": "On the arcade rows the positional MAME system IS the ROM's basename (%BASENAME%), so the per-machine subdirectory derives from the content path — and without one it stays the open <rom_stem> hole the caller fills, exactly like every other content-derived answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>arcade</name>\n    <path>%ROMPATH%/arcade</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME (Standalone)\">%EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %GAMEDIR%\\;%ROMPATH%/arcade %BASENAME%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini": "#\n# CORE OUTPUT DIRECTORY OPTIONS\n#\nnvram_directory           /mnt/sd/retrodeck/saves/mame-sa/nvram\nstate_directory           /mnt/sd/retrodeck/states/mame-sa\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/states/mame-sa"
+        ],
+        "entry_savestate_query": {
+          "system": "arcade"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/retrodeck/states/mame-sa/<rom_stem>",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "rom_stem"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "mame-a-content-path-fills-the-arcade-machines-subdirectory",
+      "rationale": "The same arcade row with the content named: the machine word is the ROM's own stem, so the subdirectory resolves concrete.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>arcade</name>\n    <path>%ROMPATH%/arcade</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME (Standalone)\">%EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %GAMEDIR%\\;%ROMPATH%/arcade %BASENAME%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini": "#\n# CORE OUTPUT DIRECTORY OPTIONS\n#\nnvram_directory           /mnt/sd/retrodeck/saves/mame-sa/nvram\nstate_directory           /mnt/sd/retrodeck/states/mame-sa\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/states/mame-sa"
+        ],
+        "entry_savestate_query": {
+          "system": "arcade",
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/sfiii3.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/retrodeck/states/mame-sa/sfiii3",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "mame-no-inipath-means-the-compiled-search-path-below-the-startdir",
+      "rationale": "Several catalogue commands pass no -inipath and set %STARTDIR%=~/.mame instead. The compiled SDL search path is $HOME/.mame;.;ini (sdl3/sdlopts.cpp:27-35); on a machine where no mame.ini exists anywhere on it, the compiled state_directory default 'sta' governs — a relative path, resolved against the working directory the command pins — so the states land below ~/.mame/sta, NOT below the arrangement's states tree. Read, not assumed: the wiring RetroDECK writes into its own mame.ini never reaches these launches.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>apple2gs</name>\n    <path>%ROMPATH%/apple2gs</path>\n    <extension>.2mg .2MG</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/apple2gs apple2gs -gameio joy -flop3 %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "apple2gs"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/.mame/sta/apple2gs",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "mame-without-a-startdir-the-relative-root-hangs-off-the-cwd",
+      "rationale": "No -inipath, no %STARTDIR%: the cwd-relative ini candidates cannot be probed and the compiled relative 'sta' cannot be anchored — the answer stays a <cwd> template with the launch-dependent caveat, the same statement the melonDS relative path makes.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>vectrex</name>\n    <path>%ROMPATH%/vectrex</path>\n    <extension>.vec .VEC</extension>\n    <command label=\"MAME (Standalone)\">%EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/vectrex vectrex -cart %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savestate_query": {
+          "system": "vectrex"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "<cwd>/sta/vectrex",
+          "root_kind": "working_directory",
+          "needs": [
+            "cwd"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "core": "MAME",
+                "path": "sta"
+              }
+            },
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "mame-a-per-machine-ini-layer-is-seen-not-assumed",
+      "rationale": "After mame.ini MAME parses orientation/source/parent/driver inis out of the same search path (parse_standard_inis, mameopts.cpp:37-96), any of which can move state_directory for the machines it covers. The layer is checked, not assumed: only where such files actually sit does the answer carry per-game-layer-unread, naming them.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>adam</name>\n    <path>%ROMPATH%/adam</path>\n    <extension>.dsk .DSK</extension>\n    <command label=\"MAME [Diskette] (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %GAMEDIR%\\;%ROMPATH%/adam adam -flop1 %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini": "#\n# CORE OUTPUT DIRECTORY OPTIONS\n#\nnvram_directory           /mnt/sd/retrodeck/saves/mame-sa/nvram\nstate_directory           /mnt/sd/retrodeck/states/mame-sa\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/ui.ini": "# ui\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/vertical.ini": "state_directory           /mnt/sd/elsewhere\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/states/mame-sa"
+        ],
+        "entry_savestate_query": {
+          "system": "adam"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/retrodeck/states/mame-sa/adam",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-layer-unread",
+              "data": {
+                "key": "state_directory",
+                "files": "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/vertical.ini"
+              }
+            },
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

@@ -424,6 +424,101 @@
       "provenance": {
         "source": "xemu v0.8.135, the release the shipped binary carries as a whole version string (components/xemu/bin/xemu) and the save card's pin. A snapshot is not a file: xemu's savestates are QEMU internal snapshots, written INTO the qcow2 hard-disk image xemu.toml names in [sys.files] hdd_path — save_snapshot writes the VM state into the vmstate block device (qemu_fopen_bdrv + qemu_savevm_state, migration/savevm.c:3285-3290) and creates the snapshot record across every snapshot-capable device (bdrv_all_create_snapshot, :3301; the iteration block/snapshot.c:695-733), and the vmstate device is the first snapshot-capable one (bdrv_all_find_vmstate_bs with no vmstate argument, block/snapshot.c:736-777) — in xemu's machine the qcow2 hard disk, the DVD being read-only and the EEPROM raw. The emulator's own snapshot browser states the same fact in code: it opens exactly the file hdd_path names to list the snapshots and their embedded metadata (ui/xemu-snapshots.c:156-158, the list via bdrv_snapshot_list :193-198). Entries are named by the user (the snapshot UI's create field, the F5-F8 shortcut bindings, xemu-snapshots.c:46-51) or default to vm-YYYYMMDDhhmmss (savevm.c:3277-3282). A machine with no disk configured cannot snapshot at all ('no block device can store vmstate for snapshot', block/snapshot.c:779-781), which is the resolver's refusal branch. xemu.toml lives under the DATA home the way the save card establishes (SDL_GetPrefPath; RetroDECK links its config-tree copy there, components/xemu/component_prepare.sh:16-17), and on EmuDeck the emulator is the app.xemu.xemu flatpak the save card records, its trees below ~/.var/app. The card answers the xbox rows it shares with the save card; the consolearcade xemu entry stays outside both for the same reason — that launch's content story is unexamined. Neither arrangement wires any state path for xemu — nothing outside the image exists to wire."
       }
+    },
+    "MAME": {
+      "savestates": {
+        "systems": [
+          "adam",
+          "amstradcpc",
+          "apple2",
+          "apple2gs",
+          "arcade",
+          "arcadia",
+          "archimedes",
+          "astrocde",
+          "atari7800",
+          "atarijaguar",
+          "bbcmicro",
+          "cdimono1",
+          "channelf",
+          "coco",
+          "consolearcade",
+          "cps",
+          "cps1",
+          "cps2",
+          "cps3",
+          "crvision",
+          "daphne",
+          "dragon32",
+          "electron",
+          "fm7",
+          "fmtowns",
+          "gamate",
+          "gameandwatch",
+          "gamecom",
+          "gmaster",
+          "gx4000",
+          "intellivision",
+          "laserdisc",
+          "lcdgames",
+          "macintosh",
+          "mame",
+          "megaduck",
+          "model2",
+          "neogeo",
+          "neogeocd",
+          "neogeocdjp",
+          "odyssey2",
+          "oric",
+          "pv1000",
+          "scv",
+          "stv",
+          "supervision",
+          "supracan",
+          "tanodragon",
+          "ti99",
+          "vectrex",
+          "videopac",
+          "vsmile",
+          "x1",
+          "x68000"
+        ],
+        "launch_ini": {
+          "file": "mame.ini",
+          "keys": {
+            "state_directory": {
+              "default": "sta",
+              "citation": "emuopts.cpp:62 at mame0287"
+            },
+            "statename": {
+              "default": "%g",
+              "citation": "emuopts.cpp:85 at mame0287"
+            }
+          },
+          "citation": "parse_one_ini opens <basename>.ini over the ini_path search path (mameopts.cpp:116-131); mame.ini is parsed twice so the first pass can move that path (:39-42); a CLI -inipath cannot be overridden from an ini because an equal-or-lower priority set does not override (options.cpp:270); the SDL builds' compiled default path is $HOME/.mame;.;ini (sdl3/sdlopts.cpp:27-35, the entry at :44) — all at mame0287"
+        },
+        "names": {
+          "pattern": "<machine>/<slot>.sta, slot one of auto, quick, 0-9, a-z",
+          "citation": "machine.cpp:576 (the <statename>/<name>.sta join); ui/state.cpp:34-42 (the a-z/0-9 menu slots); ui/ui.cpp:1702-1705 (quick); machine.cpp:429-432 (auto, under the off-by-default autosave option, emuopts.cpp:71) at mame0287"
+        }
+      },
+      "anchors": {
+        "binary": "mame/bin/mame",
+        "names": {
+          "state_directory": {
+            "literal": "state_directory"
+          },
+          "statename": {
+            "literal": "statename"
+          },
+          "mame.ini": {
+            "unprotected": "the emulator never stores the whole name: parse_one_ini composes it at run time from emulator_info::get_configname() + \".ini\" (mameopts.cpp:125 at mame0287), so 'mame.ini' is nowhere in the shipped binary as bytes (verified raw, 0 matches) and its fragments 'mame' and '.ini' are far too generic to pin"
+          }
+        }
+      },
+      "provenance": {
+        "source": "MAME 0.287, the version the shipped components/mame/bin/mame carries as a whole string ('0.287 (unknown)'). The states root is the state_directory option, compiled default 'sta' (emuopts.cpp:62), read out of mame.ini with MAME's own grammar — name to the first whitespace, value trimmed of spaces and one pair of quotes, '#' comments, a duplicate key's last occurrence winning (core_options::parse_ini_file, options.cpp:980-1046, trim_spaces_and_quotes :60-73, the equal-priority override :270) — and PATH-typed values get environment substitution: a leading ~ becomes $HOME and $VAR/${VAR} expand from the process environment (type_specific_substitutions, options.cpp:622-627; osd_subst_env, posixdir.cpp:236-300). Which mame.ini governs is the launch's own fact: parse_one_ini opens it over the ini_path search path (mameopts.cpp:116-131, the double parse :39-42), the command's -inipath outranks any ini (options.cpp:270), and the compiled SDL default is $HOME/.mame;.;ini (sdl3/sdlopts.cpp:27-35) — which is why this card takes the launch_ini shape instead of naming a settings-table address. A relative root resolves against the working directory (emu_file over the searchpath, handle_saveload machine.cpp:899-903), the %STARTDIR% some catalogue commands state. Below the root sits one subdirectory per machine: statename, default %g = the running system's short name (get_statename, machine.cpp:474-547, the substitution at :544; the <statename>/<name>.sta join at compose_saveload_filename :555-579), which the command's positional system word fills — the ROM's own stem where the machine IS %BASENAME%. A state file is <slot>.sta: the save-state menu's single-key slots a-z/0-9 (keyboard_input_item_name, ui/state.cpp:34-42; the menu directory :527-532), quick (ui/ui.cpp:1702-1705) and auto (machine.cpp:429-432, written only under the off-by-default autosave option, emuopts.cpp:71, and only for flagged drivers). Whether a system supports states officially is the driver's compiled MACHINE_SUPPORTS_SAVE flag (gamedrv.h:76); an unflagged one still writes the file and warns (machine.cpp:927-928), which every answer states as savestate-support-machine-dependent. After mame.ini MAME layers debug/orientation/screen/source/parent/driver inis from the same path (parse_standard_inis, mameopts.cpp:37-96); the answer lists the search path and says so only where such files actually sit. RetroDECK writes state_directory = $states_path/mame-sa into $XDG_CONFIG_HOME/mame/ini/mame.ini (set_setting_value, components/mame/component_prepare.sh:91, :114; the address component_functions.sh:3) and most of its catalogue commands pass -inipath /var/config/mame/ini, the sandbox spelling of that directory; the commands that pass none set %STARTDIR%=~/.mame instead, where no mame.ini exists on a stock machine, so the compiled 'sta' resolves below ~/.mame. EmuDeck runs the org.mamedev.MAME flatpak against $HOME/.mame/mame.ini (emuDeckMAME.sh:7) and writes state_directory = $savesPath/mame/states there (:102-104) — the compiled default search path finds that file — but no save card records the flatpak's app id, so the EmuDeck route refuses with the variant named until one does."
+      }
     }
   }
 }
