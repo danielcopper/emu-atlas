@@ -1862,7 +1862,8 @@ class TestTheStatedNoIsAnAnswer:
         outcome = self._entry(marker=marker).savestate_location()
         assert isinstance(outcome, atlas.SavestateAbsence)
         drifted = [c for c in outcome.caveats if c.code == "arrangement-version-drifted"]
-        assert drifted and drifted[0].data["observed"] == "9.9.9"
+        assert drifted
+        assert drifted[0].data["observed"] == "9.9.9"
 
     def test_the_verified_arrangement_version_rides_nothing(self):
         marker = (

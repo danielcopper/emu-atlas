@@ -288,7 +288,8 @@ class TestTheStatedNoShape:
         assert cards[0].absent is not None
         assert cards[0].absent.citation == "the whole tree at v1: no state serializer"
         assert cards[0].absent.build_unestablished is None
-        assert cards[0].names is None and cards[0].names_citation is None
+        assert cards[0].names is None
+        assert cards[0].names_citation is None
 
     def test_an_unpinned_build_sentence_travels(self):
         table = _table(
@@ -346,7 +347,9 @@ class TestTheInsideImageShape:
         card = load_standalone_savestates(table)[0]
         assert card.inside_image is not None
         assert card.inside_image.key == "hdd_path"
-        assert card.base is None and card.directory is None and card.absent is None
+        assert card.base is None
+        assert card.directory is None
+        assert card.absent is None
 
     def test_without_a_settings_file_it_is_refused(self):
         table = _table(
@@ -395,12 +398,14 @@ class TestTheLaunchIniShape:
     def test_a_settings_file_beside_it_is_a_contradiction(self):
         savestates = self._launch_ini()
         savestates["settings"] = "demo.ini"
+        table = _table(savestates)
         with pytest.raises(ValueError, match="addressed by the launch command"):
-            load_standalone_savestates(_table(savestates))
+            load_standalone_savestates(table)
 
     def test_an_empty_key_table_is_refused(self):
+        table = _table(self._launch_ini(keys={}))
         with pytest.raises(ValueError, match="non-empty object"):
-            load_standalone_savestates(_table(self._launch_ini(keys={})))
+            load_standalone_savestates(table)
 
     def test_the_recorded_words_carry_the_file_and_keys(self):
         from atlas.standalone_savestates import recorded_savestate_emulator_words
