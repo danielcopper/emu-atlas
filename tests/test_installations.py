@@ -2346,9 +2346,11 @@ class TestMoreStandaloneSaves:
         assert p.needs == ("cwd",)
         assert p.file_set.groups is not None
         eeprom = [g for g in p.file_set.groups if g.role == "settings"]
-        assert eeprom and eeprom[0].dir == "<cwd>"
+        assert eeprom
+        assert eeprom[0].dir == "<cwd>"
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT]
-        assert stated and stated[0].data["key"] == "eeprom_path"
+        assert stated
+        assert stated[0].data["key"] == "eeprom_path"
 
     def test_xemu_relative_disk_snapshots_are_a_cwd_template_too(self):
         # The savestate answer keys off the same hdd_path — the identical
