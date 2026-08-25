@@ -1937,6 +1937,51 @@ class TestMameReadingPrimitives:
         assert launch == type(launch)(None, None, None, False)
 
 
+class TestMameTemplatedDirIsNeverLinkWalked:
+    """A <rom_stem> hole is a shape, not a path — walking it invents dead links."""
+
+    ARCADE = (
+        '<?xml version="1.0"?><systemList>'
+        "<system><name>arcade</name><path>%ROMPATH%/arcade</path><extension>.zip</extension>"
+        '<command label="MAME (Standalone)">%EMULATOR_MAME% -inipath /var/config/mame/ini '
+        "-rompath %ROMPATH%/arcade %BASENAME%</command></system>"
+        "</systemList>"
+    )
+    INI = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini"
+
+    def _entry(self):
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: self.ARCADE,
+            self.INI: "state_directory           /mnt/sd/retrodeck/states/mame-sa\n",
+        }
+        rd = _retrodeck(
+            files,
+            dirs=[
+                "/mnt/sd/retrodeck/saves",
+                "/mnt/sd/backing/mame-states",
+                "/mnt/sd/backing/mame-states/sfiii3",
+            ],
+            symlinks={"/mnt/sd/retrodeck/states/mame-sa": "/mnt/sd/backing/mame-states"},
+        )
+        return rd.emulators_for("arcade").entries[0]
+
+    def test_the_templated_dir_carries_no_link_caveats(self):
+        p = self._entry().savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir.endswith("/mame-sa/<rom_stem>")
+        assert p.physical_dir is None
+        assert atlas.CAVEAT_DEAD_SYMLINK not in [c.code for c in p.caveats]
+
+    def test_a_concrete_dir_still_walks_the_arrangements_link(self):
+        p = self._entry().savestate_location(content_path="/mnt/sd/roms/arcade/sfiii3.zip")
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir.endswith("/mame-sa/sfiii3")
+        assert p.physical_dir == "/mnt/sd/backing/mame-states/sfiii3"
+
+
 class TestMameSecondIniParse:
     """mame.ini is parsed twice so the first pass can move the ini path.
 

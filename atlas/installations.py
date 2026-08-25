@@ -9445,11 +9445,16 @@ def _mame_savestate_placement(
             },
         )
     )
-    if directory.startswith("<"):
-        physical = None
-    else:
-        physical, link_caveats = _link_view(machine, directory)
-        caveats.extend(link_caveats)
+    # A templated directory is a shape, not a path: walking <cwd>/... or
+    # .../mame-sa/<rom_stem> through the filesystem would read the template
+    # text as real components and report their absence as a dead link (the
+    # family guard at the Dolphin card's region template, same shape).
+    physical, link_caveats = (
+        _link_view(machine, directory)
+        if not directory.startswith("<") and TEMPLATE_ROM_STEM not in directory
+        else (None, ())
+    )
+    caveats.extend(link_caveats)
     if subdir is None:
         file_set = UNKNOWN_FILE_SET
         assert card.names is not None and card.names_citation is not None
