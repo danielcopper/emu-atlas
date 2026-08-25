@@ -759,7 +759,8 @@ citation, and `physical_dir` pointing at the real tree behind the arrangement's 
 be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside to.
 Savestates are their own wiring and their own card family (`standalone_savestates.json`, #225): the same entry answers
 `savestate_location` through it, and an emulator without a savestate card keeps the `standalone-unsupported` refusal
-there even where its save answers.
+there even where its save answers (since #284 every save-carded emulator carries a savestate card too — for Cemu and
+Vita3K it is the stated no — so today that refusal marks the rows neither family has examined).
 
 Three more cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
 `PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the
