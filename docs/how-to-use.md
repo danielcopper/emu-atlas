@@ -1834,8 +1834,13 @@ emulator reads, not on it.
 answer = inst.firmware_for_system(system)                 # verify=False: fast, presence-only
 for core in answer.cores:
     row = render_core(core.label, light=core.requirements_met)   # True/False/None → green/red/grey
-    for req in core.requirements:
-        row.add(req.file_name, need=req.need, present=req.present, checked=req.checked)
+    for entry in core.requirements:
+        if isinstance(entry, atlas.FirmwareAlternatives):        # one of these, the console region decides
+            for req in entry.options:
+                row.add(req.file_name, need=req.need, present=req.present,
+                        checked=req.checked, regions=req.regions)
+        else:
+            row.add(entry.file_name, need=entry.need, present=entry.present, checked=entry.checked)
 # user clicks "verify" → same call with verify=True; hashing is opt-in by design, cache the result yourself
 ```
 
