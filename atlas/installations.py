@@ -9535,32 +9535,39 @@ STANDALONE_SAVESTATE_CITATION_SLOTS = {
 }
 
 
-def _savestate_absence_answer(card: StandaloneSavestateCard) -> SavestateAbsence:
+def _savestate_absence_answer(
+    card: StandaloneSavestateCard, *, arrangement: tuple[Caveat, ...] = ()
+) -> SavestateAbsence:
     """The stated no a card's ``absent`` statement becomes — an answer, not a refusal.
 
-    No machine-derived caveats ride here (health, entry, arrangement): the
-    absence is a statement about the emulator, not about this machine or this
-    launch, so it reads identically on every arrangement that launches the
-    emulator at all. The one caveat it can carry is the card's own — an
-    ``unverified-version`` where no shipped build pins the claim (nothing
-    ships Ryubing; PICO-8's binary is the user's own copy).
+    Path-derived caveats (health findings, entry selection, link walks) do
+    not ride here: the absence names no path, so a statement about this
+    machine's trees qualifies nothing it says. What DOES ride is everything
+    that qualifies the *claim*: the card's own ``unverified-version`` where
+    no shipped build pins it (nothing ships Ryubing; PICO-8's binary is the
+    user's own copy), and the arrangement's evidence caveats — the absence is
+    world knowledge pinned to the build an arrangement was verified with, so
+    an arrangement atlas never observed, or one observed on another version,
+    says so here exactly as it does on every placement
+    (:func:`atlas.evidence.arrangement_caveats`).
     """
     absent = card.absent
     assert absent is not None  # callers branch on the statement first
-    caveats: tuple[Caveat, ...] = ()
+    caveats: list[Caveat] = []
     if absent.build_unestablished is not None:
-        caveats = (
+        caveats.append(
             Caveat(
                 CAVEAT_UNVERIFIED_VERSION,
                 absent.build_unestablished,
                 {"emulator": card.token, "verification": "build-unestablished"},
-            ),
+            )
         )
+    caveats.extend(arrangement)
     return SavestateAbsence(
         emulator=card.token,
         citation=absent.citation,
         sources=(f"standalone savestate card '{card.token}': {card.provenance}",),
-        caveats=caveats,
+        caveats=tuple(caveats),
     )
 
 
@@ -9580,12 +9587,18 @@ def _standalone_savestate_placement(
     The launch command and content path ride for the same reasons they ride
     the save dispatch: a launch's own flags could outrank configuration, and
     melonDS fills its state names from the content's own stem. An absence
-    card answers before any resolver runs: the stated no depends on no homes,
-    no sandbox and no file, which is why a card stating it registers no
-    resolver function.
+    card never reaches this dispatch: the routes answer it before homes are
+    built, because the stated no needs none of what this dispatch carries and
+    DOES need the arrangement caveats only a route can supply — reaching here
+    with one means a route forgot that branch.
     """
     if card.absent is not None:
-        return _savestate_absence_answer(card)
+        raise ValueError(
+            f"standalone savestate card {card.token!r} states the feature does not exist "
+            "— the routes answer that before this dispatch, with the arrangement's own "
+            "evidence caveats; reaching it here means the route and the dispatch "
+            "shipped out of step"
+        )
     resolver = _STANDALONE_SAVESTATE_RESOLVERS.get(card.token)
     if resolver is None:
         raise ValueError(
@@ -14135,6 +14148,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             card = lookup_standalone_savestate_card(emulator_token(spec.command))
             if card is None or spec.system not in card.systems:
                 return _standalone_savestate_unresolved(spec)
+            if card.absent is not None:
+                # The stated no reads no tree, so no homes are built for it —
+                # but it IS world knowledge pinned to a verified build, so the
+                # arrangement's evidence caveats qualify it like any placement.
+                return _savestate_absence_answer(
+                    card,
+                    arrangement=arrangement_caveats(
+                        self.kind, observed_version=_marker_version(config)
+                    ),
+                )
             health = self._health_from(config, marker_issues)
             return _standalone_savestate_placement(
                 self._machine,
@@ -15761,7 +15784,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if launch.probe_name is None or card is None or spec.system not in card.systems:
             return _standalone_savestate_unresolved(spec)
         if card.absent is not None:
-            return _savestate_absence_answer(card)
+            return _savestate_absence_answer(
+                card,
+                arrangement=arrangement_caveats(
+                    self.kind, observed_version=self._observed_backend_head()
+                ),
+            )
         gate = self._standalone_launch_gate(spec)
         if gate.homes is None:
             assert gate.variant is not None  # a card was found, so the launch identified one

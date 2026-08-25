@@ -930,11 +930,13 @@ It serializes as `{"no_savestates": {"emulator": …, "citation": …, "caveats"
 three shapes are never mistakable. Cemu 2.6 and Vita3K ship no state serializer; the Ryujinx lineage (Ryubing) never had
 one; Ruffle's persistence is the SharedObjects tree; GZDoom's, ironwail's, OpenBOR's, PICO-8's and Solarus's whole
 serialization is their savegame/cartdata system — the **save** question's business, and the cards say so rather than
-blurring a quicksave into a machine snapshot. No machine-derived caveat ever rides a stated no (the fact is the
-emulator's, not this machine's, so it answers even where the EmuDeck variant gate would refuse the save question); the
-one caveat it can carry is `unverified-version` with `verification: "build-unestablished"`, for the emulators no
-arrangement ships a build of (Ryubing, ironwail, PICO-8) — the citation then names the release or manual the record
-read.
+blurring a quicksave into a machine snapshot. No path-derived caveat ever rides a stated no (the fact is the emulator's,
+not this machine's trees', so it answers even where the EmuDeck variant gate would refuse the save question). What does
+ride is what qualifies the claim itself: `unverified-version` with `verification: "build-unestablished"` for the
+emulators no arrangement ships a build of (Ryubing, ironwail, PICO-8 — the citation then names the release or manual the
+record read), and the arrangement evidence caveats (`arrangement-unverified` / `arrangement-version-drifted`) exactly as
+on a placement — a stated no is world knowledge pinned to the build a verified arrangement ships, and an arrangement
+atlas has not confirmed on this version says so.
 
 ## Where do texture packs go?
 

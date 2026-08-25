@@ -1811,10 +1811,12 @@ class TestDolphinStandaloneSaves:
 class TestTheStatedNoIsAnAnswer:
     """#284: an absence card answers the states question — not a refusal.
 
-    The vector family pins the contract blocks; what lives here is the one
-    property a vector cannot show as sharply: no machine-derived caveat ever
-    rides the stated no, because the statement is about the emulator and not
-    about this machine or this launch.
+    The vector family pins the contract blocks; what lives here is the split
+    a vector cannot show as sharply: no path-derived caveat ever rides the
+    stated no (the absence names no path to qualify), while everything that
+    qualifies the CLAIM does ride — the card's own build statement, and the
+    arrangement's evidence caveats, because the no is world knowledge pinned
+    to a verified arrangement's build.
     """
 
     CEMU_ESDE = (
@@ -1841,13 +1843,35 @@ class TestTheStatedNoIsAnAnswer:
         assert "feature_report.yaml:18" in outcome.citation
         assert outcome.caveats == ()
 
-    def test_no_machine_caveat_rides_a_statement_about_the_emulator(self):
+    def test_no_path_caveat_rides_a_statement_about_the_emulator(self):
         # A broken marker degrades every placement this installation
-        # resolves; the stated no is not a resolution of this machine, so it
-        # stays clean — identical on a healthy and a broken arrangement.
+        # resolves; the stated no names no path those findings could qualify,
+        # so it reads identically on a healthy and a broken arrangement.
         broken = self._entry(marker="{not json").savestate_location()
         healthy = self._entry().savestate_location()
         assert broken == healthy
+
+    def test_a_drifted_arrangement_version_qualifies_the_claim(self):
+        # The no is pinned to the build the verified arrangement ships; a
+        # machine stating another version carries the same evidence caveat
+        # every placement carries (arrangement_caveats, atlas/evidence.py).
+        marker = (
+            '{"version": "9.9.9", "paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+            '"saves_path": "/mnt/sd/retrodeck/saves"}}'
+        )
+        outcome = self._entry(marker=marker).savestate_location()
+        assert isinstance(outcome, atlas.SavestateAbsence)
+        drifted = [c for c in outcome.caveats if c.code == "arrangement-version-drifted"]
+        assert drifted and drifted[0].data["observed"] == "9.9.9"
+
+    def test_the_verified_arrangement_version_rides_nothing(self):
+        marker = (
+            '{"version": "0.10.9b", "paths": {"rd_home_path": "/mnt/sd/retrodeck", '
+            '"saves_path": "/mnt/sd/retrodeck/saves"}}'
+        )
+        outcome = self._entry(marker=marker).savestate_location()
+        assert isinstance(outcome, atlas.SavestateAbsence)
+        assert outcome.caveats == ()
 
     def test_the_save_question_still_walks_its_own_route(self):
         # The two questions about one entry stay independent: the save answer

@@ -1040,12 +1040,15 @@ class SavestateAbsence:
     a client repeating the claim repeats its source); ``sources`` is the
     card's provenance prose, non-contractual like every provenance.
 
-    ``caveats`` carries only what the *card* states — an ``unverified-version``
-    where no shipped build pins the claim (nothing ships Ryubing; the record
-    reads a release). Machine-derived caveats (health, entry, arrangement) do
-    not ride here: the absence is a statement about the emulator, not about
-    this machine or this launch, and it holds identically on every
-    arrangement that launches the emulator at all.
+    ``caveats`` carries what qualifies the *claim*, never what qualifies a
+    path: the card's own ``unverified-version`` where no shipped build pins
+    the claim (nothing ships Ryubing; the record reads a release), and the
+    arrangement's evidence caveats — a stated no is world knowledge pinned to
+    the build an arrangement was verified with, so an arrangement atlas never
+    observed, or one observed on another version, says so here exactly as it
+    does on a placement. Path-derived caveats (health findings, entry
+    selection, link walks) do not ride: the absence names no path for them
+    to qualify.
     """
 
     emulator: str
