@@ -100,6 +100,7 @@ from atlas.contract import (
 )
 from atlas.firmware import (
     CoreFirmware,
+    FirmwareAlternatives,
     FirmwareAnswer,
     FirmwareIdentification,
     FirmwareIdentity,
@@ -456,6 +457,7 @@ __all__ = [
     "FirmwareAnswer",
     "CoreFirmware",
     "FirmwareRequirement",
+    "FirmwareAlternatives",
     "FirmwareIdentification",
     "FirmwareIdentity",
     "UnclaimedFile",

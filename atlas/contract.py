@@ -29,6 +29,7 @@ from typing import Any, Callable, Sequence, TypeVar
 
 from atlas.every_installation import InstallationAnswer
 from atlas.firmware import (
+    FirmwareAlternatives,
     FirmwareAnswer,
     FirmwareIdentification,
     FirmwareIdentity,
@@ -339,6 +340,33 @@ def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
     }
 
 
+def _requirement_entry_contract(
+    entry: FirmwareRequirement | FirmwareAlternatives,
+) -> dict[str, Any]:
+    """One entry of a core's requirement list, in whichever of its two shapes.
+
+    The list is a conjunction, and an entry that is *one of several files —
+    the console region decides* must not be mistakable for two files both
+    needed, so the group is its own single-key shape (the discriminator style
+    ``unresolved`` and ``no_savestates`` use): each option is a full
+    requirement plus ``regions``, the console regions whose launch it serves.
+    A plain requirement stays exactly the fields it always was — ``regions``
+    appears nowhere on it, because an unconditional entry has no scope to
+    state.
+    """
+    if isinstance(entry, FirmwareAlternatives):
+        return {
+            "alternatives": [
+                {
+                    **_requirement_contract(option),
+                    "regions": list(option.regions or ()),
+                }
+                for option in entry.options
+            ]
+        }
+    return _requirement_contract(entry)
+
+
 def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
     """The stable form of a :class:`~atlas.firmware.FirmwareAnswer`.
 
@@ -369,6 +397,13 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
     **resolved** destination and ``declared`` the string the core spelled: two
     declarations that land on one file are one place, and the name the core
     opens is still stated.
+
+    A core's ``requirements`` list is a conjunction, and one entry may be an
+    ``alternatives`` group instead of a requirement — see
+    :func:`_requirement_entry_contract`: a launch needs the option whose
+    ``regions`` contain its console region, which is the running disc's own
+    under DuckStation's shipped Auto setting. A region no option lists has
+    nothing stated for it, and the entry's caveats say why.
     """
     return {
         "root": answer.root,
@@ -379,7 +414,7 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
                 "label": core.label,
                 "declaration": core.declaration,
                 "requirements_met": core.requirements_met,
-                "requirements": [_requirement_contract(r) for r in core.requirements],
+                "requirements": [_requirement_entry_contract(r) for r in core.requirements],
                 "refused": [{"declared": r.declared, "need": r.need, "reason": r.reason} for r in core.refused],
                 "caveats": [{"code": c.code, "data": dict(c.data)} for c in core.caveats],
             }
