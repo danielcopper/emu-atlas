@@ -9429,6 +9429,11 @@ def _mame_savestate_placement(
     # short name (get_statename, machine.cpp:474-547, the %g substitution at
     # :544; the join at :576).
     sname = values.get("statename")
+    if sname == "":
+        # A present-empty statename is NOT an empty literal: get_statename
+        # reverts a null or empty option to "%g" (machine.cpp:477-478), the
+        # one option in this reading whose empty value restores the default.
+        sname = None
     machine_word = launch.machine_name
     subdir_open_reason: str | None = None
     if sname is not None and sname != "%g" and "%" in sname:
@@ -9563,24 +9568,30 @@ STANDALONE_SAVESTATE_CITATION_SLOTS = {
 
 
 def _savestate_absence_answer(
-    card: StandaloneSavestateCard, *, arrangement: tuple[Caveat, ...] = ()
+    card: StandaloneSavestateCard,
+    *,
+    entry: tuple[Caveat, ...] = (),
+    arrangement: tuple[Caveat, ...] = (),
 ) -> SavestateAbsence:
     """The stated no a card's ``absent`` statement becomes — an answer, not a refusal.
 
-    Path-derived caveats (health findings, entry selection, link walks) do
-    not ride here: the absence names no path, so a statement about this
-    machine's trees qualifies nothing it says. What DOES ride is everything
-    that qualifies the *claim*: the card's own ``unverified-version`` where
-    no shipped build pins it (nothing ships Ryubing; PICO-8's binary is the
-    user's own copy), and the arrangement's evidence caveats — the absence is
-    world knowledge pinned to the build an arrangement was verified with, so
-    an arrangement atlas never observed, or one observed on another version,
-    says so here exactly as it does on every placement
-    (:func:`atlas.evidence.arrangement_caveats`).
+    Tree-derived caveats (health findings, link walks) do not ride here: the
+    absence names no path, so a statement about this machine's trees
+    qualifies nothing it says. What DOES ride is everything that qualifies
+    the *claim*: *entry* — the catalogue-status and per-game-override caveats
+    the save twin carries, because a gamelist that would launch a DIFFERENT
+    emulator for this game is a statement about emulator identity, and "Cemu
+    has no savestates" needs the rider that Cemu may not be what runs — the
+    card's own ``unverified-version`` where no shipped build pins it (nothing
+    ships Ryubing; PICO-8's binary is the user's own copy), and the
+    arrangement's evidence caveats — the absence is world knowledge pinned to
+    the build an arrangement was verified with, so an arrangement atlas never
+    observed, or one observed on another version, says so here exactly as it
+    does on every placement (:func:`atlas.evidence.arrangement_caveats`).
     """
     absent = card.absent
     assert absent is not None  # callers branch on the statement first
-    caveats: list[Caveat] = []
+    caveats: list[Caveat] = [*entry]
     if absent.build_unestablished is not None:
         caveats.append(
             Caveat(
@@ -14161,9 +14172,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         that would not launch says so on both. A standalone entry goes through
         the savestate card the same way a save goes through its own card, and
         refuses identically where none covers it (#225). An absence card
-        answers the stated no before any tree is touched (#284) — the
-        dispatch short-circuits on it, so the homes and sandbox built here
-        are simply unused for that shape.
+        answers the stated no on this route, before any tree is touched
+        (#284) — the dispatch refuses to handle one, because only the route
+        holds the caveats that qualify the claim: the catalogue-status and
+        per-game-override caveats the save twin carries, and the
+        arrangement's evidence caveats.
         """
         config, marker_issues = self._read_marker()
         extra = (
@@ -14177,10 +14190,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 return _standalone_savestate_unresolved(spec)
             if card.absent is not None:
                 # The stated no reads no tree, so no homes are built for it —
-                # but it IS world knowledge pinned to a verified build, so the
-                # arrangement's evidence caveats qualify it like any placement.
+                # but everything qualifying the CLAIM rides: which emulator
+                # the gamelist would really launch, and the arrangement's own
+                # evidence, exactly as on every placement.
                 return _savestate_absence_answer(
                     card,
+                    entry=(*entry_caveats, *extra),
                     arrangement=arrangement_caveats(
                         self.kind, observed_version=_marker_version(config)
                     ),
@@ -15810,9 +15825,16 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         card = lookup_standalone_savestate_card(launch.token)
         if launch.probe_name is None or card is None or spec.system not in card.systems:
             return _standalone_savestate_unresolved(spec)
+        # Computed before the absence branch, the same way the RetroDeck route
+        # does: a per-game override is a statement about which emulator runs
+        # at all, so the stated no needs it exactly as a placement would.
+        extra = (
+            self._entry_caveats_for(spec, content_path) if content_path is not None else ()
+        )
         if card.absent is not None:
             return _savestate_absence_answer(
                 card,
+                entry=(*entry_caveats, *extra),
                 arrangement=arrangement_caveats(
                     self.kind, observed_version=self._observed_backend_head()
                 ),
@@ -15823,9 +15845,6 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return _emudeck_variant_unresolved(spec, card.token, gate.variant, gate.why or "")
         homes = gate.homes
         _, marker_issues = self._read_marker()
-        extra = (
-            self._entry_caveats_for(spec, content_path) if content_path is not None else ()
-        )
         return _standalone_savestate_placement(
             self._machine,
             card=card,

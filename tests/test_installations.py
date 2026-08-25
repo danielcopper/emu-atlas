@@ -1873,6 +1873,52 @@ class TestTheStatedNoIsAnAnswer:
         assert isinstance(outcome, atlas.SavestateAbsence)
         assert outcome.caveats == ()
 
+    GAMELIST = "/mnt/sd/retrodeck/ES-DE/gamelists/wiiu/gamelist.xml"
+    CONTENT = "/mnt/sd/retrodeck/roms/wiiu/Game.wua"
+
+    def _entry_with_gamelist(self, gamelist):
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: self.CEMU_ESDE,
+            ESDE_SETTINGS: (
+                '<?xml version="1.0"?>\n'
+                '<string name="ROMDirectory" value="/mnt/sd/retrodeck/roms" />\n'
+            ),
+            self.CONTENT: "",
+        }
+        if gamelist is not None:
+            files[self.GAMELIST] = gamelist
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for("wiiu").entries[0]
+
+    def test_a_per_game_override_rides_the_stated_no(self):
+        # A gamelist that would launch a different emulator for this game is
+        # a statement about emulator IDENTITY, not about a path: "Cemu has no
+        # savestates" needs the rider that Cemu may not be what runs — the
+        # exact caveat the save twin carries for the same entry and game.
+        gamelist = (
+            '<?xml version="1.0"?>\n<gameList>\n\t<game>\n\t\t<path>./Game.wua</path>\n'
+            "\t\t<altemulator>Cemu (Proton)</altemulator>\n\t</game>\n</gameList>\n"
+        )
+        entry = self._entry_with_gamelist(gamelist)
+        states = entry.savestate_location(content_path=self.CONTENT)
+        assert isinstance(states, atlas.SavestateAbsence)
+        codes = [c.code for c in states.caveats]
+        assert atlas.CAVEAT_PER_GAME_OVERRIDE in codes
+
+    def test_without_an_override_the_stated_no_stays_clean(self):
+        gamelist = (
+            '<?xml version="1.0"?>\n<gameList>\n\t<game>\n\t\t<path>./Game.wua</path>\n'
+            "\t</game>\n</gameList>\n"
+        )
+        states = self._entry_with_gamelist(gamelist).savestate_location(
+            content_path=self.CONTENT
+        )
+        assert isinstance(states, atlas.SavestateAbsence)
+        assert atlas.CAVEAT_PER_GAME_OVERRIDE not in [c.code for c in states.caveats]
+
     def test_the_save_question_still_walks_its_own_route(self):
         # The two questions about one entry stay independent: the save answer
         # resolves Cemu's MLC tree while the states answer is the stated no.
@@ -2039,6 +2085,17 @@ class TestMameEdgeBranches:
         p = self._entry('state_directory ""\n').savestate_location()
         assert isinstance(p, atlas.SavestatePlacement)
         assert p.dir == f"{HOME}/.mame/vectrex"
+
+    def test_an_empty_statename_reverts_to_the_machine_default(self):
+        # get_statename assigns "%g" for a null OR empty option
+        # (machine.cpp:477-478) — a present-empty statename is not an empty
+        # literal subdirectory, and the machine word governs.
+        p = self._entry(
+            'state_directory           /mnt/sd/states\nstatename                 ""\n'
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states/vectrex"
+        assert p.file_set.state == "declared"
 
     def test_a_statename_template_refuses_the_subdirectory(self):
         p = self._entry(

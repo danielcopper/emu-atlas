@@ -1041,14 +1041,17 @@ class SavestateAbsence:
     card's provenance prose, non-contractual like every provenance.
 
     ``caveats`` carries what qualifies the *claim*, never what qualifies a
-    path: the card's own ``unverified-version`` where no shipped build pins
-    the claim (nothing ships Ryubing; the record reads a release), and the
+    tree: the card's own ``unverified-version`` where no shipped build pins
+    the claim (nothing ships Ryubing; the record reads a release); the
     arrangement's evidence caveats — a stated no is world knowledge pinned to
     the build an arrangement was verified with, so an arrangement atlas never
     observed, or one observed on another version, says so here exactly as it
-    does on a placement. Path-derived caveats (health findings, entry
-    selection, link walks) do not ride: the absence names no path for them
-    to qualify.
+    does on a placement; and the entry's catalogue-status and per-game
+    override caveats — a gamelist that would launch a DIFFERENT emulator for
+    this game is a statement about emulator identity, and "this emulator has
+    no savestates" needs the rider that this emulator may not be what runs.
+    Tree-derived caveats (health findings, link walks) do not ride: the
+    absence names no path for them to qualify.
     """
 
     emulator: str

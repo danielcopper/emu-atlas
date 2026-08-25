@@ -1045,7 +1045,7 @@
     },
     {
       "name": "retrodeck-a-carded-no-answers-the-states-question-for-cemu",
-      "rationale": "Cemu 2.6 has no savestates — no state serializer anywhere in the v2.6 tree, none in the shipped binary's unfiltered scan, and the project's own issue template lists 'Add savestates' among features yet to be implemented — and #284 makes that an ANSWER: no_savestates with the card's citation, not the generic standalone-unsupported refusal. No machine-derived caveats ride it; the statement is about the emulator, not about this machine.",
+      "rationale": "Cemu 2.6 has no savestates — no state serializer anywhere in the v2.6 tree, none in the shipped binary's unfiltered scan, and the project's own issue template lists 'Add savestates' among features yet to be implemented — and #284 makes that an ANSWER: no_savestates with the card's citation, not the generic standalone-unsupported refusal. On this machine nothing qualifies the claim, so the caveats are empty — what CAN ride a stated no is exactly what qualifies it: the card's own build statement, the arrangement's evidence caveats, and the entry's catalogue-status and per-game-override caveats; tree-derived caveats (health findings, link walks) never do, because the absence names no path.",
       "input": {
         "home": "/home/deck",
         "files": {

@@ -612,8 +612,10 @@ serializes as `no_savestates` with the citation, an answer and never a refusal; 
 settings and no anchors, registers no resolver, and answers before the EmuDeck variant gate, because the fact is the
 emulator's and not the launch's. Where no shipped build pins the claim (nothing ships Ryubing or ironwail; PICO-8's
 binary is the user's own), the card's `build_unestablished` sentence rides the answer as the `unverified-version`
-caveat, and the arrangement's evidence caveats ride it like any placement's — a stated no is world knowledge pinned to a
-verified arrangement's build; path-derived caveats stay off, because the absence names no path for them to qualify. The
+caveat, the arrangement's evidence caveats ride it like any placement's — a stated no is world knowledge pinned to a
+verified arrangement's build — and so do the entry's catalogue-status and per-game-override caveats, because a gamelist
+that would launch a different emulator for this game is a statement about emulator identity, not about a path.
+Tree-derived caveats (health findings, link walks) stay off, because the absence names no path for them to qualify. The
 source ports' savegame and quicksave trees are the **save** question's business and their cards say so — a Doom savegame
 is not a machine snapshot, and the two questions stay unblurred.
 
