@@ -9830,6 +9830,118 @@
           ]
         }
       }
+    },
+    {
+      "name": "xemu-a-relative-bootrom-is-a-stated-launch-dependence",
+      "rationale": "A firmware requirement's path is contractually the absolute observed destination, and a relative [sys.files] value has none: xemu opens it relative to its own process's working directory (system/vl.c:2983-3007 with vl.c:2527-2535 and osdep.h:645-653 at v0.8.135), which no read of this machine can establish. So the relative boot ROM stays out of the requirement list and the firmware-path-launch-dependent caveat carries the anchor as data — the key, the declared value, and the <cwd>-templated path the launcher's working directory completes — while the absolute flash image and hard disk answer exactly as before.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n    <platform>xbox</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml": "[sys.files]\nbootrom_path = 'mcpx_1.0.bin'\nflashrom_path = '/mnt/sd/retrodeck/bios/Complex.bin'\neeprom_path = '/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin'\nhdd_path = '/mnt/sd/retrodeck/bios/xbox_hdd.qcow2'\n",
+          "/mnt/sd/retrodeck/bios/mcpx_1.0.bin": "mmmmmmmmmmmmmmmm",
+          "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2": "qqqqqqqqqqqqqqqq"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "xemu (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "xbox",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "Complex.bin",
+                  "path": "/mnt/sd/retrodeck/bios/Complex.bin",
+                  "declared": "/mnt/sd/retrodeck/bios/Complex.bin",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false
+                },
+                {
+                  "core_so": null,
+                  "system": "xbox",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "xbox_hdd.qcow2",
+                  "path": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                  "declared": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "xemu (Standalone)",
+                    "token": "XEMU"
+                  }
+                },
+                {
+                  "code": "firmware-path-launch-dependent",
+                  "data": {
+                    "label": "xemu (Standalone)",
+                    "token": "XEMU",
+                    "key": "sys.files/bootrom_path",
+                    "declared": "mcpx_1.0.bin",
+                    "need": "required",
+                    "path": "<cwd>/mcpx_1.0.bin"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
     }
   ]
 }
