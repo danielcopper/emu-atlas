@@ -566,7 +566,11 @@ states, created on the first save where no directory of that name exists yet —
 tree as a reading and as `configured_user` in the caveat; a recorded user the listing does not hold moves nothing, the
 caveat's reason saying why (no tree of that name, a directory that is not set up as that user, or a `user.xml` that
 could not be read), and a tree that could not be listed keeps claiming nothing. An empty `pref-path` is a refusal rather
-than a guess: the emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). The
+than a guess: the emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). A
+configuration that exists and cannot be read refuses the whole question with `emulator-config-unreadable`; one that
+reads fine but states an absolute path only the emulator's sandbox can spell refuses with
+`emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
+`sandbox-path-untranslated` said as an outcome, for the routes where the whole answer hangs on that one path. The
 answers root at `emulator_directory` — no frontend hands a standalone emulator a save directory — except where the
 emulator's own default walks into the content's. On EmuDeck a standalone emulator is identified by `%EMULATOR_…%` token
 or by an allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`, `pcsx2-qt.sh`, `melonds.sh` and

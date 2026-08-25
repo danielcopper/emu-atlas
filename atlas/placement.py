@@ -958,6 +958,17 @@ UNRESOLVED_MOD_WIRING_UNESTABLISHED = "mod-wiring-unestablished"
 # there atlas has no wiring for the emulator, here it does and the machine
 # would not let it look.
 UNRESOLVED_EMULATOR_CONFIG_UNREADABLE = "emulator-config-unreadable"
+# The emulator's configuration was read, and the absolute path it states has
+# no spelling on this host from here: the value names a location only the
+# emulator's sandbox can read, and the whole answer hangs on that one path,
+# so there is nothing to anchor at. The caveat vocabulary states the same
+# fact as a degradation (``sandbox-path-untranslated``) where an answer still
+# stands around it; this is that fact as a refusal, with the untranslatable
+# value in ``data["path"]`` beside the file that states it. Distinct from
+# ``emulator-config-unreadable``: there the machine would not let the file be
+# read, here the read succeeded and the stated value is what cannot be
+# reached.
+UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE = "emulator-config-path-untranslatable"
 
 
 @dataclass(frozen=True, slots=True)
