@@ -1292,10 +1292,13 @@ class FirmwareAlternatives:
     def satisfied(self) -> bool | None:
         """The three-valued lift over the selector atlas cannot read.
 
-        ``True`` when every option is satisfied — met whichever region the
-        disc sets. ``False`` when every option demonstrably fails — no region
-        boots. ``None`` otherwise: whether THIS launch is served depends on a
-        run-time fact, and a mixed group has no honest single verdict.
+        ``True`` when every stated option is satisfied. ``False`` when every
+        stated option demonstrably fails. ``None`` otherwise: whether THIS
+        launch is served depends on a run-time fact, and a mixed group has no
+        honest single verdict. Regions no option lists are outside this
+        verdict and the entry's caveats speak for them — a group of one
+        satisfied NTSC-U image says nothing about the two regions with no
+        image stated.
         """
         verdicts = {option.satisfied for option in self.options}
         if verdicts == {True}:

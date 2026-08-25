@@ -98,9 +98,14 @@ def _plain_requirements(core: CoreFirmware) -> tuple[FirmwareRequirement, ...]:
     """A conjunctive core's entries, narrowed for attribute access.
 
     Every core these tests build through the .info route is a conjunction, so
-    the narrowing drops nothing — it only tells the type checker what the
-    fixture already guarantees. Group-building tests read options explicitly.
+    the narrowing drops nothing — and the assert holds it to that: a group
+    appearing where a test expects plain entries must FAIL, not be silently
+    skipped. Group-building tests read options explicitly.
     """
+    assert all(isinstance(r, FirmwareRequirement) for r in core.requirements), (
+        f"{core.core_so or core.label}: an alternatives group appeared in a core this test "
+        "reads as a plain conjunction — read its options explicitly instead of filtering it away"
+    )
     return tuple(r for r in core.requirements if isinstance(r, FirmwareRequirement))
 
 PSX_INFO = """
