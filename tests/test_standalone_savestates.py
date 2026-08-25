@@ -125,7 +125,8 @@ class TestACitationBelongsToABuild:
     def test_the_fork_and_the_emulator_it_forks_cite_different_lines(self):
         dolphin = lookup_standalone_savestate_card("DOLPHIN")
         fork = lookup_standalone_savestate_card("PRIMEHACK")
-        assert dolphin is not None and fork is not None
+        assert dolphin is not None
+        assert fork is not None
         assert dolphin.cite("names", flatpak=None) != fork.cite("names", flatpak=None)
 
     def test_an_unstated_slot_raises_instead_of_answering_nothing(self):
@@ -137,8 +138,9 @@ class TestACitationBelongsToABuild:
 
 class TestTheLoaderRefusesWhatItCannotStand:
     def test_a_wrong_schema_is_refused(self):
+        table = json.dumps({"schema": 99, "emulators": {}})
         with pytest.raises(ValueError, match="unsupported schema"):
-            load_standalone_savestates(json.dumps({"schema": 99, "emulators": {}}))
+            load_standalone_savestates(table)
 
     def test_a_card_stating_both_shapes_is_refused(self):
         table = _table(
@@ -148,40 +150,48 @@ class TestTheLoaderRefusesWhatItCannotStand:
             load_standalone_savestates(table)
 
     def test_a_card_stating_neither_shape_is_refused(self):
+        table = _table(_fixed(base=None, subdir=None))
         with pytest.raises(ValueError, match="never both or neither"):
-            load_standalone_savestates(_table(_fixed(base=None, subdir=None)))
+            load_standalone_savestates(table)
 
     def test_an_unknown_base_is_refused(self):
+        table = _table(_fixed(base="cache"))
         with pytest.raises(ValueError, match="savestates.base"):
-            load_standalone_savestates(_table(_fixed(base="cache")))
+            load_standalone_savestates(table)
 
     def test_an_absolute_subdir_is_refused(self):
+        table = _table(_fixed(subdir="/States"))
         with pytest.raises(ValueError, match="absolute"):
-            load_standalone_savestates(_table(_fixed(subdir="/States")))
+            load_standalone_savestates(table)
 
     def test_a_subdir_climbing_out_is_refused(self):
+        table = _table(_fixed(subdir="../States"))
         with pytest.raises(ValueError, match="climbs out"):
-            load_standalone_savestates(_table(_fixed(subdir="../States")))
+            load_standalone_savestates(table)
 
     def test_a_card_without_names_is_refused(self):
+        table = _table(_fixed(names=None))
         with pytest.raises(ValueError, match="names"):
-            load_standalone_savestates(_table(_fixed(names=None)))
+            load_standalone_savestates(table)
 
     def test_a_directory_setting_without_a_settings_file_is_refused(self):
-        savestates = {
-            "settings": None,
-            "systems": ["ps2"],
-            "directory": {"section": "S", "key": "K", "default": "d", "citation": "c:1"},
-            "names": {"pattern": "<serial>.p2s", "citation": "c:2"},
-        }
+        table = _table(
+            {
+                "settings": None,
+                "systems": ["ps2"],
+                "directory": {"section": "S", "key": "K", "default": "d", "citation": "c:1"},
+                "names": {"pattern": "<serial>.p2s", "citation": "c:2"},
+            }
+        )
         with pytest.raises(ValueError, match="names none"):
-            load_standalone_savestates(_table(savestates))
+            load_standalone_savestates(table)
 
     def test_a_flatpak_field_is_refused_as_a_second_record(self):
         # Which app id an arrangement runs an emulator under lives on the save
         # card; a copy here could only drift from it.
+        table = _table(_fixed(), extra={"flatpak": "org.demo.Demo"})
         with pytest.raises(ValueError, match="save\\s+card's record"):
-            load_standalone_savestates(_table(_fixed(), extra={"flatpak": "org.demo.Demo"}))
+            load_standalone_savestates(table)
 
     def test_a_partial_installations_override_is_refused(self):
         table = _table(
@@ -223,8 +233,9 @@ class TestTheLoaderRefusesWhatItCannotStand:
             load_standalone_savestates(table)
 
     def test_empty_systems_are_refused(self):
+        table = _table(_fixed(systems=[]))
         with pytest.raises(ValueError, match="non-empty list"):
-            load_standalone_savestates(_table(_fixed(systems=[])))
+            load_standalone_savestates(table)
 
 
 class TestTheCardShape:
@@ -240,7 +251,8 @@ class TestTheCardShape:
         card = lookup_standalone_savestate_card("RPCS3")
         assert isinstance(card, StandaloneSavestateCard)
         assert (card.base, card.subdir) == ("config", "savestates")
-        assert card.settings is None and card.directory is None
+        assert card.settings is None
+        assert card.directory is None
 
     def test_melonds_default_is_the_empty_string_not_a_directory(self):
         # An empty SavestatePath routes the state beside the ROM — the default
