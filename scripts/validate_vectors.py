@@ -1421,6 +1421,7 @@ def _validate_alternatives(name: str, entry: Any, *, core_so: Any, root: str, ha
     one region could pick between would leave the pick unstated, which is the
     exact defect the shape exists to remove.
     """
+    _require_exact(name, entry, FIRMWARE_ALTERNATIVES_FIELDS, "an alternatives entry")
     options = entry["alternatives"]
     if not isinstance(options, list) or not options:
         fail(f"{name}: an alternatives entry must carry a non-empty list of options")
@@ -1468,7 +1469,7 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
             "packaged, its provenance) — an unexplained list reads as 'needs nothing'"
         )
     for entry in requirements:
-        if isinstance(entry, dict) and set(entry) == FIRMWARE_ALTERNATIVES_FIELDS:
+        if isinstance(entry, dict) and "alternatives" in entry:
             _validate_alternatives(
                 name, entry, core_so=core["core_so"], root=root, hash_checked=hash_checked
             )
@@ -1517,8 +1518,8 @@ def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
     """``requirements_met`` is derived, never asserted: recompute and compare."""
     requirements = core["requirements"]
     refused = core["refused"]
-    plain = [r for r in requirements if set(r) != FIRMWARE_ALTERNATIVES_FIELDS]
-    groups = [r["alternatives"] for r in requirements if set(r) == FIRMWARE_ALTERNATIVES_FIELDS]
+    plain = [r for r in requirements if "alternatives" not in r]
+    groups = [r["alternatives"] for r in requirements if "alternatives" in r]
     required = [r for r in plain if r["need"] == "required"]
     if core["declaration"] != "read":
         expected = None
