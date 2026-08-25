@@ -6054,19 +6054,24 @@ def _xemu_group(
 
 
 def _xemu_document(
-    machine: Machine, card: "StandaloneSaveCard | StandaloneSavestateCard", toml_path: str
+    machine: Machine,
+    card: "StandaloneSaveCard | StandaloneSavestateCard",
+    toml_path: str,
+    *,
+    lost: str,
 ) -> "tuple[Mapping[str, Any], str | None] | Unresolved":
     """xemu.toml parsed, or the refusal — no frame exists to step aside to.
 
     Shared by the save and the savestate readings (#284): both open the same
-    file the same way, and only the token rides into the refusal.
+    file the same way, and each hands in *lost* — the sentence naming what
+    ITS question can no longer answer — so a savestate refusal never talks
+    about the EEPROM, which is the save question's business alone.
     """
     result = machine.read_text(toml_path)
     if result.status not in (READ_OK, READ_MISSING):
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"xemu's configuration ({toml_path}) exists and could not be read — where the "
-            "hard-disk image and the EEPROM live is unknowable here",
+            f"xemu's configuration ({toml_path}) exists and could not be read — {lost}",
             {"emulator": card.token, "config": toml_path},
         )
     try:
@@ -6076,8 +6081,7 @@ def _xemu_document(
     except tomllib.TOMLDecodeError:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"xemu's configuration ({toml_path}) is not parseable TOML — where the hard-disk "
-            "image and the EEPROM live is unknowable here",
+            f"xemu's configuration ({toml_path}) is not parseable TOML — {lost}",
             {"emulator": card.token, "config": toml_path},
         )
     return doc, (toml_path if result.status == READ_OK else None)
@@ -6156,7 +6160,12 @@ def _xemu_savefile_placement(
 ) -> SavefilePlacement | Unresolved:
     """xemu's save answer, read from xemu.toml the way the emulator reads it."""
     toml_path = _standalone_settings_path(card, homes)
-    parsed = _xemu_document(machine, card, toml_path)
+    parsed = _xemu_document(
+        machine,
+        card,
+        toml_path,
+        lost="where the hard-disk image and the EEPROM live is unknowable here",
+    )
     if isinstance(parsed, Unresolved):
         return parsed
     doc, stated_toml = parsed
@@ -8909,7 +8918,7 @@ def _xemu_savestate_placement(
     and the ``savestate-inside-image`` caveat is what keeps "here is the
     file" from reading as "and states lie beside it". A machine with no disk
     configured cannot snapshot at all ("no block device can store vmstate",
-    block/snapshot.c:779-781), which is the refusal branch.
+    block/snapshot.c:781-782), which is the refusal branch.
     """
     stated = card.inside_image
     assert stated is not None  # the loader pairs the shape with this resolver
@@ -8917,7 +8926,12 @@ def _xemu_savestate_placement(
     toml_path = settings.only(
         config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
     )
-    parsed = _xemu_document(machine, card, toml_path)
+    parsed = _xemu_document(
+        machine,
+        card,
+        toml_path,
+        lost="where a snapshot would land is unknowable here",
+    )
     if isinstance(parsed, Unresolved):
         return parsed
     doc, _ = parsed

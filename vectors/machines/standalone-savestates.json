@@ -1228,7 +1228,7 @@
     },
     {
       "name": "xemu-no-disk-image-means-no-snapshot-store",
-      "rationale": "A machine with no hard-disk image configured cannot snapshot at all — QEMU refuses with 'no block device can store vmstate for snapshot' (block/snapshot.c:779-781 at v0.8.135) — so the answer refuses with the fact named instead of inventing a directory: emulator-config-unreadable, the same code the save answer uses where nothing its configuration names can anchor an answer.",
+      "rationale": "A machine with no hard-disk image configured cannot snapshot at all — QEMU refuses with 'no block device can store vmstate for snapshot' (block/snapshot.c:781-782 at v0.8.135) — so the answer refuses with the fact named instead of inventing a directory: emulator-config-unreadable, the same code the save answer uses where nothing its configuration names can anchor an answer.",
       "input": {
         "home": "/home/deck",
         "files": {
