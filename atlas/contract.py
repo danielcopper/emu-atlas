@@ -49,6 +49,7 @@ from atlas.platforms import PlatformIdentities
 from atlas.placement import (
     ModPlacement,
     SavefilePlacement,
+    SavestateAbsence,
     SavestatePlacement,
     ScreenshotPlacement,
     SoftPatchAnswer,
@@ -549,10 +550,37 @@ def savefile_answer_contract(outcome: SavefilePlacement | Unresolved) -> dict[st
     return savefile_placement_contract(outcome)
 
 
-def savestate_answer_contract(outcome: SavestatePlacement | Unresolved) -> dict[str, Any]:
-    """A savestate question's answer, placement or refusal — the savefile twin."""
+def savestate_absence_contract(absence: SavestateAbsence) -> dict[str, Any]:
+    """The stable form of a :class:`~atlas.placement.SavestateAbsence`.
+
+    Its own top-level key rather than a placement with holes, because the
+    shapes must not be mistakable: ``no_savestates`` states the emulator has
+    no such feature — an answer, not a refusal — and the citation rides
+    contractually because a client repeating the claim repeats its source.
+    ``sources`` stays out, like every provenance prose.
+    """
+    return {
+        "no_savestates": {
+            "emulator": absence.emulator,
+            "citation": absence.citation,
+            "caveats": [{"code": c.code, "data": dict(c.data)} for c in absence.caveats],
+        }
+    }
+
+
+def savestate_answer_contract(
+    outcome: SavestatePlacement | SavestateAbsence | Unresolved,
+) -> dict[str, Any]:
+    """A savestate question's answer — placement, stated no, or refusal.
+
+    One shape more than the savefile twin (#284): an emulator with no
+    savestate feature answers the question with a cited no, which is neither
+    a directory nor a refusal, so the serializer branches three ways.
+    """
     if isinstance(outcome, Unresolved):
         return unresolved_contract(outcome)
+    if isinstance(outcome, SavestateAbsence):
+        return savestate_absence_contract(outcome)
     return savestate_placement_contract(outcome)
 
 

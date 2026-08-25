@@ -80,6 +80,7 @@ from atlas.contract import (
     soft_patch_contract,
     texture_answer_contract,
     texture_placement_contract,
+    savestate_absence_contract,
     savestate_answer_contract,
     savestate_placement_contract,
     rom_placement_contract,
@@ -155,6 +156,7 @@ from atlas.placement import (
     ModPlacement,
     ModTree,
     SavefilePlacement,
+    SavestateAbsence,
     SavestatePlacement,
     ScreenshotPlacement,
     SoftPatchAnswer,
@@ -401,6 +403,7 @@ __all__ = [
     "BareRetroArchNative",
     # Answers
     "SavefilePlacement",
+    "SavestateAbsence",
     "SavestatePlacement",
     "ScreenshotPlacement",
     "TexturePlacement",
@@ -458,6 +461,7 @@ __all__ = [
     # Serializers — one per answer type, the same code the vectors assert
     "savefile_answer_contract",
     "savefile_placement_contract",
+    "savestate_absence_contract",
     "savestate_answer_contract",
     "savestate_placement_contract",
     "texture_answer_contract",

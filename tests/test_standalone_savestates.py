@@ -54,8 +54,16 @@ class TestEveryCardHasItsReading:
     def test_every_packaged_card_has_a_resolver_registered(self):
         # A card without a resolver is a marker selecting nothing — the
         # dispatch raises for it, so the pairing is proven here instead of in
-        # a caller's answer.
+        # a caller's answer. The one exception is deliberate and inverted
+        # (#284): an absence card states there is nothing to resolve, so a
+        # resolver registered for it would be dead code shipped as if alive.
         for card in load_standalone_savestates():
+            if card.absent is not None:
+                assert card.token not in _STANDALONE_SAVESTATE_RESOLVERS, (
+                    f"{card.token} states the feature does not exist AND registers a "
+                    "resolver — one of the two is a lie"
+                )
+                continue
             assert card.token in _STANDALONE_SAVESTATE_RESOLVERS, (
                 f"{card.token} has a card and no resolver — the card and the code "
                 "shipped out of step"
@@ -146,12 +154,12 @@ class TestTheLoaderRefusesWhatItCannotStand:
         table = _table(
             _fixed(directory={"section": "S", "key": "K", "default": "d", "citation": "c:1"})
         )
-        with pytest.raises(ValueError, match="never both or neither"):
+        with pytest.raises(ValueError, match="state exactly one of"):
             load_standalone_savestates(table)
 
     def test_a_card_stating_neither_shape_is_refused(self):
         table = _table(_fixed(base=None, subdir=None))
-        with pytest.raises(ValueError, match="never both or neither"):
+        with pytest.raises(ValueError, match="state exactly one of"):
             load_standalone_savestates(table)
 
     def test_an_unknown_base_is_refused(self):
@@ -261,3 +269,142 @@ class TestTheCardShape:
         assert card is not None
         assert card.directory is not None
         assert card.directory.default == ""
+
+
+def _absent(**overrides):
+    savestates = {
+        "systems": ["wiiu"],
+        "absent": {"citation": "the whole tree at v1: no state serializer"},
+    }
+    savestates.update(overrides)
+    return savestates
+
+
+class TestTheStatedNoShape:
+    """#284: an absence card states a cited no, and nothing a no cannot have."""
+
+    def test_an_absence_card_loads_with_its_citation(self):
+        cards = load_standalone_savestates(_table(_absent()))
+        assert cards[0].absent is not None
+        assert cards[0].absent.citation == "the whole tree at v1: no state serializer"
+        assert cards[0].absent.build_unestablished is None
+        assert cards[0].names is None and cards[0].names_citation is None
+
+    def test_an_unpinned_build_sentence_travels(self):
+        table = _table(
+            _absent(
+                absent={
+                    "citation": "repo-wide at 1.3.3: nothing",
+                    "build_unestablished": "nothing ships this emulator — the record reads 1.3.3",
+                }
+            )
+        )
+        card = load_standalone_savestates(table)[0]
+        assert card.absent is not None
+        assert card.absent.build_unestablished is not None
+        assert "1.3.3" in card.absent.build_unestablished
+
+    def test_a_citation_free_no_is_refused(self):
+        table = _table(_absent(absent={}))
+        with pytest.raises(ValueError, match="absent.citation"):
+            load_standalone_savestates(table)
+
+    def test_an_absence_beside_a_tree_shape_is_refused(self):
+        table = _table(_fixed(absent={"citation": "c"}))
+        with pytest.raises(ValueError, match="state exactly one of"):
+            load_standalone_savestates(table)
+
+    def test_an_absence_with_names_is_refused(self):
+        table = _table(_absent(names={"pattern": "x", "citation": "c"}))
+        with pytest.raises(ValueError, match="no state to name"):
+            load_standalone_savestates(table)
+
+    def test_an_absence_with_a_settings_file_is_refused(self):
+        table = _table(_absent(settings="demo.ini"))
+        with pytest.raises(ValueError, match="no state"):
+            load_standalone_savestates(table)
+
+    def test_an_absence_with_anchors_is_refused(self):
+        table = _table(
+            _absent(),
+            extra={"anchors": {"binary": "demo/bin/demo", "names": {}}},
+        )
+        with pytest.raises(ValueError, match="nothing .*anchor"):
+            load_standalone_savestates(table)
+
+
+class TestTheInsideImageShape:
+    def test_the_key_and_citation_load(self):
+        table = _table(
+            {
+                "settings": "demo.toml",
+                "systems": ["xbox"],
+                "inside_image": {"key": "hdd_path", "citation": "snapshots.c:1-2"},
+                "names": {"pattern": "vm-<timestamp>", "citation": "savevm.c:1"},
+            }
+        )
+        card = load_standalone_savestates(table)[0]
+        assert card.inside_image is not None
+        assert card.inside_image.key == "hdd_path"
+        assert card.base is None and card.directory is None and card.absent is None
+
+    def test_without_a_settings_file_it_is_refused(self):
+        table = _table(
+            {
+                "systems": ["xbox"],
+                "inside_image": {"key": "hdd_path", "citation": "c"},
+                "names": {"pattern": "p", "citation": "c"},
+            }
+        )
+        with pytest.raises(ValueError, match="names no settings"):
+            load_standalone_savestates(table)
+
+    def test_extra_fields_in_the_statement_are_refused(self):
+        table = _table(
+            {
+                "settings": "demo.toml",
+                "systems": ["xbox"],
+                "inside_image": {"key": "hdd_path", "citation": "c", "extra": 1},
+                "names": {"pattern": "p", "citation": "c"},
+            }
+        )
+        with pytest.raises(ValueError, match="exactly key/citation"):
+            load_standalone_savestates(table)
+
+
+class TestTheLaunchIniShape:
+    def _launch_ini(self, **overrides):
+        statement = {
+            "file": "demo.ini",
+            "keys": {"state_directory": {"default": "sta", "citation": "emuopts.cpp:62"}},
+            "citation": "the -inipath flag names the directory",
+        }
+        statement.update(overrides)
+        return {
+            "systems": ["arcade"],
+            "launch_ini": statement,
+            "names": {"pattern": "<slot>.sta", "citation": "machine.cpp:576"},
+        }
+
+    def test_the_file_and_keys_load(self):
+        card = load_standalone_savestates(_table(self._launch_ini()))[0]
+        assert card.launch_ini is not None
+        assert card.launch_ini.file == "demo.ini"
+        assert card.launch_ini.keys["state_directory"].default == "sta"
+
+    def test_a_settings_file_beside_it_is_a_contradiction(self):
+        savestates = self._launch_ini()
+        savestates["settings"] = "demo.ini"
+        with pytest.raises(ValueError, match="addressed by the launch command"):
+            load_standalone_savestates(_table(savestates))
+
+    def test_an_empty_key_table_is_refused(self):
+        with pytest.raises(ValueError, match="non-empty object"):
+            load_standalone_savestates(_table(self._launch_ini(keys={})))
+
+    def test_the_recorded_words_carry_the_file_and_keys(self):
+        from atlas.standalone_savestates import recorded_savestate_emulator_words
+
+        table = json.loads(_table(self._launch_ini()))
+        words = recorded_savestate_emulator_words(table["emulators"]["DEMO"])
+        assert {"demo.ini", "state_directory"} <= words

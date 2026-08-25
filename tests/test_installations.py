@@ -1799,7 +1799,7 @@ class TestDolphinStandaloneSaves:
         rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
         entry = rd.emulators_for("gc").entries[0]
         p = entry.savestate_location()
-        assert not isinstance(p, atlas.Unresolved)
+        assert isinstance(p, atlas.SavestatePlacement)
         assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/StateSaves"
         assert p.root_kind == "emulator_directory"
         assert p.file_set.state == "unknown"
@@ -5816,12 +5816,12 @@ class TestPcsx2EmptyFolderKeys:
 
     def test_an_empty_savestates_line_lands_the_states_on_the_dataroot(self):
         p = self._entry("[Folders]\nSaveStates =\n").savestate_location()
-        assert not isinstance(p, atlas.Unresolved)
+        assert isinstance(p, atlas.SavestatePlacement)
         assert p.dir == self.DATA_ROOT
 
     def test_an_absent_savestates_key_keeps_the_compiled_default(self):
         p = self._entry("[Folders]\nMemoryCards = /mnt/sd/cards\n").savestate_location()
-        assert not isinstance(p, atlas.Unresolved)
+        assert isinstance(p, atlas.SavestatePlacement)
         assert p.dir == f"{self.DATA_ROOT}/sstates"
 
     def test_an_empty_memorycards_line_lands_the_cards_on_the_dataroot(self):

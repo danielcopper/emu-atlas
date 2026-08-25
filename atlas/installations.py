@@ -248,6 +248,7 @@ from atlas.placement import (
     SCREENSHOT_ROOT_DIRECTORY,
     ScreenshotRootKind,
     SavefilePlacement,
+    SavestateAbsence,
     SavestatePlacement,
     ScreenshotPlacement,
     SoftPatchAnswer,
@@ -8529,13 +8530,17 @@ def _simpleini_value(
     return found, spelled
 
 
-def _savestate_names_caveat(card: StandaloneSavestateCard, directory: str, citation: str) -> Caveat:
+def _savestate_names_caveat(
+    card: StandaloneSavestateCard, directory: str, citation: str | None
+) -> Caveat:
     """The statement every non-derivable naming shares: pattern stated, names refused.
 
     The pattern is the card's word, cited to the build that composes it, and
     it rides in ``data`` because it is what a client acts on — the shape of
     the files a backup of this tree will contain.
     """
+    # An absence card never reaches a names caveat, so both are stated.
+    assert card.names is not None and citation is not None
     return Caveat(
         CAVEAT_FILE_NAMES_UNESTABLISHED,
         f"a state below {directory} is named {card.names} — from the running game's own "
@@ -8767,6 +8772,9 @@ def _melonds_state_files(
     the ``<rom_stem>`` hole open for an archive or an unnamed content the
     same way (slot 0 is the free-file picker and names nothing).
     """
+    # melonDS's card states its tree, so its names are stated too — only an
+    # absence card carries none, and one never reaches a resolver.
+    assert card.names is not None and card.names_citation is not None
     if content_path is not None and not _melonds_is_archive(content_path):
         stem = _melonds_stem(os.path.basename(content_path))
         return tuple(f"{stem}.ml{slot}" for slot in _MELONDS_STATE_SLOTS), (), ()
@@ -8886,6 +8894,35 @@ STANDALONE_SAVESTATE_CITATION_SLOTS = {
 }
 
 
+def _savestate_absence_answer(card: StandaloneSavestateCard) -> SavestateAbsence:
+    """The stated no a card's ``absent`` statement becomes — an answer, not a refusal.
+
+    No machine-derived caveats ride here (health, entry, arrangement): the
+    absence is a statement about the emulator, not about this machine or this
+    launch, so it reads identically on every arrangement that launches the
+    emulator at all. The one caveat it can carry is the card's own — an
+    ``unverified-version`` where no shipped build pins the claim (nothing
+    ships Ryubing; PICO-8's binary is the user's own copy).
+    """
+    absent = card.absent
+    assert absent is not None  # callers branch on the statement first
+    caveats: tuple[Caveat, ...] = ()
+    if absent.build_unestablished is not None:
+        caveats = (
+            Caveat(
+                CAVEAT_UNVERIFIED_VERSION,
+                absent.build_unestablished,
+                {"emulator": card.token, "verification": "build-unestablished"},
+            ),
+        )
+    return SavestateAbsence(
+        emulator=card.token,
+        citation=absent.citation,
+        sources=(f"standalone savestate card '{card.token}': {card.provenance}",),
+        caveats=caveats,
+    )
+
+
 def _standalone_savestate_placement(
     machine: Machine,
     *,
@@ -8896,13 +8933,18 @@ def _standalone_savestate_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
-) -> SavestatePlacement | Unresolved:
+) -> SavestatePlacement | SavestateAbsence | Unresolved:
     """Dispatch to the emulator's own states resolver — a card without one fails loudly.
 
     The launch command and content path ride for the same reasons they ride
     the save dispatch: a launch's own flags could outrank configuration, and
-    melonDS fills its state names from the content's own stem.
+    melonDS fills its state names from the content's own stem. An absence
+    card answers before any resolver runs: the stated no depends on no homes,
+    no sandbox and no file, which is why a card stating it registers no
+    resolver function.
     """
+    if card.absent is not None:
+        return _savestate_absence_answer(card)
     resolver = _STANDALONE_SAVESTATE_RESOLVERS.get(card.token)
     if resolver is None:
         raise ValueError(
@@ -10113,7 +10155,7 @@ class _CatalogueHost(Protocol):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavestatePlacement | Unresolved: ...
+    ) -> SavestatePlacement | SavestateAbsence | Unresolved: ...
 
     def entry_texture_pack_location(
         self,
@@ -11314,7 +11356,9 @@ class EmulatorEntry:
             self._spec, self._caveats, content_path=content_path
         )
 
-    def savestate_location(self, *, content_path: str | None = None) -> SavestatePlacement | Unresolved:
+    def savestate_location(
+        self, *, content_path: str | None = None
+    ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """Where this emulator keeps the savestates — core filled in from the catalogue.
 
         The savefile route's twin, and since #225 it answers on the same
@@ -11324,7 +11368,9 @@ class EmulatorEntry:
         exception. Which of the two it is stays the installation's decision,
         exactly as on the savefile route: the catalogue names an emulator,
         and whether atlas has its wiring is a question about packaged
-        knowledge.
+        knowledge. Since #284 there is a third shape: a card can state, with
+        its citation, that the emulator has no savestates at all — an answer
+        (:class:`~atlas.placement.SavestateAbsence`), not a refusal.
         """
         return self._installation.entry_savestate_location(
             self._spec, self._caveats, content_path=content_path
@@ -13426,14 +13472,17 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavestatePlacement | Unresolved:
+    ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savestate_location` — one marker read.
 
         The savefile route's twin, down to the per-game override check: which
         emulator ES-DE would actually launch decides both answers, so the one
         that would not launch says so on both. A standalone entry goes through
         the savestate card the same way a save goes through its own card, and
-        refuses identically where none covers it (#225).
+        refuses identically where none covers it (#225). An absence card
+        answers the stated no before any tree is touched (#284) — the
+        dispatch short-circuits on it, so the homes and sandbox built here
+        are simply unused for that shape.
         """
         config, marker_issues = self._read_marker()
         extra = (
@@ -15030,7 +15079,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
-    ) -> SavestatePlacement | Unresolved:
+    ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """The savefile entry route's twin — same sources, the savestate keys.
 
         A standalone entry goes through the launcher route the save answer
@@ -15054,18 +15103,24 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...],
         *,
         content_path: str | None,
-    ) -> SavestatePlacement | Unresolved:
+    ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """A standalone entry's states answer, resolved the way the launch resolves.
 
         :meth:`_standalone_entry_savefile`'s twin: the same launch identity,
         the same variant gate, and the savestate card where the save route
         holds the save card — so the two questions about one entry can never
-        come to different conclusions about which binary runs.
+        come to different conclusions about which binary runs. An absence
+        card answers BEFORE the variant gate (#284): the stated no is about
+        the emulator, not about which binary this launch would pick, so a
+        launch whose variant is unestablished still gets the answer instead
+        of a refusal about trees the answer never needed.
         """
         launch = self._standalone_launch_identity(spec.command)
         card = lookup_standalone_savestate_card(launch.token)
         if launch.probe_name is None or card is None or spec.system not in card.systems:
             return _standalone_savestate_unresolved(spec)
+        if card.absent is not None:
+            return _savestate_absence_answer(card)
         gate = self._standalone_launch_gate(spec)
         if gate.homes is None:
             assert gate.variant is not None  # a card was found, so the launch identified one

@@ -1007,6 +1007,42 @@ class SavestatePlacement:
 
 
 @dataclass(frozen=True, slots=True)
+class SavestateAbsence:
+    """This emulator has no savestates — a stated, cited fact, and an answer.
+
+    The savestate question's third shape (#284), beside the placement and the
+    refusal, because "the feature does not exist" is neither: a refusal says
+    atlas cannot answer, a placement would have to invent a directory that is
+    not there, and this says the answer is *nowhere* — Cemu 2.6 ships no state
+    serializer, the Ryujinx lineage never had one. ``citation`` is the
+    evidence for the no (the spans and scans that establish it, contractual —
+    a client repeating the claim repeats its source); ``sources`` is the
+    card's provenance prose, non-contractual like every provenance.
+
+    ``caveats`` carries only what the *card* states — an ``unverified-version``
+    where no shipped build pins the claim (nothing ships Ryubing; the record
+    reads a release). Machine-derived caveats (health, entry, arrangement) do
+    not ride here: the absence is a statement about the emulator, not about
+    this machine or this launch, and it holds identically on every
+    arrangement that launches the emulator at all.
+    """
+
+    emulator: str
+    citation: str
+    sources: tuple[str, ...]
+    caveats: tuple[Caveat, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.emulator:
+            raise ValueError("SavestateAbsence: emulator must be non-empty")
+        if not self.citation:
+            raise ValueError(
+                "SavestateAbsence: citation must be non-empty — a stated no without its "
+                "evidence is indistinguishable from a guess"
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class TexturePlacement:
     """Where this emulator, configured as it is, reads texture packs from.
 
