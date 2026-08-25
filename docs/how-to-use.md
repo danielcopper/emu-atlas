@@ -867,7 +867,8 @@ Three differences are worth knowing, and all three are things the answer states 
 - **`root_kind` speaks the question's own vocabulary.** A savestate is never anchored at the saves root and never at a
   core's system directory. On RetroArch's routes it is `savestate_directory` or `content_directory`; a standalone
   entry's answer (below) adds the savefile family's `emulator_directory` — the tree the emulator owns — and
-  `working_directory` for melonDS's relative value.
+  `working_directory` for a relative configured value (melonDS's `SavestatePath`, xemu's `hdd_path`), which the emulator
+  opens from wherever it was started.
 - **The file set is narrower and sharper.** A savefile's extensions are the core's own, so the observation has to match
   everything under the ROM's stem; a savestate's names are RetroArch's own, so the observation matches `<stem>.state*`
   and nothing else. Two consequences: `content-dir-observation` does not appear on a state placement even when the
@@ -1384,7 +1385,10 @@ firmware: the boot ROM, the flash image and the hard disk each refuse the start 
 in the firmware answer at all, because the emulator generates one where none exists and it is the console's own settings
 — the save answer already names it as a settings group, and stating it twice would file save data under firmware. The
 hard disk _is_ in both answers on purpose: the console needs one to start, and every save lives inside it, so each
-answer names it and says which aspect it means.
+answer names it and says which aspect it means. One more shape can appear here: a _relative_ value in those settings is
+opened by the xemu process from wherever it was started, so it has no destination this answer could state — the file
+drops out of `requirements` and rides the `firmware-path-launch-dependent` caveat instead, whose data carries the key,
+the value as written, and the `<cwd>`-templated path a launcher's working directory completes.
 
 **DuckStation names no file at all**, which is the third way a card can state its probes and the one that changes what
 `verify` means. `[BIOS] SearchDirectory` names a directory, three per-region keys may name an image inside it, and where
