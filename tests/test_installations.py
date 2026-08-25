@@ -5075,7 +5075,7 @@ class TestCfgDirectorySpelling:
         assert [c.core_so for c in slashed.cores] == [c.core_so for c in plain.cores]
         assert [c.core_so for c in plain.cores] == ["pcsx2_libretro.so"]
         assert [c.code for c in slashed.caveats] == [c.code for c in plain.caveats]
-        assert [r.found for c in slashed.cores for r in c.requirements] == ["file"]
+        assert [r.found for r in slashed.requirements] == ["file"]
 
 
 class TestBareRetroArch:

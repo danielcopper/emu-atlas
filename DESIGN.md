@@ -511,6 +511,13 @@ visible in `system_source`, and marked as derived where the core spans systems.
   whose identity could not be established makes it `null`. `satisfied` per requirement and `requirements_met` per core
   are both in the contract for one reason: a consumer deriving them from `need` and `present` gets the mismatch case
   wrong, which is exactly how a verified-broken BIOS reads as all-clear.
+- **A requirement list is a conjunction, and alternatives say so as data.** Where an emulator reads exactly one of
+  several files per launch — DuckStation's per-region BIOS keys, switched on the console region the running disc sets —
+  the entry is a `FirmwareAlternatives` group, its options full requirements each carrying the `regions` whose launch
+  they serve, disjoint across the group. A reader selects the one file a launch needs from data alone; stating the files
+  as sibling `required` requirements would claim a conjunction that is not there, and only prose would correct it. The
+  group's `satisfied` is the three-valued lift over the unread selector: all options met, none, or mixed — and
+  `requirements_met` folds it in through exactly that.
 - **Every path outcome stays distinct.** A file, a missing file, a directory in the way (nothing can be placed there),
   and a path that could not be looked at are four answers, not two. `present` is therefore `true`/`false`/`null`, and
   the seam's own rule holds: a present-but-broken state is never reported as absent or healthy. Declared paths are

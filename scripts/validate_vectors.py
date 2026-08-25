@@ -191,6 +191,15 @@ FIRMWARE_REQUIREMENT_FIELDS = {
     "checked",
     "satisfied",
 }
+# An entry of a core's requirements list may be an alternatives group instead
+# of a requirement — one launch needs exactly one of its options, the console
+# region decides — discriminated by its single key, the way `unresolved` and
+# `no_savestates` are. Each option is a full requirement plus `regions`.
+FIRMWARE_ALTERNATIVES_FIELDS = {"alternatives"}
+FIRMWARE_ALTERNATIVE_OPTION_FIELDS = FIRMWARE_REQUIREMENT_FIELDS | {"regions"}
+# The console regions of the one emitting card (DuckStation's, the words its
+# region_keys spell) — a closed vocabulary, like the keyings above.
+KNOWN_FIRMWARE_REGIONS = {"ntsc-u", "ntsc-j", "pal"}
 KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent", "unsupported", "packaged"}
 KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none", "card"}
 UNCLAIMED_FIELDS = {"path", "identity", "known_as"}
@@ -1282,8 +1291,10 @@ def _validate_identity(name: str, identity: Any, what: str) -> None:
         fail(f"{name}: {what} size must be a non-negative integer")
 
 
-def _validate_requirement_fields(name: str, entry: Any) -> None:
-    _require_exact(name, entry, FIRMWARE_REQUIREMENT_FIELDS, "each firmware requirement")
+def _validate_requirement_fields(
+    name: str, entry: Any, fields: set[str] = FIRMWARE_REQUIREMENT_FIELDS
+) -> None:
+    _require_exact(name, entry, fields, "each firmware requirement")
     for key in ("system", "file_name", "path", "declared"):
         if not isinstance(entry[key], str) or not entry[key]:
             fail(f"{name}: firmware requirement {key} must be a non-empty string")
@@ -1388,11 +1399,49 @@ def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) 
     _validate_file_requirement(name, entry["identity"], checked, satisfied, hash_checked=hash_checked)
 
 
-def _validate_requirement(name: str, entry: Any, *, root: str, hash_checked: bool) -> None:
-    _validate_requirement_fields(name, entry)
+def _validate_requirement(
+    name: str,
+    entry: Any,
+    *,
+    root: str,
+    hash_checked: bool,
+    fields: set[str] = FIRMWARE_REQUIREMENT_FIELDS,
+) -> None:
+    _validate_requirement_fields(name, entry, fields)
     _validate_requirement_path(name, entry, root)
     _validate_requirement_presence(name, entry)
     _validate_requirement_verdict(name, entry, hash_checked=hash_checked)
+
+
+def _validate_alternatives(name: str, entry: Any, *, core_so: Any, root: str, hash_checked: bool) -> None:
+    """An alternatives group: one launch needs exactly one option, the region decides.
+
+    Every option is a full requirement plus ``regions`` — a non-empty list of
+    known console regions, disjoint across the group's options: two options
+    one region could pick between would leave the pick unstated, which is the
+    exact defect the shape exists to remove.
+    """
+    _require_exact(name, entry, FIRMWARE_ALTERNATIVES_FIELDS, "an alternatives entry")
+    options = entry["alternatives"]
+    if not isinstance(options, list) or not options:
+        fail(f"{name}: an alternatives entry must carry a non-empty list of options")
+    claimed: set[str] = set()
+    for option in options:
+        _validate_requirement(
+            name, option, root=root, hash_checked=hash_checked, fields=FIRMWARE_ALTERNATIVE_OPTION_FIELDS
+        )
+        if option["core_so"] != core_so:
+            fail(f"{name}: an alternatives option must name the core it is listed under")
+        regions = option["regions"]
+        if not isinstance(regions, list) or not regions:
+            fail(f"{name}: an alternatives option must state the regions whose launch it serves")
+        unknown = sorted(set(regions) - KNOWN_FIRMWARE_REGIONS)
+        if unknown:
+            fail(f"{name}: option regions must be from {sorted(KNOWN_FIRMWARE_REGIONS)}, got {unknown}")
+        overlap = claimed.intersection(regions)
+        if overlap:
+            fail(f"{name}: option regions must be disjoint across a group — {sorted(overlap)} is claimed twice")
+        claimed.update(regions)
 
 
 def _validate_core_identity(name: str, core: Any) -> None:
@@ -1420,6 +1469,11 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
             "packaged, its provenance) — an unexplained list reads as 'needs nothing'"
         )
     for entry in requirements:
+        if isinstance(entry, dict) and "alternatives" in entry:
+            _validate_alternatives(
+                name, entry, core_so=core["core_so"], root=root, hash_checked=hash_checked
+            )
+            continue
         if entry["core_so"] != core["core_so"]:
             fail(f"{name}: a requirement must name the core it is listed under")
         _validate_requirement(name, entry, root=root, hash_checked=hash_checked)
@@ -1444,16 +1498,38 @@ def _validate_core_refusals(name: str, core: Any) -> None:
             fail(f"{name}: a refusal's reason must be stated as a caveat on the same core")
 
 
+def _group_verdict(options: list[Any]) -> Any:
+    """The three-valued lift an alternatives group answers with.
+
+    ``True`` when every option is satisfied (met whichever region the disc
+    sets), ``False`` when every option fails (no region boots), ``None`` for
+    the mixed group — whether THIS launch is served depends on a run-time
+    fact atlas cannot read.
+    """
+    verdicts = {option["satisfied"] for option in options}
+    if verdicts == {True}:
+        return True
+    if verdicts == {False}:
+        return False
+    return None
+
+
 def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
     """``requirements_met`` is derived, never asserted: recompute and compare."""
     requirements = core["requirements"]
     refused = core["refused"]
-    required = [r for r in requirements if r["need"] == "required"]
+    plain = [r for r in requirements if "alternatives" not in r]
+    groups = [r["alternatives"] for r in requirements if "alternatives" in r]
+    required = [r for r in plain if r["need"] == "required"]
     if core["declaration"] != "read":
         expected = None
-    elif any(r["satisfied"] is False for r in required):
+    elif any(r["satisfied"] is False for r in required) or any(
+        _group_verdict(options) is False for options in groups
+    ):
         expected = False
-    elif any(r["satisfied"] is None for r in required):
+    elif any(r["satisfied"] is None for r in required) or any(
+        _group_verdict(options) is None for options in groups
+    ):
         expected = None
     elif any(r["need"] == "required" for r in refused):
         # A required file atlas refused to look at is not an all-clear.

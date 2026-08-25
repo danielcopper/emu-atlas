@@ -61,6 +61,7 @@ from atlas.firmware import (
     CoreDeclarations,
     CoreFirmware,
     Destination,
+    FirmwareAlternatives,
     FirmwareAnswer,
     FirmwareContext,
     FirmwareIdentity,
@@ -91,6 +92,21 @@ from atlas.systems import known_systems
 
 INFO_DIR = "/cores"
 BIOS_DIR = "/bios"
+
+
+def _plain_requirements(core: CoreFirmware) -> tuple[FirmwareRequirement, ...]:
+    """A conjunctive core's entries, narrowed for attribute access.
+
+    Every core these tests build through the .info route is a conjunction, so
+    the narrowing drops nothing — and the assert holds it to that: a group
+    appearing where a test expects plain entries must FAIL, not be silently
+    skipped. Group-building tests read options explicitly.
+    """
+    assert all(isinstance(r, FirmwareRequirement) for r in core.requirements), (
+        f"{core.core_so or core.label}: an alternatives group appeared in a core this test "
+        "reads as a plain conjunction — read its options explicitly instead of filtering it away"
+    )
+    return tuple(r for r in core.requirements if isinstance(r, FirmwareRequirement))
 
 PSX_INFO = """
 display_name = "Sony - PlayStation (Beetle PSX)"
@@ -476,7 +492,7 @@ class TestTheCountIsTheEnumeration:
         # empty value and keeps the NULL (core_info.c:1610). The slot is empty
         # either way; that the file states the key is what gets said.
         core = self._answered('firmware_count = 2\nfirmware0_path = "a.bin"\nfirmware1_path = ""\n')
-        assert [r.declared for r in core.requirements] == ["a.bin"]
+        assert [r.declared for r in _plain_requirements(core)] == ["a.bin"]
         assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
         assert core.caveats[0].data["declared"] == "firmware1_path"
 
@@ -485,7 +501,7 @@ class TestTheCountIsTheEnumeration:
         # nowhere, but it names no file, so it is not a hidden declaration and
         # a well-formed core must stay silent.
         core = self._answered('firmware_count = 1\nfirmware0_path = "a.bin"\nfirmware0_md5 = "d41d8c"\n')
-        assert [r.declared for r in core.requirements] == ["a.bin"]
+        assert [r.declared for r in _plain_requirements(core)] == ["a.bin"]
         assert core.caveats == ()
 
     def test_a_file_wrong_in_several_ways_states_a_reason_for_each(self):
@@ -562,7 +578,7 @@ class TestPerCoreAnswer:
         """
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
         core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
-        required = next(r for r in core.requirements if r.need == NEED_REQUIRED)
+        required = next(r for r in _plain_requirements(core) if r.need == NEED_REQUIRED)
         assert required.found == "file"
         assert required.checked == "unchecked"
         assert required.satisfied is None
@@ -848,9 +864,9 @@ class TestWhatTheMachineWouldNotSay:
         # it, so the real /etc/shadow — which exists on this fixture machine —
         # is neither read nor reported, and the file the core will not find is
         # stated as missing where RetroArch will look for it.
-        assert [r.path for r in core.requirements] == [f"{BIOS_DIR}/etc/shadow"]
-        assert core.requirements[0].path.startswith(f"{BIOS_DIR}/")
-        assert core.requirements[0].found == "missing"
+        assert [r.path for r in _plain_requirements(core)] == [f"{BIOS_DIR}/etc/shadow"]
+        assert _plain_requirements(core)[0].path.startswith(f"{BIOS_DIR}/")
+        assert _plain_requirements(core)[0].found == "missing"
         assert core.refused == ()
         assert core.caveats == ()
 
@@ -1046,10 +1062,10 @@ class TestSystemAssignmentIsVisible:
         answer = firmware_for_core(machine, _context(machine), core_so="skyemu_libretro.so")
         core = answer.cores[0]
         assert [c.code for c in core.caveats] == [CAVEAT_CORE_WITHOUT_SYSTEMNAME]
-        assert [r.system for r in core.requirements if r.file_name == "gba_bios.bin"] == ["_unknown"]
+        assert [r.system for r in _plain_requirements(core) if r.file_name == "gba_bios.bin"] == ["_unknown"]
         # The override still applies where it has a rule, so this is not a
         # blanket "we know nothing about this core".
-        assert [r.system for r in core.requirements if r.file_name == "cgb_boot.bin"] == ["gbc"]
+        assert [r.system for r in _plain_requirements(core) if r.file_name == "cgb_boot.bin"] == ["gbc"]
 
     def test_a_core_declaring_nothing_has_nothing_to_be_unsure_about(self):
         machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
@@ -1104,7 +1120,7 @@ class TestSystemAssignmentIsVisible:
         answer = firmware_for_core(machine, _context(machine), core_so="vice_x128_libretro.so")
         core = answer.cores[0]
         assert core.caveats == ()
-        assert core.requirements[0].system == "c64"
+        assert _plain_requirements(core)[0].system == "c64"
 
     def test_the_disagreement_check_needs_both_names_to_be_mappable(self):
         """The known limit of that reading, pinned rather than glossed over.
@@ -1828,7 +1844,7 @@ class TestNoDeclarationIsNeverSatisfied:
         through_systemname = firmware_for_system(machine, context, system="psx")
         for answer in (through_catalogue, through_systemname):
             core = answer.cores[0]
-            assert [r.declared for r in core.requirements] == ["scph5501.bin"]
+            assert [r.declared for r in _plain_requirements(core)] == ["scph5501.bin"]
             assert CAVEAT_FIRMWARE_DECLARATION_UNREAD in [c.code for c in core.caveats]
 
     def test_without_a_root_there_is_nothing_to_resolve_against(self):
@@ -1937,13 +1953,13 @@ class TestPartialReaderIsNotMisled:
         seen_mismatch = False
         for _, answer in self._answers():
             for core in answer.cores:
-                for requirement in core.requirements:
+                for requirement in _plain_requirements(core):
                     if requirement.checked == CHECKED_MISMATCH:
                         seen_mismatch = True
                 if core.requirements_met is not True:
                     continue
                 assert core.declaration == DECLARATION_READ
-                for requirement in core.requirements:
+                for requirement in _plain_requirements(core):
                     if requirement.need != NEED_REQUIRED:
                         continue
                     assert requirement.found == "file", "all-clear over something that is not a file"
@@ -1965,7 +1981,7 @@ class TestPartialReaderIsNotMisled:
         core = firmware_for_core(
             machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
         ).cores[0]
-        wrong = next(r for r in core.requirements if r.file_name == "scph5501.bin")
+        wrong = next(r for r in _plain_requirements(core) if r.file_name == "scph5501.bin")
         assert wrong.found == "file"
         assert wrong.checked == CHECKED_MISMATCH
         assert wrong.satisfied is False
@@ -1977,7 +1993,7 @@ class TestPartialReaderIsNotMisled:
         core = firmware_for_core(
             machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
         ).cores[0]
-        undecided = next(r for r in core.requirements if r.file_name == "scph5501.bin")
+        undecided = next(r for r in _plain_requirements(core) if r.file_name == "scph5501.bin")
         assert undecided.found == "file"
         assert undecided.checked == CHECKED_UNKNOWN
         assert undecided.satisfied is None
@@ -2170,7 +2186,7 @@ class TestASystemTheCatalogueDoesNotNameIsMarked:
     def test_the_own_spelling_carries_the_caveat(self):
         info = 'systemname = "TI83"\nfirmware_count = 1\nfirmware0_path = "ti83.rom"\n'
         core = self._core(info, "numero_libretro")
-        assert core.requirements[0].system == "ti83"
+        assert _plain_requirements(core)[0].system == "ti83"
         caveat = next(c for c in core.caveats if c.code == CAVEAT_SYSTEM_NOT_IN_CATALOGUE)
         assert caveat.data == {
             "core_so": "numero_libretro.so",
@@ -2188,13 +2204,13 @@ class TestASystemTheCatalogueDoesNotNameIsMarked:
             'firmware0_path = "ep128emu/roms/exos21.rom"\n'
         )
         core = self._core(info, "ep128emu_core_libretro")
-        assert core.requirements[0].system == "ep128"
+        assert _plain_requirements(core)[0].system == "ep128"
         assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE in [c.code for c in core.caveats]
 
     def test_a_catalogue_id_is_never_marked(self):
         info = 'systemname = "Sega - Dreamcast"\nfirmware_count = 1\nfirmware0_path = "dc/dc_boot.bin"\n'
         core = self._core(info, "flycast_libretro")
-        assert core.requirements[0].system == "dreamcast"
+        assert _plain_requirements(core)[0].system == "dreamcast"
         assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE not in [c.code for c in core.caveats]
 
     def _ti83_machine(self):
@@ -2458,3 +2474,130 @@ class TestTheRecordedJoinsStillHoldOnTheDeployedBuild:
         # same_cdi's cdimono2.zip under cdimono1.
         declared = set(self._systems())
         assert declared & (set(SYSTEMS_WITHOUT_CATALOGUE_ID) | {"c128", "cdimono2"}) == set()
+
+
+def _region_option(file_name: str, regions: tuple[str, ...], *, found: PathKind = "missing") -> FirmwareRequirement:
+    return FirmwareRequirement(
+        core_so=None, system="psx", system_source="card", need="required",
+        file_name=file_name, path=f"/bios/{file_name}", declared=file_name, description="",
+        identity=None, found=found, checked=CHECKED_UNKNOWN if found == "file" else None,
+        regions=regions,
+    )
+
+
+class TestAlternativesAreOneOfSeveralNotSeveralNeeds:
+    """The group states what one launch needs: one option, the console region decides."""
+
+    def test_regions_must_name_at_least_one_region(self):
+        with pytest.raises(ValueError):
+            _region_option("scph5501.bin", ())
+
+    def test_an_empty_group_states_nothing(self):
+        with pytest.raises(ValueError):
+            FirmwareAlternatives(options=())
+
+    def test_every_option_must_state_its_regions(self):
+        unscoped = FirmwareRequirement(
+            core_so=None, system="psx", system_source="card", need="required",
+            file_name="scph5501.bin", path="/bios/scph5501.bin", declared="scph5501.bin",
+            description="", identity=None, found="missing", checked=None,
+        )
+        with pytest.raises(ValueError):
+            FirmwareAlternatives(options=(unscoped,))
+
+    def test_two_options_one_region_could_pick_between_are_refused(self):
+        # Overlapping scopes would leave the pick unstated — the exact defect
+        # the shape exists to remove.
+        first = _region_option("scph5501.bin", ("ntsc-u",))
+        overlapping = _region_option("scph5500.bin", ("ntsc-u", "ntsc-j"))
+        with pytest.raises(ValueError):
+            FirmwareAlternatives(options=(first, overlapping))
+
+    def test_a_group_met_for_every_region_is_satisfied(self):
+        group = FirmwareAlternatives(
+            options=(
+                _region_option("scph5501.bin", ("ntsc-u",), found="file"),
+                _region_option("scph5502.bin", ("ntsc-j", "pal"), found="file"),
+            )
+        )
+        assert group.satisfied is True
+
+    def test_a_group_failed_for_every_region_is_unmet(self):
+        group = FirmwareAlternatives(
+            options=(
+                _region_option("scph5501.bin", ("ntsc-u",)),
+                _region_option("scph5502.bin", ("ntsc-j", "pal")),
+            )
+        )
+        assert group.satisfied is False
+
+    def test_a_mixed_group_has_no_single_verdict(self):
+        # Whether THIS launch is served depends on the disc's region, which
+        # atlas cannot read — None, never a coin flip.
+        group = FirmwareAlternatives(
+            options=(
+                _region_option("scph5501.bin", ("ntsc-u",)),
+                _region_option("scph5502.bin", ("ntsc-j", "pal"), found="file"),
+            )
+        )
+        assert group.satisfied is None
+
+    def test_a_region_scoped_requirement_outside_a_group_is_refused(self):
+        scoped = _region_option("scph5501.bin", ("ntsc-u",))
+        provenance = Caveat("firmware-packaged-declaration", "", {})
+        with pytest.raises(ValueError):
+            CoreFirmware(
+                core_so=None, label="DuckStation", declaration="packaged",
+                requirements=(scoped,), caveats=(provenance,),
+            )
+
+
+class TestAPartialReaderOfAGroupIsNotMisled:
+    """unmet/undetermined/requirements_met fold groups in through the lift."""
+
+    def _core(self, *options: FirmwareRequirement) -> CoreFirmware:
+        # declaration "read" on purpose: only there does requirements_met ever
+        # leave None, so only there can the lift be proven to gate it.
+        return CoreFirmware(
+            core_so="x_libretro.so", label=None, declaration=DECLARATION_READ,
+            requirements=(FirmwareAlternatives(options=options),), caveats=(),
+        )
+
+    def test_a_group_failed_everywhere_blocks_and_names_its_options(self):
+        core = self._core(
+            _region_option("scph5501.bin", ("ntsc-u",)),
+            _region_option("scph5502.bin", ("ntsc-j", "pal")),
+        )
+        assert [r.file_name for r in core.unmet] == ["scph5501.bin", "scph5502.bin"]
+        assert core.requirements_met is False
+
+    def test_a_mixed_group_is_undetermined_not_failed(self):
+        core = self._core(
+            _region_option("scph5501.bin", ("ntsc-u",)),
+            _region_option("scph5502.bin", ("ntsc-j", "pal"), found="file"),
+        )
+        assert core.unmet == ()
+        # The option not established usable is listed; the satisfied one is not.
+        assert [r.file_name for r in core.undetermined] == ["scph5501.bin"]
+        assert core.requirements_met is None
+
+    def test_a_group_met_everywhere_lets_true_through(self):
+        core = self._core(
+            _region_option("scph5501.bin", ("ntsc-u",), found="file"),
+            _region_option("scph5502.bin", ("ntsc-j", "pal"), found="file"),
+        )
+        assert core.unmet == ()
+        assert core.undetermined == ()
+        assert core.requirements_met is True
+
+    def test_the_flat_view_keeps_every_options_scope(self):
+        core = self._core(
+            _region_option("scph5502.bin", ("ntsc-j", "pal"), found="file"),
+            _region_option("scph5501.bin", ("ntsc-u",)),
+        )
+        answer = FirmwareAnswer(
+            root="/bios", cores=(core,), unclaimed=(), hash_checked=False, sources=(), caveats=(),
+        )
+        flattened = answer.requirements
+        assert [r.file_name for r in flattened] == ["scph5501.bin", "scph5502.bin"]
+        assert [r.regions for r in flattened] == [("ntsc-u",), ("ntsc-j", "pal")]

@@ -1149,6 +1149,16 @@ class FirmwareRequirement:
     there is nothing at the destination to check, and otherwise keeps its four
     values apart: ``unchecked`` (identity known, verification not asked for) is
     not ``unknown`` (it could not be established), and neither is a verdict.
+
+    ``regions`` is ``None`` on an ordinary requirement — every launch needs
+    this file — and names the console regions whose launch this file serves on
+    an option inside a :class:`FirmwareAlternatives` group, which is the only
+    place a region-scoped requirement may stand (:class:`CoreFirmware`
+    enforces it). DuckStation is what the field exists for: exactly one of its
+    per-region BIOS keys is read per launch, selected by the console region
+    the running disc sets (``GetBIOSImage``, bios.cpp:321-338 and
+    system.cpp:1613-1648, :2510 at 64655818e), so two named images were never
+    two files one launch needs.
     """
 
     # ``None`` exactly for a card-declared requirement: a standalone emulator
@@ -1164,10 +1174,17 @@ class FirmwareRequirement:
     identity: FirmwareIdentity | None
     found: PathKind
     checked: FirmwareChecked | None
+    regions: tuple[str, ...] | None = None
 
     def __post_init__(self) -> None:
         if self.need not in FIRMWARE_NEEDS:
             raise ValueError(f"FirmwareRequirement: need must be one of {FIRMWARE_NEEDS}, got {self.need!r}")
+        if self.regions is not None and (
+            not self.regions or any(not region for region in self.regions)
+        ):
+            raise ValueError(
+                f"FirmwareRequirement: regions must be None or name at least one region, got {self.regions!r}"
+            )
         if self.found not in (KIND_FILE, KIND_DIRECTORY, KIND_MISSING, KIND_INACCESSIBLE):
             raise ValueError(f"FirmwareRequirement: found must be a path kind, got {self.found!r}")
         if self.found in (KIND_FILE, KIND_DIRECTORY):
@@ -1228,6 +1245,67 @@ class FirmwareRequirement:
         if self.checked == CHECKED_UNKNOWN and self.identity is not None:
             return None
         return True
+
+
+@dataclass(frozen=True, slots=True)
+class FirmwareAlternatives:
+    """Requirements of which one launch needs exactly one — the console region decides.
+
+    A conjunction is what a requirement list means, and DuckStation's
+    per-region BIOS keys are not one: ``GetBIOSImage`` reads exactly one of
+    them per launch, switched on the console region (bios.cpp:321-338 at
+    64655818e), which under the shipped Auto setting is the running disc's own
+    region (system.cpp:1613-1648, :2510) — a run-time fact no configuration
+    records. So the alternatives are stated as one entry: each option carries
+    the :attr:`~FirmwareRequirement.regions` whose launch it serves, the
+    region sets are disjoint (two options one region could pick between would
+    be a claim about ranking nobody established), and a launch needs the
+    option whose regions contain its console region. A region no option lists
+    has nothing stated for it — the entry's caveats say why.
+
+    A single option is a normal group, not a degenerate one: a named NTSC-U
+    image beside a search that found nothing is still only what a US console
+    boots, and flattening it into an unconditional requirement would claim a
+    PAL launch needs it.
+    """
+
+    options: tuple[FirmwareRequirement, ...]
+
+    def __post_init__(self) -> None:
+        if not self.options:
+            raise ValueError("FirmwareAlternatives: an empty group states nothing — options must be non-empty")
+        claimed: set[str] = set()
+        for option in self.options:
+            if option.regions is None:
+                raise ValueError(
+                    "FirmwareAlternatives: every option must state the regions whose launch it serves"
+                )
+            overlap = claimed.intersection(option.regions)
+            if overlap:
+                raise ValueError(
+                    f"FirmwareAlternatives: regions must be disjoint across options — {sorted(overlap)} "
+                    "would leave the pick unstated"
+                )
+            claimed.update(option.regions)
+
+    @property
+    def satisfied(self) -> bool | None:
+        """The three-valued lift over the selector atlas cannot read.
+
+        ``True`` when every stated option is satisfied. ``False`` when every
+        stated option demonstrably fails. ``None`` otherwise: whether THIS
+        launch is served depends on a run-time fact, and a mixed group has no
+        honest single verdict. Regions no option lists are outside this
+        verdict and the entry's caveats speak for them — a group of one
+        satisfied NTSC-U image says nothing about the two regions with no
+        image stated.
+        """
+        verdicts = {option.satisfied for option in self.options}
+        if verdicts == {True}:
+            return True
+        if verdicts == {False}:
+            return False
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1294,12 +1372,19 @@ class CoreFirmware:
     the evidence caveats are different axes and never substitute for each
     other: ``arrangement-unverified`` says a reading was never confirmed live,
     while this says there was no reading to confirm.
+
+    ``requirements`` is a conjunction: every entry is needed. An entry may be
+    a :class:`FirmwareAlternatives` group, and then what is needed is exactly
+    one of its options — the console region decides which. A region-scoped
+    requirement stands only inside a group; a plain entry carrying
+    ``regions`` would smuggle a condition into the conjunction, so it is
+    refused here.
     """
 
     core_so: str | None
     label: str | None
     declaration: CoreDeclarationState
-    requirements: tuple[FirmwareRequirement, ...]
+    requirements: tuple[FirmwareRequirement | FirmwareAlternatives, ...]
     caveats: tuple[Caveat, ...]
     refused: tuple[RefusedDeclaration, ...] = ()
     # The ``.info`` path keys RetroArch's own enumeration never takes (a
@@ -1335,16 +1420,50 @@ class CoreFirmware:
             )
         if self.refused and not self.caveats:
             raise ValueError("CoreFirmware: a refused declaration must state why, or it vanishes")
+        for entry in self.requirements:
+            if isinstance(entry, FirmwareRequirement) and entry.regions is not None:
+                raise ValueError(
+                    "CoreFirmware: a region-scoped requirement stands only inside a FirmwareAlternatives "
+                    "group — a plain entry carrying regions would smuggle a condition into the conjunction"
+                )
 
     @property
     def unmet(self) -> tuple[FirmwareRequirement, ...]:
-        """Required files that are demonstrably not usable — absent or wrong."""
-        return tuple(r for r in self.requirements if r.need == NEED_REQUIRED and r.satisfied is False)
+        """Required files that are demonstrably not usable — absent or wrong.
+
+        An alternatives group contributes its options only when the whole
+        group fails: one region's image being absent while another region's is
+        served is not "the launch lacks this file", it is a fact the region
+        decides, and that is :attr:`undetermined`'s side of the line.
+        """
+        out: list[FirmwareRequirement] = []
+        for entry in self.requirements:
+            if isinstance(entry, FirmwareAlternatives):
+                if entry.satisfied is False:
+                    out.extend(o for o in entry.options if o.need == NEED_REQUIRED)
+            elif entry.need == NEED_REQUIRED and entry.satisfied is False:
+                out.append(entry)
+        return tuple(out)
 
     @property
     def undetermined(self) -> tuple[FirmwareRequirement, ...]:
-        """Required files atlas could not judge — unverified, unreadable, or unlookable."""
-        return tuple(r for r in self.requirements if r.need == NEED_REQUIRED and r.satisfied is None)
+        """Required files atlas could not judge — unverified, unreadable, or unlookable.
+
+        From an alternatives group that has no single verdict, the options not
+        established usable: which of them the launch needs is the run-time
+        fact the group exists to state, so none of the not-satisfied ones may
+        be presented as settled.
+        """
+        out: list[FirmwareRequirement] = []
+        for entry in self.requirements:
+            if isinstance(entry, FirmwareAlternatives):
+                if entry.satisfied is None:
+                    out.extend(
+                        o for o in entry.options if o.need == NEED_REQUIRED and o.satisfied is not True
+                    )
+            elif entry.need == NEED_REQUIRED and entry.satisfied is None:
+                out.append(entry)
+        return tuple(out)
 
     @property
     def requirements_met(self) -> bool | None:
@@ -1360,12 +1479,21 @@ class CoreFirmware:
         Note what follows for ``verify=False``: a core whose required files have
         known identities answers ``None``, not ``True``. Presence alone is not
         the question this field asks.
+
+        An alternatives group folds in through its own three-valued
+        :attr:`FirmwareAlternatives.satisfied`: ``False`` blocks (no region
+        boots), a mixed group leaves ``None`` (whether THIS launch is served
+        is the run-time fact atlas cannot read), and only an all-satisfied
+        group lets ``True`` through.
         """
         if self.declaration != DECLARATION_READ:
             return None
-        if self.unmet:
+        group_verdicts = [
+            entry.satisfied for entry in self.requirements if isinstance(entry, FirmwareAlternatives)
+        ]
+        if self.unmet or any(verdict is False for verdict in group_verdicts):
             return False
-        if self.undetermined:
+        if self.undetermined or any(verdict is None for verdict in group_verdicts):
             return None
         return None if any(r.need == NEED_REQUIRED for r in self.refused) else True
 
@@ -1905,13 +2033,26 @@ def _requirements_for(
     )
 
 
+def _by_destination(requirement: FirmwareRequirement) -> str:
+    """Sort key for requirement lists: the resolved destination, the family's one order."""
+    return requirement.path
+
+
 def _requirements_of(cores: tuple[CoreFirmware, ...]) -> tuple[FirmwareRequirement, ...]:
     """Every requirement across *cores*, flattened and sorted by destination.
 
     One ordering for every answer that hands requirements back, so an
     identification and an inventory list the same files in the same order.
+    An alternatives group flattens to its options — each still carries its
+    ``regions``, so the flat view loses no scope, only the grouping.
     """
-    return tuple(sorted((r for c in cores for r in c.requirements), key=lambda r: (r.path, r.core_so)))
+    flat = (
+        option
+        for core in cores
+        for entry in core.requirements
+        for option in (entry.options if isinstance(entry, FirmwareAlternatives) else (entry,))
+    )
+    return tuple(sorted(flat, key=lambda r: (r.path, r.core_so)))
 
 
 def _empty_answer(context: FirmwareContext, extra: tuple[Caveat, ...] = ()) -> FirmwareAnswer:
@@ -2444,7 +2585,7 @@ def _packaged_standalone_core(
             core_so=None,
             label=entry.label,
             declaration=DECLARATION_PACKAGED,
-            requirements=tuple(sorted(requirements, key=lambda r: r.path)),
+            requirements=tuple(sorted(requirements, key=_by_destination)),
             caveats=(_packaged_provenance_caveat(entry, card),),
         ),
         answer_caveats,
@@ -2683,7 +2824,7 @@ def _melonds_standalone_core(
             core_so=None,
             label=entry.label,
             declaration=DECLARATION_PACKAGED,
-            requirements=tuple(sorted(requirements, key=lambda r: r.path)),
+            requirements=tuple(sorted(requirements, key=_by_destination)),
             caveats=tuple(caveats),
         ),
         answer_caveats,
@@ -2975,7 +3116,7 @@ def _xemu_standalone_core(
             core_so=None,
             label=entry.label,
             declaration=DECLARATION_PACKAGED,
-            requirements=tuple(sorted(requirements, key=lambda r: r.path)),
+            requirements=tuple(sorted(requirements, key=_by_destination)),
             caveats=tuple(caveats),
         ),
         answer_caveats,
@@ -3025,8 +3166,12 @@ def _duckstation_named_image(
     """One region key that names an image: a plain path, composed the way the emulator composes it.
 
     The value is joined onto the search directory rather than read as a path
-    of its own (``Path::Combine(EmuFolders::Bios, bios_name)``, bios.cpp:349),
-    which is why a name is what belongs in the setting.
+    of its own (``Path::Combine(EmuFolders::Bios, bios_name)``, bios.cpp:350),
+    which is why a name is what belongs in the setting. The requirement is
+    scoped to its one region, because only that region's launch reads this
+    key at all (``GetBIOSImage`` switches on the console region and reads
+    exactly one of the three, bios.cpp:321-338) — it always ends up an option
+    of the entry's alternatives group, never an unconditional requirement.
     """
     composed = os.path.join(bios_dir, name)
     path = resolve_links(machine, composed) or composed
@@ -3043,6 +3188,7 @@ def _duckstation_named_image(
         identity=None,
         found=found,
         checked=checked,
+        regions=(region,),
     )
     del entry
     return requirement, observed
@@ -3222,12 +3368,18 @@ def _duckstation_standalone_core(
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """DuckStation's expectation: a directory, and whatever in it is a BIOS.
 
-    Three region keys may name an image and each is answered on its own, since
-    the console region a disc sets decides which one is read. Where a key is
-    empty — the state both arrangements ship — the search governs, and the
-    search is a content question: without a hash check there is a directory
-    and a count, and saying more than that would be a guess dressed as an
-    answer.
+    Three region keys may name an image, and one launch reads exactly one of
+    them — the console region decides, which under the shipped Auto setting
+    is the running disc's own (bios.cpp:321-338, system.cpp:1613-1648 and
+    :2510). So the moment any key names an image, everything this entry
+    states is region-scoped, and it all rides in one
+    :class:`FirmwareAlternatives` group: each named image as the option of
+    its region, the search's find as the option of the regions left to it.
+    Where every key is empty — the state both arrangements ship — the search
+    serves whatever region a disc sets, and its answer stays the one
+    unconditional requirement it always was. The search is a content question
+    either way: without a hash check there is a directory and a count, and
+    saying more than that would be a guess dressed as an answer.
     """
     search = card.search
     if search is None:
@@ -3273,7 +3425,7 @@ def _duckstation_standalone_core(
             [],
         )
     bios_dir = resolve_links(machine, host) or host
-    requirements: list[FirmwareRequirement] = []
+    named: list[FirmwareRequirement] = []
     answer_caveats: list[Caveat] = []
     searched: list[str] = []
     for region, key in search.region_keys:
@@ -3293,9 +3445,10 @@ def _duckstation_standalone_core(
             purpose=search.purpose,
             verify=verify,
         )
-        requirements.append(requirement)
+        named.append(requirement)
         if observed is not None:
             answer_caveats.append(observed)
+    found: list[FirmwareRequirement] = []
     if searched:
         found, search_caveats, observed = _duckstation_search(
             machine,
@@ -3305,17 +3458,27 @@ def _duckstation_standalone_core(
             search=search,
             bios_dir=bios_dir,
             regions=tuple(searched),
+            # Scoped exactly when a named key took a region away from the
+            # search: then the search speaks for the regions left to it, and
+            # its find is one option among the alternatives rather than what
+            # every launch needs.
+            scoped=bool(named),
             verify=verify,
         )
-        requirements.extend(found)
         caveats.extend(search_caveats)
         answer_caveats.extend(observed)
+    requirements: tuple[FirmwareRequirement | FirmwareAlternatives, ...]
+    if named:
+        options = tuple(sorted((*named, *found), key=_by_destination))
+        requirements = (FirmwareAlternatives(options=options),)
+    else:
+        requirements = tuple(sorted(found, key=_by_destination))
     return (
         CoreFirmware(
             core_so=None,
             label=entry.label,
             declaration=DECLARATION_PACKAGED,
-            requirements=tuple(sorted(requirements, key=lambda r: r.path)),
+            requirements=requirements,
             caveats=tuple(caveats),
         ),
         answer_caveats,
@@ -3331,14 +3494,18 @@ def _duckstation_search(
     search: StandaloneFirmwareSearch,
     bios_dir: str,
     regions: tuple[str, ...],
+    scoped: bool,
     verify: bool,
 ) -> tuple[list[FirmwareRequirement], list[Caveat], list[Caveat]]:
     """The search itself: what the directory holds, and what that establishes.
 
     The regions left to it share one answer, because the pick differs between
     them only in preference: an image of another region still boots, with a
-    warning (bios.cpp:352-359), so what a launch needs is *an* image rather
-    than one per region.
+    warning (bios.cpp:353-359), so what a launch needs is *an* image rather
+    than one per region. With *scoped* the find carries those regions — a
+    named key took another region away, so the search's answer is that
+    group's leftover option, not what every launch needs — and unscoped it
+    stays the unconditional requirement of the everything-searched state.
     """
     table = duckstation.bios_table()
     caveats: list[Caveat] = []
@@ -3363,13 +3530,17 @@ def _duckstation_search(
             if machine.path_kind(bios_dir) == KIND_DIRECTORY
             else "is not a directory this launch can search"
         )
+        # Only the keys whose regions actually fell to this search: with a
+        # named key beside them, "all keys are empty" would be a false claim
+        # about a configuration the answer just read.
+        empty_keys = ", ".join(key for region, key in search.region_keys if region in regions)
         caveats.append(
             Caveat(
                 CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
-                f"{entry.label} has no BIOS image to boot: {bios_dir} {state}, and nothing in "
-                "the configuration names one either "
-                f"({', '.join(key for _, key in search.region_keys)} are all empty). A "
-                "PlayStation starts nothing until an image is there",
+                f"{entry.label} has no BIOS image to boot for a {', '.join(regions)} console: "
+                f"{bios_dir} {state}, and nothing in the configuration names one for these "
+                f"regions either ({empty_keys} are empty). A PlayStation starts nothing until "
+                "an image is there",
                 {
                     "label": entry.label,
                     "token": card.token,
@@ -3395,6 +3566,10 @@ def _duckstation_search(
                     "dir": bios_dir,
                     "candidates": str(len(kept)),
                     "need": NEED_REQUIRED,
+                    # Which launches the unanswered search speaks for — all of
+                    # them in the shipped all-keys-empty state, and only the
+                    # leftover regions once a key names another region's image.
+                    "regions": ", ".join(regions),
                 },
             )
         )
@@ -3426,6 +3601,7 @@ def _duckstation_search(
         identity=None,
         found=found,
         checked=checked,
+        regions=regions if scoped else None,
     )
     return [requirement], caveats, [] if observed is None else [observed]
 

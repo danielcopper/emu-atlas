@@ -208,7 +208,7 @@ classDiagram
     }
     class CoreFirmware {
         +declaration: CoreDeclarationState
-        +requirements: tuple~FirmwareRequirement~
+        +requirements: tuple~FirmwareRequirement|FirmwareAlternatives~
         +refused / unread
         +requirements_met: bool|None «summary»
     }
@@ -217,7 +217,12 @@ classDiagram
         +need: FirmwareNeed
         +found: PathKind
         +checked: FirmwareChecked
+        +regions: tuple|None
         +satisfied: bool|None «summary»
+    }
+    class FirmwareAlternatives {
+        +options: tuple~FirmwareRequirement~
+        +satisfied: bool|None «one of these, the console region decides»
     }
     class ScreenshotPlacement {
         +dir: str
@@ -277,6 +282,8 @@ classDiagram
     EmulatorEntry ..> Unresolved : standalone emulator
     FirmwareAnswer *-- CoreFirmware
     CoreFirmware *-- FirmwareRequirement
+    CoreFirmware *-- FirmwareAlternatives
+    FirmwareAlternatives *-- FirmwareRequirement
     Health *-- Caveat
 ```
 

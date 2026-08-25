@@ -1404,14 +1404,24 @@ core = answer.cores[0]
 [c.code for c in core.caveats]                        # [..., 'firmware-image-identified', 'firmware-image-ambiguous']
 ```
 
-Read those three codes as one sentence about content. `firmware-search-unverified` carries the directory and the count
-of files whose size the emulator accepts — on the reference machine 27, several of them Saturn dumps that happen to be
-exactly 512 KiB, which is why the size test cannot be the answer. `firmware-image-identified` names what the picked file
-_is_ in the emulator's own words (`SCPH-5500 (v3.0 09-09-96 J)`) and the region it belongs to. And
-`firmware-image-ambiguous` is the honest limit: where several images rank alike, the emulator keeps whichever one the
-directory hands it last, and no read reproduces that order — five images tie on the reference machine, so the file named
-is one of them rather than the one that boots. An image the table does not know is not a fault either: DuckStation boots
-it with a warning, so it is stated as the pick with `firmware-content-unidentified` beside it.
+Read those three codes as one sentence about content. `firmware-search-unverified` carries the directory, the count of
+files whose size the emulator accepts — on the reference machine 27, several of them Saturn dumps that happen to be
+exactly 512 KiB, which is why the size test cannot be the answer — and the `regions` the unanswered search speaks for.
+`firmware-image-identified` names what the picked file _is_ in the emulator's own words (`SCPH-5500 (v3.0 09-09-96 J)`)
+and the region it belongs to. And `firmware-image-ambiguous` is the honest limit: where several images rank alike, the
+emulator keeps whichever one the directory hands it last, and no read reproduces that order — five images tie on the
+reference machine, so the file named is one of them rather than the one that boots. An image the table does not know is
+not a fault either: DuckStation boots it with a warning, so it is stated as the pick with
+`firmware-content-unidentified` beside it.
+
+**When a region key names an image, the answer becomes alternatives.** One launch reads exactly one of `PathNTSCU`,
+`PathNTSCJ` and `PathPAL` — `GetBIOSImage` switches on the console region, which under the shipped Auto setting is the
+running disc's own — so a named image and the search's find for the remaining regions are never two files one launch
+needs. The entry then answers a single `FirmwareAlternatives` group: the named image as the option of its one region,
+the search's find (or its degradation caveats) covering the regions left over, every option carrying its `regions` as
+data. Pick the option whose `regions` contain your disc's region; a region no option lists has nothing stated for it and
+the caveats say why. Only the everything-searched state — every key empty, which is what both arrangements ship — stays
+a plain, unconditional requirement.
 
 ## Where do this system's ROMs live? (and what launches them)
 
@@ -1580,15 +1590,28 @@ answer.root                        # the live system_directory (None + caveat on
 for core in answer.cores:
     core.declaration               # 'read' | 'absent' (not installed) | 'unreadable' | 'unsupported' — four empties
     core.requirements_met          # True | False | None — THE field to render (see below)
-    for req in core.requirements:
-        req.file_name, req.path    # what the core opens, and the absolute resolved destination
-        req.need                   # 'required' | 'optional'   — what the emulator asks for
-        req.present                # True | False | None       — what lies at the destination
-        req.checked                # 'verified' | 'mismatch' | 'unchecked' | 'unknown' | None (nothing there to check)
-        req.satisfied              # True | False | None       — present AND nothing contradicts it
+    for entry in core.requirements:
+        if isinstance(entry, atlas.FirmwareAlternatives):   # one launch needs exactly ONE option — see below
+            reqs = entry.options   # each option carries req.regions, the console regions it serves
+        else:
+            reqs = (entry,)        # an unconditional requirement (entry.regions is None)
+        for req in reqs:
+            req.file_name, req.path    # what the core opens, and the absolute resolved destination
+            req.need                   # 'required' | 'optional'   — what the emulator asks for
+            req.present                # True | False | None       — what lies at the destination
+            req.checked                # 'verified' | 'mismatch' | 'unchecked' | 'unknown' | None (nothing to check)
+            req.satisfied              # True | False | None       — present AND nothing contradicts it
     core.refused                   # declarations atlas would not follow, each with the reason it was refused
 answer.unclaimed                   # files in the firmware tree that no installed core declares, identified by content
 ```
+
+A core's `requirements` list is a conjunction — every entry is needed — and one entry may be a `FirmwareAlternatives`
+group, and then what is needed is exactly one of its options: the console region decides which, and each option's
+`regions` names the regions whose launch it serves (disjoint across the group, so the pick is never ambiguous). Today
+one emulator emits it — DuckStation, whose per-region BIOS keys are read one-per-launch — and everything else stays
+plain requirements. The group's own `satisfied` is the honest lift over the region atlas cannot read: `True` when every
+option is met, `False` when every option fails, `None` for the mixed group, and `requirements_met` folds it in through
+exactly that.
 
 `unclaimed` never lists dot-files — the scan globs each directory and a wildcard does not match a leading dot, so
 tooling residue like `.directory` stays out of the answer by design (a core that _declares_ a dotted path still gets its
@@ -1811,8 +1834,13 @@ emulator reads, not on it.
 answer = inst.firmware_for_system(system)                 # verify=False: fast, presence-only
 for core in answer.cores:
     row = render_core(core.label, light=core.requirements_met)   # True/False/None → green/red/grey
-    for req in core.requirements:
-        row.add(req.file_name, need=req.need, present=req.present, checked=req.checked)
+    for entry in core.requirements:
+        if isinstance(entry, atlas.FirmwareAlternatives):        # one of these, the console region decides
+            for req in entry.options:
+                row.add(req.file_name, need=req.need, present=req.present,
+                        checked=req.checked, regions=req.regions)
+        else:
+            row.add(entry.file_name, need=entry.need, present=entry.present, checked=entry.checked)
 # user clicks "verify" → same call with verify=True; hashing is opt-in by design, cache the result yourself
 ```
 

@@ -929,6 +929,42 @@ REQUIREMENT_CASES = [
          "a verified file is satisfied", id="requirement-verified-not-satisfied"),
 ]
 
+
+def _alternative(**overrides) -> Vector:
+    """One alternatives option: a full requirement plus the regions it serves."""
+    return {**_requirement(), "regions": ["ntsc-u"], **overrides}
+
+
+ALTERNATIVES_CASES = [
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_requirement()]}])]),
+         "each firmware requirement must be exactly the fields",
+         id="alternatives-option-without-regions"),
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_alternative()], "stray": 1}])]),
+         "an alternatives entry must be exactly the fields", id="alternatives-stray-field"),
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": []}])]),
+         "an alternatives entry must carry a non-empty list of options", id="alternatives-empty"),
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_alternative(regions=[])]}])]),
+         "must state the regions whose launch it serves", id="alternatives-option-empty-regions"),
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_alternative(regions=["sécam"])]}])]),
+         "option regions must be from", id="alternatives-unknown-region"),
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [
+             _alternative(),
+             _alternative(file_name="scph5500.bin", path=f"{BIOS}/scph5500.bin", declared="scph5500.bin",
+                          regions=["ntsc-u", "ntsc-j"]),
+         ]}])]),
+         "claimed twice", id="alternatives-overlapping-regions"),
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_alternative(core_so="other_libretro.so")]}])]),
+         "an alternatives option must name the core it is listed under", id="alternatives-foreign-core"),
+    # A mixed group on a read declaration gates the summary: the region atlas
+    # cannot read decides, so requirements_met may not claim False.
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [
+             _alternative(),
+             _alternative(file_name="scph5502.bin", path=f"{BIOS}/scph5502.bin", declared="scph5502.bin",
+                          regions=["pal"], found="file", present=True, checked="unknown", satisfied=True),
+         ]}], requirements_met=False)]),
+         "requirements_met must be None", id="alternatives-mixed-group-gates-the-summary"),
+]
+
 UNCLAIMED_CASES = [
     case(_base_firmware(unclaimed=[{"path": f"{BIOS}/x.bin", "identity": None}]),
          "each unclaimed file must be exactly the fields", id="unclaimed-missing-field"),
@@ -991,6 +1027,7 @@ ALL_CASES = [
     *FIRMWARE_SHAPE_CASES,
     *FIRMWARE_CORE_CASES,
     *REQUIREMENT_CASES,
+    *ALTERNATIVES_CASES,
     *UNCLAIMED_CASES,
     *IDENTIFICATION_CASES,
 ]
@@ -1359,6 +1396,20 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_firmware_checked_vocabularies_match(self):
         assert validate_vectors.KNOWN_FIRMWARE_CHECKED == self._exported("CHECKED_")
+
+    def test_the_firmware_region_vocabulary_is_the_cards_own(self):
+        # The region words come from the one emitting card's region_keys —
+        # a card gaining a region without the validator learning it (or the
+        # other way round) is the drift this pin exists to catch.
+        from atlas.standalone_firmware import load_standalone_firmware
+
+        regions = {
+            region
+            for card in load_standalone_firmware()
+            if card.search is not None
+            for region, _ in card.search.region_keys
+        }
+        assert validate_vectors.KNOWN_FIRMWARE_REGIONS == regions
 
     def test_the_installation_kind_vocabularies_match(self):
         kinds = {

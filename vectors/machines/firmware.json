@@ -2,7 +2,7 @@
   "family": "machines",
   "schema": 3,
   "spec": "DESIGN.md — firmware: an emulator-centric answer, live declarations against packaged identities",
-  "description": "Whole fixture machines in; the canonical firmware serializations (atlas/contract.py firmware_contract, identification_contract) out, asserted with exact equality. A firmware answer is about EMULATORS: each installed core states what it wants, where each file goes as an absolute path, and what is actually lying there. Two axes stay apart — need (required/optional) is what an emulator asks for, checked (verified/mismatch/unchecked/unknown) is what the machine answers, and 'we did not look' never collapses into 'we looked and cannot tell'. The load-bearing pair is firmware-core-that-declares-nothing-answers-nothing-needed against firmware-core-not-installed-is-unknown-not-nothing: the same empty list, opposite meanings, and only the installed flag plus a caveat tells them apart. Firmware blobs are stated as {md5, sha1, size} because firmware is not text and its identity is exactly what a real file would answer with.",
+  "description": "Whole fixture machines in; the canonical firmware serializations (atlas/contract.py firmware_contract, identification_contract) out, asserted with exact equality. A firmware answer is about EMULATORS: each installed core states what it wants, where each file goes as an absolute path, and what is actually lying there. Two axes stay apart — need (required/optional) is what an emulator asks for, checked (verified/mismatch/unchecked/unknown) is what the machine answers, and 'we did not look' never collapses into 'we looked and cannot tell'. The load-bearing pair is firmware-core-that-declares-nothing-answers-nothing-needed against firmware-core-not-installed-is-unknown-not-nothing: the same empty list, opposite meanings, and only the installed flag plus a caveat tells them apart. Firmware blobs are stated as {md5, sha1, size} because firmware is not text and its identity is exactly what a real file would answer with. A core's requirements list is a conjunction, and one entry may be an 'alternatives' group — a single-key object whose options are full requirements each carrying 'regions', the console regions whose launch it serves, disjoint across the group: one launch needs exactly one option, the running disc's region decides, and a region no option lists has nothing stated for it.",
   "vectors": [
     {
       "name": "firmware-core-that-declares-nothing-answers-nothing-needed",
@@ -8975,7 +8975,7 @@
     },
     {
       "name": "duckstation-without-a-content-check-the-search-answers-nothing",
-      "rationale": "The same machine, asked without verification. Which file is a BIOS is a question about bytes, and nothing was hashed, so the honest answer is the directory, the count of files whose size the emulator accepts, and no requirement at all — 'there is one here' would be a guess. This is the shape of every unverified answer to a search card.",
+      "rationale": "The same machine, asked without verification. Which file is a BIOS is a question about bytes, and nothing was hashed, so the honest answer is the directory, the count of files whose size the emulator accepts, and no requirement at all — 'there is one here' would be a guess. The caveat's data names the regions the unanswered search speaks for — all three here, every key being empty. This is the shape of every unverified answer to a search card.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9037,7 +9037,8 @@
                     "label": "DuckStation (Legacy) (Standalone)",
                     "dir": "/mnt/sd/retrodeck/bios",
                     "candidates": "2",
-                    "need": "required"
+                    "need": "required",
+                    "regions": "ntsc-u, ntsc-j, pal"
                   }
                 }
               ]
@@ -9162,7 +9163,7 @@
     },
     {
       "name": "duckstation-a-named-region-image-is-opened-where-the-setting-points",
-      "rationale": "PathNTSCU names an image and the other two keys stay empty, so this launch answers twice over: the named file is what a US console opens, composed onto the search directory rather than read as a path of its own, and the two regions left over fall to the search. The named one is missing here, which is exactly the state a client needs to see — the search finding an image does not make the named path exist.",
+      "rationale": "PathNTSCU names an image and the other two keys stay empty, and one launch reads exactly one of the region keys — the console region the running disc sets decides — so the answer is a single alternatives group, not two files both needed: the named file as the ntsc-u option, composed onto the search directory rather than read as a path of its own, and the search's find as the option of the two regions left to it. The named one is missing here, which is exactly the state a client needs to see — the search finding an image does not make the named path exist, and only a US console's launch lacks it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9207,32 +9208,43 @@
               "requirements_met": null,
               "requirements": [
                 {
-                  "core_so": null,
-                  "system": "psx",
-                  "system_source": "card",
-                  "need": "required",
-                  "file_name": "scph5501.bin",
-                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
-                  "declared": "scph5501.bin",
-                  "identity": null,
-                  "found": "missing",
-                  "present": false,
-                  "checked": null,
-                  "satisfied": false
-                },
-                {
-                  "core_so": null,
-                  "system": "psx",
-                  "system_source": "card",
-                  "need": "required",
-                  "file_name": "scph5502.bin",
-                  "path": "/mnt/sd/retrodeck/bios/scph5502.bin",
-                  "declared": "scph5502.bin",
-                  "identity": null,
-                  "found": "file",
-                  "present": true,
-                  "checked": "unknown",
-                  "satisfied": true
+                  "alternatives": [
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "regions": [
+                        "ntsc-j",
+                        "pal"
+                      ]
+                    }
+                  ]
                 }
               ],
               "refused": [],
@@ -9252,6 +9264,354 @@
                     "region": "pal",
                     "token": "DUCKSTATION",
                     "table": "64655818e"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-an-unverified-search-speaks-only-for-the-leftover-regions",
+      "rationale": "The named-region machine asked without verification — the state where the caveat's regions data does its real work. The named ntsc-u image stays the group's one option, scoped and observed without hashing; the search keeps a candidate and, unverified, answers no requirement — and its firmware-search-unverified data carries exactly the regions left to it (ntsc-j, pal), never ntsc-u, which the data already answers. A reader of an unverified answer still knows which launches the candidate count speaks for.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[BIOS]\nSearchDirectory = /mnt/sd/retrodeck/bios\nPathNTSCU = scph5501.bin\nPathNTSCJ = \nPathPAL = \n",
+          "/mnt/sd/retrodeck/bios/scph5502.bin": {
+            "md5": "32736f17079d0b2b7024407c39bd3050",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": false
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "DuckStation (Legacy) (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "alternatives": [
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION"
+                  }
+                },
+                {
+                  "code": "firmware-search-unverified",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "dir": "/mnt/sd/retrodeck/bios",
+                    "candidates": "1",
+                    "need": "required",
+                    "regions": "ntsc-j, pal"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-one-named-image-is-still-only-its-regions-launch",
+      "rationale": "PathNTSCU names an image, the other two keys are empty, and the search keeps nothing — the directory holds no file of a size this emulator accepts. The named image is still only what a US console boots, so it stays an alternatives group of one option scoped to ntsc-u rather than flattening into a file every launch needs; ntsc-j and pal have nothing stated, and the firmware-path-names-no-file caveat says so with those two regions as data — not all three, because PathNTSCU is not empty.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[BIOS]\nSearchDirectory = /mnt/sd/retrodeck/bios\nPathNTSCU = scph5501.bin\nPathNTSCJ = \nPathPAL = \n",
+          "/mnt/sd/retrodeck/bios/notes.txt": "not a bios\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "DuckStation (Legacy) (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "alternatives": [
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION"
+                  }
+                },
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION",
+                    "key": "BIOS/SearchDirectory",
+                    "declared": "",
+                    "need": "required",
+                    "dir": "/mnt/sd/retrodeck/bios",
+                    "regions": "ntsc-j, pal"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-three-named-images-are-three-alternatives-not-three-needs",
+      "rationale": "All three region keys name an image, so no region is left to the search and the search never runs — no content question, no search caveats, verify not needed. One launch reads exactly one of the keys (GetBIOSImage switches on the console region, bios.cpp:321-338 at 64655818e), so the answer is one alternatives group of three options with disjoint single regions: the ntsc-u image is missing and the other two are present, and a structured reader concludes only a US console's launch lacks its file — never that three files are needed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[BIOS]\nSearchDirectory = /mnt/sd/retrodeck/bios\nPathNTSCU = scph5501.bin\nPathNTSCJ = scph5500.bin\nPathPAL = scph5502.bin\n",
+          "/mnt/sd/retrodeck/bios/scph5502.bin": {
+            "md5": "32736f17079d0b2b7024407c39bd3050",
+            "size": 524288
+          },
+          "/mnt/sd/retrodeck/bios/scph5500.bin": {
+            "md5": "8dd7d5296a650fac7319bce665a6a53c",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": false
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "DuckStation (Legacy) (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "alternatives": [
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION"
                   }
                 }
               ]

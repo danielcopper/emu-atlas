@@ -689,10 +689,12 @@ takes the one its emulator uses.
 
 DuckStation (the fork build frozen 2024-09-19) is the fourth, and the only `search` card: it names **no file**.
 `[BIOS] SearchDirectory` names a directory — read the same `LoadPathFromSettings` way, so an unset value is `bios` below
-the DataRoot — and three per-region keys (`PathNTSCU`, `PathNTSCJ`, `PathPAL`) may name an image inside it, each
-answered on its own because the console region a disc sets decides which one is read. Where they are empty, which is the
-state both arrangements ship, the emulator keeps every file whose size is exactly one of three and recognises what is
-left by **hashing it** against its own table (`duckstation_bios.json`, below). Three consequences are stated rather than
+the DataRoot — and three per-region keys (`PathNTSCU`, `PathNTSCJ`, `PathPAL`) may name an image inside it. One launch
+reads exactly one of the three — the console region the disc sets decides (`GetBIOSImage`, bios.cpp:321-338) — so the
+moment any key names an image the answer is a single alternatives group, each option carrying the regions whose launch
+it serves, never several files stated as if one launch needed them all. Where they are empty, which is the state both
+arrangements ship, the emulator keeps every file whose size is exactly one of three and recognises what is left by
+**hashing it** against its own table (`duckstation_bios.json`, below). Three consequences are stated rather than
 smoothed over. Without a content check there is nothing to answer with, so an unverified query gets the directory, a
 count of accepted-size files and `firmware-search-unverified` — never a claim that a BIOS is there. An image the table
 does not know still boots (`Using an unknown BIOS`), so it is the pick with `firmware-content-unidentified` beside it

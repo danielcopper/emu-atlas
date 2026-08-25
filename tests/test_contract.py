@@ -9,6 +9,7 @@ than restating it.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pytest
 
@@ -160,4 +161,67 @@ class TestTheStatedNoIsItsOwnShape:
 
     def test_the_form_is_json(self):
         block = atlas.savestate_absence_contract(self._absence())
+        assert json.loads(json.dumps(block)) == block
+
+
+class TestTheAlternativesEntryIsItsOwnShape:
+    """A conjunction entry and a one-of-several entry must not be mistakable."""
+
+    def _option(self, file_name: str, regions: tuple[str, ...]) -> atlas.FirmwareRequirement:
+        return atlas.FirmwareRequirement(
+            core_so=None, system="psx", system_source="card", need="required",
+            file_name=file_name, path=f"/bios/{file_name}", declared=file_name,
+            description="prose stays prose", identity=None, found="missing", checked=None,
+            regions=regions,
+        )
+
+    def _answer(self, *entries: atlas.FirmwareRequirement | atlas.FirmwareAlternatives) -> dict[str, Any]:
+        core = atlas.CoreFirmware(
+            core_so=None, label="DuckStation (Legacy) (Standalone)", declaration="packaged",
+            requirements=tuple(entries),
+            caveats=(atlas.Caveat("firmware-packaged-declaration", "", {}),),
+        )
+        answer = atlas.FirmwareAnswer(
+            root="/bios", cores=(core,), unclaimed=(), hash_checked=False, sources=(), caveats=(),
+        )
+        return atlas.firmware_contract(answer)
+
+    def test_a_group_serializes_as_the_single_key_alternatives_entry(self):
+        block = self._answer(
+            atlas.FirmwareAlternatives(
+                options=(
+                    self._option("scph5501.bin", ("ntsc-u",)),
+                    self._option("scph5502.bin", ("ntsc-j", "pal")),
+                )
+            )
+        )
+        [entry] = block["cores"][0]["requirements"]
+        assert set(entry) == {"alternatives"}
+        assert [option["regions"] for option in entry["alternatives"]] == [["ntsc-u"], ["ntsc-j", "pal"]]
+        # Each option is the full requirement — a reader picks one and has
+        # everything a plain requirement states.
+        assert all("satisfied" in option and "path" in option for option in entry["alternatives"])
+
+    def test_a_plain_requirement_carries_no_regions_key(self):
+        plain = atlas.FirmwareRequirement(
+            core_so=None, system="psx", system_source="card", need="required",
+            file_name="bios.bin", path="/bios/bios.bin", declared="bios.bin",
+            description="", identity=None, found="missing", checked=None,
+        )
+        block = self._answer(plain)
+        [entry] = block["cores"][0]["requirements"]
+        assert "regions" not in entry
+        assert "alternatives" not in entry
+
+    def test_the_description_prose_stays_out_of_an_option(self):
+        block = self._answer(
+            atlas.FirmwareAlternatives(options=(self._option("scph5501.bin", ("ntsc-u",)),))
+        )
+        [entry] = block["cores"][0]["requirements"]
+        assert "description" not in entry["alternatives"][0]
+
+    def test_the_form_is_json(self):
+        block = self._answer(
+            atlas.FirmwareAlternatives(options=(self._option("scph5501.bin", ("ntsc-u",)),))
+        )
         assert json.loads(json.dumps(block)) == block
