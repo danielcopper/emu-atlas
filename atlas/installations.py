@@ -9286,11 +9286,24 @@ def _mame_savestate_placement(
                 continue
             candidate = os.path.join(element.resolved, shape.file)
             if candidate == stated_ini:
+                # The re-probe reached the same file the first pass read —
+                # nothing moved, and re-reading it would change nothing.
                 break
             result = machine.read_text(candidate)
-            if result.status == READ_OK:
-                values = {**values, **_mame_ini_values(result.text or "")}
-                stated_ini = candidate
+            if result.status == READ_MISSING:
+                continue
+            if result.status != READ_OK:
+                return Unresolved(
+                    UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                    f"MAME's configuration ({candidate}) exists and could not be read — "
+                    "where a state lands is unknowable here",
+                    {"emulator": card.token, "config": candidate},
+                )
+            # The second parse of the same basename at the same priority: its
+            # lines override the first file's, keys only the first stated
+            # survive (options.cpp:270).
+            values = {**values, **_mame_ini_values(result.text or "")}
+            stated_ini = candidate
             break
     caveats: list[Caveat] = [*extra_caveats]
     needs: list[str] = []

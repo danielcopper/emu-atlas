@@ -1937,6 +1937,59 @@ class TestMameReadingPrimitives:
         assert launch == type(launch)(None, None, None, False)
 
 
+class TestMameSecondIniParse:
+    """mame.ini is parsed twice so the first pass can move the ini path.
+
+    mameopts.cpp:39-42: without a CLI -inipath, an inipath line in the found
+    mame.ini relocates the search path and the SAME basename is parsed again
+    from there, its lines overriding at equal priority (options.cpp:270).
+    """
+
+    ESDE = (
+        '<?xml version="1.0"?><systemList>'
+        "<system><name>vectrex</name><path>%ROMPATH%/vectrex</path><extension>.vec</extension>"
+        '<command label="MAME (Standalone)">%STARTDIR%=~/.mame %EMULATOR_MAME% '
+        "-rompath %ROMPATH%/vectrex vectrex -cart %ROM%</command></system>"
+        "</systemList>"
+    )
+
+    def _entry(self, files):
+        base = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: self.ESDE,
+        }
+        base.update(files)
+        rd = _retrodeck(base, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for("vectrex").entries[0]
+
+    def test_a_moved_ini_path_reparses_the_same_basename(self):
+        p = self._entry(
+            {
+                f"{HOME}/.mame/mame.ini": (
+                    "inipath                   /mnt/sd/inis\n"
+                    "state_directory           /mnt/sd/first\n"
+                ),
+                "/mnt/sd/inis/mame.ini": "state_directory           /mnt/sd/second\n",
+            }
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/second/vectrex"
+
+    def test_a_move_to_nowhere_keeps_the_first_files_values(self):
+        p = self._entry(
+            {
+                f"{HOME}/.mame/mame.ini": (
+                    "inipath                   /mnt/sd/inis\n"
+                    "state_directory           /mnt/sd/first\n"
+                ),
+            }
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/first/vectrex"
+
+
 TRIO_ESDE = (
     '<?xml version="1.0"?><systemList>'
     "<system><name>psp</name><path>%ROMPATH%/psp</path><extension>.iso</extension>"
