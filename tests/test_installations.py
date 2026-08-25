@@ -2006,6 +2006,90 @@ class TestMameTemplatedDirIsNeverLinkWalked:
         assert p.physical_dir == "/mnt/sd/backing/mame-states/sfiii3"
 
 
+class TestMameEdgeBranches:
+    """Witnesses for the reading's corner branches — every caveat site pinned."""
+
+    INI = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini"
+
+    def _entry(self, ini, command_tail="vectrex -cart %ROM%", startdir="%STARTDIR%=~/.mame "):
+        esde = (
+            '<?xml version="1.0"?><systemList>'
+            "<system><name>vectrex</name><path>%ROMPATH%/vectrex</path><extension>.vec</extension>"
+            f'<command label="MAME (Standalone)">{startdir}%EMULATOR_MAME% '
+            f"-inipath /var/config/mame/ini {command_tail}</command></system>"
+            "</systemList>"
+        )
+        files = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: esde,
+        }
+        if isinstance(ini, dict):
+            files.update(ini)
+        elif ini is not None:
+            files[self.INI] = ini
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for("vectrex").entries[0]
+
+    def test_an_explicitly_empty_value_is_kept_not_defaulted(self):
+        # MAME keeps a present-empty option (options.cpp:1041 via :262-278):
+        # the searchpath is "" and the states land at <cwd>/<machine>, with
+        # no 'sta' segment — the compiled default does NOT come back.
+        p = self._entry('state_directory ""\n').savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == f"{HOME}/.mame/vectrex"
+
+    def test_a_statename_template_refuses_the_subdirectory(self):
+        p = self._entry(
+            "state_directory           /mnt/sd/states\nstatename                 %d_cart/%g\n"
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states"
+        assert p.file_set.state == "unknown"
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_UNKNOWN_OPTION_VALUE in codes
+        named = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert "template" in named.message
+
+    def test_a_literal_statename_strips_its_extension_like_the_emulator(self):
+        # get_statename strips after the last '.' (machine.cpp:482-485).
+        p = self._entry(
+            "state_directory           /mnt/sd/states\nstatename                 myruns.bak\n"
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states/myruns"
+
+    def test_a_launch_naming_no_system_leaves_the_subdirectory_open(self):
+        # Bare MAME opens its own system picker; which machine's subdirectory
+        # this run writes is that pick, so the root is stated and the names
+        # caveat says why the entries are refused.
+        p = self._entry(
+            "state_directory           /mnt/sd/states\n", command_tail=""
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states"
+        assert p.file_set.state == "unknown"
+        named = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert "names no system" in named.message
+
+    def test_a_populated_source_directory_is_flagged_not_skipped(self):
+        # parse_standard_inis also reads source/<sourcefile>.ini one
+        # directory down (mameopts.cpp:85-87) — a populated source/ tree is
+        # part of the unread layer and must be named, not silently missed.
+        p = self._entry(
+            {
+                self.INI: "state_directory           /mnt/sd/states\n",
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini/source/vectrex.ini": (
+                    "state_directory           /mnt/sd/elsewhere\n"
+                ),
+            }
+        ).savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        layer = next(c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD)
+        assert "source/vectrex.ini" in layer.data["files"]
+
+
 class TestMameSecondIniParse:
     """mame.ini is parsed twice so the first pass can move the ini path.
 

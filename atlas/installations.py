@@ -8539,21 +8539,30 @@ def _simpleini_value(
 
 
 def _savestate_names_caveat(
-    card: StandaloneSavestateCard, directory: str, citation: str | None
+    card: StandaloneSavestateCard,
+    directory: str,
+    citation: str | None,
+    *,
+    reason: str | None = None,
 ) -> Caveat:
     """The statement every non-derivable naming shares: pattern stated, names refused.
 
     The pattern is the card's word, cited to the build that composes it, and
     it rides in ``data`` because it is what a client acts on — the shape of
-    the files a backup of this tree will contain.
+    the files a backup of this tree will contain. *reason* replaces the
+    default why-sentence where the refusal is not the usual one — MAME's
+    answer refuses names when the launch names no system, or when a
+    statename template this reading does not model shapes the subdirectory.
     """
     # An absence card never reaches a names caveat, so both are stated.
     assert card.names is not None and citation is not None
+    why = reason or (
+        "from the running game's own identity, which follows from nothing atlas reads"
+    )
     return Caveat(
         CAVEAT_FILE_NAMES_UNESTABLISHED,
-        f"a state below {directory} is named {card.names} — from the running game's own "
-        f"identity, which follows from nothing atlas reads ({citation}) — so the tree is "
-        "stated and its entries refused; back it up whole",
+        f"a state below {directory} is named {card.names} — {why} ({citation}) — so the "
+        "tree is stated and its entries refused; back it up whole",
         {"core": card.token, "dir": directory, "pattern": card.names, "citation": citation},
     )
 
@@ -9200,26 +9209,29 @@ def _mame_standard_ini_layer(
 
     After mame.ini, MAME parses debug/orientation/screen/source/parent/driver
     inis out of the same search path (parse_standard_inis,
-    mameopts.cpp:37-96), and any of them can carry its own ``state_directory``
-    line. The layer is usually empty — RetroDECK ships mame.ini and ui.ini
-    and nothing else — so the honest move is to look: only where other ini
-    files actually sit (or where the directory cannot be listed) does the
-    answer say the layer was not read.
+    mameopts.cpp:37-96) — including ``source/<sourcefile>.ini`` one directory
+    DOWN (the basename is composed with the ``source/`` prefix, :85-87) — and
+    any of them can carry its own ``state_directory`` line. The layer is
+    usually empty — RetroDECK ships mame.ini and ui.ini and nothing else —
+    so the honest move is to look: only where other ini files actually sit
+    (or where a directory cannot be listed) does the answer say the layer
+    was not read.
     """
     suspects: list[str] = []
     incomplete = False
     for element in elements:
         if element.resolved is None:
             continue
-        listing = machine.glob(os.path.join(element.resolved, "*.ini"))
-        if listing.status != GLOB_COMPLETE:
-            incomplete = True
-        for path in listing.matches:
-            name = os.path.basename(path)
-            # ui.ini is the UI manager's own file; parse_standard_inis never
-            # opens it, and the governing file was already read.
-            if name not in (file, "ui.ini"):
-                suspects.append(os.path.join(element.resolved, name))
+        for pattern in ("*.ini", os.path.join("source", "*.ini")):
+            listing = machine.glob(os.path.join(element.resolved, pattern))
+            if listing.status != GLOB_COMPLETE:
+                incomplete = True
+            for path in listing.matches:
+                name = os.path.relpath(path, element.resolved)
+                # ui.ini is the UI manager's own file; parse_standard_inis
+                # never opens it, and the governing file was already read.
+                if name not in (file, "ui.ini"):
+                    suspects.append(os.path.join(element.resolved, name))
     if not suspects and not incomplete:
         return ()
     named = ", ".join(sorted(suspects)) if suspects else "the directory could not be listed"
@@ -9350,11 +9362,22 @@ def _mame_savestate_placement(
         reading = f'{shape.file}: {key} {raw}' + (
             "" if substituted == raw else f" — the environment expands it to {substituted}"
         )
+    elif raw == "":
+        # Present and empty is not unset: the parse hands "" to set_value and
+        # the option keeps it (options.cpp:1041 via :262-278), so the
+        # searchpath is empty and the states land relative to the working
+        # directory — the compiled default does NOT come back.
+        substituted = ""
+        reading = (
+            f"{shape.file}: {key} is set empty — MAME keeps the empty value "
+            "(options.cpp:1041, :262-278), so the states root is the working directory "
+            "itself"
+        )
     else:
         substituted = stated_key.default
         reading = (
-            f"{key} is {'empty' if raw == '' else 'unset'} — the compiled default "
-            f"{stated_key.default!r} governs ({stated_key.citation})"
+            f"{key} is unset — the compiled default {stated_key.default!r} governs "
+            f"({stated_key.citation})"
         )
     root_kind: StateRootKind = STATE_ROOT_EMULATOR_DIRECTORY
     if os.path.isabs(substituted):
@@ -9457,19 +9480,9 @@ def _mame_savestate_placement(
     caveats.extend(link_caveats)
     if subdir is None:
         file_set = UNKNOWN_FILE_SET
-        assert card.names is not None and card.names_citation is not None
         caveats.append(
-            Caveat(
-                CAVEAT_FILE_NAMES_UNESTABLISHED,
-                f"a state below {directory} is named {card.names} — {subdir_open_reason} "
-                f"({card.names_citation}) — so the tree is stated and its entries "
-                "refused; back it up whole",
-                {
-                    "core": card.token,
-                    "dir": directory,
-                    "pattern": card.names,
-                    "citation": card.names_citation,
-                },
+            _savestate_names_caveat(
+                card, directory, card.names_citation, reason=subdir_open_reason
             )
         )
     else:
