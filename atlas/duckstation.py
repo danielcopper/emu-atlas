@@ -178,9 +178,15 @@ def load_path(
     An unset *or empty* value is the default, and anything relative — the
     default included — hangs off the DataRoot. Upstream then calls
     ``Path::RealPath``; atlas resolves links at the answer instead, so a
-    caller sees both the path the emulator composes and where it lands.
+    caller sees both the path the emulator composes and where it lands. The
+    key is matched the way ``CSimpleIniA`` matches it — ASCII
+    case-insensitively, last occurrence winning
+    (:func:`atlas.qt_ini.simpleini_value` carries the chain, #295) — so a
+    ``[folders]`` spelling governs here exactly as it does in the running
+    emulator.
     """
-    value = values.get((section, name), "") or default
+    raw, _ = qt_ini.simpleini_value(values, section, name)
+    value = raw or default
     return value if os.path.isabs(value) else os.path.join(root, value)
 
 
