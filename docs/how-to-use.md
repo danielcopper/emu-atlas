@@ -662,6 +662,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"         |
 | `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                              |
 | `per-game-layer-unread`                     | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does" |
+| `per-game-build-layer-unread`               | a per-game layer the emulator's BUILD ships, at a compiled-in path — never listed, never counted    |
 | `cfg-value-rejected`                        | the file sets a value the emulator cannot read, so the value it had keeps governing                 |
 | `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified           |
 | `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)       |
@@ -767,6 +768,27 @@ EEPROM — whenever more than one is named. Savestates are their own wiring and 
 savestate card keeps the `standalone-unsupported` refusal there even where its save answers (since #284 every
 save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today that refusal
 marks the rows neither family has examined).
+
+**Dolphin and PrimeHack read every answer above through a per-game layer, and they say so.** While a game runs, both
+load `<id>.ini` from _two_ GameSettings directories over the whole configuration — the user's own
+`<data home>/<user dir>/GameSettings/` and a second one below the build's `Sys` tree — and both outrank `Dolphin.ini`
+itself (LocalGame, then GlobalGame, then Base). Nothing filters what such a file may set: the loader writes every mapped
+key into the layer, and the saveability filter runs only on the way out. So `[Core] MemcardAPath`, `MemcardBPath`,
+`GCIFolderAPath` and `GCIFolderBPath` can move the GameCube cards for one game, `[Dolphin.General] NANDRootPath` the Wii
+NAND, and `[Dolphin.General] LoadPath` the `Load` directory that the texture tree _and_ the graphics-mod tree both hang
+below — one key, both answers. (The section is `[Dolphin.General]`, not `[Main.General]`: a `General` key arrives only
+through the free-form `<System>.<Section>` spelling, and the name Dolphin resolves for that system is `Dolphin`.)
+
+Which game runs is not a fact atlas holds, so the answers stay the **global** reading and state the layer beside it —
+and the two directories are two different statements, because one of them is a check atlas can make and the other never
+is. The user's directory is listed: `per-game-overrides-present` where files sit there, with `data["count"]` and
+`data["dir"]`, and `per-game-layer-unread` where the listing failed — which is not the same as "no game overrides this",
+and never silence. The build's directory is at a path compiled into the binary and written nowhere on a running machine,
+so `per-game-build-layer-unread` states it, carries **no** `data["dir"]`, and appears on every Dolphin-family answer the
+layer reaches whatever the user's directory holds. Treat the first as "some games here answer differently — go read
+those files", the second as "the emulator ships a layer atlas will never enumerate". Neither says a key _is_ set; both
+say it _can_ be. `savestate_location` stays silent throughout, because the states tree is a compiled join off the user
+directory that no configuration key moves.
 
 Three more cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
 `PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the
@@ -1015,17 +1037,20 @@ reading there rather than `None`. **PCSX2's** `dir` is the load stage, `<Texture
 a caller placing a pack where nothing reads it. That reading is the _global_ one, and PCSX2 has a second settings source
 — a running game installs `<DataRoot>/gamesettings/<serial>_<crc>.ini` as a layer over the whole configuration, so any
 key can answer differently for one game. Which game runs is not a fact atlas holds, so the answer stays the global
-reading and carries `per-game-overrides-present` where such files exist here, with their count and directory.
-DuckStation states the directory key for a different reason: the root it resolves against is the config home or the data
-home depending on how the launch was started, so a fixed base would answer correctly on one arrangement and wrongly on
-the other — and its texture answer would disagree with its own cheat answer about where the emulator keeps things. It
-reads no per-serial `replacements` tree of its own. Where nobody has read an emulator's configuration the entry still
-refuses with `standalone-unsupported`, so the split runs on evidence, not on the kind of entry. **On EmuDeck the same
-cards answer**, below the bases the launch's own binary reads: an AppImage under `~/Applications` (or the executable
-EmuDeck unpacks from one) reads the host's XDG tree, and a flatpak whose app id the save card names reads the app's own
-homes. A launch whose binary establishes neither — the Windows build under Proton, a flatpak no card names an id for —
-refuses with `standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this
-emulator is not covered".
+reading and carries `per-game-overrides-present` where such files exist here, with their count and directory. **Dolphin
+and PrimeHack** qualify their texture and mod answers the same way and for the same reason, through
+`[Dolphin.General] LoadPath` — see the per-game layer under the standalone save section, including the second,
+build-shipped layer that `per-game-build-layer-unread` states and never counts. DuckStation states the directory key for
+a different reason: the root it resolves against is the config home or the data home depending on how the launch was
+started, so a fixed base would answer correctly on one arrangement and wrongly on the other — and its texture answer
+would disagree with its own cheat answer about where the emulator keeps things. It reads no per-serial `replacements`
+tree of its own. Where nobody has read an emulator's configuration the entry still refuses with
+`standalone-unsupported`, so the split runs on evidence, not on the kind of entry. **On EmuDeck the same cards answer**,
+below the bases the launch's own binary reads: an AppImage under `~/Applications` (or the executable EmuDeck unpacks
+from one) reads the host's XDG tree, and a flatpak whose app id the save card names reads the app's own homes. A launch
+whose binary establishes neither — the Windows build under Proton, a flatpak no card names an id for — refuses with
+`standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this emulator is
+not covered".
 
 Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction — the rows
 that read a configuration add two more, below the table:
