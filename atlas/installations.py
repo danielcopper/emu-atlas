@@ -5607,48 +5607,50 @@ class _DolphinGameLayer:
     added: str
 
 
+# Two line sets, not four: PrimeHack's Flathub build is a later rebase onto
+# modern Dolphin and carries Dolphin's line numbers, while the revision
+# RetroDECK builds is three years older and carries its own. Which set a launch
+# gets is decided by the build it runs, never by the emulator's name.
+_DOLPHIN_MODERN_LINES = {
+    "loader": "GameConfigLoader.cpp:185-197",
+    "unfiltered": (
+        "GameConfigLoader.cpp:261-277, the IsSettingSaveable filter being Save's own at :294"
+    ),
+    "order": "Enums.h:39-47",
+    "user_dir": "FileUtil.cpp:843",
+    "sys_dir": "FileUtil.cpp:760-793",
+    "added": "ConfigManager.cpp:254-255, from BootManager.cpp:56",
+}
+_DOLPHIN_FORK_LINES = {
+    "loader": "GameConfigLoader.cpp:176-198",
+    "unfiltered": (
+        "GameConfigLoader.cpp:253-272, the IsSettingSaveable filter being Save's own at :292"
+    ),
+    "order": "Enums.h:40-48",
+    "user_dir": "FileUtil.cpp:840",
+    "sys_dir": "FileUtil.cpp:758-791",
+    "added": "ConfigManager.cpp:189-190, from BootManager.cpp:65",
+}
+
 # Keyed the way every standalone registry is: the token, and the flatpak app id
 # where the build differs per installation (#246). ``None`` covers an
-# arrangement's own bundled build. PrimeHack's Flathub build is a later rebase
-# onto modern Dolphin, so it shares Dolphin's line numbers rather than the
-# RetroDECK component's — stating 81bfb96's lines for it would be exactly the
-# mistake the cards' ``citations.installations`` block exists to prevent.
-_DOLPHIN_GAME_LAYERS: dict[tuple[str, str | None], _DolphinGameLayer] = {}
-
-
-def _register_dolphin_game_layers() -> None:
-    """Build the per-build layer table — one modern-Dolphin set, one fork set."""
-    modern = {
-        "loader": "GameConfigLoader.cpp:185-197",
-        "unfiltered": "GameConfigLoader.cpp:261-277, the IsSettingSaveable filter being Save's own at :294",
-        "order": "Enums.h:39-47",
-        "user_dir": "FileUtil.cpp:843",
-        "sys_dir": "FileUtil.cpp:760-793",
-        "added": "ConfigManager.cpp:254-255, from BootManager.cpp:56",
-    }
-    fork = {
-        "loader": "GameConfigLoader.cpp:176-198",
-        "unfiltered": "GameConfigLoader.cpp:253-272, the IsSettingSaveable filter being Save's own at :292",
-        "order": "Enums.h:40-48",
-        "user_dir": "FileUtil.cpp:840",
-        "sys_dir": "FileUtil.cpp:758-791",
-        "added": "ConfigManager.cpp:189-190, from BootManager.cpp:65",
-    }
-    for key, name, build, lines in (
-        (("DOLPHIN", None), "Dolphin", "dolphin 2603a", modern),
-        (("DOLPHIN", "org.DolphinEmu.dolphin-emu"), "Dolphin", "dolphin 2603a", modern),
-        (("PRIMEHACK", None), "PrimeHack", "shiiion/dolphin 81bfb96", fork),
-        (
-            ("PRIMEHACK", "io.github.shiiion.primehack"),
-            "PrimeHack",
-            "shiiion/dolphin 53f53e0",
-            modern,
-        ),
-    ):
-        _DOLPHIN_GAME_LAYERS[key] = _DolphinGameLayer(name=name, build=build, **lines)
-
-
-_register_dolphin_game_layers()
+# arrangement's own bundled build. Stating 81bfb96's lines for the Flathub
+# PrimeHack would be exactly the mistake the cards' ``citations.installations``
+# block exists to prevent, which is why that row is keyed separately.
+_DOLPHIN_GAME_LAYERS: dict[tuple[str, str | None], _DolphinGameLayer] = {
+    ("DOLPHIN", None): _DolphinGameLayer(
+        name="Dolphin", build="dolphin 2603a", **_DOLPHIN_MODERN_LINES
+    ),
+    ("DOLPHIN", "org.DolphinEmu.dolphin-emu"): _DolphinGameLayer(
+        name="Dolphin", build="dolphin 2603a", **_DOLPHIN_MODERN_LINES
+    ),
+    ("PRIMEHACK", None): _DolphinGameLayer(
+        name="PrimeHack", build="shiiion/dolphin 81bfb96", **_DOLPHIN_FORK_LINES
+    ),
+    ("PRIMEHACK", "io.github.shiiion.primehack"): _DolphinGameLayer(
+        name="PrimeHack", build="shiiion/dolphin 53f53e0", **_DOLPHIN_MODERN_LINES
+    ),
+}
 
 # The user directory's per-game tree, below the emulator's own XDG data root —
 # the LocalGame layer's source (FileUtil.cpp:843 at dolphin 2603a).
@@ -10841,7 +10843,7 @@ def _standalone_mod_placement(
             token=card.token,
             homes=homes,
             keys=_DOLPHIN_LOAD_LAYER_KEYS,
-            governs="the Load directory these mod trees hang below",
+            governs="the Load directory the mod tree hangs below",
         )
     )
     return ModPlacement(
