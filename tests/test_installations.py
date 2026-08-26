@@ -1772,6 +1772,22 @@ class TestDolphinStandaloneSaves:
         assert p.file_set.files == ("mine.USA.raw", "mine.EUR.raw", "mine.JAP.raw")
         assert p.file_set.groups[0].dir == "/mnt/sd/cards"
 
+    def test_a_readings_sentence_quotes_the_files_own_spelling(self):
+        # The matched value is already the emulator's (#295); the sentence
+        # quotes the key as the file writes it, the canonical key beside it —
+        # the same convention as the DuckStation/PCSX2 readings and the
+        # NANDRootPath site.
+        p = self._answer(
+            "[core]\nslota = 1\nslotb = 255\nmemcardapath = /mnt/sd/cards/mine.USA.raw\n"
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.granularity is not None
+        by_key = {r.key: r for r in p.granularity.readings}
+        assert by_key["SlotA"].provenance == 'Dolphin.ini: [Core] slota = "1"'
+        assert by_key["MemcardAPath"].provenance == (
+            'Dolphin.ini: [Core] memcardapath = "/mnt/sd/cards/mine.USA.raw"'
+        )
+
     def test_a_second_slot_adds_its_own_groups(self):
         p = self._answer("[Core]\nSlotA = 8\nSlotB = 1\n")
         assert not isinstance(p, atlas.Unresolved)

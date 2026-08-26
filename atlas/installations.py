@@ -5566,8 +5566,10 @@ def _dolphin_region_split(value: str, *, separator: str) -> tuple[str, str]:
 
     The emulator's own move, made explicit: a configured card path is a
     template whose region segment the running disc replaces (GetMemcardPath
-    MainSettings.cpp:777-819, GetGCIFolderPath :844-873). A value that spells
-    no region keeps its tail and the region is inserted before it.
+    MainSettings.cpp:777-819, GetGCIFolderPath :844-873, at dolphin 2603a —
+    the fork's own lines live on the card, per the note above
+    ``_DOLPHIN_CITATION_SLOTS``). A value that spells no region keeps its
+    tail and the region is inserted before it.
     """
     for region in _DOLPHIN_REGION_SPELLINGS:
         marker = separator + region
@@ -5582,13 +5584,16 @@ def _dolphin_raw_slot(
     sandbox: _Sandbox,
     gc_root: str,
     cite: "_Cite",
+    *,
+    spelled: str | None = None,
 ) -> _DolphinSlot:
     """A raw memory card in one slot: one file per region, named.
 
     An empty path defaults to ``<GC user>/MemoryCard<slot>.<region>.raw``
-    (MainSettings.cpp:767-774); a standard-size card carries no block suffix
-    (EXI.cpp:123-124 sizes the card at 2043 blocks unless MemoryCardSize
-    overrides it, and the suffix only exists below that, :763-765).
+    (MainSettings.cpp:767-774 at dolphin 2603a); a standard-size card
+    carries no block suffix (EXI.cpp:123-126 sizes the card at 2043 blocks
+    unless MemoryCardSize overrides it, and the suffix only exists below
+    that, MainSettings.cpp:763-765).
     """
     if configured:
         resolved = sandbox.host(f"Memcard{letter}Path", configured)
@@ -5603,7 +5608,9 @@ def _dolphin_raw_slot(
                         {"key": f"Memcard{letter}Path", "path": configured},
                     ),
                 ),
-                readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None, cite),),
+                readings=(
+                    _dolphin_reading(f"Memcard{letter}Path", configured, None, cite, spelled=spelled),
+                ),
             )
         directory, filename = os.path.split(resolved.path)
         stem, ext = os.path.splitext(filename)
@@ -5618,7 +5625,9 @@ def _dolphin_raw_slot(
             FileGroup(dir=directory, files=(name,), granularity="shared-file", role="memory-card")
             for name in names
         ),
-        readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None, cite),),
+        readings=(
+            _dolphin_reading(f"Memcard{letter}Path", configured, None, cite, spelled=spelled),
+        ),
     )
 
 
@@ -5628,14 +5637,16 @@ def _dolphin_folder_slot(
     sandbox: _Sandbox,
     gc_root: str,
     cite: "_Cite",
+    *,
+    spelled: str | None = None,
 ) -> _DolphinSlot:
     """A GCI folder in one slot: one directory per region, files unnamed.
 
     An empty path defaults to ``<GC user>/<region>/Card <slot>``
-    (MainSettings.cpp:835-841). The ``.gci`` names inside come from the save's
-    own directory entry — makercode, gamecode and the save's internal filename
-    (GCMemcardDirectory.cpp:56-60) — none of which any read of the content
-    path recovers, so the groups stay unnamed.
+    (MainSettings.cpp:835-841 at dolphin 2603a). The ``.gci`` names inside
+    come from the save's own directory entry — makercode, gamecode and the
+    save's internal filename (GCMemcardDirectory.cpp:56-60) — none of which
+    any read of the content path recovers, so the groups stay unnamed.
     """
     if configured:
         resolved = sandbox.host(f"GCIFolder{letter}Path", configured)
@@ -5650,7 +5661,9 @@ def _dolphin_folder_slot(
                         {"key": f"GCIFolder{letter}Path", "path": configured},
                     ),
                 ),
-                readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite),),
+                readings=(
+                    _dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite, spelled=spelled),
+                ),
             )
         base, _ = _dolphin_region_split(resolved.path.rstrip("/"), separator="/")
         dirs = tuple(os.path.join(base, region) for region in _DOLPHIN_REGIONS)
@@ -5664,22 +5677,39 @@ def _dolphin_folder_slot(
             FileGroup(dir=d, files=None, granularity="per-game-files", role="memory-card")
             for d in dirs
         ),
-        readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite),),
+        readings=(
+            _dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite, spelled=spelled),
+        ),
         template_dir=template,
     )
 
 
 def _dolphin_reading(
-    key: str, value: str | None, provenance: str | None, cite: "_Cite | None" = None
+    key: str,
+    value: str | None,
+    provenance: str | None,
+    cite: "_Cite | None" = None,
+    *,
+    spelled: str | None = None,
 ) -> OptionReading:
+    """One key's reading: the canonical key, and the file's own spelling in the sentence.
+
+    *spelled* is the case-variant spelling the file carries, where a value was
+    found — the reading's ``key`` stays canonical (it is what a client selects
+    by), and the provenance quotes the line as written, the way the
+    DuckStation/PCSX2 readings and the NANDRootPath site already do (#295).
+    An unset key has no file spelling, so the default sentence keeps the
+    canonical one.
+    """
     default_provenance = f"[Core] {key} is unset — the compiled-in default governs"
     if cite is not None:
         default_provenance += f" ({cite('slot_defaults')} at {cite('build')})"
+    shown = spelled if spelled is not None else key
     return OptionReading(
         key,
         value,
         provenance
-        or (f'Dolphin.ini: [Core] {key} = "{value}"' if value is not None else default_provenance),
+        or (f'Dolphin.ini: [Core] {shown} = "{value}"' if value is not None else default_provenance),
         None,
     )
 
@@ -5697,29 +5727,33 @@ def _dolphin_slot(
     because that is the emulator's own matching (the chain is on
     :func:`_parse_sectioned_ini`, #295).
     """
-    raw_value, _ = _simpleini_value(values, "Core", f"Slot{letter}")
+    raw_value, slot_spelled = _simpleini_value(values, "Core", f"Slot{letter}")
     try:
         device = int(raw_value) if raw_value is not None else _DOLPHIN_SLOT_DEFAULTS[letter]
     except ValueError:
         device = None
-    slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None, cite)
+    slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None, cite, spelled=slot_spelled)
     if device == _DOLPHIN_DEVICE_NONE:
         return _DolphinSlot(mode="none", readings=(slot_reading,))
     if device == _DOLPHIN_DEVICE_FOLDER:
+        folder_value, folder_spelled = _simpleini_value(values, "Core", f"GCIFolder{letter}Path")
         slot = _dolphin_folder_slot(
             letter,
-            _simpleini_value(values, "Core", f"GCIFolder{letter}Path")[0],
+            folder_value,
             sandbox,
             gc_root,
             cite,
+            spelled=folder_spelled,
         )
     elif device == _DOLPHIN_DEVICE_RAW:
+        card_value, card_spelled = _simpleini_value(values, "Core", f"Memcard{letter}Path")
         slot = _dolphin_raw_slot(
             letter,
-            _simpleini_value(values, "Core", f"Memcard{letter}Path")[0],
+            card_value,
             sandbox,
             gc_root,
             cite,
+            spelled=card_spelled,
         )
     elif device == _DOLPHIN_DEVICE_AGP:
         return _DolphinSlot(
@@ -5936,7 +5970,7 @@ def _dolphin_wii_answer(
     """The Wii answer: the NAND's title tree, one unnamed directory per title.
 
     ``NANDRootPath`` governs where the NAND lives (the default is the ``Wii``
-    tree below the user directory, CommonPaths.h:49); the saves inside it are
+    tree below the user directory, CommonPaths.h:49 at 2603a); the saves inside it are
     ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at 2603a), the title
     id a fact of the disc that no read of the content path recovers. The key
     is matched the way the emulator matches it — ASCII case-insensitively
