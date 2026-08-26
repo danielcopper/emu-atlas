@@ -8654,45 +8654,13 @@ def _standalone_savestate_settings(card: StandaloneSavestateCard) -> emulator_se
     return emulator_settings.settings_file(card.token, card.settings)
 
 
-def _ascii_locase(text: str) -> str:
-    """SI_GenericNoCase's lowering: ``A-Z`` only, nothing else folds.
-
-    Python's ``casefold`` folds more than ASCII; the emulator's comparator
-    does not (SimpleIni.h:2916-2931 at PCSX2 v2.6.3, the same generic class at
-    DuckStation's pin), and mirroring it exactly is the difference between
-    reading the file the way the emulator does and the way a reasonable ini
-    reader would.
-    """
-    return "".join(chr(ord(ch) + 32) if "A" <= ch <= "Z" else ch for ch in text)
-
-
-def _simpleini_value(
-    values: Mapping[tuple[str, str], str], section: str, key: str
-) -> tuple[str | None, str]:
-    """The value ``CSimpleIniA`` hands back for (section, key), and the spelling that carried it.
-
-    Both emulators that keep their folders in an ini read it through
-    ``CSimpleIniA``, whose comparator is ASCII case-insensitive on Linux
-    (PCSX2 v2.6.3: INISettingsInterface.h:66, SimpleIni.h:2882-2887 define
-    SI_NO_CONVERSION, :3629-3634 pick SI_GenericNoCase, :3642-3643 the
-    typedef; the same chain at stenzek/duckstation@64655818e,
-    ini_settings_interface.h:65 and its vendored SimpleIni.h:3593-3607). A
-    file carrying two case-spellings of one key collapses them into one entry
-    with the last occurrence winning (AddEntry assigns into the found key,
-    SimpleIni.h:2042-2150) — mirrored here by taking the last matching entry
-    in file order, exact for any file that spells each variant at most once.
-    The spelling rides back for the reading's own sentence, because the
-    shipped RetroDECK ini spells PCSX2's key another way than the source
-    reads it, which is the trap issue #225 turned on.
-    """
-    found: str | None = None
-    spelled = key
-    lowered = (_ascii_locase(section), _ascii_locase(key))
-    for (stated_section, stated_key), value in values.items():
-        if (_ascii_locase(stated_section), _ascii_locase(stated_key)) == lowered:
-            found = value
-            spelled = stated_key
-    return found, spelled
+# The case-insensitive (section, key) match and its ASCII fold moved to
+# atlas.qt_ini (#295): the firmware and DuckStation modules read the same ini
+# files and needed the same mirror, and qt_ini is the module all three already
+# import. The private names stay bound here because this module is where the
+# savestate routes (and their tests) address them.
+_ascii_locase = qt_ini.ascii_locase
+_simpleini_value = qt_ini.simpleini_value
 
 
 def _savestate_names_caveat(
