@@ -95,6 +95,12 @@ class TestOneAddressPerFile:
         with pytest.raises(ValueError, match="no settings file"):
             settings_file("NOBODY", "any.ini")
 
+    def test_a_file_the_emulator_does_not_state_fails_loudly(self):
+        # The other way to ask for an unstated address: the emulator is
+        # carried, the file name is not.
+        with pytest.raises(ValueError, match="no settings file"):
+            settings_file("PCSX2", "nowhere.ini")
+
     def test_an_emulator_with_no_entry_lists_nothing(self):
         assert settings_files("NOBODY") == {}
 
