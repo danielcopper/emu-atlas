@@ -6014,11 +6014,11 @@ def _dolphin_wii_answer(
     """The Wii answer: the NAND's title tree, one unnamed directory per title.
 
     ``NANDRootPath`` governs where the NAND lives (the default is the ``Wii``
-    tree below the user directory, CommonPaths.h:49 at 2603a); the saves inside it are
-    ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at 2603a), the title
-    id a fact of the disc that no read of the content path recovers. The key
-    is matched the way the emulator matches it — ASCII case-insensitively
-    (the chain is on :func:`_parse_sectioned_ini`, #295).
+    tree below the user directory, CommonPaths.h:49 at 2603a); the saves
+    inside it are ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at
+    2603a), the title id a fact of the disc that no read of the content path
+    recovers. The key is matched the way the emulator matches it — ASCII
+    case-insensitively (the chain is on :func:`_parse_sectioned_ini`, #295).
     """
     cite = _cites(card, homes)
     configured, spelled = _simpleini_value(values, "General", "NANDRootPath")

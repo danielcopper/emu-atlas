@@ -41,14 +41,14 @@ class StandaloneSaveCard:
     (PPSSPP's Linux memstick is a compiled-in XDG join): naming a file the
     resolver never reads would state a governing config that does not govern.
     ``systems`` is the closed list of catalogue systems this card answers
-    for: an emulator can serve several
-    with different trees (Dolphin keeps GameCube cards and a Wii NAND), and a
-    system outside the list is a question the card does not answer, stated
-    rather than stretched. ``flatpak`` is the app id the emulator installs
-    under where an arrangement is established to run it as a flatpak
-    (EmuDeck's melonDS) — the id whose per-app XDG trees the flatpak variant
-    reads. ``None`` for an emulator no established launch runs that way: an
-    id nothing launches would resolve nothing, so the variant keeps refusing.
+    for: an emulator can serve several with different trees (Dolphin keeps
+    GameCube cards and a Wii NAND), and a system outside the list is a
+    question the card does not answer, stated rather than stretched.
+    ``flatpak`` is the app id the emulator installs under where an
+    arrangement is established to run it as a flatpak (EmuDeck's melonDS) —
+    the id whose per-app XDG trees the flatpak variant reads. ``None`` for
+    an emulator no established launch runs that way: an id nothing
+    launches would resolve nothing, so the variant keeps refusing.
 
     ``citations`` are the emulator's own source references the **resolver**
     speaks — the line ranges that go into an answer's caveats and readings —
