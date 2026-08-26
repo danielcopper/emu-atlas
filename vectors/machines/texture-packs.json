@@ -2112,7 +2112,7 @@
     },
     {
       "name": "pcsx2-a-sandbox-only-gamesettings-directory-is-an-unread-layer",
-      "rationale": "The per-game layer check globs the directory [Folders] GameSettings names, and this one only the emulator's sandbox can spell — so the listing cannot be made from here, and the absence of a caveat would claim exactly what was not established (that no game carries an override). The texture answer itself stays the configured host directory; the layer rides as per-game-layer-unread with the configured spelling in data.dir, the same unread state an unlistable host directory reaches.",
+      "rationale": "The per-game layer check globs the directory [Folders] GameSettings names, and this one only the emulator's sandbox can spell — so the listing cannot be made from here, and the absence of a caveat would claim exactly what was not established (that no game carries an override). The texture answer itself stays the configured host directory; the cause rides in the settled words — sandbox-path-untranslated with the key and the stated value, the caveat every answer-stands-around-it site emits — beside the consequence, per-game-layer-unread with the configured spelling in data.dir, so a client can tell this unread state from a host directory that failed to glob.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2149,6 +2149,13 @@
           "enabled": true,
           "keying": "serial",
           "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "GameSettings",
+                "path": "/var/tmp/gamesettings"
+              }
+            },
             {
               "code": "per-game-layer-unread",
               "data": {

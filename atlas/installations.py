@@ -5206,8 +5206,14 @@ def _pcsx2_game_settings_caveat(
             # An absolute value only the emulator's sandbox can spell: the
             # listing this caveat rests on cannot be made from here, and that
             # is the unread state — never the silent absence, whose meaning is
-            # "no game carries an override".
+            # "no game carries an override". The cause rides beside the
+            # consequence in the settled words: ``host.caveats`` is the
+            # sandbox-path-untranslated caveat every other stands-around-it
+            # site emits, so a client sees WHY the layer went unread and that
+            # the stated directory is the configured sandbox spelling, not a
+            # host directory that failed to glob.
             return [
+                *host.caveats,
                 Caveat(
                     CAVEAT_PER_GAME_LAYER_UNREAD,
                     f"[Folders] GameSettings = {raw!r} names a location only the emulator's "
