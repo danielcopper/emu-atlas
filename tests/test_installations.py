@@ -6287,12 +6287,12 @@ class TestSimpleIniKeyMatching:
         # folds 'ß' to 'ss' — a mirror built on either would match keys the
         # emulator keeps apart.
         from atlas.installations import (
-            _ascii_locase,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
             _simpleini_value,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
         )
+        from atlas.qt_ini import ascii_locase
 
-        assert _ascii_locase("SaveStates") == "savestates"
-        assert _ascii_locase("İß") == "İß"
+        assert ascii_locase("SaveStates") == "savestates"
+        assert ascii_locase("İß") == "İß"
         assert _simpleini_value({("S", "İd"): "/x"}, "S", "i̇d") == (None, "i̇d")
         assert _simpleini_value({("S", "Straße"): "/x"}, "S", "STRASSE") == (None, "STRASSE")
 

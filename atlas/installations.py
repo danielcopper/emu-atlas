@@ -8695,12 +8695,11 @@ def _standalone_savestate_settings(card: StandaloneSavestateCard) -> emulator_se
     return emulator_settings.settings_file(card.token, card.settings)
 
 
-# The case-insensitive (section, key) match and its ASCII fold moved to
-# atlas.qt_ini (#295): the firmware and DuckStation modules read the same ini
-# files and needed the same mirror, and qt_ini is the module all three already
-# import. The private names stay bound here because this module is where the
-# savestate routes (and their tests) address them.
-_ascii_locase = qt_ini.ascii_locase
+# The case-insensitive (section, key) match moved to atlas.qt_ini (#295): the
+# firmware and DuckStation modules read the same ini files and needed the same
+# mirror, and qt_ini is the module all three already import. The private name
+# stays bound here because this module is where every route that matches an
+# ini key addresses it.
 _simpleini_value = qt_ini.simpleini_value
 
 
