@@ -6297,6 +6297,41 @@ class TestSimpleIniKeyMatching:
         assert _simpleini_value({("S", "Straße"): "/x"}, "S", "STRASSE") == (None, "STRASSE")
 
 
+class TestDolphinIniParse:
+    """Dolphin.ini parsed flat, spellings kept — matching is the lookup's job (#295).
+
+    The emulator's own chain: sections found case-insensitively with
+    case-variant headers merged (IniFile.cpp:130-146, :289 at dolphin 2603a),
+    keys in a CaseInsensitiveLess map where a duplicate's last value wins
+    (IniFile.h:64, insert_or_assign IniFile.cpp:47-49), and the config layer
+    keyed by strcasecmp on section and key (ConfigInfo.cpp:18-29).
+    """
+
+    def test_the_parse_keeps_the_files_own_spellings(self):
+        from atlas.installations import (
+            _parse_sectioned_ini,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        assert _parse_sectioned_ini("[core]\nslota = 8\n") == {("core", "slota"): "8"}
+
+    def test_an_exact_duplicate_collapses_to_the_last_value_at_parse(self):
+        from atlas.installations import (
+            _parse_sectioned_ini,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        text = "[Core]\nSlotA = 8\nSlotA = 1\n"
+        assert _parse_sectioned_ini(text) == {("Core", "SlotA"): "1"}
+
+    def test_a_case_variant_duplicate_stays_and_the_lookup_takes_the_last(self):
+        from atlas.installations import (
+            _parse_sectioned_ini,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+            _simpleini_value,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        parsed = _parse_sectioned_ini("[Core]\nSlotA = 8\n[core]\nslota = 1\n")
+        assert _simpleini_value(parsed, "Core", "SlotA") == ("1", "slota")
+
+
 class TestPcsx2EmptyFolderKeys:
     """A present-but-empty [Folders] line moves the directory to the DataRoot.
 

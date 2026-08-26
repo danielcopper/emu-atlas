@@ -121,6 +121,15 @@ class TestOneSettingBecomesADirectory:
             "/mnt/sd/bios"
         )
 
+    def test_a_case_variant_spelling_is_the_same_key(self):
+        # CSimpleIniA matches sections and keys ASCII case-insensitively
+        # (ini_settings_interface.h:65 at 64655818e), so [bios] searchdirectory
+        # governs exactly as the canonical spelling would (#295).
+        values = {("bios", "searchdirectory"): "images/ps1"}
+        assert duckstation.load_path(values, self.ROOT, "BIOS", "SearchDirectory", "bios") == (
+            "/root/images/ps1"
+        )
+
 
 class TestTheTableIsTheEmulatorsOwn:
     def test_it_carries_the_revision_it_was_read_at(self):

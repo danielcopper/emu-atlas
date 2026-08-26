@@ -2331,6 +2331,119 @@
           }
         }
       }
+    },
+    {
+      "name": "pcsx2-a-case-variant-spelling-of-the-texture-keys-governs",
+      "rationale": "PCSX2 reads PCSX2.ini through CSimpleIniA, whose comparator matches sections and keys ASCII case-insensitively (INISettingsInterface.h:66, SimpleIni.h:3642-3643 over SI_GenericNoCase :2916-2931 at v2.6.3) — so [folders] textures, gamesettings and [emucore/gs] loadtexturereplacements are the same settings to the running emulator as their canonical spellings. The configured directory governs, the switch reads true, and the per-game layer the case-variant gamesettings line names is found and stated — an exact-case lookup would have answered the compiled default for all three (#295).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[folders]\ntextures = /mnt/sd/retrodeck/texture_packs/PCSX2/textures\ngamesettings = gs-layer\n[emucore/gs]\nloadtexturereplacements = true\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gs-layer/SLUS-20946_05D42518.ini": "[EmuCore/GS]\nLoadTextureReplacements = false\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures"
+        ],
+        "entry_texture_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures/<save_id>/replacements",
+          "needs": [
+            "save_id"
+          ],
+          "physical_dir": null,
+          "enabled": true,
+          "keying": "serial",
+          "caveats": [
+            {
+              "code": "per-game-overrides-present",
+              "data": {
+                "core": "PCSX2",
+                "count": "1",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gs-layer",
+                "key": "LoadTextureReplacements"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "PCSX2",
+                "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+                "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "load_stage": "replacements",
+                "dump_stage": "dumps",
+                "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-a-case-variant-spelling-of-the-textures-key-governs",
+      "rationale": "DuckStation reads settings.ini through the same CSimpleIniA as PCSX2 (ini_settings_interface.h:65 and the vendored SimpleIni.h:3593-3607 at 64655818e), so [folders] textures is the [Folders] Textures key to the running emulator. The relative value joins the DataRoot exactly as the canonical spelling would (LoadPathFromSettings, settings.cpp:1955-1962) — an exact-case lookup would have answered the compiled textures default instead (#295).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"texture_packs_path\": \"/mnt/sd/retrodeck/texture_packs\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[folders]\ntextures = packs\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs",
+          "/mnt/sd/retrodeck/texture_packs/Duckstation/textures"
+        ],
+        "entry_texture_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/packs",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
