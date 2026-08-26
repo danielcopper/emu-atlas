@@ -115,6 +115,7 @@ from atlas.machine import (
 )
 from atlas.mods import (
     ModCard,
+    ModSetting,
     SoftPatchBuild,
     StandaloneModCard,
     lookup_mod_card,
@@ -5271,31 +5272,36 @@ def _duckstation_dataroot_caveat(token: str) -> Caveat:
     return duckstation.dataroot_caveat(token, "the directory below")
 
 
-def _duckstation_texture_placement(
+def _duckstation_configured_directory(
     machine: Machine,
     *,
-    card: StandaloneTextureCard,
+    token: str,
+    setting: TextureSetting | ModSetting,
     homes: _XdgHomes,
     sandbox: _Sandbox,
-    extra_caveats: tuple[Caveat, ...] = (),
-) -> TexturePlacement | Unresolved:
-    """DuckStation's texture directory: a configuration value, below the root its launch picks.
+    extra_caveats: tuple[Caveat, ...],
+    reads: str,
+    named: str,
+    switch: str,
+) -> tuple[str, str | None, list[Caveat]] | Unresolved:
+    """A ``[Folders]`` directory read the way DuckStation reads it: (dir, physical dir, caveats).
 
-    The same reading its cheat tree gets, and for the same reason — the
-    directory is ``[Folders] Textures`` and the root that key resolves
-    against is the config home or the data home depending on how the launch
-    was started, so a fixed XDG join answers correctly on one arrangement and
-    wrongly on the other. An absolute value is translated through the
-    launch's sandbox rather than trusted as a host path, the way the states
-    directory beside it already is. ``enabled`` stays unstated: the card
-    names no switch, so nothing is read for one.
+    The texture and cheat routes ask one question of one file, so they ask it
+    once here. The root the key resolves against is the config home or the
+    data home depending on how the launch was started, which is why neither
+    row is a fixed XDG join; an unset key is the emulator's compiled default
+    below that root, a relative value hangs off it, and an absolute one is
+    translated through the launch's sandbox rather than trusted as a host
+    path — the states directory beside them already reads this way. Neither
+    card names a switch, so both answers close with
+    ``emulator-config-unread`` naming the file that would hold one.
+
+    Only the nouns differ between the two, so they are parameters the way
+    :func:`_duckstation_settings` makes its refusal sentence one: ``reads`` is
+    what the emulator reads from the directory ("texture packs"), ``named``
+    the word the untranslatable refusal spells ("texture"), and ``switch`` the
+    feature whose switch went unread ("texture replacement").
     """
-    setting = card.directory
-    if setting is None:
-        raise ValueError(
-            f"texture card {card.token!r} states no directory and this resolver reads "
-            "one — the card and the code shipped out of step"
-        )
     read = duckstation.read_settings(
         machine,
         config_home=homes.base("config"),
@@ -5307,8 +5313,8 @@ def _duckstation_texture_placement(
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
-            "where it reads texture packs from is unknowable here",
-            {"emulator": card.token, "config": read.unreadable},
+            f"where it reads {reads} from is unknowable here",
+            {"emulator": token, "config": read.unreadable},
         )
     # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
     # case-insensitive, so a case-variant spelling governs here as it does
@@ -5319,10 +5325,10 @@ def _duckstation_texture_placement(
         if host.path is None:
             return Unresolved(
                 UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
-                f"the texture directory DuckStation's configuration names ({configured!r}) "
+                f"the {named} directory DuckStation's configuration names ({configured!r}) "
                 f"has no spelling on this host — {read.stated_path} read fine, and nothing "
                 "this answer could anchor at",
-                {"emulator": card.token, "config": read.stated_path or "", "path": configured},
+                {"emulator": token, "config": read.stated_path or "", "path": configured},
             )
         directory = host.path
     else:
@@ -5332,17 +5338,55 @@ def _duckstation_texture_placement(
     physical_dir, link_caveats = _link_view(machine, directory)
     caveats: list[Caveat] = [*extra_caveats, *link_caveats]
     if read.ambiguous:
-        caveats.append(_duckstation_dataroot_caveat(card.token))
+        caveats.append(_duckstation_dataroot_caveat(token))
     config_path = os.path.join(read.root, duckstation.CONFIG_FILENAME)
     caveats.append(
         Caveat(
             CAVEAT_EMULATOR_CONFIG_UNREAD,
-            f"whether {card.token} has texture replacement switched on is not established — the "
-            f"setting lives in {config_path}, which this answer reads for the directory and not "
-            "for the switch, because the card states none",
-            {"emulator": card.token, "config": config_path},
+            f"whether {token} has {switch} switched on is not established — the setting lives "
+            f"in {config_path}, which this answer reads for the directory and not for the "
+            "switch, because the card states none",
+            {"emulator": token, "config": config_path},
         )
     )
+    return directory, physical_dir, caveats
+
+
+def _duckstation_texture_placement(
+    machine: Machine,
+    *,
+    card: StandaloneTextureCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> TexturePlacement | Unresolved:
+    """DuckStation's texture directory: ``[Folders] Textures``, below the root its launch picks.
+
+    The reading its cheat tree gets, from the same file and for the same
+    reason — see :func:`_duckstation_configured_directory`, which both routes
+    read through. ``enabled`` stays unstated: the card names no switch, so
+    nothing is read for one.
+    """
+    setting = card.directory
+    if setting is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no directory and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
+    resolved = _duckstation_configured_directory(
+        machine,
+        token=card.token,
+        setting=setting,
+        homes=homes,
+        sandbox=sandbox,
+        extra_caveats=extra_caveats,
+        reads="texture packs",
+        named="texture",
+        switch="texture replacement",
+    )
+    if isinstance(resolved, Unresolved):
+        return resolved
+    directory, physical_dir, caveats = resolved
     return TexturePlacement(
         dir=directory,
         needs=(),
@@ -10430,17 +10474,15 @@ def _duckstation_mod_placement(
     sandbox: _Sandbox,
     extra_caveats: tuple[Caveat, ...] = (),
 ) -> ModPlacement | Unresolved:
-    """DuckStation's cheat tree: the directory its configuration names, below the root it picks.
+    """DuckStation's cheat tree: ``[Folders] Cheats``, below the root its launch picks.
 
     The reason this row needs a resolver rather than an XDG join is the same
     one that made the save card wrong before #250: DuckStation's DataRoot is
     the config home or the data home depending on the launch environment, so a
     card naming either would answer correctly on one arrangement and wrongly on
-    the other. The directory itself is ``[Folders] Cheats`` read the way every
-    folder of this emulator is read, so an unset key is ``cheats`` below that
-    root, a relative value hangs off it, and an absolute one is translated
-    through the launch's sandbox rather than trusted as a host path — the
-    texture and states directories' own reading.
+    the other. The key is then read the way every folder of this emulator is
+    read — :func:`_duckstation_configured_directory`, the texture route's own
+    reading.
     """
     spec = card.trees[0]
     setting = spec.directory
@@ -10449,53 +10491,20 @@ def _duckstation_mod_placement(
             f"mod card {card.token!r} states no directory and this resolver reads one "
             "— the card and the code shipped out of step"
         )
-    read = duckstation.read_settings(
+    resolved = _duckstation_configured_directory(
         machine,
-        config_home=homes.base("config"),
-        data_home=homes.base("data"),
-        flatpak=homes.flatpak,
-        xdg_pinned=homes.xdg_pinned,
+        token=card.token,
+        setting=setting,
+        homes=homes,
+        sandbox=sandbox,
+        extra_caveats=extra_caveats,
+        reads="cheat files",
+        named="cheats",
+        switch="cheat loading",
     )
-    if read.unreadable is not None:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
-            "where it reads cheat files from is unknowable here",
-            {"emulator": card.token, "config": read.unreadable},
-        )
-    # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
-    # case-insensitive, so a case-variant spelling governs here as it does
-    # in the running emulator (:func:`atlas.qt_ini.simpleini_value`).
-    configured = _simpleini_value(read.values, setting.section, setting.key)[0] or ""
-    if os.path.isabs(configured):
-        host = sandbox.host(setting.key, configured)
-        if host.path is None:
-            return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
-                f"the cheats directory DuckStation's configuration names ({configured!r}) "
-                f"has no spelling on this host — {read.stated_path} read fine, and nothing "
-                "this answer could anchor at",
-                {"emulator": card.token, "config": read.stated_path or "", "path": configured},
-            )
-        directory = host.path
-    else:
-        directory = duckstation.load_path(
-            read.values, read.root, setting.section, setting.key, setting.default
-        )
-    physical, link_caveats = _link_view(machine, directory)
-    caveats: list[Caveat] = [*extra_caveats, *link_caveats]
-    if read.ambiguous:
-        caveats.append(_duckstation_dataroot_caveat(card.token))
-    config_path = os.path.join(read.root, duckstation.CONFIG_FILENAME)
-    caveats.append(
-        Caveat(
-            CAVEAT_EMULATOR_CONFIG_UNREAD,
-            f"whether {card.token} has cheat loading switched on is not established — the "
-            f"setting lives in {config_path}, which this answer reads for the directory and "
-            "not for the switch, because the card states none",
-            {"emulator": card.token, "config": config_path},
-        )
-    )
+    if isinstance(resolved, Unresolved):
+        return resolved
+    directory, physical, caveats = resolved
     sources = [
         f"mod card '{card.token}': the directory is [{setting.section}] {setting.key} in the "
         f"emulator's own configuration — {setting.citation}",
