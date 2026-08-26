@@ -2913,7 +2913,9 @@ def _pcsx2_standalone_core(
         )
     values = qt_ini.values(result.text or "") if result.status == READ_OK else {}
     data_root = os.path.join(config_home, _PCSX2_DATA_ROOT)
-    stated_dir = values.get(_PCSX2_BIOS_DIR_KEY, "")
+    # Both keys the way the emulator matches them (#295): CSimpleIniA is
+    # ASCII case-insensitive (:func:`atlas.qt_ini.simpleini_value`).
+    stated_dir = qt_ini.simpleini_value(values, *_PCSX2_BIOS_DIR_KEY)[0] or ""
     _expect_card_keys(
         card, ("/".join(_PCSX2_BIOS_DIR_KEY), "/".join(_PCSX2_BIOS_NAME_KEY))
     )
@@ -2941,7 +2943,7 @@ def _pcsx2_standalone_core(
                 [],
             )
         bios_dir = host
-    name = values.get(_PCSX2_BIOS_NAME_KEY, "")
+    name = qt_ini.simpleini_value(values, *_PCSX2_BIOS_NAME_KEY)[0] or ""
     if not name:
         caveats.append(
             Caveat(
@@ -3477,7 +3479,9 @@ def _duckstation_standalone_core(
     searched: list[str] = []
     for region, key in search.region_keys:
         key_section, key_name = key.split("/", 1)
-        value = read.values.get((key_section, key_name), "")
+        # The key the way the emulator matches it (#295): CSimpleIniA is
+        # ASCII case-insensitive (:func:`atlas.qt_ini.simpleini_value`).
+        value = qt_ini.simpleini_value(read.values, key_section, key_name)[0] or ""
         if not value:
             searched.append(region)
             continue

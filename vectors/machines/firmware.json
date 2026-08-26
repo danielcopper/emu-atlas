@@ -9942,6 +9942,221 @@
           ]
         }
       }
+    },
+    {
+      "name": "duckstation-a-case-variant-spelling-of-the-bios-keys-governs",
+      "rationale": "[bios] searchdirectory and pathntscu are the [BIOS] SearchDirectory and PathNTSCU keys to the running emulator (CSimpleIniA, ini_settings_interface.h:65 at 64655818e): the search runs in the configured directory and the named NTSC-U image scopes the alternatives exactly as the canonical spellings would. An exact-case lookup would have searched the compiled default below the DataRoot and found nothing (#295).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[bios]\nsearchdirectory = /mnt/sd/retrodeck/bios\npathntscu = scph5501.bin\nPathNTSCJ = \nPathPAL = \n",
+          "/mnt/sd/retrodeck/bios/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "size": 524288
+          },
+          "/mnt/sd/retrodeck/bios/mpr-17933.bin": {
+            "md5": "85ec9ca47d8f6807718151cbcca8b964",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "DuckStation (Legacy) (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "alternatives": [
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": null,
+                      "system": "psx",
+                      "system_source": "card",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "regions": [
+                        "ntsc-j",
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION"
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                    "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
+                    "region": "ntsc-u",
+                    "token": "DUCKSTATION",
+                    "table": "64655818e"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-case-variant-spelling-of-the-bios-keys-governs",
+      "rationale": "[folders] bios and [filenames] bios are the [Folders] Bios and [Filenames] BIOS keys to the running emulator (CSimpleIniA, INISettingsInterface.h:66 at v2.6.3), so the configured BIOS directory and the chosen image govern. An exact-case lookup would have read both as unset and answered the compiled bios default with no image chosen (#295).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[folders]\nbios = /mnt/sd/retrodeck/bios\n[filenames]\nbios = scph39001.bin\n",
+          "/mnt/sd/retrodeck/bios/scph39001.bin": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "PCSX2 (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "ps2",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "scph39001.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph39001.bin",
+                  "declared": "scph39001.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "PCSX2 (Standalone)",
+                    "token": "PCSX2"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
     }
   ]
 }

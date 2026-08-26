@@ -16,10 +16,17 @@ What does live here beside it is one *named* reading — :func:`from_chars_bool`
 — because two of the four emulators share it byte for byte and neither owns a
 module the other could import. It is named after the upstream function it
 mirrors and carries its citation, so it reads as one emulator family's own
-value grammar rather than as this format's.
+value grammar rather than as this format's. :func:`simpleini_value` is the
+same kind of resident (#295): the case-insensitive (section, key) match two
+emulators perform through ``CSimpleIniA`` and a third performs through its own
+``IniFile``, needed by :mod:`atlas.installations`, :mod:`atlas.firmware` and
+:mod:`atlas.duckstation` alike — and this is the one module all three already
+read.
 """
 
 from __future__ import annotations
+
+from collections.abc import Mapping
 
 
 def unescape_section(name: str) -> str:
@@ -83,6 +90,60 @@ def from_chars_bool(value: str | None) -> bool | None:
         if literal.startswith(value.casefold()):
             return False
     return None
+
+
+def ascii_locase(text: str) -> str:
+    """SI_GenericNoCase's lowering: ``A-Z`` only, nothing else folds.
+
+    Python's ``casefold`` folds more than ASCII; the emulators' comparators
+    do not (SimpleIni.h:2916-2931 at PCSX2 v2.6.3, the same generic class at
+    DuckStation's pin; Dolphin's ``Common::ToLower`` is
+    ``std::tolower(ch, std::locale::classic())``, StringUtil.h:306-308 at
+    2603a, which folds the same 26 characters), and mirroring the fold
+    exactly is the difference between reading the file the way the emulator
+    does and the way a reasonable ini reader would.
+    """
+    return "".join(chr(ord(ch) + 32) if "A" <= ch <= "Z" else ch for ch in text)
+
+
+def simpleini_value(
+    values: Mapping[tuple[str, str], str], section: str, key: str
+) -> tuple[str | None, str]:
+    """The value ``CSimpleIniA`` hands back for (section, key), and the spelling that carried it.
+
+    Both emulators that keep their folders in an ini read it through
+    ``CSimpleIniA``, whose comparator is ASCII case-insensitive on Linux
+    (PCSX2 v2.6.3: INISettingsInterface.h:66, SimpleIni.h:2882-2887 define
+    SI_NO_CONVERSION, :3629-3634 pick SI_GenericNoCase, :3642-3643 the
+    typedef; the same chain at stenzek/duckstation@64655818e,
+    ini_settings_interface.h:65 and its vendored SimpleIni.h:3593-3607). A
+    file carrying two case-spellings of one key collapses them into one entry
+    with the last occurrence winning (AddEntry assigns into the found key,
+    SimpleIni.h:2042-2150) — mirrored here by taking the last matching entry
+    in file order, exact for any file that spells each variant at most once.
+    The spelling rides back for the reading's own sentence, because the
+    shipped RetroDECK ini spells PCSX2's key another way than the source
+    reads it, which is the trap issue #225 turned on.
+
+    Dolphin.ini is not a Qt settings file and not SimpleIni, but its own
+    reader matches the same way, so the same mirror serves it (#295): keys
+    live in a ``CaseInsensitiveLess`` map (IniFile.h:64 at dolphin 2603a),
+    sections are found by ``CaseInsensitiveEquals`` (IniFile.cpp:130-146,
+    case-variant headers merged at :289), a duplicate key's last value wins
+    (``insert_or_assign``, :47-49 from the parse at :308), and the config
+    layer the values land in keys them by ``strcasecmp`` on section and key
+    (BaseConfigLoader.cpp:144-181, Layer.h:56, ConfigInfo.cpp:18-29) — the
+    identical chain at PrimeHack's pins (shiiion/dolphin@81bfb96
+    IniFile.h:89, @53f53e0 IniFile.h:64, both ConfigInfo.cpp via strcasecmp).
+    """
+    found: str | None = None
+    spelled = key
+    lowered = (ascii_locase(section), ascii_locase(key))
+    for (stated_section, stated_key), value in values.items():
+        if (ascii_locase(stated_section), ascii_locase(stated_key)) == lowered:
+            found = value
+            spelled = stated_key
+    return found, spelled
 
 
 def values(text: str) -> dict[tuple[str, str], str]:

@@ -5036,13 +5036,17 @@ def _pcsx2_texture_placement(
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     setting = card.directory
-    raw_dir = values.get((setting.section, setting.key))
+    # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
+    # case-insensitive, so a case-variant spelling governs here as it does
+    # in the running emulator (:func:`atlas.qt_ini.simpleini_value`).
+    raw_dir, dir_spelled = _simpleini_value(values, setting.section, setting.key)
     resolved, _ = _pcsx2_folder_below_dataroot(
         raw_dir,
         key=setting.key,
         default=setting.default,
         default_citation=setting.citation,
         data_root=data_root,
+        spelled=dir_spelled,
     )
     if resolved is None:
         assert raw_dir is not None  # only an absolute value leaves the helper unresolved
@@ -5065,7 +5069,7 @@ def _pcsx2_texture_placement(
             f"texture card {card.token!r} states no switch and this resolver reads one "
             "— the card and the code shipped out of step"
         )
-    raw_switch = values.get((switch.section, switch.key))
+    raw_switch, _ = _simpleini_value(values, switch.section, switch.key)
     parsed_switch = qt_ini.from_chars_bool(raw_switch)
     # The card's own default is atlas's word, not an ini value, so it keeps
     # its plain comparison; the live value goes through the emulator's reading.
@@ -5191,13 +5195,14 @@ def _pcsx2_game_settings_caveat(
     every other path this configuration names; one with no host spelling is
     that same unread state, because the listing cannot be made from here.
     """
-    raw = values.get(("Folders", "GameSettings"))
+    raw, spelled = _simpleini_value(values, "Folders", "GameSettings")
     resolved, _ = _pcsx2_folder_below_dataroot(
         raw,
         key="GameSettings",
         default="gamesettings",
         default_citation="Pcsx2Config.cpp:2290",
         data_root=data_root,
+        spelled=spelled,
     )
     if resolved is None:
         assert raw is not None  # only an absolute value leaves the helper unresolved
@@ -5305,7 +5310,10 @@ def _duckstation_texture_placement(
             "where it reads texture packs from is unknowable here",
             {"emulator": card.token, "config": read.unreadable},
         )
-    configured = read.values.get((setting.section, setting.key), "")
+    # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
+    # case-insensitive, so a case-variant spelling governs here as it does
+    # in the running emulator (:func:`atlas.qt_ini.simpleini_value`).
+    configured = _simpleini_value(read.values, setting.section, setting.key)[0] or ""
     if os.path.isabs(configured):
         host = sandbox.host(setting.key, configured)
         if host.path is None:
@@ -5509,21 +5517,37 @@ _DOLPHIN_DEVICE_NONE = 255
 _DOLPHIN_SLOT_DEFAULTS = {"A": _DOLPHIN_DEVICE_FOLDER, "B": _DOLPHIN_DEVICE_NONE}
 
 
-def _parse_sectioned_ini(text: str) -> dict[str, dict[str, str]]:
-    """``key = value`` lines under ``[section]`` headers — Dolphin.ini's own shape."""
-    sections: dict[str, dict[str, str]] = {"": {}}
-    current = sections[""]
+def _parse_sectioned_ini(text: str) -> dict[tuple[str, str], str]:
+    """``key = value`` lines under ``[section]`` headers — Dolphin.ini, kept as written.
+
+    The mapping keeps the file's own spellings in file order; *matching* is
+    the lookup's job, and it is ASCII case-insensitive with the last
+    occurrence winning, because that is how the emulator reads this file
+    (#295): sections are found by ``CaseInsensitiveEquals`` and case-variant
+    headers merge (IniFile.cpp:130-146, :289 at dolphin 2603a), keys live in
+    a ``CaseInsensitiveLess`` map where a duplicate's last value wins
+    (IniFile.h:64; ``insert_or_assign``, IniFile.cpp:47-49 from the parse at
+    :308), and the config layer the values land in keys them by
+    ``strcasecmp`` on section and key (BaseConfigLoader.cpp:144-181,
+    Layer.h:56, ConfigInfo.cpp:18-29) — the identical chain at PrimeHack's
+    pins (shiiion/dolphin@81bfb96 IniFile.h:89, @53f53e0 IniFile.h:64). An
+    exact-duplicate key collapses at parse here the way it does upstream;
+    case-variant duplicates stay separate entries and the lookup
+    (:func:`atlas.qt_ini.simpleini_value`) takes the last in file order.
+    """
+    parsed: dict[tuple[str, str], str] = {}
+    section = ""
     for raw_line in text.splitlines():
         line = raw_line.strip()
         if not line or line.startswith(("#", ";")):
             continue
         if line.startswith("[") and line.endswith("]"):
-            current = sections.setdefault(line[1:-1], {})
+            section = line[1:-1]
             continue
         key, sep, value = line.partition("=")
         if sep:
-            current[key.strip()] = value.strip()
-    return sections
+            parsed[(section, key.strip())] = value.strip()
+    return parsed
 
 
 @dataclass(frozen=True, slots=True)
@@ -5662,13 +5686,18 @@ def _dolphin_reading(
 
 def _dolphin_slot(
     letter: str,
-    core: Mapping[str, str],
+    values: Mapping[tuple[str, str], str],
     sandbox: _Sandbox,
     gc_root: str,
     cite: "_Cite",
 ) -> _DolphinSlot:
-    """One slot read the way the emulator reads it: device id first, then the path."""
-    raw_value = core.get(f"Slot{letter}")
+    """One slot read the way the emulator reads it: device id first, then the path.
+
+    Every key is matched ASCII case-insensitively, last occurrence winning,
+    because that is the emulator's own matching (the chain is on
+    :func:`_parse_sectioned_ini`, #295).
+    """
+    raw_value, _ = _simpleini_value(values, "Core", f"Slot{letter}")
     try:
         device = int(raw_value) if raw_value is not None else _DOLPHIN_SLOT_DEFAULTS[letter]
     except ValueError:
@@ -5678,11 +5707,19 @@ def _dolphin_slot(
         return _DolphinSlot(mode="none", readings=(slot_reading,))
     if device == _DOLPHIN_DEVICE_FOLDER:
         slot = _dolphin_folder_slot(
-            letter, core.get(f"GCIFolder{letter}Path"), sandbox, gc_root, cite
+            letter,
+            _simpleini_value(values, "Core", f"GCIFolder{letter}Path")[0],
+            sandbox,
+            gc_root,
+            cite,
         )
     elif device == _DOLPHIN_DEVICE_RAW:
         slot = _dolphin_raw_slot(
-            letter, core.get(f"Memcard{letter}Path"), sandbox, gc_root, cite
+            letter,
+            _simpleini_value(values, "Core", f"Memcard{letter}Path")[0],
+            sandbox,
+            gc_root,
+            cite,
         )
     elif device == _DOLPHIN_DEVICE_AGP:
         return _DolphinSlot(
@@ -5887,7 +5924,7 @@ def _unnamed_tree_placement(
 
 
 def _dolphin_wii_answer(
-    general: Mapping[str, str],
+    values: Mapping[tuple[str, str], str],
     *,
     machine: Machine,
     sandbox: _Sandbox,
@@ -5901,15 +5938,17 @@ def _dolphin_wii_answer(
     ``NANDRootPath`` governs where the NAND lives (the default is the ``Wii``
     tree below the user directory, CommonPaths.h:49); the saves inside it are
     ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at 2603a), the title
-    id a fact of the disc that no read of the content path recovers.
+    id a fact of the disc that no read of the content path recovers. The key
+    is matched the way the emulator matches it — ASCII case-insensitively
+    (the chain is on :func:`_parse_sectioned_ini`, #295).
     """
     cite = _cites(card, homes)
-    configured = general.get("NANDRootPath")
+    configured, spelled = _simpleini_value(values, "General", "NANDRootPath")
     caveats = [*extra_caveats]
     if configured:
         resolved = sandbox.host("NANDRootPath", configured)
         nand_root = resolved.path
-        reading = _dolphin_reading("NANDRootPath", configured, f'Dolphin.ini: [General] NANDRootPath = "{configured}"')
+        reading = _dolphin_reading("NANDRootPath", configured, f'Dolphin.ini: [General] {spelled} = "{configured}"')
         if nand_root is None:
             caveats.append(
                 Caveat(
@@ -5990,12 +6029,11 @@ def _dolphin_savefile_placement(
             "sit in the card slots and where the trees point is unknowable here",
             {"emulator": card.token, "config": ini_path},
         )
-    sections = _parse_sectioned_ini(result.text) if result.status == READ_OK and result.text else {}
+    values = _parse_sectioned_ini(result.text) if result.status == READ_OK and result.text else {}
     stated_ini = ini_path if result.status == READ_OK else None
-    core = sections.get("Core", {})
     if system == "wii":
         return _dolphin_wii_answer(
-            sections.get("General", {}),
+            values,
             machine=machine,
             sandbox=sandbox,
             homes=homes,
@@ -6013,11 +6051,11 @@ def _dolphin_savefile_placement(
             {"core": card.token, "reason": f"{key} is set"},
         )
         for key in ("GCIFolderAPathOverride", "GCIFolderBPathOverride")
-        if core.get(key)
+        if _simpleini_value(values, "Core", key)[0]
     )
     slots = (
-        _dolphin_slot("A", core, sandbox, gc_root, cite),
-        _dolphin_slot("B", core, sandbox, gc_root, cite),
+        _dolphin_slot("A", values, sandbox, gc_root, cite),
+        _dolphin_slot("B", values, sandbox, gc_root, cite),
     )
     return _dolphin_gc_answer(
         slots,
@@ -6855,12 +6893,13 @@ def _duckstation_shared_slot(
 ) -> _DuckSlot:
     """The shared card: ``CardXPath`` — absolute or Directory-relative — else the default name."""
     n = slot + 1
-    raw_path = values.get(("MemoryCards", f"Card{n}Path"), "")
+    found_path, path_spelled = _simpleini_value(values, "MemoryCards", f"Card{n}Path")
+    raw_path = found_path or ""
     path_reading = OptionReading(
         f"Card{n}Path",
         raw_path or None,
         (
-            f'settings.ini: [MemoryCards] Card{n}Path = "{raw_path}"'
+            f'settings.ini: [MemoryCards] {path_spelled} = "{raw_path}"'
             if raw_path
             else f"Card{n}Path is unset — the default shared_card_{n}.mcd below the memory-card "
             "directory governs (settings.cpp:1785-1797)"
@@ -6931,13 +6970,13 @@ def _duckstation_per_game_slot(
         citation = "system.cpp:3663-3685 and settings.cpp:1799-1802 at 64655818e"
     else:
         name = f"{TEMPLATE_SAVE_ID}_{n}.mcd"
-        raw_playlist = values.get(("MemoryCards", "UsePlaylistTitle"))
+        raw_playlist, playlist_spelled = _simpleini_value(values, "MemoryCards", "UsePlaylistTitle")
         readings.append(
             OptionReading(
                 "UsePlaylistTitle",
                 raw_playlist,
                 (
-                    f'settings.ini: [MemoryCards] UsePlaylistTitle = "{raw_playlist}"'
+                    f'settings.ini: [MemoryCards] {playlist_spelled} = "{raw_playlist}"'
                     if raw_playlist is not None
                     else "UsePlaylistTitle is unset — the default true governs "
                     "(settings.cpp:401)"
@@ -6987,7 +7026,7 @@ def _duckstation_slot(
 ) -> _DuckSlot:
     """One slot read the way the emulator reads it: the type first, then its paths."""
     n = slot + 1
-    raw = values.get(("MemoryCards", f"Card{n}Type"))
+    raw, type_spelled = _simpleini_value(values, "MemoryCards", f"Card{n}Type")
     parsed = next(
         (
             t
@@ -6998,10 +7037,10 @@ def _duckstation_slot(
     )
     mode = parsed if parsed is not None else _DUCKSTATION_TYPE_DEFAULTS[slot]
     if parsed is not None:
-        provenance = f'settings.ini: [MemoryCards] Card{n}Type = "{raw}"'
+        provenance = f'settings.ini: [MemoryCards] {type_spelled} = "{raw}"'
     elif raw is not None:
         provenance = (
-            f'settings.ini sets Card{n}Type to "{raw}", a value ParseMemoryCardTypeName '
+            f'settings.ini sets {type_spelled} to "{raw}", a value ParseMemoryCardTypeName '
             f"does not know — the compiled default {mode} governs (.value_or, "
             "settings.cpp:391-398)"
         )
@@ -7085,12 +7124,13 @@ def _duckstation_savefile_placement(
     if refusal is not None:
         return refusal
     caveats: list[Caveat] = [*extra_caveats, *probe_caveats]
-    raw_dir = values.get(("MemoryCards", "Directory"), "")
+    found_dir, dir_spelled = _simpleini_value(values, "MemoryCards", "Directory")
+    raw_dir = found_dir or ""
     dir_reading = OptionReading(
         "Directory",
         raw_dir or None,
         (
-            f'settings.ini: [MemoryCards] Directory = "{raw_dir}"'
+            f'settings.ini: [MemoryCards] {dir_spelled} = "{raw_dir}"'
             if raw_dir
             else "Directory is unset — the default memcards below the DataRoot governs "
             "(settings.cpp:1943, :1974)"
@@ -7212,15 +7252,15 @@ def _pcsx2_slot_group(
     first use.
     """
     enable_key, filename_key, default_name, enabled_default = slot
-    raw_enable = values.get(("MemoryCards", enable_key))
+    raw_enable, enable_spelled = _simpleini_value(values, "MemoryCards", enable_key)
     parsed_enable = qt_ini.from_chars_bool(raw_enable)
     enabled = parsed_enable if parsed_enable is not None else enabled_default
     default_word = "true" if enabled_default else "false"
     if parsed_enable is not None:
-        enable_provenance = f'PCSX2.ini: [MemoryCards] {enable_key} = "{raw_enable}"'
+        enable_provenance = f'PCSX2.ini: [MemoryCards] {enable_spelled} = "{raw_enable}"'
     elif raw_enable is not None:
         enable_provenance = (
-            f'PCSX2.ini sets {enable_key} to "{raw_enable}", which FromChars<bool> reads as '
+            f'PCSX2.ini sets {enable_spelled} to "{raw_enable}", which FromChars<bool> reads as '
             f"neither true nor false — the default {default_word} governs "
             "(INISettingsInterface.cpp:198-210 at v2.6.3)"
         )
@@ -7229,14 +7269,14 @@ def _pcsx2_slot_group(
     readings = [OptionReading(enable_key, raw_enable, enable_provenance, None)]
     if not enabled:
         return "off", None, tuple(readings), ()
-    raw_name = values.get(("MemoryCards", filename_key))
+    raw_name, name_spelled = _simpleini_value(values, "MemoryCards", filename_key)
     name = raw_name if raw_name is not None else default_name
     readings.append(
         OptionReading(
             filename_key,
             raw_name,
             (
-                f'PCSX2.ini: [MemoryCards] {filename_key} = "{raw_name}"'
+                f'PCSX2.ini: [MemoryCards] {name_spelled} = "{raw_name}"'
                 if raw_name is not None
                 else f"{filename_key} is unset — the default {default_name} governs "
                 "(MemoryCardFile.cpp:244-250)"
@@ -7302,13 +7342,14 @@ def _pcsx2_memcards_dir(
     ini_path: str,
 ) -> tuple[str | None, OptionReading, Unresolved | None]:
     """(memory-card directory, its reading, the refusal if any) — one shape per return."""
-    raw_dir = values.get(("Folders", "MemoryCards"))
+    raw_dir, dir_spelled = _simpleini_value(values, "Folders", "MemoryCards")
     resolved, provenance = _pcsx2_folder_below_dataroot(
         raw_dir,
         key="MemoryCards",
         default="memcards",
         default_citation="Pcsx2Config.cpp:2259",
         data_root=data_root,
+        spelled=dir_spelled,
     )
     reading = OptionReading("MemoryCards", raw_dir, provenance, None)
     if resolved is not None:
@@ -8654,45 +8695,12 @@ def _standalone_savestate_settings(card: StandaloneSavestateCard) -> emulator_se
     return emulator_settings.settings_file(card.token, card.settings)
 
 
-def _ascii_locase(text: str) -> str:
-    """SI_GenericNoCase's lowering: ``A-Z`` only, nothing else folds.
-
-    Python's ``casefold`` folds more than ASCII; the emulator's comparator
-    does not (SimpleIni.h:2916-2931 at PCSX2 v2.6.3, the same generic class at
-    DuckStation's pin), and mirroring it exactly is the difference between
-    reading the file the way the emulator does and the way a reasonable ini
-    reader would.
-    """
-    return "".join(chr(ord(ch) + 32) if "A" <= ch <= "Z" else ch for ch in text)
-
-
-def _simpleini_value(
-    values: Mapping[tuple[str, str], str], section: str, key: str
-) -> tuple[str | None, str]:
-    """The value ``CSimpleIniA`` hands back for (section, key), and the spelling that carried it.
-
-    Both emulators that keep their folders in an ini read it through
-    ``CSimpleIniA``, whose comparator is ASCII case-insensitive on Linux
-    (PCSX2 v2.6.3: INISettingsInterface.h:66, SimpleIni.h:2882-2887 define
-    SI_NO_CONVERSION, :3629-3634 pick SI_GenericNoCase, :3642-3643 the
-    typedef; the same chain at stenzek/duckstation@64655818e,
-    ini_settings_interface.h:65 and its vendored SimpleIni.h:3593-3607). A
-    file carrying two case-spellings of one key collapses them into one entry
-    with the last occurrence winning (AddEntry assigns into the found key,
-    SimpleIni.h:2042-2150) — mirrored here by taking the last matching entry
-    in file order, exact for any file that spells each variant at most once.
-    The spelling rides back for the reading's own sentence, because the
-    shipped RetroDECK ini spells PCSX2's key another way than the source
-    reads it, which is the trap issue #225 turned on.
-    """
-    found: str | None = None
-    spelled = key
-    lowered = (_ascii_locase(section), _ascii_locase(key))
-    for (stated_section, stated_key), value in values.items():
-        if (_ascii_locase(stated_section), _ascii_locase(stated_key)) == lowered:
-            found = value
-            spelled = stated_key
-    return found, spelled
+# The case-insensitive (section, key) match moved to atlas.qt_ini (#295): the
+# firmware and DuckStation modules read the same ini files and needed the same
+# mirror, and qt_ini is the module all three already import. The private name
+# stays bound here because this module is where every route that matches an
+# ini key addresses it.
+_simpleini_value = qt_ini.simpleini_value
 
 
 def _savestate_names_caveat(
@@ -10421,7 +10429,10 @@ def _duckstation_mod_placement(
             "where it reads cheat files from is unknowable here",
             {"emulator": card.token, "config": read.unreadable},
         )
-    configured = read.values.get((setting.section, setting.key), "")
+    # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
+    # case-insensitive, so a case-variant spelling governs here as it does
+    # in the running emulator (:func:`atlas.qt_ini.simpleini_value`).
+    configured = _simpleini_value(read.values, setting.section, setting.key)[0] or ""
     if os.path.isabs(configured):
         host = sandbox.host(setting.key, configured)
         if host.path is None:
