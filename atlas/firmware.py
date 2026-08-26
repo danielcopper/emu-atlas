@@ -1297,6 +1297,11 @@ class FirmwareAlternatives:
                 raise ValueError(
                     "FirmwareAlternatives: every option must state the regions whose launch it serves"
                 )
+            if len(set(option.regions)) != len(option.regions):
+                raise ValueError(
+                    "FirmwareAlternatives: an option repeats a region within its own tuple — "
+                    "one region, one statement"
+                )
             overlap = claimed.intersection(option.regions)
             if overlap:
                 raise ValueError(

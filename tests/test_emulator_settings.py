@@ -285,6 +285,23 @@ class TestTheLoaderRefusesWhatItCannotStand:
         with pytest.raises(ValueError, match="begins with the emulator's own directory"):
             load_emulator_settings(text)
 
+    def test_a_path_that_repeats_an_installations_spelling_is_refused(self):
+        # The guard covers every stated spelling: a path spelled with an
+        # override installation's directory name is the same second copy.
+        directory = _directory(
+            installations={
+                "org.demo.Demo": {
+                    "name": "other",
+                    "citation": "y",
+                    "anchors": _anchors("other", "bin/demo", flatpak="org.demo.Demo"),
+                }
+            }
+        )
+        spec = {"bases": ["config"], "path": "other/demo.ini", "citation": "x"}
+        text = _table(directory=directory, **{"demo.ini": spec})
+        with pytest.raises(ValueError, match="begins with the emulator's own directory 'other'"):
+            load_emulator_settings(text)
+
     def test_a_base_outside_the_vocabulary_is_refused(self):
         text = _table(**{"demo.ini": {"bases": ["cache"], "path": "demo.ini", "citation": "x"}})
         with pytest.raises(ValueError, match="bases"):

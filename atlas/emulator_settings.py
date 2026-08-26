@@ -251,11 +251,15 @@ def _file(token: str, name: str, entry: Any, directory: EmulatorDirectory) -> Se
     if len(set(bases)) != len(bases):
         raise ValueError(f"{where}.bases repeats a base, so a probe would read one twice")
     path = _relative(entry["path"], f"{where}.path")
-    if path.split("/")[0] == directory.default.name.split("/")[0]:
-        raise ValueError(
-            f"{where}.path begins with the emulator's own directory {directory.default.name!r} — "
-            "the path is stated below that directory, which is named once for the emulator"
-        )
+    # Every stated spelling, not just the default: a path spelled with an
+    # installation's own directory name would smuggle in exactly the second
+    # copy this guard exists to refuse.
+    for stated in (directory.default, *directory.installations.values()):
+        if path.split("/")[0] == stated.name.split("/")[0]:
+            raise ValueError(
+                f"{where}.path begins with the emulator's own directory {stated.name!r} — "
+                "the path is stated below that directory, which is named once for the emulator"
+            )
     citation = entry["citation"]
     if not isinstance(citation, str) or not citation:
         raise ValueError(f"{where}.citation: expected a non-empty string, got {citation!r}")
