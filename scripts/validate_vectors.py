@@ -295,6 +295,7 @@ KNOWN_CAVEAT_CODES = {
     "per-game-overrides-present",
     "per-game-override",
     "per-game-layer-unread",
+    "per-game-build-layer-unread",
     "unverified-version",
     "invalid-save-directory",
     "invalid-screenshot-directory",

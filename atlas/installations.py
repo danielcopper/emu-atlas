@@ -177,6 +177,7 @@ from atlas.placement import (
     CAVEAT_INVALID_SAVE_DIRECTORY,
     CAVEAT_INVALID_SCREENSHOT_DIRECTORY,
     CAVEAT_UNVERIFIED_VERSION,
+    CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
     CAVEAT_PER_GAME_LAYER_UNREAD,
     CAVEAT_PER_GAME_OVERRIDE,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
@@ -5487,6 +5488,16 @@ def _standalone_texture_placement(
                 "does not read (standalone emulator configuration is its own roadmap block)",
                 {"emulator": card.token, "config": config_path},
             ),
+            # The Dolphin family reads this tree through a directory index one
+            # per-game key re-points, so the fixed join above is the answer for
+            # every game that carries no such file. Empty for every other token.
+            *_dolphin_game_settings_caveats(
+                machine,
+                token=card.token,
+                homes=homes,
+                keys=_DOLPHIN_LOAD_LAYER_KEYS,
+                governs="the Load directory this texture tree hangs below",
+            ),
         ),
         physical_dir=physical_dir,
     )
@@ -5552,6 +5563,205 @@ _DOLPHIN_CITATION_SLOTS = frozenset(
         "wii_dir",  # the NAND's default directory below the user directory
     }
 )
+
+@dataclass(frozen=True, slots=True)
+class _DolphinGameLayer:
+    """One build's evidence for the per-game ini layer, in that build's own lines.
+
+    Dolphin and its PrimeHack fork load **two** per-game layers over the whole
+    configuration while a game runs, and both outrank ``Dolphin.ini``. They sit
+    in different places and only one of them is a directory atlas can list:
+
+    * ``LocalGame`` reads ``<user directory>/GameSettings/`` — the XDG data tree
+      every other Dolphin answer already resolves, so its contents are a
+      listing, counted like PCSX2's (:func:`_pcsx2_game_settings_caveat`).
+    * ``GlobalGame`` reads ``GetSysDirectory() + GameSettings/`` — the build's
+      own tree, and ``GetSysDirectory()`` is the compile-time ``DATA_DIR "sys/"``
+      that is written **nowhere on a running machine**. Nothing atlas reads
+      spells it, so it is stated and never counted.
+
+    Which is why this record lives in code rather than on a card: it is the
+    emulator's own source, shared by the save, texture and mod answers alike,
+    and no one of those cards owns it. What it must NOT do is state one build's
+    lines for another's answer, which is why it is keyed by the same
+    (token, flatpak app id) identity the cards use — PrimeHack's RetroDECK
+    build and the Flathub one are three years apart.
+    """
+
+    name: str
+    build: str
+    # ``Load``: the GlobalGame branch opens the build's Sys tree, the else
+    # branch the user's directory.
+    loader: str
+    # Every mapped key of every section is set into the layer; only ``Save``
+    # filters. This is what makes the reach the whole key space.
+    unfiltered: str
+    # LocalGame > GlobalGame > CommandLine > Base.
+    order: str
+    # ``D_GAMESETTINGS_IDX = D_USER_IDX + GAMESETTINGS_DIR DIR_SEP``.
+    user_dir: str
+    # ``GetSysDirectory()`` is the compile-time ``DATA_DIR "sys/"``.
+    sys_dir: str
+    # Where the layers are added, and from where — the reachability proof:
+    # this runs before the emulated hardware opens anything.
+    added: str
+
+
+# Keyed the way every standalone registry is: the token, and the flatpak app id
+# where the build differs per installation (#246). ``None`` covers an
+# arrangement's own bundled build. PrimeHack's Flathub build is a later rebase
+# onto modern Dolphin, so it shares Dolphin's line numbers rather than the
+# RetroDECK component's — stating 81bfb96's lines for it would be exactly the
+# mistake the cards' ``citations.installations`` block exists to prevent.
+_DOLPHIN_GAME_LAYERS: dict[tuple[str, str | None], _DolphinGameLayer] = {}
+
+
+def _register_dolphin_game_layers() -> None:
+    """Build the per-build layer table — one modern-Dolphin set, one fork set."""
+    modern = {
+        "loader": "GameConfigLoader.cpp:185-197",
+        "unfiltered": "GameConfigLoader.cpp:261-277, the IsSettingSaveable filter being Save's own at :294",
+        "order": "Enums.h:39-47",
+        "user_dir": "FileUtil.cpp:843",
+        "sys_dir": "FileUtil.cpp:760-793",
+        "added": "ConfigManager.cpp:254-255, from BootManager.cpp:56",
+    }
+    fork = {
+        "loader": "GameConfigLoader.cpp:176-198",
+        "unfiltered": "GameConfigLoader.cpp:253-272, the IsSettingSaveable filter being Save's own at :292",
+        "order": "Enums.h:40-48",
+        "user_dir": "FileUtil.cpp:840",
+        "sys_dir": "FileUtil.cpp:758-791",
+        "added": "ConfigManager.cpp:189-190, from BootManager.cpp:65",
+    }
+    for key, name, build, lines in (
+        (("DOLPHIN", None), "Dolphin", "dolphin 2603a", modern),
+        (("DOLPHIN", "org.DolphinEmu.dolphin-emu"), "Dolphin", "dolphin 2603a", modern),
+        (("PRIMEHACK", None), "PrimeHack", "shiiion/dolphin 81bfb96", fork),
+        (
+            ("PRIMEHACK", "io.github.shiiion.primehack"),
+            "PrimeHack",
+            "shiiion/dolphin 53f53e0",
+            modern,
+        ),
+    ):
+        _DOLPHIN_GAME_LAYERS[key] = _DolphinGameLayer(name=name, build=build, **lines)
+
+
+_register_dolphin_game_layers()
+
+# The user directory's per-game tree, below the emulator's own XDG data root —
+# the LocalGame layer's source (FileUtil.cpp:843 at dolphin 2603a).
+_DOLPHIN_GAME_SETTINGS_DIR = "GameSettings"
+
+
+def _dolphin_game_settings_caveats(
+    machine: Machine,
+    *,
+    token: str,
+    homes: _XdgHomes,
+    keys: tuple[str, ...],
+    governs: str,
+) -> tuple[Caveat, ...]:
+    """The per-game ini layers, stated beside a Dolphin-family answer.
+
+    Two facts, and a caller has to be able to tell them apart, so they are two
+    codes. The **user** directory is a listing atlas makes: where files sit
+    there, ``per-game-overrides-present`` says how many and where, and where the
+    listing fails ``per-game-layer-unread`` says the check did not happen — the
+    PCSX2 vocabulary unchanged, because the situation is unchanged. The
+    **build's** directory is not a listing atlas can make at all: its location
+    is compiled into the binary, so ``per-game-build-layer-unread`` states it
+    and no count of it will ever appear.
+
+    That second caveat is unconditional, and that is the point. Under the PCSX2
+    shape, silence means "this answer holds for every game" — and for a
+    Dolphin-family emulator that would be false whatever the user's directory
+    holds, because the build ships a layer of its own that is read regardless.
+    So a Dolphin answer is never silent here.
+
+    Neither caveat claims a key is actually set. Nothing filters what a game ini
+    may carry (the loader sets every mapped key; only ``Save`` filters), so the
+    honest statement is that these keys CAN be answered differently for a game
+    this answer cannot name — never that any file does so.
+
+    *keys* are section-qualified the way a game ini must spell them: the
+    memory-card keys live in ``[Core]``, but ``NANDRootPath`` and ``LoadPath``
+    are reached through the free-form ``<System>.<Section>`` parse, and the
+    name that parse resolves for ``System::Main`` is ``Dolphin`` — so the
+    section is ``[Dolphin.General]``, and ``[Main.General]`` is dropped with a
+    warning. *governs* says, in the answer's own terms, what those keys move.
+    """
+    layer = _DOLPHIN_GAME_LAYERS.get((token, homes.flatpak))
+    if layer is None:
+        return ()
+    spelled = ", ".join(keys)
+    plural = "keys" if len(keys) > 1 else "key"
+    directory = os.path.join(
+        homes.emulator_root(XDG_DATA, token), _DOLPHIN_GAME_SETTINGS_DIR
+    )
+    built_in = Caveat(
+        CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
+        f"{layer.name} loads a second per-game layer from its own build — the GameSettings "
+        f"directory below the Sys tree, whose location is compiled into the binary "
+        f"({layer.sys_dir} at {layer.build}) and written nowhere this machine can be read, so "
+        f"this answer never lists it and states no count for it. Nothing filters what such a "
+        f"file may set ({layer.unfiltered}), so the {plural} {spelled} — {governs} — can be "
+        f"answered differently there for a game this answer cannot name; the user's own "
+        f"{directory} outranks it ({layer.order})",
+        {"core": token, "key": spelled, "layer": "GlobalGame"},
+    )
+    listing = machine.glob(os.path.join(directory, _ANY_INI_GLOB))
+    if listing.status != GLOB_COMPLETE:
+        return (
+            Caveat(
+                CAVEAT_PER_GAME_LAYER_UNREAD,
+                f"{directory} could not be listed, so whether any game on this machine carries "
+                f"a per-game settings file of its own is unknown — {layer.name} layers such a "
+                f"file over the whole configuration while that game runs, above every value "
+                f"Dolphin.ini states ({layer.loader}, {layer.order} at {layer.build}), and the "
+                f"{plural} {spelled} — {governs} — would be read through it",
+                {"core": token, "dir": directory, "key": spelled},
+            ),
+            built_in,
+        )
+    if not listing.matches:
+        return (built_in,)
+    return (
+        Caveat(
+            CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+            f"{len(listing.matches)} game(s) on this machine carry a per-game settings file in "
+            f"{directory}, which {layer.name} layers over the whole configuration while that "
+            f"game runs, above every value Dolphin.ini states ({layer.loader}, {layer.order} at "
+            f"{layer.build}) — the {plural} {spelled} — {governs} — are read through that layer, "
+            f"so this answer is the one that holds for every game without such a file",
+            {
+                "core": token,
+                "count": str(len(listing.matches)),
+                "dir": directory,
+                "key": spelled,
+            },
+        ),
+        built_in,
+    )
+
+
+# The section-qualified keys each Dolphin-family answer depends on. The memory
+# card keys map through the legacy section table ([Core] -> {Main, "Core"});
+# the General ones only through the free-form <System>.<Section> parse, whose
+# name for System::Main is "Dolphin" — [Main.General] resolves to nothing.
+_DOLPHIN_GC_LAYER_KEYS = (
+    "[Core] MemcardAPath",
+    "[Core] MemcardBPath",
+    "[Core] GCIFolderAPath",
+    "[Core] GCIFolderBPath",
+)
+_DOLPHIN_WII_LAYER_KEYS = ("[Dolphin.General] NANDRootPath",)
+# One key moves both the texture tree and the graphics-mod tree: it re-points
+# D_LOAD_IDX, and the rebuild recomputes D_HIRESTEXTURES_IDX and
+# D_GRAPHICSMOD_IDX below it (FileUtil.cpp:967-972 at dolphin 2603a).
+_DOLPHIN_LOAD_LAYER_KEYS = ("[Dolphin.General] LoadPath",)
+
 _DOLPHIN_REGIONS = ("USA", "EUR", "JAP")
 _DOLPHIN_REGION_SPELLINGS = ("USA", "EUR", "JAP", "JPN", "DEV")
 _DOLPHIN_DEVICE_RAW = 1
@@ -6117,7 +6327,16 @@ def _dolphin_savefile_placement(
             homes=homes,
             ini_path=stated_ini,
             card=card,
-            extra_caveats=extra_caveats,
+            extra_caveats=(
+                *extra_caveats,
+                *_dolphin_game_settings_caveats(
+                    machine,
+                    token=card.token,
+                    homes=homes,
+                    keys=_DOLPHIN_WII_LAYER_KEYS,
+                    governs="where the Wii NAND lives",
+                ),
+            ),
         )
     gc_root = os.path.join(homes.emulator_root(XDG_DATA, card.token), "GC")
     override_caveats = tuple(
@@ -6141,7 +6360,17 @@ def _dolphin_savefile_placement(
         ini_path=stated_ini,
         card=card,
         cite=cite,
-        extra_caveats=(*extra_caveats, *override_caveats),
+        extra_caveats=(
+            *extra_caveats,
+            *override_caveats,
+            *_dolphin_game_settings_caveats(
+                machine,
+                token=card.token,
+                homes=homes,
+                keys=_DOLPHIN_GC_LAYER_KEYS,
+                governs="which file or folder each memory card slot reads",
+            ),
+        ),
     )
 
 
@@ -10603,6 +10832,18 @@ def _standalone_mod_placement(
             f"mod card '{card.token}': no switch is established for this emulator — neither a core "
             "option nor a setting anyone has found, so whether loading is on is not stated"
         )
+    # The same Load directory the texture answer hangs below: one per-game key
+    # re-points it and the graphics-mod tree moves with it. Empty for every
+    # other token.
+    caveats.extend(
+        _dolphin_game_settings_caveats(
+            machine,
+            token=card.token,
+            homes=homes,
+            keys=_DOLPHIN_LOAD_LAYER_KEYS,
+            governs="the Load directory these mod trees hang below",
+        )
+    )
     return ModPlacement(
         trees=tuple(trees),
         needs=(),

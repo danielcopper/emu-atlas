@@ -325,6 +325,21 @@ CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
 # "whether any does was not checked". ``data`` carries the directory and the
 # key the layer could have changed.
 CAVEAT_PER_GAME_LAYER_UNREAD = "per-game-layer-unread"
+# The fourth state, and the one Dolphin's shape needed: a per-game layer whose
+# DIRECTORY no read of the machine finds, because the emulator compiles it in.
+# Dolphin loads two such layers — the user's ``GameSettings/`` and a second one
+# below the build's own ``Sys`` tree, and the second lives at the compile-time
+# ``DATA_DIR "sys/"`` that is written nowhere on a running machine.
+# ``per-game-layer-unread`` is the wrong code for it: that one says a listing
+# atlas COULD make did not succeed, so a client can act — fix the permission,
+# read the directory itself. This one says no listing was ever possible from
+# here, so there is nothing to retry and no count will ever appear. Keeping
+# them apart is the whole point: one is a degraded check, the other is a
+# structural limit, and a client that treats them alike either retries forever
+# or gives up on a directory it could have read. ``data`` carries the keys the
+# layer could move and which layer it is (``layer``); it carries NO ``dir``,
+# and that absence is the honest half — atlas cannot spell this directory.
+CAVEAT_PER_GAME_BUILD_LAYER_UNREAD = "per-game-build-layer-unread"
 CAVEAT_UNVERIFIED_VERSION = "unverified-version"
 # The frontend writes this core no save file — established from its source, not
 # guessed — and what the core writes on its own is a different question nobody

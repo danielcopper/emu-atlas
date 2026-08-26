@@ -1824,6 +1824,245 @@ class TestDolphinStandaloneSaves:
         assert named.data["citation"] == "State.cpp:304-308"
 
 
+DOLPHIN_GAME_SETTINGS = (
+    f"{HOME}/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings"
+)
+PRIMEHACK_GAME_SETTINGS = (
+    f"{HOME}/.var/app/net.retrodeck.retrodeck/data/primehack/GameSettings"
+)
+DOLPHIN_PRIMEHACK_SYSTEMS = (
+    '<?xml version="1.0"?><systemList>'
+    "<system><name>gc</name><path>%ROMPATH%/gc</path><extension>.rvz</extension>"
+    '<command label="Dolphin (Standalone)">%EMULATOR_DOLPHIN% -b -e %ROM%</command>'
+    '<command label="PrimeHack (Standalone)">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>'
+    "</system>"
+    "<system><name>wii</name><path>%ROMPATH%/wii</path><extension>.rvz</extension>"
+    '<command label="Dolphin (Standalone)">%EMULATOR_DOLPHIN% -b -e %ROM%</command>'
+    "</system>"
+    "</systemList>"
+)
+
+
+class TestDolphinPerGameSettingsLayer:
+    """#301: the two per-game ini layers, stated beside every answer they reach.
+
+    Dolphin loads ``<user>/GameSettings/<id>.ini`` (LocalGame) *and*
+    ``<build Sys>/GameSettings/<id>.ini`` (GlobalGame) over the whole
+    configuration while a game runs, both above ``Dolphin.ini``. The first is a
+    directory atlas lists; the second lives at a compile-time path written
+    nowhere on the machine, so it is stated and never counted — and the two
+    are different codes precisely so a client can tell a check that failed
+    from a check that was never possible.
+    """
+
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: DOLPHIN_PRIMEHACK_SYSTEMS,
+    }
+
+    def _machine(self, files=None, **kwargs):
+        merged = dict(self.BASE)
+        merged.update(files or {})
+        dirs = ["/mnt/sd/retrodeck/saves", *kwargs.pop("dirs", [])]
+        return _retrodeck(merged, dirs=dirs, **kwargs)
+
+    def _entry(self, rd, system="gc", label="Dolphin (Standalone)"):
+        return next(e for e in rd.emulators_for(system).entries if e.label == label)
+
+    def _caveat(self, answer, code):
+        return next(c for c in answer.caveats if c.code == code)
+
+    def _codes(self, answer):
+        return [c.code for c in answer.caveats]
+
+    # -- the user directory: counted, exactly as PCSX2's is -------------------
+
+    def test_files_in_the_user_directory_are_counted_with_their_directory(self):
+        rd = self._machine(
+            {
+                f"{DOLPHIN_GAME_SETTINGS}/GALE01.ini": "[Core]\nMemcardAPath = /tmp/melee.raw\n",
+                f"{DOLPHIN_GAME_SETTINGS}/GZ2E01.ini": "[Core]\nMMU = True\n",
+            },
+            dirs=[DOLPHIN_GAME_SETTINGS],
+        )
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["count"] == "2"
+
+    def test_the_counted_caveat_names_the_directory_it_listed(self):
+        rd = self._machine(
+            {f"{DOLPHIN_GAME_SETTINGS}/GALE01.ini": "[Core]\nMMU = True\n"},
+            dirs=[DOLPHIN_GAME_SETTINGS],
+        )
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["dir"] == DOLPHIN_GAME_SETTINGS
+
+    def test_an_empty_user_directory_states_nothing_about_files_that_are_not_there(self):
+        rd = self._machine(dirs=[DOLPHIN_GAME_SETTINGS])
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in codes
+
+    def test_an_empty_user_directory_is_not_an_unread_one(self):
+        rd = self._machine(dirs=[DOLPHIN_GAME_SETTINGS])
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert atlas.CAVEAT_PER_GAME_LAYER_UNREAD not in codes
+
+    def test_a_user_directory_that_cannot_be_listed_says_the_check_did_not_happen(self):
+        # Silence would mean "no game overrides this", which a failed listing
+        # never established — the PCSX2 distinction, unchanged.
+        rd = self._machine(dirs=[DOLPHIN_GAME_SETTINGS], unlistable=[DOLPHIN_GAME_SETTINGS])
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+        assert stated.data["dir"] == DOLPHIN_GAME_SETTINGS
+
+    def test_a_user_directory_that_cannot_be_listed_claims_no_files_exist_there(self):
+        rd = self._machine(dirs=[DOLPHIN_GAME_SETTINGS], unlistable=[DOLPHIN_GAME_SETTINGS])
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in codes
+
+    # -- the build directory: stated, never counted ---------------------------
+
+    def test_the_build_layer_is_stated_even_where_the_user_has_no_file(self):
+        # The build ships its own GameSettings tree and reads it regardless, so
+        # silence here would claim this answer holds for every game.
+        rd = self._machine()
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD in codes
+
+    def test_the_build_layer_carries_no_directory_because_none_was_read(self):
+        # GetSysDirectory() is the compile-time DATA_DIR "sys/" — spelling a
+        # directory here would be a path atlas never established.
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
+        )
+        assert "dir" not in stated.data
+
+    def test_the_build_layer_names_which_layer_it_is(self):
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
+        )
+        assert stated.data["layer"] == "GlobalGame"
+
+    def test_the_build_layer_still_speaks_beside_a_counted_user_directory(self):
+        rd = self._machine(
+            {f"{DOLPHIN_GAME_SETTINGS}/GALE01.ini": "[Core]\nMMU = True\n"},
+            dirs=[DOLPHIN_GAME_SETTINGS],
+        )
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert codes.count(atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD) == 1
+
+    # -- the keys each answer depends on --------------------------------------
+
+    def test_the_gamecube_answer_names_the_memory_card_keys(self):
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
+        )
+        assert stated.data["key"] == (
+            "[Core] MemcardAPath, [Core] MemcardBPath, "
+            "[Core] GCIFolderAPath, [Core] GCIFolderBPath"
+        )
+
+    def test_the_wii_answer_names_the_nand_root_key(self):
+        # NANDRootPath is reached only through the free-form <System>.<Section>
+        # parse, and the name that parse resolves for System::Main is "Dolphin"
+        # — [Main.General] is dropped with a warning, so the section matters.
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd, system="wii").savefile_location(),
+            atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
+        )
+        assert stated.data["key"] == "[Dolphin.General] NANDRootPath"
+
+    def test_the_texture_answer_names_the_load_path_key(self):
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd).texture_pack_location(),
+            atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
+        )
+        assert stated.data["key"] == "[Dolphin.General] LoadPath"
+
+    def test_the_mod_answer_names_the_same_load_path_key(self):
+        # One key re-points D_LOAD_IDX and the rebuild moves the hires-texture
+        # and graphics-mod trees together (FileUtil.cpp:967-972).
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd).mod_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
+        )
+        assert stated.data["key"] == "[Dolphin.General] LoadPath"
+
+    # -- what stays silent ----------------------------------------------------
+
+    def test_the_savestate_answer_says_nothing_about_a_layer_that_cannot_reach_it(self):
+        # D_STATESAVES_IDX is a compiled join off D_USER_IDX, which no config
+        # key sets — a caveat here would manufacture doubt.
+        rd = self._machine(
+            {f"{DOLPHIN_GAME_SETTINGS}/GALE01.ini": "[Core]\nMMU = True\n"},
+            dirs=[DOLPHIN_GAME_SETTINGS],
+        )
+        codes = self._codes(self._entry(rd).savestate_location())
+        assert not [c for c in codes if c.startswith("per-game")]
+
+    # -- the citation belongs to the build ------------------------------------
+
+    def test_dolphins_statement_cites_the_dolphin_release_it_reads(self):
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
+        )
+        assert "dolphin 2603a" in stated.message
+
+    def test_primehacks_statement_cites_the_fork_revision_instead(self):
+        # A shared reading with one hard-coded citation would state Dolphin's
+        # evidence for the fork's answer; the fork's own lines differ.
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd, label="PrimeHack (Standalone)").savefile_location(),
+            atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
+        )
+        assert "shiiion/dolphin 81bfb96" in stated.message
+
+    def test_primehack_lists_its_own_user_directory_not_dolphins(self):
+        rd = self._machine(
+            {f"{PRIMEHACK_GAME_SETTINGS}/R3ME01.ini": "[Core]\nMMU = True\n"},
+            dirs=[PRIMEHACK_GAME_SETTINGS],
+        )
+        stated = self._caveat(
+            self._entry(rd, label="PrimeHack (Standalone)").savefile_location(),
+            atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+        )
+        assert stated.data["dir"] == PRIMEHACK_GAME_SETTINGS
+
+    # -- and nobody else grows a caveat ---------------------------------------
+
+    def test_an_emulator_with_no_such_layer_established_stays_silent(self):
+        # The table is keyed by token: PCSX2 has its own per-game helper and
+        # PPSSPP none at all, so neither grows Dolphin's statement.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+                DOLPHIN_ESDE: (
+                    '<?xml version="1.0"?><systemList>'
+                    "<system><name>psp</name><path>%ROMPATH%/psp</path><extension>.iso</extension>"
+                    '<command label="PPSSPP (Standalone)">%EMULATOR_PPSSPP% %ROM%</command>'
+                    "</system></systemList>"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        codes = self._codes(self._entry(rd, system="psp", label="PPSSPP (Standalone)").texture_pack_location())
+        assert atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD not in codes
+
+
 class TestTheStatedNoIsAnAnswer:
     """#284: an absence card answers the states question — not a refusal.
 
