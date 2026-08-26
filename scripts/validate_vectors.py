@@ -352,6 +352,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-path-escapes-root",
     "firmware-path-unresolvable",
     "firmware-path-names-no-file",
+    "firmware-path-launch-dependent",
     "firmware-root-unusable",
     "firmware-declaration-unread",
     "firmware-content-contradictory",

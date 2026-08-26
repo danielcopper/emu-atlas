@@ -4808,6 +4808,111 @@
           }
         }
       }
+    },
+    {
+      "name": "xemu-a-relative-disk-image-anchors-at-the-launchs-working-directory",
+      "rationale": "A relative [sys.files] value is opened by the xemu process verbatim: the string passes unchanged into the QEMU machine options (system/vl.c:2983-3095 at v0.8.135) and is probed with plain fopen/access (xemu_check_file, vl.c:2527-2535; osdep.h:645-653), and no launch step changes the process's directory (ui/xemu.c:1278-1379) — so the anchor is the launching process's working directory, a property of the launch, not of the machine. The answer is the <cwd> template with the cwd hole and the save-dir-launch-dependent caveat, never a bare relative path stated as if it were somewhere. The absolute EEPROM beside it keeps its own read directory as a group of its own, and the hole rides in needs because needs is the answer's holes, not the primary directory's alone.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\neeprom_path = '/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin'\nhdd_path = 'images/xbox_hdd.qcow2'\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "<cwd>/images",
+          "root_kind": "working_directory",
+          "needs": [
+            "cwd"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "<cwd>/images",
+                "files": [
+                  "xbox_hdd.qcow2"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/xbox/xemu",
+                "files": [
+                  "xbox-eeprom.bin"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "core": "XEMU",
+                "key": "hdd_path",
+                "path": "images/xbox_hdd.qcow2"
+              }
+            },
+            {
+              "code": "save-inside-image",
+              "data": {
+                "emulator": "XEMU",
+                "image": "<cwd>/images/xbox_hdd.qcow2",
+                "layout": "UDATA/<title id>"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "hdd",
+            "readings": [
+              {
+                "key": "hdd_path",
+                "value": "images/xbox_hdd.qcow2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              },
+              {
+                "key": "eeprom_path",
+                "value": "/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

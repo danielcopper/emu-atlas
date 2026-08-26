@@ -2296,6 +2296,84 @@ class TestMoreStandaloneSaves:
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
 
+    def test_xemu_relative_disk_anchors_at_the_launchs_working_directory(self):
+        # A relative [sys.files] value is opened by the process verbatim
+        # (fopen/access resolve it against the cwd; xemu never chdirs) — the
+        # answer is the <cwd> template with the hole, never a bare relative
+        # path stated as if it were somewhere.
+        p = self._answer(
+            "xbox",
+            files={XEMU_TOML_PATH: "[sys.files]\nhdd_path = 'images/xbox_hdd.qcow2'\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "working_directory"
+        assert p.dir == "<cwd>/images"
+        assert p.needs == ("cwd",)
+        assert p.physical_dir is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT]
+        assert stated
+        assert stated[0].data["key"] == "hdd_path"
+        assert stated[0].data["path"] == "images/xbox_hdd.qcow2"
+        inside = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_INSIDE_IMAGE]
+        assert inside
+        assert inside[0].data["image"] == "<cwd>/images/xbox_hdd.qcow2"
+
+    def test_xemu_bare_relative_disk_is_the_working_directory_itself(self):
+        p = self._answer(
+            "xbox",
+            files={XEMU_TOML_PATH: "[sys.files]\nhdd_path = 'xbox_hdd.qcow2'\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "<cwd>"
+        assert p.file_set.files == ("xbox_hdd.qcow2",)
+
+    def test_xemu_relative_eeprom_beside_an_absolute_disk_keeps_the_disk_root(self):
+        # The answer anchors at the disk (groups[0]); the EEPROM's group keeps
+        # its own <cwd> template, and the hole rides in needs because needs is
+        # the answer's holes, not the primary directory's alone.
+        p = self._answer(
+            "xbox",
+            files={
+                XEMU_TOML_PATH: (
+                    "[sys.files]\nhdd_path = '/mnt/sd/hdd.qcow2'\n"
+                    "eeprom_path = 'eeprom.bin'\n"
+                )
+            },
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.root_kind == "emulator_directory"
+        assert p.dir == "/mnt/sd"
+        assert p.needs == ("cwd",)
+        assert p.file_set.groups is not None
+        eeprom = [g for g in p.file_set.groups if g.role == "settings"]
+        assert eeprom
+        assert eeprom[0].dir == "<cwd>"
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT]
+        assert stated
+        assert stated[0].data["key"] == "eeprom_path"
+
+    def test_xemu_relative_disk_snapshots_are_a_cwd_template_too(self):
+        # The savestate answer keys off the same hdd_path — the identical
+        # anchor fact, stated with the state family's own root kind.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                XEMU_TOML_PATH: "[sys.files]\nhdd_path = 'images/xbox_hdd.qcow2'\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        p = rd.emulators_for("xbox").entries[0].savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.root_kind == "working_directory"
+        assert p.dir == "<cwd>/images"
+        assert p.needs == ("cwd",)
+        assert p.physical_dir is None
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT]
+        assert stated
+        inside = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVESTATE_INSIDE_IMAGE]
+        assert inside
+        assert inside[0].data["image"] == "<cwd>/images/xbox_hdd.qcow2"
+
     def test_cemu_without_a_settings_xml_answers_the_default_mlc(self):
         # The catalogue command carries --mlc, which outranks the config — the
         # answer still stands, with the caveat saying so.
@@ -2313,6 +2391,41 @@ class TestMoreStandaloneSaves:
         p = self._answer("wiiu", files={CEMU_XML_PATH: "<content><mlc_path>"})
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_xemu_relative_firmware_value_is_a_stated_launch_dependence(self):
+        # The firmware grammar has no root kind to change: a requirement's
+        # path is contractually the absolute observed destination, so the
+        # relative boot ROM stays out of the list and the caveat carries the
+        # anchor as data — the <cwd>-templated path the launcher completes.
+        # The absolute keys answer exactly as before.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                XEMU_TOML_PATH: (
+                    "[sys.files]\nbootrom_path = 'mcpx_1.0.bin'\n"
+                    "flashrom_path = '/mnt/sd/bios/Complex.bin'\n"
+                    "hdd_path = '/mnt/sd/hdd.qcow2'\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        answer = rd.firmware_for_system("xbox")
+        core = next(c for c in answer.cores if c.label == "xemu (Standalone)")
+        assert [
+            r.path for r in core.requirements if isinstance(r, atlas.FirmwareRequirement)
+        ] == [
+            "/mnt/sd/bios/Complex.bin",
+            "/mnt/sd/hdd.qcow2",
+        ]
+        assert len(core.requirements) == 2
+        stated = [
+            c for c in core.caveats if c.code == atlas.CAVEAT_FIRMWARE_PATH_LAUNCH_DEPENDENT
+        ]
+        assert len(stated) == 1
+        assert stated[0].data["key"] == "sys.files/bootrom_path"
+        assert stated[0].data["declared"] == "mcpx_1.0.bin"
+        assert stated[0].data["path"] == "<cwd>/mcpx_1.0.bin"
+        assert stated[0].data["need"] == "required"
 
     def test_azahar_a_default_marked_directory_is_read_as_the_default(self):
         # `<key>\default=true` makes the compiled default win over any stored

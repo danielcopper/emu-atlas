@@ -6043,9 +6043,45 @@ def _standalone_settings_path(card: StandaloneSaveCard, homes: _XdgHomes) -> str
 # ---------------------------------------------------------------------------
 
 
+def _xemu_launch_dependent_caveat(core: str, key: str, value: str) -> Caveat:
+    """The relative-value rider: xemu opens the value from the launch's own cwd.
+
+    A relative ``[sys.files]`` value is composed verbatim into the QEMU machine
+    options (system/vl.c:2983-3095 at v0.8.135) and opened with plain POSIX
+    calls — ``xemu_check_file`` is ``qemu_fopen`` (vl.c:2527-2535), the EEPROM
+    probe ``qemu_access`` (vl.c:2918), and both are ``fopen``/``access``
+    outside Windows (include/qemu/osdep.h:645-653) — while no step of the
+    launch changes the process's directory (``main``, ui/xemu.c:1278-1379).
+    So the anchor is the launching process's working directory: a property of
+    the launch, not of the machine, exactly the melonDS relative-path fact.
+    """
+    return Caveat(
+        CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
+        f"{key} is the relative value {value!r}, which xemu opens relative to the "
+        "working directory of the launching process (the configured string is passed "
+        "verbatim into the QEMU options, system/vl.c:2983-3095, and opened with plain "
+        "fopen/access, vl.c:2527-2535 and :2918 with osdep.h:645-653, at v0.8.135) — "
+        "a property of the launch, not of the machine; fill 'cwd' with the launcher's "
+        "working directory to complete the path",
+        {"core": core, "key": key, "path": value},
+    )
+
+
+def _cwd_templated(directory: str) -> bool:
+    """Is this directory the launch's own — the ``<cwd>`` template or below it?"""
+    return directory == TEMPLATE_CWD or directory.startswith(TEMPLATE_CWD + "/")
+
+
 def _xemu_group(
-    sandbox: _Sandbox, key: str, value: str, *, role: str
+    sandbox: _Sandbox, key: str, value: str, *, role: str, core: str
 ) -> tuple[FileGroup | None, tuple[Caveat, ...]]:
+    if not os.path.isabs(value):
+        head, name = os.path.split(value)
+        directory = os.path.join(TEMPLATE_CWD, head) if head else TEMPLATE_CWD
+        return (
+            FileGroup(dir=directory, files=(name,), granularity="shared-file", role=role),
+            (_xemu_launch_dependent_caveat(core, key, value),),
+        )
     resolved = sandbox.host(key, value)
     if resolved.path is None:
         return None, (
@@ -6107,7 +6143,9 @@ def _xemu_disk_pieces(
                 {"core": card.token, "reason": "hdd_path is unset"},
             ),
         )
-    group, group_caveats = _xemu_group(sandbox, "hdd_path", hdd, role=ROLE_BATTERY)
+    group, group_caveats = _xemu_group(
+        sandbox, "hdd_path", hdd, role=ROLE_BATTERY, core=card.token
+    )
     if group is None or not group.files:
         return (), group_caveats
     return (group,), (
@@ -6181,7 +6219,9 @@ def _xemu_savefile_placement(
     readings = _xemu_readings(hdd, eeprom, stated_toml)
     disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd)
     eeprom_group, eeprom_caveats = (
-        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS) if eeprom else (None, ())
+        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS, core=card.token)
+        if eeprom
+        else (None, ())
     )
     groups = [*disk_groups, *([eeprom_group] if eeprom_group is not None else [])]
     caveats = [*extra_caveats, *disk_caveats, *eeprom_caveats]
@@ -6220,15 +6260,23 @@ def _xemu_savefile_placement(
             {"emulator": card.token, "config": toml_path},
         )
     directory = groups[0].dir
-    physical, link_caveats = _link_view(machine, directory)
-    caveats.extend(link_caveats)
+    # A <cwd>-templated directory is a property of the launch — nothing on the
+    # machine exists to walk links on — while a hole anywhere in the answer
+    # (the EEPROM's group can be the templated one under an absolute disk)
+    # belongs in ``needs``: the answer's holes, not the primary directory's.
+    launch_anchored = _cwd_templated(directory)
+    if launch_anchored:
+        physical = None
+    else:
+        physical, link_caveats = _link_view(machine, directory)
+        caveats.extend(link_caveats)
     files = tuple(
         name for g in groups if g.dir == directory and g.files for name in g.files
     )
     return SavefilePlacement(
         dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(),
+        root_kind=ROOT_WORKING_DIRECTORY if launch_anchored else ROOT_EMULATOR_DIRECTORY,
+        needs=(HOLE_CWD,) if any(_cwd_templated(g.dir) for g in groups) else (),
         fallback_dir=None,
         file_set=FileSet(
             FILE_SET_DECLARED,
@@ -8976,22 +9024,39 @@ def _xemu_savestate_placement(
             "unknowable here",
             {"emulator": card.token, "config": toml_path},
         )
-    host = sandbox.host(stated.key, hdd)
-    if host.path is None:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
-            f"the hard-disk image xemu's configuration names ({hdd!r}) has no spelling "
-            f"on this host — {toml_path} read fine, and nothing this answer could "
-            "anchor at",
-            {"emulator": card.token, "config": toml_path, "path": hdd},
-        )
-    directory, image = os.path.split(host.path)
-    physical, link_caveats = _link_view(machine, directory)
-    reading = f'xemu.toml: [sys.files] {stated.key} = "{hdd}"{host.note}'
+    if os.path.isabs(hdd):
+        host = sandbox.host(stated.key, hdd)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the hard-disk image xemu's configuration names ({hdd!r}) has no spelling "
+                f"on this host — {toml_path} read fine, and nothing this answer could "
+                "anchor at",
+                {"emulator": card.token, "config": toml_path, "path": hdd},
+            )
+        directory, image = os.path.split(host.path)
+        image_path = host.path
+        root_kind: StateRootKind = STATE_ROOT_EMULATOR_DIRECTORY
+        needs: tuple[str, ...] = ()
+        physical, anchor_caveats = _link_view(machine, directory)
+        reading = f'xemu.toml: [sys.files] {stated.key} = "{hdd}"{host.note}'
+    else:
+        # A relative value anchors at the launching process's working
+        # directory (the save route's fact, one question over), so the image
+        # stays a <cwd> template with the hole the caller fills — no read of
+        # the machine can walk links on a directory that is not on it.
+        head, image = os.path.split(hdd)
+        directory = os.path.join(TEMPLATE_CWD, head) if head else TEMPLATE_CWD
+        image_path = os.path.join(directory, image)
+        root_kind = STATE_ROOT_WORKING_DIRECTORY
+        needs = (HOLE_CWD,)
+        physical = None
+        anchor_caveats = (_xemu_launch_dependent_caveat(card.token, stated.key, hdd),)
+        reading = f'xemu.toml: [sys.files] {stated.key} = "{hdd}"'
     return SavestatePlacement(
         dir=directory,
-        root_kind=STATE_ROOT_EMULATOR_DIRECTORY,
-        needs=(),
+        root_kind=root_kind,
+        needs=needs,
         file_set=FileSet(
             FILE_SET_DECLARED,
             (image,),
@@ -9001,7 +9066,7 @@ def _xemu_savestate_placement(
         sources=(f"standalone savestate card '{card.token}': {card.provenance}", reading),
         caveats=(
             *extra_caveats,
-            *link_caveats,
+            *anchor_caveats,
             Caveat(
                 CAVEAT_SAVESTATE_INSIDE_IMAGE,
                 f"every snapshot lives inside {image} — a QEMU internal snapshot written "
@@ -9009,7 +9074,7 @@ def _xemu_savestate_placement(
                 f"whole; entries inside it are named {card.names} ({stated.citation})",
                 {
                     "emulator": card.token,
-                    "image": host.path,
+                    "image": image_path,
                     "names": card.names or "",
                     "citation": stated.citation,
                 },

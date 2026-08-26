@@ -46,9 +46,10 @@ grouping or would send a save sync past real save data; `complete` is a claim ab
 
 `working_directory` is the root that is a property of the launch rather than of the machine: DeSmuME 2015 composes its
 save path from a variable its build never fills, so the file lands relative to wherever the launching process was
-started. Such a mode's answer is always the `<cwd>` template with the `cwd` hole in `needs` — the file names are stated,
-the directory is the caller's to fill — and it rides the `save-dir-launch-dependent` caveat. Nothing on the machine is
-read for it: a template names nothing to observe.
+started; melonDS opens a relative `SaveFilePath` the same way, and xemu opens a relative `[sys.files]` value the same
+way. Such a mode's answer is always the `<cwd>` template with the `cwd` hole in `needs` — the file names are stated, the
+directory is the caller's to fill — and it rides the `save-dir-launch-dependent` caveat. Nothing on the machine is read
+for it: a template names nothing to observe.
 
 **Why grouping and role are two fields.** They answer different questions — _whose is it_ and _what is it_ — and MAME's
 two `.cfg` files are the proof neither can carry the other's meaning: `<machine>.cfg` and `default.cfg` share a
@@ -518,58 +519,62 @@ directory whose name belongs to the build (#246). PPSSPP (v1.20.4): the Linux me
 `settings` is `null`, the honest spelling of "no file governs this" — and savedata is one unnamed directory per game
 below `PSP/SAVEDATA`. xemu (v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml` — read
 under the **data** home, where the emulator opens it — stated as one shared file with the `save-inside-image` caveat
-carrying the inside layout (`UDATA/<title id>`), the EEPROM beside it as a named settings group. Cemu (2.6): the MLC
-resolved the way the emulator resolves it (`--mlc` flag outranks `settings.xml` outranks the default), and the per-title
-unit templated below it — `usr/save/<save_id>`, granularity `per-game-directory`, the fill spelled in the caveat
-(nn_save.cpp:133-145). Azahar (2125.1.1): the emulated SD read from `qt-config.ini`'s `[Data Storage]` group the way the
-emulator reads it (`use_custom_storage` routes `sdmc_directory`, `\default` companions honored — ReadSetting,
-config.cpp:1442-1450), the per-title unit `Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001` below it with
-compile-time all-zero ids (archive.h:22-24), and the extdata tree stated beside it as its own group. DuckStation (the
-"Legacy" build RetroDECK froze from the 2024-09 rolling release; citations at stenzek/duckstation@64655818e): two
-memory-card slots, six modes each — the Dolphin GC shape in DuckStation's vocabulary — a per-game `<name>_<slot>.mcd`
-below `[MemoryCards] Directory` keyed by serial, sanitized title, or the content file's own stem (which the resolver
-fills itself), a shared card at its configured or default path, and the DataRoot probed on both spellings the launch
-environment can pick (qthost.cpp:562-582). PCSX2 (v2.6.3): up to eight slots — two console ports and six multitap slots
-that join only when enabled — each card's type read off the disk the way `FileMcd_SetType` reads it: a directory at the
-card's full path is a folder card (per-game saves as auto-managed subdirectories, stated with its names refused),
-anything else the shared `.ps2` image it is; one config-side DataRoot either way (Pcsx2Config.cpp:2197-2217), completing
-the ps2 pair beside the LRPS2 core rule. melonDS (1.1): one `<rom stem>.sav` per game in the directory
-`[Instance0] SaveFilePath` names, the config read the way `Config::Load` reads it — `melonDS.toml`, a missing TOML
-falling back to the pre-1.0 `melonDS.ini` line by line as the built-in migration, an unparseable TOML yielding factory
-defaults — and the empty default landing the save beside the ROM itself (root `content_directory`); the stem is filled
-from named content, held open as `<rom_stem>` for archives, whose saves are named after the file inside. RPCS3 (build
-7c6b3dcd): the save tree hangs off the emulated PS3's internal drive, and `vfs.yml` states where that drive lives —
-`/dev_hdd0/`, composed off `$(EmulatorDir)`, which `cfg_vfs::get` replaces everywhere it appears and which means the
-emulator's config directory when empty (vfs_config.cpp:14-62). It is the first card read through the YAML scalar reader
-(`atlas.yaml_scalars`), which names the one key of that file it does not read rather than guessing at it. Below the
-drive the unit is `home/<user>/savedata`, one directory per title id; the active user is a runtime selection no file
-records, so **every user home that exists becomes its own group** and a caveat says which ones were found — the same
-stance the Dolphin card takes with its region trees. Where none exists the answer says so outright rather than
-presenting the compiled default as a home somebody found, and a tree that cannot be listed carries `save-dir-unlistable`
-rather than a clause glued onto another caveat's prose. A second save location is named and not walked: `savedata/vmc`,
-the virtual memory cards for PS1 and PS2 classics, which a sync walking only the per-user tree would miss. It is a
-**directory**, so it is a group of its own with its names left open (`files: null`) beside `file-set-spans-roots` — not
-`save-inside-image`, which means the answer named a file and nothing inside it is addressable, the opposite of what is
-true here. Vita3K (build 3996, commit `cb1f592c`): one key carries the whole tree — `pref-path` in `config.yml`, with
-everything the emulator keeps hanging off it as `ux0/…`, and saves at `ux0/user/<user>/savedata`, one directory per
-title id (io.cpp:136-143). Its user segment states every user directory that exists as its own group, the way RPCS3's
-does — but this emulator **does** write down the user it opened, as `user-id` in the same `config.yml`
-(select_and_open_user, user_management.cpp:329-331), and the record reaches further: `init_home` reopens the recorded
-user when the id is among the users the emulator itself listed and either the launch names an app on the command line —
-which is how a frontend launches — or `user-auto-connect` is on, and otherwise the user manager opens for the player to
-pick (gui.cpp:688-696); the list is built from the directories under `ux0/user` whose `user.xml` loads, keyed by the
-file's `id` attribute or, lacking one, the directory name's stem (get_users_list, user_management.cpp:83-97), and the
-emulator's own writes keep that key equal to the directory name (save_user, user_management.cpp:145-158) — atlas reads
-each `user.xml` the same way, so the users it checks the record against are the emulator's own list. So the answer's
-headline `dir` names the recorded user's tree where that listing holds it — composed from the identity the user.xml
-states, created on the first save where no directory of that name exists yet — with the recorded id stated beside every
-tree as a reading and as `configured_user` in the caveat; a recorded user the listing does not hold moves nothing, the
-caveat's reason saying why (no tree of that name, a directory that is not set up as that user, or a `user.xml` that
-could not be read), and a tree that could not be listed keeps claiming nothing. An empty `pref-path` is a refusal rather
-than a guess: the emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). A
-configuration that exists and cannot be read refuses the whole question with `emulator-config-unreadable`; one that
-reads fine but states an absolute path only the emulator's sandbox can spell refuses with
-`emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
+carrying the inside layout (`UDATA/<title id>`), the EEPROM beside it as a named settings group; a **relative**
+`[sys.files]` value is opened by the process verbatim (composed unchanged into the QEMU options, system/vl.c:2983-3095,
+probed with plain fopen/access, vl.c:2527-2535 with osdep.h:645-653, and no launch step chdirs, ui/xemu.c:1278-1379), so
+it anchors at the launching process's working directory and the answer takes the `working_directory` shape above, per
+value — a relative EEPROM beside an absolute disk keeps the disk's root and carries its own `<cwd>` group, the hole in
+`needs` either way. Cemu (2.6): the MLC resolved the way the emulator resolves it (`--mlc` flag outranks `settings.xml`
+outranks the default), and the per-title unit templated below it — `usr/save/<save_id>`, granularity
+`per-game-directory`, the fill spelled in the caveat (nn_save.cpp:133-145). Azahar (2125.1.1): the emulated SD read from
+`qt-config.ini`'s `[Data Storage]` group the way the emulator reads it (`use_custom_storage` routes `sdmc_directory`,
+`\default` companions honored — ReadSetting, config.cpp:1442-1450), the per-title unit
+`Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001` below it with compile-time all-zero ids (archive.h:22-24), and
+the extdata tree stated beside it as its own group. DuckStation (the "Legacy" build RetroDECK froze from the 2024-09
+rolling release; citations at stenzek/duckstation@64655818e): two memory-card slots, six modes each — the Dolphin GC
+shape in DuckStation's vocabulary — a per-game `<name>_<slot>.mcd` below `[MemoryCards] Directory` keyed by serial,
+sanitized title, or the content file's own stem (which the resolver fills itself), a shared card at its configured or
+default path, and the DataRoot probed on both spellings the launch environment can pick (qthost.cpp:562-582). PCSX2
+(v2.6.3): up to eight slots — two console ports and six multitap slots that join only when enabled — each card's type
+read off the disk the way `FileMcd_SetType` reads it: a directory at the card's full path is a folder card (per-game
+saves as auto-managed subdirectories, stated with its names refused), anything else the shared `.ps2` image it is; one
+config-side DataRoot either way (Pcsx2Config.cpp:2197-2217), completing the ps2 pair beside the LRPS2 core rule. melonDS
+(1.1): one `<rom stem>.sav` per game in the directory `[Instance0] SaveFilePath` names, the config read the way
+`Config::Load` reads it — `melonDS.toml`, a missing TOML falling back to the pre-1.0 `melonDS.ini` line by line as the
+built-in migration, an unparseable TOML yielding factory defaults — and the empty default landing the save beside the
+ROM itself (root `content_directory`); the stem is filled from named content, held open as `<rom_stem>` for archives,
+whose saves are named after the file inside. RPCS3 (build 7c6b3dcd): the save tree hangs off the emulated PS3's internal
+drive, and `vfs.yml` states where that drive lives — `/dev_hdd0/`, composed off `$(EmulatorDir)`, which `cfg_vfs::get`
+replaces everywhere it appears and which means the emulator's config directory when empty (vfs_config.cpp:14-62). It is
+the first card read through the YAML scalar reader (`atlas.yaml_scalars`), which names the one key of that file it does
+not read rather than guessing at it. Below the drive the unit is `home/<user>/savedata`, one directory per title id; the
+active user is a runtime selection no file records, so **every user home that exists becomes its own group** and a
+caveat says which ones were found — the same stance the Dolphin card takes with its region trees. Where none exists the
+answer says so outright rather than presenting the compiled default as a home somebody found, and a tree that cannot be
+listed carries `save-dir-unlistable` rather than a clause glued onto another caveat's prose. A second save location is
+named and not walked: `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, which a sync walking only the
+per-user tree would miss. It is a **directory**, so it is a group of its own with its names left open (`files: null`)
+beside `file-set-spans-roots` — not `save-inside-image`, which means the answer named a file and nothing inside it is
+addressable, the opposite of what is true here. Vita3K (build 3996, commit `cb1f592c`): one key carries the whole tree —
+`pref-path` in `config.yml`, with everything the emulator keeps hanging off it as `ux0/…`, and saves at
+`ux0/user/<user>/savedata`, one directory per title id (io.cpp:136-143). Its user segment states every user directory
+that exists as its own group, the way RPCS3's does — but this emulator **does** write down the user it opened, as
+`user-id` in the same `config.yml` (select_and_open_user, user_management.cpp:329-331), and the record reaches further:
+`init_home` reopens the recorded user when the id is among the users the emulator itself listed and either the launch
+names an app on the command line — which is how a frontend launches — or `user-auto-connect` is on, and otherwise the
+user manager opens for the player to pick (gui.cpp:688-696); the list is built from the directories under `ux0/user`
+whose `user.xml` loads, keyed by the file's `id` attribute or, lacking one, the directory name's stem (get_users_list,
+user_management.cpp:83-97), and the emulator's own writes keep that key equal to the directory name (save_user,
+user_management.cpp:145-158) — atlas reads each `user.xml` the same way, so the users it checks the record against are
+the emulator's own list. So the answer's headline `dir` names the recorded user's tree where that listing holds it —
+composed from the identity the user.xml states, created on the first save where no directory of that name exists yet —
+with the recorded id stated beside every tree as a reading and as `configured_user` in the caveat; a recorded user the
+listing does not hold moves nothing, the caveat's reason saying why (no tree of that name, a directory that is not set
+up as that user, or a `user.xml` that could not be read), and a tree that could not be listed keeps claiming nothing. An
+empty `pref-path` is a refusal rather than a guess: the emulator falls back to a default it derives at run time and
+writes nowhere (config.cpp:189-190). A configuration that exists and cannot be read refuses the whole question with
+`emulator-config-unreadable`; one that reads fine but states an absolute path only the emulator's sandbox can spell
+refuses with `emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
 `sandbox-path-untranslated` said as an outcome, for the routes where the whole answer hangs on that one path
 (`data.path` is the primary; an aggregate refusal naming more than one file — xemu's save answer — also carries
 `data.paths`, every untranslatable value, the disk image first and then the EEPROM). The answers root at
@@ -605,7 +610,9 @@ source reads `"Savestates"` (Pcsx2Config.cpp:2284 at v2.6.3), and the written li
 
 The three #284 shapes state what no directory statement can spell. `inside_image` (xemu): the states are QEMU internal
 snapshots written INTO the qcow2 that `[sys.files] hdd_path` names — no file per state exists — so the answer names the
-image and the `savestate-inside-image` caveat carries it with the entry naming (user-chosen, else `vm-YYYYMMDDhhmmss`).
+image and the `savestate-inside-image` caveat carries it with the entry naming (user-chosen, else `vm-YYYYMMDDhhmmss`);
+a relative `hdd_path` anchors at the launching process's working directory exactly as on the save route, so the answer
+roots at the state family's `working_directory` kind and the image stays a `<cwd>` template inside the caveat.
 `launch_ini` (MAME): the governing `mame.ini` is addressed by the launch command's `-inipath` (else the shipped builds'
 compiled `$HOME/.mame;/app/share/mame/ini` search path — the Flathub build define, byte-proven in the shipped binary,
 not upstream's `#ifndef` fallback; the `/app` element resolves against the running deploy, which for RetroDECK carries
@@ -685,7 +692,13 @@ already states as a named settings group; claiming it here too would file save d
 twice. The hard disk is the opposite case and is claimed by both answers deliberately: a console does not start without
 one, and every save lives inside it, so each answer names it and says which aspect it means. Note also where xemu keeps
 its settings — under the **data** home, not the config one — which is why a card's resolver receives both bases and
-takes the one its emulator uses.
+takes the one its emulator uses. A **relative** value has no destination here at all: xemu opens it relative to its own
+process's working directory (verbatim into the QEMU options, system/vl.c:2983-3095; plain fopen/access probes,
+vl.c:2527-2535 with osdep.h:645-653 at v0.8.135), and a firmware requirement's `path` is contractually the absolute
+observed destination — so the file stays out of the requirement list and the `firmware-path-launch-dependent` caveat
+carries the anchor as data: the key, the declared value, and the `<cwd>`-templated path the launcher's working directory
+completes. The placement families state the same fact as their `working_directory` root; this is that fact in the
+firmware grammar's own words.
 
 DuckStation (the fork build frozen 2024-09-19) is the fourth, and the only `search` card: it names **no file**.
 `[BIOS] SearchDirectory` names a directory — read the same `LoadPathFromSettings` way, so an unset value is `bios` below
