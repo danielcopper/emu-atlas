@@ -948,6 +948,10 @@ ALTERNATIVES_CASES = [
     case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_alternative(regions=["sécam"])]}])]),
          "option regions must be from", id="alternatives-unknown-region"),
     case(_base_firmware(cores=[_core(requirements=[{"alternatives": [
+             _alternative(regions=["ntsc-u", "ntsc-u"]),
+         ]}])]),
+         "must not repeat a region within its own list", id="alternatives-region-repeated-within-option"),
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [
              _alternative(),
              _alternative(file_name="scph5500.bin", path=f"{BIOS}/scph5500.bin", declared="scph5500.bin",
                           regions=["ntsc-u", "ntsc-j"]),

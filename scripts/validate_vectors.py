@@ -1439,6 +1439,8 @@ def _validate_alternatives(name: str, entry: Any, *, core_so: Any, root: str, ha
         unknown = sorted(set(regions) - KNOWN_FIRMWARE_REGIONS)
         if unknown:
             fail(f"{name}: option regions must be from {sorted(KNOWN_FIRMWARE_REGIONS)}, got {unknown}")
+        if len(set(regions)) != len(regions):
+            fail(f"{name}: an option must not repeat a region within its own list")
         overlap = claimed.intersection(regions)
         if overlap:
             fail(f"{name}: option regions must be disjoint across a group — {sorted(overlap)} is claimed twice")

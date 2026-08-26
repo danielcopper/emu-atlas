@@ -95,6 +95,12 @@ class TestOneAddressPerFile:
         with pytest.raises(ValueError, match="no settings file"):
             settings_file("NOBODY", "any.ini")
 
+    def test_a_file_the_emulator_does_not_state_fails_loudly(self):
+        # The other way to ask for an unstated address: the emulator is
+        # carried, the file name is not.
+        with pytest.raises(ValueError, match="no settings file"):
+            settings_file("PCSX2", "nowhere.ini")
+
     def test_an_emulator_with_no_entry_lists_nothing(self):
         assert settings_files("NOBODY") == {}
 
@@ -277,6 +283,23 @@ class TestTheLoaderRefusesWhatItCannotStand:
         spec = {"bases": ["config"], "path": "demo/demo.ini", "citation": "x"}
         text = _table(**{"demo.ini": spec})
         with pytest.raises(ValueError, match="begins with the emulator's own directory"):
+            load_emulator_settings(text)
+
+    def test_a_path_that_repeats_an_installations_spelling_is_refused(self):
+        # The guard covers every stated spelling: a path spelled with an
+        # override installation's directory name is the same second copy.
+        directory = _directory(
+            installations={
+                "org.demo.Demo": {
+                    "name": "other",
+                    "citation": "y",
+                    "anchors": _anchors("other", "bin/demo", flatpak="org.demo.Demo"),
+                }
+            }
+        )
+        spec = {"bases": ["config"], "path": "other/demo.ini", "citation": "x"}
+        text = _table(directory=directory, **{"demo.ini": spec})
+        with pytest.raises(ValueError, match="begins with the emulator's own directory 'other'"):
             load_emulator_settings(text)
 
     def test_a_base_outside_the_vocabulary_is_refused(self):

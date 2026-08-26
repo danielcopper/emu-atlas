@@ -27,9 +27,6 @@ from typing import Any
 
 SAVES_SCHEMA = 1
 
-# The XDG bases a card's configuration file may hang off — the same two words
-# the texture cards use, because they are the same fact: one flatpak pins both.
-
 
 @dataclass(frozen=True, slots=True)
 class StandaloneSaveCard:
@@ -42,15 +39,16 @@ class StandaloneSaveCard:
     own copy is how two of them came to disagree about it. It is ``None`` for
     an emulator whose save tree is fixed by the build rather than by any file
     (PPSSPP's Linux memstick is a compiled-in XDG join): naming a file the
-    resolver never reads would state a governing config that does not govern. ``systems`` is the closed list of
-    catalogue systems this card answers for: an emulator can serve several
-    with different trees (Dolphin keeps GameCube cards and a Wii NAND), and a
-    system outside the list is a question the card does not answer, stated
-    rather than stretched. ``flatpak`` is the app id the emulator installs
-    under where an arrangement is established to run it as a flatpak
-    (EmuDeck's melonDS) — the id whose per-app XDG trees the flatpak variant
-    reads. ``None`` for an emulator no established launch runs that way: an
-    id nothing launches would resolve nothing, so the variant keeps refusing.
+    resolver never reads would state a governing config that does not govern.
+    ``systems`` is the closed list of catalogue systems this card answers
+    for: an emulator can serve several with different trees (Dolphin keeps
+    GameCube cards and a Wii NAND), and a system outside the list is a
+    question the card does not answer, stated rather than stretched.
+    ``flatpak`` is the app id the emulator installs under where an
+    arrangement is established to run it as a flatpak (EmuDeck's melonDS) —
+    the id whose per-app XDG trees the flatpak variant reads. ``None`` for
+    an emulator no established launch runs that way: an id nothing
+    launches would resolve nothing, so the variant keeps refusing.
 
     ``citations`` are the emulator's own source references the **resolver**
     speaks — the line ranges that go into an answer's caveats and readings —
@@ -64,8 +62,8 @@ class StandaloneSaveCard:
     A citation belongs to the **build** rather than to the emulator, which is
     why the reserved ``installations`` key states one set per flatpak app id,
     exactly as the directory name does: the PrimeHack revision RetroDECK
-    builds and the one Flathub ships are three years apart, and five of the
-    seven lines a save answer names differ between them.
+    builds and the one Flathub ships are three years apart, and all seven of
+    the lines a save answer names differ between them.
     """
 
     token: str

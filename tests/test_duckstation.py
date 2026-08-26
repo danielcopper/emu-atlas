@@ -234,3 +234,20 @@ class TestTheLoaderRefusesAMalformedTable:
         text = json.dumps({"sizes": {"ps1": 1}, "images": [{"name": "x", "region": "pal"}]})
         with pytest.raises(ValueError, match="md5"):
             duckstation.load_bios_table(text)
+
+    ROW = {"name": "x", "region": "pal", "md5": "a", "priority": 1, "fast_boot_patch": "y"}
+
+    def test_a_table_without_the_openbios_block_is_refused(self):
+        # The offset speaks in a caveat's sentence; a silent default would
+        # ship "offset None" instead of failing the load.
+        text = json.dumps({"sizes": {"ps1": 1}, "images": [self.ROW], "_meta": {"revision": "r"}})
+        with pytest.raises(ValueError, match="openbios"):
+            duckstation.load_bios_table(text)
+
+    def test_a_table_without_its_revision_is_refused(self):
+        # The revision rides in the identified-image caveat's data; an empty
+        # pin would claim the table without saying which table.
+        openbios = {"signature": "OpenBIOS", "offset": 120}
+        text = json.dumps({"sizes": {"ps1": 1}, "images": [self.ROW], "openbios": openbios})
+        with pytest.raises(ValueError, match="_meta"):
+            duckstation.load_bios_table(text)

@@ -2513,6 +2513,13 @@ class TestAlternativesAreOneOfSeveralNotSeveralNeeds:
         with pytest.raises(ValueError):
             FirmwareAlternatives(options=(first, overlapping))
 
+    def test_a_region_repeated_within_one_option_is_refused(self):
+        # Disjointness across options never sees a duplicate inside one, so
+        # the option's own tuple is checked too.
+        doubled = _region_option("scph5501.bin", ("ntsc-u", "ntsc-u"))
+        with pytest.raises(ValueError, match="repeats a region within its own tuple"):
+            FirmwareAlternatives(options=(doubled,))
+
     def test_a_group_met_for_every_region_is_satisfied(self):
         group = FirmwareAlternatives(
             options=(

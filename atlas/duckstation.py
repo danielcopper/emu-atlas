@@ -356,11 +356,22 @@ def load_bios_table(text: str | None = None) -> BiosTable:
     sizes = raw.get("sizes")
     if not isinstance(sizes, dict) or not sizes:
         raise ValueError("duckstation_bios: sizes must be a non-empty object")
+    rows = tuple(_image(entry, index) for index, entry in enumerate(images))
+    # Loudly, like the blocks above: both feed answers (the OpenBIOS offset
+    # speaks in a caveat's sentence, the revision in its data), so a table
+    # without them would ship "offset None" and an empty pin instead of
+    # failing the load.
+    openbios = raw.get("openbios")
+    if not isinstance(openbios, dict) or {"signature", "offset"} - set(openbios):
+        raise ValueError("duckstation_bios: openbios must state signature and offset")
+    meta = raw.get("_meta")
+    if not isinstance(meta, dict) or "revision" not in meta:
+        raise ValueError("duckstation_bios: _meta must state the upstream revision")
     return BiosTable(
-        images=tuple(_image(entry, index) for index, entry in enumerate(images)),
+        images=rows,
         sizes=tuple(sorted(int(size) for size in sizes.values())),
-        openbios=raw.get("openbios", {}),
-        meta=raw.get("_meta", {}),
+        openbios=openbios,
+        meta=meta,
     )
 
 

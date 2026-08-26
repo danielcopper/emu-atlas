@@ -1297,6 +1297,11 @@ class FirmwareAlternatives:
                 raise ValueError(
                     "FirmwareAlternatives: every option must state the regions whose launch it serves"
                 )
+            if len(set(option.regions)) != len(option.regions):
+                raise ValueError(
+                    "FirmwareAlternatives: an option repeats a region within its own tuple — "
+                    "one region, one statement"
+                )
             overlap = claimed.intersection(option.regions)
             if overlap:
                 raise ValueError(
@@ -3585,12 +3590,18 @@ def _duckstation_search(
         # named key beside them, "all keys are empty" would be a false claim
         # about a configuration the answer just read.
         empty_keys = ", ".join(key for region, key in search.region_keys if region in regions)
+        # The sentence scopes itself only when a named key really took a
+        # region away; in the shipped all-keys-empty state the search speaks
+        # for every launch, and enumerating the regions would dress the plain
+        # case as a conditional one. The regions ride in the data either way.
+        scope = f" for a {', '.join(regions)} console" if scoped else ""
+        these = "for these regions " if scoped else ""
         caveats.append(
             Caveat(
                 CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
-                f"{entry.label} has no BIOS image to boot for a {', '.join(regions)} console: "
-                f"{bios_dir} {state}, and nothing in the configuration names one for these "
-                f"regions either ({empty_keys} are empty). A PlayStation starts nothing until "
+                f"{entry.label} has no BIOS image to boot{scope}: "
+                f"{bios_dir} {state}, and nothing in the configuration names one "
+                f"{these}either ({empty_keys} are empty). A PlayStation starts nothing until "
                 "an image is there",
                 {
                     "label": entry.label,

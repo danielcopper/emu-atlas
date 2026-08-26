@@ -115,6 +115,7 @@ from atlas.machine import (
 )
 from atlas.mods import (
     ModCard,
+    ModSetting,
     SoftPatchBuild,
     StandaloneModCard,
     lookup_mod_card,
@@ -5228,7 +5229,7 @@ def _pcsx2_game_settings_caveat(
                     "directory below it may be answered differently for a game this answer "
                     "cannot name (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
                     {"core": token, "dir": raw, "key": switch_key},
-                )
+                ),
             ]
         directory = host.path
     else:
@@ -5271,31 +5272,36 @@ def _duckstation_dataroot_caveat(token: str) -> Caveat:
     return duckstation.dataroot_caveat(token, "the directory below")
 
 
-def _duckstation_texture_placement(
+def _duckstation_configured_directory(
     machine: Machine,
     *,
-    card: StandaloneTextureCard,
+    token: str,
+    setting: TextureSetting | ModSetting,
     homes: _XdgHomes,
     sandbox: _Sandbox,
-    extra_caveats: tuple[Caveat, ...] = (),
-) -> TexturePlacement | Unresolved:
-    """DuckStation's texture directory: a configuration value, below the root its launch picks.
+    extra_caveats: tuple[Caveat, ...],
+    reads: str,
+    named: str,
+    switch: str,
+) -> tuple[str, str | None, list[Caveat]] | Unresolved:
+    """A ``[Folders]`` directory read the way DuckStation reads it: (dir, physical dir, caveats).
 
-    The same reading its cheat tree gets, and for the same reason — the
-    directory is ``[Folders] Textures`` and the root that key resolves
-    against is the config home or the data home depending on how the launch
-    was started, so a fixed XDG join answers correctly on one arrangement and
-    wrongly on the other. An absolute value is translated through the
-    launch's sandbox rather than trusted as a host path, the way the states
-    directory beside it already is. ``enabled`` stays unstated: the card
-    names no switch, so nothing is read for one.
+    The texture and cheat routes ask one question of one file, so they ask it
+    once here. The root the key resolves against is the config home or the
+    data home depending on how the launch was started, which is why neither
+    row is a fixed XDG join; an unset key is the emulator's compiled default
+    below that root, a relative value hangs off it, and an absolute one is
+    translated through the launch's sandbox rather than trusted as a host
+    path — the states directory beside them already reads this way. Neither
+    card names a switch, so both answers close with
+    ``emulator-config-unread`` naming the file that would hold one.
+
+    Only the nouns differ between the two, so they are parameters the way
+    :func:`_duckstation_settings` makes its refusal sentence one: ``reads`` is
+    what the emulator reads from the directory ("texture packs"), ``named``
+    the word the untranslatable refusal spells ("texture"), and ``switch`` the
+    feature whose switch went unread ("texture replacement").
     """
-    setting = card.directory
-    if setting is None:
-        raise ValueError(
-            f"texture card {card.token!r} states no directory and this resolver reads "
-            "one — the card and the code shipped out of step"
-        )
     read = duckstation.read_settings(
         machine,
         config_home=homes.base("config"),
@@ -5307,8 +5313,8 @@ def _duckstation_texture_placement(
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
-            "where it reads texture packs from is unknowable here",
-            {"emulator": card.token, "config": read.unreadable},
+            f"where it reads {reads} from is unknowable here",
+            {"emulator": token, "config": read.unreadable},
         )
     # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
     # case-insensitive, so a case-variant spelling governs here as it does
@@ -5319,10 +5325,10 @@ def _duckstation_texture_placement(
         if host.path is None:
             return Unresolved(
                 UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
-                f"the texture directory DuckStation's configuration names ({configured!r}) "
+                f"the {named} directory DuckStation's configuration names ({configured!r}) "
                 f"has no spelling on this host — {read.stated_path} read fine, and nothing "
                 "this answer could anchor at",
-                {"emulator": card.token, "config": read.stated_path or "", "path": configured},
+                {"emulator": token, "config": read.stated_path or "", "path": configured},
             )
         directory = host.path
     else:
@@ -5332,17 +5338,55 @@ def _duckstation_texture_placement(
     physical_dir, link_caveats = _link_view(machine, directory)
     caveats: list[Caveat] = [*extra_caveats, *link_caveats]
     if read.ambiguous:
-        caveats.append(_duckstation_dataroot_caveat(card.token))
+        caveats.append(_duckstation_dataroot_caveat(token))
     config_path = os.path.join(read.root, duckstation.CONFIG_FILENAME)
     caveats.append(
         Caveat(
             CAVEAT_EMULATOR_CONFIG_UNREAD,
-            f"whether {card.token} has texture replacement switched on is not established — the "
-            f"setting lives in {config_path}, which this answer reads for the directory and not "
-            "for the switch, because the card states none",
-            {"emulator": card.token, "config": config_path},
+            f"whether {token} has {switch} switched on is not established — the setting lives "
+            f"in {config_path}, which this answer reads for the directory and not for the "
+            "switch, because the card states none",
+            {"emulator": token, "config": config_path},
         )
     )
+    return directory, physical_dir, caveats
+
+
+def _duckstation_texture_placement(
+    machine: Machine,
+    *,
+    card: StandaloneTextureCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> TexturePlacement | Unresolved:
+    """DuckStation's texture directory: ``[Folders] Textures``, below the root its launch picks.
+
+    The reading its cheat tree gets, from the same file and for the same
+    reason — see :func:`_duckstation_configured_directory`, which both routes
+    read through. ``enabled`` stays unstated: the card names no switch, so
+    nothing is read for one.
+    """
+    setting = card.directory
+    if setting is None:
+        raise ValueError(
+            f"texture card {card.token!r} states no directory and this resolver reads "
+            "one — the card and the code shipped out of step"
+        )
+    resolved = _duckstation_configured_directory(
+        machine,
+        token=card.token,
+        setting=setting,
+        homes=homes,
+        sandbox=sandbox,
+        extra_caveats=extra_caveats,
+        reads="texture packs",
+        named="texture",
+        switch="texture replacement",
+    )
+    if isinstance(resolved, Unresolved):
+        return resolved
+    directory, physical_dir, caveats = resolved
     return TexturePlacement(
         dir=directory,
         needs=(),
@@ -5566,8 +5610,10 @@ def _dolphin_region_split(value: str, *, separator: str) -> tuple[str, str]:
 
     The emulator's own move, made explicit: a configured card path is a
     template whose region segment the running disc replaces (GetMemcardPath
-    MainSettings.cpp:777-819, GetGCIFolderPath :844-873). A value that spells
-    no region keeps its tail and the region is inserted before it.
+    MainSettings.cpp:777-819, GetGCIFolderPath :844-873, at dolphin 2603a —
+    the fork's own lines live on the card, per the note above
+    ``_DOLPHIN_CITATION_SLOTS``). A value that spells no region keeps its
+    tail and the region is inserted before it.
     """
     for region in _DOLPHIN_REGION_SPELLINGS:
         marker = separator + region
@@ -5582,13 +5628,16 @@ def _dolphin_raw_slot(
     sandbox: _Sandbox,
     gc_root: str,
     cite: "_Cite",
+    *,
+    spelled: str | None = None,
 ) -> _DolphinSlot:
     """A raw memory card in one slot: one file per region, named.
 
     An empty path defaults to ``<GC user>/MemoryCard<slot>.<region>.raw``
-    (MainSettings.cpp:767-774); a standard-size card carries no block suffix
-    (EXI.cpp:123-124 sizes the card at 2043 blocks unless MemoryCardSize
-    overrides it, and the suffix only exists below that, :763-765).
+    (MainSettings.cpp:767-774 at dolphin 2603a); a standard-size card
+    carries no block suffix (EXI.cpp:123-126 sizes the card at 2043 blocks
+    unless MemoryCardSize overrides it, and the suffix only exists below
+    that, MainSettings.cpp:763-765).
     """
     if configured:
         resolved = sandbox.host(f"Memcard{letter}Path", configured)
@@ -5603,7 +5652,9 @@ def _dolphin_raw_slot(
                         {"key": f"Memcard{letter}Path", "path": configured},
                     ),
                 ),
-                readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None, cite),),
+                readings=(
+                    _dolphin_reading(f"Memcard{letter}Path", configured, None, cite, spelled=spelled),
+                ),
             )
         directory, filename = os.path.split(resolved.path)
         stem, ext = os.path.splitext(filename)
@@ -5618,7 +5669,9 @@ def _dolphin_raw_slot(
             FileGroup(dir=directory, files=(name,), granularity="shared-file", role="memory-card")
             for name in names
         ),
-        readings=(_dolphin_reading(f"Memcard{letter}Path", configured, None, cite),),
+        readings=(
+            _dolphin_reading(f"Memcard{letter}Path", configured, None, cite, spelled=spelled),
+        ),
     )
 
 
@@ -5628,14 +5681,16 @@ def _dolphin_folder_slot(
     sandbox: _Sandbox,
     gc_root: str,
     cite: "_Cite",
+    *,
+    spelled: str | None = None,
 ) -> _DolphinSlot:
     """A GCI folder in one slot: one directory per region, files unnamed.
 
     An empty path defaults to ``<GC user>/<region>/Card <slot>``
-    (MainSettings.cpp:835-841). The ``.gci`` names inside come from the save's
-    own directory entry — makercode, gamecode and the save's internal filename
-    (GCMemcardDirectory.cpp:56-60) — none of which any read of the content
-    path recovers, so the groups stay unnamed.
+    (MainSettings.cpp:835-841 at dolphin 2603a). The ``.gci`` names inside
+    come from the save's own directory entry — makercode, gamecode and the
+    save's internal filename (GCMemcardDirectory.cpp:56-60) — none of which
+    any read of the content path recovers, so the groups stay unnamed.
     """
     if configured:
         resolved = sandbox.host(f"GCIFolder{letter}Path", configured)
@@ -5650,7 +5705,9 @@ def _dolphin_folder_slot(
                         {"key": f"GCIFolder{letter}Path", "path": configured},
                     ),
                 ),
-                readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite),),
+                readings=(
+                    _dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite, spelled=spelled),
+                ),
             )
         base, _ = _dolphin_region_split(resolved.path.rstrip("/"), separator="/")
         dirs = tuple(os.path.join(base, region) for region in _DOLPHIN_REGIONS)
@@ -5664,22 +5721,39 @@ def _dolphin_folder_slot(
             FileGroup(dir=d, files=None, granularity="per-game-files", role="memory-card")
             for d in dirs
         ),
-        readings=(_dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite),),
+        readings=(
+            _dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite, spelled=spelled),
+        ),
         template_dir=template,
     )
 
 
 def _dolphin_reading(
-    key: str, value: str | None, provenance: str | None, cite: "_Cite | None" = None
+    key: str,
+    value: str | None,
+    provenance: str | None,
+    cite: "_Cite | None" = None,
+    *,
+    spelled: str | None = None,
 ) -> OptionReading:
+    """One key's reading: the canonical key, and the file's own spelling in the sentence.
+
+    *spelled* is the case-variant spelling the file carries, where a value was
+    found — the reading's ``key`` stays canonical (it is what a client selects
+    by), and the provenance quotes the line as written, the way the
+    DuckStation/PCSX2 readings and the NANDRootPath site already do (#295).
+    An unset key has no file spelling, so the default sentence keeps the
+    canonical one.
+    """
     default_provenance = f"[Core] {key} is unset — the compiled-in default governs"
     if cite is not None:
         default_provenance += f" ({cite('slot_defaults')} at {cite('build')})"
+    shown = spelled if spelled is not None else key
     return OptionReading(
         key,
         value,
         provenance
-        or (f'Dolphin.ini: [Core] {key} = "{value}"' if value is not None else default_provenance),
+        or (f'Dolphin.ini: [Core] {shown} = "{value}"' if value is not None else default_provenance),
         None,
     )
 
@@ -5697,29 +5771,33 @@ def _dolphin_slot(
     because that is the emulator's own matching (the chain is on
     :func:`_parse_sectioned_ini`, #295).
     """
-    raw_value, _ = _simpleini_value(values, "Core", f"Slot{letter}")
+    raw_value, slot_spelled = _simpleini_value(values, "Core", f"Slot{letter}")
     try:
         device = int(raw_value) if raw_value is not None else _DOLPHIN_SLOT_DEFAULTS[letter]
     except ValueError:
         device = None
-    slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None, cite)
+    slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None, cite, spelled=slot_spelled)
     if device == _DOLPHIN_DEVICE_NONE:
         return _DolphinSlot(mode="none", readings=(slot_reading,))
     if device == _DOLPHIN_DEVICE_FOLDER:
+        folder_value, folder_spelled = _simpleini_value(values, "Core", f"GCIFolder{letter}Path")
         slot = _dolphin_folder_slot(
             letter,
-            _simpleini_value(values, "Core", f"GCIFolder{letter}Path")[0],
+            folder_value,
             sandbox,
             gc_root,
             cite,
+            spelled=folder_spelled,
         )
     elif device == _DOLPHIN_DEVICE_RAW:
+        card_value, card_spelled = _simpleini_value(values, "Core", f"Memcard{letter}Path")
         slot = _dolphin_raw_slot(
             letter,
-            _simpleini_value(values, "Core", f"Memcard{letter}Path")[0],
+            card_value,
             sandbox,
             gc_root,
             cite,
+            spelled=card_spelled,
         )
     elif device == _DOLPHIN_DEVICE_AGP:
         return _DolphinSlot(
@@ -5936,11 +6014,11 @@ def _dolphin_wii_answer(
     """The Wii answer: the NAND's title tree, one unnamed directory per title.
 
     ``NANDRootPath`` governs where the NAND lives (the default is the ``Wii``
-    tree below the user directory, CommonPaths.h:49); the saves inside it are
-    ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at 2603a), the title
-    id a fact of the disc that no read of the content path recovers. The key
-    is matched the way the emulator matches it — ASCII case-insensitively
-    (the chain is on :func:`_parse_sectioned_ini`, #295).
+    tree below the user directory, CommonPaths.h:49 at 2603a); the saves
+    inside it are ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at
+    2603a), the title id a fact of the disc that no read of the content path
+    recovers. The key is matched the way the emulator matches it — ASCII
+    case-insensitively (the chain is on :func:`_parse_sectioned_ini`, #295).
     """
     cite = _cites(card, homes)
     configured, spelled = _simpleini_value(values, "General", "NANDRootPath")
@@ -10396,17 +10474,15 @@ def _duckstation_mod_placement(
     sandbox: _Sandbox,
     extra_caveats: tuple[Caveat, ...] = (),
 ) -> ModPlacement | Unresolved:
-    """DuckStation's cheat tree: the directory its configuration names, below the root it picks.
+    """DuckStation's cheat tree: ``[Folders] Cheats``, below the root its launch picks.
 
     The reason this row needs a resolver rather than an XDG join is the same
     one that made the save card wrong before #250: DuckStation's DataRoot is
     the config home or the data home depending on the launch environment, so a
     card naming either would answer correctly on one arrangement and wrongly on
-    the other. The directory itself is ``[Folders] Cheats`` read the way every
-    folder of this emulator is read, so an unset key is ``cheats`` below that
-    root, a relative value hangs off it, and an absolute one is translated
-    through the launch's sandbox rather than trusted as a host path — the
-    texture and states directories' own reading.
+    the other. The key is then read the way every folder of this emulator is
+    read — :func:`_duckstation_configured_directory`, the texture route's own
+    reading.
     """
     spec = card.trees[0]
     setting = spec.directory
@@ -10415,53 +10491,20 @@ def _duckstation_mod_placement(
             f"mod card {card.token!r} states no directory and this resolver reads one "
             "— the card and the code shipped out of step"
         )
-    read = duckstation.read_settings(
+    resolved = _duckstation_configured_directory(
         machine,
-        config_home=homes.base("config"),
-        data_home=homes.base("data"),
-        flatpak=homes.flatpak,
-        xdg_pinned=homes.xdg_pinned,
+        token=card.token,
+        setting=setting,
+        homes=homes,
+        sandbox=sandbox,
+        extra_caveats=extra_caveats,
+        reads="cheat files",
+        named="cheats",
+        switch="cheat loading",
     )
-    if read.unreadable is not None:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
-            "where it reads cheat files from is unknowable here",
-            {"emulator": card.token, "config": read.unreadable},
-        )
-    # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
-    # case-insensitive, so a case-variant spelling governs here as it does
-    # in the running emulator (:func:`atlas.qt_ini.simpleini_value`).
-    configured = _simpleini_value(read.values, setting.section, setting.key)[0] or ""
-    if os.path.isabs(configured):
-        host = sandbox.host(setting.key, configured)
-        if host.path is None:
-            return Unresolved(
-                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
-                f"the cheats directory DuckStation's configuration names ({configured!r}) "
-                f"has no spelling on this host — {read.stated_path} read fine, and nothing "
-                "this answer could anchor at",
-                {"emulator": card.token, "config": read.stated_path or "", "path": configured},
-            )
-        directory = host.path
-    else:
-        directory = duckstation.load_path(
-            read.values, read.root, setting.section, setting.key, setting.default
-        )
-    physical, link_caveats = _link_view(machine, directory)
-    caveats: list[Caveat] = [*extra_caveats, *link_caveats]
-    if read.ambiguous:
-        caveats.append(_duckstation_dataroot_caveat(card.token))
-    config_path = os.path.join(read.root, duckstation.CONFIG_FILENAME)
-    caveats.append(
-        Caveat(
-            CAVEAT_EMULATOR_CONFIG_UNREAD,
-            f"whether {card.token} has cheat loading switched on is not established — the "
-            f"setting lives in {config_path}, which this answer reads for the directory and "
-            "not for the switch, because the card states none",
-            {"emulator": card.token, "config": config_path},
-        )
-    )
+    if isinstance(resolved, Unresolved):
+        return resolved
+    directory, physical, caveats = resolved
     sources = [
         f"mod card '{card.token}': the directory is [{setting.section}] {setting.key} in the "
         f"emulator's own configuration — {setting.citation}",

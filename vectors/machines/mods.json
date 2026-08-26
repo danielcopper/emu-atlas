@@ -1216,6 +1216,65 @@
       }
     },
     {
+      "name": "emudeck-a-var-spelled-cheats-directory-is-the-host-path-it-names",
+      "rationale": "The cheat tree's half of the same fact: an EmuDeck AppImage launch has no sandbox, so a /var/data value in its settings.ini is a host path rather than the app's private data home. The DataRoot probe still runs — the config-home candidate carries the file here — and the answer names the value as written, where the RetroDECK vector of this key translates it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">%EMULATOR_DUCKSTATION% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/duckstation.AppImage": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/duckstation/settings.ini": "[Folders]\nCheats = /var/data/duckstation/cheats\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/var/data/duckstation/cheats"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/var/data/duckstation/cheats",
+              "physical_dir": null,
+              "keying": "title"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.config/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "duckstation-a-case-variant-spelling-of-the-cheats-key-governs",
       "rationale": "The cheat tree comes from the same settings.ini read through the same CSimpleIniA (ini_settings_interface.h:65 at 64655818e), so [folders] cheats is the [Folders] Cheats key to the running emulator, and the relative value joins the DataRoot (LoadPathFromSettings, settings.cpp:1955-1962). An exact-case lookup would have answered the compiled cheats default while the emulator loads from the configured tree (#295).",
       "input": {

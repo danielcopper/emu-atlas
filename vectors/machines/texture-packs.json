@@ -2333,6 +2333,66 @@
       }
     },
     {
+      "name": "emudeck-a-var-spelled-texture-directory-is-the-host-path-it-names",
+      "rationale": "The same string RetroDECK's PCSX2 writes from inside its flatpak — /var/data/... — means something else in a config no sandbox wrote. EmuDeck's AppImage launch is a native install, so its PCSX2.ini is host-native and the value is a real (if unusual) host path: translating it to ~/.var/app/<id>/data would invent a directory this emulator never opens. The answer therefore anchors at the value as it stands, with no sandbox caveat, which is the opposite of what the RetroDECK vector of the same key pins.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/pcsx2-v2.6.3.AppImage": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = /var/data/pcsx2/textures\n[EmuCore/GS]\nLoadTextureReplacements = true\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/var/data/pcsx2/textures"
+        ],
+        "entry_texture_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/var/data/pcsx2/textures/<save_id>/replacements",
+          "needs": [
+            "save_id"
+          ],
+          "physical_dir": null,
+          "enabled": true,
+          "keying": "serial",
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "PCSX2",
+                "root": "/var/data/pcsx2/textures",
+                "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "load_stage": "replacements",
+                "dump_stage": "dumps",
+                "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "pcsx2-a-case-variant-spelling-of-the-texture-keys-governs",
       "rationale": "PCSX2 reads PCSX2.ini through CSimpleIniA, whose comparator matches sections and keys ASCII case-insensitively (INISettingsInterface.h:66, SimpleIni.h:3642-3643 over SI_GenericNoCase :2916-2931 at v2.6.3) — so [folders] textures, gamesettings and [emucore/gs] loadtexturereplacements are the same settings to the running emulator as their canonical spellings. The configured directory governs, the switch reads true, and the per-game layer the case-variant gamesettings line names is found and stated — an exact-case lookup would have answered the compiled default for all three (#295).",
       "input": {

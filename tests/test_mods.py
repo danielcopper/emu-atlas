@@ -636,12 +636,6 @@ class TestATreeIsAFixedPlaceOrAConfiguredOne:
         with pytest.raises(ValueError, match="mods.settings"):
             load_standalone_mod_cards(text)
 
-    def test_a_card_naming_a_file_the_table_does_not_carry_fails_loudly(self):
-        # The two shipped out of step, and answering from a path nobody stated
-        # is the exact failure the settings table exists to remove.
-        with pytest.raises(ValueError, match="no settings file"):
-            settings_file("PCSX2", "nowhere.ini")
-
 
 class TestTheAnswerJoinsALiveRootToRecordedTrees:
     def _fbneo(self, **kwargs) -> ModPlacement:
