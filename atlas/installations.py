@@ -5228,7 +5228,7 @@ def _pcsx2_game_settings_caveat(
                     "directory below it may be answered differently for a game this answer "
                     "cannot name (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
                     {"core": token, "dir": raw, "key": switch_key},
-                )
+                ),
             ]
         directory = host.path
     else:
