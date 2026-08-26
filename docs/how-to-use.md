@@ -1027,7 +1027,8 @@ homes. A launch whose binary establishes neither — the Windows build under Pro
 refuses with `standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this
 emulator is not covered".
 
-Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction:
+Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction — the rows
+that read a configuration add two more, below the table:
 
 | Code                               | Meaning                                                                                                             |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -1119,13 +1120,10 @@ resolves against is the config home or the data home depending on how the launch
 and its compiled default (`cheats`) instead of a base, and the answer follows the same read the save and BIOS questions
 of that emulator make. Where no `settings.ini` exists on either candidate, the answer names the environment-unset side
 and says so with `core-mode-unestablished` — the same word the save route uses, so the two never disagree about what is
-unknown. Where the file exists and cannot be read, the question is refused rather than answered with a default that file
-may well have overridden. And an absolute value in that key goes through the launch's sandbox map like every other path
-this emulator's configuration names: translated to its host spelling where the map knows one, refused with
-`emulator-config-path-untranslatable` (the stated value in `data.path`) where it does not — never a verbatim sandbox
-path stated as a host tree.
+unknown.
 
-Four ways this question answers with `Unresolved`:
+Four ways this question answers with `Unresolved` instead of a directory, and the row that reads a configuration adds
+two more, below the table:
 
 | Code                               | Meaning                                                                                                            |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -1133,6 +1131,14 @@ Four ways this question answers with `Unresolved`:
 | `standalone-unsupported`           | a standalone emulator whose mod directory is named only in its own config (MAME's `pluginspath`)                   |
 | `standalone-variant-unestablished` | the card covers it, but which tree the launch's binary reads is not established (EmuDeck; `data.variant` names it) |
 | `mod-wiring-unestablished`         | atlas carries no mod wiring for this core — a statement about atlas, never about the emulator                      |
+
+Where the tree hangs off a configuration value (DuckStation), the config read itself can refuse with the texture
+question's own two codes: a `settings.ini` that exists and cannot be read is `emulator-config-unreadable` — refused
+rather than answered with a default that file may well have overridden — and one that reads fine but states an absolute
+directory only the emulator's sandbox can spell is `emulator-config-path-untranslatable` with the stated value in
+`data.path`. An absolute value in that key goes through the launch's sandbox map like every other path this emulator's
+configuration names: translated to its host spelling where the map knows one, refused where it does not, and never
+stated verbatim as if this host could read it.
 
 Standalone emulators answer through the catalogue entry, exactly as they do for texture packs and with the same
 asymmetry against their saves. Two caveats are worth branching on, and one absence:
