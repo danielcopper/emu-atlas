@@ -1037,7 +1037,12 @@ Four ways this question answers with `Unresolved` instead of a directory, and ea
 | `texture-wiring-unestablished`     | atlas carries no texture wiring for this core                                                                       |
 
 The last is a statement about atlas, never about the emulator. It does **not** say the emulator has no texture-pack
-feature; most cores are simply outside the packaged knowledge.
+feature; most cores are simply outside the packaged knowledge. Where the directory is a configuration value (PCSX2,
+DuckStation), the config read itself can refuse the way the save routes' reads do: a settings file that exists and
+cannot be read is `emulator-config-unreadable`, and one that reads fine but states an absolute directory only the
+emulator's sandbox can spell is `emulator-config-path-untranslatable` with the stated value in `data.path` — a
+sandbox-spelled value is translated to its host spelling where the map knows one, refused where it does not, and never
+stated verbatim as if this host could read it.
 
 Three caveats are this question's own:
 
@@ -1115,7 +1120,10 @@ and its compiled default (`cheats`) instead of a base, and the answer follows th
 of that emulator make. Where no `settings.ini` exists on either candidate, the answer names the environment-unset side
 and says so with `core-mode-unestablished` — the same word the save route uses, so the two never disagree about what is
 unknown. Where the file exists and cannot be read, the question is refused rather than answered with a default that file
-may well have overridden.
+may well have overridden. And an absolute value in that key goes through the launch's sandbox map like every other path
+this emulator's configuration names: translated to its host spelling where the map knows one, refused with
+`emulator-config-path-untranslatable` (the stated value in `data.path`) where it does not — never a verbatim sandbox
+path stated as a host tree.
 
 Four ways this question answers with `Unresolved`:
 

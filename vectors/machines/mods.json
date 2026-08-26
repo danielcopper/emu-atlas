@@ -758,7 +758,7 @@
     },
     {
       "name": "duckstation-a-configured-cheats-directory-is-read-as-it-stands",
-      "rationale": "An absolute [Folders] Cheats is taken as it stands, the way LoadPathFromSettings takes it — the same helper the BIOS search directory and the memory cards go through. This is the state an arrangement that does wire the key would leave, and the answer follows the configuration rather than the emulator's default.",
+      "rationale": "A host-spelled absolute [Folders] Cheats is taken as it stands, the way LoadPathFromSettings takes it — the same helper the BIOS search directory and the memory cards go through (a sandbox-spelled one would translate through the launch's sandbox map instead, #277). This is the state an arrangement that does wire the key would leave, and the answer follows the configuration rather than the emulator's default.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1118,6 +1118,100 @@
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-duckstation-a-sandbox-spelled-cheats-directory-is-translated",
+      "rationale": "The cheat tree is read from the same settings.ini the texture and states directories come from, written from inside the same flatpak — so an absolute [Folders] Cheats spelled /var/data/... anchors at the app's private data directory on the host, ~/.var/app/<app id>/data. One sandbox map serves every answer about this emulator, or one machine gets a translated states answer and an untranslated cheats answer for the same config file.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"mods_path\": \"/mnt/sd/retrodeck/mods\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Folders]\nCheats = /var/data/duckstation/cheats\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/cheats"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/cheats",
+              "physical_dir": null,
+              "keying": "title"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-duckstation-a-sandbox-only-cheats-directory-refuses-with-the-path",
+      "rationale": "settings.ini reads fine and [Folders] Cheats states a path only the emulator's sandbox can spell (/var/tmp/ is no XDG bind) — the refusal is emulator-config-path-untranslatable with the stated value in data.path, exactly the outcome the same value in [MemoryCards] Directory already reaches, never a verbatim sandbox path stated as a host tree.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"mods_path\": \"/mnt/sd/retrodeck/mods\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Folders]\nCheats = /var/tmp/cheats\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_mod_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "unresolved": {
+            "code": "emulator-config-path-untranslatable",
+            "data": {
+              "emulator": "DUCKSTATION",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini",
+              "path": "/var/tmp/cheats"
+            }
+          }
         }
       }
     }

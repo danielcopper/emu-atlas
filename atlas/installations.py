@@ -4991,6 +4991,7 @@ def _pcsx2_texture_placement(
     *,
     card: StandaloneTextureCard,
     homes: _XdgHomes,
+    sandbox: _Sandbox,
     extra_caveats: tuple[Caveat, ...] = (),
 ) -> TexturePlacement | Unresolved:
     """PCSX2's texture answer: the directory its configuration names, and the switch.
@@ -4999,7 +5000,11 @@ def _pcsx2_texture_placement(
     directory is a configuration value — ``[Folders] Textures``, read through
     the helper the memory-card directory goes through (LoadPathFromSettings,
     Pcsx2Config.cpp:2272-2278 at v2.6.3), so an unset key means the compiled
-    ``textures`` below the DataRoot and a relative one resolves against it.
+    ``textures`` below the DataRoot, a relative one resolves against it, and
+    an absolute one is translated through the launch's sandbox rather than
+    trusted as a host path — the same translation the memory-card and states
+    directories get, because all three are values the emulator wrote from
+    inside the same sandbox.
     And ``enabled`` is a real read rather than ``None``: the switch is
     ``[EmuCore/GS] LoadTextureReplacements``, compiled default off, and
     nothing is scanned while it is off (GSTextureReplacements.cpp:391-393).
@@ -5039,8 +5044,20 @@ def _pcsx2_texture_placement(
         default_citation=setting.citation,
         data_root=data_root,
     )
-    root = resolved if resolved is not None else raw_dir
-    assert root is not None  # only an absolute value leaves the helper unresolved
+    if resolved is None:
+        assert raw_dir is not None  # only an absolute value leaves the helper unresolved
+        host = sandbox.host(setting.key, raw_dir)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the texture directory PCSX2's configuration names ({raw_dir!r}) has no "
+                f"spelling on this host — {ini_path} read fine, and nothing this answer "
+                "could anchor at",
+                {"emulator": card.token, "config": ini_path, "path": raw_dir},
+            )
+        root = host.path
+    else:
+        root = resolved
     directory = os.path.join(root, TEMPLATE_SAVE_ID, _PCSX2_TEXTURE_LOAD_STAGE)
     switch = card.switch
     if switch is None:
@@ -5054,7 +5071,9 @@ def _pcsx2_texture_placement(
     # its plain comparison; the live value goes through the emulator's reading.
     enabled = parsed_switch if parsed_switch is not None else switch.default == "true"
     rejected = _pcsx2_rejected_switch(card.token, switch, raw_switch, parsed_switch, enabled)
-    per_game = _pcsx2_game_settings_caveat(machine, values, data_root, card.token, switch.key)
+    per_game = _pcsx2_game_settings_caveat(
+        machine, values, data_root, card.token, switch.key, sandbox=sandbox
+    )
     physical_dir, link_caveats = _link_view(machine, root)
     return TexturePlacement(
         dir=directory,
@@ -5144,6 +5163,8 @@ def _pcsx2_game_settings_caveat(
     data_root: str,
     token: str,
     switch_key: str,
+    *,
+    sandbox: _Sandbox,
 ) -> list[Caveat]:
     """The per-game ini layer, where this machine has one — PCSX2's second settings source.
 
@@ -5165,7 +5186,10 @@ def _pcsx2_game_settings_caveat(
     A listing that *failed* is not that silence. The absence of a caveat here
     is what tells a caller this answer holds for every game, so answering an
     unreadable directory the way an empty one is answered claims exactly what
-    was not established — which is why the failure has a code of its own.
+    was not established — which is why the failure has a code of its own. An
+    absolute configured value is translated through the launch's sandbox like
+    every other path this configuration names; one with no host spelling is
+    that same unread state, because the listing cannot be made from here.
     """
     raw = values.get(("Folders", "GameSettings"))
     resolved, _ = _pcsx2_folder_below_dataroot(
@@ -5175,8 +5199,29 @@ def _pcsx2_game_settings_caveat(
         default_citation="Pcsx2Config.cpp:2290",
         data_root=data_root,
     )
-    directory = resolved if resolved is not None else raw
-    assert directory is not None  # only an absolute value leaves the helper unresolved
+    if resolved is None:
+        assert raw is not None  # only an absolute value leaves the helper unresolved
+        host = sandbox.host("GameSettings", raw)
+        if host.path is None:
+            # An absolute value only the emulator's sandbox can spell: the
+            # listing this caveat rests on cannot be made from here, and that
+            # is the unread state — never the silent absence, whose meaning is
+            # "no game carries an override".
+            return [
+                Caveat(
+                    CAVEAT_PER_GAME_LAYER_UNREAD,
+                    f"[Folders] GameSettings = {raw!r} names a location only the emulator's "
+                    "sandbox can spell, so whether any game on this machine carries a "
+                    "per-game settings file is unknown — PCSX2 layers such a file over the "
+                    f"whole configuration while that game runs, so {switch_key} and the "
+                    "directory below it may be answered differently for a game this answer "
+                    "cannot name (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
+                    {"core": token, "dir": raw, "key": switch_key},
+                )
+            ]
+        directory = host.path
+    else:
+        directory = resolved
     listing = machine.glob(os.path.join(directory, _ANY_INI_GLOB))
     if listing.status != GLOB_COMPLETE:
         return [
@@ -5220,6 +5265,7 @@ def _duckstation_texture_placement(
     *,
     card: StandaloneTextureCard,
     homes: _XdgHomes,
+    sandbox: _Sandbox,
     extra_caveats: tuple[Caveat, ...] = (),
 ) -> TexturePlacement | Unresolved:
     """DuckStation's texture directory: a configuration value, below the root its launch picks.
@@ -5228,8 +5274,10 @@ def _duckstation_texture_placement(
     directory is ``[Folders] Textures`` and the root that key resolves
     against is the config home or the data home depending on how the launch
     was started, so a fixed XDG join answers correctly on one arrangement and
-    wrongly on the other. ``enabled`` stays unstated: the card names no
-    switch, so nothing is read for one.
+    wrongly on the other. An absolute value is translated through the
+    launch's sandbox rather than trusted as a host path, the way the states
+    directory beside it already is. ``enabled`` stays unstated: the card
+    names no switch, so nothing is read for one.
     """
     setting = card.directory
     if setting is None:
@@ -5251,9 +5299,22 @@ def _duckstation_texture_placement(
             "where it reads texture packs from is unknowable here",
             {"emulator": card.token, "config": read.unreadable},
         )
-    directory = duckstation.load_path(
-        read.values, read.root, setting.section, setting.key, setting.default
-    )
+    configured = read.values.get((setting.section, setting.key), "")
+    if os.path.isabs(configured):
+        host = sandbox.host(setting.key, configured)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the texture directory DuckStation's configuration names ({configured!r}) "
+                f"has no spelling on this host — {read.stated_path} read fine, and nothing "
+                "this answer could anchor at",
+                {"emulator": card.token, "config": read.stated_path or "", "path": configured},
+            )
+        directory = host.path
+    else:
+        directory = duckstation.load_path(
+            read.values, read.root, setting.section, setting.key, setting.default
+        )
     physical_dir, link_caveats = _link_view(machine, directory)
     caveats: list[Caveat] = [*extra_caveats, *link_caveats]
     if read.ambiguous:
@@ -5304,6 +5365,7 @@ def _standalone_texture_placement(
     *,
     card: StandaloneTextureCard,
     homes: _XdgHomes,
+    sandbox: _Sandbox,
     extra_caveats: tuple[Caveat, ...] = (),
 ) -> TexturePlacement | Unresolved:
     """Where a standalone emulator reads texture packs — an XDG join, then the links.
@@ -5329,7 +5391,9 @@ def _standalone_texture_placement(
                 f"standalone texture card {card.token!r} states a directory setting but has "
                 "no resolver registered — the card and the code shipped out of step"
             )
-        return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
+        return resolver(
+            machine, card=card, homes=homes, sandbox=sandbox, extra_caveats=extra_caveats
+        )
     if card.base is None or card.subdir is None:
         raise ValueError(
             f"texture card {card.token!r} states no base/subdir pair and this resolver "
@@ -10315,6 +10379,7 @@ def _duckstation_mod_placement(
     *,
     card: StandaloneModCard,
     homes: _XdgHomes,
+    sandbox: _Sandbox,
     extra_caveats: tuple[Caveat, ...] = (),
 ) -> ModPlacement | Unresolved:
     """DuckStation's cheat tree: the directory its configuration names, below the root it picks.
@@ -10325,7 +10390,9 @@ def _duckstation_mod_placement(
     card naming either would answer correctly on one arrangement and wrongly on
     the other. The directory itself is ``[Folders] Cheats`` read the way every
     folder of this emulator is read, so an unset key is ``cheats`` below that
-    root and a relative value hangs off it.
+    root, a relative value hangs off it, and an absolute one is translated
+    through the launch's sandbox rather than trusted as a host path — the
+    texture and states directories' own reading.
     """
     spec = card.trees[0]
     setting = spec.directory
@@ -10348,9 +10415,22 @@ def _duckstation_mod_placement(
             "where it reads cheat files from is unknowable here",
             {"emulator": card.token, "config": read.unreadable},
         )
-    directory = duckstation.load_path(
-        read.values, read.root, setting.section, setting.key, setting.default
-    )
+    configured = read.values.get((setting.section, setting.key), "")
+    if os.path.isabs(configured):
+        host = sandbox.host(setting.key, configured)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the cheats directory DuckStation's configuration names ({configured!r}) "
+                f"has no spelling on this host — {read.stated_path} read fine, and nothing "
+                "this answer could anchor at",
+                {"emulator": card.token, "config": read.stated_path or "", "path": configured},
+            )
+        directory = host.path
+    else:
+        directory = duckstation.load_path(
+            read.values, read.root, setting.section, setting.key, setting.default
+        )
     physical, link_caveats = _link_view(machine, directory)
     caveats: list[Caveat] = [*extra_caveats, *link_caveats]
     if read.ambiguous:
@@ -10397,6 +10477,7 @@ def _standalone_mod_placement(
     *,
     card: StandaloneModCard,
     homes: _XdgHomes,
+    sandbox: _Sandbox,
     extra_caveats: tuple[Caveat, ...] = (),
 ) -> ModPlacement | Unresolved:
     """Where a standalone emulator reads mods — an XDG join, then the links.
@@ -10416,7 +10497,9 @@ def _standalone_mod_placement(
                 f"standalone mod card {card.token!r} states a directory setting but has no "
                 "resolver registered — the card and the code shipped out of step"
             )
-        return resolver(machine, card=card, homes=homes, extra_caveats=extra_caveats)
+        return resolver(
+            machine, card=card, homes=homes, sandbox=sandbox, extra_caveats=extra_caveats
+        )
     if card.base is None:
         raise ValueError(
             f"mod card {card.token!r} states no base and this resolver opens one below "
@@ -14556,6 +14639,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 self._machine,
                 card=card,
                 homes=self._xdg_homes(),
+                sandbox=self._sandbox(),
                 extra_caveats=(
                     *entry_caveats,
                     *extra,
@@ -14599,6 +14683,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 self._machine,
                 card=card,
                 homes=self._xdg_homes(),
+                sandbox=self._sandbox(),
                 extra_caveats=(
                     *entry_caveats,
                     *extra,
@@ -16212,6 +16297,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine,
             card=card,
             homes=gate.homes,
+            sandbox=self._standalone_sandbox(),
             extra_caveats=self._standalone_entry_caveats(spec, entry_caveats, content_path),
         )
 
@@ -16234,6 +16320,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine,
             card=card,
             homes=gate.homes,
+            sandbox=self._standalone_sandbox(),
             extra_caveats=self._standalone_entry_caveats(spec, entry_caveats, content_path),
         )
 
