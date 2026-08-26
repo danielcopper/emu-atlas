@@ -77,6 +77,14 @@
           },
           "caveats": [
             {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "layer": "GlobalGame"
+              }
+            },
+            {
               "code": "file-names-unestablished",
               "data": {
                 "core": "DOLPHIN",
@@ -210,7 +218,16 @@
               }
             ]
           },
-          "caveats": [],
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "layer": "GlobalGame"
+              }
+            }
+          ],
           "granularity": {
             "value": "shared-file",
             "mode": "card+none",
@@ -300,6 +317,14 @@
             ]
           },
           "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Dolphin.General] NANDRootPath",
+                "layer": "GlobalGame"
+              }
+            },
             {
               "code": "file-names-unestablished",
               "data": {
@@ -4211,6 +4236,14 @@
           },
           "caveats": [
             {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "layer": "GlobalGame"
+              }
+            },
+            {
               "code": "file-names-unestablished",
               "data": {
                 "core": "DOLPHIN",
@@ -4412,6 +4445,14 @@
           },
           "caveats": [
             {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "PRIMEHACK",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "layer": "GlobalGame"
+              }
+            },
+            {
               "code": "file-names-unestablished",
               "data": {
                 "core": "PRIMEHACK",
@@ -4526,6 +4567,14 @@
           },
           "caveats": [
             {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "PRIMEHACK",
+                "key": "[Dolphin.General] NANDRootPath",
+                "layer": "GlobalGame"
+              }
+            },
+            {
               "code": "file-names-unestablished",
               "data": {
                 "core": "PRIMEHACK",
@@ -4619,6 +4668,14 @@
             ]
           },
           "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "PRIMEHACK",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "layer": "GlobalGame"
+              }
+            },
             {
               "code": "file-names-unestablished",
               "data": {
@@ -5197,6 +5254,14 @@
           },
           "caveats": [
             {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "layer": "GlobalGame"
+              }
+            },
+            {
               "code": "file-names-unestablished",
               "data": {
                 "core": "DOLPHIN",
@@ -5320,6 +5385,14 @@
           },
           "caveats": [
             {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Dolphin.General] NANDRootPath",
+                "layer": "GlobalGame"
+              }
+            },
+            {
               "code": "file-names-unestablished",
               "data": {
                 "core": "DOLPHIN",
@@ -5340,6 +5413,262 @@
               }
             ],
             "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-per-game-settings-file-on-this-machine-is-stated-beside-the-card-answer",
+      "rationale": "Dolphin layers <user>/GameSettings/<id>.ini over the whole configuration while that game runs, above every value Dolphin.ini states (GameConfigLoader.cpp:185-197, Enums.h:39-47 at dolphin 2603a), and nothing filters what such a file may set — the loader writes every mapped key into the layer and only Save filters (:261-277, :294). So MemcardAPath can be answered differently for one game, and which game runs is not a fact atlas holds. Whether any file exists at all IS a listing, so the answer keeps the global reading and counts them: per-game-overrides-present with the count and the directory. The two files here are one that really sets a card path and one that sets nothing of the sort — the count is of per-game FILES, not of files atlas read and judged, because reading them would answer for a game nobody named.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 1\nSlotB = 255\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings/GALE01.ini": "[Core]\nMemcardAPath = /mnt/sd/cards/melee.USA.raw\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings/GZ2E01.ini": "[Core]\nMMU = True\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "MemoryCardA.USA.raw",
+              "MemoryCardA.EUR.raw",
+              "MemoryCardA.JAP.raw"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.USA.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.EUR.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.JAP.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-overrides-present",
+              "data": {
+                "core": "DOLPHIN",
+                "count": "2",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "layer": "GlobalGame"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "card+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "MemcardAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "folder+none",
+                "options": {
+                  "SlotA": "8"
+                },
+                "values": [
+                  "per-game-files"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-per-game-directory-that-cannot-be-listed-is-not-an-empty-one",
+      "rationale": "The absence of per-game-overrides-present is what tells a caller this answer holds for every game, so answering an unreadable GameSettings directory the way an empty one is answered would claim exactly what the failed listing never established. The directory is there and its contents cannot be read: per-game-layer-unread says so, naming the directory and the keys the layer could move, and per-game-overrides-present stays away because it would assert files nobody saw. The build's own layer is stated beside it either way — that one is never a listing atlas can make.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 1\nSlotB = 255\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings"
+        ],
+        "unlistable": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "MemoryCardA.USA.raw",
+              "MemoryCardA.EUR.raw",
+              "MemoryCardA.JAP.raw"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.USA.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.EUR.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.JAP.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "layer": "GlobalGame"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "card+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "MemcardAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "folder+none",
+                "options": {
+                  "SlotA": "8"
+                },
+                "values": [
+                  "per-game-files"
+                ]
+              }
+            ]
           }
         }
       }

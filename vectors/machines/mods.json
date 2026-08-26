@@ -614,6 +614,14 @@
                 "emulator": "DOLPHIN",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/GFX.ini"
               }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Dolphin.General] LoadPath",
+                "layer": "GlobalGame"
+              }
             }
           ]
         }
@@ -1059,6 +1067,14 @@
                 "emulator": "DOLPHIN",
                 "config": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/GFX.ini"
               }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Dolphin.General] LoadPath",
+                "layer": "GlobalGame"
+              }
             }
           ]
         }
@@ -1115,6 +1131,14 @@
               "data": {
                 "emulator": "PRIMEHACK",
                 "config": "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu/GFX.ini"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "PRIMEHACK",
+                "key": "[Dolphin.General] LoadPath",
+                "layer": "GlobalGame"
               }
             }
           ]
