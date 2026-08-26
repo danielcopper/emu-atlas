@@ -1921,7 +1921,9 @@ class TestDolphinPerGameSettingsLayer:
         )
         assert stated.data["dir"] == DOLPHIN_GAME_SETTINGS
 
-    def test_a_user_directory_that_cannot_be_listed_claims_no_files_exist_there(self):
+    def test_a_failed_listing_never_asserts_that_per_game_files_exist(self):
+        # The sibling code asserts they are there; a listing that failed saw
+        # nothing, so it must not borrow that claim.
         rd = self._machine(dirs=[DOLPHIN_GAME_SETTINGS], unlistable=[DOLPHIN_GAME_SETTINGS])
         codes = self._codes(self._entry(rd).savefile_location())
         assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in codes
@@ -2040,6 +2042,56 @@ class TestDolphinPerGameSettingsLayer:
             atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT,
         )
         assert stated.data["dir"] == PRIMEHACK_GAME_SETTINGS
+
+    # -- the table and the shipped cards cannot drift apart -------------------
+
+    @pytest.mark.parametrize("token", ["DOLPHIN", "PRIMEHACK"])
+    def test_every_dolphin_family_build_has_a_row(self, token):
+        # The lookup is exact by (token, app id) on purpose: falling back to
+        # another build's row would state that build's line numbers for this
+        # one. So an id the cards can produce and the table has no row for is
+        # card/code drift, and the resolver raises for it — this is what keeps
+        # that raise unreachable for anything actually shipped. Both sources of
+        # an app id are covered: the save card's own, and every installation
+        # override the settings table states.
+        from atlas import emulator_settings, standalone_saves
+        from atlas.installations import (
+            _DOLPHIN_GAME_LAYERS,  # pyright: ignore[reportPrivateUsage] - the pairing is the unit under test
+        )
+
+        card = standalone_saves.lookup_standalone_save_card(token)
+        assert card is not None
+        candidates = {None, card.flatpak}
+        candidates.update(emulator_settings.emulator_directory(token).installations)
+        missing = [
+            app_id for app_id in candidates if (token, app_id) not in _DOLPHIN_GAME_LAYERS
+        ]
+        assert missing == []
+
+    def test_a_build_with_no_row_fails_loudly_rather_than_going_silent(self):
+        # The branch the drift test above keeps unreachable. It must raise
+        # rather than return nothing: a silently dropped statement is the
+        # wrongly-silent answer this whole feature exists to remove, and
+        # borrowing another build's row would cite the wrong line numbers.
+        from atlas.installations import (
+            _XdgHomes,  # pyright: ignore[reportPrivateUsage] - the drift guard is the unit under test
+            _dolphin_game_settings_caveats,  # pyright: ignore[reportPrivateUsage] - the drift guard is the unit under test
+        )
+
+        homes = _XdgHomes(
+            data=f"{HOME}/.local/share",
+            config=f"{HOME}/.config",
+            flatpak="org.example.NotAKnownBuild",
+        )
+        machine = FixtureMachine({})
+        with pytest.raises(ValueError, match="shipped out of step"):
+            _dolphin_game_settings_caveats(
+                machine,
+                token="DOLPHIN",
+                homes=homes,
+                keys=("[Core] MemcardAPath",),
+                governs="where the cards live",
+            )
 
     # -- and nobody else grows a caveat ---------------------------------------
 

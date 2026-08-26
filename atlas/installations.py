@@ -5598,28 +5598,40 @@ class _DolphinGameLayer:
     unfiltered: str
     # LocalGame > GlobalGame > CommandLine > Base.
     order: str
-    # ``D_GAMESETTINGS_IDX = D_USER_IDX + GAMESETTINGS_DIR DIR_SEP``.
-    user_dir: str
     # ``GetSysDirectory()`` is the compile-time ``DATA_DIR "sys/"``.
     sys_dir: str
-    # Where the layers are added, and from where — the reachability proof:
-    # this runs before the emulated hardware opens anything.
-    added: str
 
 
 # Two line sets, not four: PrimeHack's Flathub build is a later rebase onto
 # modern Dolphin and carries Dolphin's line numbers, while the revision
 # RetroDECK builds is three years older and carries its own. Which set a launch
 # gets is decided by the build it runs, never by the emulator's name.
+#
+# Only what a message actually says is data here. Two more facts were read at
+# these same pins and belong in the record without being fields no sentence
+# surfaces:
+#
+#   * the user directory's join, ``D_GAMESETTINGS_IDX = D_USER_IDX +
+#     GAMESETTINGS_DIR DIR_SEP`` — FileUtil.cpp:843 modern, :840 fork. The
+#     caveats name that directory by its resolved path, not by its citation,
+#     because it is a path atlas really walked.
+#   * the reachability proof — the layers are installed at
+#     ConfigManager.cpp:254-255 (modern) / :189-190 (fork), reached from
+#     BootManager.cpp:56 / :65, which runs before ``Core::Init`` and therefore
+#     before the emulated hardware opens a memory card or the video backend
+#     opens the Load tree. Adding a layer fires the config-changed callback
+#     that re-runs ``InitCustomPaths`` (UICommon.cpp:102-118, :131-135 modern;
+#     :101-118, :130 fork), which is how one ``LoadPath`` line moves both the
+#     texture tree and the graphics-mod tree (FileUtil.cpp:967-972 / :946-950).
+#     This is why the caveats are stated at all rather than hedged: the layer
+#     is provably in place before every read they qualify.
 _DOLPHIN_MODERN_LINES = {
     "loader": "GameConfigLoader.cpp:185-197",
     "unfiltered": (
         "GameConfigLoader.cpp:261-277, the IsSettingSaveable filter being Save's own at :294"
     ),
     "order": "Enums.h:39-47",
-    "user_dir": "FileUtil.cpp:843",
     "sys_dir": "FileUtil.cpp:760-793",
-    "added": "ConfigManager.cpp:254-255, from BootManager.cpp:56",
 }
 _DOLPHIN_FORK_LINES = {
     "loader": "GameConfigLoader.cpp:176-198",
@@ -5627,10 +5639,16 @@ _DOLPHIN_FORK_LINES = {
         "GameConfigLoader.cpp:253-272, the IsSettingSaveable filter being Save's own at :292"
     ),
     "order": "Enums.h:40-48",
-    "user_dir": "FileUtil.cpp:840",
     "sys_dir": "FileUtil.cpp:758-791",
-    "added": "ConfigManager.cpp:189-190, from BootManager.cpp:65",
 }
+
+# The tokens this layer is established for. Kept beside the table rather than
+# derived from it, because the two answer different questions: this one says
+# "does this emulator load a per-game layer at all" (a fact about the
+# emulator), the table says "which build's lines describe it" (a fact about the
+# installation). An emulator missing from here is silent; one missing only a
+# build row raises.
+_DOLPHIN_FAMILY = frozenset({"DOLPHIN", "PRIMEHACK"})
 
 # Keyed the way every standalone registry is: the token, and the flatpak app id
 # where the build differs per installation (#246). ``None`` covers an
@@ -5694,11 +5712,26 @@ def _dolphin_game_settings_caveats(
     section is ``[Dolphin.General]``, and ``[Main.General]`` is dropped with a
     warning. *governs* says, in the answer's own terms, what those keys move.
     """
+    if token not in _DOLPHIN_FAMILY:
+        return ()
     layer = _DOLPHIN_GAME_LAYERS.get((token, homes.flatpak))
     if layer is None:
-        return ()
+        # A Dolphin-family emulator whose build has no row is card/code drift,
+        # and it fails loudly the way every other drift in this file does
+        # (a texture card naming a directory setting with no resolver
+        # registered raises exactly here). Falling back to another build's row
+        # would state that build's line numbers for this one — the mistake the
+        # per-installation citations exist to prevent — and returning nothing
+        # would drop the statement SILENTLY, which is the failure this whole
+        # answer exists to remove. ``test_every_dolphin_family_build_has_a_row``
+        # keeps it unreachable for the builds the cards actually name.
+        raise ValueError(
+            f"{token!r} runs under flatpak {homes.flatpak!r}, a build the per-game layer "
+            "table states no source lines for — the cards and the code shipped out of step"
+        )
     spelled = ", ".join(keys)
     plural = "keys" if len(keys) > 1 else "key"
+    are = "are" if len(keys) > 1 else "is"
     directory = os.path.join(
         homes.emulator_root(XDG_DATA, token), _DOLPHIN_GAME_SETTINGS_DIR
     )
@@ -5706,7 +5739,7 @@ def _dolphin_game_settings_caveats(
         CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
         f"{layer.name} loads a second per-game layer from its own build — the GameSettings "
         f"directory below the Sys tree, whose location is compiled into the binary "
-        f"({layer.sys_dir} at {layer.build}) and written nowhere this machine can be read, so "
+        f"({layer.sys_dir} at {layer.build}) and written nowhere on a running machine, so "
         f"this answer never lists it and states no count for it. Nothing filters what such a "
         f"file may set ({layer.unfiltered}), so the {plural} {spelled} — {governs} — can be "
         f"answered differently there for a game this answer cannot name; the user's own "
@@ -5735,8 +5768,8 @@ def _dolphin_game_settings_caveats(
             f"{len(listing.matches)} game(s) on this machine carry a per-game settings file in "
             f"{directory}, which {layer.name} layers over the whole configuration while that "
             f"game runs, above every value Dolphin.ini states ({layer.loader}, {layer.order} at "
-            f"{layer.build}) — the {plural} {spelled} — {governs} — are read through that layer, "
-            f"so this answer is the one that holds for every game without such a file",
+            f"{layer.build}) — the {plural} {spelled} — {governs} — {are} read through that "
+            f"layer, so this answer is the one that holds for every game without such a file",
             {
                 "core": token,
                 "count": str(len(listing.matches)),
