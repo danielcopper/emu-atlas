@@ -2347,6 +2347,103 @@
           ]
         }
       }
+    },
+    {
+      "name": "emudeck-mames-states-answer-from-the-ini-the-installed-flatpak-reads",
+      "rationale": "EmuDeck installs MAME as the org.mamedev.MAME flatpak (emuDeckMAME.sh:4-5), and with no AppImage under ~/Applications the launch is that flatpak. The app id is the settings table's statement rather than a save card's, which is what lets this answer exist at all: MAME has no save card, and until #288 the launch's XDG bases could only be reached through one, so the whole reading — a complete savestate card, a mame.ini the compiled search path's first element finds — refused with the variant named. The ini is $HOME/.mame/mame.ini, which flatpak leaves spelled as the host home, and EmuDeck writes state_directory there (emuDeckMAME.sh:102-104); below it sits one directory per machine, the command's positional system word.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/atarijaguar jaguar -cart %ROM%</command>\n    <platform>atarijaguar</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.mame/mame.ini": "state_directory           /home/deck/Emulation/saves/mame/states\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/mame/states",
+          "/home/deck/Applications",
+          "/var/lib/flatpak/app/org.mamedev.MAME"
+        ],
+        "entry_savestate_query": {
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/Emulation/saves/mame/states/jaguar",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

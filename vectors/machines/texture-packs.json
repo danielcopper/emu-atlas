@@ -2611,6 +2611,49 @@
           ]
         }
       }
+    },
+    {
+      "name": "emudeck-an-installed-flatpak-no-row-names-an-id-for-refuses-as-before",
+      "rationale": "The texture route runs the variant gate before it looks for a card, so an installed flatpak whose emulator the settings table carries no row for asks the table for an app id and gets none. That is an answer, not drift: hundreds of catalogue tokens name emulators atlas states nothing about, and the reading must refuse them exactly as it did rather than raising or joining a path onto an id nobody wrote down. XRoar's token identifies the launch, no texture card covers it, and the refusal stays standalone-unsupported.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>coco</name>\n    <path>%ROMPATH%/coco</path>\n    <extension>.ccc .CCC</extension>\n    <command label=\"XRoar CoCo 2 NTSC (Standalone)\">%EMULATOR_XROAR% -fs -default-machine coco2bus %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Applications",
+          "/var/lib/flatpak/app/uk.org.6809.xroar"
+        ],
+        "entry_texture_query": {
+          "system": "coco"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "unresolved": {
+            "code": "standalone-unsupported",
+            "data": {
+              "label": "XRoar CoCo 2 NTSC (Standalone)",
+              "system": "coco"
+            }
+          }
+        }
+      }
     }
   ]
 }
