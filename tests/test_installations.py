@@ -2536,6 +2536,225 @@ MELONDS_TOML_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/melonDS/mel
 MELONDS_INI_PATH = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.ini"
 
 
+DUCKSTATION_DATA_ROOT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/duckstation"
+DUCKSTATION_GAME_SETTINGS = f"{DUCKSTATION_DATA_ROOT}/gamesettings"
+
+
+class TestDuckstationPerGameSettingsLayer:
+    """#302: the per-game layer, stated beside the answers it can really reach.
+
+    A running game installs ``gamesettings/<serial>.ini`` as the top layer of
+    the settings interface (UpdateGameSettingsLayer, system.cpp:1407-1441 at
+    64655818e), so every key read through that interface can be answered
+    differently for one game. Two families of keys are: the memory-card ones
+    (Settings::Load, settings.cpp:391-401) and the three BIOS image names
+    (BIOS::GetBIOSImage on Host::GetStringSettingValue, bios.cpp:321-338 with
+    host.cpp:124-128). The ``[Folders]`` keys are not — EmuFolders::LoadConfig
+    is handed the base layer at every call site — which is why the savestate,
+    texture and cheat answers stay silent.
+    """
+
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: TRIO_ESDE,
+    }
+    SETTINGS = (
+        "[MemoryCards]\nCard1Type = PerGameTitle\nCard2Type = None\n"
+        "Directory = /mnt/sd/memcards\n"
+    )
+    ONE_OVERRIDE = {f"{DUCKSTATION_GAME_SETTINGS}/SLUS-00594.ini": "[MemoryCards]\n"}
+
+    def _machine(self, files=None, settings=None, **kwargs):
+        merged = {**self.BASE, DUCKSTATION_CONFIG_INI: settings or self.SETTINGS}
+        merged.update(files or {})
+        dirs = ["/mnt/sd/retrodeck/saves", *kwargs.pop("dirs", [])]
+        return _retrodeck(merged, dirs=dirs, **kwargs)
+
+    def _entry(self, rd):
+        return rd.emulators_for("psx").entries[0]
+
+    def _caveat(self, answer, code):
+        return next(c for c in answer.caveats if c.code == code)
+
+    def _codes(self, answer):
+        return [c.code for c in answer.caveats]
+
+    # -- the save answer speaks ----------------------------------------------
+
+    def test_the_save_answer_counts_the_files_in_the_gamesettings_directory(self):
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["count"] == "1"
+
+    def test_the_save_answer_names_the_directory_it_listed(self):
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["dir"] == DUCKSTATION_GAME_SETTINGS
+
+    def test_the_save_answer_names_all_five_memory_card_keys(self):
+        # All five unconditionally: a game ini can change the slot MODES, so
+        # even a machine whose slots are both None can be answered differently.
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["key"] == (
+            "[MemoryCards] Card1Type, [MemoryCards] Card2Type, [MemoryCards] Card1Path, "
+            "[MemoryCards] Card2Path, [MemoryCards] UsePlaylistTitle"
+        )
+
+    def test_the_save_answer_says_an_absolute_card_path_leaves_the_directory(self):
+        # The strongest half of the statement: GetSharedMemoryCardPath takes an
+        # absolute value verbatim (settings.cpp:1785-1797), so the card need
+        # not be in the directory this answer names.
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert "used verbatim" in stated.message
+
+    def test_the_save_answer_says_the_memory_card_directory_itself_cannot_move(self):
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert "no per-game file moves it" in stated.message
+
+    def test_an_empty_gamesettings_directory_states_nothing(self):
+        rd = self._machine(dirs=[DUCKSTATION_GAME_SETTINGS])
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in codes
+
+    def test_an_empty_gamesettings_directory_is_not_an_unread_one(self):
+        rd = self._machine(dirs=[DUCKSTATION_GAME_SETTINGS])
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert atlas.CAVEAT_PER_GAME_LAYER_UNREAD not in codes
+
+    def test_a_directory_that_cannot_be_listed_says_the_check_did_not_happen(self):
+        rd = self._machine(
+            dirs=[DUCKSTATION_GAME_SETTINGS], unlistable=[DUCKSTATION_GAME_SETTINGS]
+        )
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+        assert stated.data["dir"] == DUCKSTATION_GAME_SETTINGS
+
+    # -- the directory is a configured value like every other ----------------
+
+    def test_a_relative_folders_key_moves_the_directory_that_is_listed(self):
+        rd = self._machine(
+            {f"{DUCKSTATION_DATA_ROOT}/per-game/SLUS-00594.ini": "[MemoryCards]\n"},
+            settings=self.SETTINGS + "[Folders]\nGameSettings = per-game\n",
+            dirs=[f"{DUCKSTATION_DATA_ROOT}/per-game"],
+        )
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["dir"] == f"{DUCKSTATION_DATA_ROOT}/per-game"
+
+    def test_an_absolute_folders_key_is_listed_where_it_points(self):
+        rd = self._machine(
+            {"/mnt/sd/per-game/SLUS-00594.ini": "[MemoryCards]\n"},
+            settings=self.SETTINGS + "[Folders]\nGameSettings = /mnt/sd/per-game\n",
+            dirs=["/mnt/sd/per-game"],
+        )
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["dir"] == "/mnt/sd/per-game"
+
+    def test_a_sandbox_only_directory_is_unread_rather_than_silent(self):
+        # No host spelling means the listing cannot be made from here, and
+        # silence would say no game overrides this answer.
+        rd = self._machine(
+            settings=self.SETTINGS + "[Folders]\nGameSettings = /app/gamesettings\n"
+        )
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+        assert stated.data["dir"] == "/app/gamesettings"
+
+    def test_a_sandbox_only_directory_states_the_untranslated_path_beside_it(self):
+        rd = self._machine(
+            settings=self.SETTINGS + "[Folders]\nGameSettings = /app/gamesettings\n"
+        )
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED in codes
+
+    # -- the switch that loads the layer gates every statement ---------------
+
+    def test_the_switch_switched_off_silences_the_save_answer(self):
+        rd = self._machine(
+            self.ONE_OVERRIDE,
+            settings="[Main]\nApplyGameSettings = false\n" + self.SETTINGS,
+            dirs=[DUCKSTATION_GAME_SETTINGS],
+        )
+        codes = self._codes(self._entry(rd).savefile_location())
+        assert not [c for c in codes if c.startswith("per-game")]
+
+    def test_the_switch_switched_off_silences_the_firmware_answer_too(self):
+        # One gate, not five: the switch decides whether the layer is loaded
+        # at all, so every answer this round added falls silent together.
+        rd = self._machine(
+            self.ONE_OVERRIDE,
+            settings="[Main]\nApplyGameSettings = false\n" + self.SETTINGS,
+            dirs=[DUCKSTATION_GAME_SETTINGS],
+        )
+        core = rd.firmware_for_system("psx").cores[0]
+        assert not [c for c in core.caveats if c.code.startswith("per-game")]
+
+    # -- the firmware answer speaks, in its own keys -------------------------
+
+    def test_the_firmware_answer_names_the_three_region_image_keys(self):
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        core = rd.firmware_for_system("psx").cores[0]
+        stated = next(
+            c for c in core.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["key"] == "[BIOS] PathNTSCU, [BIOS] PathNTSCJ, [BIOS] PathPAL"
+
+    def test_the_firmware_answer_says_the_search_directory_cannot_move(self):
+        # SearchDirectory goes through EmuFolders::LoadConfig, which is handed
+        # the base layer — the asymmetry is the useful part of the statement.
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        core = rd.firmware_for_system("psx").cores[0]
+        stated = next(
+            c for c in core.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert "no per-game file moves it" in stated.message
+
+    def test_the_firmware_answer_counts_the_same_directory_the_save_answer_did(self):
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        core = rd.firmware_for_system("psx").cores[0]
+        stated = next(
+            c for c in core.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["dir"] == DUCKSTATION_GAME_SETTINGS
+
+    # -- what stays silent, and why ------------------------------------------
+
+    def test_the_savestate_answer_says_nothing_about_a_layer_it_cannot_reach(self):
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        codes = self._codes(self._entry(rd).savestate_location())
+        assert not [c for c in codes if c.startswith("per-game")]
+
+    def test_the_texture_answer_says_nothing_either(self):
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        codes = self._codes(self._entry(rd).texture_pack_location())
+        assert not [c for c in codes if c.startswith("per-game")]
+
+    def test_the_cheat_answer_says_nothing_either(self):
+        rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
+        codes = self._codes(self._entry(rd).mod_location())
+        assert not [c for c in codes if c.startswith("per-game")]
+
+
 class TestMoreStandaloneSaves:
     """The ppsspp/xemu/cemu corners the vector family does not carry."""
 

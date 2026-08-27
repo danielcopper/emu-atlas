@@ -131,6 +131,143 @@ class TestOneSettingBecomesADirectory:
         )
 
 
+class TestThePerGameLayerIsGatedByTheSwitchThatLoadsIt:
+    """#302: ``[Main] ApplyGameSettings`` decides whether there is a layer at all.
+
+    ``UpdateGameSettingsLayer`` loads nothing while it is false
+    (system.cpp:1410), so an emulator switched off that way has no per-game
+    layer to state — and stating one would be a claim about a file the launch
+    never opens. Absent and unreadable-as-a-boolean are not off: the compiled
+    default is true (settings.cpp:162, settings_interface.h:77-81).
+    """
+
+    def test_an_absent_switch_leaves_the_layer_on(self):
+        assert duckstation.applies_game_settings({}) is True
+
+    @pytest.mark.parametrize("raw", ["false", "no", "off", "0", "disabled", "FALSE", "Off"])
+    def test_a_value_the_emulator_reads_as_false_switches_it_off(self, raw):
+        assert duckstation.applies_game_settings({("Main", "ApplyGameSettings"): raw}) is False
+
+    @pytest.mark.parametrize("raw", ["true", "yes", "on", "1", "enabled", "TRUE"])
+    def test_a_value_the_emulator_reads_as_true_leaves_it_on(self, raw):
+        assert duckstation.applies_game_settings({("Main", "ApplyGameSettings"): raw}) is True
+
+    def test_a_value_the_emulator_cannot_read_leaves_the_default_standing(self):
+        # GetBoolValue keeps the caller's default when FromChars<bool> yields
+        # nothing, and that default is true — so an unreadable value is not a
+        # licence to fall silent.
+        values = {("Main", "ApplyGameSettings"): "sometimes"}
+        assert duckstation.applies_game_settings(values) is True
+
+    def test_a_case_variant_spelling_governs_the_way_simpleini_matches(self):
+        assert duckstation.applies_game_settings({("main", "applygamesettings"): "off"}) is False
+
+
+class TestThePerGameLayerStatedBesideAnAnswer:
+    """#302: what a listing of the gamesettings directory is allowed to claim."""
+
+    DIR = "/root/gamesettings"
+    KEYS = ("[MemoryCards] Card1Type", "[MemoryCards] Card2Type")
+    ONE_KEY = ("[BIOS] PathNTSCU",)
+
+    def _caveats(self, files=None, **kwargs):
+        return duckstation.per_game_caveats(
+            FixtureMachine(files or {}, **kwargs),
+            token="DUCKSTATION",
+            directory=self.DIR,
+            keys=self.KEYS,
+            governs="which card each slot holds",
+            read_through="settings.cpp:391-401",
+        )
+
+    def test_files_there_are_counted(self):
+        caveats = self._caveats(
+            {f"{self.DIR}/SLUS-00594.ini": "[MemoryCards]\nCard1Type = Shared\n"},
+            dirs=[self.DIR],
+        )
+        assert caveats[0].data["count"] == "1"
+
+    def test_the_count_names_the_directory_it_listed(self):
+        caveats = self._caveats(
+            {f"{self.DIR}/SLUS-00594.ini": "[MemoryCards]\n"}, dirs=[self.DIR]
+        )
+        assert caveats[0].data["dir"] == self.DIR
+
+    def test_the_count_names_every_key_that_answer_depends_on(self):
+        caveats = self._caveats(
+            {f"{self.DIR}/SLUS-00594.ini": "[MemoryCards]\n"}, dirs=[self.DIR]
+        )
+        assert caveats[0].data["key"] == "[MemoryCards] Card1Type, [MemoryCards] Card2Type"
+
+    def test_an_empty_directory_says_nothing_at_all(self):
+        # Silence is available here — unlike Dolphin, DuckStation ships no
+        # second layer inside its own build — and it means this answer holds
+        # for every game.
+        assert self._caveats(dirs=[self.DIR]) == []
+
+    def test_a_directory_that_is_not_there_says_nothing_either(self):
+        assert self._caveats() == []
+
+    def test_a_directory_that_cannot_be_listed_says_the_check_did_not_happen(self):
+        caveats = self._caveats(dirs=[self.DIR], unlistable=[self.DIR])
+        assert caveats[0].code == "per-game-layer-unread"
+
+    def test_a_failed_listing_never_asserts_that_per_game_files_exist(self):
+        caveats = self._caveats(dirs=[self.DIR], unlistable=[self.DIR])
+        assert [c.code for c in caveats if c.code == "per-game-overrides-present"] == []
+
+    def test_a_failed_listing_still_names_the_directory_it_tried(self):
+        caveats = self._caveats(dirs=[self.DIR], unlistable=[self.DIR])
+        assert caveats[0].data["dir"] == self.DIR
+
+    def test_only_ini_files_are_layer_candidates(self):
+        # GetGameSettingsPath composes "<serial>.ini" and nothing else, so a
+        # stray file in the directory is not a game carrying an override.
+        caveats = self._caveats({f"{self.DIR}/notes.txt": "hello"}, dirs=[self.DIR])
+        assert caveats == []
+
+    def test_the_sandbox_variant_names_the_value_it_could_not_spell(self):
+        stated = duckstation.per_game_unread_caveat(
+            token="DUCKSTATION",
+            directory="/app/gamesettings",
+            keys=self.KEYS,
+            governs="which card each slot holds",
+            read_through="settings.cpp:391-401",
+            sandbox_value="/app/gamesettings",
+        )
+        assert "only the emulator's sandbox can spell" in stated.message
+
+    def test_one_key_reads_as_singular(self):
+        # A sentence that says "the key ... are read" is the #301 defect; the
+        # verb is derived beside the noun.
+        caveats = duckstation.per_game_caveats(
+            FixtureMachine({f"{self.DIR}/SLUS-00594.ini": ""}, dirs=[self.DIR]),
+            token="DUCKSTATION",
+            directory=self.DIR,
+            keys=self.ONE_KEY,
+            governs="which image the launch loads",
+            read_through="bios.cpp:321-338",
+        )
+        assert "the key [BIOS] PathNTSCU" in caveats[0].message
+
+    def test_one_key_takes_the_singular_verb_too(self):
+        caveats = duckstation.per_game_caveats(
+            FixtureMachine({f"{self.DIR}/SLUS-00594.ini": ""}, dirs=[self.DIR]),
+            token="DUCKSTATION",
+            directory=self.DIR,
+            keys=self.ONE_KEY,
+            governs="which image the launch loads",
+            read_through="bios.cpp:321-338",
+        )
+        assert "is read through that layer" in caveats[0].message
+
+    def test_several_keys_take_the_plural_verb(self):
+        caveats = self._caveats(
+            {f"{self.DIR}/SLUS-00594.ini": ""}, dirs=[self.DIR]
+        )
+        assert "are read through that layer" in caveats[0].message
+
+
 class TestTheTableIsTheEmulatorsOwn:
     def test_it_carries_the_revision_it_was_read_at(self):
         assert duckstation.bios_table().meta["revision"]
