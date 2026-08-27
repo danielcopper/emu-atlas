@@ -5652,7 +5652,7 @@ class _DolphinGameLayer:
 
     * ``LocalGame`` reads ``<user directory>/GameSettings/`` — the XDG data tree
       every other Dolphin answer already resolves, so its contents are a
-      listing, counted like PCSX2's (:func:`_pcsx2_game_settings_caveat`).
+      listing, counted like PCSX2's (:func:`_pcsx2_game_settings_caveats`).
     * ``GlobalGame`` reads ``GetSysDirectory() + GameSettings/`` — the build's
       own tree, and ``GetSysDirectory()`` is the compile-time ``DATA_DIR "sys/"``
       that is written **nowhere on a running machine**. Nothing atlas reads
@@ -7794,7 +7794,7 @@ _PCSX2_SAVE_GOVERNS = (
     f"MemoryCards is a folder setting, and {_PCSX2_FOLDERS_ARE_BASE_ONLY}. What such a name "
     "does decide beside the file is the card's kind: the type is read off whatever sits at "
     "the composed path, so a per-game name can make a slot a folder card where this answer "
-    "states a file card (FileMcd_SetType, MemoryCardFile.cpp:580-604)."
+    "states a file card (FileMcd_SetType, MemoryCardFile.cpp:584-604)."
 )
 
 

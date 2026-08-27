@@ -7237,6 +7237,30 @@ class TestPcsx2PerGameLayerPrecision:
         answer = rd.emulators_for("ps2").entries[0].mod_location()
         assert self._stated(answer, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT) == []
 
+    def test_the_firmware_answer_says_nothing_about_a_per_game_layer(self):
+        # A tripwire, and honest about being one. [Filenames] BIOS IS a layered
+        # key; what keeps this answer silent is that its only consumer runs
+        # before the layer exists — LoadBIOS at VMManager.cpp:1398, before
+        # UpdateDiscDetails(true) at :1427 installs the layer at :1108. This
+        # test cannot prove that ordering; only the pin can, and the reason is
+        # recorded at the route (atlas/firmware.py, `_pcsx2_standalone_core`).
+        # What it does do is fail loudly if a later round wires the statement in
+        # here, so that round has to re-read the ordering first.
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: self.INI,
+                f"{layer}/SLES-12345_A1B2C3D4.ini": "[Filenames]\nBIOS = other.bin\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards", layer],
+        )
+        answer = rd.firmware_for_system("ps2")
+        codes = [c.code for core in answer.cores for c in core.caveats] + [
+            c.code for c in answer.caveats
+        ]
+        assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in codes
+
     def test_an_unreadable_configuration_still_refuses_the_save_answer(self):
         # The route's existing refusal outranks the statement: nothing is read,
         # so nothing — including the layer — can be stated about it.
