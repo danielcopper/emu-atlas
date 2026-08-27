@@ -5683,7 +5683,7 @@ def _dolphin_game_settings_caveats(
     homes: _XdgHomes,
     keys: tuple[str, ...],
     governs: str,
-) -> tuple[Caveat, ...]:
+) -> list[Caveat]:
     """The per-game ini layers, stated beside a Dolphin-family answer.
 
     Two facts, and a caller has to be able to tell them apart, so they are two
@@ -5714,7 +5714,7 @@ def _dolphin_game_settings_caveats(
     warning. *governs* says, in the answer's own terms, what those keys move.
     """
     if token not in _DOLPHIN_FAMILY:
-        return ()
+        return []
     layer = _DOLPHIN_GAME_LAYERS.get((token, homes.flatpak))
     if layer is None:
         # A Dolphin-family emulator whose build has no row is card/code drift,
@@ -5747,9 +5747,16 @@ def _dolphin_game_settings_caveats(
         f"{directory} outranks it ({layer.order})",
         {"core": token, "key": spelled, "layer": "GlobalGame"},
     )
+    # What the USER's directory has to say comes first, where it says anything:
+    # it is the layer that outranks the build's, so a reader meets the stronger
+    # statement first. The build's rides behind it unconditionally. One
+    # accumulator and one return, because the result is a homogeneous SEQUENCE
+    # of caveats and not a record whose positions mean things — the arity is the
+    # count of statements this machine earned, never a shape a caller unpacks.
+    caveats: list[Caveat] = []
     listing = machine.glob(os.path.join(directory, _ANY_INI_GLOB))
     if listing.status != GLOB_COMPLETE:
-        return (
+        caveats.append(
             Caveat(
                 CAVEAT_PER_GAME_LAYER_UNREAD,
                 f"{directory} could not be listed, so whether any game on this machine carries "
@@ -5758,28 +5765,28 @@ def _dolphin_game_settings_caveats(
                 f"Dolphin.ini states ({layer.loader}, {layer.order} at {layer.build}), and the "
                 f"{plural} {spelled} — {governs} — would be read through it",
                 {"core": token, "dir": directory, "key": spelled},
-            ),
-            built_in,
+            )
         )
-    if not listing.matches:
-        return (built_in,)
-    return (
-        Caveat(
-            CAVEAT_PER_GAME_OVERRIDES_PRESENT,
-            f"{len(listing.matches)} game(s) on this machine carry a per-game settings file in "
-            f"{directory}, which {layer.name} layers over the whole configuration while that "
-            f"game runs, above every value Dolphin.ini states ({layer.loader}, {layer.order} at "
-            f"{layer.build}) — the {plural} {spelled} — {governs} — {are} read through that "
-            f"layer, so this answer is the one that holds for every game without such a file",
-            {
-                "core": token,
-                "count": str(len(listing.matches)),
-                "dir": directory,
-                "key": spelled,
-            },
-        ),
-        built_in,
-    )
+    elif listing.matches:
+        caveats.append(
+            Caveat(
+                CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+                f"{len(listing.matches)} game(s) on this machine carry a per-game settings file "
+                f"in {directory}, which {layer.name} layers over the whole configuration while "
+                f"that game runs, above every value Dolphin.ini states ({layer.loader}, "
+                f"{layer.order} at {layer.build}) — the {plural} {spelled} — {governs} — {are} "
+                f"read through that layer, so this answer is the one that holds for every game "
+                f"without such a file",
+                {
+                    "core": token,
+                    "count": str(len(listing.matches)),
+                    "dir": directory,
+                    "key": spelled,
+                },
+            )
+        )
+    caveats.append(built_in)
+    return caveats
 
 
 # The section-qualified keys each Dolphin-family answer depends on. The memory
