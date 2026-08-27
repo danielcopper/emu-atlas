@@ -10047,7 +10047,7 @@ def _mame_layer_suspects(
     return suspects, incomplete
 
 
-def _mame_layer_middle(*, file: str, driver_ini: str | None, word: str | None) -> str:
+def _mame_driver_ini_clause(*, file: str, driver_ini: str | None, word: str | None) -> str:
     """Why the driver ini was or was not read — the statement's middle clause."""
     if driver_ini is not None:
         return (
@@ -10056,8 +10056,8 @@ def _mame_layer_middle(*, file: str, driver_ini: str | None, word: str | None) -
         )
     if word is not None:
         return (
-            f", and no {word}.ini — the driver ini for the system this launch names — sits "
-            "on that search path"
+            f", and no {word}.ini — the driver ini for the system this launch names — was "
+            "found along that search path"
         )
     return (
         ", and the launch names no system this reading can turn into a driver ini file "
@@ -10110,7 +10110,7 @@ def _mame_standard_ini_layer(
             CAVEAT_PER_GAME_LAYER_UNREAD,
             f"MAME layers per-machine and per-orientation ini files over {file} "
             f"(parse_standard_inis, mameopts.cpp:37-96)"
-            + _mame_layer_middle(file=file, driver_ini=driver_ini, word=word)
+            + _mame_driver_ini_clause(file=file, driver_ini=driver_ini, word=word)
             + f", and the path holds more than the files this answer read ({named}) — which "
             "of those MAME opens follows from the driver's orientation flag, screen type, "
             "source file and clone chain, all compiled into the binary. Each parses BELOW "
@@ -10198,11 +10198,6 @@ def _mame_savestate_placement(
     )
     if isinstance(ini, Unresolved):
         return ini
-    layered = _mame_driver_layer(
-        machine, ini, token=card.token, launch=launch, content_path=content_path
-    )
-    if isinstance(layered, Unresolved):
-        return layered
     key = "state_directory"
     stated_key = shape.keys.get(key)
     if stated_key is None:
@@ -10210,6 +10205,11 @@ def _mame_savestate_placement(
             f"savestate card {card.token!r} states no {key!r} ini key and this resolver "
             "reads it — the card and the code shipped out of step"
         )
+    layered = _mame_driver_layer(
+        machine, ini, token=card.token, launch=launch, content_path=content_path
+    )
+    if isinstance(layered, Unresolved):
+        return layered
     value = _mame_root_value(card, shape, ini, layered, env, key=key, stated_key=stated_key)
     if isinstance(value, Unresolved):
         return value
@@ -10448,9 +10448,10 @@ class _MameLayeredIni:
 
     def read_names(self, file: str) -> tuple[str, ...]:
         """Every ini file name this reading opened, for the leftover-layer check."""
-        if self.driver_ini is None:
-            return (file,)
-        return (file, os.path.basename(self.driver_ini))
+        names = [file]
+        if self.driver_ini is not None:
+            names.append(os.path.basename(self.driver_ini))
+        return tuple(names)
 
 
 def _mame_driver_layer(

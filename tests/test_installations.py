@@ -2706,6 +2706,29 @@ class TestMameDriverIniIsRead:
         )
         assert "no vectrex.ini" in layer.message
 
+    def test_a_shadowed_driver_ini_further_down_the_path_is_no_unread_layer(self):
+        # emu_file stops at the first element holding the name
+        # (fileio.cpp:374-384), so the second adam.ini is never parsed and
+        # naming it as an unread layer would invent a doubt.
+        p = self._placement(
+            {
+                f"{self.INI_DIR}/vectrex.ini": "state_directory  /mnt/sd/first\n",
+                "/mnt/sd/second-inis/vectrex.ini": "state_directory  /mnt/sd/second\n",
+            },
+            inipath="/var/config/mame/ini;/mnt/sd/second-inis",
+        )
+        assert p.dir == "/mnt/sd/first/vectrex"
+
+    def test_a_shadowed_driver_ini_is_not_named_as_a_leftover(self):
+        p = self._placement(
+            {
+                f"{self.INI_DIR}/vectrex.ini": "state_directory  /mnt/sd/first\n",
+                "/mnt/sd/second-inis/vectrex.ini": "state_directory  /mnt/sd/second\n",
+            },
+            inipath="/var/config/mame/ini;/mnt/sd/second-inis",
+        )
+        assert atlas.CAVEAT_PER_GAME_LAYER_UNREAD not in [c.code for c in p.caveats]
+
     def test_an_absent_driver_ini_records_no_read_file(self):
         layer = next(
             c
