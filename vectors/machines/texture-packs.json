@@ -1278,7 +1278,7 @@
                 "core": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "LoadTextureReplacements"
+                "key": "[EmuCore/GS] LoadTextureReplacements"
               }
             },
             {
@@ -1344,7 +1344,7 @@
               "data": {
                 "core": "PCSX2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "LoadTextureReplacements"
+                "key": "[EmuCore/GS] LoadTextureReplacements"
               }
             },
             {
@@ -2201,7 +2201,7 @@
               "data": {
                 "core": "PCSX2",
                 "dir": "/var/tmp/gamesettings",
-                "key": "LoadTextureReplacements"
+                "key": "[EmuCore/GS] LoadTextureReplacements"
               }
             },
             {
@@ -2265,7 +2265,7 @@
                 "core": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "LoadTextureReplacements"
+                "key": "[EmuCore/GS] LoadTextureReplacements"
               }
             },
             {
@@ -2478,7 +2478,7 @@
                 "core": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gs-layer",
-                "key": "LoadTextureReplacements"
+                "key": "[EmuCore/GS] LoadTextureReplacements"
               }
             },
             {

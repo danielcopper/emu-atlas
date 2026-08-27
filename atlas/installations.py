@@ -5077,8 +5077,15 @@ def _pcsx2_texture_placement(
     # its plain comparison; the live value goes through the emulator's reading.
     enabled = parsed_switch if parsed_switch is not None else switch.default == "true"
     rejected = _pcsx2_rejected_switch(card.token, switch, raw_switch, parsed_switch, enabled)
-    per_game = _pcsx2_game_settings_caveat(
-        machine, values, data_root, card.token, switch.key, sandbox=sandbox
+    per_game = _pcsx2_game_settings_caveats(
+        machine,
+        values,
+        data_root,
+        card.token,
+        sandbox=sandbox,
+        keys=(f"[{switch.section}] {switch.key}",),
+        governs=_pcsx2_texture_governs(f"[{setting.section}] {setting.key}"),
+        read_through=_PCSX2_TEXTURE_READ_THROUGH,
     )
     physical_dir, link_caveats = _link_view(machine, root)
     return TexturePlacement(
@@ -5163,31 +5170,96 @@ def _pcsx2_rejected_switch(
     ]
 
 
-def _pcsx2_game_settings_caveat(
+# What every PCSX2 route citing the layer cites, written once so two answers
+# cannot drift into two tellings of one fact.
+_PCSX2_LAYER = (
+    "UpdateGameSettingsLayer, VMManager.cpp:932-997 at PCSX2 v2.6.3 — the file is "
+    "<serial>_<CRC>.ini below [Folders] GameSettings, with <CRC>.ini as the legacy "
+    "spelling (GetGameSettingsPath, :774-781)"
+)
+
+# The door every layered PCSX2 key comes through. ``VMManager::LoadSettings``
+# hands ``LoadCoreSettings`` whatever ``Host::GetSettingsInterface`` returns, and
+# that is the LAYERED interface itself rather than its base layer — so every key
+# ``Pcsx2Config::LoadSave`` reads can be answered differently for one game.
+_PCSX2_LOAD_CORE = (
+    "VMManager::LoadCoreSettings on Host::GetSettingsInterface, the layered interface "
+    "itself — VMManager.cpp:598-607 and :645-648, Host.cpp:173-176"
+)
+
+# Why the directory half of every PCSX2 answer is immovable, and the reason so
+# many PCSX2 answers stay silent here altogether. Established repo-wide at the
+# pin rather than assumed: ``EmuFolders::LoadConfig`` is the only reader of the
+# ``[Folders]`` keys, and it has exactly two call sites, both handed the base
+# layer. No per-game file reaches any of them.
+_PCSX2_FOLDERS_ARE_BASE_ONLY = (
+    "EmuFolders::LoadConfig (Pcsx2Config.cpp:2280-2316) is the only reader of the [Folders] "
+    "keys and is handed the base layer at both of its call sites (VMManager.cpp:552, :835)"
+)
+
+# PCSX2 has NO off switch for this layer, and that is a checked negative rather
+# than an unasked question: at v2.6.3 nothing named ApplyGameSettings exists,
+# and none of UpdateGameSettingsLayer's four call sites (VMManager.cpp:765,
+# :1108, :1334, :1650) is conditional on a setting — the function branches only
+# on a non-zero disc CRC (:935) and on the file existing (:938, :944). The two
+# switches that look like it are not: [EmuCore] EnableGameFixes gates the game
+# DATABASE's fixes (VMManager.cpp:703, :3295) and [EmuCore] EnablePatches /
+# EnableCheats gate the pnach patch and cheat system (Patch.cpp:815, :831).
+# So the statements below are unconditional, unlike DuckStation's
+# (:func:`atlas.duckstation.applies_game_settings`).
+
+# The door the texture switch itself comes through. Both halves of the texture
+# answer are named from the CARD rather than written here, so a card that renamed
+# either setting cannot leave this statement quietly describing the old one.
+_PCSX2_TEXTURE_READ_THROUGH = (
+    f"GSOptions::LoadSave, Pcsx2Config.cpp:908 and :1004, reached from {_PCSX2_LOAD_CORE}"
+)
+
+
+def _pcsx2_texture_governs(directory_key: str) -> str:
+    """What a per-game file does to the texture answer — and the half it cannot touch."""
+    return (
+        "A per-game file can flip the switch this answer states. It cannot move the texture "
+        f"directory that switch reads below: {directory_key} is a folder setting, and "
+        f"{_PCSX2_FOLDERS_ARE_BASE_ONLY}."
+    )
+
+
+def _pcsx2_game_settings_caveats(
     machine: Machine,
     values: Mapping[tuple[str, str], str],
     data_root: str,
     token: str,
-    switch_key: str,
     *,
     sandbox: _Sandbox,
+    keys: tuple[str, ...],
+    governs: str,
+    read_through: str,
 ) -> list[Caveat]:
     """The per-game ini layer, where this machine has one — PCSX2's second settings source.
 
     A running game installs ``<DataRoot>/gamesettings/<serial>_<crc>.ini`` as a
     *layer* under the settings interface every core setting is read through
-    (``UpdateGameSettingsLayer``, VMManager.cpp:932-969 at v2.6.3; the path is
-    ``GetGameSettingsPath``, :774-781), so any key of any section — the
-    texture switch included — can be answered differently for one game than
-    the global ``PCSX2.ini`` answers it. The directory is the usual
-    ``LoadPathFromSettings`` shape, ``[Folders] GameSettings`` defaulting to
-    ``gamesettings`` below the DataRoot (Pcsx2Config.cpp:2290).
+    (:data:`_PCSX2_LAYER`), so a key of any section that ``Pcsx2Config::LoadSave``
+    reads can be answered differently for one game than the global ``PCSX2.ini``
+    answers it. The directory is the usual ``LoadPathFromSettings`` shape,
+    ``[Folders] GameSettings`` defaulting to ``gamesettings`` below the DataRoot
+    (Pcsx2Config.cpp:2290).
+
+    What the layer reaches is not "the configuration" — it is exactly the keys
+    read through :data:`_PCSX2_LOAD_CORE`. Every ``[Folders]`` key goes through
+    a different door and is base-layer only, so the *directories* PCSX2's
+    answers name cannot move at all. Saying "per-game overrides may be present"
+    and leaving it there would invite a caller to distrust a directory nothing
+    can move, which is why each caller passes the *keys* that answer depends
+    on, a *read_through* naming the door those keys come through, and a
+    *governs* sentence carrying its own citations for both halves — what a
+    per-game value does here, and what it cannot touch.
 
     Which game runs is not a fact atlas holds, so the layer cannot be read
-    *for* an answer — but whether one exists at all is a directory listing,
-    and a caller told "replacement is off" deserves to know that some games on
-    this machine carry their own answer. Silent where the directory holds
-    none, which is the shipped state.
+    *for* an answer — but whether one exists at all is a directory listing.
+    Silent where the directory holds none, which is the shipped state, and
+    silence means this answer holds for every game.
 
     A listing that *failed* is not that silence. The absence of a caveat here
     is what tells a caller this answer holds for every game, so answering an
@@ -5196,15 +5268,22 @@ def _pcsx2_game_settings_caveat(
     absolute configured value is translated through the launch's sandbox like
     every other path this configuration names; one with no host spelling is
     that same unread state, because the listing cannot be made from here.
+
+    Nothing here claims a key **is** set: a game ini may carry any section, so
+    the honest statement is that these keys CAN be answered differently for a
+    game this answer cannot name.
     """
-    raw, spelled = _simpleini_value(values, "Folders", "GameSettings")
+    spelled = ", ".join(keys)
+    plural = "keys" if len(keys) > 1 else "key"
+    are = "are" if len(keys) > 1 else "is"
+    raw, spelled_dir = _simpleini_value(values, "Folders", "GameSettings")
     resolved, _ = _pcsx2_folder_below_dataroot(
         raw,
         key="GameSettings",
         default="gamesettings",
         default_citation="Pcsx2Config.cpp:2290",
         data_root=data_root,
-        spelled=spelled,
+        spelled=spelled_dir,
     )
     if resolved is None:
         assert raw is not None  # only an absolute value leaves the helper unresolved
@@ -5226,10 +5305,9 @@ def _pcsx2_game_settings_caveat(
                     f"[Folders] GameSettings = {raw!r} names a location only the emulator's "
                     "sandbox can spell, so whether any game on this machine carries a "
                     "per-game settings file is unknown — PCSX2 layers such a file over the "
-                    f"whole configuration while that game runs, so {switch_key} and the "
-                    "directory below it may be answered differently for a game this answer "
-                    "cannot name (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
-                    {"core": token, "dir": raw, "key": switch_key},
+                    f"whole configuration while that game runs ({_PCSX2_LAYER}), and the "
+                    f"{plural} {spelled} would be read through it ({read_through}). {governs}",
+                    {"core": token, "dir": raw, "key": spelled},
                 ),
             ]
         directory = host.path
@@ -5242,10 +5320,9 @@ def _pcsx2_game_settings_caveat(
                 CAVEAT_PER_GAME_LAYER_UNREAD,
                 f"{directory} could not be listed, so whether any game on this machine carries "
                 "a per-game settings file is unknown — PCSX2 layers such a file over the whole "
-                f"configuration while that game runs, so {switch_key} and the directory below "
-                "it may be answered differently for a game this answer cannot name "
-                "(UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
-                {"core": token, "dir": directory, "key": switch_key},
+                f"configuration while that game runs ({_PCSX2_LAYER}), and the {plural} "
+                f"{spelled} would be read through it ({read_through}). {governs}",
+                {"core": token, "dir": directory, "key": spelled},
             )
         ]
     if not listing.matches:
@@ -5255,14 +5332,14 @@ def _pcsx2_game_settings_caveat(
             CAVEAT_PER_GAME_OVERRIDES_PRESENT,
             f"{len(listing.matches)} game(s) on this machine carry a per-game settings file "
             f"in {directory}, which PCSX2 installs as a layer over the global configuration "
-            f"while that game runs — {switch_key} and the directory below it are read through "
-            "that layer, so this answer is the one that holds for every game without such a "
-            "file (UpdateGameSettingsLayer, VMManager.cpp:932-969 at v2.6.3)",
+            f"while that game runs ({_PCSX2_LAYER}) — the {plural} {spelled} {are} read "
+            f"through that layer ({read_through}), so this answer is the one that holds for "
+            f"every game without such a file. {governs}",
             {
                 "core": token,
                 "count": str(len(listing.matches)),
                 "dir": directory,
-                "key": switch_key,
+                "key": spelled,
             },
         )
     ]
@@ -5575,7 +5652,7 @@ class _DolphinGameLayer:
 
     * ``LocalGame`` reads ``<user directory>/GameSettings/`` — the XDG data tree
       every other Dolphin answer already resolves, so its contents are a
-      listing, counted like PCSX2's (:func:`_pcsx2_game_settings_caveat`).
+      listing, counted like PCSX2's (:func:`_pcsx2_game_settings_caveats`).
     * ``GlobalGame`` reads ``GetSysDirectory() + GameSettings/`` — the build's
       own tree, and ``GetSysDirectory()`` is the compile-time ``DATA_DIR "sys/"``
       that is written **nowhere on a running machine**. Nothing atlas reads
@@ -7686,6 +7763,40 @@ _PCSX2_SLOTS = tuple(
     ]
 )
 
+# The section-qualified memory-card keys the save answer depends on, in the
+# emulator's own order — derived from the slot table above so the statement and
+# the reading cannot drift apart. All sixteen, deliberately: a per-game file can
+# turn on a multitap slot this machine keeps off, so "this answer names two
+# cards" is itself something such a file overturns, and naming only the four
+# console-port keys would understate the layer's reach.
+_PCSX2_MEMCARD_LAYER_KEYS = tuple(
+    f"[MemoryCards] {key}" for slot in _PCSX2_SLOTS for key in (slot[0], slot[1])
+)
+
+_PCSX2_MEMCARD_READ_THROUGH = (
+    f"Pcsx2Config::LoadSaveMemcards, Pcsx2Config.cpp:2035-2054, reached from {_PCSX2_LOAD_CORE}"
+)
+
+# The precision this answer needs. PCSX2's layer moves a card's FILE NAME inside
+# a directory it cannot move, and an absolute name does not escape either: the
+# name is joined onto the memory-card directory by Path::Combine, which appends
+# one separator and then swallows the leading separator of what follows
+# (PathAppendString, FileSystem.cpp:98-139, entered with last_separator true).
+# Where PCSX2 wants an absolute value to win it tests for one — LoadPathFromSettings
+# does exactly that at Pcsx2Config.cpp:2275 — and FullpathToMcd does not.
+_PCSX2_SAVE_GOVERNS = (
+    "A per-game file can name a different card file for a slot, and can hold a card in a slot "
+    "this machine keeps empty. It cannot move the directory those names are read in: "
+    "FullpathToMcd joins the name onto the memory-card directory (Pcsx2Config.cpp:2065-2068) "
+    "and Path::Combine concatenates rather than letting the name replace it — even an "
+    "absolute name lands below that directory, because the separator it opens with is "
+    "swallowed (FileSystem.cpp:847-862, PathAppendString :98-139) — while [Folders] "
+    f"MemoryCards is a folder setting, and {_PCSX2_FOLDERS_ARE_BASE_ONLY}. What such a name "
+    "does decide beside the file is the card's kind: the type is read off whatever sits at "
+    "the composed path, so a per-game name can make a slot a folder card where this answer "
+    "states a file card (FileMcd_SetType, MemoryCardFile.cpp:584-604)."
+)
+
 
 def _pcsx2_slot_group(
     machine: Machine,
@@ -7891,10 +8002,35 @@ def _pcsx2_savefile_placement(
                 {"core": card.token, "mode": mode},
             )
         )
-    # The answer's own directory — a slot whose filename is an absolute path
-    # moves `dir` off the memory-card one, and `physical_dir` speaks for `dir`.
+    # The answer's own directory — `physical_dir` speaks for `dir`.
+    #
+    # NOTE (#303): today a slot whose filename is an absolute path moves `dir`
+    # off the memory-card one (:func:`_pcsx2_slot_group`), and that disagrees
+    # with the emulator. ``FullpathToMcd`` is
+    # ``Path::Combine(EmuFolders::MemoryCards, Filename)``
+    # (Pcsx2Config.cpp:2065-2068), and ``Path::Combine`` performs no
+    # ``IsAbsolute`` test: it appends one separator and then
+    # ``PathAppendString`` swallows the leading separator of what follows
+    # (FileSystem.cpp:847-862, :98-139), so an absolute name lands BELOW the
+    # memory-card directory rather than replacing it. The asymmetry is the
+    # proof it is deliberate — ``LoadPathFromSettings`` does test, at :2275.
+    # Reported rather than fixed here: correcting it moves this answer's
+    # headline `dir`, which is its own change. The per-game statement below is
+    # worded about the JOIN, so it stays true either way.
     physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
+    caveats.extend(
+        _pcsx2_game_settings_caveats(
+            machine,
+            values,
+            data_root,
+            card.token,
+            sandbox=sandbox,
+            keys=_PCSX2_MEMCARD_LAYER_KEYS,
+            governs=_PCSX2_SAVE_GOVERNS,
+            read_through=_PCSX2_MEMCARD_READ_THROUGH,
+        )
+    )
     return SavefilePlacement(
         dir=directory,
         root_kind=ROOT_EMULATOR_DIRECTORY,

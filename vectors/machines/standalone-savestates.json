@@ -2444,6 +2444,65 @@
           ]
         }
       }
+    },
+    {
+      "name": "pcsx2-a-per-game-file-says-nothing-about-the-states-answer",
+      "rationale": "Earned silence, not forgotten silence. Two per-game files sit in the gamesettings directory and the states answer states nothing about them, because nothing it says is reachable from that layer: [Folders] Savestates is read by EmuFolders::LoadConfig alone (Pcsx2Config.cpp:2280-2316), handed the base layer at both of its call sites (VMManager.cpp:552, :835), and the file name is composed from the disc's serial and CRC with no setting anywhere in it (GetSaveStateFileName, VMManager.cpp:1790-1806). A caveat here would manufacture doubt about a directory and a naming rule that no per-game file can touch.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\nSlot2_Enable = true\nSlot2_Filename = Mcd002.ps2\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings/SLES-50490_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = gt3.ps2\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings/SCUS-97328_0F0E0D0C.ini": "[MemoryCards]\nMultitap1_Slot2_Enable = true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+        ],
+        "entry_savestate_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/sstates",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "PCSX2",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/sstates",
+                "pattern": "<serial> (<crc>).<slot>.p2s",
+                "citation": "VMManager.cpp:1790-1806 at v2.6.3"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

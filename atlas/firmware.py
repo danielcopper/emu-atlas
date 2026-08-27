@@ -2889,6 +2889,38 @@ def _pcsx2_standalone_core(
     shipped state rather than a fault: RetroDECK points the directory at its
     BIOS root and leaves the choice to the user. The answer says so, because
     "no BIOS chosen" is why a game would not boot.
+
+    **No per-game statement here, and the reason is an ORDERING rather than a
+    layering rule** (#303). Both DuckStation firmware siblings above state their
+    per-game layer; PCSX2's does not, and the difference is easy to get wrong.
+    ``[Filenames] BIOS`` *is* a layered key — ``FilenameOptions::LoadSave``
+    (Pcsx2Config.cpp:1667-1672) is reached from ``VMManager::LoadCoreSettings``
+    on ``Host::GetSettingsInterface``, which returns the layered interface
+    itself (VMManager.cpp:598-607, :645-648; Host.cpp:173-176). But its only
+    consumer is ``LoadBIOS`` (ps2/BiosTools.cpp:317-333, reading
+    ``EmuConfig.FullpathToBios()`` at :321), and ``LoadBIOS`` is called from
+    exactly one place, **before** the layer for that game exists:
+
+        VMManager.cpp:1398   if (!LoadBIOS())          <- reads the base value
+        VMManager.cpp:1427   UpdateDiscDetails(true);  <- installs the layer at :1108
+
+    Nothing re-reads the BIOS afterwards (the only other reader of
+    ``FullpathToBios`` compares it to decide a UI relayout,
+    ImGui/FullscreenUI.cpp:1029-1034), and no previous game's layer survives to
+    the next boot: ``Shutdown`` clears the disc details and calls
+    ``UpdateGameSettingsLayer`` with a zero CRC, which installs ``nullptr``
+    (:1650), then re-reads settings at :1698 — "clear out any
+    potentially-incorrect settings from the last game".
+
+    So a code path being real is not the same as it being reachable, and this
+    silence rests on where a call sits rather than on which layer a key comes
+    from. **If upstream ever moves the BIOS load after the layer is installed,
+    this answer must start speaking** — the same statement its DuckStation
+    sibling makes, over ``[Filenames] BIOS``, closing on ``[Folders] Bios``,
+    which no per-game file can move (``EmuFolders::LoadConfig``,
+    Pcsx2Config.cpp:2280-2316, handed the base layer at both call sites,
+    VMManager.cpp:552 and :835). Re-read the ordering before assuming this
+    comment still holds at a newer pin.
     """
     del xdg_pinned  # PCSX2 states one base, so no launch has a root to pick
     # Which home the file sits under is the settings table's to say, so both
