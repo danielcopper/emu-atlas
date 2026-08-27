@@ -774,6 +774,14 @@
           },
           "caveats": [
             {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "PRIMEHACK",
+                "key": "[Dolphin.General] NANDRootPath",
+                "layer": "GlobalGame"
+              }
+            },
+            {
               "code": "file-names-unestablished",
               "data": {
                 "core": "PRIMEHACK",
@@ -808,6 +816,14 @@
               "data": {
                 "emulator": "DOLPHIN",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/GFX.ini"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Dolphin.General] LoadPath",
+                "layer": "GlobalGame"
               }
             }
           ]
@@ -1562,6 +1578,14 @@
                 "emulator": "DOLPHIN",
                 "config": "/home/deck/.config/dolphin-emu/GFX.ini"
               }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Dolphin.General] LoadPath",
+                "layer": "GlobalGame"
+              }
             }
           ]
         }
@@ -1958,6 +1982,14 @@
                 "emulator": "DOLPHIN",
                 "config": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/GFX.ini"
               }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Dolphin.General] LoadPath",
+                "layer": "GlobalGame"
+              }
             }
           ]
         }
@@ -2009,6 +2041,14 @@
               "data": {
                 "emulator": "PRIMEHACK",
                 "config": "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu/GFX.ini"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "PRIMEHACK",
+                "key": "[Dolphin.General] LoadPath",
+                "layer": "GlobalGame"
               }
             }
           ]
@@ -2499,6 +2539,73 @@
               "data": {
                 "emulator": "DUCKSTATION",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-per-game-load-path-is-stated-beside-the-texture-answer",
+      "rationale": "The texture tree is not a configured directory for Dolphin — it is Load/Textures below the emulator's own user directory — but that IS reachable from the per-game layer: [Dolphin.General] LoadPath re-points D_LOAD_IDX and the rebuild recomputes D_HIRESTEXTURES_IDX below it (FileUtil.cpp:967-972 at dolphin 2603a), reached through the config-changed callback that re-runs InitCustomPaths when the layer is added (UICommon.cpp:102-118, :131-135). The section is [Dolphin.General] and not [Main.General]: General-section keys arrive only through the free-form <System>.<Section> parse, and the name that parse resolves for System::Main is 'Dolphin' (Config.cpp:157-169), so [Main.General] is dropped with a warning. The answer stays the global reading and states the layer beside it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 1\nSlotB = 255\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings/GALE01.ini": "[Dolphin.General]\nLoadPath = /mnt/sd/load\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings"
+        ],
+        "entry_texture_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Load/Textures",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": "game-id",
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DOLPHIN",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/GFX.ini"
+              }
+            },
+            {
+              "code": "per-game-overrides-present",
+              "data": {
+                "core": "DOLPHIN",
+                "count": "1",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings",
+                "key": "[Dolphin.General] LoadPath"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": "[Dolphin.General] LoadPath",
+                "layer": "GlobalGame"
               }
             }
           ]
