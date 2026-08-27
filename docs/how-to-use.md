@@ -1009,6 +1009,47 @@ each `<slot>.sta`. Every MAME answer carries `savestate-support-machine-dependen
 is flagged `MACHINE_SUPPORTS_SAVE` is compiled into the binary, and an unflagged one still writes the file with a
 warning.
 
+#### MAME's per-system ini layer is read, not announced
+
+Above `mame.ini` MAME parses a whole standard set of ini files, in ascending priority: `debug.ini`,
+`vertical.ini`/`horizont.ini`, `raster.ini`/`vector.ini`/`lcd.ini`, `source/<sourcefile>.ini`, the grandparent's and the
+parent's inis, and last `<system>.ini` (`parse_standard_inis`, `mameopts.cpp:37-97` at mame0287). The parser accepts
+**any** registered option at that priority — `nvram_directory`, `state_directory`, `diff_directory`,
+`snapshot_directory`, `cfg_directory`, `share_directory`, the rom and hash search paths, `statename` — so a per-machine
+file can move any of them, and an equal-or-higher priority set overrides (`options.cpp:270`). MAME's ini is
+**sectionless** (`name value` lines), so these keys carry no section: they are already fully qualified in MAME's own
+language.
+
+**One member of that set atlas can name, so it reads it.** MAME picks `<system>.ini` by the system's own short name
+(`cursystem->name`, `mameopts.cpp:96`), and the launch states that word — the command's positional token, or the ROM's
+own stem on the `%BASENAME%` arcade rows. atlas therefore opens the file and applies its lines over `mame.ini`'s. That
+is not a partial improvement: `<system>.ini` parses at `OPTION_PRIORITY_DRIVER_INI`, the **highest** of the standard set
+(`mameopts.h:31-39`), so a value read from it cannot be overturned by any other ini — only by the command line, which
+outranks every ini at `OPTION_PRIORITY_CMDLINE` = 151. Where an arcade row is asked without content there is no system
+word and no file name to compose, and the answer says so instead of opening a file for a machine nobody named.
+
+The rest of the set stays unread **with the reason**: which of those files applies follows from the driver's orientation
+flag, its screen devices, its source file and its clone chain, all compiled into the binary. Where such files actually
+sit on the search path — checked with a listing, never assumed — the answer carries `per-game-layer-unread` naming them,
+saying which member it _did_ read (`data["read"]`, absent when none was), and stating the precedence: each of them
+parses **below** the driver ini, so a `state_directory` line in one governs only where the driver ini states none. A
+`<system>.ini` that exists and cannot be read refuses the whole question, the way an unreadable `mame.ini` does — the
+emulator would have parsed it.
+
+The search path this layer is looked up on is the one in force _after_ `mame.ini`'s double parse, because
+`parse_one_ini` re-reads `options.ini_path()` at every call (`mameopts.cpp:123`) — an `inipath` line in `mame.ini` moves
+the layer, and a command-line `-inipath` cannot be moved at all.
+
+**Every other MAME answer is silent about this layer, and each for a checked reason.** `savefile`, `texture` and `mod`
+refuse `standalone-unsupported` before any directory is computed — MAME has no save, texture or mod card, so
+`nvram_directory`, `diff_directory` and `share_directory` are keys atlas states nothing about, and there is no claim for
+the layer to qualify. `screenshot` is the installation's own route answering the frontend's screenshot directory
+(`no-core` rides every standalone entry), not MAME's `snapshot_directory`. `rom_location` answers the arrangement's ROM
+tree, and every MAME command in both catalogues passes `-rompath` on the command line, which no ini can override. MAME
+has no firmware card. The libretro `mame_libretro.so` core is a separate surface with a mode rule of its own, which
+reads `mame.ini` and `<stem>.ini` the same way and refuses the mode where a cascade member it cannot attribute — a
+`vertical.ini`, or a file in the `source/` tree — sits on its search path.
+
 ### A card can state the emulator has no savestates — and that is an answer
 
 For nine emulators the honest finding is that the feature does not exist, and #284 makes that a stated, cited fact

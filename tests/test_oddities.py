@@ -1958,6 +1958,61 @@ class TestMameOwnPaths:
         assert stated
         assert "vertical.ini" in stated[0].data["reason"]
 
+    def test_a_source_tree_member_refuses_the_mode_too(self):
+        # Issue #304: parse_standard_inis composes source/<sourcefile>.ini with
+        # the prefix (mameopts.cpp:86-87 at libretro/mame a90e86e1) and parses
+        # it ABOVE mame.ini. A listing of the search directory alone names that
+        # tree as the plain directory 'source', which ends in no '.ini' — so
+        # this member used to drop out of the check and the answer stated
+        # mame.ini's value as though nothing could override it.
+        p = _mame_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{MAME_INI_DIR}/mame.ini": "nvram_directory   /mnt/sd/mame-nvram\n",
+                f"{MAME_INI_DIR}/source/dkong.ini": "nvram_directory   /mnt/sd/other\n",
+            }
+        )
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert "source/dkong.ini" in stated[0].data["reason"]
+
+    def test_a_source_tree_member_stops_the_redirect_being_stated(self):
+        p = _mame_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{MAME_INI_DIR}/mame.ini": "nvram_directory   /mnt/sd/mame-nvram\n",
+                f"{MAME_INI_DIR}/source/dkong.ini": "nvram_directory   /mnt/sd/other\n",
+            }
+        )
+        assert not any(c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED for c in p.caveats)
+
+    def test_an_unlistable_source_tree_refuses_the_shadow_check(self):
+        rd = _retrodeck(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{MAME_INI_DIR}/mame.ini": "nvram_directory   /mnt/sd/mame-nvram\n",
+            },
+            dirs=[f"{MAME_INI_DIR}/source"],
+            unlistable=[f"{MAME_INI_DIR}/source"],
+            cores={f"{DEPLOY}/mame_libretro.so": MAME_CORE},
+        )
+        p = placed(rd.savefile_location(content_path=MAME_ROM, core_so="mame_libretro.so"))
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert "could not be listed" in stated[0].data["reason"]
+
+    def test_an_absent_source_tree_is_a_truthful_negative(self):
+        # No source/ directory is not a failed listing: the redirect stands.
+        p = _mame_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: MAME_OWN_INI,
+                f"{MAME_INI_DIR}/mame.ini": "nvram_directory   /mnt/sd/mame-nvram\n",
+            }
+        )
+        assert any(c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED for c in p.caveats)
+
     def test_an_unreadable_main_ini_leaves_the_mode_unestablished(self):
         p = _mame_query(
             {

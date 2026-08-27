@@ -2506,6 +2506,301 @@ class TestMameSecondIniParse:
         assert p.dir == "/mnt/sd/first/vectrex"
 
 
+class TestMameDriverIniIsRead:
+    """Issue #304: ``<system>.ini`` is the one layer member atlas can name.
+
+    ``parse_standard_inis`` picks it by ``cursystem->name``
+    (mameopts.cpp:96) — the word the launch already states — and parses it at
+    OPTION_PRIORITY_DRIVER_INI, the highest of the standard set
+    (mameopts.h:31-39). So this reading opens it instead of announcing it,
+    and its lines override mame.ini's (options.cpp:270).
+    """
+
+    INI_DIR = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini"
+    MAIN = f"{INI_DIR}/mame.ini"
+
+    def _entry(
+        self,
+        files,
+        *,
+        system="vectrex",
+        command_tail="vectrex -cart %ROM%",
+        inipath="/var/config/mame/ini",
+    ):
+        flag = f"-inipath {inipath} " if inipath else ""
+        esde = (
+            '<?xml version="1.0"?><systemList>'
+            f"<system><name>{system}</name><path>%ROMPATH%/{system}</path>"
+            "<extension>.vec</extension>"
+            '<command label="MAME (Standalone)">%STARTDIR%=~/.mame %EMULATOR_MAME% '
+            f"{flag}{command_tail}</command></system>"
+            "</systemList>"
+        )
+        base = {
+            RETRODECK_JSON: RD_JSON,
+            RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+            'libretro_directory = "/app/cores"\n',
+            DOLPHIN_ESDE: esde,
+        }
+        base.update(files)
+        rd = _retrodeck(base, dirs=["/mnt/sd/retrodeck/saves"])
+        return rd.emulators_for(system).entries[0]
+
+    def _placement(self, files, **kwargs):
+        content = kwargs.pop("content_path", None)
+        p = self._entry(files, **kwargs).savestate_location(content_path=content)
+        assert isinstance(p, atlas.SavestatePlacement)
+        return p
+
+    LAYERED = {
+        MAIN: "state_directory           /mnt/sd/from-mame-ini\n",
+        f"{INI_DIR}/vectrex.ini": "state_directory           /mnt/sd/from-driver-ini\n",
+    }
+
+    def test_the_driver_inis_value_governs_over_mame_inis(self):
+        assert self._placement(self.LAYERED).dir == "/mnt/sd/from-driver-ini/vectrex"
+
+    def test_the_reading_names_the_file_the_value_came_from(self):
+        assert any("vectrex.ini: state_directory" in s for s in self._placement(self.LAYERED).sources)
+
+    def test_the_provenance_names_the_layered_driver_ini(self):
+        sources = self._placement(self.LAYERED).sources
+        assert any(f"driver ini {self.INI_DIR}/vectrex.ini layered over it" in s for s in sources)
+
+    def test_a_read_driver_ini_is_no_unread_layer(self):
+        codes = [c.code for c in self._placement(self.LAYERED).caveats]
+        assert atlas.CAVEAT_PER_GAME_LAYER_UNREAD not in codes
+
+    def test_a_driver_ini_alone_still_moves_the_root(self):
+        # No mame.ini at all: the compiled default 'sta' would govern, and the
+        # driver ini overrides it just the same.
+        p = self._placement(
+            {f"{self.INI_DIR}/vectrex.ini": "state_directory           /mnt/sd/only-driver\n"}
+        )
+        assert p.dir == "/mnt/sd/only-driver/vectrex"
+
+    def test_a_driver_ini_statename_names_the_subdirectory(self):
+        p = self._placement(
+            {
+                self.MAIN: "state_directory           /mnt/sd/states\n",
+                f"{self.INI_DIR}/vectrex.ini": "statename                 myruns\n",
+            }
+        )
+        assert p.dir == "/mnt/sd/states/myruns"
+
+    def test_an_unreadable_driver_ini_refuses_the_answer(self):
+        # The emulator would have parsed it; guessing past it would invent an
+        # answer the machine contradicts.
+        p = self._entry(
+            {
+                self.MAIN: "state_directory           /mnt/sd/states\n",
+                f"{self.INI_DIR}/vectrex.ini": {"status": "unreadable"},
+            }
+        ).savestate_location()
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_the_arcade_shape_reads_the_roms_own_driver_ini(self):
+        p = self._placement(
+            {
+                self.MAIN: "state_directory           /mnt/sd/states\n",
+                f"{self.INI_DIR}/sfiii3.ini": "state_directory           /mnt/sd/sf\n",
+            },
+            system="arcade",
+            command_tail="%BASENAME%",
+            content_path="/mnt/sd/roms/arcade/sfiii3.zip",
+        )
+        assert p.dir == "/mnt/sd/sf/sfiii3"
+
+    def test_the_arcade_shape_without_content_reads_no_driver_ini(self):
+        # No ROM, no system word, no file name to compose — the answer says so
+        # rather than guessing which machine's ini to open.
+        p = self._placement(
+            {
+                self.MAIN: "state_directory           /mnt/sd/states\n",
+                f"{self.INI_DIR}/sfiii3.ini": "state_directory           /mnt/sd/sf\n",
+            },
+            system="arcade",
+            command_tail="%BASENAME%",
+        )
+        assert p.dir == "/mnt/sd/states/<rom_stem>"
+
+    def test_that_unread_arcade_layer_names_the_missing_identity(self):
+        layer = next(
+            c
+            for c in self._placement(
+                {
+                    self.MAIN: "state_directory           /mnt/sd/states\n",
+                    f"{self.INI_DIR}/sfiii3.ini": "state_directory           /mnt/sd/sf\n",
+                },
+                system="arcade",
+                command_tail="%BASENAME%",
+            ).caveats
+            if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+        assert "names no system this reading can turn into a driver ini file name" in layer.message
+
+    def test_the_driver_ini_is_searched_on_the_path_mame_ini_moved_to(self):
+        # parse_one_ini re-reads options.ini_path() at every call
+        # (mameopts.cpp:123), so an inipath line in mame.ini moves the layer.
+        p = self._placement(
+            {
+                f"{HOME}/.mame/mame.ini": (
+                    "inipath                   /mnt/sd/inis\n"
+                    "state_directory           /mnt/sd/first\n"
+                ),
+                "/mnt/sd/inis/vectrex.ini": "state_directory           /mnt/sd/moved\n",
+            },
+            inipath=None,
+        )
+        assert p.dir == "/mnt/sd/moved/vectrex"
+
+    def _leftover(self):
+        return next(
+            c
+            for c in self._placement(
+                {
+                    **self.LAYERED,
+                    f"{self.INI_DIR}/vertical.ini": "state_directory  /mnt/sd/elsewhere\n",
+                }
+            ).caveats
+            if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+
+    def test_a_leftover_layer_records_the_member_that_was_read(self):
+        assert self._leftover().data["read"] == f"{self.INI_DIR}/vectrex.ini"
+
+    def test_a_leftover_layer_names_only_the_files_it_did_not_read(self):
+        assert self._leftover().data["files"] == f"{self.INI_DIR}/vertical.ini"
+
+    def test_a_leftover_layer_says_it_cannot_overturn_the_driver_ini(self):
+        assert "governs only where the driver ini states none" in self._leftover().message
+
+    def test_a_case_variant_driver_ini_stays_a_named_suspect(self):
+        # driver_list::find matches case-insensitively (drivenum.cpp:50) but
+        # parse_one_ini opens cursystem->name (mameopts.cpp:96), so a file
+        # spelled otherwise is one this reading did NOT open — and the
+        # leftover check names it rather than passing it off as read.
+        layer = next(
+            c
+            for c in self._placement(
+                {
+                    self.MAIN: "state_directory           /mnt/sd/states\n",
+                    f"{self.INI_DIR}/VECTREX.ini": "state_directory  /mnt/sd/other\n",
+                }
+            ).caveats
+            if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+        assert layer.data["files"] == f"{self.INI_DIR}/VECTREX.ini"
+
+    def test_an_absent_driver_ini_is_stated_by_name(self):
+        layer = next(
+            c
+            for c in self._placement(
+                {
+                    self.MAIN: "state_directory           /mnt/sd/states\n",
+                    f"{self.INI_DIR}/vertical.ini": "state_directory  /mnt/sd/elsewhere\n",
+                }
+            ).caveats
+            if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+        assert "no vectrex.ini" in layer.message
+
+    def test_a_shadowed_driver_ini_further_down_the_path_is_no_unread_layer(self):
+        # emu_file stops at the first element holding the name
+        # (fileio.cpp:374-384), so the second adam.ini is never parsed and
+        # naming it as an unread layer would invent a doubt.
+        p = self._placement(
+            {
+                f"{self.INI_DIR}/vectrex.ini": "state_directory  /mnt/sd/first\n",
+                "/mnt/sd/second-inis/vectrex.ini": "state_directory  /mnt/sd/second\n",
+            },
+            inipath="/var/config/mame/ini;/mnt/sd/second-inis",
+        )
+        assert p.dir == "/mnt/sd/first/vectrex"
+
+    def test_a_shadowed_driver_ini_is_not_named_as_a_leftover(self):
+        p = self._placement(
+            {
+                f"{self.INI_DIR}/vectrex.ini": "state_directory  /mnt/sd/first\n",
+                "/mnt/sd/second-inis/vectrex.ini": "state_directory  /mnt/sd/second\n",
+            },
+            inipath="/var/config/mame/ini;/mnt/sd/second-inis",
+        )
+        assert atlas.CAVEAT_PER_GAME_LAYER_UNREAD not in [c.code for c in p.caveats]
+
+    def test_an_absent_driver_ini_records_no_read_file(self):
+        layer = next(
+            c
+            for c in self._placement(
+                {
+                    self.MAIN: "state_directory           /mnt/sd/states\n",
+                    f"{self.INI_DIR}/vertical.ini": "state_directory  /mnt/sd/elsewhere\n",
+                }
+            ).caveats
+            if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+        assert "read" not in layer.data
+
+
+class TestMameAnswersThatSayNothingAboutTheLayer:
+    """Issue #304's silent half: every MAME answer that is not the states one.
+
+    Each refuses or answers something the ini layer never reaches, so a
+    statement about ``<system>.ini`` would qualify a claim atlas does not
+    make. Checked here rather than assumed, so a later round that gives MAME
+    a save, texture or mod card is forced to revisit the layer with it.
+    """
+
+    ESDE = (
+        '<?xml version="1.0"?><systemList>'
+        "<system><name>vectrex</name><path>%ROMPATH%/vectrex</path><extension>.vec</extension>"
+        '<command label="MAME (Standalone)">%STARTDIR%=~/.mame %EMULATOR_MAME% '
+        "-inipath /var/config/mame/ini vectrex -cart %ROM%</command></system>"
+        "</systemList>"
+    )
+    INI_DIR = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/mame/ini"
+
+    def _entry(self):
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                'libretro_directory = "/app/cores"\n',
+                DOLPHIN_ESDE: self.ESDE,
+                f"{self.INI_DIR}/mame.ini": (
+                    "state_directory           /mnt/sd/states\n"
+                    "nvram_directory           /mnt/sd/nvram\n"
+                ),
+                f"{self.INI_DIR}/vectrex.ini": (
+                    "nvram_directory           /mnt/sd/driver-nvram\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/nvram"],
+        )
+        return rd.emulators_for("vectrex").entries[0]
+
+    def test_the_save_answer_refuses_before_any_directory(self):
+        answer = self._entry().savefile_location(content_path="/mnt/sd/roms/vectrex/a.vec")
+        assert isinstance(answer, atlas.Unresolved)
+        assert answer.code == atlas.UNRESOLVED_STANDALONE
+
+    def test_the_texture_answer_refuses_before_any_directory(self):
+        answer = self._entry().texture_pack_location(content_path="/mnt/sd/roms/vectrex/a.vec")
+        assert isinstance(answer, atlas.Unresolved)
+        assert answer.code == atlas.UNRESOLVED_STANDALONE
+
+    def test_the_mod_answer_refuses_before_any_directory(self):
+        answer = self._entry().mod_location(content_path="/mnt/sd/roms/vectrex/a.vec")
+        assert isinstance(answer, atlas.Unresolved)
+        assert answer.code == atlas.UNRESOLVED_STANDALONE
+
+    def test_the_states_answer_is_the_one_that_reads_the_layer(self):
+        p = self._entry().savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/states/vectrex"
+
+
 TRIO_ESDE = (
     '<?xml version="1.0"?><systemList>'
     "<system><name>psp</name><path>%ROMPATH%/psp</path><extension>.iso</extension>"
