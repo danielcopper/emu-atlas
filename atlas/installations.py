@@ -8002,8 +8002,21 @@ def _pcsx2_savefile_placement(
                 {"core": card.token, "mode": mode},
             )
         )
-    # The answer's own directory — a slot whose filename is an absolute path
-    # moves `dir` off the memory-card one, and `physical_dir` speaks for `dir`.
+    # The answer's own directory — `physical_dir` speaks for `dir`.
+    #
+    # NOTE (#303): today a slot whose filename is an absolute path moves `dir`
+    # off the memory-card one (:func:`_pcsx2_slot_group`), and that disagrees
+    # with the emulator. ``FullpathToMcd`` is
+    # ``Path::Combine(EmuFolders::MemoryCards, Filename)``
+    # (Pcsx2Config.cpp:2065-2068), and ``Path::Combine`` performs no
+    # ``IsAbsolute`` test: it appends one separator and then
+    # ``PathAppendString`` swallows the leading separator of what follows
+    # (FileSystem.cpp:847-862, :98-139), so an absolute name lands BELOW the
+    # memory-card directory rather than replacing it. The asymmetry is the
+    # proof it is deliberate — ``LoadPathFromSettings`` does test, at :2275.
+    # Reported rather than fixed here: correcting it moves this answer's
+    # headline `dir`, which is its own change. The per-game statement below is
+    # worded about the JOIN, so it stays true either way.
     physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     caveats.extend(
