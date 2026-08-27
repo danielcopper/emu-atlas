@@ -7449,6 +7449,96 @@ def _duckstation_needs(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(holes))
 
 
+# The section-qualified keys DuckStation's save answer depends on, and what a
+# per-game value does to them. All five, unconditionally: a game ini can change
+# the slot MODES themselves, so even a machine whose slots are both ``None``
+# today can be answered differently for one game (settings.cpp:391-401).
+_DUCKSTATION_SAVE_LAYER_KEYS = (
+    "[MemoryCards] Card1Type",
+    "[MemoryCards] Card2Type",
+    "[MemoryCards] Card1Path",
+    "[MemoryCards] Card2Path",
+    "[MemoryCards] UsePlaylistTitle",
+)
+# The asymmetry is the useful half: the card FILE can leave the directory, the
+# directory itself cannot move.
+_DUCKSTATION_SAVE_LAYER_GOVERNS = (
+    "A per-game value there decides which card each slot holds and which file it reads, and an "
+    "absolute CardNPath is used verbatim rather than joined below the memory-card directory "
+    "(GetSharedMemoryCardPath, settings.cpp:1785-1797), so a card named there need not sit in "
+    "the directory this answer states. The directory itself is fixed: [MemoryCards] Directory "
+    "is read from the base settings alone (EmuFolders::LoadConfig, settings.cpp:1964-1981), "
+    "and no per-game file moves it."
+)
+# The door those five come through: Settings::Load is handed the LAYERED
+# interface, because Host::GetSettingsInterface returns the layered object
+# itself rather than its base layer.
+_DUCKSTATION_SAVE_LAYER_READ = "Settings::Load, settings.cpp:391-401, on host.cpp:42-45"
+
+
+def _duckstation_game_settings_caveats(
+    machine: Machine,
+    values: Mapping[tuple[str, str], str],
+    data_root: str,
+    token: str,
+    *,
+    sandbox: _Sandbox,
+    keys: tuple[str, ...],
+    governs: str,
+    read_through: str,
+) -> list[Caveat]:
+    """The per-game layer where this machine loads one — DuckStation's second settings source.
+
+    The directory resolution and the sandbox hop; the words and the listing
+    live in :mod:`atlas.duckstation`, because the firmware route states the
+    same fact about its own keys and the two must say it identically. An
+    absolute configured value is translated through the launch's sandbox like
+    every other path this configuration names, and one with no host spelling
+    is the unread state rather than the silent one — the listing this caveat
+    rests on cannot be made from here.
+    """
+    if not duckstation.applies_game_settings(values):
+        return []
+    raw, _ = _simpleini_value(
+        values, duckstation.GAME_SETTINGS_SECTION, duckstation.GAME_SETTINGS_KEY
+    )
+    if raw and os.path.isabs(raw):
+        host = sandbox.host(duckstation.GAME_SETTINGS_KEY, raw)
+        if host.path is None:
+            # The cause rides beside the consequence, the way every other
+            # stands-around-it site emits it: a client sees WHY the layer went
+            # unread, and that the stated directory is the configured sandbox
+            # spelling rather than a host directory that failed to glob.
+            return [
+                *host.caveats,
+                duckstation.per_game_unread_caveat(
+                    token=token,
+                    directory=raw,
+                    keys=keys,
+                    governs=governs,
+                    read_through=read_through,
+                    sandbox_value=raw,
+                ),
+            ]
+        directory = host.path
+    else:
+        directory = duckstation.load_path(
+            values,
+            data_root,
+            duckstation.GAME_SETTINGS_SECTION,
+            duckstation.GAME_SETTINGS_KEY,
+            duckstation.GAME_SETTINGS_DEFAULT,
+        )
+    return duckstation.per_game_caveats(
+        machine,
+        token=token,
+        directory=directory,
+        keys=keys,
+        governs=governs,
+        read_through=read_through,
+    )
+
+
 def _duckstation_savefile_placement(
     machine: Machine,
     *,
@@ -7474,6 +7564,18 @@ def _duckstation_savefile_placement(
     if refusal is not None:
         return refusal
     caveats: list[Caveat] = [*extra_caveats, *probe_caveats]
+    caveats.extend(
+        _duckstation_game_settings_caveats(
+            machine,
+            values,
+            data_root,
+            card.token,
+            sandbox=sandbox,
+            keys=_DUCKSTATION_SAVE_LAYER_KEYS,
+            governs=_DUCKSTATION_SAVE_LAYER_GOVERNS,
+            read_through=_DUCKSTATION_SAVE_LAYER_READ,
+        )
+    )
     found_dir, dir_spelled = _simpleini_value(values, "MemoryCards", "Directory")
     raw_dir = found_dir or ""
     dir_reading = OptionReading(

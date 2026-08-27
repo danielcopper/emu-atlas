@@ -3407,6 +3407,100 @@ def _duckstation_search_caveats(
     return caveats
 
 
+# What a per-game file does to the firmware answer, and — the half worth as
+# much — what it cannot do. The image keys and the search directory sit in the
+# same ``[BIOS]`` section and are read through different doors: the three names
+# through the layered interface, the directory through the base layer alone.
+_DUCKSTATION_BIOS_LAYER_GOVERNS = (
+    "A per-game value there decides which image inside the search directory a launch loads for "
+    "its console region: the name is combined with that directory and loaded outright, where "
+    "an empty value leaves the region to the content search (bios.cpp:321-351). The search "
+    "directory itself is fixed: [BIOS] SearchDirectory is read from the base settings alone "
+    "(EmuFolders::LoadConfig, settings.cpp:1964-1981), and no per-game file moves it."
+)
+# The door those three come through, and it is not the memory-card keys' door:
+# Host::GetStringSettingValue reads the layered interface, unlike the
+# Host::GetBase*SettingValue family beside it.
+_DUCKSTATION_BIOS_LAYER_READ = (
+    "BIOS::GetBIOSImage, bios.cpp:321-338, on Host::GetStringSettingValue, host.cpp:124-128"
+)
+
+
+def _duckstation_game_settings_caveats(
+    machine: Machine,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    *,
+    read: duckstation.SettingsRead,
+    search: StandaloneFirmwareSearch,
+    sandbox: SandboxTranslation | None,
+) -> list[Caveat]:
+    """The per-game layer stated beside the firmware answer, in its own keys.
+
+    The save route makes the same statement about ``[MemoryCards]`` and both
+    read it out of :mod:`atlas.duckstation`, so one entry's answers cannot
+    drift into two tellings of one fact. The keys are the card's own — the
+    three region keys it already names, section-qualified — rather than a list
+    written twice, so a card that grew a fourth region would be stated without
+    touching this.
+    """
+    if not duckstation.applies_game_settings(read.values):
+        return []
+    keys = tuple(f"[{key.replace('/', '] ', 1)}" for _, key in search.region_keys)
+    raw = (
+        qt_ini.simpleini_value(
+            read.values, duckstation.GAME_SETTINGS_SECTION, duckstation.GAME_SETTINGS_KEY
+        )[0]
+        or ""
+    )
+    # Only an absolute configured value goes through the sandbox map, the way
+    # the save route does it and the way the BIOS directory two calls below
+    # does: a relative one was already joined onto a DataRoot this route
+    # resolved on the host side, so there is nothing there to translate.
+    if os.path.isabs(raw):
+        host, untranslated = _sandbox_host_path(
+            sandbox,
+            entry,
+            card,
+            f"{duckstation.GAME_SETTINGS_SECTION}/{duckstation.GAME_SETTINGS_KEY}",
+            raw,
+        )
+        if host is None:
+            assert untranslated is not None
+            # No host spelling means the listing cannot be made from here,
+            # which is the unread state and never the silent one — silence
+            # would say no game overrides this answer, which is exactly what
+            # was not established.
+            return [
+                untranslated,
+                duckstation.per_game_unread_caveat(
+                    token=card.token,
+                    directory=raw,
+                    keys=keys,
+                    governs=_DUCKSTATION_BIOS_LAYER_GOVERNS,
+                    read_through=_DUCKSTATION_BIOS_LAYER_READ,
+                    sandbox_value=raw,
+                ),
+            ]
+        directory = host
+    else:
+        directory = duckstation.load_path(
+            read.values,
+            read.root,
+            duckstation.GAME_SETTINGS_SECTION,
+            duckstation.GAME_SETTINGS_KEY,
+            duckstation.GAME_SETTINGS_DEFAULT,
+        )
+    return duckstation.per_game_caveats(
+        machine,
+        token=card.token,
+        directory=directory,
+        keys=keys,
+        governs=_DUCKSTATION_BIOS_LAYER_GOVERNS,
+        read_through=_DUCKSTATION_BIOS_LAYER_READ,
+    )
+
+
 def _duckstation_standalone_core(
     machine: Machine,
     entry: CatalogueEntry,
@@ -3455,6 +3549,11 @@ def _duckstation_standalone_core(
         caveats.append(
             duckstation.dataroot_caveat(card.token, "the search directory below")
         )
+    caveats.extend(
+        _duckstation_game_settings_caveats(
+            machine, entry, card, read=read, search=search, sandbox=sandbox
+        )
+    )
     section, name = search.directory_key.split("/", 1)
     composed = duckstation.load_path(
         read.values, read.root, section, name, search.directory_default

@@ -5672,6 +5672,444 @@
           }
         }
       }
+    },
+    {
+      "name": "duckstation-a-per-game-settings-file-is-stated-beside-the-card-answer",
+      "rationale": "A running game installs gamesettings/<serial>.ini as the TOP layer of the settings interface (UpdateGameSettingsLayer, system.cpp:1407-1441 at stenzek/duckstation@64655818e), and Settings::Load reads Card1Type, Card2Type, Card1Path, Card2Path and UsePlaylistTitle through that interface rather than through the base one (settings.cpp:391-401 on host.cpp:42-45). So the slot modes AND the card files can be answered differently for one game, and which game runs is not a fact atlas holds. Whether any such file exists at all IS a listing, so the answer keeps the global reading and counts them. The strongest half of what it says is the escape: GetSharedMemoryCardPath takes an absolute CardNPath verbatim (settings.cpp:1785-1797), so a per-game card need not sit in the directory this answer names — while [MemoryCards] Directory itself cannot move, because EmuFolders::LoadConfig is handed the base layer at every call site there is (settings.cpp:1964-1981, qthost.cpp:470).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\nCard2Type = None\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings/SLUS-00594.ini": "[MemoryCards]\nCard1Path = /mnt/sd/elsewhere/castlevania.mcd\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings/SCUS-94163.ini": "[Display]\nAspectRatio = 4:3\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-overrides-present",
+              "data": {
+                "core": "DUCKSTATION",
+                "count": "2",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings",
+                "key": "[MemoryCards] Card1Type, [MemoryCards] Card2Type, [MemoryCards] Card1Path, [MemoryCards] Card2Path, [MemoryCards] UsePlaylistTitle"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameTitle",
+                "files": "<save_id>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameTitle+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "PerGameTitle",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "UsePlaylistTitle",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-a-per-game-directory-that-cannot-be-listed-is-not-an-empty-one",
+      "rationale": "The absence of per-game-overrides-present is what tells a caller this answer holds for every game, so answering an unreadable gamesettings directory the way an empty one is answered would claim exactly what the failed listing never established. The directory is there and its contents cannot be read: per-game-layer-unread says so, naming the directory and the keys the layer could move, and per-game-overrides-present stays away because it would assert files nobody saw.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\nCard2Type = None\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings"
+        ],
+        "unlistable": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-layer-unread",
+              "data": {
+                "core": "DUCKSTATION",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings",
+                "key": "[MemoryCards] Card1Type, [MemoryCards] Card2Type, [MemoryCards] Card1Path, [MemoryCards] Card2Path, [MemoryCards] UsePlaylistTitle"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameTitle",
+                "files": "<save_id>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameTitle+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "PerGameTitle",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "UsePlaylistTitle",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-a-sandbox-only-gamesettings-directory-leaves-the-layer-unread",
+      "rationale": "[Folders] GameSettings is a configured value like every other folder of this emulator (settings.cpp:1972 through LoadPathFromSettings :1952-1962), so it can name a path only the emulator's own sandbox can spell. The listing this caveat rests on cannot be made from here, which is the unread state and never the silent one — silence would say no game overrides this answer, which is precisely what was not established. The cause rides beside the consequence: sandbox-path-untranslated names the path, per-game-layer-unread names what went unchecked because of it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\nCard2Type = None\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n[Folders]\nGameSettings = /app/gamesettings\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "GameSettings",
+                "path": "/app/gamesettings"
+              }
+            },
+            {
+              "code": "per-game-layer-unread",
+              "data": {
+                "core": "DUCKSTATION",
+                "dir": "/app/gamesettings",
+                "key": "[MemoryCards] Card1Type, [MemoryCards] Card2Type, [MemoryCards] Card1Path, [MemoryCards] Card2Path, [MemoryCards] UsePlaylistTitle"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameTitle",
+                "files": "<save_id>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameTitle+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "PerGameTitle",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "UsePlaylistTitle",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-per-game-settings-switched-off-leaves-the-answer-unqualified",
+      "rationale": "[Main] ApplyGameSettings is the switch that decides whether the layer is loaded at all: UpdateGameSettingsLayer opens nothing while it is false (system.cpp:1410), so on this machine the per-game files really are inert. Stating a layer here would be a claim about a file the launch never opens, so the answer says nothing about one — even though two per-game files sit in the directory, which is what makes this vector worth its place. The switch gates the layer as a whole rather than any single key, so it is one gate for every answer, not one per answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Main]\nApplyGameSettings = false\n[MemoryCards]\nCard1Type = PerGameTitle\nCard2Type = None\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings/SLUS-00594.ini": "[MemoryCards]\nCard1Path = /mnt/sd/elsewhere/castlevania.mcd\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings/SCUS-94163.ini": "[Display]\nAspectRatio = 4:3\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameTitle",
+                "files": "<save_id>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameTitle+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "PerGameTitle",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "UsePlaylistTitle",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

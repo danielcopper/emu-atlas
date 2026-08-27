@@ -24,8 +24,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from atlas import emulator_settings, qt_ini
-from atlas.machine import READ_MISSING, READ_OK, Machine
-from atlas.placement import CAVEAT_CORE_MODE_UNESTABLISHED, Caveat
+from atlas.machine import GLOB_COMPLETE, READ_MISSING, READ_OK, Machine
+from atlas.placement import (
+    CAVEAT_CORE_MODE_UNESTABLISHED,
+    CAVEAT_PER_GAME_LAYER_UNREAD,
+    CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+    Caveat,
+)
 
 # The emulator's own directory name below whichever XDG base the launch picked,
 # and the settings file inside it.
@@ -188,6 +193,170 @@ def load_path(
     raw, _ = qt_ini.simpleini_value(values, section, name)
     value = raw or default
     return value if os.path.isabs(value) else os.path.join(root, value)
+
+
+# The per-game settings layer. Its directory is the usual LoadPathFromSettings
+# shape, ``[Folders] GameSettings`` defaulting to ``gamesettings`` below the
+# DataRoot (settings.cpp:1972, the compiled default the same join at :1941).
+GAME_SETTINGS_SECTION = "Folders"
+GAME_SETTINGS_KEY = "GameSettings"
+GAME_SETTINGS_DEFAULT = "gamesettings"
+
+# The switch that decides whether the layer is loaded at all, and its compiled
+# default (settings.cpp:162; UpdateGameSettingsLayer loads nothing when it is
+# false, system.cpp:1410).
+APPLY_SECTION = "Main"
+APPLY_KEY = "ApplyGameSettings"
+
+_ANY_INI_GLOB = "*.ini"
+
+# What every route citing the layer cites, written once so four answers cannot
+# drift into four tellings of one fact — the reason :func:`dataroot_caveat`
+# lives here too.
+_LAYER = (
+    "UpdateGameSettingsLayer, system.cpp:1407-1441 at stenzek/duckstation@64655818e — "
+    "the file is <serial>.ini, folded onto a disc set's first serial "
+    "(GetGameSettingsPath, :1145-1152)"
+)
+# Why a key can be answered differently at all: the read that consumes it goes
+# through the LAYERED settings interface rather than through the base one. That
+# is not one door — the memory-card keys arrive via Host::GetSettingsInterface
+# and the BIOS ones via Host::GetStringSettingValue — so each route states the
+# door it came through (*read_through*) rather than sharing a citation that
+# would be right for one answer and wrong for the other. The folder keys go
+# through neither: EmuFolders::LoadConfig is handed the base layer at every
+# call site there is, which is why so many DuckStation answers stay silent.
+
+
+def applies_game_settings(values: Mapping[tuple[str, str], str]) -> bool:
+    """Would this launch load a per-game layer at all? ``[Main] ApplyGameSettings``.
+
+    ``UpdateGameSettingsLayer`` loads nothing while ``apply_game_settings`` is
+    false (system.cpp:1410), and that value is
+    ``si.GetBoolValue("Main", "ApplyGameSettings", true)`` (settings.cpp:162).
+    So an emulator whose own settings file switches the layer off has no
+    per-game layer to state, and stating one would be a claim about a file
+    that is never opened.
+
+    Absent or unreadable-as-a-boolean is **not** off: ``GetBoolValue`` keeps
+    the caller's default when ``FromChars<bool>`` yields nothing
+    (settings_interface.h:77-81), and that default is ``true``. Only a value
+    the emulator itself reads as false silences the statement, which is why
+    this goes through :func:`atlas.qt_ini.from_chars_bool` rather than through
+    a reasonable-looking test of its own.
+
+    The value read is the one in ``settings.ini`` — the base layer — and that
+    is the right one even though ``Settings::Load`` reads the key through the
+    layered interface: at the read that matters the game layer is not
+    installed yet, so the base value is what decides whether it ever is.
+    """
+    raw, _ = qt_ini.simpleini_value(values, APPLY_SECTION, APPLY_KEY)
+    return qt_ini.from_chars_bool(raw) is not False
+
+
+def _spelling(keys: tuple[str, ...]) -> tuple[str, str, str]:
+    """``(the keys joined, "key"/"keys", "is"/"are")`` — one arity, three places."""
+    return ", ".join(keys), "keys" if len(keys) > 1 else "key", "are" if len(keys) > 1 else "is"
+
+
+def per_game_unread_caveat(
+    *,
+    token: str,
+    directory: str,
+    keys: tuple[str, ...],
+    governs: str,
+    read_through: str,
+    sandbox_value: str | None = None,
+) -> Caveat:
+    """Whether any game overrides this answer was **not** established.
+
+    Not the same fact as "no game does", which is what silence means here, and
+    the difference is what a client acts on: a failed listing can be retried
+    with more permission, an answered one cannot be improved on. *directory*
+    is the location the check would have been made at — a host path where the
+    listing failed, the emulator's own sandbox spelling where there is no host
+    path at all, which is what *sandbox_value* marks.
+    """
+    spelled, plural, _ = _spelling(keys)
+    where = (
+        f"[{GAME_SETTINGS_SECTION}] {GAME_SETTINGS_KEY} = {sandbox_value!r} names a location "
+        "only the emulator's sandbox can spell"
+        if sandbox_value is not None
+        else f"{directory} could not be listed"
+    )
+    return Caveat(
+        CAVEAT_PER_GAME_LAYER_UNREAD,
+        f"{where}, so whether any game on this machine carries a per-game settings file is "
+        f"unknown — DuckStation layers such a file over the whole configuration while that "
+        f"game runs ({_LAYER}), and the {plural} {spelled} would be read through it "
+        f"({read_through}). {governs}",
+        {"core": token, "dir": directory, "key": spelled},
+    )
+
+
+def per_game_caveats(
+    machine: Machine,
+    *,
+    token: str,
+    directory: str,
+    keys: tuple[str, ...],
+    governs: str,
+    read_through: str,
+) -> list[Caveat]:
+    """The per-game layer stated beside one answer, from a listing of *directory*.
+
+    The PCSX2 vocabulary unchanged, because the situation is unchanged: which
+    game runs is not a fact atlas holds, so the layer cannot be read *for* an
+    answer — but whether one exists at all is a directory listing.
+    ``per-game-overrides-present`` says how many and where, a failed listing
+    says the check did not happen, and silence means this answer holds for
+    every game. DuckStation has no second, build-shipped layer the way Dolphin
+    does, so silence is available here and is the shipped state.
+
+    Nothing claims a key **is** set: a game ini may carry any section, so the
+    honest statement is that these keys CAN be answered differently for a game
+    this answer cannot name. *keys* are section-qualified the way that file
+    must spell them; *governs* is a whole sentence of the answer's own, saying
+    what a per-game value does there and — the half worth as much — which part
+    of the answer no per-game value can touch. It trails the statement rather
+    than sitting inside it: these clauses carry their own citations, and
+    nesting one between a subject and its verb left the verb stranded a line
+    away from what it belonged to.
+
+    The caller decides whether to ask at all: :func:`applies_game_settings`
+    is the gate, and it is one gate for every answer because the switch it
+    reads gates the layer as a whole rather than any single key.
+    """
+    listing = machine.glob(os.path.join(directory, _ANY_INI_GLOB))
+    if listing.status != GLOB_COMPLETE:
+        return [
+            per_game_unread_caveat(
+                token=token,
+                directory=directory,
+                keys=keys,
+                governs=governs,
+                read_through=read_through,
+            )
+        ]
+    if not listing.matches:
+        return []
+    spelled, plural, are = _spelling(keys)
+    return [
+        Caveat(
+            CAVEAT_PER_GAME_OVERRIDES_PRESENT,
+            f"{len(listing.matches)} game(s) on this machine carry a per-game settings file in "
+            f"{directory}, which DuckStation layers over the whole configuration while that "
+            f"game runs ({_LAYER}) — the {plural} {spelled} {are} read through that layer "
+            f"({read_through}), so this answer is the one that holds for every game without "
+            f"such a file. {governs}",
+            {
+                "core": token,
+                "count": str(len(listing.matches)),
+                "dir": directory,
+                "key": spelled,
+            },
+        )
+    ]
 
 
 @dataclass(frozen=True, slots=True)
