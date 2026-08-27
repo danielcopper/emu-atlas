@@ -4951,67 +4951,6 @@ class _XdgHomes:
         )
 
 
-def _pcsx2_path_append(dst: list[str], src: str) -> None:
-    """``PathAppendString`` (common/FileSystem.cpp:98-139 at v2.6.3), the POSIX half.
-
-    Copies *src* onto *dst* collapsing every run of separators to one. The
-    state that decides it is ``last_separator``, seeded from what *dst*
-    already ends with (:104) — which is the whole mechanism behind
-    :func:`_pcsx2_path_combine` swallowing an absolute value's leading
-    separator. The ``_WIN32`` arms (backslash folding, the UNC special case)
-    are deliberately not ported: atlas resolves Linux machines, and porting a
-    branch no read of one can reach would be code nothing proves.
-    """
-    last_separator = bool(dst) and dst[-1] == "/"
-    for char in src:
-        if char != "/":
-            last_separator = False
-            dst.append(char)
-        elif not last_separator:
-            last_separator = True
-            dst.append("/")
-
-
-def _pcsx2_path_combine(base: str, name: str) -> str:
-    """``Path::Combine`` (common/FileSystem.cpp:847-862 at v2.6.3), ported faithfully.
-
-    PCSX2 composes a card's full path as
-    ``Path::Combine(EmuFolders::MemoryCards, Filename)`` (``FullpathToMcd``,
-    Pcsx2Config.cpp:2065-2068), and this is that combine rather than
-    :func:`os.path.join`, because the two disagree on exactly the value
-    issue #312 is about. The combine appends *base*, strips its trailing
-    separators, appends **one** separator (:856), then appends *name* through
-    :func:`_pcsx2_path_append` — which therefore enters with
-    ``last_separator`` already true and swallows the leading separator of an
-    absolute *name* at the ``continue`` on :128-129. So an absolute filename
-    lands **below** the memory-card directory instead of replacing it, where
-    ``os.path.join`` would let it replace it silently.
-
-    That this is deliberate rather than incidental is visible two hundred
-    lines from the combine: ``LoadPathFromSettings`` *does* test
-    ``Path::IsAbsolute`` (Pcsx2Config.cpp:2275), because a folder setting is
-    where PCSX2 wants an absolute value to win. ``Path::Combine`` has no such
-    test.
-
-    Nothing here normalises: upstream resolves no ``.`` or ``..`` component,
-    so neither does this. A name of ``"../x.ps2"`` composes literally to
-    ``<memcards>/../x.ps2`` — where that lands is the kernel's answer, and
-    resolving it lexically would be the mistake the firmware route documents
-    beside :data:`~atlas.firmware.CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT`, since a
-    symlinked parent makes the lexical reading and the opened file two
-    different places.
-    """
-    ret: list[str] = []
-    _pcsx2_path_append(ret, base)
-    while ret and ret[-1] == "/":
-        ret.pop()
-    ret.append("/")
-    _pcsx2_path_append(ret, name)
-    while ret and ret[-1] == "/":
-        ret.pop()
-    return "".join(ret)
-
-
 def _pcsx2_folder_below_dataroot(
     raw: str | None,
     *,
@@ -7963,7 +7902,7 @@ def _pcsx2_slot_group(
     anything else is a file card, one shared image that would be created on
     first use.
 
-    The full path is :func:`_pcsx2_path_combine` of the memory-card directory
+    The full path is :func:`atlas.qt_ini.pcsx2_path_combine` of the memory-card directory
     and the name, which is why this takes no sandbox: the configured value is a
     file NAME and cannot carry a root of its own past that join (#312).
 
@@ -8024,12 +7963,12 @@ def _pcsx2_slot_group(
         return "empty", None, tuple(readings), ()
     # The name is a name, not a path — even when it is spelled like one. It is
     # composed the way the emulator composes it (#312), and that join never
-    # lets the value replace the directory: see :func:`_pcsx2_path_combine`.
+    # lets the value replace the directory: see :func:`atlas.qt_ini.pcsx2_path_combine`.
     # Nothing here goes through the sandbox, and that is the fix rather than an
     # omission — the memory-card DIRECTORY was already translated by
     # :func:`_pcsx2_memcards_dir`, and an absolute name contributes no root of
     # its own for a second translation to be about.
-    full = _pcsx2_path_combine(memcards_dir, name)
+    full = qt_ini.pcsx2_path_combine(memcards_dir, name)
     if machine.path_kind(full) == KIND_DIRECTORY:
         caveat = Caveat(
             CAVEAT_FILE_NAMES_UNESTABLISHED,
@@ -8195,7 +8134,7 @@ def _pcsx2_savefile_placement(
     # ``Path::Combine(EmuFolders::MemoryCards, Filename)`` (``FullpathToMcd``,
     # Pcsx2Config.cpp:2065-2068), a combine with no ``IsAbsolute`` test, so an
     # absolute name lands BELOW that directory — see
-    # :func:`_pcsx2_path_combine`. What CAN move `dir` is a name carrying a
+    # :func:`atlas.qt_ini.pcsx2_path_combine`. What CAN move `dir` is a name carrying a
     # sub-path (``sub/card.ps2`` puts the group one level down), which is the
     # same thing the emulator would open.
     physical, link_caveats = _link_view(machine, directory)

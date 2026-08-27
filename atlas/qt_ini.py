@@ -57,6 +57,70 @@ _FROM_CHARS_TRUE = ("true", "yes", "on", "1", "enabled")
 _FROM_CHARS_FALSE = ("false", "no", "off", "0", "disabled")
 
 
+def _path_append(dst: list[str], src: str) -> None:
+    """``PathAppendString`` (common/FileSystem.cpp:98-139 at PCSX2 v2.6.3), the POSIX half.
+
+    Copies *src* onto *dst* collapsing every run of separators to one. The
+    state that decides it is ``last_separator``, seeded from what *dst*
+    already ends with (:104) — which is the whole mechanism behind
+    :func:`pcsx2_path_combine` swallowing an absolute value's leading
+    separator. The ``_WIN32`` arms (backslash folding, the UNC special case)
+    are deliberately not ported: atlas resolves Linux machines, and porting a
+    branch no read of one can reach would be code nothing proves.
+    """
+    last_separator = bool(dst) and dst[-1] == "/"
+    for char in src:
+        if char != "/":
+            last_separator = False
+            dst.append(char)
+        elif not last_separator:
+            last_separator = True
+            dst.append("/")
+
+
+def pcsx2_path_combine(base: str, name: str) -> str:
+    """``Path::Combine`` (common/FileSystem.cpp:847-862 at PCSX2 v2.6.3), ported faithfully.
+
+    A resident here for the reason :func:`from_chars_bool` is: PCSX2 composes
+    both of its configured *file names* with this combine — the memory-card
+    image (``FullpathToMcd``, Pcsx2Config.cpp:2065-2068, read by
+    :mod:`atlas.installations`) and the BIOS image (``FullpathToBios``,
+    :2057-2062, read by :mod:`atlas.firmware`) — and neither module can import
+    the other.
+
+    It is this rather than :func:`os.path.join` because the two disagree on
+    exactly the value issue #312 was about. The combine appends *base*, strips
+    its trailing separators, appends **one** separator (:856), then appends
+    *name* through :func:`_path_append` — which therefore enters with
+    ``last_separator`` already true and swallows the leading separator of an
+    absolute *name* at the ``continue`` on :128-129. So an absolute file name
+    lands **below** the directory instead of replacing it, where
+    ``os.path.join`` would let it replace it silently.
+
+    That this is deliberate rather than incidental is visible two hundred lines
+    away: ``LoadPathFromSettings`` *does* test ``Path::IsAbsolute``
+    (Pcsx2Config.cpp:2275), because a ``[Folders]`` setting is where PCSX2
+    wants an absolute value to win. ``Path::Combine`` has no such test — so in
+    one PCSX2 configuration file an absolute value is a path when it names a
+    directory and is not one when it names a file.
+
+    Nothing here normalises, because upstream resolves no ``.`` or ``..``
+    component either. A name of ``"../x"`` composes literally to
+    ``<dir>/../x``, and where that lands is the kernel's answer: reading it
+    lexically would make the resolved path and the opened file two different
+    places wherever a parent is a symlink.
+    """
+    ret: list[str] = []
+    _path_append(ret, base)
+    while ret and ret[-1] == "/":
+        ret.pop()
+    ret.append("/")
+    _path_append(ret, name)
+    while ret and ret[-1] == "/":
+        ret.pop()
+    return "".join(ret)
+
+
 def from_chars_bool(value: str | None) -> bool | None:
     """``StringUtil::FromChars<bool>`` as PCSX2 and DuckStation apply it to an ini value.
 
