@@ -7115,7 +7115,8 @@ class TestPcsx2PerGameLayerPrecision:
         )
         answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
         card = lookup_standalone_texture_card("PCSX2")
-        assert card is not None and card.switch is not None
+        assert card is not None
+        assert card.switch is not None
         assert self._stated(answer, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0].data["key"] == (
             f"[{card.switch.section}] {card.switch.key}"
         )
