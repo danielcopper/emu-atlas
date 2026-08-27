@@ -792,6 +792,29 @@ those files", the second as "the emulator ships a layer atlas will never enumera
 say it _can_ be. `savestate_location` stays silent throughout, because the states tree is a compiled join off the user
 directory that no configuration key moves.
 
+**DuckStation reads its memory-card answer through a per-game layer too, and the useful half of what it says is what
+that layer _cannot_ move.** While a game runs, `gamesettings/<serial>.ini` sits on top of the whole settings interface —
+one file per disc set, since a multi-disc title is folded onto its set's first serial — and `Settings::Load` reads
+`[MemoryCards] Card1Type`, `Card2Type`, `Card1Path`, `Card2Path` and `UsePlaylistTitle` through that interface rather
+than through the base one. So a game can switch its own slots between the shared card and per-title `<name>_N.mcd`
+files, and an **absolute** `CardNPath` is used verbatim rather than joined below the memory-card directory: that card
+need not be inside the directory `savefile_location` names at all. The directory itself is fixed.
+`[MemoryCards]
+Directory` — like every `[Folders]` key of this emulator — is read by `EmuFolders::LoadConfig`, which is
+handed the base settings at every call site there is, so no per-game file moves it. Read the pair as "the file can
+leave, the folder cannot".
+
+The statement is the PCSX2 vocabulary unchanged: `per-game-overrides-present` with `data["count"]`, `data["dir"]` and
+`data["key"]` where files sit in the gamesettings directory, `per-game-layer-unread` where the listing failed or where
+`[Folders] GameSettings` names a path only the emulator's sandbox can spell, and **silence** where the directory holds
+none — which for this emulator really does mean "this answer holds for every game", because DuckStation ships no second
+layer inside its own build the way Dolphin does. One thing gates all of it: `[Main] ApplyGameSettings`, the switch that
+decides whether the layer is loaded at all. Where a machine's own `settings.ini` reads as false there, atlas says
+nothing about a layer, because the launch opens no such file. An absent or unparseable value is not off — the emulator's
+compiled default is on, and atlas keeps the default rather than inventing silence. `savestate_location`,
+`texture_pack_location` and `mod_location` stay silent throughout: their directories are `[Folders]` keys, base-layer
+only.
+
 Three more cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
 `PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the
 emulator resolves it (an `--mlc` launch flag outranks `settings.xml`, and the answer says so when it sees one) — with
@@ -1046,16 +1069,18 @@ build-shipped layer that `per-game-build-layer-unread` states and never counts. 
 a different reason: the root it resolves against is the config home or the data home depending on how the launch was
 started, so a fixed base would answer correctly on one arrangement and wrongly on the other — and its texture answer
 would disagree with its own cheat answer about where the emulator keeps things. It reads no per-serial `replacements`
-tree of its own. Where nobody has read an emulator's configuration the entry still refuses with
-`standalone-unsupported`, so the split runs on evidence, not on the kind of entry. **On EmuDeck the same cards answer**,
-below the bases the launch's own binary reads: an AppImage under `~/Applications` (or the executable EmuDeck unpacks
-from one) reads the host's XDG tree, and a flatpak whose app id `emulator_settings.json` names reads the app's own
-homes. That id is stated once per emulator, beside the directory spellings already keyed by it, so a question reaches
-the trees whether or not the emulator has a card of any particular family — MAME's savestate answer refused on exactly
-that until #288, having a complete savestate card and no save card. A launch whose binary establishes neither — the
-Windows build under Proton, or a flatpak the table names no app id for (EmuDeck installs Cemu, Azahar, DuckStation,
-PCSX2 and RPCS3 as AppImages, so none is established for them) — refuses with `standalone-variant-unestablished` and the
-variant in `data`, which is a different instruction from "this emulator is not covered".
+tree of its own — and unlike the three emulators above it states **no** per-game layer on either answer, because both
+directories are `[Folders]` keys, which that emulator reads from its base settings alone. Where nobody has read an
+emulator's configuration the entry still refuses with `standalone-unsupported`, so the split runs on evidence, not on
+the kind of entry. **On EmuDeck the same cards answer**, below the bases the launch's own binary reads: an AppImage
+under `~/Applications` (or the executable EmuDeck unpacks from one) reads the host's XDG tree, and a flatpak whose app
+id `emulator_settings.json` names reads the app's own homes. That id is stated once per emulator, beside the directory
+spellings already keyed by it, so a question reaches the trees whether or not the emulator has a card of any particular
+family — MAME's savestate answer refused on exactly that until #288, having a complete savestate card and no save card.
+A launch whose binary establishes neither — the Windows build under Proton, or a flatpak the table names no app id for
+(EmuDeck installs Cemu, Azahar, DuckStation, PCSX2 and RPCS3 as AppImages, so none is established for them) — refuses
+with `standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this emulator
+is not covered".
 
 Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction — the rows
 that read a configuration add two more, below the table:
@@ -1470,6 +1495,15 @@ the search's find (or its degradation caveats) covering the regions left over, e
 data. Pick the option whose `regions` contain your disc's region; a region no option lists has nothing stated for it and
 the caveats say why. Only the everything-searched state — every key empty, which is what both arrangements ship — stays
 a plain, unconditional requirement.
+
+Those same three keys are the second family DuckStation's **per-game layer** reaches, so this answer carries the layer
+statement described under the standalone save section — same codes, same gate, its own keys. They travel a different
+door from the memory-card ones: `GetBIOSImage` reads them through `Host::GetStringSettingValue`, which reads the layered
+interface, unlike the `Host::GetBase*SettingValue` family beside it. The asymmetry repeats here and is worth reading the
+same way: a per-game file can name a **different image inside** the search directory, and `[BIOS] SearchDirectory`
+itself cannot move, because it comes through `EmuFolders::LoadConfig` on the base layer. So a game that carries its own
+ini can turn the everything-searched state above into a named image for its region, and nothing about the directory
+changes.
 
 ## Where do this system's ROMs live? (and what launches them)
 
