@@ -6992,6 +6992,258 @@ class TestPcsx2EmptyFolderKeys:
         assert stated.data["count"] == "1"
 
 
+class TestPcsx2PerGameLayerPrecision:
+    """What PCSX2's per-game layer moves — and, key by key, what it cannot (#303).
+
+    The layer sits over every key ``Pcsx2Config::LoadSave`` reads
+    (VMManager.cpp:932-997 at v2.6.3), and over none of the ``[Folders]`` keys:
+    ``EmuFolders::LoadConfig`` is their only reader and is handed the base layer
+    at both of its call sites (Pcsx2Config.cpp:2280-2316; VMManager.cpp:552,
+    :835). So the memory-card *file name* moves per game and the memory-card
+    *directory* cannot, and an answer that said only "overrides may be present"
+    would invite a caller to distrust a directory nothing can touch.
+    """
+
+    DATA_ROOT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2"
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: TRIO_ESDE,
+    }
+    INI = (
+        "[Folders]\nMemoryCards = /mnt/sd/memcards\n"
+        "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
+        "Slot2_Enable = false\n"
+    )
+
+    def _save(self, files=None, dirs=(), **kwargs):
+        rd = _retrodeck(
+            {**self.BASE, PCSX2_INI_PATH: self.INI, **(files or {})},
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards", *dirs],
+            **kwargs,
+        )
+        return rd.emulators_for("ps2").entries[0].savefile_location()
+
+    def _stated(self, placement, code):
+        assert not isinstance(placement, atlas.Unresolved)
+        return [c for c in placement.caveats if c.code == code]
+
+    # ---- the counted half -------------------------------------------------
+
+    def test_a_per_game_file_is_counted_beside_the_card_answer(self):
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(
+            files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
+            dirs=[layer],
+        )
+        assert self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0].data["count"] == "1"
+
+    def test_the_counted_statement_names_the_directory_it_listed(self):
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(
+            files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
+            dirs=[layer],
+        )
+        assert self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0].data["dir"] == layer
+
+    def test_the_answers_own_directory_is_not_moved_by_the_statement(self):
+        # The whole point: the caveat qualifies the file names, never `dir`.
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(
+            files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
+            dirs=[layer],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/memcards"
+
+    # ---- which keys it names ---------------------------------------------
+
+    def test_the_statement_names_every_slot_key_the_answer_reads(self):
+        # All sixteen, including the six multitap pairs: a per-game file can
+        # turn on a slot this machine keeps off, so naming only the console
+        # ports would understate the layer's reach.
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(
+            files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
+            dirs=[layer],
+        )
+        stated = self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
+        assert stated.data["key"].split(", ") == [
+            "[MemoryCards] Slot1_Enable",
+            "[MemoryCards] Slot1_Filename",
+            "[MemoryCards] Slot2_Enable",
+            "[MemoryCards] Slot2_Filename",
+            "[MemoryCards] Multitap1_Slot2_Enable",
+            "[MemoryCards] Multitap1_Slot2_Filename",
+            "[MemoryCards] Multitap1_Slot3_Enable",
+            "[MemoryCards] Multitap1_Slot3_Filename",
+            "[MemoryCards] Multitap1_Slot4_Enable",
+            "[MemoryCards] Multitap1_Slot4_Filename",
+            "[MemoryCards] Multitap2_Slot2_Enable",
+            "[MemoryCards] Multitap2_Slot2_Filename",
+            "[MemoryCards] Multitap2_Slot3_Enable",
+            "[MemoryCards] Multitap2_Slot3_Filename",
+            "[MemoryCards] Multitap2_Slot4_Enable",
+            "[MemoryCards] Multitap2_Slot4_Filename",
+        ]
+
+    def test_every_named_save_key_carries_its_section(self):
+        # The section is the discriminator this round turns on: [MemoryCards]
+        # is read through the layered interface, [Folders] is not.
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(
+            files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
+            dirs=[layer],
+        )
+        stated = self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
+        assert all(k.startswith("[MemoryCards] ") for k in stated.data["key"].split(", "))
+
+    def test_the_texture_key_is_the_section_the_card_states(self):
+        # Derived from the card rather than written twice, so a card that
+        # renamed the switch cannot leave this statement describing the old one.
+        from atlas.textures import lookup_standalone_texture_card
+
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: self.INI,
+                f"{layer}/SLES-12345_A1B2C3D4.ini": "[EmuCore/GS]\nLoadTextureReplacements = true\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards", layer],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        card = lookup_standalone_texture_card("PCSX2")
+        assert card is not None and card.switch is not None
+        assert self._stated(answer, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0].data["key"] == (
+            f"[{card.switch.section}] {card.switch.key}"
+        )
+
+    # ---- what the statement says the layer cannot do ----------------------
+
+    def test_the_save_statement_says_the_memory_card_directory_cannot_move(self):
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(
+            files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
+            dirs=[layer],
+        )
+        stated = self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
+        assert "It cannot move the directory those names are read in" in stated.message
+
+    def test_the_save_statement_says_an_absolute_name_does_not_escape(self):
+        # Path::Combine appends one separator and PathAppendString then swallows
+        # the leading separator of what follows (FileSystem.cpp:98-139, :847-862).
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(
+            files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
+            dirs=[layer],
+        )
+        stated = self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
+        assert "even an absolute name lands below that directory" in stated.message
+
+    def test_the_texture_statement_says_the_texture_directory_cannot_move(self):
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: self.INI,
+                f"{layer}/SLES-12345_A1B2C3D4.ini": "[EmuCore/GS]\nLoadTextureReplacements = true\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards", layer],
+        )
+        answer = rd.emulators_for("ps2").entries[0].texture_pack_location()
+        stated = self._stated(answer, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
+        assert "[Folders] Textures is a folder setting" in stated.message
+
+    # ---- the three states a listing can be in -----------------------------
+
+    def test_no_per_game_file_leaves_the_card_answer_silent(self):
+        # Silence means this answer holds for every game, and that is the
+        # shipped state on both real arrangements.
+        p = self._save(dirs=[f"{self.DATA_ROOT}/gamesettings"])
+        assert self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT) == []
+
+    def test_an_absent_layer_directory_is_not_an_unread_one(self):
+        p = self._save()
+        assert self._stated(p, atlas.CAVEAT_PER_GAME_LAYER_UNREAD) == []
+
+    def test_a_directory_that_cannot_be_listed_says_the_check_did_not_happen(self):
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(dirs=[layer], unlistable=[layer])
+        assert self._stated(p, atlas.CAVEAT_PER_GAME_LAYER_UNREAD)[0].data["dir"] == layer
+
+    def test_a_failed_listing_never_asserts_that_per_game_files_exist(self):
+        # The two codes are different instructions to a client: retry the
+        # listing, versus this answer holds for every game.
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        p = self._save(dirs=[layer], unlistable=[layer])
+        assert self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT) == []
+
+    def test_a_sandbox_only_layer_directory_states_the_sandbox_spelling(self):
+        p = self._save(
+            files={
+                PCSX2_INI_PATH: (
+                    "[Folders]\nMemoryCards = /mnt/sd/memcards\nGameSettings = /var/tmp/layer\n"
+                    "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
+                    "Slot2_Enable = false\n"
+                )
+            }
+        )
+        assert self._stated(p, atlas.CAVEAT_PER_GAME_LAYER_UNREAD)[0].data["dir"] == "/var/tmp/layer"
+
+    def test_a_sandbox_only_layer_directory_says_why_it_went_unread(self):
+        p = self._save(
+            files={
+                PCSX2_INI_PATH: (
+                    "[Folders]\nMemoryCards = /mnt/sd/memcards\nGameSettings = /var/tmp/layer\n"
+                    "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
+                    "Slot2_Enable = false\n"
+                )
+            }
+        )
+        assert self._stated(p, atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED) != []
+
+    # ---- the answers the layer cannot reach, which stay silent ------------
+
+    def test_the_savestate_answer_says_nothing_about_a_per_game_layer(self):
+        # [Folders] Savestates is base-layer only, and the file name is
+        # composed from serial and CRC with no setting in it
+        # (GetSaveStateFileName, VMManager.cpp:1790-1806).
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: self.INI,
+                f"{layer}/SLES-12345_A1B2C3D4.ini": "[Folders]\nSavestates = /mnt/sd/elsewhere\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards", layer],
+        )
+        answer = rd.emulators_for("ps2").entries[0].savestate_location()
+        assert self._stated(answer, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT) == []
+
+    def test_the_mod_answer_says_nothing_about_a_per_game_layer(self):
+        # [Folders] Patches is base-layer only, and the switch this answer
+        # would have to qualify is one it never states (enabled is None).
+        layer = f"{self.DATA_ROOT}/gamesettings"
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: self.INI,
+                f"{layer}/SLES-12345_A1B2C3D4.ini": "[EmuCore]\nEnablePatches = false\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/memcards", layer],
+        )
+        answer = rd.emulators_for("ps2").entries[0].mod_location()
+        assert self._stated(answer, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT) == []
+
+    def test_an_unreadable_configuration_still_refuses_the_save_answer(self):
+        # The route's existing refusal outranks the statement: nothing is read,
+        # so nothing — including the layer — can be stated about it.
+        p = self._save(files={PCSX2_INI_PATH: {"status": "unreadable"}})
+        assert isinstance(p, atlas.Unresolved)
+
+
 class TestAnUntranslatableConfigPathIsItsOwnRefusal:
     """A config that reads fine but states a sandbox-only absolute path (#274).
 
