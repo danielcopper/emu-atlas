@@ -106,8 +106,10 @@ answers carry that evidence. All four standalone questions now go through one va
 launch runs decides which XDG bases its trees hang off, so the texture and mod routes answer where the save and firmware
 routes do and refuse with the variant named where nothing is established. What remains: its own emulator set
 (coverage-matrix `?` cells), frontend variants (ES-DE elsewhere / Pegasus / SRM), companion-health semantics beyond the
-config-missing case, and the two variants that establish nothing yet — the Windows build under Proton, and a flatpak no
-save card names an app id for.
+config-missing case, and the two variants that establish nothing yet — the Windows build under Proton, and a flatpak
+`emulator_settings.json` names no app id for (#288 moved that id out of the save card and onto the emulator's own row,
+so the gate no longer needs the emulator to have a save card; what is left is the six EmuDeck installs as AppImages or
+unpacked binaries, whose flatpak ids nobody has established).
 
 ### 6. Firmware follow-ups
 
