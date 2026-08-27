@@ -822,6 +822,41 @@ compiled default is on, and atlas keeps the default rather than inventing silenc
 `texture_pack_location` and `mod_location` stay silent throughout: their directories are `[Folders]` keys, base-layer
 only.
 
+**PCSX2's layer moves a card's file name inside a directory it cannot move, and the answer says exactly that.** While a
+game runs, `<DataRoot>/gamesettings/<serial>_<CRC>.ini` — or `<CRC>.ini`, the legacy spelling it falls back to — sits on
+top of the settings interface, and every key `Pcsx2Config::LoadSave` reads comes through it. For the card answer that is
+all sixteen `[MemoryCards]` slot keys: `Slot1_Enable` / `Slot1_Filename`, `Slot2_…`, and the six
+`Multitap<port>_Slot<slot>_…` pairs. So a game can name a different card file for a slot, and can hold a card in a slot
+this machine keeps empty — `savefile_location` naming two cards is itself something a per-game file overturns.
+
+What no per-game file reaches is the directory. `FullpathToMcd` joins the configured name onto the memory-card directory
+and `Path::Combine` concatenates rather than letting the name replace it: even an **absolute** name lands below that
+directory, because the separator it opens with is swallowed. (Where PCSX2 wants an absolute value to win it tests for
+one — `LoadPathFromSettings` does exactly that for the `[Folders]` keys — and this join does not.) And
+`[Folders]
+MemoryCards` itself is read by `EmuFolders::LoadConfig`, which is handed the base layer at both of its call
+sites, so nothing per-game touches it. Read the pair as "the name can change, the folder cannot" — the mirror image of
+DuckStation, where the card file can leave the directory entirely. One thing a per-game name does decide beside the file
+is the card's **kind**: the type is read off whatever sits at the composed path, so a per-game name can make a slot a
+folder card where this answer states a file card.
+
+The vocabulary is the one above: `per-game-overrides-present` with `data["count"]`, `data["dir"]` and a `data["key"]`
+listing every key that answer depends on, section-qualified; `per-game-layer-unread` where the listing failed or where
+`[Folders] GameSettings` names a path only the emulator's sandbox can spell; and **silence** where the directory holds
+none, which really does mean "this answer holds for every game". Unlike DuckStation, **nothing gates it**: PCSX2 has no
+`ApplyGameSettings`-style switch at all, and the two settings that look like one are not — `[EmuCore]
+EnableGameFixes`
+gates the game _database_'s fixes and `[EmuCore] EnablePatches` / `EnableCheats` gate the pnach patch and cheat system.
+So the statement is unconditional wherever the layer reaches.
+
+Three PCSX2 answers stay silent, each for a reason worth knowing. `savestate_location`: the states directory is a
+`[Folders]` key, and a state's file name is composed from the disc's serial and CRC with no setting anywhere in it.
+`mod_location`: the patches tree is a `[Folders]` key too, and the switch a per-game file _could_ flip is one atlas does
+not read — the answer states `enabled` as unanswered, so there is no claim to qualify. And the **firmware** answer, for
+a subtler reason: `[Filenames] BIOS` really is a layered key, but the only read that opens a BIOS image happens at boot
+_before_ the layer for that game is installed, and nothing re-reads it afterwards. A key being layered is not the same
+as its consumer running after the layer arrives — which is why DuckStation's BIOS answer speaks and PCSX2's does not.
+
 Three more cards follow the same shapes. PPSSPP is one unnamed savedata directory per game below the memstick's
 `PSP/SAVEDATA`. Cemu keys the per-title unit: `dir` is `usr/save/<save_id>` below the MLC — the MLC resolved the way the
 emulator resolves it (an `--mlc` launch flag outranks `settings.xml`, and the answer says so when it sees one) — with
@@ -1067,27 +1102,29 @@ with `[Folders] Textures`, and reads `[EmuCore/GS] LoadTextureReplacements` from
 reading there rather than `None`. **PCSX2's** `dir` is the load stage, `<Textures>/<serial>/replacements`, with
 `save_id` in `needs`: replacements are read one level below the per-game directory, and naming only the root would send
 a caller placing a pack where nothing reads it. That reading is the _global_ one, and PCSX2 has a second settings source
-— a running game installs `<DataRoot>/gamesettings/<serial>_<crc>.ini` as a layer over the whole configuration, so any
-key can answer differently for one game. Which game runs is not a fact atlas holds, so the answer stays the global
-reading and carries `per-game-overrides-present` where such files exist here, with their count and directory. **Dolphin
-and PrimeHack** qualify their texture and mod answers the same way and for the same reason, through
-`[Dolphin.General] LoadPath` — see the per-game layer under the standalone save section, including the second,
-build-shipped layer that `per-game-build-layer-unread` states and never counts. DuckStation states the directory key for
-a different reason: the root it resolves against is the config home or the data home depending on how the launch was
-started, so a fixed base would answer correctly on one arrangement and wrongly on the other — and its texture answer
-would disagree with its own cheat answer about where the emulator keeps things. It reads no per-serial `replacements`
-tree of its own — and unlike the three emulators above it states **no** per-game layer on either answer, because both
-directories are `[Folders]` keys, which that emulator reads from its base settings alone. Where nobody has read an
-emulator's configuration the entry still refuses with `standalone-unsupported`, so the split runs on evidence, not on
-the kind of entry. **On EmuDeck the same cards answer**, below the bases the launch's own binary reads: an AppImage
-under `~/Applications` (or the executable EmuDeck unpacks from one) reads the host's XDG tree, and a flatpak whose app
-id `emulator_settings.json` names reads the app's own homes. That id is stated once per emulator, beside the directory
-spellings already keyed by it, so a question reaches the trees whether or not the emulator has a card of any particular
-family — MAME's savestate answer refused on exactly that until #288, having a complete savestate card and no save card.
-A launch whose binary establishes neither — the Windows build under Proton, or a flatpak the table names no app id for
-(EmuDeck installs Cemu, Azahar, DuckStation, PCSX2 and RPCS3 as AppImages, so none is established for them) — refuses
-with `standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this emulator
-is not covered".
+— a running game installs `<DataRoot>/gamesettings/<serial>_<crc>.ini` as a layer over the whole configuration. It
+reaches exactly one half of this answer: `[EmuCore/GS] LoadTextureReplacements` comes through the layered settings
+interface, so a game can have replacement on where this machine has it off, while `[Folders] Textures` is a folder key
+and cannot move at all. Which game runs is not a fact atlas holds, so the answer stays the global reading and carries
+`per-game-overrides-present` where such files exist here, with their count, their directory and the section-qualified
+key — and says in the same breath which half no per-game file reaches. **Dolphin and PrimeHack** qualify their texture
+and mod answers the same way and for the same reason, through `[Dolphin.General] LoadPath` — see the per-game layer
+under the standalone save section, including the second, build-shipped layer that `per-game-build-layer-unread` states
+and never counts. DuckStation states the directory key for a different reason: the root it resolves against is the
+config home or the data home depending on how the launch was started, so a fixed base would answer correctly on one
+arrangement and wrongly on the other — and its texture answer would disagree with its own cheat answer about where the
+emulator keeps things. It reads no per-serial `replacements` tree of its own — and unlike the three emulators above it
+states **no** per-game layer on either answer, because both directories are `[Folders]` keys, which that emulator reads
+from its base settings alone. Where nobody has read an emulator's configuration the entry still refuses with
+`standalone-unsupported`, so the split runs on evidence, not on the kind of entry. **On EmuDeck the same cards answer**,
+below the bases the launch's own binary reads: an AppImage under `~/Applications` (or the executable EmuDeck unpacks
+from one) reads the host's XDG tree, and a flatpak whose app id `emulator_settings.json` names reads the app's own
+homes. That id is stated once per emulator, beside the directory spellings already keyed by it, so a question reaches
+the trees whether or not the emulator has a card of any particular family — MAME's savestate answer refused on exactly
+that until #288, having a complete savestate card and no save card. A launch whose binary establishes neither — the
+Windows build under Proton, or a flatpak the table names no app id for (EmuDeck installs Cemu, Azahar, DuckStation,
+PCSX2 and RPCS3 as AppImages, so none is established for them) — refuses with `standalone-variant-unestablished` and the
+variant in `data`, which is a different instruction from "this emulator is not covered".
 
 Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction — the rows
 that read a configuration add two more, below the table:
