@@ -706,6 +706,13 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `platform-unknown`                          | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too  |
 | `platform-scraping-ignored`                 | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                   |
 
+One of those codes carries two unrelated facts, so read its `data` before acting on it. `per-game-overrides-present` is
+a statement about the **frontend** — some games of this system select a different emulator — when `data` holds `count`
+alone; it is a statement about the **emulator** — some games carry a settings file that layers over this very answer —
+when `data` also holds `core`, `dir` and `key`. That is the discriminator, it is deterministic, and a client that
+switches on the code alone will read one as the other. Both can ride the same answer at once, because they come from
+different places.
+
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
 The nine `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
