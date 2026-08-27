@@ -3342,7 +3342,11 @@ class TestMoreStandaloneSaves:
         stated = [c for c in answer.caveats if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD]
         assert stated
         assert stated[0].data["dir"] == gamesettings
-        assert stated[0].data["key"] == "LoadTextureReplacements"
+        # Section-qualified, because the section is what decides whether the
+        # layer reaches the key at all: [EmuCore/GS] is read through
+        # Pcsx2Config::LoadSave on the layered interface, while every [Folders]
+        # key goes through EmuFolders::LoadConfig on the base layer alone.
+        assert stated[0].data["key"] == "[EmuCore/GS] LoadTextureReplacements"
         # Not the sibling that asserts they exist, and not silence.
         assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in [
             c.code for c in answer.caveats
