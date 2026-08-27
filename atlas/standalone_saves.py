@@ -25,7 +25,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-SAVES_SCHEMA = 1
+SAVES_SCHEMA = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,11 +44,15 @@ class StandaloneSaveCard:
     for: an emulator can serve several with different trees (Dolphin keeps
     GameCube cards and a Wii NAND), and a system outside the list is a
     question the card does not answer, stated rather than stretched.
-    ``flatpak`` is the app id the emulator installs under where an
-    arrangement is established to run it as a flatpak (EmuDeck's melonDS) —
-    the id whose per-app XDG trees the flatpak variant reads. ``None`` for
-    an emulator no established launch runs that way: an id nothing
-    launches would resolve nothing, so the variant keeps refusing.
+
+    There is deliberately no ``flatpak`` field, since #288. Which app id an
+    arrangement installs an emulator as is a property of the **installation**
+    and of no single question, so it is stated once in
+    ``atlas/data/emulator_settings.json``, beside the directory spellings that
+    are keyed by that very id. It sat here until then, which is why an
+    emulator with no save card could reach no trees of its own at all: MAME's
+    savestate card is complete and its save card does not exist, and the
+    savestate answer refused a launch it could have read.
 
     ``citations`` are the emulator's own source references the **resolver**
     speaks — the line ranges that go into an answer's caveats and readings —
@@ -69,7 +73,6 @@ class StandaloneSaveCard:
     token: str
     settings: str | None
     systems: tuple[str, ...]
-    flatpak: str | None
     provenance: str
     citations: Mapping[str, str] = field(default_factory=dict)
     citation_installations: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
@@ -114,9 +117,12 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
     systems = saves.get("systems")
     if not isinstance(systems, list) or not systems:
         raise ValueError(f"{where}: saves.systems must be a non-empty list, got {systems!r}")
-    flatpak = entry.get("flatpak")
-    if flatpak is not None:
-        flatpak = _expect_str(flatpak, f"{where}: flatpak")
+    if "flatpak" in entry:
+        raise ValueError(
+            f"{where}: which app id an arrangement installs this emulator as is stated once in "
+            "atlas/data/emulator_settings.json — a copy here could only ever drift from it, and "
+            "an emulator without a save card could not state it at all (#288)"
+        )
     provenance = entry.get("provenance", {})
     if not isinstance(provenance, dict):
         raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
@@ -144,7 +150,6 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
         token=token,
         settings=settings,
         systems=tuple(_expect_str(s, f"{where}: saves.systems[]") for s in systems),
-        flatpak=flatpak,
         provenance=_expect_str(provenance.get("source"), f"{where}: provenance.source"),
         citations={
             _expect_str(slot, f"{where}: saves.citations key"): _expect_str(

@@ -1,6 +1,6 @@
 {
-  "schema": 1,
-  "spec": "Standalone save cards: which emulators the savefile question can answer for a non-libretro catalogue entry, keyed by the %EMULATOR_…% token the launch command names. This is world knowledge under DESIGN.md's boundary rule — each card names the configuration file that governs the emulator's save tree and the catalogue systems it answers for, with source citations at the revision the arrangement ships; the reading itself is code beside the card (atlas/installations.py), which reads that configuration the way the emulator does and states every degradation as a structured caveat. A card is deliberately thin: what SlotA = 8 means, what an empty path key defaults to, how a configured path templates its region — none of that is on the machine, so it lives as cited code, never as a copied value that could age apart from the binary.",
+  "schema": 2,
+  "spec": "Standalone save cards: which emulators the savefile question can answer for a non-libretro catalogue entry, keyed by the %EMULATOR_…% token the launch command names. This is world knowledge under DESIGN.md's boundary rule — each card names the configuration file that governs the emulator's save tree and the catalogue systems it answers for, with source citations at the revision the arrangement ships; the reading itself is code beside the card (atlas/installations.py), which reads that configuration the way the emulator does and states every degradation as a structured caveat. A card is deliberately thin: what SlotA = 8 means, what an empty path key defaults to, how a configured path templates its region — none of that is on the machine, so it lives as cited code, never as a copied value that could age apart from the binary. A card states no flatpak app id: which app the arrangement installs the emulator as is a property of the INSTALLATION rather than of the save question, so it is stated once in emulator_settings.json (#288) — here it could only be stated for emulators that happen to have a save card, which is how MAME's savestate answer came to refuse a launch it could read.",
   "emulators": {
     "DOLPHIN": {
       "saves": {
@@ -21,8 +21,7 @@
       },
       "provenance": {
         "source": "Dolphin 2603a, the release the shipped binary names in its version strings (components/dolphin/bin/dolphin-emu-nogui). GameCube: which device sits in each card slot is [Core] SlotA/SlotB in Dolphin.ini, an EXI device id (EXI_Device.h:25-45 — 1 memory card, 8 GCI folder, 9 AGP, 255 none; registered defaults GCI folder for A, none for B, MainSettings.cpp:133-136). An empty MemcardA/BPath defaults to <user>/GC/MemoryCard<A|B>.<region>.raw and an empty GCIFolderA/BPath to <user>/GC/<region>/Card <A|B> (GetMemcardPath :767-774, GetGCIFolderPath :835-841); a configured value of either is a template whose region segment the running disc replaces (:777-819, :844-873), so the answer keeps a <region> hole rather than reading the value literally. GCI files are named from the save's own directory entry — makercode-gamecode-filename.gci (GCMemcardDirectory.cpp:56-60) — none of it derivable from the content path, so the folder groups are unnamed. A raw card of standard size carries no block suffix (EXI.cpp:123-124 defaults to the 2043-block card; a smaller MemoryCardSize appends one, GetMemcardPath :763-765). Wii: saves live in the NAND tree title/<hi:08x>/<lo:08x>/data below NANDRootPath (NandPaths.cpp:63-71), the title id from the disc — unnamed per title. The user directory is the emulator's XDG data tree, which the arrangement pins and reroutes with symlinks the answer walks. Not modelled and stated as such where met: the AGP device (slot id 9 saves onto a GBA cartridge image), the GBA-integration SavesPath, and the GCIFolder*PathOverride keys a movie or netplay session sets. On EmuDeck the emulator is the org.DolphinEmu.dolphin-emu flatpak (emuDeckDolphin.sh:4-5), so the launch's flatpak variant reads the app's own XDG homes below ~/.var/app; EmuDeck grants every emulator flatpak --filesystem=host (installEmuFP.sh:33), so configured paths stay host paths."
-      },
-      "flatpak": "org.DolphinEmu.dolphin-emu"
+      }
     },
     "PRIMEHACK": {
       "saves": {
@@ -54,8 +53,7 @@
       },
       "provenance": {
         "source": "PrimeHack, the Metroid Prime fork of Dolphin, read at shiiion/dolphin 81bfb96 — the revision RetroDECK's component master-230724.27 is built from and the one the Flathub flatpak EmuDeck installs is not (53f53e0). The save shape is Dolphin's, inherited whole, so the same reading serves both and the line numbers here are the fork's own. GameCube: which device sits in each card slot is [Core] SlotA/SlotB in Dolphin.ini, an EXI device id (EXI_Device.h:25-46 — 1 memory card, 8 GCI folder, 9 AGP, 255 none; registered defaults GCI folder for A, none for B, MainSettings.cpp:112-115). An empty MemcardA/BPath defaults to <user>/GC/MemoryCard<A|B>.<region>.raw and an empty GCIFolderA/BPath to <user>/GC/<region>/Card <A|B> (GetMemcardPath :635-649, GetGCIFolderPath :704-711); a configured value of either is a template whose region segment the running disc replaces (:652-688, :713-748), so the answer keeps a <region> hole rather than reading the value literally. GCI files are named from the save's own directory entry — makercode-gamecode-filename.gci (GCMemcardDirectory.cpp:54-62) — none of it derivable from the content path, so the folder groups are unnamed. A raw card of standard size carries no block suffix (EXI.cpp:116-119 defaults to the 2043-block card; a smaller MemoryCardSize appends one, GetMemcardPath :638-640). Wii: saves live in the NAND tree title/<hi:08x>/<lo:08x>/data below NANDRootPath (NandPaths.cpp:49-58 — GetTitlePath composes title/<hi>/<lo> at :49-53 and GetTitleDataPath appends /data at :55-58), the title id from the disc — unnamed per title. The user directory is the fork's own, and which name that is belongs to the build rather than to the emulator (emulator_settings.json states both, #246). Not modelled and stated as such where met: the AGP device, the GBA-integration SavesPath, and the GCIFolder*PathOverride keys a movie or netplay session sets. On EmuDeck the emulator is the io.github.shiiion.primehack flatpak (emuDeckPrimehack.sh:5-6), so the launch's flatpak variant reads the app's own XDG homes below ~/.var/app — where the fork spells its directory dolphin-emu, not primehack. The Flathub flatpak is a later rebase of the fork (53f53e0), so the same reading answers for it with that build's own line numbers, stated beside the app id."
-      },
-      "flatpak": "io.github.shiiion.primehack"
+      }
     },
     "PPSSPP": {
       "saves": {
@@ -66,8 +64,7 @@
       },
       "provenance": {
         "source": "PPSSPP v1.20.4, the release the shipped binary carries as a whole version string (components/ppsspp/bin/PPSSPPSDL). On Linux the memory stick is fixed by the build: $XDG_CONFIG_HOME/ppsspp, with no setting naming it (NativeApp.cpp:473-482) — which is why this card names no governing config. Savedata is <memstick>/PSP/SAVEDATA (PathUtil.cpp:52, :62-63): one directory per game, named by the game itself from its own id and save name, so the tree is stated and its entries refused — unnamed per game. The arrangement reroutes SAVEDATA with a symlink the answer walks. On EmuDeck the emulator is the org.ppsspp.PPSSPP flatpak (emuDeckPPSSPP.sh:4-5), so the launch's flatpak variant reads the app's own XDG homes below ~/.var/app — and since the memstick is the config home's own ppsspp directory, that is the whole answer there. EmuDeck grants every emulator flatpak --filesystem=host (installEmuFP.sh:33), so configured paths stay host paths."
-      },
-      "flatpak": "org.ppsspp.PPSSPP"
+      }
     },
     "XEMU": {
       "saves": {
@@ -78,8 +75,7 @@
       },
       "provenance": {
         "source": "xemu v0.8.135, the release the shipped binary carries as a whole version string (components/xemu/bin/xemu). xemu keeps xemu.toml under the DATA home, not the config one — the shipped binary takes its base path from SDL_GetPrefPath, which on Linux is $XDG_DATA_HOME/<org>/<app>/, and RetroDECK says the same in its own words while linking a config-tree directory there: 'linking back to original location where component will look', dir_prep \"$XDG_CONFIG_HOME/xemu\" \"$XDG_DATA_HOME/xemu/xemu\" (component_prepare.sh:16-17). The card names the location the emulator opens; where an arrangement keeps the real directory is its own business, and the read walks the link. Every game's save lives on the emulated Xbox hard disk: a disk image xemu.toml names in [sys.files] hdd_path, beside the console's EEPROM in eeprom_path (config_spec.yml:359-363). The image is one shared file — its FATX filesystem keeps one directory per title id under UDATA/, addressable only by parsing the image, which the save-inside-image caveat states machine-readably with the layout. The EEPROM holds the console's settings and rides as its own named group. On EmuDeck the emulator is the app.xemu.xemu flatpak (emuDeckXemu.sh:4-5), so the launch's flatpak variant reads the app's own XDG homes below ~/.var/app; EmuDeck grants every emulator flatpak --filesystem=host (installEmuFP.sh:33), so configured paths stay host paths."
-      },
-      "flatpak": "app.xemu.xemu"
+      }
     },
     "CEMU": {
       "saves": {
@@ -126,7 +122,6 @@
       }
     },
     "MELONDS": {
-      "flatpak": "net.kuribo64.melonDS",
       "saves": {
         "settings": "melonDS.toml",
         "systems": [
