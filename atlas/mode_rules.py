@@ -724,6 +724,10 @@ _MAME_FRONTEND_MODE = "frontend-paths"
 _MAME_HOME_INIS = ".mame"
 _MAME_SYSTEM_INIS = "mame/ini"
 _MAME_MAIN_INI = "mame.ini"
+# The one cascade member that is not a plain name in a search directory:
+# parse_standard_inis composes "source" + PATH_SEPARATOR + <sourcefile>
+# (mameopts.cpp:86 at libretro/mame a90e86e1).
+_MAME_SOURCE_INIS = "source"
 # The fork's compiled-in save trees (emuopts.cpp:59-64 at a90e86e1) — what
 # governs when MAME's own paths are in force and no ini names a directory.
 _MAME_DEFAULT_TREES = (
@@ -773,7 +777,16 @@ def _mame_ini_lookup(reading: RuleReading, name: str) -> FileLookup:
 
 
 def _mame_stray_inis(reading: RuleReading, stem: str | None) -> tuple[str, ...] | None:
-    """Cascade members atlas cannot attribute — ``None`` when it cannot even look."""
+    """Cascade members atlas cannot attribute — ``None`` when it cannot even look.
+
+    One member sits a directory DOWN: ``parse_standard_inis`` composes
+    ``source/<sourcefile>.ini`` with the prefix before searching for it
+    (mameopts.cpp:86-87 at libretro/mame a90e86e1), and it parses at
+    OPTION_PRIORITY_SOURCE_INI — above mame.ini's. A listing of the search
+    directory alone names that tree as the plain directory ``source``, which
+    ends in no ``.ini`` and would drop out of the check silently, so the
+    directory is listed too.
+    """
     attributable = {_MAME_MAIN_INI}
     if stem:
         attributable.add(f"{stem}.ini")
@@ -786,6 +799,12 @@ def _mame_stray_inis(reading: RuleReading, stem: str | None) -> tuple[str, ...] 
         if listing is None:
             return None
         strays.update(n for n in listing if n.endswith(".ini") and n not in attributable)
+        below = entries(posixpath.join(base, _MAME_SOURCE_INIS))
+        if below is None:
+            return None
+        strays.update(
+            posixpath.join(_MAME_SOURCE_INIS, n) for n in below if n.endswith(".ini")
+        )
     return tuple(sorted(strays))
 
 

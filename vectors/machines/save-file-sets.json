@@ -5369,6 +5369,94 @@
           }
         }
       }
+    },
+    {
+      "name": "a-source-tree-cascade-member-refuses-the-mode-the-same-way",
+      "rationale": "The sibling above pins vertical.ini, a plain name in the search directory. This one pins the cascade member that is NOT a plain name: parse_standard_inis composes source/<sourcefile>.ini with the prefix before searching for it (mameopts.cpp:86-87 at libretro/mame a90e86e1) and parses it at OPTION_PRIORITY_SOURCE_INI, above mame.ini's. A listing of the search directory alone shows that tree as the plain directory 'source', which ends in no '.ini' — so the member would drop out of the check and the answer would state mame.ini's nvram_directory as though nothing could override it. Which source file a driver belongs to is compiled into the binary, so the file is named and the mode refused, exactly as for vertical.ini.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame_mame_paths_enable = \"enabled\"\nmame_read_config = \"enabled\"\n",
+          "/mnt/sd/retrodeck/bios/mame/ini/mame.ini": "nvram_directory           /mnt/sd/mame-nvram\n",
+          "/mnt/sd/retrodeck/bios/mame/ini/source/dkong.ini": "nvram_directory           /mnt/sd/mame-nvram-source\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
+            "library_name": "MAME",
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip",
+          "core_so": "mame_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "mame",
+                "reason": "MAME reads an ini cascade whose members apply by driver metadata inside the binary, which atlas cannot attribute — source/dkong.ini on its search path outranks mame.ini, so which values govern was never established"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
     }
   ]
 }
