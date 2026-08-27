@@ -3507,7 +3507,7 @@ class TestMoreStandaloneSaves:
         # by which this answer's `dir` leaves the DataRoot at all. It used to
         # sit on an absolute Slot1_Filename — a route #312 retired, because
         # PCSX2 joins a filename BELOW the memory-card directory rather than
-        # letting it replace one (:func:`_pcsx2_path_combine`). The fact under
+        # letting it replace one (:func:`atlas.qt_ini.pcsx2_path_combine`). The fact under
         # test is unchanged and so is the assertion; only the way the fixture
         # reaches a linked `dir` moved onto a route that still exists.
         rd = _retrodeck(
