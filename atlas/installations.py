@@ -11287,12 +11287,118 @@ def _duckstation_mod_placement(
     )
 
 
+def _pcsx2_mod_placement(
+    machine: Machine,
+    *,
+    card: StandaloneModCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> ModPlacement | Unresolved:
+    """PCSX2's patch tree: ``[Folders] Patches``, read rather than assumed (#314).
+
+    This row used to be a fixed ``patches`` join below the DataRoot, which was
+    true only for as long as nobody set the key. Upstream reads it through
+    ``LoadPathFromSettings`` with the compiled default ``patches``
+    (Pcsx2Config.cpp:2288 with :2272-2278), exactly like the memory-card,
+    texture, savestates and gamesettings directories — so a machine that sets
+    it got a tree atlas never named, and confidently.
+
+    The reading is the sibling routes' own, deliberately and not by accident:
+    :func:`_pcsx2_folder_below_dataroot` for the three non-absolute outcomes
+    (unset → the compiled default, present-but-empty → the DataRoot itself,
+    relative → joined onto it), then the launch's sandbox for an absolute
+    value, with the same untranslatable refusal the texture and memory-card
+    directories give. Each PCSX2 route opens the ini itself, which is how the
+    texture, save and states routes beside this one are written.
+
+    ``enabled`` stays ``None``: the card names no switch, so nothing is read
+    for one and ``emulator-config-unread`` says where one would live —
+    ``[EmuCore] EnablePatches``, in the very file this reads for the directory.
+    """
+    spec = card.trees[0]
+    setting = spec.directory
+    if setting is None:
+        raise ValueError(
+            f"mod card {card.token!r} states no directory and this resolver reads one "
+            "— the card and the code shipped out of step"
+        )
+    settings = emulator_settings.settings_file(card.token, card.settings)
+    data_root = homes.emulator_root(settings.bases[0], card.token)
+    ini_path = settings.only(
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
+    )
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"PCSX2's configuration ({ini_path}) exists and could not be read — where it "
+            "reads patches from is unknowable here",
+            {"emulator": card.token, "config": ini_path},
+        )
+    values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
+    # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
+    # case-insensitive, so a case-variant spelling governs here as it does
+    # in the running emulator (:func:`atlas.qt_ini.simpleini_value`).
+    raw_dir, dir_spelled = _simpleini_value(values, setting.section, setting.key)
+    resolved, _ = _pcsx2_folder_below_dataroot(
+        raw_dir,
+        key=setting.key,
+        default=setting.default,
+        default_citation=setting.citation,
+        data_root=data_root,
+        spelled=dir_spelled,
+    )
+    if resolved is None:
+        assert raw_dir is not None  # only an absolute value leaves the helper unresolved
+        host = sandbox.host(setting.key, raw_dir)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the patches directory PCSX2's configuration names ({raw_dir!r}) has no "
+                f"spelling on this host — {ini_path} read fine, and nothing this answer "
+                "could anchor at",
+                {"emulator": card.token, "config": ini_path, "path": raw_dir},
+            )
+        directory = host.path
+    else:
+        directory = resolved
+    physical, link_caveats = _link_view(machine, directory)
+    caveats: list[Caveat] = [*extra_caveats, *link_caveats]
+    caveats.append(
+        Caveat(
+            CAVEAT_EMULATOR_CONFIG_UNREAD,
+            f"whether {card.token} has patch loading switched on is not established — the "
+            f"setting lives in {ini_path}, which this answer reads for the directory and not "
+            "for the switch, because the card states none",
+            {"emulator": card.token, "config": ini_path},
+        )
+    )
+    sources = [
+        f"mod card '{card.token}': the directory is [{setting.section}] {setting.key} in the "
+        f"emulator's own configuration — {setting.citation}",
+        f"mod card '{card.token}': {card.provenance}",
+    ]
+    if spec.keying is not None:
+        sources.insert(
+            1, f"mod card '{card.token}': keyed by {spec.keying} — {spec.keying_citation}"
+        )
+    return ModPlacement(
+        trees=(ModTree(dir=directory, keying=spec.keying, role=spec.role, physical_dir=physical),),
+        needs=(),
+        enabled=None,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
+    )
+
+
 # Standalone mod cards whose tree hangs off a configuration value rather than a
 # fixed XDG join. Keyed by token like the texture resolvers beside them, and a
 # card stating a directory setting without one here fails loudly rather than
 # answering a default nobody read.
 _STANDALONE_MOD_RESOLVERS = {
     "DUCKSTATION": _duckstation_mod_placement,
+    "PCSX2": _pcsx2_mod_placement,
 }
 
 

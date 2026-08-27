@@ -7599,6 +7599,106 @@ class TestPcsx2PerGameLayerPrecision:
         assert isinstance(p, atlas.Unresolved)
 
 
+class TestPcsx2ModAnswerReadsItsConfiguredDirectory:
+    """PCSX2's patch tree is ``[Folders] Patches``, not a fixed join (#314).
+
+    Upstream reads the key through ``LoadPathFromSettings`` with the compiled
+    default ``patches`` (Pcsx2Config.cpp:2288 with :2272-2278) — the same
+    helper the memory-card, texture, savestates and gamesettings directories
+    go through. The answer used to compose ``<DataRoot>/patches`` outright,
+    which was true only for as long as nobody set the key.
+
+    What a vector cannot pin and these do: that the three non-absolute
+    outcomes are told apart the way the emulator tells them, that an
+    untranslatable absolute value refuses rather than guesses, and that the
+    unread switch is still named.
+    """
+
+    DATA_ROOT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2"
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: TRIO_ESDE,
+    }
+
+    def _mods(self, ini, dirs=(), **kwargs):
+        rd = _retrodeck(
+            {**self.BASE, **({} if ini is None else {PCSX2_INI_PATH: ini})},
+            dirs=["/mnt/sd/retrodeck/saves", *dirs],
+            **kwargs,
+        )
+        return rd.emulators_for("ps2").entries[0].mod_location()
+
+    def test_a_configured_relative_value_hangs_off_the_data_root(self):
+        answer = self._mods("[Folders]\nPatches = my-patches\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [f"{self.DATA_ROOT}/my-patches"]
+
+    def test_a_configured_absolute_value_wins_outright(self):
+        # LoadPathFromSettings tests IsAbsolute (Pcsx2Config.cpp:2275) — a
+        # folder setting is exactly where PCSX2 lets an absolute value win,
+        # which is the asymmetry #312 turns on at the other end.
+        answer = self._mods(
+            "[Folders]\nPatches = /mnt/sd/patches\n", dirs=["/mnt/sd/patches"]
+        )
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == ["/mnt/sd/patches"]
+
+    def test_an_absent_key_is_the_compiled_default_below_the_data_root(self):
+        answer = self._mods("[Folders]\nMemoryCards = /mnt/sd/memcards\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [f"{self.DATA_ROOT}/patches"]
+
+    def test_a_missing_configuration_is_the_compiled_default_too(self):
+        # READ_MISSING is not a refusal: no file means no key, and no key means
+        # the emulator's own default — the same answer the row gave before #314.
+        answer = self._mods(None)
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [f"{self.DATA_ROOT}/patches"]
+
+    def test_a_present_but_empty_key_is_the_data_root_itself(self):
+        # GetStringValue defaults only when the lookup FAILS
+        # (SettingsInterface.h:83-89), and Path::Combine(DataRoot, "") strips
+        # the separator it just appended (FileSystem.cpp:847-862).
+        answer = self._mods("[Folders]\nPatches =\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [self.DATA_ROOT]
+
+    def test_a_case_variant_spelling_of_the_key_governs(self):
+        # CSimpleIniA matches ASCII case-insensitively (#295), so the file's
+        # spelling governs here as it does in the running emulator.
+        answer = self._mods("[folders]\npatches = my-patches\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [f"{self.DATA_ROOT}/my-patches"]
+
+    def test_an_unreadable_configuration_refuses_rather_than_defaults(self):
+        # The directory is now a read rather than an assumption, so a file that
+        # exists and cannot be read is a refusal — falling back to 'patches'
+        # would state a directory nobody established.
+        answer = self._mods({"status": "unreadable"})
+        assert isinstance(answer, atlas.Unresolved)
+        assert answer.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_the_unread_switch_is_still_named(self):
+        # enabled stays unanswered and emulator-config-unread says where the
+        # switch would live — the statement the fixed-join row also made, kept
+        # rather than lost when the directory became a read.
+        answer = self._mods("[Folders]\nPatches = my-patches\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert answer.enabled is None
+        unread = [c for c in answer.caveats if c.code == atlas.CAVEAT_EMULATOR_CONFIG_UNREAD]
+        assert [c.data["config"] for c in unread] == [PCSX2_INI_PATH]
+
+    def test_the_keying_survives_the_move_to_a_configured_directory(self):
+        # The patches directory is flat and the SERIAL keys the file inside it;
+        # that fact belongs to the card and must not have been dropped with the
+        # subdir it used to sit beside.
+        answer = self._mods("[Folders]\nPatches = my-patches\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.keying for t in answer.trees] == ["serial"]
+
+
 class TestAnUntranslatableConfigPathIsItsOwnRefusal:
     """A config that reads fine but states a sandbox-only absolute path (#274).
 
@@ -7666,6 +7766,15 @@ class TestAnUntranslatableConfigPathIsItsOwnRefusal:
             "ps2", {PCSX2_INI_PATH: f"[Folders]\nSavestates = {self.SANDBOX_ONLY}\n"}
         )
         self._refused(entry.savestate_location())
+
+    def test_pcsx2_patches_directory(self):
+        # New emitter as of #314: the mod tree is a configured directory now,
+        # so it translates an absolute value like its sibling folder keys and
+        # refuses on the same terms rather than composing a default.
+        entry = self._entry(
+            "ps2", {PCSX2_INI_PATH: f"[Folders]\nPatches = {self.SANDBOX_ONLY}\n"}
+        )
+        self._refused(entry.mod_location())
 
     def test_azahar_sdmc_directory(self):
         entry = self._entry(
