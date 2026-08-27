@@ -10022,9 +10022,16 @@ def _mame_ini_elements(
 
 
 def _mame_layer_suspects(
-    machine: Machine, directory: str, *, file: str
+    machine: Machine, directory: str, *, read: tuple[str, ...]
 ) -> tuple[list[str], bool]:
-    """One search-path element's unread ini files, and whether its listing failed."""
+    """One search-path element's unread ini files, and whether its listing failed.
+
+    *read* is every file name this reading opened. Excluding them by NAME
+    across all elements is what the emulator does: ``emu_file`` stops at the
+    first element that holds the name (fileio.cpp:374-384), so a second
+    ``mame.ini`` — or a second ``<system>.ini`` — further down the path is
+    never parsed and is no unread layer.
+    """
     suspects: list[str] = []
     incomplete = False
     for pattern in (_ANY_INI_GLOB, os.path.join("source", _ANY_INI_GLOB)):
@@ -10034,46 +10041,82 @@ def _mame_layer_suspects(
         for path in listing.matches:
             name = os.path.relpath(path, directory)
             # ui.ini is the UI manager's own file; parse_standard_inis
-            # never opens it, and the governing file was already read.
-            if name not in (file, "ui.ini"):
+            # never opens it, and the files this reading read are no layer.
+            if name not in read and name != "ui.ini":
                 suspects.append(os.path.join(directory, name))
     return suspects, incomplete
 
 
+def _mame_layer_middle(*, file: str, driver_ini: str | None, word: str | None) -> str:
+    """Why the driver ini was or was not read — the statement's middle clause."""
+    if driver_ini is not None:
+        return (
+            f", and this answer read {driver_ini} — the driver ini, the highest-priority "
+            "member of that set (mameopts.h:31-39)"
+        )
+    if word is not None:
+        return (
+            f", and no {word}.ini — the driver ini for the system this launch names — sits "
+            "on that search path"
+        )
+    return (
+        ", and the launch names no system this reading can turn into a driver ini file "
+        f"name, so only {file} was read"
+    )
+
+
 def _mame_standard_ini_layer(
-    machine: Machine, elements: tuple[_MameIniElement, ...], *, file: str, key: str
+    machine: Machine,
+    elements: tuple[_MameIniElement, ...],
+    *,
+    file: str,
+    key: str,
+    read: tuple[str, ...],
+    driver_ini: str | None,
+    word: str | None,
 ) -> list[Caveat]:
-    """The per-machine ini layer, checked instead of assumed.
+    """The rest of the per-machine ini layer, checked instead of assumed.
 
     After mame.ini, MAME parses debug/orientation/screen/source/parent/driver
     inis out of the same search path (parse_standard_inis,
     mameopts.cpp:37-96) — including ``source/<sourcefile>.ini`` one directory
-    DOWN (the basename is composed with the ``source/`` prefix, :85-87) — and
-    any of them can carry its own ``state_directory`` line. The layer is
-    usually empty — RetroDECK ships mame.ini and ui.ini and nothing else —
-    so the honest move is to look: only where other ini files actually sit
-    (or where a directory cannot be listed) does the answer say the layer
-    was not read.
+    DOWN (the basename is composed with the ``source/`` prefix, :85-87). The
+    driver ini is the one member this reading can name, because MAME selects
+    it by ``cursystem->name`` (:96) and the launch states that word; the
+    others are selected by the driver's orientation flag (:56-59), its screen
+    devices (:62-82), its source file (:86) and its clone chain (:90-95) —
+    all compiled into the binary and unreadable here.
+
+    So this says what is left over: only where ini files this reading did not
+    open actually sit (or where a directory cannot be listed) does the answer
+    say a layer went unread, and it says which member it DID read.
     """
     suspects: list[str] = []
     incomplete = False
     for element in elements:
         if element.resolved is None:
             continue
-        found, failed = _mame_layer_suspects(machine, element.resolved, file=file)
+        found, failed = _mame_layer_suspects(machine, element.resolved, read=read)
         suspects.extend(found)
         incomplete = incomplete or failed
     if not suspects and not incomplete:
         return []
     named = ", ".join(sorted(suspects)) if suspects else "the directory could not be listed"
+    data = {"key": key, "files": named}
+    if driver_ini is not None:
+        data["read"] = driver_ini
     return [
         Caveat(
             CAVEAT_PER_GAME_LAYER_UNREAD,
             f"MAME layers per-machine and per-orientation ini files over {file} "
-            f"(parse_standard_inis, mameopts.cpp:37-96), and this search path holds more "
-            f"than the files this answer read ({named}) — a {key} line in one of them "
-            "would move the states for the machines it covers, and none was read",
-            {"key": key, "files": named},
+            f"(parse_standard_inis, mameopts.cpp:37-96)"
+            + _mame_layer_middle(file=file, driver_ini=driver_ini, word=word)
+            + f", and the path holds more than the files this answer read ({named}) — which "
+            "of those MAME opens follows from the driver's orientation flag, screen type, "
+            "source file and clone chain, all compiled into the binary. Each parses BELOW "
+            f"the driver ini (mameopts.h:31-39), so a {key} line in one of them governs only "
+            "where the driver ini states none",
+            data,
         ),
     ]
 
@@ -10106,11 +10149,43 @@ def _mame_savestate_placement(
     machine (``statename``, default ``%g`` = the running system's short
     name, machine.cpp:474-547, :576), which the command's positional system
     word fills — or the content's own stem where the machine IS the ROM
-    (``%BASENAME%``). Two facts ride every answer as caveats: whether the
-    launched system's driver is flagged MACHINE_SUPPORTS_SAVE is compiled
-    into the binary and unreadable here (states are written and warned about
-    either way, machine.cpp:927-928), and any per-machine ini layer that was
-    seen but not read.
+    (``%BASENAME%``).
+
+    That same word names the ``<system>.ini`` MAME layers over mame.ini
+    (``cursystem->name``, mameopts.cpp:96), so this reading OPENS it
+    (:func:`_mame_driver_layer`) rather than announcing it: it is the highest
+    priority ini of the standard set (mameopts.h:38), so a ``state_directory``
+    or ``statename`` line there governs and nothing else in the set can
+    overturn it. The members that remain unreadable from outside — the
+    orientation, screen, source, parent and grandparent inis — are selected by
+    driver metadata compiled into the binary, and are stated where files that
+    could be them actually sit
+    (:func:`_mame_standard_ini_layer`).
+
+    Two facts ride every answer as caveats: whether the launched system's
+    driver is flagged MACHINE_SUPPORTS_SAVE is compiled into the binary and
+    unreadable here (states are written and warned about either way,
+    machine.cpp:927-928), and any per-machine ini layer that was seen but not
+    read.
+
+    Every OTHER MAME answer atlas emits stays silent about this layer, and
+    each for a reason that was checked rather than assumed:
+
+    * ``savefile``, ``texture`` and ``mod`` refuse with
+      ``standalone-unsupported`` before any directory is computed — MAME has
+      no save, texture or mod card (``atlas/data/standalone_saves.json``,
+      ``texture_packs.json``, ``mods.json`` name no MAME token), so
+      ``nvram_directory``, ``diff_directory`` and ``share_directory`` are
+      keys atlas states nothing about at all. There is no claim for the layer
+      to qualify.
+    * ``screenshot`` is the installation's own route answering the frontend's
+      screenshot directory (it carries ``no-core`` for every standalone
+      entry), not MAME's ``snapshot_directory``.
+    * ``rom_location`` answers the arrangement's ROM tree, and every MAME
+      command in both catalogues passes ``-rompath`` on the command line
+      (OPTION_PRIORITY_CMDLINE = 151, mameopts.h:27-28), which no ini at any
+      priority can override (options.cpp:270).
+    * MAME has no firmware card, so no firmware answer names it.
     """
     shape = card.launch_ini
     assert shape is not None  # the loader pairs the shape with this resolver
@@ -10123,6 +10198,11 @@ def _mame_savestate_placement(
     )
     if isinstance(ini, Unresolved):
         return ini
+    layered = _mame_driver_layer(
+        machine, ini, token=card.token, launch=launch, content_path=content_path
+    )
+    if isinstance(layered, Unresolved):
+        return layered
     key = "state_directory"
     stated_key = shape.keys.get(key)
     if stated_key is None:
@@ -10130,16 +10210,16 @@ def _mame_savestate_placement(
             f"savestate card {card.token!r} states no {key!r} ini key and this resolver "
             "reads it — the card and the code shipped out of step"
         )
-    value = _mame_root_value(card, shape, ini, env, key=key, stated_key=stated_key)
+    value = _mame_root_value(card, shape, ini, layered, env, key=key, stated_key=stated_key)
     if isinstance(value, Unresolved):
         return value
     anchored = _mame_root_anchor(
         card, shape, value[0], value[1], key=key, sandbox=sandbox, cwd=cwd,
-        launch=launch, stated_ini=ini.stated_ini,
+        launch=launch, stated_ini=layered.stated_in(key, ini),
     )
     if isinstance(anchored, Unresolved):
         return anchored
-    machine_dir = _mame_state_subdir(ini.values, launch, content_path)
+    machine_dir = _mame_state_subdir(layered.values, launch, content_path)
     directory = (
         os.path.join(anchored.root, machine_dir.subdir)
         if machine_dir.subdir is not None
@@ -10150,7 +10230,15 @@ def _mame_savestate_placement(
         *extra_caveats,
         *anchored.caveats,
         *machine_dir.caveats,
-        *_mame_standard_ini_layer(machine, ini.elements, file=shape.file, key=key),
+        *_mame_standard_ini_layer(
+            machine,
+            ini.layer_elements,
+            file=shape.file,
+            key=key,
+            read=layered.read_names(shape.file),
+            driver_ini=layered.driver_ini,
+            word=layered.word,
+        ),
         Caveat(
             CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT,
             "whether the launched system's driver is flagged MACHINE_SUPPORTS_SAVE is "
@@ -10194,7 +10282,7 @@ def _mame_savestate_placement(
         file_set=file_set,
         sources=(
             f"standalone savestate card '{card.token}': {card.provenance}",
-            f"{reading} — {_mame_ini_provenance(ini, shape.file)}",
+            f"{reading} — {_mame_ini_provenance(ini, layered, shape.file)}",
         ),
         caveats=tuple(caveats),
         physical_dir=physical,
@@ -10221,11 +10309,19 @@ class _MameIniReading:
 
 @dataclass(frozen=True, slots=True)
 class _MameGoverningIni:
-    """The governing configuration as the launch resolves it, double parse done."""
+    """The governing configuration as the launch resolves it, double parse done.
+
+    ``elements`` is where mame.ini itself was searched; ``layer_elements`` is
+    where every LATER ini of the standard set is searched, which is not
+    always the same path: ``parse_one_ini`` re-reads ``options.ini_path()``
+    on each call (mameopts.cpp:123), so an ``inipath`` line in mame.ini moves
+    the layer — that is exactly why mame.ini is parsed twice (:40-42).
+    """
 
     values: Mapping[str, str]
     stated_ini: str | None
     elements: tuple[_MameIniElement, ...]
+    layer_elements: tuple[_MameIniElement, ...]
 
 
 def _mame_ini_probe(
@@ -10277,6 +10373,11 @@ def _mame_governing_ini(
     (mameopts.cpp:39-42); a CLI ``-inipath`` cannot be overridden
     (options.cpp:270), so the re-probe happens only without one, and the
     second file's lines override the first's at equal priority.
+
+    Whatever ``inipath`` holds when both passes are done is the path every
+    later member of the standard set is searched along, because
+    ``parse_one_ini`` constructs its ``emu_file`` from ``options.ini_path()``
+    at each call (mameopts.cpp:123).
     """
     elements = _mame_ini_elements(launch, env, sandbox, cwd)
     first = _mame_ini_probe(machine, token, file, elements)
@@ -10295,13 +10396,104 @@ def _mame_governing_ini(
         if second.stated_ini is not None:
             values = {**values, **second.values}
             stated_ini = second.stated_ini
-    return _MameGoverningIni(values, stated_ini, elements)
+    layer_elements = elements
+    if launch.inipath is None and values.get("inipath"):
+        layer_elements = _mame_ini_elements(
+            _MameLaunch(values["inipath"], launch.startdir, None, False), env, sandbox, cwd
+        )
+    return _MameGoverningIni(values, stated_ini, elements, layer_elements)
+
+
+def _mame_system_word(launch: _MameLaunch, content_path: str | None) -> str | None:
+    """The system word this launch hands MAME — the driver ini's own name.
+
+    ``parse_standard_inis`` names the driver ini after ``cursystem->name``
+    (mameopts.cpp:96), and ``cursystem`` is the driver ``driver_list::find``
+    matches against ``core_filename_extract_base(options.system_name())``
+    (:105-109). The launch states that word: the positional token for the
+    console and computer rows, and the ROM's own stem where the token is
+    ``%BASENAME%``. Where neither is available — a launch that names no
+    system, or an arcade row asked without content — there is no file name to
+    compose and the answer says so instead of guessing one.
+    """
+    if launch.machine_is_content:
+        if content_path is None:
+            return None
+        return os.path.splitext(os.path.basename(content_path))[0]
+    return launch.machine_name
+
+
+@dataclass(frozen=True, slots=True)
+class _MameLayeredIni:
+    """mame.ini with the driver ini layered over it, and which file stated what.
+
+    ``driver_keys`` is the set of option names the driver ini carried, which
+    is what lets a reading name the file its value really came from. Every
+    one of them outranks mame.ini's: the driver ini parses at
+    OPTION_PRIORITY_DRIVER_INI, the highest of the standard set
+    (mameopts.h:31-39), and an equal-or-higher priority set overrides
+    (options.cpp:270).
+    """
+
+    values: Mapping[str, str]
+    word: str | None
+    driver_ini: str | None
+    driver_keys: frozenset[str]
+
+    def stated_in(self, key: str, governing: _MameGoverningIni) -> str | None:
+        """The path of the file that stated *key* — ``None`` where nothing did."""
+        if key in self.driver_keys:
+            return self.driver_ini
+        return governing.stated_ini if key in self.values else None
+
+    def read_names(self, file: str) -> tuple[str, ...]:
+        """Every ini file name this reading opened, for the leftover-layer check."""
+        if self.driver_ini is None:
+            return (file,)
+        return (file, os.path.basename(self.driver_ini))
+
+
+def _mame_driver_layer(
+    machine: Machine,
+    ini: _MameGoverningIni,
+    *,
+    token: str,
+    launch: _MameLaunch,
+    content_path: str | None,
+) -> _MameLayeredIni | Unresolved:
+    """Read ``<system>.ini`` off the layer's search path and lay it over mame.ini.
+
+    This is the one member of MAME's standard ini set an outside reading can
+    name: the emulator picks it by the system's own short name
+    (mameopts.cpp:96), and that name follows from the launch — so atlas reads
+    it rather than announcing it. Its values are applied over mame.ini's
+    because it parses at the higher priority (mameopts.h:38, options.cpp:270),
+    and nothing else in the set can overturn them.
+
+    An unreadable file refuses the whole answer, exactly as an unreadable
+    mame.ini does: the emulator would have parsed it.
+    """
+    word = _mame_system_word(launch, content_path)
+    if word is None:
+        return _MameLayeredIni(ini.values, None, None, frozenset())
+    reading = _mame_ini_probe(machine, token, f"{word}.ini", ini.layer_elements)
+    if isinstance(reading, Unresolved):
+        return reading
+    if reading.stated_ini is None:
+        return _MameLayeredIni(ini.values, word, None, frozenset())
+    return _MameLayeredIni(
+        {**ini.values, **reading.values},
+        word,
+        reading.stated_ini,
+        frozenset(reading.values),
+    )
 
 
 def _mame_root_value(
     card: StandaloneSavestateCard,
     shape: SavestateLaunchIni,
     ini: _MameGoverningIni,
+    layered: _MameLayeredIni,
     env: Mapping[str, str],
     *,
     key: str,
@@ -10314,24 +10506,30 @@ def _mame_root_value(
     the parse hands "" to set_value and the option holds it (options.cpp:1041
     via :262-278), so the compiled default does not come back — and only an
     unset key falls to that default.
+
+    Which FILE stated it is the layered reading's answer, not this one's: the
+    driver ini's line outranks mame.ini's, so a value that came from
+    ``<system>.ini`` is read back under that name.
     """
-    raw = ini.values.get(key)
+    stated_path = layered.stated_in(key, ini)
+    stated_file = os.path.basename(stated_path) if stated_path else shape.file
+    raw = layered.values.get(key)
     if raw:
         substituted, missing = _mame_subst_env(raw, env)
         if substituted is None:
             return Unresolved(
                 UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-                f"{shape.file} names the states directory through ${missing}, a value of "
+                f"{stated_file} names the states directory through ${missing}, a value of "
                 "the launch's own environment this answer cannot establish — where a state "
                 "lands is unknowable here",
-                {"emulator": card.token, "config": ini.stated_ini or shape.file},
+                {"emulator": card.token, "config": stated_path or shape.file},
             )
-        return substituted, f'{shape.file}: {key} {raw}' + (
+        return substituted, f'{stated_file}: {key} {raw}' + (
             "" if substituted == raw else f" — the environment expands it to {substituted}"
         )
     if raw == "":
         return "", (
-            f"{shape.file}: {key} is set empty — MAME keeps the empty value "
+            f"{stated_file}: {key} is set empty — MAME keeps the empty value "
             "(options.cpp:1041, :262-278), so the states root is the working directory "
             "itself"
         )
@@ -10466,7 +10664,7 @@ def _mame_state_subdir(
     )
 
 
-def _mame_ini_provenance(ini: _MameGoverningIni, file: str) -> str:
+def _mame_ini_provenance(ini: _MameGoverningIni, layered: _MameLayeredIni, file: str) -> str:
     """Which file governed — or that none did, and which elements nobody could probe."""
     unprobed = [e.stated for e in ini.elements if e.resolved is None]
     if ini.stated_ini is not None:
@@ -10475,6 +10673,12 @@ def _mame_ini_provenance(ini: _MameGoverningIni, file: str) -> str:
         provenance = (
             f"no {file} exists on the launch's search path "
             f"({'; '.join(e.stated for e in ini.elements)})"
+        )
+    if layered.driver_ini is not None:
+        provenance += (
+            f", with the driver ini {layered.driver_ini} layered over it "
+            "(parse_standard_inis, mameopts.cpp:96, at the higher priority of "
+            "mameopts.h:38)"
         )
     if unprobed:
         provenance += (
