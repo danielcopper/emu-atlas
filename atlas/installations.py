@@ -10409,8 +10409,8 @@ _EMUDECK_LAUNCHER_CARDS = {
 # installed flatpak whose id carries the emulator's name, and otherwise the
 # Windows build under Proton. The AppImage variant reads the host's own XDG
 # tree; the flatpak variant reads the app's own homes below ~/.var/app, and
-# answers only where the card names the app id (the rest, and Proton, refuse
-# with the variant named).
+# answers only where the settings table names the app id the emulator installs
+# as (the rest, and Proton, refuse with the variant named).
 _EMUDECK_VARIANT_APPIMAGE = "appimage"
 # An emulator EmuDeck extracts out of its AppImage and keeps as a plain
 # executable at ``~/Applications/<Name>/<Name>`` (emuDeckVita3K.sh:21-24).
