@@ -3503,6 +3503,35 @@ class TestMoreStandaloneSaves:
         assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
 
     def test_pcsx2_a_dead_link_on_the_answers_own_directory_is_stated(self):
+        # The dead link sits on [Folders] MemoryCards, which is the only route
+        # by which this answer's `dir` leaves the DataRoot at all. It used to
+        # sit on an absolute Slot1_Filename — a route #312 retired, because
+        # PCSX2 joins a filename BELOW the memory-card directory rather than
+        # letting it replace one (:func:`_pcsx2_path_combine`). The fact under
+        # test is unchanged and so is the assertion; only the way the fixture
+        # reaches a linked `dir` moved onto a route that still exists.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: (
+                    "[Folders]\nMemoryCards = /mnt/sd/cards\n"
+                    "[MemoryCards]\nSlot1_Enable = true\n"
+                    "Slot2_Enable = false\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+            symlinks={"/mnt/sd/cards": "/mnt/sd/gone"},
+        )
+        p = rd.emulators_for("ps2").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+
+    def test_pcsx2_an_absolute_slot_filename_joins_below_the_card_directory(self):
+        # #312's headline: the value the retired route treated as a full path.
+        # PCSX2 composes it with Path::Combine, which swallows the leading
+        # separator (FileSystem.cpp:847-862, :98-139 at v2.6.3), so the card
+        # lands under the memory-card directory and `dir` never leaves it.
         rd = _retrodeck(
             {
                 **self.BASE,
@@ -3517,8 +3546,14 @@ class TestMoreStandaloneSaves:
         )
         p = rd.emulators_for("ps2").entries[0].savefile_location()
         assert not isinstance(p, atlas.Unresolved)
-        assert p.dir == "/mnt/sd/cards"
-        assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+        assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/memcards/mnt/sd/cards"
+        assert p.file_set.files == ("Mcd001.ps2",)
+        # The dead link the old reading would have walked into is not this
+        # answer's directory at all any more, so nothing is said about it.
+        assert not [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+        assert not [
+            c.code for c in p.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED
+        ]
 
     def test_duckstation_a_linked_answer_directory_states_its_physical_one(self):
         rd = _retrodeck(
