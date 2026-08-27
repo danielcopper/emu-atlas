@@ -154,9 +154,10 @@ class StandaloneSavestateCard:
     ``None`` for an emulator whose states tree is fixed by the build rather
     than by any file. ``systems`` is the closed list of catalogue systems this
     card answers for. There is deliberately no ``flatpak`` field: which app id
-    an arrangement runs an emulator under is recorded once, on the save card
+    an arrangement installs an emulator as is recorded once, in
+    ``atlas/data/emulator_settings.json``
     (:meth:`atlas.installations.EmuDeck._homes_for_token` reads it there), and
-    a second copy here could only ever drift from it.
+    a copy here could only ever drift from it.
 
     ``citations`` are the source references the **resolver** speaks, keyed by
     the slot the code asks for; they live on the card because one resolver can
@@ -556,8 +557,8 @@ def _card(token: str, entry: Any) -> StandaloneSavestateCard:
         raise ValueError(f"{where}: expected a 'savestates' object, got {savestates!r}")
     if "flatpak" in entry:
         raise ValueError(
-            f"{where}: which app id an arrangement runs this emulator under is the save "
-            "card's record — a second copy here could only ever drift from it"
+            f"{where}: which app id an arrangement installs this emulator as is stated once in "
+            "atlas/data/emulator_settings.json — a copy here could only ever drift from it"
         )
     settings = _settings_name(savestates, where)
     shape = _stated_shape(savestates, where)

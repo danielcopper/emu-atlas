@@ -2049,19 +2049,17 @@ class TestDolphinPerGameSettingsLayer:
     def test_every_dolphin_family_build_has_a_row(self, token):
         # The lookup is exact by (token, app id) on purpose: falling back to
         # another build's row would state that build's line numbers for this
-        # one. So an id the cards can produce and the table has no row for is
-        # card/code drift, and the resolver raises for it — this is what keeps
+        # one. So an id a resolver can reach and the table has no row for is
+        # data/code drift, and the resolver raises for it — this is what keeps
         # that raise unreachable for anything actually shipped. Both sources of
-        # an app id are covered: the save card's own, and every installation
-        # override the settings table states.
-        from atlas import emulator_settings, standalone_saves
+        # an app id are covered: the install the settings table states, and
+        # every installation override its directory names.
+        from atlas import emulator_settings
         from atlas.installations import (
             _DOLPHIN_GAME_LAYERS,  # pyright: ignore[reportPrivateUsage] - the pairing is the unit under test
         )
 
-        card = standalone_saves.lookup_standalone_save_card(token)
-        assert card is not None
-        candidates = {None, card.flatpak}
+        candidates = {None, emulator_settings.installed_flatpak(token)}
         candidates.update(emulator_settings.emulator_directory(token).installations)
         missing = [
             app_id for app_id in candidates if (token, app_id) not in _DOLPHIN_GAME_LAYERS
@@ -4039,9 +4037,10 @@ class TestEmuDeckStandaloneLaunchers:
         ed = atlas.EmuDeck(HOME, machine)
         assert ed.standalone_firmware_token("%EMULATOR_VITA3K% %ROM%") is None
 
-    def test_a_carded_flatpak_without_an_app_id_still_refuses_the_firmware_token(self):
-        # Azahar's card names no flatpak id — a flatpak-only launch stays
-        # ungated for firmware exactly as it does for saves.
+    def test_a_flatpak_the_table_names_no_id_for_still_refuses_the_firmware_token(self):
+        # The settings table states that EmuDeck installs Azahar as an
+        # AppImage, so no app id is established for it — a flatpak-only launch
+        # stays ungated for firmware exactly as it does for saves.
         ed = self._melonds(
             dirs=[
                 f"{HOME}/Applications",
@@ -4049,6 +4048,29 @@ class TestEmuDeckStandaloneLaunchers:
             ],
         )
         assert ed.standalone_firmware_token("%EMULATOR_AZAHAR% %ROM%") is None
+
+    def test_an_emulator_with_no_row_refuses_the_firmware_token_as_before(self):
+        # A token the table carries no row for reaches the same reading and
+        # gets no app id from it — the answer stays "nothing established",
+        # never a raise and never a guessed tree.
+        ed = self._melonds(
+            dirs=[
+                f"{HOME}/Applications",
+                "/var/lib/flatpak/app/uk.org.6809.xroar",
+            ],
+        )
+        assert ed.standalone_firmware_token("%EMULATOR_XROAR% %ROM%") is None
+
+    def test_an_emulator_with_no_save_card_is_gated_on_its_own_install(self):
+        # MAME has no save card at all, which is what used to make its trees
+        # unreachable however much else was established (#288).
+        ed = self._melonds(
+            dirs=[
+                f"{HOME}/Applications",
+                "/var/lib/flatpak/app/org.mamedev.MAME",
+            ],
+        )
+        assert ed.standalone_firmware_token("%EMULATOR_MAME% %ROM%") == "MAME"
 
 
 class TestEmuDeck:

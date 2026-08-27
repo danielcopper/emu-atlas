@@ -23,6 +23,14 @@ emulator: PrimeHack renamed its user directory and later renamed it back, so
 which name a launch uses depends on which build it runs, and the installation
 that carries the other build states its own name here beside the default
 (#246).
+
+The **app id** an arrangement installs the emulator as lives here for the same
+reason, one step earlier: it is a property of the *installation*, not of any
+one question. It used to sit on the save card, so ``~/.var/app/<id>`` could
+only be reached by an emulator that had one — and MAME, whose savestate card
+is complete and whose save card does not exist, refused a question it could
+have answered (#288). The rows the directory names are keyed by that very id
+already, so this is where it belongs.
 """
 
 from __future__ import annotations
@@ -36,7 +44,7 @@ from typing import Any
 
 from atlas.textures import expect_table_anchors, path_segments
 
-EMULATOR_SETTINGS_SCHEMA = 2
+EMULATOR_SETTINGS_SCHEMA = 3
 
 _BASES = ("config", "data")
 
@@ -77,6 +85,28 @@ class DirectoryName:
             for segment, anchor in self.anchors["names"].items()
             if "literal" in anchor
         )
+
+
+@dataclass(frozen=True, slots=True)
+class InstalledFlatpak:
+    """Which flatpak app an arrangement installs this emulator as, with its evidence.
+
+    ``app_id`` is the id whose per-app XDG trees below ``~/.var/app`` a launch
+    of that install reads. It is ``None`` where no arrangement is established
+    to install the emulator as a flatpak at all — EmuDeck fetches Cemu,
+    DuckStation and PCSX2 as AppImages — and that ``None`` is a **stated** no,
+    with the same citation requirement as a stated id: an emulator whose
+    installation nobody looked at and one that demonstrably installs no flatpak
+    must not read the same.
+
+    A launch that runs some *other*, hand-installed flatpak of the emulator is
+    not this fact: EmuDeck's launcher would run any installed id carrying the
+    emulator's name, and which id that is has been established only for the
+    apps EmuDeck installs itself.
+    """
+
+    app_id: str | None
+    citation: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -281,10 +311,74 @@ def _file(token: str, name: str, entry: Any, directory: EmulatorDirectory) -> Se
 
 @dataclass(frozen=True, slots=True)
 class EmulatorEntry:
-    """One emulator's row: its own directory, and the files stated below it."""
+    """One emulator's row: how it installs, its own directory, and the files below it.
 
-    directory: EmulatorDirectory
+    ``directory`` is ``None`` — and ``files`` then empty — for an emulator whose
+    settings file this table deliberately cannot address. MAME's is one: which
+    ``mame.ini`` governs is the launch's own fact, decided by ``-inipath`` and a
+    compiled search path, so its card takes the ``launch_ini`` shape instead of
+    naming an address here. The row still exists, because how the arrangement
+    installs MAME is a fact of exactly this file's kind.
+    """
+
+    flatpak: InstalledFlatpak
+    directory: EmulatorDirectory | None
     files: Mapping[str, SettingsFile]
+
+
+def _installed_flatpak(token: str, entry: Any) -> InstalledFlatpak:
+    """One row's install statement — an id or a stated no, and never a silence.
+
+    The key is required on every row, with no default. A row that simply left
+    it out would read as "installs no flatpak" while establishing nothing, and
+    the answer that reads it would refuse a launch whose trees are right there
+    — which is the failure #288 was.
+    """
+    where = f"emulator settings {token}: flatpak"
+    if not isinstance(entry, dict) or set(entry) != {"app_id", "citation"}:
+        raise ValueError(f"{where}: expected exactly app_id/citation, got {entry!r}")
+    app_id = entry["app_id"]
+    if app_id is not None and (not isinstance(app_id, str) or not app_id):
+        raise ValueError(f"{where}.app_id: expected an app id or null, got {app_id!r}")
+    citation = entry["citation"]
+    if not isinstance(citation, str) or not citation:
+        raise ValueError(f"{where}.citation: expected a non-empty string, got {citation!r}")
+    return InstalledFlatpak(app_id=app_id, citation=citation)
+
+
+def _entry(token: str, entry: Any) -> EmulatorEntry:
+    """One emulator's row: the install statement, and the addresses where there are any."""
+    where = f"emulator settings {token}"
+    if not isinstance(entry, dict) or not {"flatpak"} <= set(entry) <= {
+        "flatpak",
+        "directory",
+        "files",
+    }:
+        raise ValueError(
+            f"{where}: expected a flatpak and an optional directory/files pair, got {entry!r}"
+        )
+    flatpak = _installed_flatpak(token, entry["flatpak"])
+    if ("directory" in entry) != ("files" in entry):
+        raise ValueError(
+            f"{where}: a directory and the files stated below it are one statement — "
+            "one without the other addresses nothing, or addresses it from nowhere"
+        )
+    if "directory" not in entry:
+        if flatpak.app_id is None:
+            raise ValueError(
+                f"{where}: states neither an app id nor an address — a row that says "
+                "nothing about an emulator is a row nobody can read anything off"
+            )
+        return EmulatorEntry(flatpak=flatpak, directory=None, files={})
+    directory = _directory(token, entry["directory"])
+    files = entry["files"]
+    if not isinstance(files, dict) or not files:
+        raise ValueError(f"{where}: states no file at all")
+    return EmulatorEntry(
+        flatpak=flatpak,
+        directory=directory,
+        files={name: _file(token, name, spec, directory) for name, spec in files.items()},
+    )
 
 
 def load_emulator_settings(text: str | None = None) -> dict[str, EmulatorEntry]:
@@ -304,18 +398,7 @@ def load_emulator_settings(text: str | None = None) -> dict[str, EmulatorEntry]:
         )
     table: dict[str, EmulatorEntry] = {}
     for token, entry in raw.get("emulators", {}).items():
-        if not isinstance(entry, dict) or set(entry) != {"directory", "files"}:
-            raise ValueError(
-                f"emulator settings {token}: expected exactly directory/files, got {entry!r}"
-            )
-        directory = _directory(token, entry["directory"])
-        files = entry["files"]
-        if not isinstance(files, dict) or not files:
-            raise ValueError(f"emulator settings {token}: states no file at all")
-        table[token] = EmulatorEntry(
-            directory=directory,
-            files={name: _file(token, name, spec, directory) for name, spec in files.items()},
-        )
+        table[token] = _entry(token, entry)
     return table
 
 
@@ -338,12 +421,32 @@ def emulator_directory(token: str | None) -> EmulatorDirectory:
     exact failure this table exists to remove.
     """
     entry = _packaged().get(token or "")
-    if entry is None:
+    if entry is None or entry.directory is None:
         raise ValueError(
             f"no directory is stated for {token!r} — a card names it and "
             "atlas/data/emulator_settings.json does not carry it"
         )
     return entry.directory
+
+
+def installed_flatpak(token: str | None) -> str | None:
+    """The app id this emulator's flatpak install carries, where one is established.
+
+    ``None`` says no app id is established for the token, which the table
+    reaches two ways: a row whose ``flatpak`` states ``null`` — the arrangement
+    installs the emulator some other way, cited — and a token the table carries
+    no row for at all, which is every emulator atlas states nothing about. A
+    caller that gets ``None`` refuses with the variant named; it must never
+    join a path onto an id nobody stated, which is the whole point of asking
+    here rather than guessing.
+
+    The loud half of the rule is the loader's, because it is the half that can
+    be loud without lying: a row that omits the key fails the load outright
+    (``_installed_flatpak``), so "the table does not state this" can only ever
+    mean somebody wrote down that it does not.
+    """
+    entry = _packaged().get(token or "")
+    return entry.flatpak.app_id if entry is not None else None
 
 
 def user_directory(token: str | None, *, flatpak: str | None) -> str:

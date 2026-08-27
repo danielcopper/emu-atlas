@@ -11,6 +11,7 @@ card states, and every slot the card states, some reading names.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -23,6 +24,8 @@ from atlas.standalone_saves import (
 )
 
 PRIMEHACK_FLATPAK = "io.github.shiiion.primehack"
+
+DATA = Path(__file__).resolve().parent.parent / "atlas" / "data" / "standalone_saves.json"
 
 
 def _cards() -> dict[str, StandaloneSaveCard]:
@@ -135,6 +138,25 @@ class TestACitationBelongsToABuild:
         assert card is not None
         with pytest.raises(ValueError, match="states no 'nowhere' citation"):
             card.cite("nowhere", flatpak=None)
+
+
+class TestTheInstallIsNotTheCardsToState:
+    """Since #288 the app id is the settings table's, and a copy here is refused."""
+
+    def test_a_flatpak_field_is_refused_as_a_second_record(self):
+        document = json.loads(_table({"build": "demo 1"}))
+        document["emulators"]["DEMO"]["flatpak"] = "org.demo.Demo"
+        text = json.dumps(document)
+        with pytest.raises(ValueError, match="emulator_settings.json"):
+            load_standalone_saves(text)
+
+    def test_no_shipped_card_carries_an_app_id(self):
+        # The loader refuses one, so this reads the shipped file directly: the
+        # point is that the retired field really left the data, not that the
+        # loader would have caught it.
+        raw = json.loads(DATA.read_text(encoding="utf-8"))
+        carrying = [token for token, entry in raw["emulators"].items() if "flatpak" in entry]
+        assert carrying == []
 
 
 class TestTheLoaderRefusesAPartialOverride:

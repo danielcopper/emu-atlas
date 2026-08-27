@@ -582,11 +582,13 @@ refuses with `emulator-config-path-untranslatable`, the stated value carried in 
 default walks into the content's. On EmuDeck a standalone emulator is identified by `%EMULATOR_…%` token or by an
 allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`, `pcsx2-qt.sh`, `melonds.sh` and `vita3k.sh`
 today), and either way the launch's binary variant gates the answer. Three variants are established: an **AppImage**
-under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app id the card names (`flatpak` on the card —
-melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its own homes below
+under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app id the settings table names (`flatpak` on
+the row — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its own homes below
 `~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which EmuDeck unpacks some emulators into
 (Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads the host's tree like an
-AppImage does. The rest refuse with `standalone-variant-unestablished`.
+AppImage does. The rest refuse with `standalone-variant-unestablished`. The id lives in the table rather than on a card
+because the gate is one question about the launch and every card family asks it — while it sat on the **save** card, an
+emulator without one could reach no trees at all, which is what MAME's savestate answer was refusing over (#288).
 
 ## `standalone_savestates.json` — which standalone emulators the savestate question answers for
 
@@ -595,8 +597,8 @@ question answers a standalone catalogue entry exactly where a card here covers i
 refuses with `standalone-unsupported` everywhere else — byte-identically to the blanket refusal that preceded the family
 (#225), because an absent card is the same absence it always was. On EmuDeck the answer runs through the same launch
 identity and binary-variant gate as the save answer, so the two questions about one entry can never disagree about which
-binary runs; which flatpak app id that gate reads trees under stays the **save** card's record — this file deliberately
-has no `flatpak` field, because a second copy could only drift from the first.
+binary runs; which flatpak app id that gate reads trees under is stated once in `emulator_settings.json` — this file
+deliberately has no `flatpak` field, because a copy could only drift from the first.
 
 A card makes its statement one of five ways and exactly one (#284 widened the standalone texture cards' two-way rule):
 `base` plus `subdir` for a compiled join below the emulator's own directory — Dolphin's and PrimeHack's `StateSaves`
@@ -1036,10 +1038,10 @@ place, so nothing here is a fallthrough. One upstream error is excluded by hand 
 The machine-read half — which systems declare which platform, and whether they are declared, disabled or absent on this
 installation — is never tabled here; the resolvers read the catalogue's own `<platform>` tags live.
 
-## `emulator_settings.json` — the emulator's own directory, and one address per settings file
+## `emulator_settings.json` — how the emulator installs, its own directory, and one address per settings file
 
-Where each standalone emulator keeps a settings file, keyed by the `%EMULATOR_…%` token and then by the file's own name.
-Read by `atlas.emulator_settings`.
+Where each standalone emulator keeps a settings file, and which flatpak app the arrangement installs it as, keyed by the
+`%EMULATOR_…%` token and then by the file's own name. Read by `atlas.emulator_settings`.
 
 This table exists because the address was being stated once per **question**. A save card, a texture card and a mod card
 named one path between them — up to three copies — with a fourth as a constant in the firmware resolver, and nothing
@@ -1051,6 +1053,10 @@ So a card names a file by **name** and the address lives here, once. What is her
 
 ```json
 "DUCKSTATION": {
+  "flatpak": {
+    "app_id": null,
+    "citation": "[V-script] EmuDeck installs it as the DuckStation AppImage below $emusFolder rather than a flatpak …"
+  },
   "directory": {
     "name": "duckstation",
     "citation": "[V-source] the DataRoot is the duckstation directory below whichever base the launch picks …",
@@ -1066,6 +1072,14 @@ So a card names a file by **name** and the address lives here, once. What is her
 }
 ```
 
+- `flatpak` is the **identity of the installation**: the app id whose per-app XDG trees below `~/.var/app` a flatpak
+  launch of this emulator reads. It is required on every row, and states either an id or a **cited no** — EmuDeck
+  fetches Cemu, Azahar, DuckStation, PCSX2 and RPCS3 as AppImages and unpacks Vita3K as a plain executable, so for those
+  no app id is established at all. There is no default, on purpose: a row that simply left the key out would read as
+  "installs no flatpak" while establishing nothing, which is exactly how MAME came to refuse a savestate question it
+  could answer (#288). It lives here rather than on the save card because it is a property of the **installation** and
+  of no single question — the save card could only ever state it for an emulator that had a save card, and MAME does
+  not.
 - `directory` is the emulator's **own directory** below whichever XDG base a thing of its hangs off, and every path in
   this table is stated below it. It is one fact rather than a prefix: Dolphin's `Dolphin.ini`, its `Load/Textures` tree
   and its `GC` cards all live below the directory Dolphin itself calls the user directory, so spelling it into each of
@@ -1079,6 +1093,10 @@ So a card names a file by **name** and the address lives here, once. What is her
   its single location is what resolvers do; asking a two-base file for one raises rather than answering the first
   candidate, because that would be a guess dressed as an address.
 - `citation` is required like every other recorded fact here.
+- A row may state **only** its `flatpak`. MAME's does: which `mame.ini` governs a launch is the launch's own fact,
+  decided by `-inipath` over a compiled search path, so its savestate card takes the `launch_ini` shape instead of
+  naming an address here — but how EmuDeck installs MAME is a fact of exactly this file's kind. `directory` and `files`
+  are one statement and come as a pair; a row that states neither them nor an app id says nothing and is refused.
 - Two tests cross the table with the cards: every card names a file the table carries, and the table carries no file no
   card asks for. Together they are what makes a disagreement inexpressible rather than merely unlikely.
 
@@ -1110,8 +1128,8 @@ those two names, on a machine that has both. So `directory` may state one name p
 }
 ```
 
-The key is the flatpak app id whose build spells it differently — the id a save card names, which is how a resolver
-knows which installation this launch runs. An override stating the default's own name is refused: it reads as
+The key is the flatpak app id whose build spells it differently — the id the row's own `flatpak` names, which is how a
+resolver knows which installation this launch runs. An override stating the default's own name is refused: it reads as
 "established for this installation" while establishing nothing.
 
 `anchors` is why a stated name cannot rot quietly. The name is a compiled-in constant, so the binary that carries it is

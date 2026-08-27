@@ -7,7 +7,10 @@ table carries, and every file the table carries is named by a card.
 
 Since #246 the emulator's own directory is stated here too, once per emulator
 rather than once per path, and per installation where the name belongs to the
-build rather than to the emulator.
+build rather than to the emulator. Since #288 so is the flatpak app id the
+arrangement installs the emulator as — the identity of the installation, which
+used to sit on the save card and so could not be reached by an emulator that
+had none.
 """
 
 import json
@@ -17,6 +20,7 @@ import pytest
 from atlas.emulator_settings import (
     EMULATOR_SETTINGS_SCHEMA,
     emulator_directory,
+    installed_flatpak,
     load_emulator_settings,
     settings_file,
     settings_files,
@@ -46,25 +50,31 @@ def _directory(name: str = "demo", **extra: object) -> dict[str, object]:
     }
 
 
+def _flatpak(app_id: str | None = "org.demo.Demo") -> dict[str, object]:
+    return {"app_id": app_id, "citation": "[V] a citation for the install"}
+
+
+def _row(directory=None, **files) -> dict[str, object]:
+    return {
+        "flatpak": _flatpak(),
+        "directory": directory or _directory(),
+        "files": files
+        or {
+            "demo.ini": {
+                "bases": ["config"],
+                "path": "demo.ini",
+                "citation": "[V] a citation",
+            }
+        },
+    }
+
+
+def _document(row: dict[str, object]) -> str:
+    return json.dumps({"schema": EMULATOR_SETTINGS_SCHEMA, "emulators": {"DEMO": row}})
+
+
 def _table(directory=None, **files) -> str:
-    return json.dumps(
-        {
-            "schema": EMULATOR_SETTINGS_SCHEMA,
-            "emulators": {
-                "DEMO": {
-                    "directory": directory or _directory(),
-                    "files": files
-                    or {
-                        "demo.ini": {
-                            "bases": ["config"],
-                            "path": "demo.ini",
-                            "citation": "[V] a citation",
-                        }
-                    },
-                }
-            },
-        }
-    )
+    return _document(_row(directory, **files))
 
 
 class TestOneAddressPerFile:
@@ -146,14 +156,50 @@ class TestTheEmulatorsOwnDirectory:
             "io.github.shiiion.primehack"
         ).citation
 
-    def test_every_shipped_emulator_states_a_directory_with_evidence(self):
+    def test_every_stated_directory_carries_its_evidence(self):
         for token, entry in load_emulator_settings().items():
+            if entry.directory is None:
+                continue
             assert entry.directory.default.name, f"{token} states no directory"
             assert entry.directory.default.citation, f"{token} names a directory and no evidence"
 
     def test_an_emulator_the_table_does_not_carry_has_no_directory(self):
         with pytest.raises(ValueError, match="no directory is stated"):
             user_directory("NOBODY", flatpak=None)
+
+    def test_a_row_that_states_no_address_has_no_directory_either(self):
+        # MAME's row exists for its install alone: which mame.ini governs is
+        # the launch's own fact, so this table deliberately addresses none.
+        with pytest.raises(ValueError, match="no directory is stated"):
+            user_directory("MAME", flatpak=None)
+
+
+class TestTheInstallTheArrangementMakes:
+    """Which flatpak app the emulator installs as — the identity, stated once."""
+
+    def test_an_emulator_installed_as_a_flatpak_answers_its_id(self):
+        assert installed_flatpak("MELONDS") == "net.kuribo64.melonDS"
+
+    def test_an_emulator_installed_another_way_answers_no_id(self):
+        # EmuDeck fetches Cemu as an AppImage, so no app id is established and
+        # the flatpak branch of a launch has nothing to resolve against.
+        assert installed_flatpak("CEMU") is None
+
+    def test_an_emulator_the_table_does_not_carry_answers_no_id(self):
+        # Hundreds of catalogue tokens name emulators atlas states nothing
+        # about; asking about one is not drift, and the answer is "nothing is
+        # established", never a guess.
+        assert installed_flatpak("NOBODY") is None
+
+    def test_mame_states_its_install_without_stating_an_address(self):
+        assert installed_flatpak("MAME") == "org.mamedev.MAME"
+
+    def test_a_row_stating_only_an_install_addresses_no_file(self):
+        assert settings_files("MAME") == {}
+
+    def test_every_shipped_row_states_its_install_with_evidence(self):
+        for token, entry in load_emulator_settings().items():
+            assert entry.flatpak.citation, f"{token} states an install and no evidence"
 
 
 class TestTheCardsAndTheTableAgree:
@@ -215,32 +261,59 @@ class TestTheLoaderRefusesWhatItCannotStand:
         with pytest.raises(ValueError, match="unsupported schema"):
             load_emulator_settings(text)
 
+    def test_a_row_without_an_install_statement_is_refused(self):
+        # No default: a row that left the key out would read as "installs no
+        # flatpak" while establishing nothing, and the answer reading it would
+        # refuse a launch whose trees are right there — which is what #288 was.
+        row = _row()
+        del row["flatpak"]
+        text = _document(row)
+        with pytest.raises(ValueError, match="expected a flatpak"):
+            load_emulator_settings(text)
+
+    def test_an_install_statement_without_a_citation_is_refused(self):
+        text = _document({**_row(), "flatpak": {"app_id": "org.demo.Demo", "citation": ""}})
+        with pytest.raises(ValueError, match="flatpak.citation"):
+            load_emulator_settings(text)
+
+    def test_an_install_statement_with_an_empty_app_id_is_refused(self):
+        text = _document({**_row(), "flatpak": {**_flatpak(), "app_id": ""}})
+        with pytest.raises(ValueError, match="an app id or null"):
+            load_emulator_settings(text)
+
+    def test_a_stated_no_still_needs_its_evidence(self):
+        # "Installs no flatpak" is a claim about the arrangement, not an
+        # absence of one, so it carries a citation like every stated fact here.
+        text = _document({**_row(), "flatpak": {"app_id": None, "citation": ""}})
+        with pytest.raises(ValueError, match="flatpak.citation"):
+            load_emulator_settings(text)
+
+    def test_a_row_stating_neither_an_id_nor_an_address_is_refused(self):
+        text = _document({"flatpak": _flatpak(None)})
+        with pytest.raises(ValueError, match="neither an app id nor an address"):
+            load_emulator_settings(text)
+
+    def test_a_row_stating_only_an_install_loads(self):
+        table = load_emulator_settings(_document({"flatpak": _flatpak()}))
+        assert table["DEMO"].directory is None
+
     def test_an_emulator_stating_no_file_is_refused(self):
-        text = json.dumps(
-            {
-                "schema": EMULATOR_SETTINGS_SCHEMA,
-                "emulators": {
-                    "DEMO": {"directory": _directory(), "files": {}}
-                },
-            }
-        )
+        text = _document({"flatpak": _flatpak(), "directory": _directory(), "files": {}})
         with pytest.raises(ValueError, match="states no file"):
             load_emulator_settings(text)
 
-    def test_an_emulator_stating_no_directory_is_refused(self):
-        text = json.dumps(
-            {
-                "schema": EMULATOR_SETTINGS_SCHEMA,
-                "emulators": {
-                    "DEMO": {
-                        "files": {
-                            "demo.ini": {"bases": ["config"], "path": "demo.ini", "citation": "x"}
-                        }
-                    }
-                },
-            }
-        )
-        with pytest.raises(ValueError, match="exactly directory/files"):
+    def test_an_emulator_stating_files_without_a_directory_is_refused(self):
+        row = {
+            "flatpak": _flatpak(),
+            "files": {"demo.ini": {"bases": ["config"], "path": "demo.ini", "citation": "x"}},
+        }
+        text = _document(row)
+        with pytest.raises(ValueError, match="one statement"):
+            load_emulator_settings(text)
+
+    def test_an_emulator_stating_a_directory_without_files_is_refused(self):
+        text = _document({"flatpak": _flatpak(), "directory": _directory()})
+        with pytest.raises(ValueError, match="one statement"):
             load_emulator_settings(text)
 
     def test_a_directory_without_a_citation_is_refused(self):

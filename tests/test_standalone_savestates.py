@@ -195,10 +195,10 @@ class TestTheLoaderRefusesWhatItCannotStand:
             load_standalone_savestates(table)
 
     def test_a_flatpak_field_is_refused_as_a_second_record(self):
-        # Which app id an arrangement runs an emulator under lives on the save
-        # card; a copy here could only drift from it.
+        # Which app id an arrangement installs an emulator as is stated once in
+        # the settings table (#288); a copy here could only drift from it.
         table = _table(_fixed(), extra={"flatpak": "org.demo.Demo"})
-        with pytest.raises(ValueError, match="save\\s+card's record"):
+        with pytest.raises(ValueError, match="emulator_settings.json"):
             load_standalone_savestates(table)
 
     def test_a_partial_installations_override_is_refused(self):

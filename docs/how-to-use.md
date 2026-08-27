@@ -729,18 +729,20 @@ launcher script — an allowlisted launcher (`tools/launchers/cemu.sh`, `melonds
 either way the launch's binary variant gates the answer. Three variants are established: an AppImage under
 `~/Applications` reads the host's own XDG tree; an **extracted binary** at `~/Applications/<Name>/<Name>`, which EmuDeck
 unpacks some emulators into (Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads
-that same host tree; and a flatpak whose app id the card names reads the app's own homes below `~/.var/app` — melonDS's
-`net.kuribo64.melonDS`, which `melonds.sh` runs outright and probes nothing for, plus xemu, Dolphin and PPSSPP, which
-EmuDeck installs as flatpaks and the probe finds among the installed ones. A variant whose config is not established
-(the Windows build under Proton via `-w`, a flatpak no card names an id for) refuses with
-`standalone-variant-unestablished` and the variant named in `data`. No frontend hands these emulators a save directory,
-so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the emulator's own
-configuration the way the emulator reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's `settings.xml` — each
-at the shipped release; PPSSPP's Linux memstick is fixed by the build, so its card names no config at all). Each is
-looked for under the XDG base the **emulator** opens it from, which is not always where an arrangement keeps it — xemu's
-`xemu.toml` lives under the data home while RetroDECK keeps the real directory in its config tree and links it into
-place — and rerouted with symlinks the answer walks. The one exception is the emulator whose own default walks into the
-content's directory — melonDS below.
+that same host tree; and a flatpak whose app id the **settings table** names reads the app's own homes below
+`~/.var/app` — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright and probes nothing for, plus xemu,
+Dolphin and PPSSPP, which EmuDeck installs as flatpaks and the probe finds among the installed ones. The id is a
+property of the installation rather than of the save question, so `emulator_settings.json` states it once for the
+emulator — while it sat on the save card, an emulator without one could reach no trees at all (#288). A variant whose
+config is not established (the Windows build under Proton via `-w`, a flatpak the table names no app id for) refuses
+with `standalone-variant-unestablished` and the variant named in `data`. No frontend hands these emulators a save
+directory, so the answer's `root_kind` is `emulator_directory`: the emulator's own tree, its shape read from the
+emulator's own configuration the way the emulator reads it (Dolphin's `Dolphin.ini`, xemu's `xemu.toml`, Cemu's
+`settings.xml` — each at the shipped release; PPSSPP's Linux memstick is fixed by the build, so its card names no config
+at all). Each is looked for under the XDG base the **emulator** opens it from, which is not always where an arrangement
+keeps it — xemu's `xemu.toml` lives under the data home while RetroDECK keeps the real directory in its config tree and
+links it into place — and rerouted with symlinks the answer walks. The one exception is the emulator whose own default
+walks into the content's directory — melonDS below.
 
 ```python
 entry = inst.emulators_for("gc").entries[0]   # 'Dolphin (Standalone)'
@@ -1047,10 +1049,13 @@ would disagree with its own cheat answer about where the emulator keeps things. 
 tree of its own. Where nobody has read an emulator's configuration the entry still refuses with
 `standalone-unsupported`, so the split runs on evidence, not on the kind of entry. **On EmuDeck the same cards answer**,
 below the bases the launch's own binary reads: an AppImage under `~/Applications` (or the executable EmuDeck unpacks
-from one) reads the host's XDG tree, and a flatpak whose app id the save card names reads the app's own homes. A launch
-whose binary establishes neither — the Windows build under Proton, a flatpak no card names an id for — refuses with
-`standalone-variant-unestablished` and the variant in `data`, which is a different instruction from "this emulator is
-not covered".
+from one) reads the host's XDG tree, and a flatpak whose app id `emulator_settings.json` names reads the app's own
+homes. That id is stated once per emulator, beside the directory spellings already keyed by it, so a question reaches
+the trees whether or not the emulator has a card of any particular family — MAME's savestate answer refused on exactly
+that until #288, having a complete savestate card and no save card. A launch whose binary establishes neither — the
+Windows build under Proton, or a flatpak the table names no app id for (EmuDeck installs Cemu, Azahar, DuckStation,
+PCSX2 and RPCS3 as AppImages, so none is established for them) — refuses with `standalone-variant-unestablished` and the
+variant in `data`, which is a different instruction from "this emulator is not covered".
 
 Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction — the rows
 that read a configuration add two more, below the table:
