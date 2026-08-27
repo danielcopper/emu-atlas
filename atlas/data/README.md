@@ -1036,10 +1036,10 @@ place, so nothing here is a fallthrough. One upstream error is excluded by hand 
 The machine-read half — which systems declare which platform, and whether they are declared, disabled or absent on this
 installation — is never tabled here; the resolvers read the catalogue's own `<platform>` tags live.
 
-## `emulator_settings.json` — the emulator's own directory, and one address per settings file
+## `emulator_settings.json` — how the emulator installs, its own directory, and one address per settings file
 
-Where each standalone emulator keeps a settings file, keyed by the `%EMULATOR_…%` token and then by the file's own name.
-Read by `atlas.emulator_settings`.
+Where each standalone emulator keeps a settings file, and which flatpak app the arrangement installs it as, keyed by the
+`%EMULATOR_…%` token and then by the file's own name. Read by `atlas.emulator_settings`.
 
 This table exists because the address was being stated once per **question**. A save card, a texture card and a mod card
 named one path between them — up to three copies — with a fourth as a constant in the firmware resolver, and nothing
@@ -1051,6 +1051,10 @@ So a card names a file by **name** and the address lives here, once. What is her
 
 ```json
 "DUCKSTATION": {
+  "flatpak": {
+    "app_id": null,
+    "citation": "[V-script] EmuDeck installs it as the DuckStation AppImage below $emusFolder rather than a flatpak …"
+  },
   "directory": {
     "name": "duckstation",
     "citation": "[V-source] the DataRoot is the duckstation directory below whichever base the launch picks …",
@@ -1066,6 +1070,14 @@ So a card names a file by **name** and the address lives here, once. What is her
 }
 ```
 
+- `flatpak` is the **identity of the installation**: the app id whose per-app XDG trees below `~/.var/app` a flatpak
+  launch of this emulator reads. It is required on every row, and states either an id or a **cited no** — EmuDeck
+  fetches Cemu, Azahar, DuckStation, PCSX2 and RPCS3 as AppImages and unpacks Vita3K as a plain executable, so for those
+  no app id is established at all. There is no default, on purpose: a row that simply left the key out would read as
+  "installs no flatpak" while establishing nothing, which is exactly how MAME came to refuse a savestate question it
+  could answer (#288). It lives here rather than on the save card because it is a property of the **installation** and
+  of no single question — the save card could only ever state it for an emulator that had a save card, and MAME does
+  not.
 - `directory` is the emulator's **own directory** below whichever XDG base a thing of its hangs off, and every path in
   this table is stated below it. It is one fact rather than a prefix: Dolphin's `Dolphin.ini`, its `Load/Textures` tree
   and its `GC` cards all live below the directory Dolphin itself calls the user directory, so spelling it into each of
@@ -1079,6 +1091,10 @@ So a card names a file by **name** and the address lives here, once. What is her
   its single location is what resolvers do; asking a two-base file for one raises rather than answering the first
   candidate, because that would be a guess dressed as an address.
 - `citation` is required like every other recorded fact here.
+- A row may state **only** its `flatpak`. MAME's does: which `mame.ini` governs a launch is the launch's own fact,
+  decided by `-inipath` over a compiled search path, so its savestate card takes the `launch_ini` shape instead of
+  naming an address here — but how EmuDeck installs MAME is a fact of exactly this file's kind. `directory` and `files`
+  are one statement and come as a pair; a row that states neither them nor an app id says nothing and is refused.
 - Two tests cross the table with the cards: every card names a file the table carries, and the table carries no file no
   card asks for. Together they are what makes a disagreement inexpressible rather than merely unlikely.
 

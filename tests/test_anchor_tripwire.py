@@ -64,8 +64,14 @@ def _directory_spellings():
     build uses, plus one for each app whose build spells it differently.
     ``siblings`` carries the other spellings' literals — a build carrying one
     of those is the rename this tripwire exists to catch.
+
+    A row that states no directory states no name to pin either: MAME's row
+    carries its install and nothing else, because which ``mame.ini`` governs is
+    the launch's own fact and no address of it lives in that table.
     """
     for token, entry in load_emulator_settings().items():
+        if entry.directory is None:
+            continue
         spellings: list[tuple[str | None, DirectoryName]] = [(None, entry.directory.default)]
         spellings.extend(entry.directory.installations.items())
         for app_id, stated in spellings:
