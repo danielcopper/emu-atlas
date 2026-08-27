@@ -11394,6 +11394,15 @@ def _pcsx2_mod_placement(
             f"mod card {card.token!r} states no directory and this resolver reads one "
             "— the card and the code shipped out of step"
         )
+    if card.settings is None:
+        # A card MAY name no configuration file — that is the honest state for
+        # an emulator whose switch nobody has found. It is not a state this
+        # route can be in: the directory it answers with is read out of that
+        # very file, so an unnamed one leaves nothing to read.
+        raise ValueError(
+            f"mod card {card.token!r} names no configuration file and this resolver reads its "
+            "directory out of one — the card and the code shipped out of step"
+        )
     settings = emulator_settings.settings_file(card.token, card.settings)
     data_root = homes.emulator_root(settings.bases[0], card.token)
     ini_path = settings.only(
