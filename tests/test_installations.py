@@ -2737,6 +2737,39 @@ class TestDuckstationPerGameSettingsLayer:
         )
         assert stated.data["dir"] == DUCKSTATION_GAME_SETTINGS
 
+    def test_the_firmware_answer_lists_a_relative_folders_key_where_it_points(self):
+        # The firmware route resolves the directory in its own idiom (its
+        # sandbox seam differs from the entry route's), so the resolution needs
+        # its own cover rather than borrowing the save answer's.
+        rd = self._machine(
+            {f"{DUCKSTATION_DATA_ROOT}/per-game/SLUS-00594.ini": "[MemoryCards]\n"},
+            settings=self.SETTINGS + "[Folders]\nGameSettings = per-game\n",
+            dirs=[f"{DUCKSTATION_DATA_ROOT}/per-game"],
+        )
+        core = rd.firmware_for_system("psx").cores[0]
+        stated = next(
+            c for c in core.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
+        )
+        assert stated.data["dir"] == f"{DUCKSTATION_DATA_ROOT}/per-game"
+
+    def test_a_sandbox_only_directory_leaves_the_firmware_answer_unread_too(self):
+        rd = self._machine(
+            settings=self.SETTINGS + "[Folders]\nGameSettings = /app/gamesettings\n"
+        )
+        core = rd.firmware_for_system("psx").cores[0]
+        stated = next(
+            c for c in core.caveats if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD
+        )
+        assert stated.data["dir"] == "/app/gamesettings"
+
+    def test_the_firmware_answer_names_the_untranslatable_path_beside_it(self):
+        rd = self._machine(
+            settings=self.SETTINGS + "[Folders]\nGameSettings = /app/gamesettings\n"
+        )
+        core = rd.firmware_for_system("psx").cores[0]
+        codes = [c.code for c in core.caveats]
+        assert atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED in codes
+
     # -- what stays silent, and why ------------------------------------------
 
     def test_the_savestate_answer_says_nothing_about_a_layer_it_cannot_reach(self):

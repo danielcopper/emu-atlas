@@ -3453,36 +3453,48 @@ def _duckstation_game_settings_caveats(
         )[0]
         or ""
     )
-    composed = duckstation.load_path(
-        read.values,
-        read.root,
-        duckstation.GAME_SETTINGS_SECTION,
-        duckstation.GAME_SETTINGS_KEY,
-        duckstation.GAME_SETTINGS_DEFAULT,
-    )
-    host, untranslated = _sandbox_host_path(
-        sandbox, entry, card, f"[Folders] {duckstation.GAME_SETTINGS_KEY}", composed
-    )
-    if host is None:
-        assert untranslated is not None
-        # No host spelling means the listing cannot be made from here, which is
-        # the unread state and never the silent one — silence would say no game
-        # overrides this answer, which is exactly what was not established.
-        return [
-            untranslated,
-            duckstation.per_game_unread_caveat(
-                token=card.token,
-                directory=composed,
-                keys=keys,
-                governs=_DUCKSTATION_BIOS_LAYER_GOVERNS,
-                read_through=_DUCKSTATION_BIOS_LAYER_READ,
-                sandbox_value=raw or composed,
-            ),
-        ]
+    # Only an absolute configured value goes through the sandbox map, the way
+    # the save route does it and the way the BIOS directory two calls below
+    # does: a relative one was already joined onto a DataRoot this route
+    # resolved on the host side, so there is nothing there to translate.
+    if os.path.isabs(raw):
+        host, untranslated = _sandbox_host_path(
+            sandbox,
+            entry,
+            card,
+            f"{duckstation.GAME_SETTINGS_SECTION}/{duckstation.GAME_SETTINGS_KEY}",
+            raw,
+        )
+        if host is None:
+            assert untranslated is not None
+            # No host spelling means the listing cannot be made from here,
+            # which is the unread state and never the silent one — silence
+            # would say no game overrides this answer, which is exactly what
+            # was not established.
+            return [
+                untranslated,
+                duckstation.per_game_unread_caveat(
+                    token=card.token,
+                    directory=raw,
+                    keys=keys,
+                    governs=_DUCKSTATION_BIOS_LAYER_GOVERNS,
+                    read_through=_DUCKSTATION_BIOS_LAYER_READ,
+                    sandbox_value=raw,
+                ),
+            ]
+        directory = host
+    else:
+        directory = duckstation.load_path(
+            read.values,
+            read.root,
+            duckstation.GAME_SETTINGS_SECTION,
+            duckstation.GAME_SETTINGS_KEY,
+            duckstation.GAME_SETTINGS_DEFAULT,
+        )
     return duckstation.per_game_caveats(
         machine,
         token=card.token,
-        directory=host,
+        directory=directory,
         keys=keys,
         governs=_DUCKSTATION_BIOS_LAYER_GOVERNS,
         read_through=_DUCKSTATION_BIOS_LAYER_READ,
