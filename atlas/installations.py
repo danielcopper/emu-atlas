@@ -16331,46 +16331,40 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 return _EMUDECK_VARIANT_UNKNOWN
         return None
 
-    def _standalone_homes_for(
-        self, variant: str, card: StandaloneSaveCard
-    ) -> _XdgHomes | None:
+    def _homes_for_token(self, variant: str, token: str) -> _XdgHomes | None:
         """The XDG bases the picked binary reads, or ``None`` where none are established.
 
         The AppImage variant reads the host's own tree (emuDeckCemu.sh:13,
         vars.sh:4-5), and so does the extracted binary — nothing sandboxes
         either, and EmuDeck writes the one it unpacks at the plain XDG default
         (emuDeckVita3K.sh:7). The flatpak variant reads the app's own homes
-        below ``~/.var/app`` — established only where the card names the app
-        id the arrangement installs; EmuDeck grants every emulator flatpak
-        ``--filesystem=host`` (installEmuFP.sh:33), so paths configured
-        inside those homes stay host paths. Proton, and a flatpak no card
-        names an id for, have no established bases.
-        """
-        return self._homes_for_token(variant, card.token)
+        below ``~/.var/app`` — established where the settings table names the
+        app id this emulator installs as; EmuDeck grants every emulator
+        flatpak ``--filesystem=host`` (installEmuFP.sh:33), so paths
+        configured inside those homes stay host paths. Proton, and an
+        emulator no arrangement is established to install as a flatpak, have
+        no established bases.
 
-    def _homes_for_token(self, variant: str, token: str) -> _XdgHomes | None:
-        """The same rule, reached from a token rather than from a save card.
-
-        Every route asks this about one launch, and only one of them holds a
-        save card while asking — the texture and mod routes hold their own
-        cards, and the firmware route holds none. What the flatpak branch
-        needs is the app id, which lives on the save card because that is
-        where the arrangement's installation of the emulator is recorded; so
-        the lookup happens here, once, instead of at three call sites that
-        could drift apart about which card names the trees.
+        The id comes from the table rather than from a card because it is the
+        identity of the *installation*, and every question asks it: the save
+        route holds a save card while asking, the texture and mod routes hold
+        their own, and the firmware route holds none. Reading it off the save
+        card meant an emulator without one could not reach its own trees at
+        all — MAME's savestate answer refused a launch it could have read
+        (#288).
         """
         if variant in (_EMUDECK_VARIANT_APPIMAGE, _EMUDECK_VARIANT_BINARY):
             return self._standalone_xdg_homes()
         if variant != _EMUDECK_VARIANT_FLATPAK:
             return None
-        card = lookup_standalone_save_card(token)
-        if card is None or card.flatpak is None:
+        app_id = emulator_settings.installed_flatpak(token)
+        if app_id is None:
             return None
-        app_dir = os.path.join(self._home, ".var", "app", card.flatpak)
+        app_dir = os.path.join(self._home, ".var", "app", app_id)
         return _XdgHomes(
             data=os.path.join(app_dir, "data"),
             config=os.path.join(app_dir, "config"),
-            flatpak=card.flatpak,
+            flatpak=app_id,
             xdg_pinned=True,
         )
 
@@ -16389,8 +16383,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             )
         if launch.pinned_variant is not None:
             return (
-                "the launcher script runs the installed flatpak outright, and no card "
-                "names the app id its configuration trees hang off (a later slice)"
+                "the launcher script runs the installed flatpak outright, and the settings "
+                "table names no app id whose configuration trees this emulator's launch "
+                "would hang off"
             )
         return (
             "no AppImage sits under ~/Applications, so the launch falls through to "
@@ -16439,8 +16434,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         A token only where the launch would really run the binary whose trees
         the cards describe: identified by token or allowlisted launcher, not
         forced to Proton by ``-w``, and picking a binary whose homes are
-        established — the AppImage, or a flatpak whose app id the save card
-        names. Every other launch answers ``None`` and stays honestly
+        established — the AppImage, or a flatpak whose app id the settings
+        table names. Every other launch answers ``None`` and stays honestly
         unsupported — the same gating the save route applies, because it is
         the same question about the same command.
         """
@@ -16448,35 +16443,26 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if launch.token is None or launch.probe_name is None or "-w" in launch.args:
             return None
         variant = self._launch_variant(launch)
-        if variant in (_EMUDECK_VARIANT_APPIMAGE, _EMUDECK_VARIANT_BINARY):
-            # Both read the host's own tree, so the token stands whether or not
-            # a save card exists for the emulator — the same rule
-            # :meth:`_standalone_homes_for` applies.
-            return launch.token
-        card = lookup_standalone_save_card(launch.token)
-        if (
-            variant == _EMUDECK_VARIANT_FLATPAK
-            and card is not None
-            and card.flatpak is not None
-        ):
-            return launch.token
-        return None
+        # Established homes are exactly what makes the token stand, so the gate
+        # is the homes themselves rather than a second reading of the same
+        # facts: the AppImage and the extracted binary read the host's tree,
+        # the flatpak reads the app's own where the table names one, and
+        # nothing else is established.
+        homes = self._homes_for_token(variant, launch.token)
+        return launch.token if homes is not None else None
 
     def standalone_firmware_homes(self, command: str) -> _XdgHomes | None:
         """The homes the gated launch reads — per entry, because the variant is.
 
         The same identity and gate as the token: an ungated launch answers
         ``None`` (its token is ``None`` too, so nothing consumes homes), the
-        AppImage answers the host pair, and a flatpak whose app id the save
-        card names answers the app's own trees below ``~/.var/app``.
+        AppImage answers the host pair, and a flatpak whose app id the
+        settings table names answers the app's own trees below ``~/.var/app``.
         """
         launch = self._standalone_launch_identity(command)
         if launch.token is None or launch.probe_name is None or "-w" in launch.args:
             return None
-        card = lookup_standalone_save_card(launch.token)
-        if card is None:
-            return None
-        return self._standalone_homes_for(self._launch_variant(launch), card)
+        return self._homes_for_token(self._launch_variant(launch), launch.token)
 
     def _standalone_sandbox(self) -> _Sandbox:
         """No path translation: both established variants read host paths.
