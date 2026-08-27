@@ -6183,7 +6183,7 @@
                 "core": "PCSX2",
                 "count": "2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename"
+                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename, [Pad] MultitapPort1, [Pad] MultitapPort2"
               }
             }
           ],
@@ -6294,7 +6294,7 @@
               "data": {
                 "core": "PCSX2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename"
+                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename, [Pad] MultitapPort1, [Pad] MultitapPort2"
               }
             }
           ],
@@ -6408,7 +6408,7 @@
               "data": {
                 "core": "PCSX2",
                 "dir": "/app/gamesettings",
-                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename"
+                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename, [Pad] MultitapPort1, [Pad] MultitapPort2"
               }
             }
           ],
@@ -6439,6 +6439,644 @@
               {
                 "key": "Slot2_Filename",
                 "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-an-absolute-card-filename-joins-below-the-card-directory",
+      "rationale": "The headline #312 moves. SlotN_Filename is a file NAME, and PCSX2 composes the card as Path::Combine(EmuFolders::MemoryCards, Filename) (FullpathToMcd, Pcsx2Config.cpp:2065-2068 at v2.6.3). That combine appends one separator and then hands the value to PathAppendString, which enters with last_separator already true and swallows the leading separator of what follows (FileSystem.cpp:847-862, :98-139) — so an absolute name lands BELOW the memory-card directory rather than in place of it, and dir stays anchored there. There is no IsAbsolute test; LoadPathFromSettings has one two hundred lines away (:2275), which is what makes the omission deliberate. atlas used to read the value as a full path, sandbox-translate it and move dir onto it, which named a directory the emulator never opens.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = /elsewhere/mine.ps2\nSlot2_Enable = false\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/elsewhere",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "mine.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/elsewhere",
+                "files": [
+                  "mine.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+off",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "/elsewhere/mine.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "false",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-an-absolute-card-filename-joins-below-a-sandbox-spelled-card-directory",
+      "rationale": "The second arm of #312, and the one that shows which value the sandbox is for. The DIRECTORY is a sandbox spelling and is translated — [Folders] MemoryCards goes through LoadPathFromSettings, where an absolute value really does win (Pcsx2Config.cpp:2275) — while the NAME is joined onto the translated result and never translated itself, because after the combine it contributes no root of its own. So one absolute value in this file is a path and the other is not, which is exactly the asymmetry upstream draws and the one atlas used to miss.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /var/config/PCSX2/cards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = /elsewhere/mine.ps2\nSlot2_Enable = false\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/cards"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/cards/elsewhere",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "mine.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/cards/elsewhere",
+                "files": [
+                  "mine.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+off",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/var/config/PCSX2/cards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "/elsewhere/mine.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "false",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-card-filename-of-separators-alone-is-the-card-directory-itself",
+      "rationale": "The join's edge, pinned because it follows from the same reading and would otherwise be a place to guess. PathAppendString collapses every run of separators to one (FileSystem.cpp:117-138) and Path::Combine strips what is trailing afterwards (:858-859), so a name of '/' composes to the memory-card directory itself — the empty basename FileMcd_SetType would then find nothing at. Nothing here normalises: upstream resolves no '.' or '..' component either.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = /\nSlot2_Enable = false\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "PCSX2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "role": "memory-card",
+                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3 — a directory at the card's full path is MemoryCardType::Folder (McdFolderAutoManage default true, Pcsx2Config.cpp:1922)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "folder+off",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "false",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-multitap-slot-without-its-tap-is-not-a-card-this-answer-lists",
+      "rationale": "#315's first arm: [MemoryCards] Multitap1_Slot2_Enable is on and [Pad] MultitapPort1 is not, so the emulator opens no card there and neither does this answer. FileMemoryCard::Open skips the slot outright (MemoryCardFile.cpp:271-277), and one level up the game cannot address it at all — with the tap off MultitapProtocol::Select refuses to move currentMemcardSlot off 0 and SupportCheck answers absent (MultitapProtocol.cpp:17-38, :41-60), so Sio2::Memcard only ever reaches slot 0 of each port (Sio2.cpp:247). The slot is left out of the mode string and the file set, and both switches that decided it travel as readings, which is what keeps 'configured and unreachable' distinguishable from 'never configured'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\nSlot2_Enable = false\nMultitap1_Slot2_Enable = true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+off",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "false",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Multitap1_Slot2_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "MultitapPort1",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-multitap-with-no-enabled-slot-adds-no-card",
+      "rationale": "#315's second arm, the disagreement the other way round: the tap is on and no [MemoryCards] multitap slot is enabled. Nothing joins the answer — the slot enables default to false (Pcsx2Config.cpp:2045-2054) — and no [Pad] reading travels either, because that switch decided nothing here. A machine in the shipped default configuration is this case, which is why the whole existing PCSX2 corpus gains no reading from this round.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\nSlot2_Enable = false\n[Pad]\nMultitapPort1 = true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+off",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "false",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-multitap-slot-with-its-tap-on-holds-a-card",
+      "rationale": "#315's third arm, both switches on: the slot joins the listing with its own default card name (Mcd-Multitap1-Slot02.ps2, MemoryCardFile.cpp:244-250) and the [Pad] reading travels beside the slot's own. This is the state the old answer gave for the first arm too, which is the whole defect: one configuration was being told as another.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\nSlot2_Enable = false\nMultitap1_Slot2_Enable = true\n[Pad]\nMultitapPort1 = true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd-Multitap1-Slot02.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd-Multitap1-Slot02.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+off+file",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "false",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Multitap1_Slot2_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Multitap1_Slot2_Filename",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "MultitapPort1",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-the-second-multitap-is-its-own-switch",
+      "rationale": "The pairing #315's issue text would have got wrong. The C++ members are zero-based (MultitapPort0_Enabled) and the ini keys are one-based: SettingsWrapBitBoolEx(MultitapPort0_Enabled, \"MultitapPort1\") and (MultitapPort1_Enabled, \"MultitapPort2\") under SettingsWrapSection(\"Pad\") (Pcsx2Config.cpp:1815-1817). So Multitap2_Slot* pairs with [Pad] MultitapPort2, and turning on port 1 does nothing for a slot behind port 2 — which this pins by enabling exactly the wrong one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\nSlot2_Enable = false\nMultitap2_Slot2_Enable = true\n[Pad]\nMultitapPort1 = true\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+off",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "false",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Multitap2_Slot2_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "MultitapPort2",
+                "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
               }
             ],

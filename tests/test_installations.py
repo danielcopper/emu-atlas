@@ -3777,15 +3777,25 @@ class TestMoreStandaloneSaves:
         assert p.granularity is not None
         assert p.granularity.mode == "file+file"
 
+    # A multitap slot needs BOTH switches (#315): its own [MemoryCards] enable
+    # and the [Pad] switch for its port. The three tests below are the three
+    # arrangements of those two — both on, the tap missing, the slot missing.
+    _MULTITAP_BASE = (
+        "[Folders]\nMemoryCards = /mnt/sd/memcards\n"
+        "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
+        "Slot2_Enable = false\n"
+    )
+
     def test_pcsx2_an_enabled_multitap_slot_joins_the_answer(self):
+        # The input gained the [Pad] line this fixture always needed to mean
+        # what its name says: before #315 the slot joined on its own enable
+        # alone, which is the card the emulator would not have opened.
         p = self._answer(
             "ps2",
             files={
                 PCSX2_INI_PATH: (
-                    "[Folders]\nMemoryCards = /mnt/sd/memcards\n"
-                    "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
-                    "Slot2_Enable = false\n"
-                    "Multitap1_Slot2_Enable = true\n"
+                    f"{self._MULTITAP_BASE}Multitap1_Slot2_Enable = true\n"
+                    "[Pad]\nMultitapPort1 = true\n"
                 ),
             },
         )
@@ -3793,6 +3803,38 @@ class TestMoreStandaloneSaves:
         assert p.file_set.files == ("Mcd001.ps2", "Mcd-Multitap1-Slot02.ps2")
         assert p.granularity is not None
         assert p.granularity.mode == "file+off+file"
+
+    def test_pcsx2_a_multitap_slot_without_its_tap_holds_no_card(self):
+        # FileMemoryCard::Open skips it (MemoryCardFile.cpp:271-277) and the
+        # game cannot address it at all — MultitapProtocol::Select refuses to
+        # move off slot 0 with the tap absent (MultitapProtocol.cpp:41-60).
+        p = self._answer(
+            "ps2",
+            files={PCSX2_INI_PATH: f"{self._MULTITAP_BASE}Multitap1_Slot2_Enable = true\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("Mcd001.ps2",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "file+off"
+        # Not listed — and told apart from a slot nobody configured, because
+        # both switches that decided it travel as readings.
+        keys = [r.key for r in p.granularity.readings]
+        assert "Multitap1_Slot2_Enable" in keys
+        assert "MultitapPort1" in keys
+        assert "MultitapPort2" not in keys  # port 2 had no say; it stays silent
+
+    def test_pcsx2_a_tap_without_an_enabled_slot_adds_nothing(self):
+        # The other direction: the tap is on and no multitap slot is enabled,
+        # so there is no card to list and nothing for the pad switch to decide.
+        p = self._answer(
+            "ps2",
+            files={PCSX2_INI_PATH: f"{self._MULTITAP_BASE}[Pad]\nMultitapPort1 = true\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("Mcd001.ps2",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "file+off"
+        assert [r.key for r in p.granularity.readings if r.key.startswith("MultitapPort")] == []
 
     def test_pcsx2_an_empty_filename_empties_the_slot(self):
         p = self._answer(
@@ -7390,9 +7432,13 @@ class TestPcsx2PerGameLayerPrecision:
     # ---- which keys it names ---------------------------------------------
 
     def test_the_statement_names_every_slot_key_the_answer_reads(self):
-        # All sixteen, including the six multitap pairs: a per-game file can
-        # turn on a slot this machine keeps off, so naming only the console
-        # ports would understate the layer's reach.
+        # All sixteen memory-card keys, including the six multitap pairs: a
+        # per-game file can turn on a slot this machine keeps off, so naming
+        # only the console ports would understate the layer's reach. The two
+        # [Pad] keys close the list as of #315 — the slot listing depends on
+        # them too, and they come through the same layered read
+        # (Pcsx2Config::LoadSave is LoadSaveCore AND Pad.LoadSave, :2028-2033),
+        # so a per-game file can turn a whole multitap on or off as well.
         layer = f"{self.DATA_ROOT}/gamesettings"
         p = self._save(
             files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
@@ -7416,18 +7462,24 @@ class TestPcsx2PerGameLayerPrecision:
             "[MemoryCards] Multitap2_Slot3_Filename",
             "[MemoryCards] Multitap2_Slot4_Enable",
             "[MemoryCards] Multitap2_Slot4_Filename",
+            "[Pad] MultitapPort1",
+            "[Pad] MultitapPort2",
         ]
 
     def test_every_named_save_key_carries_its_section(self):
         # The section is the discriminator this round turns on: [MemoryCards]
-        # is read through the layered interface, [Folders] is not.
+        # and [Pad] are read through the layered interface, [Folders] is not —
+        # so every key here carries the section that says which side it is on,
+        # and the two sections are exactly the two the answer reads.
         layer = f"{self.DATA_ROOT}/gamesettings"
         p = self._save(
             files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
             dirs=[layer],
         )
         stated = self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
-        assert all(k.startswith("[MemoryCards] ") for k in stated.data["key"].split(", "))
+        keys = stated.data["key"].split(", ")
+        assert all(k.startswith(("[MemoryCards] ", "[Pad] ")) for k in keys)
+        assert not any(k.startswith("[Folders] ") for k in keys)
 
     def test_the_texture_key_is_the_section_the_card_states(self):
         # Derived from the card rather than written twice, so a card that

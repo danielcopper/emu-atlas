@@ -1351,6 +1351,163 @@
           ]
         }
       }
+    },
+    {
+      "name": "pcsx2-the-patch-tree-is-the-configured-patches-directory",
+      "rationale": "#314: the mod answer used to join 'patches' below the DataRoot outright, which is true only for as long as nobody sets the key. EmuFolders::LoadConfig reads [Folders] Patches through LoadPathFromSettings with the compiled default 'patches' (Pcsx2Config.cpp:2288 with :2272-2278) — the same helper the memory-card, texture, savestates and gamesettings directories go through — so a relative value hangs off the DataRoot and the answer follows it there.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nPatches = my-patches\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_mod_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/my-patches",
+              "physical_dir": null,
+              "keying": "serial"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "PCSX2",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "pcsx2-an-unset-patches-key-is-the-compiled-default",
+      "rationale": "The silence half of #314, and the state both live arrangements are in: RetroDECK does not write [Folders] Patches, so the compiled 'patches' below the DataRoot governs (Pcsx2Config.cpp:2288; :2262 writes that same default into a fresh ini). The answer is the one the fixed join gave — the difference is that it is now read rather than assumed, and would follow the key if a machine set it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_mod_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/patches",
+              "physical_dir": null,
+              "keying": "serial"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "PCSX2",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "pcsx2-a-sandbox-spelled-patches-directory-is-listed-at-its-host-spelling",
+      "rationale": "The third witness #314 asks for. PCSX2 writes its configuration from inside the Flatpak sandbox, so an absolute value there is a sandbox spelling: /var/config is bound to the app's own config home, and the answer names the directory as this host reads it rather than a path no host process can open. The same translation the memory-card, texture and states directories already get.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nPatches = /var/config/PCSX2/my-patches\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/my-patches"
+        ],
+        "entry_mod_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_mod_location": {
+          "trees": [
+            {
+              "role": null,
+              "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/my-patches",
+              "physical_dir": null,
+              "keying": "serial"
+            }
+          ],
+          "needs": [],
+          "enabled": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "PCSX2",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
