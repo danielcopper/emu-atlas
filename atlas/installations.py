@@ -8032,6 +8032,79 @@ def _pcsx2_memcards_dir(
     return host.path, reading, None
 
 
+class _Pcsx2Listing(NamedTuple):
+    """What PCSX2's eight slot spellings come to: the answer's listing, and why."""
+
+    mode: str
+    groups: tuple[FileGroup, ...]
+    readings: tuple[OptionReading, ...]
+    caveats: tuple[Caveat, ...]
+
+
+def _pcsx2_slot_listing(
+    machine: Machine,
+    values: Mapping[tuple[str, str], str],
+    memcards_dir: str,
+    card: StandaloneSaveCard,
+    taps: Mapping[int, _Pcsx2Tap],
+) -> _Pcsx2Listing:
+    """The eight slot spellings, resolved into what this answer lists.
+
+    Each slot lands in exactly one of three states, and they are three
+    different facts rather than degrees of one:
+
+    * **absent** — a multitap slot disabled in ``[MemoryCards]``. Dropped
+      whole: six of them would drown the answer in noise, and a slot nobody
+      configured is not news.
+    * **suppressed** (``"tap-off"``) — enabled there while its ``[Pad]``
+      multitap switch is off, so the emulator opens nothing and no save of the
+      running game reaches it (#315). It joins neither the mode string nor the
+      file set, but **its enable reading travels**, which is the whole of what
+      lets a caller tell it from an absent one.
+    * **listed** — everything else: its word joins the mode string, its group
+      the file set, its caveats the answer.
+
+    A port's ``[Pad]`` reading joins whenever that port had a say — it either
+    let a slot in or kept one out — once per port and in port order. They are
+    appended after the slot readings rather than interleaved, which is what
+    keeps the reading list byte-identical on every machine with no multitap
+    slot enabled.
+    """
+    modes: list[str] = []
+    groups: list[FileGroup] = []
+    readings: list[OptionReading] = []
+    caveats: list[Caveat] = []
+    tap_readings: dict[int, OptionReading] = {}
+    for slot in _PCSX2_SLOTS:
+        port = slot[4]
+        word, group, slot_readings, slot_caveats = _pcsx2_slot_group(
+            machine,
+            values,
+            slot,
+            memcards_dir,
+            card,
+            multitap_enabled=None if port is None else taps[port].enabled,
+        )
+        if port is not None:
+            if word == "off":
+                continue  # absent
+            tap_readings.setdefault(port, taps[port].reading)
+        readings.extend(slot_readings)
+        if word == "tap-off":
+            continue  # suppressed — the readings above are all it contributes
+        modes.append(word)
+        caveats.extend(slot_caveats)
+        if group is not None:
+            groups.append(group)
+    readings.extend(tap_readings[tap_port] for tap_port in sorted(tap_readings))
+    return _Pcsx2Listing(
+        mode="+".join(modes),
+        groups=tuple(groups),
+        readings=tuple(readings),
+        caveats=tuple(caveats),
+    )
+
+
 def _pcsx2_savefile_placement(
     machine: Machine,
     *,
@@ -8073,47 +8146,16 @@ def _pcsx2_savefile_placement(
     if refusal is not None:
         return refusal
     assert memcards_dir is not None  # the helper refuses whenever it cannot name one
-    taps = _pcsx2_multitap_ports(values)
-    modes: list[str] = []
-    groups: list[FileGroup] = []
-    readings: list[OptionReading] = [dir_reading]
-    tap_readings: dict[int, OptionReading] = {}
-    for slot in _PCSX2_SLOTS:
-        port = slot[4]
-        word, group, slot_readings, slot_caveats = _pcsx2_slot_group(
-            machine,
-            values,
-            slot,
-            memcards_dir,
-            card,
-            multitap_enabled=None if port is None else taps[port].enabled,
-        )
-        if word == "off" and port is not None:
-            continue  # six disabled multitap slots would drown the answer in noise
-        if port is not None:
-            # This port's [Pad] switch had a say — it either let the slot join
-            # or kept it out — so the reading that names it travels, once per
-            # port and in port order. A machine whose multitap slots are all
-            # disabled in [MemoryCards] never reaches here, which is why the
-            # default configuration gains no reading at all.
-            tap_readings.setdefault(port, taps[port].reading)
-        if word == "tap-off":
-            # Configured, and the emulator opens nothing there. Its enable
-            # reading travels so a caller can tell this apart from a slot that
-            # was never configured, but the slot joins neither the mode string
-            # nor the file set, because no save of the running game reaches it.
-            readings.extend(slot_readings)
-            continue
-        modes.append(word)
-        readings.extend(slot_readings)
-        caveats.extend(slot_caveats)
-        if group is not None:
-            groups.append(group)
-    readings.extend(tap_readings[port] for port in sorted(tap_readings))
-    mode = "+".join(modes)
+    listing = _pcsx2_slot_listing(
+        machine, values, memcards_dir, card, _pcsx2_multitap_ports(values)
+    )
+    caveats.extend(listing.caveats)
+    mode = listing.mode
+    groups = listing.groups
+    readings = (dir_reading, *listing.readings)
     if groups:
         directory = groups[0].dir
-        files = _first_directory_files(tuple(groups))
+        files = _first_directory_files(groups)
     else:
         directory = memcards_dir
         files = ()
@@ -8161,7 +8203,7 @@ def _pcsx2_savefile_placement(
             files,
             f"declared by standalone save card '{card.token}'",
             complete=False,
-            groups=tuple(groups),
+            groups=groups,
         ),
         sources=(f"standalone save card '{card.token}': {card.provenance}",),
         caveats=tuple(caveats),
