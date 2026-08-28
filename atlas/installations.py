@@ -27,7 +27,17 @@ import shlex
 import tomllib
 import xml.etree.ElementTree as _ET
 from glob import escape as _glob_escape
-from typing import Any, Callable, Iterator, Mapping, Protocol, Sequence, cast, runtime_checkable
+from typing import (
+    Any,
+    Callable,
+    Iterator,
+    Mapping,
+    NamedTuple,
+    Protocol,
+    Sequence,
+    cast,
+    runtime_checkable,
+)
 
 from dataclasses import dataclass, replace as _dc_replace
 
@@ -7744,12 +7754,14 @@ def _duckstation_savefile_placement(
 
 # PCSX2's eight slot spellings, in the emulator's own order: the two console
 # ports, then the six multitap slots (Pcsx2Config.cpp:2035-2047 at v2.6.3).
-# Each entry is (enable key, filename key, default filename, enabled default)
-# — the multitap slots default off and join the answer only when enabled.
+# Each entry is (enable key, filename key, default filename, enabled default,
+# multitap port) — the multitap slots default off, and `port` is the [Pad]
+# switch they ALSO depend on (#315), None for the two console slots, which
+# depend on nothing but their own enable.
 _PCSX2_SLOTS = tuple(
     [
-        ("Slot1_Enable", "Slot1_Filename", "Mcd001.ps2", True),
-        ("Slot2_Enable", "Slot2_Filename", "Mcd002.ps2", True),
+        ("Slot1_Enable", "Slot1_Filename", "Mcd001.ps2", True, None),
+        ("Slot2_Enable", "Slot2_Filename", "Mcd002.ps2", True, None),
     ]
     + [
         (
@@ -7757,24 +7769,51 @@ _PCSX2_SLOTS = tuple(
             f"Multitap{port}_Slot{slot}_Filename",
             f"Mcd-Multitap{port}-Slot{slot:02d}.ps2",
             False,
+            port,
         )
         for port in (1, 2)
         for slot in (2, 3, 4)
     ]
 )
 
-# The section-qualified memory-card keys the save answer depends on, in the
-# emulator's own order — derived from the slot table above so the statement and
-# the reading cannot drift apart. All sixteen, deliberately: a per-game file can
+# The multitap's own switch, which is NOT in [MemoryCards] and is not spelled
+# the way the C++ member is (#315). `SettingsWrapSection("Pad")` then
+# `SettingsWrapBitBoolEx(MultitapPort0_Enabled, "MultitapPort1")` and
+# `(MultitapPort1_Enabled, "MultitapPort2")` (Pcsx2Config.cpp:1815-1817 at
+# v2.6.3): the ini key is one-based where the member is zero-based, so the
+# key that pairs with the `Multitap1_Slot*` card spellings is `MultitapPort1`.
+# Both spellings being one-based, the pairing is by number.
+#
+# The compiled default is off, and reachably so: the default handed to
+# GetBoolValue is the member's CURRENT value (SettingsWrapper.h:133,
+# SettingsWrapper.cpp:96-99), which would be a stale-value trap were it not
+# for VMManager::ApplySettings doing `EmuConfig = Pcsx2Config()` at :726
+# immediately before LoadSettings() at :728 — and PadOptions' constructor ends
+# in `bitset = 0` (Pcsx2Config.cpp:1779-1788). Pad::SetDefaultControllerConfig
+# writes the same false into a fresh ini (SIO/Pad/Pad.cpp:172-173).
+_PCSX2_MULTITAP_SECTION = "Pad"
+_PCSX2_MULTITAP_PORT_KEYS = {1: "MultitapPort1", 2: "MultitapPort2"}
+
+# The section-qualified keys the save answer depends on, in the emulator's own
+# order — derived from the tables above so the statement and the reading cannot
+# drift apart. All sixteen memory-card keys deliberately: a per-game file can
 # turn on a multitap slot this machine keeps off, so "this answer names two
 # cards" is itself something such a file overturns, and naming only the four
-# console-port keys would understate the layer's reach.
+# console-port keys would understate the layer's reach. The two [Pad] keys join
+# them because the slot listing now depends on them too (#315) and they come
+# through the same layered read — `Pcsx2Config::LoadSave` is `LoadSaveCore`
+# AND `Pad.LoadSave` (Pcsx2Config.cpp:2028-2033) — so listing only sixteen
+# would understate that reach in the other direction.
 _PCSX2_MEMCARD_LAYER_KEYS = tuple(
     f"[MemoryCards] {key}" for slot in _PCSX2_SLOTS for key in (slot[0], slot[1])
+) + tuple(
+    f"[{_PCSX2_MULTITAP_SECTION}] {key}" for key in _PCSX2_MULTITAP_PORT_KEYS.values()
 )
 
 _PCSX2_MEMCARD_READ_THROUGH = (
-    f"Pcsx2Config::LoadSaveMemcards, Pcsx2Config.cpp:2035-2054, reached from {_PCSX2_LOAD_CORE}"
+    "Pcsx2Config::LoadSaveMemcards, Pcsx2Config.cpp:2035-2054, and "
+    "Pcsx2Config::PadOptions::LoadSave, :1790-1818 — both reached from "
+    f"{_PCSX2_LOAD_CORE} through Pcsx2Config::LoadSave (:2028-2033)"
 )
 
 # The precision this answer needs. PCSX2's layer moves a card's FILE NAME inside
@@ -7794,17 +7833,66 @@ _PCSX2_SAVE_GOVERNS = (
     f"MemoryCards is a folder setting, and {_PCSX2_FOLDERS_ARE_BASE_ONLY}. What such a name "
     "does decide beside the file is the card's kind: the type is read off whatever sits at "
     "the composed path, so a per-game name can make a slot a folder card where this answer "
-    "states a file card (FileMcd_SetType, MemoryCardFile.cpp:584-604)."
+    "states a file card (FileMcd_SetType, MemoryCardFile.cpp:584-604). A multitap slot takes "
+    "one more switch than its own enable — [Pad] MultitapPort1/MultitapPort2, read through the "
+    "same layered call (Pcsx2Config.cpp:2028-2033, :1815-1817) — so such a file can also turn a "
+    "whole multitap on or off under an unchanged [MemoryCards] section."
 )
+
+
+class _Pcsx2Tap(NamedTuple):
+    """One multitap port's switch: the value the emulator would see, and its reading."""
+
+    enabled: bool
+    reading: OptionReading
+
+
+def _pcsx2_multitap_ports(
+    values: Mapping[tuple[str, str], str],
+) -> dict[int, _Pcsx2Tap]:
+    """``[Pad] MultitapPort{1,2}``, read the way the emulator reads them (#315).
+
+    A memory-card slot behind a multitap needs this switch as well as its own
+    ``[MemoryCards]`` enable, and the two are read through the same layered
+    call — ``Pcsx2Config::LoadSave`` is ``LoadSaveCore`` *and* ``Pad.LoadSave``
+    (Pcsx2Config.cpp:2028-2033). The value is parsed with the emulator's own
+    ``FromChars<bool>``, so a value that is neither true nor false leaves the
+    compiled default standing exactly as it does for the slot enables
+    (INISettingsInterface.cpp:198-210).
+    """
+    ports: dict[int, _Pcsx2Tap] = {}
+    for port, key in _PCSX2_MULTITAP_PORT_KEYS.items():
+        raw, spelled = _simpleini_value(values, _PCSX2_MULTITAP_SECTION, key)
+        parsed = qt_ini.from_chars_bool(raw)
+        if parsed is not None:
+            provenance = f'PCSX2.ini: [{_PCSX2_MULTITAP_SECTION}] {spelled} = "{raw}"'
+        elif raw is not None:
+            provenance = (
+                f'PCSX2.ini sets {spelled} to "{raw}", which FromChars<bool> reads as neither '
+                "true nor false — the default false governs "
+                "(INISettingsInterface.cpp:198-210 at v2.6.3)"
+            )
+        else:
+            provenance = (
+                f"{key} is unset — the default false governs (PadOptions' constructor ends in "
+                "bitset = 0, Pcsx2Config.cpp:1779-1788, and ApplySettings resets the config "
+                "before every load, VMManager.cpp:726-728)"
+            )
+        ports[port] = _Pcsx2Tap(
+            enabled=parsed if parsed is not None else False,
+            reading=OptionReading(key, raw, provenance, None),
+        )
+    return ports
 
 
 def _pcsx2_slot_group(
     machine: Machine,
     values: Mapping[tuple[str, str], str],
-    slot: tuple[str, str, str, bool],
+    slot: tuple[str, str, str, bool, int | None],
     memcards_dir: str,
-    sandbox: _Sandbox,
     card: StandaloneSaveCard,
+    *,
+    multitap_enabled: bool | None,
 ) -> tuple[str, FileGroup | None, tuple[OptionReading, ...], tuple[Caveat, ...]]:
     """One slot: (type word, group, readings, caveats) — the type read off the disk.
 
@@ -7813,8 +7901,20 @@ def _pcsx2_slot_group(
     card — per-game saves as auto-managed subdirectories inside — and
     anything else is a file card, one shared image that would be created on
     first use.
+
+    The full path is :func:`atlas.qt_ini.pcsx2_path_combine` of the memory-card directory
+    and the name, which is why this takes no sandbox: the configured value is a
+    file NAME and cannot carry a root of its own past that join (#312).
+
+    *multitap_enabled* is the ``[Pad]`` switch for this slot's port, or ``None``
+    for a console slot that has none. A multitap slot needs BOTH switches (#315)
+    and answers ``"tap-off"`` when its own enable is on and the tap is not: the
+    word is distinct from ``"off"`` on purpose, because "configured and the
+    emulator would not open it" is a different fact from "never configured",
+    and the caller keeps the enable's reading for the first while dropping it
+    for the second.
     """
-    enable_key, filename_key, default_name, enabled_default = slot
+    enable_key, filename_key, default_name, enabled_default, _port = slot
     raw_enable, enable_spelled = _simpleini_value(values, "MemoryCards", enable_key)
     parsed_enable = qt_ini.from_chars_bool(raw_enable)
     enabled = parsed_enable if parsed_enable is not None else enabled_default
@@ -7832,6 +7932,18 @@ def _pcsx2_slot_group(
     readings = [OptionReading(enable_key, raw_enable, enable_provenance, None)]
     if not enabled:
         return "off", None, tuple(readings), ()
+    if multitap_enabled is False:
+        # The card is configured and the emulator opens none for the running
+        # game: with the tap off, MultitapProtocol::Select refuses to move
+        # currentMemcardSlot off 0 and SupportCheck answers "absent"
+        # (MultitapProtocol.cpp:17-38, :41-60), so Sio2::Memcard only ever
+        # reaches slot 0 of each port (Sio2.cpp:247). FileMemoryCard::Open
+        # skips the slot outright (MemoryCardFile.cpp:271-277); a FOLDER card
+        # there is still opened and its directory even created
+        # (FolderMemoryCardAggregator::Open, MemoryCardFolder.cpp:2291-2297,
+        # which carries no such guard) — but nothing the game can address, so
+        # this answer names no save location either way.
+        return "tap-off", None, tuple(readings), ()
     raw_name, name_spelled = _simpleini_value(values, "MemoryCards", filename_key)
     name = raw_name if raw_name is not None else default_name
     readings.append(
@@ -7849,25 +7961,14 @@ def _pcsx2_slot_group(
     )
     if name == "":
         return "empty", None, tuple(readings), ()
-    if os.path.isabs(name):
-        host = sandbox.host(filename_key, name)
-        if host.path is None:
-            return (
-                "file",
-                None,
-                tuple(readings),
-                (
-                    Caveat(
-                        CAVEAT_SANDBOX_PATH_UNTRANSLATED,
-                        f"PCSX2.ini sets {filename_key} to {name!r}, a path only the emulator's "
-                        "sandbox can read — the card could not be located from here",
-                        {"key": filename_key, "path": name},
-                    ),
-                ),
-            )
-        full = host.path
-    else:
-        full = os.path.join(memcards_dir, name)
+    # The name is a name, not a path — even when it is spelled like one. It is
+    # composed the way the emulator composes it (#312), and that join never
+    # lets the value replace the directory: see :func:`atlas.qt_ini.pcsx2_path_combine`.
+    # Nothing here goes through the sandbox, and that is the fix rather than an
+    # omission — the memory-card DIRECTORY was already translated by
+    # :func:`_pcsx2_memcards_dir`, and an absolute name contributes no root of
+    # its own for a second translation to be about.
+    full = qt_ini.pcsx2_path_combine(memcards_dir, name)
     if machine.path_kind(full) == KIND_DIRECTORY:
         caveat = Caveat(
             CAVEAT_FILE_NAMES_UNESTABLISHED,
@@ -7931,6 +8032,79 @@ def _pcsx2_memcards_dir(
     return host.path, reading, None
 
 
+class _Pcsx2Listing(NamedTuple):
+    """What PCSX2's eight slot spellings come to: the answer's listing, and why."""
+
+    mode: str
+    groups: tuple[FileGroup, ...]
+    readings: tuple[OptionReading, ...]
+    caveats: tuple[Caveat, ...]
+
+
+def _pcsx2_slot_listing(
+    machine: Machine,
+    values: Mapping[tuple[str, str], str],
+    memcards_dir: str,
+    card: StandaloneSaveCard,
+    taps: Mapping[int, _Pcsx2Tap],
+) -> _Pcsx2Listing:
+    """The eight slot spellings, resolved into what this answer lists.
+
+    Each slot lands in exactly one of three states, and they are three
+    different facts rather than degrees of one:
+
+    * **absent** — a multitap slot disabled in ``[MemoryCards]``. Dropped
+      whole: six of them would drown the answer in noise, and a slot nobody
+      configured is not news.
+    * **suppressed** (``"tap-off"``) — enabled there while its ``[Pad]``
+      multitap switch is off, so the emulator opens nothing and no save of the
+      running game reaches it (#315). It joins neither the mode string nor the
+      file set, but **its enable reading travels**, which is the whole of what
+      lets a caller tell it from an absent one.
+    * **listed** — everything else: its word joins the mode string, its group
+      the file set, its caveats the answer.
+
+    A port's ``[Pad]`` reading joins whenever that port had a say — it either
+    let a slot in or kept one out — once per port and in port order. They are
+    appended after the slot readings rather than interleaved, which is what
+    keeps the reading list byte-identical on every machine with no multitap
+    slot enabled.
+    """
+    modes: list[str] = []
+    groups: list[FileGroup] = []
+    readings: list[OptionReading] = []
+    caveats: list[Caveat] = []
+    tap_readings: dict[int, OptionReading] = {}
+    for slot in _PCSX2_SLOTS:
+        port = slot[4]
+        word, group, slot_readings, slot_caveats = _pcsx2_slot_group(
+            machine,
+            values,
+            slot,
+            memcards_dir,
+            card,
+            multitap_enabled=None if port is None else taps[port].enabled,
+        )
+        if port is not None:
+            if word == "off":
+                continue  # absent
+            tap_readings.setdefault(port, taps[port].reading)
+        readings.extend(slot_readings)
+        if word == "tap-off":
+            continue  # suppressed — the readings above are all it contributes
+        modes.append(word)
+        caveats.extend(slot_caveats)
+        if group is not None:
+            groups.append(group)
+    readings.extend(tap_readings[tap_port] for tap_port in sorted(tap_readings))
+    return _Pcsx2Listing(
+        mode="+".join(modes),
+        groups=tuple(groups),
+        readings=tuple(readings),
+        caveats=tuple(caveats),
+    )
+
+
 def _pcsx2_savefile_placement(
     machine: Machine,
     *,
@@ -7972,24 +8146,16 @@ def _pcsx2_savefile_placement(
     if refusal is not None:
         return refusal
     assert memcards_dir is not None  # the helper refuses whenever it cannot name one
-    modes: list[str] = []
-    groups: list[FileGroup] = []
-    readings: list[OptionReading] = [dir_reading]
-    for slot in _PCSX2_SLOTS:
-        word, group, slot_readings, slot_caveats = _pcsx2_slot_group(
-            machine, values, slot, memcards_dir, sandbox, card
-        )
-        if word == "off" and slot[0].startswith("Multitap"):
-            continue  # six disabled multitap slots would drown the answer in noise
-        modes.append(word)
-        readings.extend(slot_readings)
-        caveats.extend(slot_caveats)
-        if group is not None:
-            groups.append(group)
-    mode = "+".join(modes)
+    listing = _pcsx2_slot_listing(
+        machine, values, memcards_dir, card, _pcsx2_multitap_ports(values)
+    )
+    caveats.extend(listing.caveats)
+    mode = listing.mode
+    groups = listing.groups
+    readings = (dir_reading, *listing.readings)
     if groups:
         directory = groups[0].dir
-        files = _first_directory_files(tuple(groups))
+        files = _first_directory_files(groups)
     else:
         directory = memcards_dir
         files = ()
@@ -8004,19 +8170,15 @@ def _pcsx2_savefile_placement(
         )
     # The answer's own directory — `physical_dir` speaks for `dir`.
     #
-    # NOTE (#303): today a slot whose filename is an absolute path moves `dir`
-    # off the memory-card one (:func:`_pcsx2_slot_group`), and that disagrees
-    # with the emulator. ``FullpathToMcd`` is
-    # ``Path::Combine(EmuFolders::MemoryCards, Filename)``
-    # (Pcsx2Config.cpp:2065-2068), and ``Path::Combine`` performs no
-    # ``IsAbsolute`` test: it appends one separator and then
-    # ``PathAppendString`` swallows the leading separator of what follows
-    # (FileSystem.cpp:847-862, :98-139), so an absolute name lands BELOW the
-    # memory-card directory rather than replacing it. The asymmetry is the
-    # proof it is deliberate — ``LoadPathFromSettings`` does test, at :2275.
-    # Reported rather than fixed here: correcting it moves this answer's
-    # headline `dir`, which is its own change. The per-game statement below is
-    # worded about the JOIN, so it stays true either way.
+    # `dir` cannot leave the memory-card directory by way of a slot's FILENAME,
+    # and that is the emulator's rule rather than a convenience of this code
+    # (#312): every card's full path is
+    # ``Path::Combine(EmuFolders::MemoryCards, Filename)`` (``FullpathToMcd``,
+    # Pcsx2Config.cpp:2065-2068), a combine with no ``IsAbsolute`` test, so an
+    # absolute name lands BELOW that directory — see
+    # :func:`atlas.qt_ini.pcsx2_path_combine`. What CAN move `dir` is a name carrying a
+    # sub-path (``sub/card.ps2`` puts the group one level down), which is the
+    # same thing the emulator would open.
     physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     caveats.extend(
@@ -8041,7 +8203,7 @@ def _pcsx2_savefile_placement(
             files,
             f"declared by standalone save card '{card.token}'",
             complete=False,
-            groups=tuple(groups),
+            groups=groups,
         ),
         sources=(f"standalone save card '{card.token}': {card.provenance}",),
         caveats=tuple(caveats),
@@ -11238,12 +11400,127 @@ def _duckstation_mod_placement(
     )
 
 
+def _pcsx2_mod_placement(
+    machine: Machine,
+    *,
+    card: StandaloneModCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    extra_caveats: tuple[Caveat, ...] = (),
+) -> ModPlacement | Unresolved:
+    """PCSX2's patch tree: ``[Folders] Patches``, read rather than assumed (#314).
+
+    This row used to be a fixed ``patches`` join below the DataRoot, which was
+    true only for as long as nobody set the key. Upstream reads it through
+    ``LoadPathFromSettings`` with the compiled default ``patches``
+    (Pcsx2Config.cpp:2288 with :2272-2278), exactly like the memory-card,
+    texture, savestates and gamesettings directories — so a machine that sets
+    it got a tree atlas never named, and confidently.
+
+    The reading is the sibling routes' own, deliberately and not by accident:
+    :func:`_pcsx2_folder_below_dataroot` for the three non-absolute outcomes
+    (unset → the compiled default, present-but-empty → the DataRoot itself,
+    relative → joined onto it), then the launch's sandbox for an absolute
+    value, with the same untranslatable refusal the texture and memory-card
+    directories give. Each PCSX2 route opens the ini itself, which is how the
+    texture, save and states routes beside this one are written.
+
+    ``enabled`` stays ``None``: the card names no switch, so nothing is read
+    for one and ``emulator-config-unread`` says where one would live —
+    ``[EmuCore] EnablePatches``, in the very file this reads for the directory.
+    """
+    spec = card.trees[0]
+    setting = spec.directory
+    if setting is None:
+        raise ValueError(
+            f"mod card {card.token!r} states no directory and this resolver reads one "
+            "— the card and the code shipped out of step"
+        )
+    if card.settings is None:
+        # A card MAY name no configuration file — that is the honest state for
+        # an emulator whose switch nobody has found. It is not a state this
+        # route can be in: the directory it answers with is read out of that
+        # very file, so an unnamed one leaves nothing to read.
+        raise ValueError(
+            f"mod card {card.token!r} names no configuration file and this resolver reads its "
+            "directory out of one — the card and the code shipped out of step"
+        )
+    settings = emulator_settings.settings_file(card.token, card.settings)
+    data_root = homes.emulator_root(settings.bases[0], card.token)
+    ini_path = settings.only(
+        config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
+    )
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"PCSX2's configuration ({ini_path}) exists and could not be read — where it "
+            "reads patches from is unknowable here",
+            {"emulator": card.token, "config": ini_path},
+        )
+    values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
+    # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
+    # case-insensitive, so a case-variant spelling governs here as it does
+    # in the running emulator (:func:`atlas.qt_ini.simpleini_value`).
+    raw_dir, dir_spelled = _simpleini_value(values, setting.section, setting.key)
+    resolved, _ = _pcsx2_folder_below_dataroot(
+        raw_dir,
+        key=setting.key,
+        default=setting.default,
+        default_citation=setting.citation,
+        data_root=data_root,
+        spelled=dir_spelled,
+    )
+    if resolved is None:
+        assert raw_dir is not None  # only an absolute value leaves the helper unresolved
+        host = sandbox.host(setting.key, raw_dir)
+        if host.path is None:
+            return Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+                f"the patches directory PCSX2's configuration names ({raw_dir!r}) has no "
+                f"spelling on this host — {ini_path} read fine, and nothing this answer "
+                "could anchor at",
+                {"emulator": card.token, "config": ini_path, "path": raw_dir},
+            )
+        directory = host.path
+    else:
+        directory = resolved
+    physical, link_caveats = _link_view(machine, directory)
+    caveats: list[Caveat] = [*extra_caveats, *link_caveats]
+    caveats.append(
+        Caveat(
+            CAVEAT_EMULATOR_CONFIG_UNREAD,
+            f"whether {card.token} has patch loading switched on is not established — the "
+            f"setting lives in {ini_path}, which this answer reads for the directory and not "
+            "for the switch, because the card states none",
+            {"emulator": card.token, "config": ini_path},
+        )
+    )
+    sources = [
+        f"mod card '{card.token}': the directory is [{setting.section}] {setting.key} in the "
+        f"emulator's own configuration — {setting.citation}",
+        f"mod card '{card.token}': {card.provenance}",
+    ]
+    if spec.keying is not None:
+        sources.insert(
+            1, f"mod card '{card.token}': keyed by {spec.keying} — {spec.keying_citation}"
+        )
+    return ModPlacement(
+        trees=(ModTree(dir=directory, keying=spec.keying, role=spec.role, physical_dir=physical),),
+        needs=(),
+        enabled=None,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
+    )
+
+
 # Standalone mod cards whose tree hangs off a configuration value rather than a
 # fixed XDG join. Keyed by token like the texture resolvers beside them, and a
 # card stating a directory setting without one here fails loudly rather than
 # answering a default nobody read.
 _STANDALONE_MOD_RESOLVERS = {
     "DUCKSTATION": _duckstation_mod_placement,
+    "PCSX2": _pcsx2_mod_placement,
 }
 
 

@@ -825,9 +825,21 @@ only.
 **PCSX2's layer moves a card's file name inside a directory it cannot move, and the answer says exactly that.** While a
 game runs, `<DataRoot>/gamesettings/<serial>_<CRC>.ini` — or `<CRC>.ini`, the legacy spelling it falls back to — sits on
 top of the settings interface, and every key `Pcsx2Config::LoadSave` reads comes through it. For the card answer that is
-all sixteen `[MemoryCards]` slot keys: `Slot1_Enable` / `Slot1_Filename`, `Slot2_…`, and the six
-`Multitap<port>_Slot<slot>_…` pairs. So a game can name a different card file for a slot, and can hold a card in a slot
-this machine keeps empty — `savefile_location` naming two cards is itself something a per-game file overturns.
+all sixteen `[MemoryCards]` slot keys — `Slot1_Enable` / `Slot1_Filename`, `Slot2_…`, and the six
+`Multitap<port>_Slot<slot>_…` pairs — **plus the two `[Pad]` keys the multitap slots also depend on** (see below):
+`Pcsx2Config::LoadSave` is `LoadSaveCore` _and_ `Pad.LoadSave`, so both sections come through the one layered read. So a
+game can name a different card file for a slot, can hold a card in a slot this machine keeps empty, and can turn a whole
+multitap on or off — `savefile_location` naming two cards is itself something a per-game file overturns.
+
+**A multitap slot needs two switches, and the answer lists it only when it has both.**
+`[MemoryCards]
+Multitap<port>_Slot<slot>_Enable` says the slot holds a card; `[Pad] MultitapPort1` / `MultitapPort2`
+says the multitap is plugged in at all. The ini keys are **one-based** where PCSX2's own C++ members are zero-based, so
+the key that pairs with `Multitap1_…` is `MultitapPort1`; both default to off. With the tap off the running game cannot
+address the slot at all — the multitap answers "absent" and the memory-card selector never moves off slot 0 of the port
+— so the slot joins neither the mode string nor the file set even though its own enable is on. It is still not silent:
+both switches that decided it travel in the granularity `readings`, which is what tells "configured and unreachable"
+apart from "never configured", and tells you which line to flip.
 
 What no per-game file reaches is the directory. `FullpathToMcd` joins the configured name onto the memory-card directory
 and `Path::Combine` concatenates rather than letting the name replace it: even an **absolute** name lands below that
@@ -1295,11 +1307,14 @@ carries **no** config caveat and `enabled` is still `None` — Azahar, in both i
 the weaker statement on purpose: nobody has established that any switch exists, so the answer points nowhere rather than
 at a file that may govern nothing.
 
-**PCSX2 answers here from a default and answers the texture question from a configuration — the same emulator, two
-different means.** That is evidence, not inconsistency: RetroDECK writes PCSX2's texture directory into the emulator's
-own `PCSX2.ini` (`Folders/Textures`), which the texture card now reads, while nothing writes `Folders/Patches` at all —
-the patches directory stays the emulator's own default, which is a path join. If you set `Folders/Patches` yourself, the
-mod answer moves out from under you and atlas will not see it, because this block reads no configuration.
+**PCSX2 answers here from its configuration, the way it answers the texture question.** Both directories are `[Folders]`
+keys read through the same helper: `Folders/Textures` for texture packs, `Folders/Patches` for `.pnach` patches, each
+falling back to the emulator's own compiled default (`textures`, `patches`) below the DataRoot, resolving a relative
+value against it, and translating an absolute one through the launch's sandbox. RetroDECK writes the texture key and
+leaves the patches key unset, so on that arrangement the patches answer _is_ the compiled default — but it is now read
+rather than assumed, so setting `Folders/Patches` yourself moves the answer with it instead of out from under it. The
+switch stays unanswered either way: `[EmuCore] EnablePatches` lives in the same file this reads for the directory, and
+`emulator-config-unread` names it.
 
 **Cemu appears in this question and in the texture one, with the same directory.** On that emulator a graphic pack is
 one mechanism: `rules.txt` replaces textures and `patches.txt` beside it patches the running title's code. Both
@@ -1533,6 +1548,12 @@ and the name empty, and then no game boots at all — so an empty name is stated
 data carries the `dir` a BIOS belongs in. That is a different answer from a _chosen_ image that is not there, which is a
 required requirement reported `found: "missing"`, and a client would act differently on the two: one says "pick one",
 the other says "fetch this one".
+
+The two settings are **not** symmetric, and the asymmetry is upstream's. `[Folders] Bios` is a directory: an absolute
+value there wins outright. `[Filenames] BIOS` is a name: `FullpathToBios` joins it onto that directory with the same
+`Path::Combine` the memory-card answer uses, so an absolute value there is joined **below** the BIOS directory rather
+than opened where it points — the leading separator is swallowed. So in one file, one absolute value is a path and the
+other is not, and atlas composes each the way the emulator does.
 
 **xemu shows which files a card deliberately leaves out.** Four paths sit in its machine settings and only three are
 firmware: the boot ROM, the flash image and the hard disk each refuse the start when missing. The EEPROM does not appear

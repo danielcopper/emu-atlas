@@ -3009,14 +3009,32 @@ def _pcsx2_standalone_core(
             ),
             [],
         )
-    path = resolve_links(machine, os.path.join(bios_dir, name)) or os.path.join(bios_dir, name)
+    # [Filenames] BIOS is a file NAME, and FullpathToBios composes it exactly
+    # the way FullpathToMcd composes a memory card's:
+    # Path::Combine(EmuFolders::Bios, BaseFilenames.Bios)
+    # (Pcsx2Config.cpp:2057-2062 at v2.6.3). os.path.join is wrong for it —
+    # Python lets an absolute second argument replace the first, while
+    # Path::Combine swallows that value's leading separator and joins it BELOW
+    # the BIOS directory (:func:`atlas.qt_ini.pcsx2_path_combine`). The same
+    # defect #312 fixed on the memory-card side, reached by a quieter route:
+    # there atlas tested for an absolute value and acted on it, here the join
+    # itself did the replacing with nothing in the code to read.
+    #
+    # The directory above went through the sandbox and the name does not: after
+    # the combine it carries no root of its own, so there is nothing to
+    # translate.
+    composed = qt_ini.pcsx2_path_combine(bios_dir, name)
+    path = resolve_links(machine, composed) or composed
     found, checked, observed = _observe(machine, path, None, verify=verify)
     requirement = FirmwareRequirement(
         core_so=None,
         system=system,
         system_source=SOURCE_CARD,
         need=NEED_REQUIRED,
-        file_name=os.path.basename(name),
+        # The basename of what the emulator OPENS, not of the raw value: the
+        # two agree for every ordinary name and part company on a degenerate
+        # one, and the composed path is the authority on both halves.
+        file_name=os.path.basename(composed),
         path=path,
         declared=name,
         description=declared.purpose,

@@ -10258,6 +10258,92 @@
           ]
         }
       }
+    },
+    {
+      "name": "pcsx2-an-absolute-bios-image-name-joins-below-the-bios-directory",
+      "rationale": "The [Filenames] BIOS half of #312's general question. FullpathToBios is Path::Combine(EmuFolders::Bios, BaseFilenames.Bios) (Pcsx2Config.cpp:2057-2062 at v2.6.3) — the identical combine FullpathToMcd uses for a memory card — so an absolute image name is joined BELOW the BIOS directory rather than opened where it points. atlas composed it with os.path.join, which in Python lets an absolute second argument replace the first; the same wrong outcome as the memory-card defect, reached by a quieter route, since here no code tested for an absolute value at all. The image really sits at the composed path, so the requirement is satisfied there and nowhere else.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Filenames]\nBIOS = /elsewhere/scph39001.bin\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/bios/elsewhere/scph39001.bin": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "label": "PCSX2 (Standalone)",
+              "declaration": "packaged",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "ps2",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "scph39001.bin",
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/bios/elsewhere/scph39001.bin",
+                  "declared": "/elsewhere/scph39001.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "PCSX2 (Standalone)",
+                    "token": "PCSX2"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
     }
   ]
 }

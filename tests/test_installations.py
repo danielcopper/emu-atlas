@@ -3503,6 +3503,35 @@ class TestMoreStandaloneSaves:
         assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
 
     def test_pcsx2_a_dead_link_on_the_answers_own_directory_is_stated(self):
+        # The dead link sits on [Folders] MemoryCards, which is the only route
+        # by which this answer's `dir` leaves the DataRoot at all. It used to
+        # sit on an absolute Slot1_Filename — a route #312 retired, because
+        # PCSX2 joins a filename BELOW the memory-card directory rather than
+        # letting it replace one (:func:`atlas.qt_ini.pcsx2_path_combine`). The fact under
+        # test is unchanged and so is the assertion; only the way the fixture
+        # reaches a linked `dir` moved onto a route that still exists.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                PCSX2_INI_PATH: (
+                    "[Folders]\nMemoryCards = /mnt/sd/cards\n"
+                    "[MemoryCards]\nSlot1_Enable = true\n"
+                    "Slot2_Enable = false\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+            symlinks={"/mnt/sd/cards": "/mnt/sd/gone"},
+        )
+        p = rd.emulators_for("ps2").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/cards"
+        assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+
+    def test_pcsx2_an_absolute_slot_filename_joins_below_the_card_directory(self):
+        # #312's headline: the value the retired route treated as a full path.
+        # PCSX2 composes it with Path::Combine, which swallows the leading
+        # separator (FileSystem.cpp:847-862, :98-139 at v2.6.3), so the card
+        # lands under the memory-card directory and `dir` never leaves it.
         rd = _retrodeck(
             {
                 **self.BASE,
@@ -3517,8 +3546,14 @@ class TestMoreStandaloneSaves:
         )
         p = rd.emulators_for("ps2").entries[0].savefile_location()
         assert not isinstance(p, atlas.Unresolved)
-        assert p.dir == "/mnt/sd/cards"
-        assert [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+        assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2/memcards/mnt/sd/cards"
+        assert p.file_set.files == ("Mcd001.ps2",)
+        # The dead link the old reading would have walked into is not this
+        # answer's directory at all any more, so nothing is said about it.
+        assert not [c.code for c in p.caveats if c.code == atlas.CAVEAT_DEAD_SYMLINK]
+        assert not [
+            c.code for c in p.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED
+        ]
 
     def test_duckstation_a_linked_answer_directory_states_its_physical_one(self):
         rd = _retrodeck(
@@ -3742,15 +3777,25 @@ class TestMoreStandaloneSaves:
         assert p.granularity is not None
         assert p.granularity.mode == "file+file"
 
+    # A multitap slot needs BOTH switches (#315): its own [MemoryCards] enable
+    # and the [Pad] switch for its port. The three tests below are the three
+    # arrangements of those two — both on, the tap missing, the slot missing.
+    _MULTITAP_BASE = (
+        "[Folders]\nMemoryCards = /mnt/sd/memcards\n"
+        "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
+        "Slot2_Enable = false\n"
+    )
+
     def test_pcsx2_an_enabled_multitap_slot_joins_the_answer(self):
+        # The input gained the [Pad] line this fixture always needed to mean
+        # what its name says: before #315 the slot joined on its own enable
+        # alone, which is the card the emulator would not have opened.
         p = self._answer(
             "ps2",
             files={
                 PCSX2_INI_PATH: (
-                    "[Folders]\nMemoryCards = /mnt/sd/memcards\n"
-                    "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
-                    "Slot2_Enable = false\n"
-                    "Multitap1_Slot2_Enable = true\n"
+                    f"{self._MULTITAP_BASE}Multitap1_Slot2_Enable = true\n"
+                    "[Pad]\nMultitapPort1 = true\n"
                 ),
             },
         )
@@ -3758,6 +3803,38 @@ class TestMoreStandaloneSaves:
         assert p.file_set.files == ("Mcd001.ps2", "Mcd-Multitap1-Slot02.ps2")
         assert p.granularity is not None
         assert p.granularity.mode == "file+off+file"
+
+    def test_pcsx2_a_multitap_slot_without_its_tap_holds_no_card(self):
+        # FileMemoryCard::Open skips it (MemoryCardFile.cpp:271-277) and the
+        # game cannot address it at all — MultitapProtocol::Select refuses to
+        # move off slot 0 with the tap absent (MultitapProtocol.cpp:41-60).
+        p = self._answer(
+            "ps2",
+            files={PCSX2_INI_PATH: f"{self._MULTITAP_BASE}Multitap1_Slot2_Enable = true\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("Mcd001.ps2",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "file+off"
+        # Not listed — and told apart from a slot nobody configured, because
+        # both switches that decided it travel as readings.
+        keys = [r.key for r in p.granularity.readings]
+        assert "Multitap1_Slot2_Enable" in keys
+        assert "MultitapPort1" in keys
+        assert "MultitapPort2" not in keys  # port 2 had no say; it stays silent
+
+    def test_pcsx2_a_tap_without_an_enabled_slot_adds_nothing(self):
+        # The other direction: the tap is on and no multitap slot is enabled,
+        # so there is no card to list and nothing for the pad switch to decide.
+        p = self._answer(
+            "ps2",
+            files={PCSX2_INI_PATH: f"{self._MULTITAP_BASE}[Pad]\nMultitapPort1 = true\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.file_set.files == ("Mcd001.ps2",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "file+off"
+        assert [r.key for r in p.granularity.readings if r.key.startswith("MultitapPort")] == []
 
     def test_pcsx2_an_empty_filename_empties_the_slot(self):
         p = self._answer(
@@ -7355,9 +7432,13 @@ class TestPcsx2PerGameLayerPrecision:
     # ---- which keys it names ---------------------------------------------
 
     def test_the_statement_names_every_slot_key_the_answer_reads(self):
-        # All sixteen, including the six multitap pairs: a per-game file can
-        # turn on a slot this machine keeps off, so naming only the console
-        # ports would understate the layer's reach.
+        # All sixteen memory-card keys, including the six multitap pairs: a
+        # per-game file can turn on a slot this machine keeps off, so naming
+        # only the console ports would understate the layer's reach. The two
+        # [Pad] keys close the list as of #315 — the slot listing depends on
+        # them too, and they come through the same layered read
+        # (Pcsx2Config::LoadSave is LoadSaveCore AND Pad.LoadSave, :2028-2033),
+        # so a per-game file can turn a whole multitap on or off as well.
         layer = f"{self.DATA_ROOT}/gamesettings"
         p = self._save(
             files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
@@ -7381,18 +7462,24 @@ class TestPcsx2PerGameLayerPrecision:
             "[MemoryCards] Multitap2_Slot3_Filename",
             "[MemoryCards] Multitap2_Slot4_Enable",
             "[MemoryCards] Multitap2_Slot4_Filename",
+            "[Pad] MultitapPort1",
+            "[Pad] MultitapPort2",
         ]
 
     def test_every_named_save_key_carries_its_section(self):
         # The section is the discriminator this round turns on: [MemoryCards]
-        # is read through the layered interface, [Folders] is not.
+        # and [Pad] are read through the layered interface, [Folders] is not —
+        # so every key here carries the section that says which side it is on,
+        # and the two sections are exactly the two the answer reads.
         layer = f"{self.DATA_ROOT}/gamesettings"
         p = self._save(
             files={f"{layer}/SLES-12345_A1B2C3D4.ini": "[MemoryCards]\nSlot1_Filename = own.ps2\n"},
             dirs=[layer],
         )
         stated = self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
-        assert all(k.startswith("[MemoryCards] ") for k in stated.data["key"].split(", "))
+        keys = stated.data["key"].split(", ")
+        assert all(k.startswith(("[MemoryCards] ", "[Pad] ")) for k in keys)
+        assert not any(k.startswith("[Folders] ") for k in keys)
 
     def test_the_texture_key_is_the_section_the_card_states(self):
         # Derived from the card rather than written twice, so a card that
@@ -7564,6 +7651,106 @@ class TestPcsx2PerGameLayerPrecision:
         assert isinstance(p, atlas.Unresolved)
 
 
+class TestPcsx2ModAnswerReadsItsConfiguredDirectory:
+    """PCSX2's patch tree is ``[Folders] Patches``, not a fixed join (#314).
+
+    Upstream reads the key through ``LoadPathFromSettings`` with the compiled
+    default ``patches`` (Pcsx2Config.cpp:2288 with :2272-2278) — the same
+    helper the memory-card, texture, savestates and gamesettings directories
+    go through. The answer used to compose ``<DataRoot>/patches`` outright,
+    which was true only for as long as nobody set the key.
+
+    What a vector cannot pin and these do: that the three non-absolute
+    outcomes are told apart the way the emulator tells them, that an
+    untranslatable absolute value refuses rather than guesses, and that the
+    unread switch is still named.
+    """
+
+    DATA_ROOT = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/PCSX2"
+    BASE = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+        'libretro_directory = "/app/cores"\n',
+        DOLPHIN_ESDE: TRIO_ESDE,
+    }
+
+    def _mods(self, ini, dirs=(), **kwargs):
+        rd = _retrodeck(
+            {**self.BASE, **({} if ini is None else {PCSX2_INI_PATH: ini})},
+            dirs=["/mnt/sd/retrodeck/saves", *dirs],
+            **kwargs,
+        )
+        return rd.emulators_for("ps2").entries[0].mod_location()
+
+    def test_a_configured_relative_value_hangs_off_the_data_root(self):
+        answer = self._mods("[Folders]\nPatches = my-patches\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [f"{self.DATA_ROOT}/my-patches"]
+
+    def test_a_configured_absolute_value_wins_outright(self):
+        # LoadPathFromSettings tests IsAbsolute (Pcsx2Config.cpp:2275) — a
+        # folder setting is exactly where PCSX2 lets an absolute value win,
+        # which is the asymmetry #312 turns on at the other end.
+        answer = self._mods(
+            "[Folders]\nPatches = /mnt/sd/patches\n", dirs=["/mnt/sd/patches"]
+        )
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == ["/mnt/sd/patches"]
+
+    def test_an_absent_key_is_the_compiled_default_below_the_data_root(self):
+        answer = self._mods("[Folders]\nMemoryCards = /mnt/sd/memcards\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [f"{self.DATA_ROOT}/patches"]
+
+    def test_a_missing_configuration_is_the_compiled_default_too(self):
+        # READ_MISSING is not a refusal: no file means no key, and no key means
+        # the emulator's own default — the same answer the row gave before #314.
+        answer = self._mods(None)
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [f"{self.DATA_ROOT}/patches"]
+
+    def test_a_present_but_empty_key_is_the_data_root_itself(self):
+        # GetStringValue defaults only when the lookup FAILS
+        # (SettingsInterface.h:83-89), and Path::Combine(DataRoot, "") strips
+        # the separator it just appended (FileSystem.cpp:847-862).
+        answer = self._mods("[Folders]\nPatches =\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [self.DATA_ROOT]
+
+    def test_a_case_variant_spelling_of_the_key_governs(self):
+        # CSimpleIniA matches ASCII case-insensitively (#295), so the file's
+        # spelling governs here as it does in the running emulator.
+        answer = self._mods("[folders]\npatches = my-patches\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.dir for t in answer.trees] == [f"{self.DATA_ROOT}/my-patches"]
+
+    def test_an_unreadable_configuration_refuses_rather_than_defaults(self):
+        # The directory is now a read rather than an assumption, so a file that
+        # exists and cannot be read is a refusal — falling back to 'patches'
+        # would state a directory nobody established.
+        answer = self._mods({"status": "unreadable"})
+        assert isinstance(answer, atlas.Unresolved)
+        assert answer.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+
+    def test_the_unread_switch_is_still_named(self):
+        # enabled stays unanswered and emulator-config-unread says where the
+        # switch would live — the statement the fixed-join row also made, kept
+        # rather than lost when the directory became a read.
+        answer = self._mods("[Folders]\nPatches = my-patches\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert answer.enabled is None
+        unread = [c for c in answer.caveats if c.code == atlas.CAVEAT_EMULATOR_CONFIG_UNREAD]
+        assert [c.data["config"] for c in unread] == [PCSX2_INI_PATH]
+
+    def test_the_keying_survives_the_move_to_a_configured_directory(self):
+        # The patches directory is flat and the SERIAL keys the file inside it;
+        # that fact belongs to the card and must not have been dropped with the
+        # subdir it used to sit beside.
+        answer = self._mods("[Folders]\nPatches = my-patches\n")
+        assert not isinstance(answer, atlas.Unresolved)
+        assert [t.keying for t in answer.trees] == ["serial"]
+
+
 class TestAnUntranslatableConfigPathIsItsOwnRefusal:
     """A config that reads fine but states a sandbox-only absolute path (#274).
 
@@ -7631,6 +7818,15 @@ class TestAnUntranslatableConfigPathIsItsOwnRefusal:
             "ps2", {PCSX2_INI_PATH: f"[Folders]\nSavestates = {self.SANDBOX_ONLY}\n"}
         )
         self._refused(entry.savestate_location())
+
+    def test_pcsx2_patches_directory(self):
+        # New emitter as of #314: the mod tree is a configured directory now,
+        # so it translates an absolute value like its sibling folder keys and
+        # refuses on the same terms rather than composing a default.
+        entry = self._entry(
+            "ps2", {PCSX2_INI_PATH: f"[Folders]\nPatches = {self.SANDBOX_ONLY}\n"}
+        )
+        self._refused(entry.mod_location())
 
     def test_azahar_sdmc_directory(self):
         entry = self._entry(

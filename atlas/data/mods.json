@@ -135,10 +135,14 @@
     },
     "PCSX2": {
       "mods": {
-        "base": "config",
         "trees": [
           {
-            "subdir": "patches",
+            "directory": {
+              "section": "Folders",
+              "key": "Patches",
+              "default": "patches",
+              "citation": "Pcsx2Config.cpp:2288 at v2.6.3 reads it through LoadPathFromSettings (:2272-2278), which falls back to the compiled default and resolves a relative value against the DataRoot; :2262 writes that default into a fresh ini"
+            },
             "keying": {
               "value": "serial",
               "citation": "[V-binary] The shipped pcsx2-qt carries the patch file's name template \"{}_{:08X}{}.pnach\" (0x14beb2) and the serial glob \"{}_*.pnach\" (0x121783) as whole NUL-delimited runs: the game's serial and the CRC name the FILE. This is the one row in the family where the keyed level is a file rather than a directory — the patches directory is flat — and the keying is stated anyway, with the file-level fact here, the way the LRPS2 texture card states its fixed 'replacements' sub-level rather than inventing a field for it."
@@ -148,13 +152,19 @@
         "settings": "PCSX2.ini"
       },
       "provenance": {
-        "source": "[V-binary/V-script] \"patches\" is a whole NUL-delimited run in the shipped pcsx2-qt (0xf2c44) and so is the EmuFolders key \"Patches\" — and RetroDECK does NOT write that key, which is exactly why this row answers where the same emulator's texture row refuses: the directory is the emulator's own default rather than a value an installer put in its configuration. RetroDECK names it in components/pcsx2/component_functions.sh:11 ($XDG_CONFIG_HOME/PCSX2/patches) and links it (component_prepare.sh:54,:92). Two things a caller should know and no field carries: the distribution extracts a shipped patch pack into that tree on every reset and at the 0.10.0b upgrade, backing up what was there first (component_prepare.sh:65-71), so the directory is not user-owned; and the switch EnablePatches lives in PCSX2.ini (pinned by component_functions.sh:3, and inis/ is where that emulator keeps it), which atlas does not read. A user who sets Folders/Patches themselves moves the directory out from under this answer — the key exists, and only the fact that nothing writes it makes the default true here."
+        "source": "[V-binary/V-source/V-script] \"patches\" is a whole NUL-delimited run in the shipped pcsx2-qt (0xf2c44) and so is the EmuFolders key \"Patches\" (0xef323) and the section \"Folders\" (0x142033). The tree is stated as a configuration key rather than an XDG subpath because it IS one: EmuFolders::LoadConfig reads [Folders] Patches through LoadPathFromSettings, the same helper the memory-card, texture, savestates and gamesettings directories of this emulator go through (Pcsx2Config.cpp:2288 with :2272-2278), so an unset key means the compiled 'patches' below the DataRoot, a relative value hangs off it, and an absolute one wins outright (:2275). RetroDECK does NOT write the key — it names the default location in components/pcsx2/component_functions.sh:11 ($XDG_CONFIG_HOME/PCSX2/patches) and links it (component_prepare.sh:54,:92) — so on that arrangement the compiled default is what answers; the difference is that the answer now reads the key instead of assuming nobody set it, which is what issue #314 was about. Two things a caller should know and no field carries: the distribution extracts a shipped patch pack into that tree on every reset and at the 0.10.0b upgrade, backing up what was there first (component_prepare.sh:65-71), so the directory is not user-owned; and the switch EnablePatches lives in PCSX2.ini (pinned by component_functions.sh:3, and inis/ is where that emulator keeps it), which this answer reads for the directory and not for the switch, because the card states none."
       },
       "anchors": {
         "binary": "pcsx2/bin/pcsx2-qt",
         "names": {
           "PCSX2.ini": {
             "literal": "PCSX2.ini"
+          },
+          "Folders": {
+            "literal": "Folders"
+          },
+          "Patches": {
+            "literal": "Patches"
           },
           "patches": {
             "literal": "patches"
