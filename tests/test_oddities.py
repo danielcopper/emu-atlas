@@ -31,6 +31,14 @@ from atlas.placement import (
 )
 from tests.answers import placed, state_placed
 
+
+def _text(caveat: atlas.Caveat, key: str) -> str:
+    """The string at *key* — narrows past the one mapping-valued data key (#311)."""
+    value = caveat.data[key]
+    assert isinstance(value, str)
+    return value
+
+
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
 RETRODECK_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
@@ -257,7 +265,7 @@ class TestADirectoryWhoseNamesAreNotEstablished:
         # reads and the citation behind it. Both, not one instead of the other.
         p = _mame_query(self.FILES)
         caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
-        assert caveat.data["dir"].endswith("/diff")
+        assert _text(caveat, "dir").endswith("/diff")
         assert caveat.data["role"] == atlas.ROLE_DISK_DIFF
         assert caveat.data["citation"]
         assert caveat.message
@@ -265,7 +273,7 @@ class TestADirectoryWhoseNamesAreNotEstablished:
     def test_every_directory_the_caveats_name_is_also_a_group(self):
         p = _mame_query(self.FILES)
         flagged = {
-            c.data["dir"] for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED
+            _text(c, "dir") for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED
         }
         assert flagged <= {g.dir for g in p.file_set.groups}
 
@@ -736,8 +744,8 @@ class TestFlycastResolution:
         data = dict(conditional[0].data)
         assert data["core"] == "flycast"
         assert data["mode"] == "All VMUs"
-        assert data["files"].split(", ") == list(p.file_set.files)
-        assert data["files_without_save_id"].split(", ") == [
+        assert _text(conditional[0], "files").split(", ") == list(p.file_set.files)
+        assert _text(conditional[0], "files_without_save_id").split(", ") == [
             f"{ROM_STEM}.A1.bin",
             f"{ROM_STEM}.B1.bin",
             f"{ROM_STEM}.C1.bin",
@@ -776,7 +784,7 @@ class TestFlycastResolution:
         p = placed(rd.savefile_location(core_so="flycast_libretro.so"))
         conditional = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
         assert conditional
-        assert conditional[0].data["files_without_save_id"].startswith("<rom_stem>.A1.bin")
+        assert _text(conditional[0], "files_without_save_id").startswith("<rom_stem>.A1.bin")
 
     def test_the_card_provenance_rides_along_on_the_standard_route(self):
         # A mode switch MOVES the save — the shared cards stay behind stale —

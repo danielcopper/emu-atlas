@@ -619,8 +619,31 @@ class TestPerGameAltemulator:
         rd = _catalogue_fixture(self.FILES)
         entries = _entries(rd.emulators_for("n64"))
         assert entries[0].label == "ParaLLEl N64"  # system selection still applies
-        assert any(c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT for c in entries[0].caveats)
+        assert any(
+            c.code == atlas.CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR for c in entries[0].caveats
+        )
         assert entries[0].caveats[0].data["count"] == "2"
+        assert entries[0].caveats[0].data["emulators"] == {"Mupen64Plus-Next": "2"}
+
+    def test_caveat_tallies_the_selected_emulators_per_label(self):
+        # The count alone says how many games leave this order, not where they
+        # go — the tally is what answers "is this answer even about the
+        # emulator that will run?" (#311).
+        rd = _catalogue_fixture(
+            {
+                "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": (
+                    "<gameList>"
+                    "<game><path>./A.z64</path><altemulator>Mupen64Plus-Next</altemulator></game>"
+                    "<game><path>./B.z64</path><altemulator>ParaLLEl N64</altemulator></game>"
+                    "<game><path>./C.z64</path><altemulator>Mupen64Plus-Next</altemulator></game>"
+                    "</gameList>"
+                )
+            }
+        )
+        stated = _entries(rd.emulators_for("n64"))[0].caveats[0]
+        assert stated.code == atlas.CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR
+        assert stated.data["count"] == "3"
+        assert stated.data["emulators"] == {"Mupen64Plus-Next": "2", "ParaLLEl N64": "1"}
 
     def test_no_caveat_without_per_game_entries(self):
         rd = _catalogue_fixture(

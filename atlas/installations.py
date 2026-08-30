@@ -187,6 +187,7 @@ from atlas.placement import (
     CAVEAT_INVALID_SAVE_DIRECTORY,
     CAVEAT_INVALID_SCREENSHOT_DIRECTORY,
     CAVEAT_UNVERIFIED_VERSION,
+    CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
     CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
     CAVEAT_PER_GAME_LAYER_UNREAD,
     CAVEAT_PER_GAME_OVERRIDE,
@@ -13221,6 +13222,28 @@ def _per_game_override_caveat(override_label: str, spec: EmulatorSpec) -> Caveat
     )
 
 
+def _per_game_alternative_emulator_caveat(per_game: Mapping[str, str]) -> Caveat:
+    """Some games of this system select a different emulator — every entry says so.
+
+    The statement of a system-level ask (#311): *per_game* maps each gamelist
+    entry to its ``<altemulator>`` label, so the count and the per-label tally
+    in ``emulators`` are read from the same elements — no second read. The
+    tally is sorted by label, because an aggregate has no upstream order to
+    preserve.
+    """
+    tally: dict[str, int] = {}
+    for label in per_game.values():
+        tally[label] = tally.get(label, 0) + 1
+    emulators = {label: str(n) for label, n in sorted(tally.items())}
+    return Caveat(
+        CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
+        f"{len(per_game)} game(s) of this system carry per-game altemulator "
+        f"overrides, selecting {', '.join(emulators)} — this system-level order may be "
+        "wrong for exactly those games; ask emulators_for with content_path",
+        {"count": str(len(per_game)), "emulators": emulators},
+    )
+
+
 def _entries_from(
     host: "_CatalogueHost",
     specs: tuple[EmulatorSpec, ...],
@@ -13259,15 +13282,7 @@ def _entries_from(
                 break
     entry_caveats: tuple[Caveat, ...] = ()
     if content_path is None and selections.per_game:
-        entry_caveats = (
-            Caveat(
-                CAVEAT_PER_GAME_OVERRIDES_PRESENT,
-                f"{len(selections.per_game)} game(s) of this system carry per-game altemulator "
-                "overrides — this system-level order may be wrong for exactly those games; "
-                "ask emulators_for with content_path",
-                {"count": str(len(selections.per_game))},
-            ),
-        )
+        entry_caveats = (_per_game_alternative_emulator_caveat(selections.per_game),)
     return tuple(EmulatorEntry(host, spec, entry_caveats) for spec in specs)
 
 

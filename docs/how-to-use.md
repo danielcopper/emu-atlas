@@ -653,65 +653,68 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 
 ### Placement caveats worth branching on
 
-| Code                                        | Meaning                                                                                             |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `sorted-dir-missing`                        | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`           |
-| `sorted-dir-uncreatable`                    | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`         |
-| `dead-symlink`                              | the directory is reached through a dead link; nothing can land there                                |
-| `symlink-loop`                              | the link chain never settles (`ELOOP`); nothing can land there either — check both codes            |
-| `save-dir-unlistable`                       | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"         |
-| `per-game-override` / `…-overrides-present` | a per-game config changes (or could change) the layout                                              |
-| `per-game-layer-unread`                     | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does" |
-| `per-game-build-layer-unread`               | a per-game layer the emulator's BUILD ships, at a compiled-in path — never listed, never counted    |
-| `cfg-value-rejected`                        | the file sets a value the emulator cannot read, so the value it had keeps governing                 |
-| `core-unaudited` / `core-suspect`           | no rule card for this core yet / options scan shows save-related keys nobody has verified           |
-| `core-multi-option`                         | granularity deliberately unstated — depends on options atlas does not interpret (named in it)       |
-| `filenames-content-conditional`             | the file set depends on the content: `data` carries the id-less spelling and the scope              |
-| `file-set-spans-roots`                      | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared       |
-| `file-names-unestablished`                  | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole   |
-| `file-set-across-systems`                   | no system was named; the set holds for every system in `data["systems"]` and for no other           |
-| `core-unqueryable`                          | the core would not load, `library_name` unknown — a `<library_name>` hole may remain                |
-| `core-generation-mismatch`                  | the recorded deviation names an option this core does not register — not applied, standard frame    |
-| `core-generation-unestablished`             | the core could not be read, so its generation is unknown — the recorded deviation is not applied    |
-| `core-option-value-unestablished`           | the core fits the card, but nothing states the value governing it — not applied, standard frame     |
-| `core-mode-unestablished`                   | the card's selection rule could not decide (`data["reason"]` says why) — not applied                |
-| `option-entry-retired`                      | the options file carries a key this core generation retired — the value there stopped applying      |
-| `save-inside-content`                       | no separate save file exists: the loaded content file itself takes the writes — your call           |
-| `save-inside-image`                         | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file    |
-| `save-writes-discarded`                     | nothing keeps a save at all: the writes are discarded — the granularity block names the way out     |
-| `save-root-redirected`                      | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip     |
-| `save-root-revoked`                         | a flatpak override revokes the tree the save root lives under — writes never land here on the host  |
-| `save-root-unresolvable`                    | the save trees anchor at the frontend _process's_ state (its working directory) — `data` names them |
-| `content-dir-observation`                   | the files were observed in the ROM's own directory — content files share the name, see below        |
-| `content-path-unnamed`                      | the content path names no file; no file names stated, nothing observed                              |
-| `marker-missing`                            | health: the config marker this installation is detected by is gone                                  |
-| `marker-unreadable`                         | health: the marker exists and its bytes could not be read                                           |
-| `marker-invalid`                            | health: the marker parsed to something unusable                                                     |
-| `root-missing`                              | health: the installation's own root is not an existing directory                                    |
-| `saves-root-missing`                        | health: its saves root is not an existing directory                                                 |
-| `config-unreadable`                         | health: a bare RetroArch's `retroarch.cfg` could not be read                                        |
-| `companion-config-missing`                  | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                         |
-| `catalogue-invalid`                         | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run              |
-| `content-tree-unwired`                      | health: a texture/mods hub tree exists that no emulator-side link reaches — filed content is lost   |
-| `unverified-version`                        | the rule card was never verified against this emulator version                                      |
-| `arrangement-unverified`                    | this arrangement has never been observed live — the answer is derived (see above)                   |
-| `arrangement-version-drifted`               | it was observed, on another version than this machine runs — re-verification pending                |
-| `sandbox-path-untranslated`                 | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read         |
-| `config-home-relocated`                     | EmuDeck entry route: a `portable.txt` may have moved ES-DE's tree — reads may not be in force       |
-| `entry-format-unclaimed`                    | launchable: the running core does not claim this format — attempted, never refused                  |
-| `archive-contents-unread`                   | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread     |
-| `entry-format-unestablished`                | launchable: what the running entry reads was never established — not the same as "refuses"          |
-| `emulator-list-derived`                     | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command |
-| `platform-unmapped`                         | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id |
-| `platform-unknown`                          | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too  |
-| `platform-scraping-ignored`                 | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                   |
+| Code                              | Meaning                                                                                                   |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `sorted-dir-missing`              | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`                 |
+| `sorted-dir-uncreatable`          | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`               |
+| `dead-symlink`                    | the directory is reached through a dead link; nothing can land there                                      |
+| `symlink-loop`                    | the link chain never settles (`ELOOP`); nothing can land there either — check both codes                  |
+| `save-dir-unlistable`             | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"               |
+| `per-game-override`               | this game's gamelist entry selects a different emulator (`data["label"]`) — ask with `content_path`       |
+| `per-game-alternative-emulator`   | some games of this system select a different emulator — `data["count"]`, per label in `data["emulators"]` |
+| `per-game-overrides-present`      | games carry emulator settings files layering over this answer (`data["core"]`, `dir`, `key`, `count`)     |
+| `per-game-layer-unread`           | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does"       |
+| `per-game-build-layer-unread`     | a per-game layer the emulator's BUILD ships, at a compiled-in path — never listed, never counted          |
+| `cfg-value-rejected`              | the file sets a value the emulator cannot read, so the value it had keeps governing                       |
+| `core-unaudited` / `core-suspect` | no rule card for this core yet / options scan shows save-related keys nobody has verified                 |
+| `core-multi-option`               | granularity deliberately unstated — depends on options atlas does not interpret (named in it)             |
+| `filenames-content-conditional`   | the file set depends on the content: `data` carries the id-less spelling and the scope                    |
+| `file-set-spans-roots`            | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared             |
+| `file-names-unestablished`        | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole         |
+| `file-set-across-systems`         | no system was named; the set holds for every system in `data["systems"]` and for no other                 |
+| `core-unqueryable`                | the core would not load, `library_name` unknown — a `<library_name>` hole may remain                      |
+| `core-generation-mismatch`        | the recorded deviation names an option this core does not register — not applied, standard frame          |
+| `core-generation-unestablished`   | the core could not be read, so its generation is unknown — the recorded deviation is not applied          |
+| `core-option-value-unestablished` | the core fits the card, but nothing states the value governing it — not applied, standard frame           |
+| `core-mode-unestablished`         | the card's selection rule could not decide (`data["reason"]` says why) — not applied                      |
+| `option-entry-retired`            | the options file carries a key this core generation retired — the value there stopped applying            |
+| `save-inside-content`             | no separate save file exists: the loaded content file itself takes the writes — your call                 |
+| `save-inside-image`               | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file          |
+| `save-writes-discarded`           | nothing keeps a save at all: the writes are discarded — the granularity block names the way out           |
+| `save-root-redirected`            | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip           |
+| `save-root-revoked`               | a flatpak override revokes the tree the save root lives under — writes never land here on the host        |
+| `save-root-unresolvable`          | the save trees anchor at the frontend _process's_ state (its working directory) — `data` names them       |
+| `content-dir-observation`         | the files were observed in the ROM's own directory — content files share the name, see below              |
+| `content-path-unnamed`            | the content path names no file; no file names stated, nothing observed                                    |
+| `marker-missing`                  | health: the config marker this installation is detected by is gone                                        |
+| `marker-unreadable`               | health: the marker exists and its bytes could not be read                                                 |
+| `marker-invalid`                  | health: the marker parsed to something unusable                                                           |
+| `root-missing`                    | health: the installation's own root is not an existing directory                                          |
+| `saves-root-missing`              | health: its saves root is not an existing directory                                                       |
+| `config-unreadable`               | health: a bare RetroArch's `retroarch.cfg` could not be read                                              |
+| `companion-config-missing`        | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                               |
+| `catalogue-invalid`               | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run                    |
+| `content-tree-unwired`            | health: a texture/mods hub tree exists that no emulator-side link reaches — filed content is lost         |
+| `unverified-version`              | the rule card was never verified against this emulator version                                            |
+| `arrangement-unverified`          | this arrangement has never been observed live — the answer is derived (see above)                         |
+| `arrangement-version-drifted`     | it was observed, on another version than this machine runs — re-verification pending                      |
+| `sandbox-path-untranslated`       | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read               |
+| `config-home-relocated`           | EmuDeck entry route: a `portable.txt` may have moved ES-DE's tree — reads may not be in force             |
+| `entry-format-unclaimed`          | launchable: the running core does not claim this format — attempted, never refused                        |
+| `archive-contents-unread`         | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread           |
+| `entry-format-unestablished`      | launchable: what the running entry reads was never established — not the same as "refuses"                |
+| `emulator-list-derived`           | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command       |
+| `platform-unmapped`               | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id       |
+| `platform-unknown`                | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too        |
+| `platform-scraping-ignored`       | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                         |
 
-One of those codes carries two unrelated facts, so read its `data` before acting on it. `per-game-overrides-present` is
-a statement about the **frontend** — some games of this system select a different emulator — when `data` holds `count`
-alone; it is a statement about the **emulator** — some games carry a settings file that layers over this very answer —
-when `data` also holds `core`, `dir` and `key`. That is the discriminator, it is deterministic, and a client that
-switches on the code alone will read one as the other. Both can ride the same answer at once, because they come from
-different places.
+Two of those codes state per-game facts from different places, and they are distinct codes on purpose (#311).
+`per-game-alternative-emulator` is a statement about the **frontend**: some games of this system select a different
+emulator — `data["count"]` in total, and `data["emulators"]` maps each selected emulator label to how many games select
+it, so you can tell whether this answer is even about the emulator that will run. `per-game-overrides-present` is a
+statement about the **emulator**: some games carry a settings file that layers over this very answer, with `core`, `dir`
+and `key` beside the `count`. Both can ride the same answer at once, because they come from different places — switch on
+the code.
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
@@ -1396,7 +1399,7 @@ entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro'
 entry.core_so                      # 'mupen64plus_next_libretro.so' — or None for a standalone emulator
 entry.system                       # 'n64' — an entry says what it launches, wherever it travels
 entry.selection                    # why it is first, when a user promoted it — None for declared order
-entry.caveats                      # this entry's own degradations, e.g. per-game overrides nobody checked
+entry.caveats                      # this entry's own degradations, e.g. games selecting another emulator
 entry.provenance                   # which catalogue layer declared it (prose, for debugging)
 
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)

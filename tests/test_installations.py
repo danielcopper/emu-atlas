@@ -1928,6 +1928,31 @@ class TestDolphinPerGameSettingsLayer:
         codes = self._codes(self._entry(rd).savefile_location())
         assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in codes
 
+    def test_the_frontend_and_emulator_statements_ride_one_answer_as_two_codes(self):
+        # #311: the catalogue's fact (some games launch a different emulator)
+        # and the emulator's fact (some games layer a settings file over this
+        # answer) can ride the same answer at once, and a client switches on
+        # the code alone — never on the shape of ``data``.
+        rd = self._machine(
+            {
+                f"{DOLPHIN_GAME_SETTINGS}/GALE01.ini": "[Core]\nMMU = True\n",
+                "/mnt/sd/retrodeck/ES-DE/gamelists/gc/gamelist.xml": (
+                    "<gameList><game><path>./Melee.rvz</path>"
+                    "<altemulator>PrimeHack (Standalone)</altemulator></game></gameList>"
+                ),
+            },
+            dirs=[DOLPHIN_GAME_SETTINGS],
+        )
+        answer = self._entry(rd).savefile_location()
+        frontend = self._caveat(answer, atlas.CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR)
+        emulator = self._caveat(answer, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)
+        assert frontend.data == {
+            "count": "1",
+            "emulators": {"PrimeHack (Standalone)": "1"},
+        }
+        assert emulator.data["dir"] == DOLPHIN_GAME_SETTINGS
+        assert "emulators" not in emulator.data
+
     # -- the build directory: stated, never counted ---------------------------
 
     def test_the_build_layer_is_stated_even_where_the_user_has_no_file(self):

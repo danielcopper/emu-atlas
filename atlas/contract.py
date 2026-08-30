@@ -25,7 +25,7 @@ the reference does.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Sequence, TypeVar
+from typing import Any, Callable, Mapping, Sequence, TypeVar
 
 from atlas.every_installation import InstallationAnswer
 from atlas.firmware import (
@@ -48,6 +48,7 @@ from atlas.installations import (
 )
 from atlas.platforms import PlatformIdentities
 from atlas.placement import (
+    Caveat,
     ModPlacement,
     SavefilePlacement,
     SavestateAbsence,
@@ -59,6 +60,24 @@ from atlas.placement import (
 )
 
 AnswerT = TypeVar("AnswerT")
+
+
+def _caveats_contract(caveats: Sequence[Caveat]) -> list[dict[str, Any]]:
+    """One ``{code, data}`` per caveat, in order — the one serialization of a caveat.
+
+    Mapping-valued data (the alternative-emulator tally) serializes as a plain
+    object, the way an aggregate refusal's tuples serialize as lists.
+    """
+    return [
+        {
+            "code": c.code,
+            "data": {
+                key: dict(value) if isinstance(value, Mapping) else value
+                for key, value in c.data.items()
+            },
+        }
+        for c in caveats
+    ]
 
 
 def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[str, Any]:
@@ -89,7 +108,7 @@ def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[s
                 for group in placement.file_set.groups
             ],
         },
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+        "caveats": _caveats_contract(placement.caveats),
     }
 
 
@@ -158,7 +177,7 @@ def screenshot_placement_contract(placement: ScreenshotPlacement) -> dict[str, A
         "root_kind": placement.root_kind,
         "needs": list(placement.needs),
         "physical_dir": placement.physical_dir,
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+        "caveats": _caveats_contract(placement.caveats),
     }
 
 
@@ -193,7 +212,7 @@ def texture_placement_contract(placement: TexturePlacement) -> dict[str, Any]:
         "physical_dir": placement.physical_dir,
         "enabled": placement.enabled,
         "keying": placement.keying,
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+        "caveats": _caveats_contract(placement.caveats),
     }
 
 
@@ -225,7 +244,7 @@ def mod_placement_contract(placement: ModPlacement) -> dict[str, Any]:
         ],
         "needs": list(placement.needs),
         "enabled": placement.enabled,
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+        "caveats": _caveats_contract(placement.caveats),
     }
 
 
@@ -257,7 +276,7 @@ def soft_patch_contract(answer: SoftPatchAnswer) -> dict[str, Any]:
             for candidate in answer.candidates
         ],
         "applies": answer.applies,
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+        "caveats": _caveats_contract(answer.caveats),
     }
 
 
@@ -286,7 +305,7 @@ def _findings_contract(health: Health) -> list[dict[str, Any]]:
     acts on: *which* marker is invalid, *which* root is missing, what the
     failing read answered.
     """
-    return [{"code": issue.code, "data": dict(issue.data)} for issue in health.issues]
+    return _caveats_contract(health.issues)
 
 
 def health_contract(health: Health) -> dict[str, Any]:
@@ -416,7 +435,7 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
                 "requirements_met": core.requirements_met,
                 "requirements": [_requirement_entry_contract(r) for r in core.requirements],
                 "refused": [{"declared": r.declared, "need": r.need, "reason": r.reason} for r in core.refused],
-                "caveats": [{"code": c.code, "data": dict(c.data)} for c in core.caveats],
+                "caveats": _caveats_contract(core.caveats),
             }
             for core in answer.cores
         ],
@@ -428,7 +447,7 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
             }
             for f in answer.unclaimed
         ],
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+        "caveats": _caveats_contract(answer.caveats),
     }
 
 
@@ -438,7 +457,7 @@ def identification_contract(identification: FirmwareIdentification) -> dict[str,
         "identity": _identity_contract(identification.identity),
         "known_as": list(identification.known_as),
         "requirements": [_requirement_contract(r) for r in identification.requirements],
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in identification.caveats],
+        "caveats": _caveats_contract(identification.caveats),
     }
 
 
@@ -461,7 +480,7 @@ def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
         "kind": entry.kind,
         "core_so": entry.core_so,
         "selection": entry.selection,
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in entry.caveats],
+        "caveats": _caveats_contract(entry.caveats),
     }
 
 
@@ -475,7 +494,7 @@ def catalogue_contract(answer: CatalogueAnswer) -> dict[str, Any]:
     """
     return {
         "entries": [emulator_contract(e) for e in answer.entries],
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+        "caveats": _caveats_contract(answer.caveats),
     }
 
 
@@ -496,7 +515,7 @@ def launchable_contract(answer: LaunchabilityAnswer) -> dict[str, Any]:
         "accepted": list(answer.accepted),
         "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
         "alternatives": list(answer.alternatives),
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+        "caveats": _caveats_contract(answer.caveats),
     }
 
 
@@ -504,7 +523,7 @@ def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
     """The stable form of a systems answer — what the catalogue declares, or why nothing."""
     return {
         "systems": list(answer.systems),
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+        "caveats": _caveats_contract(answer.caveats),
     }
 
 
@@ -530,7 +549,7 @@ def platform_systems_contract(answer: PlatformSystemsAnswer) -> dict[str, Any]:
             }
             for m in answer.matches
         ],
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+        "caveats": _caveats_contract(answer.caveats),
     }
 
 
@@ -560,7 +579,7 @@ def system_platforms_contract(answer: SystemPlatformsAnswer) -> dict[str, Any]:
         "tags_source": answer.tags_source,
         "platforms": list(answer.platforms),
         "identities": [_platform_identities_contract(i) for i in answer.identities],
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in answer.caveats],
+        "caveats": _caveats_contract(answer.caveats),
     }
 
 
@@ -578,7 +597,7 @@ def rom_placement_contract(placement: RomPlacement) -> dict[str, Any]:
         "dir": placement.dir,
         "physical_dir": placement.physical_dir,
         "extensions": list(placement.extensions),
-        "caveats": [{"code": c.code, "data": dict(c.data)} for c in placement.caveats],
+        "caveats": _caveats_contract(placement.caveats),
     }
 
 
@@ -610,7 +629,7 @@ def savestate_absence_contract(absence: SavestateAbsence) -> dict[str, Any]:
         "no_savestates": {
             "emulator": absence.emulator,
             "citation": absence.citation,
-            "caveats": [{"code": c.code, "data": dict(c.data)} for c in absence.caveats],
+            "caveats": _caveats_contract(absence.caveats),
         }
     }
 
