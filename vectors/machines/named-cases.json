@@ -7144,7 +7144,7 @@
     },
     {
       "name": "catalogue-entry-caveats-carry-their-data",
-      "rationale": "The system-level ask on a system whose gamelist carries a per-game override: every entry says so, and the caveat's data says how many games it is about — one, here. Bare codes could not carry that count, which is the whole difference between 'this answer may be wrong for some game' and knowing how much of the system it concerns. The entry also names its own system, so an entry that travels out of the call that produced it still says what it launches.",
+      "rationale": "The system-level ask on a system whose gamelist carries a per-game override: every entry says so under the catalogue's own code — per-game-alternative-emulator, never the emulators' per-game-overrides-present, so a client switches on the code alone (#311) — and the caveat's data says how many games it is about (one, here) and which emulator those games select, tallied per label in 'emulators'. Bare codes could not carry that, which is the whole difference between 'this answer may be wrong for some game' and knowing how much of the system it concerns and where those games went. The entry also names its own system, so an entry that travels out of the call that produced it still says what it launches.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7182,9 +7182,12 @@
               "selection": null,
               "caveats": [
                 {
-                  "code": "per-game-overrides-present",
+                  "code": "per-game-alternative-emulator",
                   "data": {
-                    "count": "1"
+                    "count": "1",
+                    "emulators": {
+                      "ParaLLEl N64": "1"
+                    }
                   }
                 }
               ]
@@ -7197,9 +7200,12 @@
               "selection": null,
               "caveats": [
                 {
-                  "code": "per-game-overrides-present",
+                  "code": "per-game-alternative-emulator",
                   "data": {
-                    "count": "1"
+                    "count": "1",
+                    "emulators": {
+                      "ParaLLEl N64": "1"
+                    }
                   }
                 }
               ]

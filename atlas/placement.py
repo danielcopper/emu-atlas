@@ -312,6 +312,16 @@ CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
 # is present and empty, and what a core is handed then depends on the run.
 CAVEAT_SYSTEM_DIRECTORY_CLEARED = "system-directory-cleared"
 CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
+# The frontend's statement, split off the code above (#311): some games of this
+# system select a different emulator in their gamelist entry, so a system-level
+# entry order may be wrong for exactly those games. Its own code because a
+# caveat code is the thing a client switches on — the two facts were riding one
+# code told apart only by the shape of ``data``, and both can ride one answer
+# at once. ``per-game-overrides-present`` stays the emulators' statement (a
+# settings file layered over the very answer it rides, with ``core``, ``dir``
+# and ``key``); this one carries the total ``count`` and ``emulators``, the
+# selected emulator label mapped to how many games select it.
+CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR = "per-game-alternative-emulator"
 CAVEAT_PER_GAME_OVERRIDE = "per-game-override"
 # The third state those two leave out: an emulator that layers per-game files
 # over its whole configuration (PCSX2 installs one game's
@@ -548,12 +558,24 @@ class Caveat:
 
     code: str
     message: str
-    data: Mapping[str, str] = field(default_factory=dict)
+    # Values are strings, except the mapping-valued key the alternative-emulator
+    # code documents beside its constant (``emulators``) — read-only mappings
+    # here, plain objects in the serialized contract.
+    data: Mapping[str, "str | Mapping[str, str]"] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.code:
             raise ValueError("Caveat: code must be a non-empty stable identifier")
-        object.__setattr__(self, "data", _freeze(self.data))
+        object.__setattr__(
+            self,
+            "data",
+            _freeze(
+                {
+                    key: _freeze(value) if isinstance(value, Mapping) else value
+                    for key, value in self.data.items()
+                }
+            ),
+        )
 
 # The holes a ``needs`` list may carry, each one a value the CALLER fills from
 # the content at hand. Contractual: clients read them, vectors assert them.

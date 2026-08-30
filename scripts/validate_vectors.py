@@ -293,6 +293,7 @@ KNOWN_CAVEAT_CODES = {
     "unknown-option-value",
     "system-directory-cleared",
     "per-game-overrides-present",
+    "per-game-alternative-emulator",
     "per-game-override",
     "per-game-layer-unread",
     "per-game-build-layer-unread",
@@ -915,8 +916,21 @@ def _validate_caveats(name: str, caveats: Any) -> None:
         if caveat["code"] not in KNOWN_CAVEAT_CODES:
             fail(f"{name}: caveat code must be one of {sorted(KNOWN_CAVEAT_CODES)}, got {caveat['code']!r}")
         data = caveat["data"]
+        # Values are strings, except the one mapping-valued key the contract
+        # documents: the alternative-emulator code's ``emulators`` tally, an
+        # object of strings itself.
         if not isinstance(data, dict) or not all(
-            isinstance(k, str) and isinstance(v, str) for k, v in data.items()
+            isinstance(k, str)
+            and (
+                isinstance(v, str)
+                or (
+                    k == "emulators"
+                    and caveat["code"] == "per-game-alternative-emulator"
+                    and isinstance(v, dict)
+                    and all(isinstance(dk, str) and isinstance(dv, str) for dk, dv in v.items())
+                )
+            )
+            for k, v in data.items()
         ):
             fail(f"{name}: caveat data must be an object of strings, got {data!r}")
 
