@@ -58,15 +58,19 @@ _FROM_CHARS_FALSE = ("false", "no", "off", "0", "disabled")
 
 
 def _path_append(dst: list[str], src: str) -> None:
-    """``PathAppendString`` (common/FileSystem.cpp:98-139 at PCSX2 v2.6.3), the POSIX half.
+    """``PathAppendString``, the POSIX half — one function in two emulators.
 
-    Copies *src* onto *dst* collapsing every run of separators to one. The
-    state that decides it is ``last_separator``, seeded from what *dst*
-    already ends with (:104) — which is the whole mechanism behind
-    :func:`pcsx2_path_combine` swallowing an absolute value's leading
-    separator. The ``_WIN32`` arms (backslash folding, the UNC special case)
-    are deliberately not ported: atlas resolves Linux machines, and porting a
-    branch no read of one can reach would be code nothing proves.
+    (common/FileSystem.cpp:98-139 at PCSX2 v2.6.3; file_system.cpp:100-140 at
+    stenzek/duckstation@64655818e.) Copies *src* onto *dst* collapsing every
+    run of separators to one. The state that decides it is ``last_separator``,
+    seeded from what *dst* already ends with (:104 / :105) — which is the
+    whole mechanism behind :func:`path_combine` swallowing an absolute value's
+    leading separator. The ``_WIN32`` arms (backslash folding, the UNC special
+    case) are deliberately not ported: atlas resolves Linux machines, and
+    porting a branch no read of one can reach would be code nothing proves.
+    Outside those arms the two upstreams differ by nothing but whitespace —
+    the UNC test, inline in PCSX2 and an ``IsUNCPath`` helper in DuckStation,
+    is their one textual difference, and it sits in the arm the port omits.
     """
     last_separator = bool(dst) and dst[-1] == "/"
     for char in src:
@@ -78,31 +82,38 @@ def _path_append(dst: list[str], src: str) -> None:
             dst.append("/")
 
 
-def pcsx2_path_combine(base: str, name: str) -> str:
-    """``Path::Combine`` (common/FileSystem.cpp:847-862 at PCSX2 v2.6.3), ported faithfully.
+def path_combine(base: str, name: str) -> str:
+    """``Path::Combine``, ported faithfully — the same function in two emulators.
 
-    A resident here for the reason :func:`from_chars_bool` is: PCSX2 composes
-    both of its configured *file names* with this combine — the memory-card
-    image (``FullpathToMcd``, Pcsx2Config.cpp:2065-2068, read by
-    :mod:`atlas.installations`) and the BIOS image (``FullpathToBios``,
-    :2057-2062, read by :mod:`atlas.firmware`) — and neither module can import
-    the other.
+    (common/FileSystem.cpp:847-862 at PCSX2 v2.6.3; file_system.cpp:859-874 at
+    stenzek/duckstation@64655818e — token-identical outside the unported
+    ``_WIN32`` arm, see :func:`_path_append`, so one port serves both.) A
+    resident here for the reason :func:`from_chars_bool` is: every configured
+    *file name* either emulator composes goes through this combine — PCSX2's
+    memory-card image (``FullpathToMcd``, Pcsx2Config.cpp:2065-2068, read by
+    :mod:`atlas.installations`), PCSX2's BIOS image (``FullpathToBios``,
+    :2057-2062, read by :mod:`atlas.firmware`) and DuckStation's region BIOS
+    image (``GetBIOSImage``, bios.cpp:350, read by :mod:`atlas.firmware` too)
+    — and neither module can import the other.
 
     It is this rather than :func:`os.path.join` because the two disagree on
-    exactly the value issue #312 was about. The combine appends *base*, strips
-    its trailing separators, appends **one** separator (:856), then appends
-    *name* through :func:`_path_append` — which therefore enters with
-    ``last_separator`` already true and swallows the leading separator of an
-    absolute *name* at the ``continue`` on :128-129. So an absolute file name
-    lands **below** the directory instead of replacing it, where
-    ``os.path.join`` would let it replace it silently.
+    exactly the value issues #312 and #320 were about. The combine appends
+    *base*, strips its trailing separators, appends **one** separator (:856 /
+    :868), then appends *name* through :func:`_path_append` — which therefore
+    enters with ``last_separator`` already true and swallows the leading
+    separator of an absolute *name* at the ``continue`` on :128-129 / :129-130.
+    So an absolute file name lands **below** the directory instead of replacing
+    it, where ``os.path.join`` would let it replace it silently.
 
     That this is deliberate rather than incidental is visible two hundred lines
     away: ``LoadPathFromSettings`` *does* test ``Path::IsAbsolute``
     (Pcsx2Config.cpp:2275), because a ``[Folders]`` setting is where PCSX2
     wants an absolute value to win. ``Path::Combine`` has no such test — so in
     one PCSX2 configuration file an absolute value is a path when it names a
-    directory and is not one when it names a file.
+    directory and is not one when it names a file. DuckStation keeps the same
+    asymmetry: its folder reader tests it (``LoadPathFromSettings``,
+    settings.cpp:1955-1962) and its shared-card getter tests it
+    (settings.cpp:1785-1797), while the BIOS-image combine tests nothing.
 
     Nothing here normalises, because upstream resolves no ``.`` or ``..``
     component either. A name of ``"../x"`` composes literally to
@@ -130,7 +141,7 @@ def from_chars_bool(value: str | None) -> bool | None:
     keeping the caller's default where that returns nothing
     (INISettingsInterface.cpp:198-210 and StringUtil.h:178-197 at PCSX2 v2.6.3;
     ini_settings_interface.cpp:155-167 and string_util.h:180-197 at
-    stenzek/duckstation`64655818e). ``None`` here is that nothing: the key
+    stenzek/duckstation@64655818e). ``None`` here is that nothing: the key
     said something the emulator could not read as a boolean, so its compiled
     default governs — which is not the same fact as an absent key, and the
     caller keeps them apart.

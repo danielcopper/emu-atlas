@@ -3015,7 +3015,7 @@ def _pcsx2_standalone_core(
     # (Pcsx2Config.cpp:2057-2062 at v2.6.3). os.path.join is wrong for it —
     # Python lets an absolute second argument replace the first, while
     # Path::Combine swallows that value's leading separator and joins it BELOW
-    # the BIOS directory (:func:`atlas.qt_ini.pcsx2_path_combine`). The same
+    # the BIOS directory (:func:`atlas.qt_ini.path_combine`). The same
     # defect #312 fixed on the memory-card side, reached by a quieter route:
     # there atlas tested for an absolute value and acted on it, here the join
     # itself did the replacing with nothing in the code to read.
@@ -3023,7 +3023,7 @@ def _pcsx2_standalone_core(
     # The directory above went through the sandbox and the name does not: after
     # the combine it carries no root of its own, so there is nothing to
     # translate.
-    composed = qt_ini.pcsx2_path_combine(bios_dir, name)
+    composed = qt_ini.path_combine(bios_dir, name)
     path = resolve_links(machine, composed) or composed
     found, checked, observed = _observe(machine, path, None, verify=verify)
     requirement = FirmwareRequirement(
@@ -3267,17 +3267,23 @@ def _duckstation_named_image(
     purpose: str,
     verify: bool,
 ) -> tuple[FirmwareRequirement, Caveat | None]:
-    """One region key that names an image: a plain path, composed the way the emulator composes it.
+    """One region key that names an image: a file name, composed the way the emulator composes it.
 
     The value is joined onto the search directory rather than read as a path
     of its own (``Path::Combine(EmuFolders::Bios, bios_name)``, bios.cpp:350),
-    which is why a name is what belongs in the setting. The requirement is
-    scoped to its one region, because only that region's launch reads this
-    key at all (``GetBIOSImage`` switches on the console region and reads
-    exactly one of the three, bios.cpp:321-338) — it always ends up an option
-    of the entry's alternatives group, never an unconditional requirement.
+    which is why a name is what belongs in the setting. DuckStation's combine
+    is PCSX2's to the token outside an unported ``_WIN32`` arm
+    (file_system.cpp:859-874 at stenzek/duckstation@64655818e), so the compose
+    goes through the one ported :func:`atlas.qt_ini.path_combine` — an
+    absolute value joins *below* the directory, where ``os.path.join`` would
+    let it replace the directory and name a file this emulator never opens
+    (#320). The requirement is scoped to its one region, because only that
+    region's launch reads this key at all (``GetBIOSImage`` switches on the
+    console region and reads exactly one of the three, bios.cpp:321-338) — it
+    always ends up an option of the entry's alternatives group, never an
+    unconditional requirement.
     """
-    composed = os.path.join(bios_dir, name)
+    composed = qt_ini.path_combine(bios_dir, name)
     path = resolve_links(machine, composed) or composed
     found, checked, observed = _observe(machine, path, None, verify=verify)
     requirement = FirmwareRequirement(
@@ -3285,7 +3291,10 @@ def _duckstation_named_image(
         system=system,
         system_source=SOURCE_CARD,
         need=NEED_REQUIRED,
-        file_name=os.path.basename(name),
+        # The basename of what the emulator OPENS, not of the raw value — the
+        # same distinction the PCSX2 site above draws: the two agree for every
+        # ordinary name and part company on a degenerate one.
+        file_name=os.path.basename(composed),
         path=path,
         declared=name,
         description=f"{purpose} — the image this launch opens for a {region} console ({key})",

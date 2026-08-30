@@ -3,13 +3,13 @@
 ``values`` interprets nothing, so its tests are about the text. ``from_chars_bool``
 mirrors an upstream function two emulators share, so its tests are about that
 function's corners — including the ones a reasonable ini reader would not have.
-``pcsx2_path_combine`` is the same kind of resident and gets the same treatment:
+``path_combine`` is the same kind of resident and gets the same treatment:
 its tests are about where it parts company with ``os.path.join``.
 """
 
 import pytest
 
-from atlas.qt_ini import from_chars_bool, pcsx2_path_combine, unescape_section, values
+from atlas.qt_ini import from_chars_bool, path_combine, unescape_section, values
 
 
 class TestSectionsAndValues:
@@ -80,49 +80,51 @@ class TestTheBooleanTwoEmulatorsShare:
 
 
 class TestTheCombineThatIsNotOsPathJoin:
-    """``Path::Combine`` at PCSX2 v2.6.3 (common/FileSystem.cpp:847-862).
+    """``Path::Combine`` at PCSX2 v2.6.3 (common/FileSystem.cpp:847-862) and at
+    stenzek/duckstation@64655818e (file_system.cpp:859-874), one port for both.
 
     The whole reason this exists rather than :func:`os.path.join` is the first
-    test below. PCSX2 composes both of its configured file names with it — the
-    memory-card image and the BIOS image — and neither is allowed to replace
-    the directory it is read in (#312).
+    test below. Every configured file name either emulator composes goes
+    through it — PCSX2's memory-card and BIOS images, DuckStation's region
+    BIOS image — and none is allowed to replace the directory it is read in
+    (#312, #320).
     """
 
     def test_an_absolute_name_is_joined_below_rather_than_replacing(self):
         # PathAppendString enters with last_separator true, because Combine
         # just appended one, so the leading separator hits `continue` (:128-129).
-        assert pcsx2_path_combine("/x/memcards", "/abs/card.ps2") == "/x/memcards/abs/card.ps2"
+        assert path_combine("/x/memcards", "/abs/card.ps2") == "/x/memcards/abs/card.ps2"
         # The behaviour this is here to NOT have:
         import os
 
         assert os.path.join("/x/memcards", "/abs/card.ps2") == "/abs/card.ps2"
 
     def test_an_ordinary_name_joins_the_way_anyone_would_expect(self):
-        assert pcsx2_path_combine("/x/memcards", "Mcd001.ps2") == "/x/memcards/Mcd001.ps2"
-        assert pcsx2_path_combine("/x/memcards", "sub/Mcd001.ps2") == "/x/memcards/sub/Mcd001.ps2"
+        assert path_combine("/x/memcards", "Mcd001.ps2") == "/x/memcards/Mcd001.ps2"
+        assert path_combine("/x/memcards", "sub/Mcd001.ps2") == "/x/memcards/sub/Mcd001.ps2"
 
     def test_separator_runs_collapse_to_one(self):
         # PathAppendString emits at most one separator per run (:117-138).
-        assert pcsx2_path_combine("/x/memcards", "//abs//card.ps2") == "/x/memcards/abs/card.ps2"
-        assert pcsx2_path_combine("/x//memcards//", "card.ps2") == "/x/memcards/card.ps2"
+        assert path_combine("/x/memcards", "//abs//card.ps2") == "/x/memcards/abs/card.ps2"
+        assert path_combine("/x//memcards//", "card.ps2") == "/x/memcards/card.ps2"
 
     def test_a_trailing_separator_is_stripped_from_the_result(self):
         # The second strip loop, :858-859.
-        assert pcsx2_path_combine("/x/memcards", "sub/") == "/x/memcards/sub"
+        assert path_combine("/x/memcards", "sub/") == "/x/memcards/sub"
 
     def test_a_name_of_separators_alone_is_the_directory_itself(self):
         # Every separator swallowed, then the trailing one stripped.
-        assert pcsx2_path_combine("/x/memcards", "/") == "/x/memcards"
-        assert pcsx2_path_combine("/x/memcards", "///") == "/x/memcards"
+        assert path_combine("/x/memcards", "/") == "/x/memcards"
+        assert path_combine("/x/memcards", "///") == "/x/memcards"
 
     def test_an_empty_name_is_the_directory_itself(self):
         # The fact _pcsx2_folder_below_dataroot states for a present-but-empty
         # [Folders] key: Path::Combine(DataRoot, "") is the DataRoot.
-        assert pcsx2_path_combine("/x/memcards", "") == "/x/memcards"
+        assert path_combine("/x/memcards", "") == "/x/memcards"
 
     def test_nothing_is_normalised(self):
         # Upstream resolves no '.' or '..' component, so neither does this:
         # where the path lands is the kernel's answer, and a lexical reading
         # would disagree with it wherever a parent is a symlink.
-        assert pcsx2_path_combine("/x/memcards", "../y.ps2") == "/x/memcards/../y.ps2"
-        assert pcsx2_path_combine("/x/memcards", "./y.ps2") == "/x/memcards/./y.ps2"
+        assert path_combine("/x/memcards", "../y.ps2") == "/x/memcards/../y.ps2"
+        assert path_combine("/x/memcards", "./y.ps2") == "/x/memcards/./y.ps2"
