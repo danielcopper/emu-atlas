@@ -3147,6 +3147,65 @@
           }
         }
       }
+    },
+    {
+      "name": "duckstation-a-degenerate-states-value-lands-where-the-combine-lands",
+      "rationale": "[Folders] SaveStates spelled states//deep/ — a separator run and a trailing separator. LoadPathFromSettings (settings.cpp:1975 with :1952-1962 at 64655818e) composes the relative value below the DataRoot through Path::Combine, which collapses the run and strips the tail (file_system.cpp:859-874), so the emulator's states directory is <DataRoot>/states/deep and the answer spells exactly that.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": "",
+          "/home/deck/.local/share/duckstation/settings.ini": "[Folders]\nSaveStates = states//deep/\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/.local/share/duckstation/states/deep"
+        ],
+        "entry_savestate_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/.local/share/duckstation/states/deep",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DUCKSTATION",
+                "dir": "/home/deck/.local/share/duckstation/states/deep",
+                "pattern": "<serial>_<slot>.sav",
+                "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

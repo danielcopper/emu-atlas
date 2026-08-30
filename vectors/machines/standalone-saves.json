@@ -7084,6 +7084,295 @@
           }
         }
       }
+    },
+    {
+      "name": "duckstation-a-degenerate-card-path-names-the-file-the-emulator-opens",
+      "rationale": "Card1Path spelled with a separator run and a trailing separator. GetSharedMemoryCardPath composes a relative value below the memory-card directory through Path::Combine (settings.cpp:1791-1792 at 64655818e), which collapses the run and strips the trailing separator (file_system.cpp:859-874) — so the answer names cards/alpha.mcd below the default memcards, the file the emulator opens, not a directory-shaped spelling of it that os.path.join would have preserved.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": "",
+          "/home/deck/.local/share/duckstation/settings.ini": "[MemoryCards]\nCard1Type = Shared\nCard1Path = cards//alpha.mcd/\nCard2Type = None\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/.local/share/duckstation/memcards/cards"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.local/share/duckstation/memcards/cards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "alpha.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.local/share/duckstation/memcards/cards",
+                "files": [
+                  "alpha.mcd"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "Shared+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": null,
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Path",
+                "value": "cards//alpha.mcd/",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-a-degenerate-card-directory-is-the-directory-the-emulator-opens",
+      "rationale": "The issue's own witness: [MemoryCards] Directory = memcards//sub/. The emulator reads the key through LoadPathFromSettings (EmuFolders::LoadConfig, settings.cpp:1974 with :1952-1962 at 64655818e), whose Path::Combine collapses the separator run and strips the trailing separator (file_system.cpp:859-874) — the emulator opens <DataRoot>/memcards/sub, and the answer spells the same string instead of <DataRoot>/memcards//sub/, the same inode under a spelling the emulator never uses. The slot is per-game deliberately: that is the mode whose group directory is the Directory compose itself, un-recomposed — a shared slot's directory passes through the card-name combine as well, which would clean the base even if the Directory compose did not.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": "",
+          "/home/deck/.local/share/duckstation/settings.ini": "[MemoryCards]\nCard1Type = PerGameTitle\nCard2Type = None\nDirectory = memcards//sub/\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/.local/share/duckstation/memcards/sub"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.local/share/duckstation/memcards/sub",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<save_id>_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.local/share/duckstation/memcards/sub",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "DUCKSTATION",
+                "mode": "PerGameTitle",
+                "files": "<save_id>_1.mcd",
+                "files_without_save_id": "shared_card_1.mcd",
+                "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "PerGameTitle+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "memcards//sub/",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "PerGameTitle",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "UsePlaylistTitle",
+                "value": null,
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-a-degenerate-absolute-directory-keeps-both-slots-in-one-group",
+      "rationale": "[MemoryCards] Directory absolute and spelled with a separator run and a trailing separator, slot 1 on a configured name and slot 2 on its default. Upstream composes the default name through the same Path::Combine as a configured one (GetSharedMemoryCardPath, settings.cpp:1790 and :1792 at 64655818e), so both cards land in one directory spelled one way. Composing the default with os.path.join instead kept the base's degenerate spelling for slot 2 only — two spellings of one directory, and the answer's file list, which aggregates only the groups sharing the first group's directory, silently dropped the second card.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": "",
+          "/home/deck/.local/share/duckstation/settings.ini": "[MemoryCards]\nCard1Type = Shared\nCard1Path = alpha.mcd\nCard2Type = Shared\nDirectory = /home/deck/Emulation/saves/duckstation//saves/\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/duckstation/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/Emulation/saves/duckstation/saves",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "alpha.mcd",
+              "shared_card_2.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/duckstation/saves",
+                "files": [
+                  "alpha.mcd"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/Emulation/saves/duckstation/saves",
+                "files": [
+                  "shared_card_2.mcd"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "Shared+Shared",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/home/deck/Emulation/saves/duckstation//saves/",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Path",
+                "value": "alpha.mcd",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Path",
+                "value": null,
+                "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

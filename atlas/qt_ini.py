@@ -97,7 +97,10 @@ def path_combine(base: str, name: str) -> str:
     — and neither module can import the other.
 
     It is this rather than :func:`os.path.join` because the two disagree on
-    exactly the value issues #312 and #320 were about. The combine appends
+    exactly the value issues #312 and #320 were about — and, on the relative
+    side, on the degenerate spellings #325 was about: the collapse and the
+    final strip mean ``memcards//sub/`` composes to ``<dir>/memcards/sub``,
+    where ``os.path.join`` preserves both the run and the tail. The combine appends
     *base*, strips its trailing separators, appends **one** separator (:856 /
     :868), then appends *name* through :func:`_path_append` — which therefore
     enters with ``last_separator`` already true and swallows the leading

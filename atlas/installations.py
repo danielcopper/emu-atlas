@@ -7329,7 +7329,25 @@ def _duckstation_shared_slot(
     sandbox: _Sandbox,
     type_reading: OptionReading,
 ) -> _DuckSlot:
-    """The shared card: ``CardXPath`` — absolute or Directory-relative — else the default name."""
+    """The shared card: ``CardXPath`` — absolute or Directory-relative — else the default name.
+
+    The three arms are ``GetSharedMemoryCardPath``'s own (settings.cpp:1785-1797
+    at 64655818e): an empty value combines the default name below the
+    memory-card directory (:1790), a relative one combines there too (:1792),
+    and only a value upstream's ``Path::IsAbsolute`` accepts stands alone — no
+    ``RealPath`` follows any of them, unlike the folder reader. Both combines
+    are :func:`atlas.qt_ini.path_combine`, not ``os.path.join``, because the
+    two disagree on degenerate spellings (#325). For a configured name the
+    degenerate spelling is the value's own: ``cards//alpha.mcd/`` names the
+    file the emulator opens instead of a directory-shaped spelling of it. For
+    the default name it is the *base*'s: an absolute ``[MemoryCards]
+    Directory`` reaches every slot as spelled, and the combine collapsing it
+    is what keeps a default-named slot in the same group directory as a
+    configured sibling — under ``os.path.join`` the two slots spelled one
+    directory two ways, and the answer's file list, which aggregates only the
+    groups sharing the first group's directory, silently dropped the second
+    card.
+    """
     n = slot + 1
     found_path, path_spelled = _simpleini_value(values, "MemoryCards", f"Card{n}Path")
     raw_path = found_path or ""
@@ -7345,9 +7363,9 @@ def _duckstation_shared_slot(
         None,
     )
     if not raw_path:
-        resolved = os.path.join(memcards_dir, f"shared_card_{n}.mcd")
+        resolved = qt_ini.path_combine(memcards_dir, f"shared_card_{n}.mcd")
     elif not os.path.isabs(raw_path):
-        resolved = os.path.join(memcards_dir, raw_path)
+        resolved = qt_ini.path_combine(memcards_dir, raw_path)
     else:
         host = sandbox.host(f"Card{n}Path", raw_path)
         if host.path is None:
@@ -7677,10 +7695,15 @@ def _duckstation_savefile_placement(
         ),
         None,
     )
+    # The directory is a LoadPathFromSettings read (EmuFolders::LoadConfig,
+    # settings.cpp:1974 with :1952-1962 at 64655818e): unset and empty alike
+    # fall to the compiled default, and a relative value combines below the
+    # DataRoot — through the emulator's own combine, whose degenerate-spelling
+    # behaviour and RealPath tail :func:`atlas.duckstation.load_path` states.
     if not raw_dir:
         memcards_dir = os.path.join(data_root, "memcards")
     elif not os.path.isabs(raw_dir):
-        memcards_dir = os.path.join(data_root, raw_dir)
+        memcards_dir = qt_ini.path_combine(data_root, raw_dir)
     else:
         host = sandbox.host("Directory", raw_dir)
         if host.path is None:
@@ -9658,7 +9681,11 @@ def _duckstation_savestate_placement(
             f"DataRoot governs ({setting.citation})"
         )
     elif not os.path.isabs(raw):
-        directory = os.path.join(data_root, raw)
+        # The emulator's own combine (settings.cpp:1958-1959), not
+        # os.path.join: what that changes for a degenerate spelling, and what
+        # of the RealPath tail an answer mirrors, is stated once at
+        # :func:`atlas.duckstation.load_path`.
+        directory = qt_ini.path_combine(data_root, raw)
         reading = (
             f'settings.ini: [{setting.section}] {spelled} = "{raw}" — a relative value '
             "joins the DataRoot (LoadPathFromSettings, settings.cpp:1955-1962)"

@@ -115,6 +115,15 @@ class TestOneSettingBecomesADirectory:
             "/root/images/ps1"
         )
 
+    def test_a_degenerate_relative_spelling_composes_the_way_the_combine_does(self):
+        # The compose is Path::Combine (settings.cpp:1958-1959 at 64655818e),
+        # which collapses the separator run and strips the trailing separator
+        # (#325) — os.path.join would have preserved both.
+        values = {("BIOS", "SearchDirectory"): "images//ps1/"}
+        assert duckstation.load_path(values, self.ROOT, "BIOS", "SearchDirectory", "bios") == (
+            "/root/images/ps1"
+        )
+
     def test_an_absolute_value_is_taken_as_it_stands(self):
         values = {("BIOS", "SearchDirectory"): "/mnt/sd/bios"}
         assert duckstation.load_path(values, self.ROOT, "BIOS", "SearchDirectory", "bios") == (
