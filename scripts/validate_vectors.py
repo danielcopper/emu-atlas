@@ -1331,8 +1331,16 @@ def _validate_requirement_path(name: str, entry: Any, root: str) -> None:
         fail(f"{name}: a requirement's path must be the absolute destination under the root {root!r}")
     if os.path.normpath(entry["path"]) != entry["path"]:
         fail(f"{name}: a requirement's path must be normalized — no '..' segment may survive into an answer")
-    if os.path.basename(entry["declared"]) != entry["file_name"]:
-        fail(f"{name}: a requirement's file_name must be the name the core spelled at the end of 'declared'")
+    # A declared value that ends in a name keeps that name through the
+    # emulator's combine, so the two spellings must agree. One that ends in a
+    # separator spells no name of its own: the combine folds it onto the
+    # directory, and file_name follows the composed path instead (#320).
+    declared_tail = os.path.basename(entry["declared"])
+    if declared_tail:
+        if declared_tail != entry["file_name"]:
+            fail(f"{name}: a requirement's file_name must be the name the core spelled at the end of 'declared'")
+    elif entry["file_name"] != os.path.basename(entry["path"]):
+        fail(f"{name}: a declaration spelling no name composes onto its directory — file_name must be the end of 'path'")
     # 'declared' is not required to be relative. RetroArch composes it with the
     # system directory whatever it looks like (fill_pathname_join,
     # file_path.c:983-993), so an absolute declaration lands under the root like

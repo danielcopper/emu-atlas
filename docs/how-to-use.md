@@ -1596,11 +1596,14 @@ not a fault either: DuckStation boots it with a warning, so it is stated as the 
 **When a region key names an image, the answer becomes alternatives.** One launch reads exactly one of `PathNTSCU`,
 `PathNTSCJ` and `PathPAL` — `GetBIOSImage` switches on the console region, which under the shipped Auto setting is the
 running disc's own — so a named image and the search's find for the remaining regions are never two files one launch
-needs. The entry then answers a single `FirmwareAlternatives` group: the named image as the option of its one region,
-the search's find (or its degradation caveats) covering the regions left over, every option carrying its `regions` as
-data. Pick the option whose `regions` contain your disc's region; a region no option lists has nothing stated for it and
-the caveats say why. Only the everything-searched state — every key empty, which is what both arrangements ship — stays
-a plain, unconditional requirement.
+needs. The keys hold names rather than paths, with the same asymmetry PCSX2's pair above has: `GetBIOSImage` joins the
+value onto `[BIOS] SearchDirectory` with the same `Path::Combine`, so an absolute value there is joined **below** the
+search directory rather than opened where it points — the leading separator is swallowed — while an absolute
+`SearchDirectory` itself wins outright. The entry then answers a single `FirmwareAlternatives` group: the named image as
+the option of its one region, the search's find (or its degradation caveats) covering the regions left over, every
+option carrying its `regions` as data. Pick the option whose `regions` contain your disc's region; a region no option
+lists has nothing stated for it and the caveats say why. Only the everything-searched state — every key empty, which is
+what both arrangements ship — stays a plain, unconditional requirement.
 
 Those same three keys are the second family DuckStation's **per-game layer** reaches, so this answer carries the layer
 statement described under the standalone save section — same codes, same gate, its own keys. They travel a different
