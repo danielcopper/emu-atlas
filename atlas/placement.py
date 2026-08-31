@@ -61,7 +61,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, TypeVar
 
-from atlas.retroarch_cfg import RetroArchCfg
+from .retroarch_cfg import RetroArchCfg
 
 # Root kinds — where the placement's directory is anchored. The closed
 # vocabularies are Literal types so an invalid state is a type error first

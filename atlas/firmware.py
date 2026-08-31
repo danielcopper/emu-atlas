@@ -62,7 +62,6 @@ established at all.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 import os
 import tomllib
@@ -71,7 +70,8 @@ from dataclasses import dataclass
 from glob import escape as _glob_escape
 from typing import Any, Literal, Mapping, Protocol, cast
 
-from atlas.core_info import (
+from ._data import packaged_text
+from .core_info import (
     UNREAD_EMPTY,
     UNREAD_NO_SLOT,
     UNREAD_UNCOUNTED,
@@ -80,8 +80,8 @@ from atlas.core_info import (
     parse_core_info,
     unread_reason,
 )
-from atlas.esde import KIND_LIBRETRO
-from atlas.machine import (
+from .esde import KIND_LIBRETRO
+from .machine import (
     DIGEST_MD5,
     DIGEST_SHA1,
     KIND_DIRECTORY,
@@ -95,15 +95,15 @@ from atlas.machine import (
     PathKind,
     ReadStatus,
 )
-from atlas import duckstation, emulator_settings, melonds, qt_ini
-from atlas.oddities import SaveMode, load_oddities
-from atlas.standalone_firmware import (
+from . import duckstation, emulator_settings, melonds, qt_ini
+from .oddities import SaveMode, load_oddities
+from .standalone_firmware import (
     StandaloneFirmwareCard,
     StandaloneFirmwareConfigFile,
     StandaloneFirmwareSearch,
     lookup_standalone_firmware_card,
 )
-from atlas.placement import (
+from .placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
     HOLE_CWD,
@@ -114,7 +114,7 @@ from atlas.placement import (
     UNRESOLVED_STANDALONE,
     Caveat,
 )
-from atlas.retroarch_cfg import cfg_uint
+from .retroarch_cfg import cfg_uint
 
 
 class SandboxTranslation(Protocol):
@@ -433,7 +433,7 @@ def load_hashes(text: str | None = None) -> FirmwareHashes:
     comes from the machine instead (:func:`read_core_declarations`).
     """
     if text is None:
-        text = importlib.resources.files("atlas").joinpath("data", "firmware_hashes.json").read_text(encoding="utf-8")
+        text = packaged_text("firmware_hashes.json")
     data = json.loads(text)
     raw_files: dict[str, dict[str, Any]] = data.get("files", {})
     files = {name: _hash_from_raw(name, raw) for name, raw in raw_files.items()}

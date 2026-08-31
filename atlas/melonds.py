@@ -24,8 +24,8 @@ import tomllib
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from atlas import emulator_settings
-from atlas.machine import Machine, READ_MISSING, READ_OK
+from . import emulator_settings
+from .machine import Machine, READ_MISSING, READ_OK
 
 CONFIG_DIRNAME = "melonDS"
 # The card token this emulator answers under, and the key its settings files

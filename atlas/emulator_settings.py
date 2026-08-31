@@ -35,14 +35,14 @@ already, so this is where it belongs.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from atlas.textures import expect_table_anchors, path_segments
+from ._data import packaged_text
+from .textures import expect_table_anchors, path_segments
 
 EMULATOR_SETTINGS_SCHEMA = 3
 
@@ -384,11 +384,7 @@ def _entry(token: str, entry: Any) -> EmulatorEntry:
 def load_emulator_settings(text: str | None = None) -> dict[str, EmulatorEntry]:
     """Load the packaged table (or *text* when supplied, for tests)."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "emulator_settings.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("emulator_settings.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != EMULATOR_SETTINGS_SCHEMA:
         raise ValueError(

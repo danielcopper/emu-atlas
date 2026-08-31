@@ -17,10 +17,11 @@ installation handles, because only a handle can answer them.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from typing import Any
+
+from ._data import packaged_text
 
 PLATFORM_CROSSWALK_SCHEMA = 1
 
@@ -136,11 +137,7 @@ def load_platform_crosswalk(text: str | None = None) -> dict[str, PlatformIdenti
     does not add up.
     """
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "platform_ids_crosswalk.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("platform_ids_crosswalk.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != PLATFORM_CROSSWALK_SCHEMA:
         raise ValueError(

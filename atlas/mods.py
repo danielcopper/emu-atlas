@@ -40,14 +40,14 @@ Facts in data, interpretation in code: this module only loads and indexes.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from atlas.placement import KEYINGS, PATCH_FORMATS, ROOT_KINDS, Keying
-from atlas.textures import SO_SUFFIX, XDG_BASES, expect_table_anchors, path_segments
+from ._data import packaged_text
+from .placement import KEYINGS, PATCH_FORMATS, ROOT_KINDS, Keying
+from .textures import SO_SUFFIX, XDG_BASES, expect_table_anchors, path_segments
 
 # Packaged-data schema version. The loader is strict for the same reason every
 # other packaged-data loader here is: a malformed build fails loudly instead of
@@ -569,14 +569,8 @@ def _standalone_mod_card(token: str, entry: Any) -> StandaloneModCard:
     )
 
 
-def _packaged_text() -> str:
-    return (
-        importlib.resources.files("atlas").joinpath("data", "mods.json").read_text(encoding="utf-8")
-    )
-
-
 def _packaged_raw(text: str | None) -> dict[str, Any]:
-    raw = json.loads(text if text is not None else _packaged_text())
+    raw = json.loads(text if text is not None else packaged_text("mods.json"))
     if not isinstance(raw, dict) or raw.get("schema") != MODS_SCHEMA:
         raise ValueError(
             f"mods: unsupported schema {raw.get('schema') if isinstance(raw, dict) else None!r} "

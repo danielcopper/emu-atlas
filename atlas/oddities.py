@@ -22,14 +22,14 @@ resolver in :mod:`atlas.installations` applies the card.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from atlas.mode_rules import RULES as MODE_RULES
-from atlas.placement import (
+from ._data import packaged_text
+from .mode_rules import RULES as MODE_RULES
+from .placement import (
     GRANULARITIES,
     GRANULARITY_NONE,
     GRANULARITY_PER_GAME_FILE,
@@ -938,9 +938,7 @@ def load_oddities(text: str | None = None) -> tuple[CoreCard, ...]:
     its own bundled world knowledge, which is exactly what the cards are.
     """
     if text is None:
-        text = (
-            importlib.resources.files("atlas").joinpath("data", "core_oddities.json").read_text(encoding="utf-8")
-        )
+        text = packaged_text("core_oddities.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != ODDITIES_SCHEMA:
         raise ValueError(
@@ -1099,7 +1097,7 @@ def _audit_entry(key: str, entry: Any) -> AuditEntry:
 def load_audit(text: str | None = None) -> dict[str, AuditEntry]:
     """Load the packaged verification matrix (``data/core_audit.json``)."""
     if text is None:
-        text = importlib.resources.files("atlas").joinpath("data", "core_audit.json").read_text(encoding="utf-8")
+        text = packaged_text("core_audit.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != AUDIT_SCHEMA:
         raise ValueError(

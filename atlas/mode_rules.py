@@ -27,7 +27,7 @@ import posixpath
 from dataclasses import dataclass
 from typing import Callable, Mapping
 
-from atlas.placement import (
+from .placement import (
     CAVEAT_CORE_GENERATION_MISMATCH,
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,

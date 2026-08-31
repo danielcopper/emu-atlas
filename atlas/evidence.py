@@ -37,12 +37,12 @@ clean as the day they were confirmed.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from typing import Any
 
-from atlas.placement import Caveat
+from ._data import packaged_text
+from .placement import Caveat
 
 # Packaged-data schema version. The loader is strict for the same reason the
 # rule-card loaders are: a malformed build fails loudly instead of resolving
@@ -127,11 +127,7 @@ def _live_verification(record: Any, where: str) -> LiveVerification | None:
 def load_arrangement_evidence(text: str | None = None) -> dict[str, ArrangementEvidence]:
     """Load the packaged evidence records (or *text* when supplied, for tests)."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "arrangement_evidence.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("arrangement_evidence.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != ARRANGEMENT_EVIDENCE_SCHEMA:
         raise ValueError(

@@ -45,14 +45,14 @@ resolver in :mod:`atlas.installations` decides when a record applies.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from atlas.placement import TEMPLATE_ROM_STEM
-from atlas.systems import known_systems
+from ._data import packaged_text
+from .placement import TEMPLATE_ROM_STEM
+from .systems import known_systems
 
 # Packaged-data schema version. The loader is strict for the same reason every
 # other packaged-data loader here is: a malformed build fails loudly instead of
@@ -279,21 +279,13 @@ def _record(key: str, entry: Any) -> SaveMemoryRecord:
     )
 
 
-def _packaged_text() -> str:
-    return (
-        importlib.resources.files("atlas")
-        .joinpath("data", "save_memory.json")
-        .read_text(encoding="utf-8")
-    )
-
-
 def load_save_memory(text: str | None = None) -> tuple[SaveMemoryRecord, ...]:
     """Load the packaged records (or *text* when supplied, for tests).
 
     Reading packaged data is not the machine seam — it is the library reading
     its own bundled world knowledge, which is exactly what these records are.
     """
-    raw = json.loads(text if text is not None else _packaged_text())
+    raw = json.loads(text if text is not None else packaged_text("save_memory.json"))
     if not isinstance(raw, dict) or raw.get("schema") != SAVE_MEMORY_SCHEMA:
         raise ValueError(
             f"save_memory: unsupported schema "

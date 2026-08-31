@@ -44,9 +44,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Generic, Sequence, TypeVar
 
-from atlas.detect import detect
-from atlas.firmware import FirmwareAnswer, FirmwareIdentification
-from atlas.installations import (
+from .detect import detect
+from .firmware import FirmwareAnswer, FirmwareIdentification
+from .installations import (
     CatalogueAnswer,
     Health,
     Installation,
@@ -56,8 +56,8 @@ from atlas.installations import (
     SystemPlatformsAnswer,
     SystemsAnswer,
 )
-from atlas.machine import Machine
-from atlas.placement import (
+from .machine import Machine
+from .placement import (
     ModPlacement,
     SavefilePlacement,
     SavestatePlacement,

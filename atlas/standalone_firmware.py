@@ -17,10 +17,11 @@ token — which on EmuDeck is the launcher route's word, variant-gated there.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from typing import Any
+
+from ._data import packaged_text
 
 FIRMWARE_CARDS_SCHEMA = 1
 
@@ -209,11 +210,7 @@ def _card(token: str, entry: Any) -> StandaloneFirmwareCard:
 def load_standalone_firmware(text: str | None = None) -> tuple[StandaloneFirmwareCard, ...]:
     """Load the packaged standalone firmware cards (or *text* when supplied, for tests)."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "standalone_firmware.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("standalone_firmware.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != FIRMWARE_CARDS_SCHEMA:
         raise ValueError(

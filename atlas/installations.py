@@ -41,15 +41,15 @@ from typing import (
 
 from dataclasses import dataclass, replace as _dc_replace
 
-from atlas.content_path import (
+from .content_path import (
     content_basename,
     content_file_name,
     content_system_dir,
     split_content_path,
 )
-from atlas.content_tree_wiring import WiringRow, lookup_content_tree_wiring
-from atlas.core_info import parse_core_info
-from atlas.esde import (
+from .content_tree_wiring import WiringRow, lookup_content_tree_wiring
+from .core_info import parse_core_info
+from .esde import (
     INVALID_PARSE,
     KIND_LIBRETRO,
     CatalogueLayer,
@@ -66,8 +66,8 @@ from atlas.esde import (
     parse_gamelist,
     resolve_rom_path,
 )
-from atlas.evidence import arrangement_caveats
-from atlas.platforms import (
+from .evidence import arrangement_caveats
+from .platforms import (
     CAVEAT_PLATFORM_SCRAPING_IGNORED,
     CAVEAT_PLATFORM_UNKNOWN,
     CAVEAT_PLATFORM_UNMAPPED,
@@ -75,8 +75,8 @@ from atlas.platforms import (
     platform_identities,
     platforms_for,
 )
-from atlas.systems import known_systems, vocabulary_platform_tags
-from atlas.firmware import (
+from .systems import known_systems, vocabulary_platform_tags
+from .firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
     CAVEAT_CORE_INFO_UNREADABLE,
@@ -102,12 +102,12 @@ from atlas.firmware import (
     read_core_declarations,
     xemu_file_value,
 )
-from atlas.launch_formats import lookup_install_first, lookup_standalone_launch
-from atlas.firmware import firmware_for_core as _resolve_for_core
-from atlas.firmware import firmware_for_system as _resolve_for_system
-from atlas.firmware import firmware_inventory as _resolve_inventory
-from atlas.firmware import identify_firmware as _resolve_identification
-from atlas.machine import (
+from .launch_formats import lookup_install_first, lookup_standalone_launch
+from .firmware import firmware_for_core as _resolve_for_core
+from .firmware import firmware_for_system as _resolve_for_system
+from .firmware import firmware_inventory as _resolve_inventory
+from .firmware import identify_firmware as _resolve_identification
+from .machine import (
     GLOB_COMPLETE,
     KIND_DIRECTORY,
     KIND_FILE,
@@ -123,7 +123,7 @@ from atlas.machine import (
     ReadResult,
     ReadStatus,
 )
-from atlas.mods import (
+from .mods import (
     ModCard,
     ModSetting,
     SoftPatchBuild,
@@ -132,7 +132,7 @@ from atlas.mods import (
     lookup_soft_patch_build,
     lookup_standalone_mod_card,
 )
-from atlas.mode_rules import (
+from .mode_rules import (
     FILE_ABSENT,
     FILE_READ,
     FILE_UNREADABLE,
@@ -140,7 +140,7 @@ from atlas.mode_rules import (
     FileLookup,
     RuleReading,
 )
-from atlas.oddities import (
+from .oddities import (
     MODE_ALWAYS,
     CoreCard,
     RetiredOption,
@@ -149,8 +149,8 @@ from atlas.oddities import (
     lookup_audit,
     lookup_card,
 )
-from atlas.save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
-from atlas.textures import (
+from .save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
+from .textures import (
     XDG_CONFIG,
     XDG_DATA,
     StandaloneTextureCard,
@@ -159,7 +159,7 @@ from atlas.textures import (
     lookup_standalone_texture_card,
     lookup_texture_card,
 )
-from atlas.placement import (
+from .placement import (
     UNRESOLVED_CORE_NOT_INSTALLED,
     CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
     CAVEAT_CFG_LINE_DROPPED,
@@ -278,16 +278,16 @@ from atlas.placement import (
     file_set_holes,
     needs_with_file_set,
 )
-from atlas import duckstation, emulator_settings, melonds, qt_ini
-from atlas.yaml_scalars import YamlScalars, read_scalars
-from atlas.standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
-from atlas.standalone_savestates import (
+from . import duckstation, emulator_settings, melonds, qt_ini
+from .yaml_scalars import YamlScalars, read_scalars
+from .standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
+from .standalone_savestates import (
     SavestateIniKey,
     SavestateLaunchIni,
     StandaloneSavestateCard,
     lookup_standalone_savestate_card,
 )
-from atlas.retroarch_cfg import (
+from .retroarch_cfg import (
     IGNORED_LINE_DROPPED,
     chain_value,
     SAVEFILE_KEYS,

@@ -27,15 +27,15 @@ from __future__ import annotations
 
 from typing import Any, Callable, Mapping, Sequence, TypeVar
 
-from atlas.every_installation import InstallationAnswer
-from atlas.firmware import (
+from .every_installation import InstallationAnswer
+from .firmware import (
     FirmwareAlternatives,
     FirmwareAnswer,
     FirmwareIdentification,
     FirmwareIdentity,
     FirmwareRequirement,
 )
-from atlas.installations import (
+from .installations import (
     CatalogueAnswer,
     EmulatorEntry,
     Health,
@@ -46,8 +46,8 @@ from atlas.installations import (
     SystemPlatformsAnswer,
     SystemsAnswer,
 )
-from atlas.platforms import PlatformIdentities
-from atlas.placement import (
+from .platforms import PlatformIdentities
+from .placement import (
     Caveat,
     ModPlacement,
     SavefilePlacement,
