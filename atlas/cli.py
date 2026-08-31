@@ -26,6 +26,7 @@ import os
 import sys
 from typing import Any, Callable, Sequence
 
+from . import __version__
 from .contract import (
     catalogue_contract,
     firmware_contract,
@@ -159,6 +160,9 @@ def build_parser() -> argparse.ArgumentParser:
         prog="emu-atlas",
         description="Ask atlas one question; the answer is its contract JSON on stdout.",
     )
+    # `--version` answers with the bare version string — an answer, exit 0 —
+    # so a script captures it without stripping a prog prefix.
+    parser.add_argument("--version", action="version", version=__version__)
     commands = parser.add_subparsers(dest="command", required=True)
 
     commands.add_parser(

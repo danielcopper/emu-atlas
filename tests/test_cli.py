@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 
+from atlas import __version__
 from atlas.cli import run
 from atlas.installations import RETRODECK_JSON_SUFFIX
 from atlas.machine import FixtureMachine
@@ -211,6 +212,15 @@ class TestTheExitCodeSeparatesAnsweringFromAsking:
         assert exit_code == 0
         detected = json.loads(capsys.readouterr().out)
         assert [installation["kind"] for installation in detected] == ["retrodeck"]
+
+
+def test_the_version_flag_answers_the_package_version(capsys):
+    """``--version`` is an answer: the bare version string on stdout, exit 0."""
+    machine = FixtureMachine({})
+    with pytest.raises(SystemExit) as excinfo:
+        run(["--version"], home="/home/deck", machine=machine)
+    assert excinfo.value.code == 0
+    assert capsys.readouterr().out.strip() == __version__
 
 
 def test_python_dash_m_atlas_speaks_from_a_real_machine(tmp_path):
