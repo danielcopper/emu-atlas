@@ -6,7 +6,8 @@ document only shows usage.
 
 ## Getting it
 
-Atlas is pure Python with zero runtime dependencies — vendoring is a directory copy:
+Atlas is pure Python with zero runtime dependencies (`dependencies = []` in `pyproject.toml` is a contract, not an
+accident) — vendoring is a directory copy:
 
 ```bash
 pip install --target py_modules/ /path/to/emu-atlas   # decky-style vendoring, from a checkout
@@ -21,6 +22,83 @@ import atlas
 Everything a client needs is in that namespace: the entry points, the handles, the answer types, the vocabularies and
 the serializers. The machine seam, the parsers and the packaged-data loaders are port and tooling surface and live in
 their own modules (`from atlas.machine import FixtureMachine`) — `docs/architecture.md` has the map.
+
+### Vendoring under a parent package
+
+A host that keeps foreign code inside its own package does not need `pip` at all — the copy is the install. Take the
+`atlas/` directory out of the release wheel (a wheel is a zip of the installed tree: unzip it, copy `atlas/`) or out of
+the repository at the release tag, place it under a parent package of your own, and import it there:
+
+```
+py_modules/
+    _vendor/
+        __init__.py     # empty — an ordinary package is all it takes
+        atlas/          # the copy, unmodified
+```
+
+```python
+from _vendor import atlas
+installations = atlas.detect(home=home)
+```
+
+Every question answers under the new name, and the parent's name and depth are yours to choose (`myplugin._vendor.atlas`
+works the same way): no module imports the package by its own name, and no packaged-data read anchors on the literal
+`atlas` — the imports are relative, the data reads anchor on the package's own location. That is a tested property, not
+a convention — `tests/test_relocation.py` holds both halves, sweeping the shipped source for the self-naming shapes and
+importing a copy under a parent package in an interpreter that provably cannot see an installed `atlas`.
+
+### Proving the copy against a release
+
+A directory copy carries no dist-info to ask, so the package states its own version:
+
+```python
+atlas.__version__     # equal to pyproject.toml's version at the release tag, e.g. '0.4.0'
+```
+
+The attribute cannot drift from the tag: release-please rewrites the `atlas/__init__.py` line at release time (the
+`extra-files` entry in `release-please-config.json`), `tests/test_version.py` fails whenever that line and
+`pyproject.toml` disagree, and CI's package job installs the built wheel into a clean venv and compares the recorded
+distribution version against `pyproject.toml`.
+
+File-level integrity comes from the release's `SHA256SUMS` manifest: beside the attached artifacts it lists every file
+inside the wheel by the path it has in the wheel archive (`atlas/contract.py`, `emu_atlas-X.Y.Z.dist-info/METADATA`). A
+partial copy — `atlas/` alone, no dist-info — verifies file by file, run from the directory that contains `atlas/`:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+```
+
+`--ignore-missing` skips the manifest entries you did not copy; every file you do hold must match its digest, and one
+edited byte fails the check. So it proves the files you hold are the tag's — not that you hold all of them: a file
+missing from the copy is skipped, not flagged.
+
+### The zstd codec under a host's own packaging
+
+One read is capability-gated: EmuDeck deploys ES-DE as an AppImage, the frontend's bundled `es_systems.xml` is sealed
+inside that image, and atlas opens the image itself wherever the runtime has the image's zstd codec —
+[the catalogue section](#which-emulator-would-launch-this-the-catalogue) says what changes when it does. That read is
+the codec's only consumer: the resolver asks for AppImage contents in exactly one place (EmuDeck's embedded-catalogue
+read, `atlas/installations.py`), gzip images decompress everywhere through the stdlib, and a consumer asking only
+RetroDECK — whose ES-DE lives in its Flatpak as plain files — never reaches the codec at all. On Python ≥ 3.14 the
+stdlib's `compression.zstd` answers the probe and nothing below applies.
+
+On an older interpreter the probe looks for `backports.zstd`, and a host that vendors the backport under its own parent
+package grants the capability without editing the copy: register the vendored module under the probed name before the
+first atlas call —
+
+```python
+import importlib, sys
+sys.modules["backports.zstd"] = importlib.import_module("_vendor.backports.zstd")
+```
+
+— and the probe finds it, because `atlas/squashfs.py` goes through the import machinery (`importlib.import_module`), and
+the import machinery consults `sys.modules` before it searches anywhere. The copy stays literal; nothing in it is
+patched.
+
+That is the shape the first consumer plans (danielcopper/romm-tender#1660): Decky Loader's embedded Python and the
+plugin's pin are 3.11, and the manylinux x86_64 `backports.zstd` wheel goes in beside the atlas copy — the consumer's
+stated plan, not a result measured here. atlas itself neither ships nor imports the backport: the probe is discovery,
+not a dependency.
 
 ## The standard query pattern
 
