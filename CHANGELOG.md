@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.0](https://github.com/danielcopper/emu-atlas/compare/v0.4.0...v0.5.0) (2026-08-31)
+
+
+### Features
+
+* a directory copy of the package answers under any parent package ([#332](https://github.com/danielcopper/emu-atlas/issues/332)) ([d8af9b6](https://github.com/danielcopper/emu-atlas/commit/d8af9b6fb0b19e7f59ae59683a37c276e17d08d9)), closes [#327](https://github.com/danielcopper/emu-atlas/issues/327)
+* **packaging:** the package states its own version, and the wheel carries only what runs ([#335](https://github.com/danielcopper/emu-atlas/issues/335)) ([930e9e7](https://github.com/danielcopper/emu-atlas/commit/930e9e7a0ffddff8b8f7bac67d241235d61194bc)), closes [#328](https://github.com/danielcopper/emu-atlas/issues/328)
+* **release:** a per-file SHA256SUMS manifest beside the artifacts ([#331](https://github.com/danielcopper/emu-atlas/issues/331)) ([6bb298d](https://github.com/danielcopper/emu-atlas/commit/6bb298d613e69c1d0e1e1fb11c3c91a2c6b3a48f)), closes [#329](https://github.com/danielcopper/emu-atlas/issues/329)
+
 ## [0.4.0](https://github.com/danielcopper/emu-atlas/compare/v0.3.0...v0.4.0) (2026-08-31)
 
 
