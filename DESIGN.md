@@ -341,7 +341,8 @@ placing a new name: if a client acts on it, Tier 1; if it exists so a port or a 
 | Consumers without any Python       | the release bundle: the CLI with its own pinned CPython, unpacked anywhere                                                                      |
 
 `dependencies = []` is a contract, not an accident: zero-dependency pure Python is what makes vendoring a directory copy
-— no compiled parts, no architecture question, no version conflicts inside a plugin bundle.
+— no compiled parts, no architecture question, no version conflicts inside a plugin bundle. And the copy is not bound to
+its own name: a host's own parent package (`_vendor.atlas`) imports it whole and every question answers there.
 
 ## Vectors
 
