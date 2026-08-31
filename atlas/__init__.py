@@ -40,6 +40,16 @@ wrong one. See DESIGN.md, "The two tiers", and docs/architecture.md for the map.
 
 from __future__ import annotations
 
+# pyproject.toml is the one version source; this line is its second spelling,
+# for the vendored directory copy that has no dist-info to answer from. A
+# second spelling is acceptable only mechanized: release-please rewrites it at
+# release time (the trailing annotation marks the line for its generic updater,
+# wired by the `extra-files` entry in release-please-config.json), and
+# tests/test_version.py holds it equal to pyproject — CI's package job holds
+# dist-info to pyproject in a clean venv — so drift is a red test, not a
+# silent fork.
+__version__ = "0.4.0"  # x-release-please-version
+
 # --- The two entry points, and the aggregate over them -----------------------
 from .detect import detect
 from .every_installation import EveryInstallation, InstallationAnswer, every_installation
@@ -384,6 +394,9 @@ from .placement import (
 )
 
 __all__ = [
+    # The package's own version — pyproject's second spelling (see the top of
+    # this module)
+    "__version__",
     # Entry points
     "detect",
     "every_installation",

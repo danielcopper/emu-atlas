@@ -6,7 +6,8 @@
   "include-component-in-tag": false,
   "packages": {
     ".": {
-      "initial-version": "0.1.0"
+      "initial-version": "0.1.0",
+      "extra-files": ["atlas/__init__.py"]
     }
   }
 }
