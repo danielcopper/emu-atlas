@@ -15,6 +15,14 @@ purpose: it is the first interpreter whose stdlib carries ``compression.zstd``
 with every capability the library has. The checksum is verified on every
 build — a provided local archive gets the same treatment as a download.
 
+The same pass writes the release's ``SHA256SUMS`` (issue #329): one
+``sha256sum -c``-native line per attached artifact, then one per file inside
+the wheel, named by the path it has in the wheel archive
+(``atlas/contract.py``, ``emu_atlas-X.Y.Z.dist-info/METADATA``). A consumer
+vendoring the package as a directory copy verifies file by file with
+``sha256sum -c --ignore-missing`` against the published manifest instead of
+building an anchor downstream of the thing it anchors.
+
 A maintainer/CI tool, not part of the library. stdlib only, like everything
 else in the tree.
 """
@@ -142,6 +150,33 @@ def _pack(bundle_root: Path, out_dir: Path) -> Path:
     return tarball
 
 
+def write_manifest(artifacts: list[Path], wheel: Path, out_dir: Path) -> Path:
+    """The release's ``SHA256SUMS``: every artifact, every file in the wheel.
+
+    ``sha256sum -c``-native lines (``<hex>``, two spaces, ``<name>``): first
+    the attached artifacts by basename, then the wheel's files by the paths
+    they have inside the wheel archive — the layout a consumer holds after
+    unzipping the wheel or copying ``atlas/`` out of it, checked from that
+    root with ``sha256sum -c --ignore-missing SHA256SUMS``. Both groups are
+    sorted and carry nothing but digests and names, so the manifest is
+    reproducible from the artifacts alone.
+    """
+    lines = [
+        f"{_sha256(artifact)}  {artifact.name}"
+        for artifact in sorted(artifacts, key=lambda artifact: artifact.name)
+    ]
+    with zipfile.ZipFile(wheel) as archive:
+        for entry in sorted(archive.infolist(), key=lambda entry: entry.filename):
+            if entry.is_dir():
+                continue
+            digest = hashlib.sha256(archive.read(entry)).hexdigest()
+            lines.append(f"{digest}  {entry.filename}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest = out_dir / "SHA256SUMS"
+    manifest.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8", newline="\n")
+    return manifest
+
+
 def build(tag: str, wheel: Path, out_dir: Path, runtime: Path | None) -> Path:
     archive = _runtime_archive(runtime, out_dir / "runtime-cache")
     with tempfile.TemporaryDirectory(prefix="emu-atlas-bundle-") as scratch:
@@ -170,15 +205,29 @@ def main(argv: list[str]) -> int:
         default=None,
         help="use this local runtime archive instead of downloading (still checksum-verified)",
     )
+    parser.add_argument(
+        "--artifact",
+        type=Path,
+        action="append",
+        default=None,
+        help="another release artifact to list in SHA256SUMS beside the bundle "
+        "and the wheel (repeatable)",
+    )
     args = parser.parse_args(argv)
     if not _TAG_PATTERN.match(args.tag):
         raise SystemExit(f"tag {args.tag!r} is not a plain release-tag name")
     wheel = _confined(args.wheel)
     out_dir = _confined(args.out)
     runtime = None if args.runtime_archive is None else _confined(args.runtime_archive)
+    artifacts = [_confined(artifact) for artifact in args.artifact or []]
     if not wheel.exists():
         raise SystemExit(f"wheel not found: {wheel}")
-    build(args.tag, wheel, out_dir, runtime)
+    for artifact in artifacts:
+        if not artifact.exists():
+            raise SystemExit(f"artifact not found: {artifact}")
+    tarball = build(args.tag, wheel, out_dir, runtime)
+    manifest = write_manifest([tarball, wheel, *artifacts], wheel, out_dir)
+    print(f"manifest: {manifest}")
     return 0
 
 
