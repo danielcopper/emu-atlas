@@ -2654,6 +2654,57 @@
           }
         }
       }
+    },
+    {
+      "name": "duckstation-a-degenerate-textures-value-composes-the-emulators-spelling",
+      "rationale": "[Folders] Textures spelled textures//packs/ — a separator run and a trailing separator. The key is a LoadPathFromSettings read (settings.cpp:1978 with :1952-1962 at 64655818e), whose Path::Combine collapses the run and strips the tail (file_system.cpp:859-874), so the emulator reads packs from <DataRoot>/textures/packs and the answer spells exactly that. The witness stands for every route through the shared load_path read — textures, cheats and the per-game settings directory compose a relative value through the same ported combine.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": "",
+          "/home/deck/.local/share/duckstation/settings.ini": "[Folders]\nTextures = textures//packs/\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/.local/share/duckstation/textures/packs"
+        ],
+        "entry_texture_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_texture_pack_location": {
+          "dir": "/home/deck/.local/share/duckstation/textures/packs",
+          "needs": [],
+          "physical_dir": null,
+          "enabled": null,
+          "keying": null,
+          "caveats": [
+            {
+              "code": "emulator-config-unread",
+              "data": {
+                "emulator": "DUCKSTATION",
+                "config": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

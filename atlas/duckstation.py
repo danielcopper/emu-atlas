@@ -178,21 +178,55 @@ def dataroot_caveat(token: str, below: str) -> Caveat:
 def load_path(
     values: Mapping[tuple[str, str], str], root: str, section: str, name: str, default: str
 ) -> str:
-    """``EmuFolders::LoadPathFromSettings`` (settings.cpp:1953-1962) as a read.
+    """``EmuFolders::LoadPathFromSettings`` (settings.cpp:1952-1962) as a read.
 
     An unset *or empty* value is the default, and anything relative — the
-    default included — hangs off the DataRoot. Upstream then calls
-    ``Path::RealPath``; atlas resolves links at the answer instead, so a
-    caller sees both the path the emulator composes and where it lands. The
-    key is matched the way ``CSimpleIniA`` matches it — ASCII
-    case-insensitively, last occurrence winning
-    (:func:`atlas.qt_ini.simpleini_value` carries the chain, #295) — so a
-    ``[folders]`` spelling governs here exactly as it does in the running
-    emulator.
+    default included — hangs off the DataRoot through ``Path::Combine``
+    (:1958-1959), which is :func:`atlas.qt_ini.path_combine` and not
+    ``os.path.join``: the combine collapses separator runs and strips a
+    trailing separator, so a degenerate spelling like ``memcards//sub/``
+    composes to the directory the emulator opens rather than to the same
+    inode under a spelling it never uses (#325). The key is matched the way
+    ``CSimpleIniA`` matches it — ASCII case-insensitively, last occurrence
+    winning (:func:`atlas.qt_ini.simpleini_value` carries the chain, #295) —
+    so a ``[folders]`` spelling governs here exactly as it does in the
+    running emulator.
+
+    Upstream then hands the composed path to ``Path::RealPath`` (:1960;
+    file_system.cpp:301-476 at 64655818e), and what an answer mirrors of it
+    is split, deliberately. RealPath walks the path a component at a time,
+    replacing each symlink with its target (``lstat``/``readlink``,
+    :397-464, a relative target resolved against the link's own directory)
+    and giving up the walk at the first component that does not exist — that
+    half atlas states at the answer instead of folding in, as
+    ``physical_dir`` and the dead-link caveats, so a caller sees both the
+    path the emulator composes and where it lands. RealPath then strips
+    ``.``/``..`` components lexically (``Path::Canonicalize``, :474) —
+    safe for upstream because every symlink in the leading portion was
+    already replaced, upstream's own comment on the line — and that half
+    atlas does not mirror at all: a configured value spelling ``..`` keeps
+    its spelling in the answer, where the running emulator's folder string
+    has it resolved against the symlink-replaced parent, which no lexical
+    read reproduces (the reason :func:`atlas.qt_ini.path_combine` resolves
+    no dot components).
+
+    The absolute arm is returned as spelled, and that is the last piece of
+    the split. Upstream hands an absolute value to ``RealPath`` too, and its
+    rebuild from split components (:306-308; ``SplitNativePath`` skips
+    consecutive separators and keeps no trailing element, :781-812, and
+    ``Canonicalize`` re-joins through ``JoinNativePath``, :499-527 and
+    :815-818) collapses separator runs and drops a trailing separator on the
+    way — so ``[Folders] Textures = /mnt/packs//sub/`` keeps that spelling
+    in the answer while the running emulator's folder string is
+    ``/mnt/packs/sub``. Not mirrored, deliberately: ``RealPath`` also
+    resolves the symlinks on that arm, so a runs-collapsed but
+    link-unresolved spelling would match neither the configured value nor
+    upstream's in-memory string — the answer keeps the configured spelling
+    in ``dir`` and leaves the kernel truth to ``physical_dir``.
     """
     raw, _ = qt_ini.simpleini_value(values, section, name)
     value = raw or default
-    return value if os.path.isabs(value) else os.path.join(root, value)
+    return value if os.path.isabs(value) else qt_ini.path_combine(root, value)
 
 
 # The per-game settings layer. Its directory is the usual LoadPathFromSettings
