@@ -60,13 +60,13 @@ below cannot be listed by name.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from atlas.textures import XDG_BASES, expect_table_anchors, path_segments
+from ._data import packaged_text
+from .textures import XDG_BASES, expect_table_anchors, path_segments
 
 SAVESTATES_SCHEMA = 1
 
@@ -598,11 +598,7 @@ def _card(token: str, entry: Any) -> StandaloneSavestateCard:
 def load_standalone_savestates(text: str | None = None) -> tuple[StandaloneSavestateCard, ...]:
     """Load the packaged standalone savestate cards (or *text* when supplied, for tests)."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "standalone_savestates.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("standalone_savestates.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != SAVESTATES_SCHEMA:
         raise ValueError(

@@ -26,7 +26,7 @@ import os
 import sys
 from typing import Any, Callable, Sequence
 
-from atlas.contract import (
+from .contract import (
     catalogue_contract,
     firmware_contract,
     health_contract,
@@ -45,11 +45,11 @@ from atlas.contract import (
     systems_contract,
     texture_answer_contract,
 )
-from atlas.platforms import KNOWN_PLATFORM_VOCABULARIES
-from atlas.detect import detect
-from atlas.every_installation import EveryInstallation
-from atlas.installations import Installation
-from atlas.machine import Machine
+from .platforms import KNOWN_PLATFORM_VOCABULARIES
+from .detect import detect
+from .every_installation import EveryInstallation
+from .installations import Installation
+from .machine import Machine
 
 # A question is asked of one handle or of the aggregate, and the two surfaces
 # are the same on purpose (EveryInstallation mirrors the Installation protocol

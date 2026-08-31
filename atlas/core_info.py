@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping
 
-from atlas.retroarch_cfg import cfg_bool, cfg_uint, parse_cfg_text
+from .retroarch_cfg import cfg_bool, cfg_uint, parse_cfg_text
 
 
 def parse_core_info(text: str) -> dict[str, str]:

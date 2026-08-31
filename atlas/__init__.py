@@ -41,15 +41,15 @@ wrong one. See DESIGN.md, "The two tiers", and docs/architecture.md for the map.
 from __future__ import annotations
 
 # --- The two entry points, and the aggregate over them -----------------------
-from atlas.detect import detect
-from atlas.every_installation import EveryInstallation, InstallationAnswer, every_installation
+from .detect import detect
+from .every_installation import EveryInstallation, InstallationAnswer, every_installation
 
 # --- The vocabulary those questions take -------------------------------------
 # ES-DE's system names, and the two ways to check a name against them. A
 # consumer holding some other product's identifiers owns that mapping and
 # validates it here — atlas carries no foreign vocabulary (atlas/systems.py).
-from atlas.systems import from_esde_system, known_systems, vocabulary_platform_tags
-from atlas.platforms import (
+from .systems import from_esde_system, known_systems, vocabulary_platform_tags
+from .platforms import (
     CAVEAT_PLATFORM_SCRAPING_IGNORED,
     CAVEAT_PLATFORM_UNKNOWN,
     CAVEAT_PLATFORM_UNMAPPED,
@@ -63,7 +63,7 @@ from atlas.platforms import (
 )
 
 # --- The handles every question is asked of ----------------------------------
-from atlas.installations import (
+from .installations import (
     EmuDeck,
     Installation,
     BareRetroArchNative,
@@ -72,7 +72,7 @@ from atlas.installations import (
 )
 
 # --- The answers ------------------------------------------------------------
-from atlas.contract import (
+from .contract import (
     catalogue_contract,
     mod_answer_contract,
     mod_placement_contract,
@@ -98,7 +98,7 @@ from atlas.contract import (
     systems_contract,
     unresolved_contract,
 )
-from atlas.firmware import (
+from .firmware import (
     CoreFirmware,
     FirmwareAlternatives,
     FirmwareAnswer,
@@ -108,7 +108,7 @@ from atlas.firmware import (
     RefusedDeclaration,
     UnclaimedFile,
 )
-from atlas.installations import (
+from .installations import (
     CAVEAT_CONFIG_HOME_RELOCATED,
     CAVEAT_FRONTEND_MARKER_MISMATCH,
     CAVEAT_FRONTEND_SETTINGS_UNREADABLE,
@@ -138,7 +138,7 @@ from atlas.installations import (
     SystemPlatformsAnswer,
     SystemsAnswer,
 )
-from atlas.launch_formats import (
+from .launch_formats import (
     InstallFirstFormat,
     StandaloneLaunchCard,
     load_launch_formats,
@@ -146,8 +146,8 @@ from atlas.launch_formats import (
     lookup_install_first,
     lookup_standalone_launch,
 )
-from atlas.esde import esde_extension
-from atlas.placement import (
+from .esde import esde_extension
+from .placement import (
     Caveat,
     FileGroup,
     FileSet,
@@ -171,9 +171,9 @@ from atlas.placement import (
 # annotates with the type. The seam's own two (`PathKind`, `ReadStatus`) are
 # here because answers carry them — a requirement's `found` is a path kind, a
 # health finding's `status` is a read status.
-from atlas.esde import KIND_LIBRETRO, KIND_STANDALONE
-from atlas.evidence import CAVEAT_ARRANGEMENT_UNVERIFIED, CAVEAT_ARRANGEMENT_VERSION_DRIFTED
-from atlas.firmware import (
+from .esde import KIND_LIBRETRO, KIND_STANDALONE
+from .evidence import CAVEAT_ARRANGEMENT_UNVERIFIED, CAVEAT_ARRANGEMENT_VERSION_DRIFTED
+from .firmware import (
     CAVEAT_EMULATOR_CATALOGUE_EXCLUSIVE,
     CAVEAT_EMULATOR_CATALOGUE_SEALED,
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
@@ -236,13 +236,13 @@ from atlas.firmware import (
     FirmwareNeed,
     SystemSource,
 )
-from atlas.content_tree_wiring import (
+from .content_tree_wiring import (
     ArrangementWiring,
     WiringRow,
     load_content_tree_wiring,
     lookup_content_tree_wiring,
 )
-from atlas.installations import (
+from .installations import (
     HEALTH_ISSUE_CATALOGUE_INVALID,
     HEALTH_ISSUE_COMPANION_CONFIG_MISSING,
     HEALTH_ISSUE_CONFIG_UNREADABLE,
@@ -253,7 +253,7 @@ from atlas.installations import (
     HEALTH_ISSUE_ROOT_MISSING,
     HEALTH_ISSUE_SAVES_ROOT_MISSING,
 )
-from atlas.machine import (
+from .machine import (
     KIND_DIRECTORY,
     KIND_FILE,
     KIND_INACCESSIBLE,
@@ -265,7 +265,7 @@ from atlas.machine import (
     PathKind,
     ReadStatus,
 )
-from atlas.placement import (
+from .placement import (
     CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
     CAVEAT_CFG_LINE_DROPPED,
     CAVEAT_CFG_VALUE_REJECTED,

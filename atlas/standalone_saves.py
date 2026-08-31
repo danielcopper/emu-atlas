@@ -19,11 +19,12 @@ card without a rule does.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
+
+from ._data import packaged_text
 
 SAVES_SCHEMA = 2
 
@@ -172,11 +173,7 @@ def _card(token: str, entry: Any) -> StandaloneSaveCard:
 def load_standalone_saves(text: str | None = None) -> tuple[StandaloneSaveCard, ...]:
     """Load the packaged standalone save cards (or *text* when supplied, for tests)."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "standalone_saves.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("standalone_saves.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != SAVES_SCHEMA:
         raise ValueError(

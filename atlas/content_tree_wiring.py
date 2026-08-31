@@ -19,10 +19,11 @@ promise of that version was never read.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from typing import Any
+
+from ._data import packaged_text
 
 WIRING_SCHEMA = 1
 
@@ -106,11 +107,7 @@ def _arrangement(kind: str, entry: Any) -> ArrangementWiring:
 def load_content_tree_wiring(text: str | None = None) -> dict[str, ArrangementWiring]:
     """Load the packaged wiring table (or *text* when supplied, for tests)."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "content_tree_wiring.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("content_tree_wiring.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != WIRING_SCHEMA:
         raise ValueError(

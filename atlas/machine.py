@@ -81,7 +81,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Callable, Iterable, Literal, Mapping, Protocol
 
-from atlas import squashfs
+from . import squashfs
 
 _CORE_PROBE_TIMEOUT_SECONDS = 15
 SYMLINK_HOPS = 40

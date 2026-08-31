@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import os
 
-from atlas.installations import (
+from .installations import (
     EMUDECK_SETTINGS_SUFFIX,
     NATIVE_CFG_SUFFIX,
     RETRODECK_JSON_SUFFIX,
@@ -29,7 +29,7 @@ from atlas.installations import (
     RetroDeck,
     BareRetroArchFlatpak,
 )
-from atlas.machine import KIND_MISSING, Machine, RealMachine
+from .machine import KIND_MISSING, Machine, RealMachine
 
 
 def detect(home: str, machine: Machine | None = None) -> list[Installation]:

@@ -13,10 +13,11 @@ never overridden by a table.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from typing import Any
+
+from ._data import packaged_text
 
 FORMATS_SCHEMA = 1
 
@@ -144,11 +145,7 @@ _PACKAGED_CARDS: tuple[StandaloneLaunchCard, ...] | None = None
 
 
 def _packaged_text() -> str:
-    return (
-        importlib.resources.files("atlas")
-        .joinpath("data", "launch_formats.json")
-        .read_text(encoding="utf-8")
-    )
+    return packaged_text("launch_formats.json")
 
 
 def lookup_install_first(system: str, extension: str) -> InstallFirstFormat | None:

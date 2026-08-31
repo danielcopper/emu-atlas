@@ -34,13 +34,13 @@ resolver in :mod:`atlas.installations` resolves the root and joins it.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from atlas.placement import KEYINGS, ROOT_KINDS, Keying
+from ._data import packaged_text
+from .placement import KEYINGS, ROOT_KINDS, Keying
 
 # Packaged-data schema version. The loader is strict for the same reason every
 # other packaged-data loader here is: a malformed build fails loudly instead of
@@ -587,11 +587,7 @@ def load_standalone_texture_packs(text: str | None = None) -> tuple[StandaloneTe
 
 
 def _packaged_text() -> str:
-    return (
-        importlib.resources.files("atlas")
-        .joinpath("data", "texture_packs.json")
-        .read_text(encoding="utf-8")
-    )
+    return packaged_text("texture_packs.json")
 
 
 def load_texture_packs(text: str | None = None) -> tuple[TextureCard, ...]:

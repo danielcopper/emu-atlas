@@ -27,8 +27,9 @@ about the machine.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
+
+from ._data import packaged_text
 
 # Packaged-data schema version, strict for the reason the whole loader is: a
 # malformed build fails loudly instead of answering out of a list nobody can
@@ -51,11 +52,7 @@ def _expect_str(value: object, where: str) -> str:
 def _load_document(text: str | None) -> tuple[frozenset[str], dict[str, tuple[str, ...]]]:
     """The whole packaged document, validated fail-closed: ids and platform tags."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "system_ids.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("system_ids.json")
     raw = json.loads(text)
     if not isinstance(raw, dict) or raw.get("schema") != SYSTEM_IDS_SCHEMA:
         raise ValueError(

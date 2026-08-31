@@ -16,16 +16,16 @@ upstream's source and pinned to the revision it was read at.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from atlas import emulator_settings, qt_ini
-from atlas.machine import GLOB_COMPLETE, READ_MISSING, READ_OK, Machine
-from atlas.placement import (
+from ._data import packaged_text
+from . import emulator_settings, qt_ini
+from .machine import GLOB_COMPLETE, READ_MISSING, READ_OK, Machine
+from .placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_PER_GAME_LAYER_UNREAD,
     CAVEAT_PER_GAME_OVERRIDES_PRESENT,
@@ -545,11 +545,7 @@ def _image(entry: Any, index: int) -> BiosImage:
 def load_bios_table(text: str | None = None) -> BiosTable:
     """Load the packaged table (or *text* when supplied, for tests)."""
     if text is None:
-        text = (
-            importlib.resources.files("atlas")
-            .joinpath("data", "duckstation_bios.json")
-            .read_text(encoding="utf-8")
-        )
+        text = packaged_text("duckstation_bios.json")
     raw = json.loads(text)
     if not isinstance(raw, dict):
         raise ValueError("duckstation_bios: expected an object at the top level")
