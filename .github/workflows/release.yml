@@ -55,10 +55,13 @@ jobs:
       # The self-contained CLI bundle (issue #202) plus the wheel — built from
       # the released commit, smoke-tested before anything is attached. The
       # bundle smoke runs the full suite under the bundle's own interpreter,
-      # so what ships is what passed. Every attached artifact has a named
-      # consumer (bundle: no-Python clients; wheel: library installs and
-      # vendoring; vectors: ports); the sdist has none, so it is built and
-      # checked in CI but never attached.
+      # so what ships is what passed. The build pass also writes SHA256SUMS
+      # (issue #329): one line per attached artifact, one per file inside the
+      # wheel. Every attached artifact has a named consumer (bundle: no-Python
+      # clients; wheel: library installs and vendoring; vectors: ports;
+      # SHA256SUMS: file-by-file verification of a vendored directory copy);
+      # the sdist has none, so it is built and checked in CI but never
+      # attached.
       - uses: actions/setup-python@v7
         if: ${{ steps.release.outputs.release_created }}
         with:
@@ -73,11 +76,14 @@ jobs:
         env:
           TAG: ${{ steps.release.outputs.tag_name }}
         run: |
-          python scripts/build_release_bundle.py --tag "$TAG" --wheel dist/*.whl --out dist-bundle
+          python scripts/build_release_bundle.py --tag "$TAG" --wheel dist/*.whl --out dist-bundle \
+            --artifact "emu-atlas-vectors-$TAG.tar.gz"
           python scripts/smoke_release_bundle.py "dist-bundle/emu-atlas-$TAG-x86_64-linux.tar.gz"
-      - name: Attach the bundle and the wheel to the release
+      - name: Attach the bundle, the wheel and the manifest to the release
         if: ${{ steps.release.outputs.release_created }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag_name }}
-        run: gh release upload "$TAG" "dist-bundle/emu-atlas-$TAG-x86_64-linux.tar.gz" dist/*.whl
+        run: >
+          gh release upload "$TAG" "dist-bundle/emu-atlas-$TAG-x86_64-linux.tar.gz"
+          dist/*.whl dist-bundle/SHA256SUMS
