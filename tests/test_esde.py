@@ -123,8 +123,8 @@ class TestLoadExclusive:
     v3.4.1): ``<loadExclusive/>`` counts only as a document child, and the
     systems come from the first document-level ``<systemList>``. The
     documented placement (INSTALL.md v3.4.1:1722-1737) makes the file
-    double-rooted — pugixml does not mind, ``xml.etree`` without the wrap
-    refused the whole layer.
+    double-rooted — pugixml does not mind, an XML parser without the wrap
+    refuses the whole layer.
     """
 
     EXCLUSIVE = (
@@ -191,8 +191,8 @@ class TestParseSettings:
     ONLY_THE_DIRECTORY = {SETTING: DIRECTORY}
 
     def test_rootless_siblings_are_all_read(self):
-        # The whole reason for the synthetic root: xml.etree stops at the second
-        # element, and every real machine's file has more than one.
+        # The whole reason for the synthetic root: a parse stops at the second
+        # document-level element, and every real machine's file has more than one.
         text = f'<string name="MediaDirectory" value="/media" />\n{self.ROM_DIRECTORY}\n'
         assert parse_es_settings(text) == {"MediaDirectory": "/media", **self.ONLY_THE_DIRECTORY}
 

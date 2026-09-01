@@ -22,8 +22,10 @@ machine, so this repository does not carry them and no contributor needs them.
 - **Upstream citations**: RetroArch facts cite `file:line` at the pinned revision (see
   `docs/research/retrodeck-save-placement.md` header). RetroDECK's per-emulator knowledge lives in the **Flatpak**
   (`/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/`), not in its Git repo.
-- **Zero runtime dependencies is a contract** (`pyproject.toml`) — it makes vendoring a directory copy. Stdlib
-  `xml.etree` is a deliberate, documented choice (local trusted config; see `atlas/esde.py`).
+- **Zero runtime dependencies is a contract** (`pyproject.toml`) — it makes vendoring a directory copy, so the package
+  may only import what a consumer's runtime is sure to have: XML goes through `atlas/_xml.py` (stdlib expat, in
+  ElementTree's shape) because a frozen runtime can ship the parser without the `xml.etree` wrapper. Parsing local
+  trusted config with the stdlib rather than `defusedxml` is the deliberate, documented choice (see `atlas/esde.py`).
 - User-facing behavior changes need vectors. One fixture machine per supported generation of an emulator's behavior —
   vectors for old generations are never deleted.
 

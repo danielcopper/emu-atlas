@@ -23,7 +23,10 @@ Usage: ``python scripts/generate_coverage_matrix.py [path-to-es_systems.xml]``
 (default: the RetroDECK Flatpak deployment's bundled file). Stdlib only —
 including ``xml.etree``: the input is a local, trusted config file, modern
 expat rejects entity-expansion attacks, and zero dependencies is a design
-contract (see ``atlas/esde.py`` for the same call).
+contract (``atlas/esde.py`` documents the same reasoning). The package itself
+reaches expat through ``atlas/_xml.py`` instead, because a vendored copy has to
+run on runtimes that ship the parser without the wrapper package; a maintainer
+script runs here, on a full Python.
 """
 
 from __future__ import annotations
