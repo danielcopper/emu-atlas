@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "emu-atlas"
-version = "0.5.0"
+version = "0.5.1"
 description = "The map of where emulators keep things — a live resolver for emulator installations: saves, firmware, textures, mods, ROMs, systems and platform identities."
 readme = "README.md"
 requires-python = ">=3.11"
