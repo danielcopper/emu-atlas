@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/danielcopper/emu-atlas/compare/v0.5.0...v0.5.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* **xml:** read configuration through expat directly, not the xml.etree wrapper ([#341](https://github.com/danielcopper/emu-atlas/issues/341)) ([3be5c68](https://github.com/danielcopper/emu-atlas/commit/3be5c681dc7c2334568e0a24d0cd2dac928d843f)), closes [#339](https://github.com/danielcopper/emu-atlas/issues/339)
+
 ## [0.5.0](https://github.com/danielcopper/emu-atlas/compare/v0.4.0...v0.5.0) (2026-08-31)
 
 
