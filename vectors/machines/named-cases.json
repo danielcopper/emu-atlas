@@ -9977,7 +9977,7 @@
     },
     {
       "name": "catalogue-loadexclusive-in-the-bundled-layer-is-ignored",
-      "rationale": "A <loadExclusive/> in the bundled es_systems.xml is ignored with a LogWarning — \"this is only supposed to be used for the custom es_systems.xml file\" (SystemData.cpp:886-895, v3.4.1) — so the catalogue answers normally. The document-level tag also makes the bundled file double-rooted, so this pins the wrap-parse on the bundled layer too: xml.etree without the wrap refused the whole file and answered emulator-catalogue-unreadable for a catalogue the frontend reads fine.",
+      "rationale": "A <loadExclusive/> in the bundled es_systems.xml is ignored with a LogWarning — \"this is only supposed to be used for the custom es_systems.xml file\" (SystemData.cpp:886-895, v3.4.1) — so the catalogue answers normally. The document-level tag also makes the bundled file double-rooted, so this pins the wrap-parse on the bundled layer too: a parse without the wrap refuses the whole file and answers emulator-catalogue-unreadable for a catalogue the frontend reads fine.",
       "input": {
         "home": "/home/deck",
         "files": {
