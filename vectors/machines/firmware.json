@@ -190,7 +190,8 @@
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -208,7 +209,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -288,7 +290,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -306,7 +309,8 @@
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
-                    "size": 2304
+                    "size": 2304,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -334,7 +338,8 @@
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
-                    "size": 2304
+                    "size": 2304,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -352,7 +357,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -384,7 +390,8 @@
           "identity": {
             "md5": "32fbbd84168d3482956eb3c5051637f5",
             "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-            "size": 256
+            "size": 256,
+            "kind": "file"
           },
           "known_as": [
             "dmg_boot.bin",
@@ -402,7 +409,8 @@
               "identity": {
                 "md5": "32fbbd84168d3482956eb3c5051637f5",
                 "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                "size": 256
+                "size": 256,
+                "kind": "file"
               },
               "found": "missing",
               "present": false,
@@ -420,7 +428,8 @@
               "identity": {
                 "md5": "32fbbd84168d3482956eb3c5051637f5",
                 "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                "size": 256
+                "size": 256,
+                "kind": "file"
               },
               "found": "file",
               "present": true,
@@ -498,7 +507,8 @@
                   "identity": {
                     "md5": "e10c53c2f8b90bab96ead2d368858623",
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
-                    "size": 2097152
+                    "size": 2097152,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -585,7 +595,8 @@
                   "identity": {
                     "md5": "e10c53c2f8b90bab96ead2d368858623",
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
-                    "size": 2097152
+                    "size": 2097152,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -608,7 +619,8 @@
               "identity": {
                 "md5": "924e392ed05558ffdb115408c263dccf",
                 "sha1": "10155d8d6e6e832d6ea66db9bc098321fb5e8ebf",
-                "size": 524288
+                "size": 524288,
+                "kind": "file"
               },
               "known_as": [
                 "scph1001.bin"
@@ -678,7 +690,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -696,7 +709,8 @@
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
-                    "size": 2304
+                    "size": 2304,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -925,7 +939,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -943,7 +958,8 @@
                   "identity": {
                     "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
                     "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
-                    "size": 16384
+                    "size": 16384,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1030,7 +1046,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1048,7 +1065,8 @@
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
-                    "size": 2304
+                    "size": 2304,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1124,7 +1142,8 @@
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
-                    "size": 2304
+                    "size": 2304,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1142,7 +1161,8 @@
                   "identity": {
                     "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
                     "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
-                    "size": 16384
+                    "size": 16384,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1342,7 +1362,8 @@
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1360,7 +1381,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1443,7 +1465,8 @@
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1461,7 +1484,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -1475,6 +1499,344 @@
           ],
           "unclaimed": [],
           "caveats": []
+        }
+      }
+    },
+    {
+      "name": "firmware-an-archive-whose-bytes-differ-states-no-verdict",
+      "rationale": "The sighting this value exists for. ecwolf.pk3 is required, it is present, and its bytes are not the pinned ones — under the old four-value axis that read 'mismatch', a broken BIOS, on a file that is simply from another core release. The identity states kind='archive', so the answer is 'not-comparable' with satisfied null and a caveat naming the drift (archive_reason 'core-bundled'). requirements_met is null, not false: nothing established that this file is wrong. Turn the archive branch of _observe back into a plain mismatch and this vector is the one that goes red.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/ecwolf_libretro.info": "display_name = \"Wolfenstein 3D (ECWolf)\"\nsystemname = \"Wolfenstein 3D Game Engine\"\ndatabase = \"Wolfenstein 3D\"\nfirmware_count = 1\nfirmware0_desc = \"ecwolf.pk3 (ECWolf System File)\"\nfirmware0_path = \"ecwolf.pk3\"\n",
+          "/usr/lib/libretro/ecwolf_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/ecwolf.pk3": {
+            "md5": "00000000000000000000000000000000",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 178755
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "ecwolf_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "ecwolf_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "ecwolf_libretro.so",
+                  "system": "ports",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "ecwolf.pk3",
+                  "path": "/home/deck/.config/retroarch/system/ecwolf.pk3",
+                  "declared": "ecwolf.pk3",
+                  "identity": {
+                    "md5": "c011b428819eea4a80b455c245a5a04d",
+                    "sha1": "9259b87edfe9b9f6d0749788a75a6ccf158f50aa",
+                    "size": 178755,
+                    "kind": "archive"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "not-comparable",
+                  "satisfied": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-identity-not-comparable",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/ecwolf.pk3",
+                "file_name": "ecwolf.pk3",
+                "archive_reason": "core-bundled",
+                "table_version": "2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-romset-archive-that-differs-names-its-own-drift",
+      "rationale": "The other reason an archive's bytes move, and the other way _observe reaches it. dc/naomi.zip is a MAME BIOS set, so its whole-file hash follows the romset version and the merge mode it was built under; here the size alone already differs, which is the free pre-filter rather than the digest read. Both paths must answer 'not-comparable', and the caveat carries archive_reason 'romset' — the word a client renders instead of calling the file broken.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/flycast_libretro.info": "display_name = \"Sega - Dreamcast/NAOMI (Flycast)\"\nsystemname = \"Sega Dreamcast\"\ndatabase = \"Sega - Dreamcast|Sega - Naomi|Sega - Naomi 2|Atomiswave\"\nfirmware_count = 1\nfirmware0_desc = \"dc/naomi.zip (Naomi Bios from MAME)\"\nfirmware0_path = \"dc/naomi.zip\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/flycast_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/dc/naomi.zip": {
+            "md5": "526eda1e2a7920c92c88178789d71d84",
+            "sha1": "c96711c01c0158f161791d6fbe75d88329e8ac0a",
+            "size": 9317437
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "flycast_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "flycast_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "flycast_libretro.so",
+                  "system": "naomi",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "naomi.zip",
+                  "path": "/home/deck/.config/retroarch/system/dc/naomi.zip",
+                  "declared": "dc/naomi.zip",
+                  "identity": {
+                    "md5": "526eda1e2a7920c92c88178789d71d84",
+                    "sha1": "c96711c01c0158f161791d6fbe75d88329e8ac0a",
+                    "size": 9321533,
+                    "kind": "archive"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "not-comparable",
+                  "satisfied": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-identity-not-comparable",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/dc/naomi.zip",
+                "file_name": "naomi.zip",
+                "archive_reason": "romset",
+                "table_version": "2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-archive-whose-bytes-hit-exactly-is-still-verified",
+      "rationale": "The asymmetry, pinned. An archive withholds a verdict only when the bytes differ: an exact hit on size and md5 IS the pinned packaging of the pinned version, so it verifies like any dump and satisfied stays true. A rule that answered 'not-comparable' for every archive would throw away a positive atlas actually earned, and this vector is what forbids it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/ecwolf_libretro.info": "display_name = \"Wolfenstein 3D (ECWolf)\"\nsystemname = \"Wolfenstein 3D Game Engine\"\ndatabase = \"Wolfenstein 3D\"\nfirmware_count = 1\nfirmware0_desc = \"ecwolf.pk3 (ECWolf System File)\"\nfirmware0_path = \"ecwolf.pk3\"\n",
+          "/usr/lib/libretro/ecwolf_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/ecwolf.pk3": {
+            "md5": "c011b428819eea4a80b455c245a5a04d",
+            "sha1": "9259b87edfe9b9f6d0749788a75a6ccf158f50aa",
+            "size": 178755
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "ecwolf_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "ecwolf_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "ecwolf_libretro.so",
+                  "system": "ports",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "ecwolf.pk3",
+                  "path": "/home/deck/.config/retroarch/system/ecwolf.pk3",
+                  "declared": "ecwolf.pk3",
+                  "identity": {
+                    "md5": "c011b428819eea4a80b455c245a5a04d",
+                    "sha1": "9259b87edfe9b9f6d0749788a75a6ccf158f50aa",
+                    "size": 178755,
+                    "kind": "archive"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-unverified-archive-is-unchecked-and-still-says-it-is-an-archive",
+      "rationale": "The kind is a property of the identity, not of a check, so it is stated on an answer where no check ran. The same present file with verify=false is 'unchecked' — never 'not-comparable', which is a result of looking — and the identity still carries kind='archive', which is how a client knows before asking for verification that a whole-file comparison here would prove only half of what it looks like.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/ecwolf_libretro.info": "display_name = \"Wolfenstein 3D (ECWolf)\"\nsystemname = \"Wolfenstein 3D Game Engine\"\ndatabase = \"Wolfenstein 3D\"\nfirmware_count = 1\nfirmware0_desc = \"ecwolf.pk3 (ECWolf System File)\"\nfirmware0_path = \"ecwolf.pk3\"\n",
+          "/usr/lib/libretro/ecwolf_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/ecwolf.pk3": {
+            "md5": "00000000000000000000000000000000",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 178755
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "ecwolf_libretro.so",
+          "verify": false
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "ecwolf_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "ecwolf_libretro.so",
+                  "system": "ports",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "ecwolf.pk3",
+                  "path": "/home/deck/.config/retroarch/system/ecwolf.pk3",
+                  "declared": "ecwolf.pk3",
+                  "identity": {
+                    "md5": "c011b428819eea4a80b455c245a5a04d",
+                    "sha1": "9259b87edfe9b9f6d0749788a75a6ccf158f50aa",
+                    "size": 178755,
+                    "kind": "archive"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
         }
       }
     },
@@ -1535,7 +1897,8 @@
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1553,7 +1916,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -1634,7 +1998,8 @@
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "directory",
                   "present": true,
@@ -1652,7 +2017,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "inaccessible",
                   "present": null,
@@ -1782,7 +2148,8 @@
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1800,7 +2167,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -1877,7 +2245,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -2198,7 +2567,8 @@
                   "identity": {
                     "md5": "c53ca5908936d412331790f4426c6c33",
                     "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -2216,7 +2586,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -2591,7 +2962,8 @@
                   "identity": {
                     "md5": "00dad01abdbf8ea9e79ad2fe11bdb182",
                     "sha1": "deb62b0074b8cae4f162c257662136733cfc76ad",
-                    "size": 1859335
+                    "size": 1859335,
+                    "kind": "archive"
                   },
                   "found": "missing",
                   "present": false,
@@ -2701,7 +3073,8 @@
               "identity": {
                 "md5": "924e392ed05558ffdb115408c263dccf",
                 "sha1": "10155d8d6e6e832d6ea66db9bc098321fb5e8ebf",
-                "size": 524288
+                "size": 524288,
+                "kind": "file"
               },
               "known_as": [
                 "scph1001.bin"
@@ -2785,7 +3158,8 @@
                   "identity": {
                     "md5": "e10c53c2f8b90bab96ead2d368858623",
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
-                    "size": 2097152
+                    "size": 2097152,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -2865,7 +3239,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -2959,7 +3334,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -3052,7 +3428,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "inaccessible",
                   "present": null,
@@ -3218,7 +3595,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -3309,7 +3687,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -3400,7 +3779,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -3491,7 +3871,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -3596,7 +3977,8 @@
           "identity": {
             "md5": "490f666e1afb15b7362b406ed1cea246",
             "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-            "size": 524288
+            "size": 524288,
+            "kind": "file"
           },
           "known_as": [
             "scph5501.bin",
@@ -3678,7 +4060,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -3760,7 +4143,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -3911,7 +4295,8 @@
                   "identity": {
                     "md5": "490f666e1afb15b7362b406ed1cea246",
                     "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                    "size": 524288
+                    "size": 524288,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -3989,7 +4374,8 @@
                   "identity": {
                     "md5": "e10c53c2f8b90bab96ead2d368858623",
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
-                    "size": 2097152
+                    "size": 2097152,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -4238,7 +4624,8 @@
               "identity": {
                 "md5": "490f666e1afb15b7362b406ed1cea246",
                 "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                "size": 524288
+                "size": 524288,
+                "kind": "file"
               },
               "known_as": [
                 "scph5501.bin",
@@ -4330,7 +4717,8 @@
               "identity": {
                 "md5": "490f666e1afb15b7362b406ed1cea246",
                 "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
-                "size": 524288
+                "size": 524288,
+                "kind": "file"
               },
               "known_as": [
                 "scph5501.bin",
@@ -4517,7 +4905,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -4706,7 +5095,8 @@
                   "identity": {
                     "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
                     "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
-                    "size": 16384
+                    "size": 16384,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -4778,7 +5168,8 @@
                   "identity": {
                     "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
                     "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
-                    "size": 16384
+                    "size": 16384,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -4992,7 +5383,8 @@
                   "identity": {
                     "md5": "d4448d09bbfde687c04f9e3310e023ab",
                     "sha1": "ef66dad3e7b2b6a86f326765e7dfd7d1a308ad8f",
-                    "size": 262144
+                    "size": 262144,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -5078,7 +5470,8 @@
                   "identity": {
                     "md5": "f36f24cbb87745fbd2714e4df881db09",
                     "sha1": "55315b20fecb4441a07ee4bc5dc7153f396e0a2e",
-                    "size": 32768
+                    "size": 32768,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -5164,7 +5557,8 @@
                   "identity": {
                     "md5": "cbbd1bbcb5e4fd8046b6030ab71fc021",
                     "sha1": "7d1898f32beae4b2ae610d469ce578a588efaa7c",
-                    "size": 16384
+                    "size": 16384,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -5246,7 +5640,8 @@
                   "identity": {
                     "md5": "85254fbe320ca82a768ec2c26bb08def",
                     "sha1": "7940c7bf29eee85a5b2fdec78750b19aa22895dc",
-                    "size": 42296
+                    "size": 42296,
+                    "kind": "archive"
                   },
                   "found": "missing",
                   "present": false,
@@ -5264,7 +5659,8 @@
                   "identity": {
                     "md5": "e10c53c2f8b90bab96ead2d368858623",
                     "sha1": "8951d1bb219ab2ff8583033d2119c899cc81f18c",
-                    "size": 2097152
+                    "size": 2097152,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -5282,7 +5678,8 @@
                   "identity": {
                     "md5": "526eda1e2a7920c92c88178789d71d84",
                     "sha1": "c96711c01c0158f161791d6fbe75d88329e8ac0a",
-                    "size": 9321533
+                    "size": 9321533,
+                    "kind": "archive"
                   },
                   "found": "missing",
                   "present": false,
@@ -5389,7 +5786,8 @@
                   "identity": {
                     "md5": "840481177270d5642a14ca71ee72844c",
                     "sha1": "c315672807d8ddb8d91443729405c766dd95cae7",
-                    "size": 8192
+                    "size": 8192,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -5482,7 +5880,8 @@
                   "identity": {
                     "md5": "00dad01abdbf8ea9e79ad2fe11bdb182",
                     "sha1": "deb62b0074b8cae4f162c257662136733cfc76ad",
-                    "size": 1859335
+                    "size": 1859335,
+                    "kind": "archive"
                   },
                   "found": "missing",
                   "present": false,
@@ -5572,7 +5971,8 @@
                   "identity": {
                     "md5": "c011b428819eea4a80b455c245a5a04d",
                     "sha1": "9259b87edfe9b9f6d0749788a75a6ccf158f50aa",
-                    "size": 178755
+                    "size": 178755,
+                    "kind": "archive"
                   },
                   "found": "missing",
                   "present": false,
@@ -5662,7 +6062,8 @@
                   "identity": {
                     "md5": "a17e0e0150155400d8cced329563d9c8",
                     "sha1": "718c1a00d38e0810a1ad0ffde79f73447f846f01",
-                    "size": 9523360
+                    "size": 9523360,
+                    "kind": "archive"
                   },
                   "found": "missing",
                   "present": false,
@@ -5835,7 +6236,8 @@
                   "identity": {
                     "md5": "38179df8f4ac870017db21ebcbf53114",
                     "sha1": "79f5ff55dd10187c7fd7b8daab0b3ffbd1f56a2c",
-                    "size": 262144
+                    "size": 262144,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -5935,7 +6337,8 @@
                   "identity": {
                     "md5": "d4448d09bbfde687c04f9e3310e023ab",
                     "sha1": "ef66dad3e7b2b6a86f326765e7dfd7d1a308ad8f",
-                    "size": 262144
+                    "size": 262144,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -6076,7 +6479,8 @@
                   "identity": {
                     "md5": "d4448d09bbfde687c04f9e3310e023ab",
                     "sha1": "ef66dad3e7b2b6a86f326765e7dfd7d1a308ad8f",
-                    "size": 262144
+                    "size": 262144,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -6238,7 +6642,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -6256,7 +6661,8 @@
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
-                    "size": 2304
+                    "size": 2304,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -6418,7 +6824,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -6436,7 +6843,8 @@
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
-                    "size": 2304
+                    "size": 2304,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,
@@ -6522,7 +6930,8 @@
                   "identity": {
                     "md5": "32fbbd84168d3482956eb3c5051637f5",
                     "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
-                    "size": 256
+                    "size": 256,
+                    "kind": "file"
                   },
                   "found": "file",
                   "present": true,
@@ -6540,7 +6949,8 @@
                   "identity": {
                     "md5": "dbfce9db9deaa2567f6a84fde55f9680",
                     "sha1": "1293d68bf9643bc4f36954c1e80e38f39864528d",
-                    "size": 2304
+                    "size": 2304,
+                    "kind": "file"
                   },
                   "found": "missing",
                   "present": false,

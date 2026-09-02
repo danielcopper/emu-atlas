@@ -1894,7 +1894,9 @@ for core in answer.cores:
             req.file_name, req.path    # what the core opens, and the absolute resolved destination
             req.need                   # 'required' | 'optional'   — what the emulator asks for
             req.present                # True | False | None       — what lies at the destination
-            req.checked                # 'verified' | 'mismatch' | 'unchecked' | 'unknown' | None (nothing to check)
+            req.checked                # 'verified' | 'mismatch' | 'unchecked' | 'unknown' | 'not-comparable'
+                                       #   — or None, when nothing is there to check
+            req.identity               # the packaged identity, or None; req.identity.kind is 'file' | 'archive'
             req.satisfied              # True | False | None       — present AND nothing contradicts it
     core.refused                   # declarations atlas would not follow, each with the reason it was refused
 answer.unclaimed                   # files in the firmware tree that no installed core declares, identified by content
@@ -1925,9 +1927,17 @@ for an absolute one: `firmware0_path =
 
 The two axes never merge: `need` is what the emulator asks for, `checked` is what the machine says. `"unchecked"` means
 _we did not look_ (you passed `verify=False`); `"unknown"` means _we looked and cannot tell_ (no packaged identity for
-this file). Render `requirements_met` as your traffic light: `True` only when everything required is there and nothing
-established contradicts it, `False` when something is missing or has wrong bytes, `None` when it could not be
-established — never coerce `None` to green.
+this file); `"not-comparable"` means _we looked, the bytes differ, and that decides nothing_. The last one is for the 24
+packaged identities that are archives rather than dumps — MAME romset zips, plus data packs and program jars released
+and versioned with the project that builds their core — whose whole-file hash pins one packaging of one version, so a
+difference from it is the ordinary state of a correct file. `req.identity.kind` says which kind an identity is before
+you ask for verification, and the `firmware-identity-not-comparable` caveat that rides with the value carries
+`archive_reason` (`romset` or `core-bundled`), the word to show instead of calling the file broken, plus
+`table_version`, the version of the curated list that made the call. **Never render `not-comparable` as a failure**: it
+is a withheld verdict, `satisfied` is `None`, and an exact hit on such a file still answers `verified`. Render
+`requirements_met` as your traffic light: `True` only when everything required is there and nothing established
+contradicts it, `False` when something is missing or has wrong bytes, `None` when it could not be established — never
+coerce `None` to green.
 
 The download flow runs off content, not names:
 

@@ -13,7 +13,13 @@ is where the split is made visible:
   ``md5``/``sha1``/``size`` triple comes from libretro-database's
   ``System.dat``, and stays a packaged, versioned, source-cited lookup
   (``data/firmware_hashes.json``). "No hash known" is a normal state, not an
-  edge case: ``System.dat`` covers only part of the firmware universe.
+  edge case: ``System.dat`` covers only part of the firmware universe. Each
+  entry also states its ``kind``, because 24 of the 388 are archives — romset
+  zips, plus data packs and program jars released and versioned with the project
+  that builds their core — whose whole-file hash pins a packaging rather than a
+  content. That statement is atlas's own [D] reading,
+  curated in ``scripts/generate_firmware_hashes.py`` and versioned there;
+  nothing in atlas decides a kind from a file extension.
 
 The model is **emulator-centric**, because a firmware requirement is a property
 of an emulator and of nothing else::
@@ -38,10 +44,14 @@ Two axes, kept apart on purpose (:class:`FirmwareRequirement`):
 - ``need`` — ``required`` or ``optional``, straight from ``firmwareN_opt``.
   It says what an emulator asks for, never what is on disk.
 - ``present`` / ``checked`` — what the machine answers. ``checked`` keeps
-  **four** values: ``verified`` and ``mismatch`` are results, ``unchecked``
-  means the identity is known but verification was not asked for, and
-  ``unknown`` means it cannot be established at all. "We did not look" and "we
-  looked and cannot tell" must never collapse into one value.
+  **five** values: ``verified`` and ``mismatch`` are results, ``unchecked``
+  means the identity is known but verification was not asked for, ``unknown``
+  means it cannot be established at all, and ``not-comparable`` means the
+  identity is not the kind a whole-file hash can judge — an archive whose bytes
+  move with its packaging — so a difference from the pinned bytes is no verdict
+  at all. "We did not look" and "we looked and cannot tell" must never collapse
+  into one value, and neither may "we looked, they differ, and that settles
+  nothing".
 
 The invariant that ties the two together: ``checked is None`` exactly when
 ``present is not True`` — nothing at the destination, or a look that did not
@@ -144,14 +154,50 @@ NEED_OPTIONAL: FirmwareNeed = "optional"
 
 FIRMWARE_NEEDS = ("required", "optional")
 
-FirmwareChecked = Literal["verified", "mismatch", "unchecked", "unknown"]
+FirmwareChecked = Literal["verified", "mismatch", "unchecked", "unknown", "not-comparable"]
 
 CHECKED_VERIFIED: FirmwareChecked = "verified"
 CHECKED_MISMATCH: FirmwareChecked = "mismatch"
 CHECKED_UNCHECKED: FirmwareChecked = "unchecked"
 CHECKED_UNKNOWN: FirmwareChecked = "unknown"
+# The bytes differ from the pinned ones and that settles nothing, because the
+# identity is not whole-file comparable (:data:`FIRMWARE_IDENTITY_KINDS`). It
+# replaces ``mismatch`` for such an identity and never joins it: a verdict is
+# what this value exists to withhold. Hyphenated on purpose — the one-word
+# spellings of the same idea ("incomparable") read as praise, and this is a
+# statement about a comparison, not about a file.
+CHECKED_NOT_COMPARABLE: FirmwareChecked = "not-comparable"
 
-FIRMWARE_CHECKED = ("verified", "mismatch", "unchecked", "unknown")
+FIRMWARE_CHECKED = ("verified", "mismatch", "unchecked", "unknown", "not-comparable")
+
+# What kind of thing one packaged identity is — a statement the table carries
+# per entry, because ``System.dat`` pins an md5 over the whole file and says
+# nothing about what that file is. ``file`` is a dump whose bytes are the
+# content; ``archive`` is a container whose bytes carry a *packaging* of the
+# content, so equal content routinely hashes differently.
+FirmwareIdentityKind = Literal["file", "archive"]
+
+IDENTITY_FILE: FirmwareIdentityKind = "file"
+IDENTITY_ARCHIVE: FirmwareIdentityKind = "archive"
+
+FIRMWARE_IDENTITY_KINDS = ("file", "archive")
+
+# Why an archive's bytes move under it — the two ways a container is versioned
+# apart from its content, and the word the not-comparable caveat carries.
+ArchiveReason = Literal["romset", "core-bundled"]
+
+# A MAME-style romset: a BIOS or device set whose bytes follow the romset
+# version and the merge mode it was built under (split / merged / non-merged).
+# Two correct copies of one BIOS can hash differently.
+ARCHIVE_ROMSET: ArchiveReason = "romset"
+# A data pack or program archive released and versioned with the project that
+# builds the core, so its bytes can change with a core release — the
+# ``ecwolf.pk3`` sighting this value exists for. "Bundled" is about versioning,
+# not about shipping: the three FreeJ2ME jars move with their release and are
+# supplied by the user, one of them as a core's *required* firmware.
+ARCHIVE_CORE_BUNDLED: ArchiveReason = "core-bundled"
+
+FIRMWARE_ARCHIVE_REASONS = ("romset", "core-bundled")
 
 # Caveat codes — stable identifiers, like the placement ones.
 # The three below are the answer-level vocabulary for an empty requirement
@@ -192,6 +238,12 @@ CAVEAT_CORE_NOT_INSTALLED = UNRESOLVED_CORE_NOT_INSTALLED
 CAVEAT_STANDALONE_UNSUPPORTED = UNRESOLVED_STANDALONE
 CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE = "emulator-catalogue-unavailable"
 CAVEAT_FIRMWARE_UNREADABLE = "firmware-unreadable"
+# The bytes were read, they differ from the pinned ones, and the identity is an
+# archive — so the difference settles nothing. Rides with
+# :data:`CHECKED_NOT_COMPARABLE` the way the unreadable code rides with
+# ``unknown``: the value says what atlas will not claim, the caveat says why,
+# and its ``archive_reason`` says which kind of drift moved the bytes.
+CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE = "firmware-identity-not-comparable"
 CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
 CAVEAT_SYSTEM_UNKNOWN = "system-unknown"
 # The marked-word code: a requirement's ``system`` is one of atlas's own
@@ -283,6 +335,29 @@ CAVEAT_FIRMWARE_SEARCH_UNVERIFIED = "firmware-search-unverified"
 TEMPLATE_INFO_STEMS = ("00_example_libretro", "puzzlescript_libretro")
 
 
+def _refuse_bad_kind(what: str, kind: object, archive_reason: object) -> None:
+    """The one rule the table and the identity both hold: ``kind`` decides the rest.
+
+    An archive must say why its bytes move, and a whole-file dump must not
+    pretend to — a reason on a ``file`` would be a statement about drift that
+    nothing drifts. Raised as a ``ValueError`` either way: over a packaged table
+    entry it is the same shape of refusal a missing digest gets, and over a
+    constructed :class:`FirmwareIdentity` it is the dataclass refusing a state
+    that would lie. *what* names the subject so a table error still names its
+    entry.
+    """
+    if kind not in FIRMWARE_IDENTITY_KINDS:
+        raise ValueError(f"{what}: kind must be one of {FIRMWARE_IDENTITY_KINDS}, got {kind!r}")
+    if kind == IDENTITY_ARCHIVE:
+        if archive_reason not in FIRMWARE_ARCHIVE_REASONS:
+            raise ValueError(
+                f"{what}: an archive must state why its bytes move — archive_reason must be one of "
+                f"{FIRMWARE_ARCHIVE_REASONS}, got {archive_reason!r}"
+            )
+    elif archive_reason is not None:
+        raise ValueError(f"{what}: only an archive carries an archive_reason, got {archive_reason!r}")
+
+
 @dataclass(frozen=True, slots=True)
 class FirmwareHash:
     """One firmware file's identity, as libretro-database's ``System.dat`` states it.
@@ -291,12 +366,21 @@ class FirmwareHash:
     (``scph5501.bin``) but sometimes a relative path (``dc/dc_boot.bin``) — the
     upstream data mixes both, so the table does too rather than normalizing
     away information it does not own.
+
+    ``kind`` is the table's own statement, not upstream's: ``System.dat`` pins
+    an md5 over the whole file and never says what that file is. It is carried
+    per entry rather than derived from the extension at read time, because
+    ``.zip`` is a container format and not a claim about a file's role — the
+    provenance for each archive is the curated list in
+    ``scripts/generate_firmware_hashes.py``.
     """
 
     name: str
     md5: str
     sha1: str
     size: int
+    kind: FirmwareIdentityKind
+    archive_reason: ArchiveReason | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,12 +392,33 @@ class FirmwareIdentity:
     distinct contents are known under more than one name (``dmg_boot.bin`` ≡
     ``gb_bios.bin``, ``dc/boot.bin`` ≡ ``dc/dc_boot.bin``, …), which is what
     makes "you already have these bytes, under another name" a statable answer.
+
+    ``kind`` says whether these bytes are comparable whole-file at all, and it
+    decides what a difference from them means: for a ``file`` it is a
+    ``mismatch``, for an ``archive`` it is ``not-comparable``, because the
+    pinned bytes are one packaging of the content
+    (:data:`FIRMWARE_ARCHIVE_REASONS`). ``archive_reason`` stays out of the
+    serialized contract — a consumer reads *why* off the caveat that rides with
+    the value, where the explanation belongs.
+
+    ``table_version`` is the version of the curated kind list that stated this
+    ``kind``, read off the table's own ``_meta`` rather than compiled in: the
+    list ships inside the data file, so a vendored older table with a newer
+    atlas must report the version it actually carries. It rides in the
+    not-comparable caveat the way ``FIRMWARE_SYSTEM_OVERRIDE_VERSION`` rides in
+    the system-assignment ones. Empty for a table that states none.
     """
 
     md5: str
     sha1: str
     size: int
+    kind: FirmwareIdentityKind
+    archive_reason: ArchiveReason | None = None
     known_as: tuple[str, ...] = ()
+    table_version: str = ""
+
+    def __post_init__(self) -> None:
+        _refuse_bad_kind("FirmwareIdentity", self.kind, self.archive_reason)
 
 
 class FirmwareHashes:
@@ -340,12 +445,25 @@ class FirmwareHashes:
         """The identity stored under *name* exactly, or ``None``."""
         return self._files.get(name)
 
+    @property
+    def archive_identities_version(self) -> str:
+        """The curated kind list's version, as this table states it.
+
+        Empty when the table states none — a table older than the field, which
+        is a fact about that table and not something to substitute a guess for.
+        """
+        version = self._meta.get("archive_identities_version")
+        return version if isinstance(version, str) else ""
+
     def _identity(self, entry: FirmwareHash) -> FirmwareIdentity:
         return FirmwareIdentity(
             md5=entry.md5,
             sha1=entry.sha1,
             size=entry.size,
+            kind=entry.kind,
+            archive_reason=entry.archive_reason,
             known_as=self._contents[_content_key(entry.md5, entry.sha1, entry.size)],
+            table_version=self.archive_identities_version,
         )
 
     def for_path(self, path: str) -> FirmwareIdentity | None:
@@ -420,7 +538,20 @@ def _hash_from_raw(name: str, raw: dict[str, Any]) -> FirmwareHash:
     md5, sha1, size = raw.get("md5"), raw.get("sha1"), raw.get("size")
     if not isinstance(md5, str) or not isinstance(sha1, str) or not isinstance(size, int):
         raise ValueError(f"{name}: an entry must carry string 'md5'/'sha1' and integer 'size'")
-    return FirmwareHash(name=name, md5=md5, sha1=sha1, size=size)
+    # Read strictly, with no default for a missing ``kind``: defaulting it to
+    # ``file`` would let a table that never learned the distinction answer
+    # ``mismatch`` over an archive again, silently — the exact defect this
+    # field exists to remove.
+    kind, archive_reason = raw.get("kind"), raw.get("archive_reason")
+    _refuse_bad_kind(name, kind, archive_reason)
+    return FirmwareHash(
+        name=name,
+        md5=md5,
+        sha1=sha1,
+        size=size,
+        kind=cast(FirmwareIdentityKind, kind),
+        archive_reason=cast("ArchiveReason | None", archive_reason),
+    )
 
 
 def load_hashes(text: str | None = None) -> FirmwareHashes:
@@ -1163,9 +1294,11 @@ class FirmwareRequirement:
     machine holds. ``found`` is the path kind read at the destination and keeps
     all four apart — a directory in the way is not a missing file, and a path
     that could not be looked at is neither. ``checked`` is ``None`` exactly when
-    there is nothing at the destination to check, and otherwise keeps its four
+    there is nothing at the destination to check, and otherwise keeps its five
     values apart: ``unchecked`` (identity known, verification not asked for) is
-    not ``unknown`` (it could not be established), and neither is a verdict.
+    not ``unknown`` (it could not be established), and ``not-comparable`` (the
+    bytes differ and the identity is an archive, so the difference judges
+    nothing) is not ``mismatch`` — none of the three is a verdict.
 
     ``regions`` is ``None`` on an ordinary requirement — every launch needs
     this file — and names the console regions whose launch this file serves on
@@ -1237,7 +1370,10 @@ class FirmwareRequirement:
         - the path could not be looked at;
         - a directory sits there (something is present, nothing is confirmed);
         - the identity is known and could not be read (unreadable bytes);
-        - the identity is known and verification was **not asked for**.
+        - the identity is known and verification was **not asked for**;
+        - the identity is an archive and the bytes differ (``not-comparable``).
+          It is there, and whether it is right is not establishable this way:
+          no whole-file comparison can tell a repacking from a wrong file.
 
         That last one is the load-bearing case. Without hashing, "a file with
         the right name is there" is all atlas knows, and calling it satisfied
@@ -1257,7 +1393,7 @@ class FirmwareRequirement:
             return None
         if self.checked == CHECKED_MISMATCH:
             return False
-        if self.checked == CHECKED_UNCHECKED:
+        if self.checked in (CHECKED_UNCHECKED, CHECKED_NOT_COMPARABLE):
             return None
         if self.checked == CHECKED_UNKNOWN and self.identity is not None:
             return None
@@ -1729,7 +1865,7 @@ def save_artifact_paths() -> frozenset[str]:
 
 
 def _observe(
-    machine: Machine, path: str, identity: FirmwareIdentity | None, *, verify: bool
+    machine: Machine, path: str, identity: FirmwareIdentity | None, *, verify: bool, file_name: str
 ) -> tuple[PathKind, FirmwareChecked | None, Caveat | None]:
     """What the machine says about one destination: what is there, and how sure we are.
 
@@ -1737,6 +1873,21 @@ def _observe(
     differently. A directory sitting at the destination is not "missing" in any
     useful sense — nothing can be placed there — and an inaccessible path is not
     an absent file, it is a look that did not happen.
+
+    An **archive** identity is checked asymmetrically, and the asymmetry is the
+    point. An exact hit on size and md5 still verifies: those bytes are the
+    pinned packaging of the pinned version, so a positive establishes the file.
+    Any difference establishes nothing at all, because the pinned bytes are one
+    romset version at one merge mode, or one core release's data pack, and a
+    wrong file differs from them exactly as those do — so it answers
+    :data:`CHECKED_NOT_COMPARABLE` with a caveat naming the reason, never
+    ``mismatch``. A hit proves; a miss proves nothing.
+
+    *file_name* is the name the declaration spells, and only the archive branch
+    reads it — it goes into that caveat, so the name a client sees is the
+    requirement's own rather than one derived here from a resolved path. It is
+    required rather than defaulted for exactly that reason: a default would be a
+    second, quieter source for a name the caller already holds.
     """
     kind = machine.path_kind(path)
     if kind == KIND_INACCESSIBLE:
@@ -1777,7 +1928,7 @@ def _observe(
     # reading a byte of the file.
     size = machine.file_size(path)
     if size is not None and size != identity.size:
-        return KIND_FILE, CHECKED_MISMATCH, None
+        return _differs(identity, path, file_name)
     digest = machine.file_digest(path, DIGEST_MD5)
     if digest is None:
         return (
@@ -1790,8 +1941,49 @@ def _observe(
                 {"path": path},
             ),
         )
-    matches = digest.lower() == identity.md5.lower()
-    return KIND_FILE, CHECKED_VERIFIED if matches else CHECKED_MISMATCH, None
+    if digest.lower() == identity.md5.lower():
+        return KIND_FILE, CHECKED_VERIFIED, None
+    return _differs(identity, path, file_name)
+
+
+def _differs(
+    identity: FirmwareIdentity, path: str, file_name: str
+) -> tuple[PathKind, FirmwareChecked | None, Caveat | None]:
+    """The file is there and its bytes are not the pinned ones — what that means.
+
+    For a whole-file dump it means the dump is wrong, which is a verdict a
+    caller acts on. For an archive it means nothing either way: the same content
+    repacked at another merge mode, the same data pack from another core
+    release, and a genuinely wrong file all differ here identically, and no
+    whole-file comparison separates them. So the archive answer withholds the
+    verdict and says why.
+    """
+    if identity.kind != IDENTITY_ARCHIVE:
+        return KIND_FILE, CHECKED_MISMATCH, None
+    reason = identity.archive_reason
+    assert reason is not None  # an archive states its reason (_refuse_bad_kind)
+    moves_with = (
+        "romset version and merge mode"
+        if reason == ARCHIVE_ROMSET
+        else "the core release it ships with"
+    )
+    return (
+        KIND_FILE,
+        CHECKED_NOT_COMPARABLE,
+        Caveat(
+            CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE,
+            f"{file_name} is at {path} and its bytes differ from the pinned ones, which settles nothing: "
+            f"this identity is an archive whose bytes move with {moves_with}, so a difference here "
+            f"cannot tell a repacking from a wrong file. An exact hit would have established it; this "
+            f"does not",
+            {
+                "path": path,
+                "file_name": file_name,
+                "archive_reason": reason,
+                "table_version": identity.table_version,
+            },
+        ),
+    )
 
 
 def resolve_links(machine: Machine, path: str) -> str | None:
@@ -2029,7 +2221,9 @@ def _requirements_for(
             continue
         path = destination.path
         identity = context.hashes.for_path(declaration.path)
-        found, checked, caveat = _observe(machine, path, identity, verify=verify)
+        found, checked, caveat = _observe(
+            machine, path, identity, verify=verify, file_name=declaration.file_name
+        )
         if caveat is not None:
             answer_caveats.append(caveat)
         requirements.append(
@@ -2580,7 +2774,7 @@ def _packaged_standalone_core(
         base = data_home if declared.base == "data" else config_home
         composed = os.path.join(base, declared.subdir, declared.name)
         path = resolve_links(machine, composed) or composed
-        found, checked, caveat = _observe(machine, path, None, verify=verify)
+        found, checked, caveat = _observe(machine, path, None, verify=verify, file_name=declared.name)
         if caveat is not None:
             answer_caveats.append(caveat)
         requirements.append(
@@ -2741,7 +2935,9 @@ def _melonds_probe(
         return _ConfigProbe(entry_caveats=(untranslated,))
     composed = melonds.local_file_path(config_home, host, flatpak)
     path = resolve_links(machine, composed) or composed
-    found, checked, observed = _observe(machine, path, None, verify=verify)
+    found, checked, observed = _observe(
+        machine, path, None, verify=verify, file_name=os.path.basename(value)
+    )
     return _ConfigProbe(
         requirement=FirmwareRequirement(
             core_so=None,
@@ -3025,7 +3221,9 @@ def _pcsx2_standalone_core(
     # translate.
     composed = qt_ini.path_combine(bios_dir, name)
     path = resolve_links(machine, composed) or composed
-    found, checked, observed = _observe(machine, path, None, verify=verify)
+    found, checked, observed = _observe(
+        machine, path, None, verify=verify, file_name=os.path.basename(composed)
+    )
     requirement = FirmwareRequirement(
         core_so=None,
         system=system,
@@ -3197,7 +3395,9 @@ def _xemu_standalone_core(
             caveats.append(untranslated)
             continue
         path = resolve_links(machine, host) or host
-        found, checked, observed = _observe(machine, path, None, verify=verify)
+        found, checked, observed = _observe(
+            machine, path, None, verify=verify, file_name=os.path.basename(value)
+        )
         if observed is not None:
             answer_caveats.append(observed)
         requirements.append(
@@ -3285,7 +3485,9 @@ def _duckstation_named_image(
     """
     composed = qt_ini.path_combine(bios_dir, name)
     path = resolve_links(machine, composed) or composed
-    found, checked, observed = _observe(machine, path, None, verify=verify)
+    found, checked, observed = _observe(
+        machine, path, None, verify=verify, file_name=os.path.basename(composed)
+    )
     requirement = FirmwareRequirement(
         core_so=None,
         system=system,
@@ -3808,7 +4010,9 @@ def _duckstation_search(
         # content check was asked for at all. Stating one would carry
         # ``satisfied: true`` about bytes nobody read.
         return [], caveats, []
-    found, checked, observed = _observe(machine, pick.chosen.path, None, verify=False)
+    found, checked, observed = _observe(
+        machine, pick.chosen.path, None, verify=False, file_name=os.path.basename(pick.chosen.path)
+    )
     requirement = FirmwareRequirement(
         core_so=None,
         system=system,

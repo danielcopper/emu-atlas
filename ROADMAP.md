@@ -16,6 +16,13 @@ carried 181 paths for cores it does not ship. Declarations are now a live `.info
 identities stay a packaged, versioned table; and `is_required() -> bool` is gone, because a bool cannot say "I don't
 know" and collapsed it into "not required" → "nothing missing" → green.
 
+**Non-comparable firmware identities** (#337): a packaged identity now states its `kind`, and the 24 archives among the
+388 — MAME romset sets, core-bundled data packs, the FreeJ2ME program jars — state why their bytes move (`romset` or
+`core-bundled`). `checked` has a fifth value: a difference from an archive's pinned bytes answers `not-comparable` with
+a caveat and no verdict, never `mismatch`, while an exact hit still verifies. The list is curated in
+`scripts/generate_firmware_hashes.py` with its own version and reviewed date, carried in the data file, and never
+guessed from a file extension.
+
 **Structural cleanup** (this branch) — everything the review flagged about the existing structure:
 
 - _Seam status model_ (H5, H10, M6, M7): explicit operation outcomes (`ReadResult`, `PathKind`), structured health as
@@ -116,11 +123,11 @@ unpacked binaries, whose flatpak ids nobody has established).
 The four firmware entry points ship: live `.info` declarations from the installed cores, stated against the live
 `system_directory`, with the packaged identity table doing only what it can. What is left:
 
-- **Non-comparable identities.** 21 of the 388 packaged identities are archives or data packs (MAME-style romset zips,
-  `scummvm.zip`, `ecwolf.pk3`), whose whole-file hash changes with romset version and merge mode. A `mismatch` there may
-  be structurally meaningless — and `neogeo.zip` is one of the mandatory files this work exists to surface. The fix
-  belongs in the table (a per-entry statement of what kind of identity it is, with provenance), not in a file-extension
-  heuristic; only then can `checked` grow a fifth value that means something.
+- **An archive's contents are still uncompared.** The whole-file question is settled (see Done), but comparing what is
+  _inside_ a romset or a data pack, member by member, is not in reach: `System.dat` carries one whole-file md5 per name
+  and no member list, so nothing packaged says which ROMs a correct `neogeo.zip` holds. Atlas would have to open the
+  archive and own a second source of truth for its contents. Until such a source exists, "present, and its packaging
+  differs" is the strongest true statement about these files.
 - **Per-file system assignment.** `FIRMWARE_SYSTEM_OVERRIDE` is `[D]` and deliberately incomplete: it is atlas's own
   reading, cross-read against RomM's `known_bios_files.json`, and the two disagree (the Super Game Boy dumps are `snes`
   here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it. The vocabulary
